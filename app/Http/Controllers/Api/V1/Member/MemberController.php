@@ -56,13 +56,19 @@ class MemberController extends Controller
 
         // Issue a secure rotating QR token (5 min expiry, single use)
         $secureToken = QrToken::issue($member, expiresInMinutes: 5);
-        $qrImage = $this->qrService->generateQrImage($secureToken->token);
+
+        $qrImage = null;
+        try {
+            $qrImage = 'data:image/png;base64,' . $this->qrService->generateQrImage($secureToken->token);
+        } catch (\Throwable $e) {
+            // GD extension may not be available — skip image
+        }
 
         return response()->json([
             'member_number' => $member->member_number,
             'qr_token'      => $secureToken->token,
             'qr_expires_at' => $secureToken->expires_at,
-            'qr_image'      => 'data:image/png;base64,' . $qrImage,
+            'qr_image'      => $qrImage,
             'nfc_uid'       => $member->nfc_uid,
             'tier'          => $member->tier,
             'current_points'=> $member->current_points,
@@ -84,12 +90,18 @@ class MemberController extends Controller
             ->update(['is_revoked' => true]);
 
         $secureToken = QrToken::issue($member, expiresInMinutes: 5);
-        $qrImage = $this->qrService->generateQrImage($secureToken->token);
+
+        $qrImage = null;
+        try {
+            $qrImage = 'data:image/png;base64,' . $this->qrService->generateQrImage($secureToken->token);
+        } catch (\Throwable $e) {
+            // GD extension may not be available
+        }
 
         return response()->json([
             'qr_token'      => $secureToken->token,
             'qr_expires_at' => $secureToken->expires_at,
-            'qr_image'      => 'data:image/png;base64,' . $qrImage,
+            'qr_image'      => $qrImage,
         ]);
     }
 }
