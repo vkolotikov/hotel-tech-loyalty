@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, resolveImageUrl } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { Bell, Brain, Cloud, Smartphone, FileText, Database, Save, RefreshCw, Palette, RotateCcw, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -168,10 +168,7 @@ export function Settings() {
   // Get current company logo URL from settings
   const currentLogoUrl = (() => {
     const val = getSettingValue('company_logo', allSettings)
-    if (!val) return null
-    if (val.startsWith('http')) return val
-    const base = (import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public/api').replace('/api', '')
-    return `${base}${val}`
+    return resolveImageUrl(val || null)
   })()
 
   // Live preview colors

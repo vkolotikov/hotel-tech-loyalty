@@ -3,6 +3,13 @@ import axios from 'axios'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api'
 export const API_URL = API_BASE.replace(/\/api$/, '')
 
+/** Resolve a storage image path to a full URL. */
+export const resolveImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return API_URL + path
+}
+
 /** Base path for the React Router. Empty in production (PHP serves SPA at root). */
 export const APP_BASE: string = (import.meta.env.VITE_ROUTER_BASE as string) ?? ''
 

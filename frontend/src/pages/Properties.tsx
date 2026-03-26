@@ -1,10 +1,8 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, resolveImageUrl } from '../lib/api'
 import { Building2, Plus, Pencil, X, Store, Upload, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public').replace('/api', '')
 
 interface Property {
   id: number
@@ -123,13 +121,8 @@ export function Properties() {
     setEditId(p.id)
     setForm({ name: p.name, code: p.code, address: p.address || '', city: p.city || '', country: p.country || '', timezone: p.timezone || '', currency: p.currency || 'USD', phone: p.phone || '', email: p.email || '' })
     setImageFile(null)
-    setImagePreview(p.image_url ? (p.image_url.startsWith('http') ? p.image_url : `${API_ORIGIN}${p.image_url}`) : null)
+    setImagePreview(resolveImageUrl(p.image_url))
     setShowForm(true)
-  }
-
-  const resolveImageUrl = (url: string | null) => {
-    if (!url) return null
-    return url.startsWith('http') ? url : `${API_ORIGIN}${url}`
   }
 
   const properties: Property[] = data?.properties || []

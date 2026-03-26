@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, resolveImageUrl } from '../lib/api'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -159,7 +159,7 @@ export function MemberDetail() {
         </button>
         {user?.avatar_url ? (
           <img
-            src={user.avatar_url.startsWith('http') ? user.avatar_url : `${(import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public').replace('/api', '')}${user.avatar_url}`}
+            src={resolveImageUrl(user.avatar_url)!}
             alt={user.name}
             className="w-14 h-14 rounded-full object-cover border-2 border-dark-border flex-shrink-0"
           />
@@ -301,7 +301,7 @@ export function MemberDetail() {
                   <div className="relative cursor-pointer group" onClick={() => avatarInputRef.current?.click()}>
                     {avatarPreview || user?.avatar_url ? (
                       <img
-                        src={avatarPreview || (user.avatar_url.startsWith('http') ? user.avatar_url : `${(import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public').replace('/api', '')}${user.avatar_url}`)}
+                        src={avatarPreview || (resolveImageUrl(user.avatar_url)!)}
                         alt="Avatar"
                         className="w-20 h-20 rounded-full object-cover border-2 border-dark-border group-hover:opacity-75 transition-opacity"
                       />
