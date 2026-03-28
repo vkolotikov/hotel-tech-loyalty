@@ -6,10 +6,14 @@ use App\Models\CrmSetting;
 use App\Models\Guest;
 use App\Models\Inquiry;
 use App\Models\LoyaltyMember;
+use App\Models\LoyaltyTier;
+use App\Models\PointsTransaction;
 use App\Models\PlannerTask;
 use App\Models\Property;
 use App\Models\Reservation;
+use App\Models\SpecialOffer;
 use App\Models\CorporateAccount;
+use App\Models\VenueBooking;
 use Illuminate\Support\Facades\Http;
 
 class CrmAiService
@@ -172,14 +176,21 @@ class CrmAiService
         $arrivalsToday= Reservation::where('check_in', now()->toDateString())->where('status', 'Confirmed')->count();
         $today        = now()->toDateString();
 
+        // Loyalty context
+        $tiers        = LoyaltyTier::where('is_active', true)->orderBy('min_points')->get(['name', 'min_points', 'earn_rate'])->map(fn($t) => "{$t->name} ({$t->min_points}+ pts, {$t->earn_rate}x)")->implode(', ');
+        $activeOffers = SpecialOffer::active()->count();
+        $totalPoints  = LoyaltyMember::sum('current_points');
+
         return <<<PROMPT
-You are an AI assistant for a unified Hotel CRM & Loyalty platform. You help manage guest profiles, inquiries (sales pipeline), reservations, properties, loyalty members, planner tasks, and more.
+You are an AI assistant for a unified Hotel CRM & Loyalty platform. You help manage guest profiles, inquiries (sales pipeline), reservations, properties, loyalty members, points, tiers, offers, planner tasks, venue bookings, and more.
 
 Hotel snapshot ({$today}):
 - {$guestCount} guests, {$memberCount} loyalty members, {$activeInq} active inquiries ({$currency}{$pipelineVal} pipeline)
 - {$inHouse} in-house guests, {$arrivalsToday} arrivals today
+- Loyalty: {$totalPoints} total points in circulation, {$activeOffers} active offers
 
 Properties: {$properties}
+Tier ladder: {$tiers}
 Room types: {$roomTypes}
 Inquiry types: {$inqTypes}
 Inquiry statuses: {$inqStatuses}
@@ -188,12 +199,19 @@ Meal plans: {$mealPlans}
 Team: {$employees}
 Currency: {$currency}
 
+Capabilities:
+- CRM: Search/create/update guests, inquiries, reservations. View hotel stats.
+- Loyalty: Search members, view full profiles with points history, award/redeem points, view tiers and offers.
+- Planning: View planner tasks, create tasks, view venue bookings.
+- AI Analysis: Analyze member churn risk, generate personalized offers, create upsell scripts (powered by GPT-4o).
+
 Rules:
 - Always use tools for real data — never invent IDs, names, or numbers.
 - When creating/updating records, state what you did with IDs.
-- Be concise. Use bullet points for lists.
-- Monetary values use {$currency}.
+- Be concise. Use bullet points for lists. Format numbers with locale separators.
+- Monetary values use {$currency}. Points have no currency symbol.
 - If ambiguous, ask a clarifying question.
+- For loyalty member analysis (churn, offers, upsell), use the analyze_member tool.
 PROMPT;
     }
 
@@ -302,6 +320,52 @@ PROMPT;
                 'tier'  => ['type' => 'string', 'description' => 'Tier name filter'],
                 'limit' => ['type' => 'integer', 'description' => 'Max results (default 5)'],
             ], []),
+
+            $this->tool('get_loyalty_member', 'Get full loyalty member profile with points history, tier progress, and recent transactions.', [
+                'id' => ['type' => 'integer', 'description' => 'Loyalty member ID (required)'],
+            ], ['id']),
+
+            $this->tool('award_points', 'Award loyalty points to a member. Use for bonuses, promotions, or manual adjustments.', [
+                'member_id'   => ['type' => 'integer', 'description' => 'Loyalty member ID (required)'],
+                'points'      => ['type' => 'integer', 'description' => 'Points to award (1-100000, required)'],
+                'description' => ['type' => 'string', 'description' => 'Reason for award (required)'],
+                'type'        => ['type' => 'string', 'description' => 'Transaction type: earn, bonus, adjust (default: bonus)'],
+            ], ['member_id', 'points', 'description']),
+
+            $this->tool('redeem_points', 'Redeem loyalty points from a member balance.', [
+                'member_id'   => ['type' => 'integer', 'description' => 'Loyalty member ID (required)'],
+                'points'      => ['type' => 'integer', 'description' => 'Points to redeem (required)'],
+                'description' => ['type' => 'string', 'description' => 'Reason for redemption (required)'],
+            ], ['member_id', 'points', 'description']),
+
+            $this->tool('get_tier_info', 'Get all loyalty tiers with their thresholds, earn rates, and benefits.', [], []),
+
+            $this->tool('search_offers', 'Search active special offers and promotions.', [
+                'search'  => ['type' => 'string', 'description' => 'Search in title/description'],
+                'active'  => ['type' => 'boolean', 'description' => 'Only active offers (default true)'],
+                'limit'   => ['type' => 'integer', 'description' => 'Max results (default 10)'],
+            ], []),
+
+            $this->tool('analyze_member', 'Run AI analysis on a loyalty member: churn risk prediction, personalized offer suggestion, and upsell script. Uses GPT-4o.', [
+                'member_id' => ['type' => 'integer', 'description' => 'Loyalty member ID (required)'],
+            ], ['member_id']),
+
+            $this->tool('create_planner_task', 'Create a new planner task for team assignment.', [
+                'title'         => ['type' => 'string', 'description' => 'Task title (required)'],
+                'task_date'     => ['type' => 'string', 'description' => 'Date YYYY-MM-DD (required)'],
+                'employee_name' => ['type' => 'string', 'description' => 'Assigned employee'],
+                'priority'      => ['type' => 'string', 'description' => 'Low, Normal, or High (default Normal)'],
+                'task_group'    => ['type' => 'string', 'description' => 'Group category'],
+                'start_time'    => ['type' => 'string', 'description' => 'HH:MM'],
+                'description'   => ['type' => 'string', 'description' => 'Task details'],
+            ], ['title', 'task_date']),
+
+            $this->tool('search_venue_bookings', 'Search venue/event bookings by date, venue, or status.', [
+                'date_from' => ['type' => 'string', 'description' => 'From date YYYY-MM-DD'],
+                'date_to'   => ['type' => 'string', 'description' => 'To date YYYY-MM-DD'],
+                'status'    => ['type' => 'string', 'description' => 'Booking status filter'],
+                'limit'     => ['type' => 'integer', 'description' => 'Max results (default 10)'],
+            ], []),
         ];
     }
 
@@ -332,6 +396,14 @@ PROMPT;
                 'create_reservation'     => $this->toolCreateReservation($in),
                 'update_reservation'     => $this->toolUpdateReservation($in),
                 'search_loyalty_members' => $this->toolSearchLoyaltyMembers($in),
+                'get_loyalty_member'     => $this->toolGetLoyaltyMember($in),
+                'award_points'           => $this->toolAwardPoints($in),
+                'redeem_points'          => $this->toolRedeemPoints($in),
+                'get_tier_info'          => $this->toolGetTierInfo(),
+                'search_offers'          => $this->toolSearchOffers($in),
+                'analyze_member'         => $this->toolAnalyzeMember($in),
+                'create_planner_task'    => $this->toolCreatePlannerTask($in),
+                'search_venue_bookings'  => $this->toolSearchVenueBookings($in),
                 default                  => ['success' => false, 'data' => ['error' => "Unknown tool: $name"]],
             };
         } catch (\Throwable $e) {
@@ -529,5 +601,129 @@ PROMPT;
             $q->whereHas('tier', fn($q2) => $q2->where('name', 'ilike', "%{$in['tier']}%"));
         }
         return ['success' => true, 'data' => $q->limit($limit)->get()->toArray()];
+    }
+
+    private function toolGetLoyaltyMember(array $in): array
+    {
+        $m = LoyaltyMember::with(['user:id,name,email', 'tier', 'pointsTransactions' => fn($q) => $q->latest()->limit(15)])->find($in['id']);
+        if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
+        $progress = $m->getProgressToNextTier();
+        return ['success' => true, 'data' => array_merge($m->toArray(), [
+            'tier_progress' => $progress,
+            'summary' => [
+                'current_points' => $m->current_points,
+                'lifetime_points' => $m->lifetime_points,
+                'tier' => $m->tier->name ?? 'None',
+                'joined' => $m->joined_at?->format('Y-m-d'),
+                'last_activity' => $m->last_activity_at?->format('Y-m-d'),
+            ],
+        ])];
+    }
+
+    private function toolAwardPoints(array $in): array
+    {
+        $m = LoyaltyMember::find($in['member_id']);
+        if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
+        $points = min(max($in['points'], 1), 100000);
+        $type = $in['type'] ?? 'bonus';
+        if (!in_array($type, ['earn', 'bonus', 'adjust'])) $type = 'bonus';
+
+        $loyaltyService = app(\App\Services\LoyaltyService::class);
+        $tx = $loyaltyService->awardPoints($m, $points, $in['description'], $type);
+
+        return ['success' => true, 'data' => [
+            'transaction_id' => $tx->id,
+            'member_id' => $m->id,
+            'points_awarded' => $points,
+            'new_balance' => $m->fresh()->current_points,
+            'message' => "{$points} points awarded to member #{$m->member_number}",
+        ]];
+    }
+
+    private function toolRedeemPoints(array $in): array
+    {
+        $m = LoyaltyMember::find($in['member_id']);
+        if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
+        if ($m->current_points < $in['points']) {
+            return ['success' => false, 'data' => ['error' => "Insufficient points. Balance: {$m->current_points}"]];
+        }
+
+        $loyaltyService = app(\App\Services\LoyaltyService::class);
+        $tx = $loyaltyService->redeemPoints($m, $in['points'], $in['description']);
+
+        return ['success' => true, 'data' => [
+            'transaction_id' => $tx->id,
+            'member_id' => $m->id,
+            'points_redeemed' => $in['points'],
+            'new_balance' => $m->fresh()->current_points,
+            'message' => "{$in['points']} points redeemed from member #{$m->member_number}",
+        ]];
+    }
+
+    private function toolGetTierInfo(): array
+    {
+        $tiers = LoyaltyTier::where('is_active', true)->orderBy('min_points')->get(['id', 'name', 'min_points', 'max_points', 'earn_rate', 'bonus_nights', 'perks', 'color_hex']);
+        return ['success' => true, 'data' => $tiers->toArray()];
+    }
+
+    private function toolSearchOffers(array $in): array
+    {
+        $limit = min($in['limit'] ?? 10, 30);
+        $q = SpecialOffer::query();
+        if ($in['active'] ?? true) $q->active();
+        if (!empty($in['search'])) {
+            $s = $in['search'];
+            $q->where(function ($query) use ($s) {
+                $query->where('title', 'ilike', "%$s%")->orWhere('description', 'ilike', "%$s%");
+            });
+        }
+        return ['success' => true, 'data' => $q->latest()->limit($limit)->get(['id', 'title', 'description', 'type', 'value', 'start_date', 'end_date', 'tier_ids', 'is_active', 'is_featured', 'times_used', 'usage_limit'])->toArray()];
+    }
+
+    private function toolAnalyzeMember(array $in): array
+    {
+        $m = LoyaltyMember::with(['tier', 'bookings', 'pointsTransactions', 'user'])->find($in['member_id']);
+        if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
+
+        $openAi = app(OpenAiService::class);
+        $churn = $openAi->predictChurn($m);
+        $offer = $openAi->personalizeOffer($m);
+        $upsell = $openAi->suggestUpsell($m);
+
+        return ['success' => true, 'data' => [
+            'member' => $m->user->name ?? 'Unknown',
+            'tier' => $m->tier->name ?? 'None',
+            'points' => $m->current_points,
+            'churn_risk' => round($churn, 2),
+            'churn_level' => $churn >= 0.7 ? 'HIGH' : ($churn >= 0.4 ? 'MEDIUM' : 'LOW'),
+            'personalized_offer' => $offer,
+            'upsell_suggestion' => $upsell,
+        ]];
+    }
+
+    private function toolCreatePlannerTask(array $in): array
+    {
+        $task = PlannerTask::create(array_filter([
+            'title' => $in['title'],
+            'task_date' => $in['task_date'],
+            'employee_name' => $in['employee_name'] ?? null,
+            'priority' => $in['priority'] ?? 'Normal',
+            'task_group' => $in['task_group'] ?? null,
+            'start_time' => $in['start_time'] ?? null,
+            'description' => $in['description'] ?? null,
+            'completed' => false,
+        ], fn($v) => $v !== null));
+
+        return ['success' => true, 'data' => ['id' => $task->id, 'message' => "Task #{$task->id} created for {$task->task_date}"]];
+    }
+
+    private function toolSearchVenueBookings(array $in): array
+    {
+        $limit = min($in['limit'] ?? 10, 30);
+        $q = VenueBooking::with(['venue:id,name,venue_type']);
+        if (!empty($in['date_from'])) $q->where('booking_date', '>=', $in['date_from']);
+        if (!empty($in['date_to'])) $q->where('booking_date', '<=', $in['date_to']);
+        if (!empty($in['status'])) $q->where('status', $in['status']);
+        return ['success' => true, 'data' => $q->orderBy('booking_date')->limit($limit)->get()->toArray()];
     }
 }
