@@ -1,6 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
+// Serve uploaded files from storage (works without public/storage symlink)
+Route::get('/storage/{path}', function (string $path) {
+    if (Storage::disk('public')->exists($path)) {
+        return Storage::disk('public')->response($path);
+    }
+    abort(404);
+})->where('path', '.*');
 
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
@@ -9,7 +18,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/).*$');
+})->where('any', '^(?!api/|storage/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
