@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Property extends Model
 {
     protected $fillable = [
-        'organization_id', 'name', 'code', 'email', 'phone', 'image_url',
+        'organization_id', 'name', 'code', 'property_type', 'email', 'phone',
+        'website', 'gm_name', 'image_url',
         'address', 'city', 'country', 'timezone', 'currency', 'star_rating',
         'room_count', 'pms_type', 'pms_property_id', 'settings', 'is_active',
     ];
@@ -38,5 +39,20 @@ class Property extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function venues(): HasMany
+    {
+        return $this->hasMany(Venue::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function inquiries(): HasMany
+    {
+        return $this->hasMany(Inquiry::class);
     }
 }

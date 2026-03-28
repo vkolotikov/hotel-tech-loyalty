@@ -20,6 +20,14 @@ use App\Http\Controllers\Api\V1\Admin\TierController;
 use App\Http\Controllers\Api\V1\Admin\BenefitAdminController;
 use App\Http\Controllers\Api\V1\Admin\PropertyAdminController;
 use App\Http\Controllers\Api\V1\Admin\CampaignSegmentController;
+use App\Http\Controllers\Api\V1\Admin\GuestController;
+use App\Http\Controllers\Api\V1\Admin\InquiryController;
+use App\Http\Controllers\Api\V1\Admin\ReservationController;
+use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
+use App\Http\Controllers\Api\V1\Admin\PlannerController;
+use App\Http\Controllers\Api\V1\Admin\VenueController;
+use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
+use App\Http\Controllers\Api\V1\Admin\CrmAiController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -147,6 +155,82 @@ Route::prefix('v1')->group(function () {
             Route::get('settings',                        [SettingsController::class, 'index']);
             Route::put('settings',                        [SettingsController::class, 'update']);
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
+
+            // ─── CRM: Guests ──────────────────────────────────────────────────
+            Route::get('guests',                          [GuestController::class, 'index']);
+            Route::post('guests',                         [GuestController::class, 'store']);
+            Route::get('guests/export',                   [GuestController::class, 'export']);
+            Route::get('guests/segments',                 [GuestController::class, 'segments']);
+            Route::post('guests/segments',                [GuestController::class, 'storeSegment']);
+            Route::delete('guests/segments/{segment}',    [GuestController::class, 'destroySegment']);
+            Route::get('guests/tags',                     [GuestController::class, 'tags']);
+            Route::post('guests/tags',                    [GuestController::class, 'storeTag']);
+            Route::delete('guests/tags/{tag}',            [GuestController::class, 'destroyTag']);
+            Route::post('guests/bulk-update',             [GuestController::class, 'bulkUpdate']);
+            Route::get('guests/{guest}',                  [GuestController::class, 'show']);
+            Route::put('guests/{guest}',                  [GuestController::class, 'update']);
+            Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);
+            Route::post('guests/{guest}/activities',      [GuestController::class, 'addActivity']);
+            Route::post('guests/{guest}/tags',            [GuestController::class, 'syncTags']);
+
+            // ─── CRM: Inquiries (Sales Pipeline) ─────────────────────────────
+            Route::get('inquiries',                       [InquiryController::class, 'index']);
+            Route::post('inquiries',                      [InquiryController::class, 'store']);
+            Route::get('inquiries/export',                [InquiryController::class, 'export']);
+            Route::get('inquiries/{inquiry}',             [InquiryController::class, 'show']);
+            Route::put('inquiries/{inquiry}',             [InquiryController::class, 'update']);
+            Route::delete('inquiries/{inquiry}',          [InquiryController::class, 'destroy']);
+            Route::post('inquiries/{inquiry}/complete-task', [InquiryController::class, 'completeTask']);
+
+            // ─── CRM: Reservations ────────────────────────────────────────────
+            Route::get('reservations',                       [ReservationController::class, 'index']);
+            Route::post('reservations',                      [ReservationController::class, 'store']);
+            Route::get('reservations/export',                [ReservationController::class, 'export']);
+            Route::get('reservations/{reservation}',         [ReservationController::class, 'show']);
+            Route::put('reservations/{reservation}',         [ReservationController::class, 'update']);
+            Route::delete('reservations/{reservation}',      [ReservationController::class, 'destroy']);
+            Route::post('reservations/{reservation}/check-in',  [ReservationController::class, 'checkIn']);
+            Route::post('reservations/{reservation}/check-out', [ReservationController::class, 'checkOut']);
+
+            // ─── CRM: Corporate Accounts ──────────────────────────────────────
+            Route::get('corporate-accounts',                          [CorporateAccountController::class, 'index']);
+            Route::post('corporate-accounts',                         [CorporateAccountController::class, 'store']);
+            Route::get('corporate-accounts/{corporateAccount}',       [CorporateAccountController::class, 'show']);
+            Route::put('corporate-accounts/{corporateAccount}',       [CorporateAccountController::class, 'update']);
+            Route::delete('corporate-accounts/{corporateAccount}',    [CorporateAccountController::class, 'destroy']);
+
+            // ─── CRM: Planner ─────────────────────────────────────────────────
+            Route::get('planner/tasks',                   [PlannerController::class, 'tasks']);
+            Route::post('planner/tasks',                  [PlannerController::class, 'storeTask']);
+            Route::put('planner/tasks/{task}',            [PlannerController::class, 'updateTask']);
+            Route::delete('planner/tasks/{task}',         [PlannerController::class, 'destroyTask']);
+            Route::patch('planner/tasks/{task}/move',     [PlannerController::class, 'moveTask']);
+            Route::post('planner/tasks/{task}/copy',      [PlannerController::class, 'copyTask']);
+            Route::post('planner/tasks/{task}/subtasks',  [PlannerController::class, 'storeSubtask']);
+            Route::patch('planner/subtasks/{subtask}/toggle', [PlannerController::class, 'toggleSubtask']);
+            Route::delete('planner/subtasks/{subtask}',   [PlannerController::class, 'destroySubtask']);
+            Route::get('planner/day-note',                [PlannerController::class, 'dayNote']);
+            Route::post('planner/day-note',               [PlannerController::class, 'upsertDayNote']);
+            Route::get('planner/stats',                   [PlannerController::class, 'stats']);
+
+            // ─── CRM: Venues & Event Bookings ─────────────────────────────────
+            Route::get('venues',                          [VenueController::class, 'indexVenues']);
+            Route::post('venues',                         [VenueController::class, 'storeVenue']);
+            Route::put('venues/{venue}',                  [VenueController::class, 'updateVenue']);
+            Route::delete('venues/{venue}',               [VenueController::class, 'destroyVenue']);
+            Route::get('venues/bookings',                 [VenueController::class, 'indexBookings']);
+            Route::get('venues/bookings/calendar',        [VenueController::class, 'calendarBookings']);
+            Route::post('venues/bookings',                [VenueController::class, 'storeBooking']);
+            Route::put('venues/bookings/{venueBooking}',  [VenueController::class, 'updateBooking']);
+            Route::delete('venues/bookings/{venueBooking}', [VenueController::class, 'destroyBooking']);
+
+            // ─── CRM: Settings ────────────────────────────────────────────────
+            Route::get('crm-settings',                    [CrmSettingsController::class, 'index']);
+            Route::put('crm-settings/{key}',              [CrmSettingsController::class, 'update']);
+
+            // ─── CRM: AI Assistant ────────────────────────────────────────────
+            Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
+            Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
         });
     });
 

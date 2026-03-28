@@ -18,6 +18,11 @@ import { Settings } from './pages/Settings'
 import { Benefits } from './pages/Benefits'
 import { Properties } from './pages/Properties'
 import { Tiers } from './pages/Tiers'
+import { Guests } from './pages/Guests'
+import { Inquiries } from './pages/Inquiries'
+import { Reservations } from './pages/Reservations'
+import { Corporate } from './pages/Corporate'
+import AiChat from './components/AiChat'
 import { useTheme } from './hooks/useTheme'
 
 function ThemeLoader() {
@@ -50,9 +55,14 @@ export default function App() {
           <Route path="/tiers" element={<ProtectedRoute><Tiers /></ProtectedRoute>} />
           <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
           <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
+          <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
+          <Route path="/inquiries" element={<ProtectedRoute><Inquiries /></ProtectedRoute>} />
+          <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
+          <Route path="/corporate" element={<ProtectedRoute><Corporate /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AiChat />
       </BrowserRouter>
     </QueryClientProvider>
   )

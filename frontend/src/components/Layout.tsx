@@ -7,23 +7,28 @@ import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Menu, X, Hotel, Scan,
-  Crown, Award, Building2
+  Crown, Award, Building2, UserCheck, FileText,
+  CalendarCheck, Briefcase
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, API_URL } from '../lib/api'
 
 const navItems = [
-  { path: '/',          label: 'Dashboard',  icon: LayoutDashboard },
-  { path: '/scan',      label: 'Scan',       icon: Scan },
-  { path: '/members',   label: 'Members',    icon: Users },
-  { path: '/offers',    label: 'Offers',     icon: Gift },
-  { path: '/tiers',     label: 'Tiers',      icon: Crown },
-  { path: '/benefits',  label: 'Benefits',   icon: Award },
-  { path: '/properties',label: 'Properties', icon: Building2 },
-  { path: '/analytics', label: 'Analytics',  icon: BarChart2 },
-  { path: '/ai',        label: 'AI Insights',icon: Sparkles },
-  { path: '/notifications', label: 'Campaigns', icon: Bell },
-  { path: '/settings',  label: 'Settings',   icon: Settings },
+  { path: '/',             label: 'Dashboard',     icon: LayoutDashboard },
+  { path: '/scan',         label: 'Scan',          icon: Scan },
+  { path: '/members',      label: 'Members',       icon: Users },
+  { path: '/guests',       label: 'Guests',        icon: UserCheck },
+  { path: '/inquiries',    label: 'Inquiries',     icon: FileText },
+  { path: '/reservations', label: 'Reservations',  icon: CalendarCheck },
+  { path: '/corporate',    label: 'Corporate',     icon: Briefcase },
+  { path: '/offers',       label: 'Offers',        icon: Gift },
+  { path: '/tiers',        label: 'Tiers',         icon: Crown },
+  { path: '/benefits',     label: 'Benefits',      icon: Award },
+  { path: '/properties',   label: 'Properties',    icon: Building2 },
+  { path: '/analytics',    label: 'Analytics',     icon: BarChart2 },
+  { path: '/ai',           label: 'AI Insights',   icon: Sparkles },
+  { path: '/notifications',label: 'Campaigns',     icon: Bell },
+  { path: '/settings',     label: 'Settings',      icon: Settings },
 ]
 
 export function Layout({ children }: { children: ReactNode }) {

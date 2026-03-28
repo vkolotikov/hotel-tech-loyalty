@@ -17,7 +17,7 @@
 /public/build
 /public/hot
 /public/storage
-/public/spa
+# /public/spa — included for Laravel Cloud deployment
 /storage/*.key
 /storage/pail
 /vendor
