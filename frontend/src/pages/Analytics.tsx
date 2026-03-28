@@ -3,19 +3,20 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ComposedChart, Line
+  ComposedChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts'
 import { api } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
-  BarChart3, Zap, Hotel, AlertTriangle
+  BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
 const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 10, color: '#fff' }
 const CHART_LABEL = { color: '#8e8e93' }
+const PIE_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#32d74b', '#636366', '#06b6d4', '#ef4444']
 
 const POINTS_RANGES = [
   { label: '7 Days', days: 7 },
@@ -38,14 +39,23 @@ const GROWTH_RANGES = [
   { label: '24m', months: 24 },
 ]
 
-type ActiveTab = 'overview' | 'points' | 'members' | 'bookings'
+const CRM_PERIOD_OPTIONS = [
+  { label: '2 Weeks', value: 'days14' },
+  { label: '6 Weeks', value: 'weeks6' },
+  { label: '6 Months', value: 'months6' },
+  { label: '12 Months', value: 'months12' },
+]
+
+type ActiveTab = 'overview' | 'points' | 'members' | 'bookings' | 'pipeline' | 'venues'
 
 export function Analytics() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
   const [pointsDays, setPointsDays] = useState(30)
   const [bookingDays, setBookingDays] = useState(30)
   const [growthMonths, setGrowthMonths] = useState(12)
+  const [crmPeriod, setCrmPeriod] = useState('months6')
 
+  // Loyalty queries
   const { data: overview } = useQuery({
     queryKey: ['analytics-overview'],
     queryFn: () => api.get('/v1/admin/analytics/overview').then(r => r.data),
@@ -101,6 +111,61 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/analytics/expiry-forecast?months=6').then(r => r.data),
   })
 
+  // CRM queries
+  const { data: crmTrends } = useQuery({
+    queryKey: ['analytics-crm-trends', crmPeriod],
+    queryFn: () => api.get(`/v1/admin/analytics/crm-trends?period=${crmPeriod}`).then(r => r.data),
+    enabled: activeTab === 'pipeline' || activeTab === 'overview',
+  })
+
+  const { data: inquiryPipeline } = useQuery({
+    queryKey: ['analytics-inquiry-pipeline'],
+    queryFn: () => api.get('/v1/admin/analytics/inquiry-pipeline').then(r => r.data),
+    enabled: activeTab === 'pipeline' || activeTab === 'overview',
+  })
+
+  const { data: bookingChannels } = useQuery({
+    queryKey: ['analytics-booking-channels'],
+    queryFn: () => api.get('/v1/admin/analytics/booking-channels').then(r => r.data),
+    enabled: activeTab === 'pipeline',
+  })
+
+  const { data: revenueComparison } = useQuery({
+    queryKey: ['analytics-revenue-comparison'],
+    queryFn: () => api.get('/v1/admin/analytics/revenue-comparison').then(r => r.data),
+    enabled: activeTab === 'pipeline',
+  })
+
+  const { data: occupancy } = useQuery({
+    queryKey: ['analytics-occupancy', crmPeriod],
+    queryFn: () => api.get(`/v1/admin/analytics/occupancy?period=${crmPeriod}`).then(r => r.data),
+    enabled: activeTab === 'venues',
+  })
+
+  const { data: vipDist } = useQuery({
+    queryKey: ['analytics-vip-dist'],
+    queryFn: () => api.get('/v1/admin/analytics/vip-distribution').then(r => r.data),
+    enabled: activeTab === 'venues',
+  })
+
+  const { data: nationality } = useQuery({
+    queryKey: ['analytics-nationality'],
+    queryFn: () => api.get('/v1/admin/analytics/nationality').then(r => r.data),
+    enabled: activeTab === 'venues',
+  })
+
+  const { data: venueUtil } = useQuery({
+    queryKey: ['analytics-venue-util'],
+    queryFn: () => api.get('/v1/admin/analytics/venue-utilization').then(r => r.data),
+    enabled: activeTab === 'venues',
+  })
+
+  const { data: revByProperty } = useQuery({
+    queryKey: ['analytics-rev-by-property'],
+    queryFn: () => api.get('/v1/admin/analytics/revenue-by-property').then(r => r.data),
+    enabled: activeTab === 'venues' || activeTab === 'pipeline',
+  })
+
   const kpis = overview?.kpis
   const tierDist = overview?.tier_distribution ?? []
 
@@ -109,6 +174,8 @@ export function Analytics() {
     { id: 'points', label: 'Points & Rewards', icon: <Award size={15} /> },
     { id: 'members', label: 'Members', icon: <Users size={15} /> },
     { id: 'bookings', label: 'Bookings & Revenue', icon: <Hotel size={15} /> },
+    { id: 'pipeline', label: 'CRM Pipeline', icon: <Briefcase size={15} /> },
+    { id: 'venues', label: 'Venues & Guests', icon: <MapPin size={15} /> },
   ]
 
   return (
@@ -117,7 +184,7 @@ export function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-sm text-[#8e8e93] mt-1">Deep dive into loyalty program performance</p>
+          <p className="text-sm text-[#8e8e93] mt-1">Deep dive into loyalty & CRM performance</p>
         </div>
         <button className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
           <Download size={15} /> Export Report
@@ -125,19 +192,19 @@ export function Analytics() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 bg-dark-surface rounded-xl p-1 border border-dark-border">
+      <div className="flex gap-1 bg-dark-surface rounded-xl p-1 border border-dark-border overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex-1 justify-center ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex-1 justify-center whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
                 : 'text-[#8e8e93] hover:text-white hover:bg-dark-surface2'
             }`}
           >
             {tab.icon}
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="hidden md:inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -145,7 +212,6 @@ export function Analytics() {
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {activeTab === 'overview' && (
         <>
-          {/* Metric Summary */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Total Members', value: kpis?.total_members?.toLocaleString() ?? '—', icon: <Users size={18} />, color: 'text-blue-400', bg: 'bg-blue-500/15' },
@@ -170,15 +236,8 @@ export function Analytics() {
               </div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
-                  <button
-                    key={r.days}
-                    onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      pointsDays === r.days
-                        ? 'bg-primary-600 text-white shadow-sm'
-                        : 'text-[#8e8e93] hover:text-white'
-                    }`}
-                  >
+                  <button key={r.days} onClick={() => setPointsDays(r.days)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -211,16 +270,13 @@ export function Analytics() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <PieIcon size={16} className="text-primary-400" />
-                Tier Distribution
+                <PieIcon size={16} className="text-primary-400" /> Tier Distribution
               </h3>
               <div className="flex gap-6 items-center">
                 <ResponsiveContainer width="55%" height={220}>
                   <PieChart>
                     <Pie data={tierDist} dataKey="count" cx="50%" cy="50%" innerRadius={55} outerRadius={90}>
-                      {tierDist.map((_: any, i: number) => (
-                        <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />
-                      ))}
+                      {tierDist.map((_: any, i: number) => <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={CHART_TOOLTIP} />
                   </PieChart>
@@ -250,8 +306,7 @@ export function Analytics() {
 
             <Card>
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <Hotel size={16} className="text-purple-400" />
-                Revenue by Room Type
+                <Hotel size={16} className="text-purple-400" /> Revenue by Room Type
               </h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={revenue ?? []} layout="vertical">
@@ -269,20 +324,12 @@ export function Analytics() {
           <Card>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <Activity size={16} className="text-amber-400" />
-                Member Growth
+                <Activity size={16} className="text-amber-400" /> Member Growth
               </h3>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
-                  <button
-                    key={r.months}
-                    onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      growthMonths === r.months
-                        ? 'bg-primary-600 text-white shadow-sm'
-                        : 'text-[#8e8e93] hover:text-white'
-                    }`}
-                  >
+                  <button key={r.months} onClick={() => setGrowthMonths(r.months)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -301,7 +348,7 @@ export function Analytics() {
             </ResponsiveContainer>
           </Card>
 
-          {/* Top Members */}
+          {/* Top Members Table */}
           <Card>
             <h3 className="text-base font-semibold text-white mb-4">Top Members by Lifetime Points</h3>
             <div className="overflow-x-auto">
@@ -347,7 +394,6 @@ export function Analytics() {
       {/* ════════════════ POINTS TAB ════════════════ */}
       {activeTab === 'points' && (
         <>
-          {/* Points KPIs */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Issued This Month', value: kpis?.points_issued_this_month?.toLocaleString() ?? '—', icon: <ArrowUpRight size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
@@ -363,22 +409,13 @@ export function Analytics() {
             ))}
           </div>
 
-          {/* Points Activity with extended ranges */}
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-base font-semibold text-white">Points Flow</h3>
-                <p className="text-xs text-[#636366] mt-0.5">Earned vs redeemed over time</p>
-              </div>
+              <div><h3 className="text-base font-semibold text-white">Points Flow</h3><p className="text-xs text-[#636366] mt-0.5">Earned vs redeemed over time</p></div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
-                  <button
-                    key={r.days}
-                    onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'
-                    }`}
-                  >
+                  <button key={r.days} onClick={() => setPointsDays(r.days)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -387,14 +424,8 @@ export function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={pointsData ?? []}>
                 <defs>
-                  <linearGradient id="gEarned2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#c9a84c" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#c9a84c" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gRedeemed2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#32d74b" stopOpacity={0} />
-                  </linearGradient>
+                  <linearGradient id="gEarned2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#c9a84c" stopOpacity={0.25} /><stop offset="95%" stopColor="#c9a84c" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gRedeemed2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5) ?? v} />
@@ -407,13 +438,9 @@ export function Analytics() {
             </ResponsiveContainer>
           </Card>
 
-          {/* Redemption Rate Trend + Points Distribution */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <Zap size={16} className="text-purple-400" />
-                Redemption Rate Trend
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Zap size={16} className="text-purple-400" /> Redemption Rate Trend</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <ComposedChart data={redemptionTrend ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
@@ -430,10 +457,7 @@ export function Analytics() {
             </Card>
 
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <Target size={16} className="text-amber-400" />
-                Points Balance Distribution
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Target size={16} className="text-amber-400" /> Points Balance Distribution</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={pointsDist ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
@@ -446,12 +470,8 @@ export function Analytics() {
             </Card>
           </div>
 
-          {/* Points Expiry Forecast */}
           <Card>
-            <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-amber-400" />
-              Points Expiry Forecast
-            </h3>
+            <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2"><AlertTriangle size={16} className="text-amber-400" /> Points Expiry Forecast</h3>
             <p className="text-xs text-[#636366] mb-5">Points scheduled to expire in upcoming months</p>
             {(expiryForecast ?? []).length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
@@ -468,7 +488,6 @@ export function Analytics() {
             )}
           </Card>
 
-          {/* Financial summary */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
               <p className="text-xs text-[#8e8e93] mb-1">Outstanding Points</p>
@@ -493,7 +512,6 @@ export function Analytics() {
       {/* ════════════════ MEMBERS TAB ════════════════ */}
       {activeTab === 'members' && (
         <>
-          {/* Member KPIs */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Total Members', value: kpis?.total_members?.toLocaleString() ?? '—', color: 'text-blue-400', bg: 'bg-blue-500/15', icon: <Users size={18} /> },
@@ -509,20 +527,14 @@ export function Analytics() {
             ))}
           </div>
 
-          {/* Engagement Breakdown + Tier Dist */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <Activity size={16} className="text-[#32d74b]" />
-                Member Engagement
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Activity size={16} className="text-[#32d74b]" /> Member Engagement</h3>
               <div className="flex gap-6 items-center">
                 <ResponsiveContainer width="45%" height={220}>
                   <PieChart>
                     <Pie data={engagement ?? []} dataKey="count" nameKey="segment" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
-                      {(engagement ?? []).map((e: any, i: number) => (
-                        <Cell key={i} fill={e.color} />
-                      ))}
+                      {(engagement ?? []).map((e: any, i: number) => <Cell key={i} fill={e.color} />)}
                     </Pie>
                     <Tooltip contentStyle={CHART_TOOLTIP} />
                   </PieChart>
@@ -551,17 +563,12 @@ export function Analytics() {
             </Card>
 
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <PieIcon size={16} className="text-primary-400" />
-                Tier Distribution
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><PieIcon size={16} className="text-primary-400" /> Tier Distribution</h3>
               <div className="flex gap-6 items-center">
                 <ResponsiveContainer width="55%" height={220}>
                   <PieChart>
                     <Pie data={tierDist} dataKey="count" cx="50%" cy="50%" innerRadius={55} outerRadius={90}>
-                      {tierDist.map((_: any, i: number) => (
-                        <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />
-                      ))}
+                      {tierDist.map((_: any, i: number) => <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={CHART_TOOLTIP} />
                   </PieChart>
@@ -590,22 +597,13 @@ export function Analytics() {
             </Card>
           </div>
 
-          {/* Member Growth with filter */}
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <TrendingUp size={16} className="text-amber-400" />
-                Member Growth
-              </h3>
+              <h3 className="text-base font-semibold text-white flex items-center gap-2"><TrendingUp size={16} className="text-amber-400" /> Member Growth</h3>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
-                  <button
-                    key={r.months}
-                    onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'
-                    }`}
-                  >
+                  <button key={r.months} onClick={() => setGrowthMonths(r.months)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -624,12 +622,8 @@ export function Analytics() {
             </ResponsiveContainer>
           </Card>
 
-          {/* Points Balance Distribution */}
           <Card>
-            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-              <Target size={16} className="text-blue-400" />
-              Member Points Balance Distribution
-            </h3>
+            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Target size={16} className="text-blue-400" /> Member Points Balance Distribution</h3>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={pointsDist ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
@@ -646,7 +640,6 @@ export function Analytics() {
       {/* ════════════════ BOOKINGS TAB ════════════════ */}
       {activeTab === 'bookings' && (
         <>
-          {/* Revenue KPIs */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Revenue (Month)', value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—', icon: <DollarSign size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
@@ -662,22 +655,13 @@ export function Analytics() {
             ))}
           </div>
 
-          {/* Booking Trends with filter */}
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-base font-semibold text-white">Booking Trends</h3>
-                <p className="text-xs text-[#636366] mt-0.5">Daily bookings and revenue</p>
-              </div>
+              <div><h3 className="text-base font-semibold text-white">Booking Trends</h3><p className="text-xs text-[#636366] mt-0.5">Daily bookings and revenue</p></div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {BOOKING_RANGES.map(r => (
-                  <button
-                    key={r.days}
-                    onClick={() => setBookingDays(r.days)}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      bookingDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'
-                    }`}
-                  >
+                  <button key={r.days} onClick={() => setBookingDays(r.days)}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -697,20 +681,13 @@ export function Analytics() {
             </ResponsiveContainer>
           </Card>
 
-          {/* Revenue Trend + Revenue by Room Type */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <TrendingUp size={16} className="text-[#32d74b]" />
-                Monthly Revenue Trend
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><TrendingUp size={16} className="text-[#32d74b]" /> Monthly Revenue Trend</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <AreaChart data={revenueTrend ?? []}>
                   <defs>
-                    <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#32d74b" stopOpacity={0} />
-                    </linearGradient>
+                    <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
@@ -722,10 +699,7 @@ export function Analytics() {
             </Card>
 
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                <Hotel size={16} className="text-purple-400" />
-                Revenue by Room Type
-              </h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Hotel size={16} className="text-purple-400" /> Revenue by Room Type</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={revenue ?? []} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" horizontal={false} />
@@ -738,18 +712,14 @@ export function Analytics() {
             </Card>
           </div>
 
-          {/* Booking Metrics (avg nights, avg spend) */}
           <Card>
-            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-              <Clock size={16} className="text-blue-400" />
-              Booking Metrics Over Time
-            </h3>
+            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Clock size={16} className="text-blue-400" /> Booking Metrics Over Time</h3>
             <ResponsiveContainer width="100%" height={260}>
               <ComposedChart data={bookingMetrics ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8e8e93' }} label={{ value: 'Nights', angle: -90, position: 'insideLeft', style: { fill: '#636366', fontSize: 11 } }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${v}`} label={{ value: 'Avg Spend', angle: 90, position: 'insideRight', style: { fill: '#636366', fontSize: 11 } }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${v}`} />
                 <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [String(name).includes('Spend') ? `$${Number(v).toLocaleString()}` : v, name]} />
                 <Legend />
                 <Bar yAxisId="left" dataKey="avg_nights" fill="#6366f1" opacity={0.7} radius={[3, 3, 0, 0]} name="Avg Nights" />
@@ -758,6 +728,267 @@ export function Analytics() {
               </ComposedChart>
             </ResponsiveContainer>
           </Card>
+        </>
+      )}
+
+      {/* ════════════════ CRM PIPELINE TAB ════════════════ */}
+      {activeTab === 'pipeline' && (
+        <>
+          {/* MoM Comparison Cards */}
+          {revenueComparison && (
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+              {[
+                { label: 'Revenue', curr: revenueComparison.current.total_revenue, pct: revenueComparison.changes.revenue_pct, fmt: (v: number) => `$${Number(v).toLocaleString()}` },
+                { label: 'Bookings', curr: revenueComparison.current.total_bookings, pct: revenueComparison.changes.bookings_pct, fmt: (v: number) => v.toLocaleString() },
+                { label: 'Avg Rate', curr: revenueComparison.current.avg_rate, pct: revenueComparison.changes.rate_pct, fmt: (v: number) => `$${Number(v).toFixed(0)}` },
+                { label: 'New Guests', curr: revenueComparison.current.new_guests, pct: revenueComparison.changes.guests_pct, fmt: (v: number) => v.toLocaleString() },
+              ].map(item => (
+                <div key={item.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                  <p className="text-xs text-[#8e8e93] mb-2">{item.label}</p>
+                  <p className="text-2xl font-bold text-white">{item.fmt(item.curr)}</p>
+                  <div className={`flex items-center gap-1 text-xs mt-1 ${item.pct >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
+                    {item.pct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    <span>{Math.abs(item.pct)}% vs last month</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Performance Trends */}
+          <Card>
+            <div className="flex items-center justify-between mb-5">
+              <div><h3 className="text-base font-semibold text-white">Performance Trends</h3><p className="text-xs text-[#636366] mt-0.5">Guests, inquiries, and conversions over time</p></div>
+              <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
+                {CRM_PERIOD_OPTIONS.map(p => (
+                  <button key={p.value} onClick={() => setCrmPeriod(p.value)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={crmTrends ?? []}>
+                <defs>
+                  <linearGradient id="gGuests" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gInq" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gConf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                <Legend />
+                <Area type="monotone" dataKey="new_guests" stroke="#3b82f6" strokeWidth={2} fill="url(#gGuests)" name="New Guests" />
+                <Area type="monotone" dataKey="new_inquiries" stroke="#f59e0b" strokeWidth={2} fill="url(#gInq)" name="Inquiries" />
+                <Area type="monotone" dataKey="confirmed_inquiries" stroke="#32d74b" strokeWidth={2} fill="url(#gConf)" name="Confirmed" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Inquiry Pipeline + Booking Channels */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Briefcase size={16} className="text-blue-400" /> Inquiry Pipeline</h3>
+              <div className="flex gap-6 items-center">
+                <ResponsiveContainer width="45%" height={220}>
+                  <PieChart>
+                    <Pie data={inquiryPipeline ?? []} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
+                      {(inquiryPipeline ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-2">
+                  {(inquiryPipeline ?? []).map((s: any, i: number) => (
+                    <div key={s.status} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-xs text-[#e0e0e0] flex-1">{s.status}</span>
+                      <span className="text-xs font-semibold text-white">{s.count}</span>
+                      <span className="text-xs text-[#636366] w-16 text-right">${Number(s.value).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><BarChart3 size={16} className="text-[#32d74b]" /> Booking Channels</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={bookingChannels ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                  <XAxis dataKey="channel" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [name === 'revenue' ? `$${Number(v).toLocaleString()}` : v, name === 'revenue' ? 'Revenue' : 'Bookings']} />
+                  <Legend />
+                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} name="Bookings" />
+                  <Bar dataKey="revenue" fill="#32d74b" radius={[4, 4, 0, 0]} name="Revenue" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+
+          {/* Revenue by Property */}
+          <Card>
+            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Hotel size={16} className="text-purple-400" /> Revenue by Property</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[#8e8e93] text-xs uppercase tracking-wide border-b border-dark-border">
+                    <th className="pb-3 font-semibold">Property</th>
+                    <th className="pb-3 font-semibold text-right">Bookings</th>
+                    <th className="pb-3 font-semibold text-right">Revenue</th>
+                    <th className="pb-3 font-semibold text-right">Avg Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-border">
+                  {(revByProperty ?? []).map((p: any, i: number) => (
+                    <tr key={i} className="hover:bg-dark-surface2 transition-colors">
+                      <td className="py-3">
+                        <p className="font-semibold text-white">{p.name}</p>
+                        <p className="text-xs text-[#636366]">{p.code}</p>
+                      </td>
+                      <td className="py-3 text-right text-[#a0a0a0]">{p.bookings}</td>
+                      <td className="py-3 text-right font-semibold text-white">${Number(p.revenue).toLocaleString()}</td>
+                      <td className="py-3 text-right text-[#a0a0a0]">${Number(p.avg_rate).toFixed(0)}</td>
+                    </tr>
+                  ))}
+                  {(revByProperty ?? []).length === 0 && (
+                    <tr><td colSpan={4} className="py-6 text-center text-[#636366]">No property data available</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ════════════════ VENUES & GUESTS TAB ════════════════ */}
+      {activeTab === 'venues' && (
+        <>
+          {/* Venue Utilization + Revenue */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><MapPin size={16} className="text-[#32d74b]" /> Venue Utilization by Type</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={venueUtil ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                  <XAxis dataKey="venue_type" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                  <Legend />
+                  <Bar dataKey="bookings" fill="#6366f1" radius={[4, 4, 0, 0]} name="Bookings" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><DollarSign size={16} className="text-amber-400" /> Venue Revenue Split</h3>
+              <div className="flex gap-6 items-center">
+                <ResponsiveContainer width="45%" height={220}>
+                  <PieChart>
+                    <Pie data={venueUtil ?? []} dataKey="revenue" nameKey="venue_type" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
+                      {(venueUtil ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-2">
+                  {(venueUtil ?? []).map((v: any, i: number) => (
+                    <div key={v.venue_type} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-xs text-[#e0e0e0] flex-1 capitalize">{v.venue_type}</span>
+                      <span className="text-xs text-[#636366]">${Number(v.revenue).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Occupancy Trend */}
+          <Card>
+            <div className="flex items-center justify-between mb-5">
+              <div><h3 className="text-base font-semibold text-white">Occupancy Rate</h3><p className="text-xs text-[#636366] mt-0.5">Property occupancy over time</p></div>
+              <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
+                {CRM_PERIOD_OPTIONS.map(p => (
+                  <button key={p.value} onClick={() => setCrmPeriod(p.value)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={occupancy ?? []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [name === 'occupancy_rate' ? `${v}%` : Number(v).toLocaleString(), name === 'occupancy_rate' ? 'Occupancy %' : name]} />
+                <Bar dataKey="occupancy_rate" fill="#6366f1" radius={[4, 4, 0, 0]} name="Occupancy %" opacity={0.7} />
+                <Line type="monotone" dataKey="occupancy_rate" stroke="#c9a84c" strokeWidth={2.5} dot={{ r: 3, fill: '#c9a84c' }} name="Trend" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* VIP Distribution + Nationalities */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><UserCheck size={16} className="text-amber-400" /> VIP Level Distribution</h3>
+              <div className="flex gap-6 items-center">
+                <ResponsiveContainer width="45%" height={220}>
+                  <PieChart>
+                    <Pie data={vipDist ?? []} dataKey="count" nameKey="level" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
+                      {(vipDist ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-2">
+                  {(vipDist ?? []).map((v: any, i: number) => (
+                    <div key={v.level} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-xs text-[#e0e0e0] flex-1">{v.level}</span>
+                      <span className="text-xs font-semibold text-white">{v.count}</span>
+                      <span className="text-xs text-[#636366]">${Number(v.revenue).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Globe size={16} className="text-blue-400" /> Guest Nationalities</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={(nationality ?? []).slice(0, 10)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <YAxis dataKey="nationality" type="category" tick={{ fontSize: 11, fill: '#8e8e93' }} width={80} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                  <Bar dataKey="count" fill="#06b6d4" radius={[0, 4, 4, 0]} name="Guests" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+
+          {/* VIP Revenue Radar */}
+          {(vipDist ?? []).length > 0 && (
+            <Card>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Award size={16} className="text-purple-400" /> VIP Revenue Impact</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={vipDist ?? []}>
+                  <PolarGrid stroke="#2c2c2c" />
+                  <PolarAngleAxis dataKey="level" tick={{ fontSize: 11, fill: '#8e8e93' }} />
+                  <PolarRadiusAxis tick={{ fontSize: 10, fill: '#636366' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Radar name="Revenue" dataKey="revenue" stroke="#c9a84c" fill="#c9a84c" fillOpacity={0.2} />
+                  <Radar name="Guests" dataKey="count" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -81,6 +81,11 @@ Route::prefix('v1')->group(function () {
             Route::get('dashboard/ai-insights',      [DashboardController::class, 'aiInsights']);
             Route::get('dashboard/week-comparison',  [DashboardController::class, 'weekComparison']);
             Route::get('dashboard/booking-trends',   [DashboardController::class, 'bookingTrends']);
+            Route::get('dashboard/arrivals-today',   [DashboardController::class, 'arrivalsToday']);
+            Route::get('dashboard/departures-today', [DashboardController::class, 'departuresToday']);
+            Route::get('dashboard/inquiries-by-status', [DashboardController::class, 'inquiriesByStatus']);
+            Route::get('dashboard/recent-activity',  [DashboardController::class, 'recentActivity']);
+            Route::get('dashboard/tasks-due',        [DashboardController::class, 'tasksDue']);
 
             Route::post('scan/qr',                [ScanController::class, 'scanQr']);
             Route::post('scan/nfc',               [ScanController::class, 'scanNfc']);
@@ -148,6 +153,15 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/redemption-trend',     [AnalyticsController::class, 'redemptionTrend']);
             Route::get('analytics/booking-metrics',      [AnalyticsController::class, 'bookingMetrics']);
             Route::get('analytics/expiry-forecast',      [AnalyticsController::class, 'expiryForecast']);
+            Route::get('analytics/crm-trends',           [AnalyticsController::class, 'crmTrends']);
+            Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
+            Route::get('analytics/booking-channels',     [AnalyticsController::class, 'bookingChannels']);
+            Route::get('analytics/revenue-comparison',   [AnalyticsController::class, 'revenueComparison']);
+            Route::get('analytics/occupancy',            [AnalyticsController::class, 'occupancyTrend']);
+            Route::get('analytics/vip-distribution',     [AnalyticsController::class, 'vipDistribution']);
+            Route::get('analytics/nationality',          [AnalyticsController::class, 'nationalityBreakdown']);
+            Route::get('analytics/venue-utilization',    [AnalyticsController::class, 'venueUtilization']);
+            Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
