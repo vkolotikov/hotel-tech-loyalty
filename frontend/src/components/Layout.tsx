@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { APP_BASE } from '../lib/api'
@@ -8,10 +8,11 @@ import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Menu, X, Hotel, Scan,
   Crown, Award, Building2, UserCheck, FileText,
-  CalendarCheck, Briefcase, ClipboardList, MapPin
+  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
+import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -55,6 +56,20 @@ export function Layout({ children }: { children: ReactNode }) {
   const { user, staff, logout } = useAuthStore()
   const visibleNav = navItems.filter(item => canAccess(item.gate, staff))
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
+  const { connected, events } = useRealtimeEvents()
+  const [showNotifPanel, setShowNotifPanel] = useState(false)
+  const [seenCount, setSeenCount] = useState(0)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const unseenCount = Math.max(0, events.length - seenCount)
+
+  // Close panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifPanel(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const { data: settingsData } = useQuery({
     queryKey: ['settings-logo'],
@@ -153,6 +168,57 @@ export function Layout({ children }: { children: ReactNode }) {
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <div className="flex-1" />
+
+          {/* Live indicator */}
+          <div className="flex items-center gap-1.5 text-xs text-[#8e8e93]">
+            <Radio size={12} className={connected ? 'text-green-400' : 'text-red-400'} />
+            <span className={connected ? 'text-green-400' : 'text-red-400'}>{connected ? 'Live' : 'Offline'}</span>
+          </div>
+
+          {/* Notification bell */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => { setShowNotifPanel(p => !p); setSeenCount(events.length) }}
+              className="relative p-1.5 text-[#8e8e93] hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors"
+            >
+              <Bell size={18} />
+              {unseenCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                  {unseenCount > 9 ? '9+' : unseenCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifPanel && (
+              <div className="absolute right-0 top-10 w-80 bg-dark-surface border border-dark-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Live Activity</h3>
+                  <span className="text-[10px] text-[#636366]">{events.length} events</span>
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-dark-border/50">
+                  {events.length === 0 ? (
+                    <p className="text-center text-[#636366] text-xs py-8">No recent events</p>
+                  ) : events.map((evt, i) => (
+                    <div key={i} className="px-4 py-2.5 hover:bg-dark-surface2 transition-colors">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm flex-shrink-0 mt-0.5">
+                          {evt.type === 'arrival' ? '🛬' : evt.type === 'departure' ? '🛫' : evt.type === 'inquiry' ? '📩' : evt.type === 'points' ? '⭐' : evt.type === 'member' ? '👤' : '🏨'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-white truncate">{evt.title}</p>
+                          {evt.body && <p className="text-[11px] text-[#8e8e93] truncate">{evt.body}</p>}
+                        </div>
+                        <span className="text-[10px] text-[#636366] flex-shrink-0 whitespace-nowrap">
+                          {new Date(evt.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className="text-sm text-[#8e8e93]">Hotel Loyalty Admin</span>
         </header>
 

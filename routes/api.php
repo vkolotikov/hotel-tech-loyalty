@@ -28,12 +28,16 @@ use App\Http\Controllers\Api\V1\Admin\PlannerController;
 use App\Http\Controllers\Api\V1\Admin\VenueController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
 use App\Http\Controllers\Api\V1\Admin\CrmAiController;
+use App\Http\Controllers\Api\V1\Admin\RealtimeController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
     // ─── Public ──────────────────────────────────────────────────────────────────
     Route::get('theme', [SettingsController::class, 'theme']);
+
+    // SSE stream — auth via query token (EventSource can't send headers)
+    Route::get('admin/realtime/stream', [RealtimeController::class, 'stream']);
 
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
@@ -248,6 +252,9 @@ Route::prefix('v1')->group(function () {
             // ─── CRM: AI Assistant ────────────────────────────────────────────
             Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
+
+            // ─── Realtime (polling fallback) ─────────────────────────────────
+            Route::get('realtime/poll',                    [RealtimeController::class, 'poll']);
         });
     });
 

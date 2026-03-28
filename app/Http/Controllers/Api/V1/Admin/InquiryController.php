@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Inquiry;
 use App\Models\Reservation;
+use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InquiryController extends Controller
 {
+    public function __construct(
+        protected RealtimeEventService $realtime,
+    ) {}
     public function index(Request $request): JsonResponse
     {
         $query = Inquiry::with(['guest:id,full_name,company,vip_level,nationality', 'property:id,name,code', 'corporateAccount:id,company_name']);
@@ -87,6 +91,12 @@ class InquiryController extends Controller
 
         $inquiry = Inquiry::create($v);
         $inquiry->load(['guest:id,full_name', 'property:id,name,code']);
+
+        $this->realtime->dispatch('inquiry', 'New Inquiry',
+            ($inquiry->inquiry_type ?? 'Inquiry') . ' from ' . ($inquiry->guest?->full_name ?? 'Unknown'),
+            ['id' => $inquiry->id, 'type' => $inquiry->inquiry_type, 'guest' => $inquiry->guest?->full_name, 'value' => $inquiry->total_value]
+        );
+
         return response()->json($inquiry, 201);
     }
 

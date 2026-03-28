@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
+use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReservationController extends Controller
 {
+    public function __construct(
+        protected RealtimeEventService $realtime,
+    ) {}
     public function index(Request $request): JsonResponse
     {
         $query = Reservation::with(['guest:id,full_name,company,vip_level,phone,email', 'property:id,name,code', 'corporateAccount:id,company_name']);
@@ -80,6 +84,12 @@ class ReservationController extends Controller
 
         $res = Reservation::create($v);
         $res->load(['guest:id,full_name', 'property:id,name,code']);
+
+        $this->realtime->dispatch('reservation', 'New Reservation',
+            "{$res->guest->full_name} — {$res->check_in} to {$res->check_out}",
+            ['id' => $res->id, 'guest' => $res->guest->full_name, 'property' => $res->property?->name]
+        );
+
         return response()->json($res, 201);
     }
 
@@ -157,6 +167,13 @@ class ReservationController extends Controller
     public function checkIn(Reservation $reservation): JsonResponse
     {
         $reservation->update(['status' => 'Checked In', 'checked_in_at' => now()]);
+        $reservation->load('guest:id,full_name');
+
+        $this->realtime->dispatch('arrival', 'Guest Checked In',
+            $reservation->guest?->full_name . ' has arrived',
+            ['id' => $reservation->id, 'guest' => $reservation->guest?->full_name, 'room' => $reservation->room_number]
+        );
+
         return response()->json($reservation);
     }
 
@@ -171,6 +188,12 @@ class ReservationController extends Controller
             $guest->update(['last_stay_date' => $reservation->check_out, 'last_activity_at' => now()]);
             if (!$guest->first_stay_date) $guest->update(['first_stay_date' => $reservation->check_in]);
         }
+
+        $this->realtime->dispatch('departure', 'Guest Checked Out',
+            $guest?->full_name . ' has departed',
+            ['id' => $reservation->id, 'guest' => $guest?->full_name, 'room' => $reservation->room_number]
+        );
+
         return response()->json($reservation);
     }
 

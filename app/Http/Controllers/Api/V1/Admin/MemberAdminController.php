@@ -12,6 +12,7 @@ use App\Services\LoyaltyService;
 use App\Services\NotificationService;
 use App\Services\OpenAiService;
 use App\Services\QrCodeService;
+use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,7 @@ class MemberAdminController extends Controller
         protected OpenAiService $openAi,
         protected QrCodeService $qrCode,
         protected GuestMemberLinkService $linkService,
+        protected RealtimeEventService $realtime,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -83,6 +85,11 @@ class MemberAdminController extends Controller
 
         // Auto-link existing CRM guests by email
         $this->linkService->linkMemberToGuests($member);
+
+        $this->realtime->dispatch('member', 'New Member Registered',
+            "{$user->name} joined as {$tier->name}",
+            ['id' => $member->id, 'name' => $user->name, 'tier' => $tier->name]
+        );
 
         return response()->json([
             'message' => 'Member created successfully',
@@ -232,6 +239,11 @@ class MemberAdminController extends Controller
 
         $this->notificationService->sendPointsEarned($member->fresh(), $points);
 
+        $this->realtime->dispatch('points', 'Points Awarded',
+            "+{$points} pts to {$member->user->name}",
+            ['id' => $member->id, 'name' => $member->user->name, 'points' => $points, 'action' => 'award']
+        );
+
         $message = $approvalStatus === 'pending_approval'
             ? 'Points submitted for approval'
             : 'Points awarded';
@@ -261,6 +273,11 @@ class MemberAdminController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        $this->realtime->dispatch('points', 'Points Redeemed',
+            "-{$validated['points']} pts from {$member->user->name}",
+            ['id' => $member->id, 'name' => $member->user->name, 'points' => $validated['points'], 'action' => 'redeem']
+        );
 
         return response()->json(['message' => 'Points redeemed', 'transaction' => $transaction]);
     }
