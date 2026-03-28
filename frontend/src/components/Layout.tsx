@@ -13,30 +13,48 @@ import {
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
 
-const navItems = [
-  { path: '/',             label: 'Dashboard',     icon: LayoutDashboard },
-  { path: '/scan',         label: 'Scan',          icon: Scan },
-  { path: '/members',      label: 'Members',       icon: Users },
-  { path: '/guests',       label: 'Guests',        icon: UserCheck },
-  { path: '/inquiries',    label: 'Inquiries',     icon: FileText },
-  { path: '/reservations', label: 'Reservations',  icon: CalendarCheck },
-  { path: '/corporate',    label: 'Corporate',     icon: Briefcase },
-  { path: '/planner',      label: 'Planner',       icon: ClipboardList },
-  { path: '/venues',       label: 'Venues',        icon: MapPin },
-  { path: '/offers',       label: 'Offers',        icon: Gift },
-  { path: '/tiers',        label: 'Tiers',         icon: Crown },
-  { path: '/benefits',     label: 'Benefits',      icon: Award },
-  { path: '/properties',   label: 'Properties',    icon: Building2 },
-  { path: '/analytics',    label: 'Analytics',     icon: BarChart2 },
-  { path: '/ai',           label: 'AI Insights',   icon: Sparkles },
-  { path: '/notifications',label: 'Campaigns',     icon: Bell },
-  { path: '/settings',     label: 'Settings',      icon: Settings },
+// gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
+export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
+
+const navItems: { path: string; label: string; icon: any; gate: NavGate }[] = [
+  { path: '/',             label: 'Dashboard',     icon: LayoutDashboard,  gate: 'all' },
+  { path: '/scan',         label: 'Scan',          icon: Scan,             gate: 'all' },
+  { path: '/members',      label: 'Members',       icon: Users,            gate: 'all' },
+  { path: '/guests',       label: 'Guests',        icon: UserCheck,        gate: 'all' },
+  { path: '/inquiries',    label: 'Inquiries',     icon: FileText,         gate: 'all' },
+  { path: '/reservations', label: 'Reservations',  icon: CalendarCheck,    gate: 'all' },
+  { path: '/corporate',    label: 'Corporate',     icon: Briefcase,        gate: 'admin' },
+  { path: '/planner',      label: 'Planner',       icon: ClipboardList,    gate: 'all' },
+  { path: '/venues',       label: 'Venues',        icon: MapPin,           gate: 'admin' },
+  { path: '/offers',       label: 'Offers',        icon: Gift,             gate: 'can_manage_offers' },
+  { path: '/tiers',        label: 'Tiers',         icon: Crown,            gate: 'admin' },
+  { path: '/benefits',     label: 'Benefits',      icon: Award,            gate: 'admin' },
+  { path: '/properties',   label: 'Properties',    icon: Building2,        gate: 'admin' },
+  { path: '/analytics',    label: 'Analytics',     icon: BarChart2,        gate: 'can_view_analytics' },
+  { path: '/ai',           label: 'AI Insights',   icon: Sparkles,         gate: 'can_view_analytics' },
+  { path: '/notifications',label: 'Campaigns',     icon: Bell,             gate: 'admin' },
+  { path: '/settings',     label: 'Settings',      icon: Settings,         gate: 'admin' },
 ]
+
+export const routeGates: Record<string, NavGate> = Object.fromEntries(
+  navItems.filter(i => i.gate !== 'all').map(i => [i.path, i.gate])
+)
+
+export function canAccess(gate: NavGate, staff: { role: string; can_manage_offers: boolean; can_view_analytics: boolean } | null): boolean {
+  if (!staff) return gate === 'all'
+  const isAdmin = staff.role === 'super_admin' || staff.role === 'manager'
+  if (isAdmin) return true
+  if (gate === 'all') return true
+  if (gate === 'admin') return false
+  return !!staff[gate]
+}
 
 export function Layout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user, staff, logout } = useAuthStore()
+  const visibleNav = navItems.filter(item => canAccess(item.gate, staff))
+  const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
 
   const { data: settingsData } = useQuery({
     queryKey: ['settings-logo'],
@@ -84,7 +102,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => (
+          {visibleNav.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
@@ -109,7 +127,10 @@ export function Layout({ children }: { children: ReactNode }) {
                 {user?.name?.charAt(0)}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
+                  {roleName && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-medium flex-shrink-0">{roleName}</span>}
+                </div>
                 <p className="text-xs text-[#8e8e93] truncate">{user?.email}</p>
               </div>
             </div>

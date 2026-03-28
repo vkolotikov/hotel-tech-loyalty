@@ -11,6 +11,9 @@ interface User {
 interface Staff {
   role: string
   hotel_name: string
+  can_award_points: boolean
+  can_redeem_points: boolean
+  can_manage_offers: boolean
   can_view_analytics: boolean
 }
 

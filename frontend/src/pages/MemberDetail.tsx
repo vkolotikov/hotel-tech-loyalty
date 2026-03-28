@@ -6,6 +6,7 @@ import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Sparkles, Pencil, Save, X, Camera, Hotel, FileText, Crown } from 'lucide-react'
+import { useAuthStore } from '../stores/authStore'
 
 export function MemberDetail() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +19,8 @@ export function MemberDetail() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const { staff } = useAuthStore()
+  const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
 
   const { data, isLoading } = useQuery({
     queryKey: ['member', id],
@@ -175,14 +178,16 @@ export function MemberDetail() {
           </div>
           <p className="text-sm text-[#8e8e93] mt-0.5">{user?.email} · {member?.member_number}</p>
         </div>
-        <button
-          onClick={() => refetchAi()}
-          disabled={aiLoading}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
-        >
-          <Sparkles size={15} />
-          {aiLoading ? 'Analyzing...' : 'AI Analysis'}
-        </button>
+        {(isAdmin || staff?.can_view_analytics) && (
+          <button
+            onClick={() => refetchAi()}
+            disabled={aiLoading}
+            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          >
+            <Sparkles size={15} />
+            {aiLoading ? 'Analyzing...' : 'AI Analysis'}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -317,7 +322,7 @@ export function MemberDetail() {
         {/* Right Column */}
         <div className="space-y-4">
           {/* Award Points */}
-          <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+          {(isAdmin || staff?.can_award_points) && <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
             <h3 className="font-semibold text-white mb-4">Award Points</h3>
             <input
               type="number"
@@ -340,10 +345,10 @@ export function MemberDetail() {
             >
               {awardMutation.isPending ? 'Awarding...' : 'Award Points'}
             </button>
-          </div>
+          </div>}
 
           {/* Redeem Points */}
-          <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+          {(isAdmin || staff?.can_redeem_points) && <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
             <h3 className="font-semibold text-white mb-4">Redeem Points</h3>
             <input
               type="number"
@@ -366,7 +371,7 @@ export function MemberDetail() {
             >
               {redeemMutation.isPending ? 'Redeeming...' : 'Redeem Points'}
             </button>
-          </div>
+          </div>}
 
           {/* Member Info / Edit */}
           <div className="bg-dark-surface rounded-xl border border-dark-border p-5">

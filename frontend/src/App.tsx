@@ -5,7 +5,8 @@ import { Toaster } from 'react-hot-toast'
 import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores/authStore'
 import { APP_BASE } from './lib/api'
-import { Layout } from './components/Layout'
+import { Layout, canAccess } from './components/Layout'
+import type { NavGate } from './components/Layout'
 import { useTheme } from './hooks/useTheme'
 
 // Eager: Login (entry point) + Dashboard (most visited)
@@ -51,10 +52,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>
 }
 
-function LazyRoute({ children }: { children: React.ReactNode }) {
+function GatedRoute({ gate, children }: { gate?: NavGate; children: React.ReactNode }) {
+  const { staff } = useAuthStore()
+  if (gate && !canAccess(gate, staff)) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+function LazyRoute({ children, gate }: { children: React.ReactNode; gate?: NavGate }) {
   return (
     <ProtectedRoute>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      <GatedRoute gate={gate}>
+        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      </GatedRoute>
     </ProtectedRoute>
   )
 }
@@ -71,20 +80,20 @@ export default function App() {
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
           <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
-          <Route path="/offers" element={<LazyRoute><Offers /></LazyRoute>} />
-          <Route path="/analytics" element={<LazyRoute><Analytics /></LazyRoute>} />
-          <Route path="/ai" element={<LazyRoute><AiInsights /></LazyRoute>} />
-          <Route path="/notifications" element={<LazyRoute><Notifications /></LazyRoute>} />
-          <Route path="/tiers" element={<LazyRoute><Tiers /></LazyRoute>} />
-          <Route path="/benefits" element={<LazyRoute><Benefits /></LazyRoute>} />
-          <Route path="/properties" element={<LazyRoute><Properties /></LazyRoute>} />
+          <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
+          <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
+          <Route path="/ai" element={<LazyRoute gate="can_view_analytics"><AiInsights /></LazyRoute>} />
+          <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
+          <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />
+          <Route path="/benefits" element={<LazyRoute gate="admin"><Benefits /></LazyRoute>} />
+          <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/guests" element={<LazyRoute><Guests /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/reservations" element={<LazyRoute><Reservations /></LazyRoute>} />
-          <Route path="/corporate" element={<LazyRoute><Corporate /></LazyRoute>} />
+          <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
-          <Route path="/venues" element={<LazyRoute><Venues /></LazyRoute>} />
-          <Route path="/settings" element={<LazyRoute><Settings /></LazyRoute>} />
+          <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
+          <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Suspense fallback={null}><AiChat /></Suspense>
