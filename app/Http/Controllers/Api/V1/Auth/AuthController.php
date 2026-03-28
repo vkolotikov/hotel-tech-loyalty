@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
 use App\Models\Staff;
 use App\Models\User;
+use App\Services\GuestMemberLinkService;
 use App\Services\LoyaltyService;
 use App\Models\HotelSetting;
 use App\Services\QrCodeService;
@@ -19,6 +20,7 @@ class AuthController extends Controller
     public function __construct(
         protected LoyaltyService $loyaltyService,
         protected QrCodeService $qrService,
+        protected GuestMemberLinkService $linkService,
     ) {}
 
     public function register(Request $request): JsonResponse
@@ -75,6 +77,9 @@ class AuthController extends Controller
             $this->loyaltyService->awardPoints($referredBy, (int) HotelSetting::getValue('referrer_bonus_points', 250), "Referral: {$user->name} joined", 'referral');
             $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('referee_bonus_points', 250), 'Referral bonus for joining via referral', 'referral');
         }
+
+        // Auto-link existing CRM guests by email
+        $this->linkService->linkMemberToGuests($member);
 
         $token = $user->createToken('mobile-app')->plainTextToken;
 

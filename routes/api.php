@@ -170,6 +170,9 @@ Route::prefix('v1')->group(function () {
             Route::put('settings',                        [SettingsController::class, 'update']);
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
 
+            // ─── Guest-Member Auto-Link ───────────────────────────────────────
+            Route::post('guests/backfill-links',          [GuestController::class, 'backfillLinks']);
+
             // ─── CRM: Guests ──────────────────────────────────────────────────
             Route::get('guests',                          [GuestController::class, 'index']);
             Route::post('guests',                         [GuestController::class, 'store']);

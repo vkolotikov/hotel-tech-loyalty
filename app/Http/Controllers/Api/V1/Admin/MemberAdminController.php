@@ -7,6 +7,7 @@ use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\User;
+use App\Services\GuestMemberLinkService;
 use App\Services\LoyaltyService;
 use App\Services\NotificationService;
 use App\Services\OpenAiService;
@@ -22,6 +23,7 @@ class MemberAdminController extends Controller
         protected NotificationService $notificationService,
         protected OpenAiService $openAi,
         protected QrCodeService $qrCode,
+        protected GuestMemberLinkService $linkService,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -79,6 +81,9 @@ class MemberAdminController extends Controller
         // Award welcome bonus
         $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('welcome_bonus_points', 500), 'Welcome bonus — registered by staff', 'bonus');
 
+        // Auto-link existing CRM guests by email
+        $this->linkService->linkMemberToGuests($member);
+
         return response()->json([
             'message' => 'Member created successfully',
             'member'  => $member->load(['user', 'tier']),
@@ -108,6 +113,10 @@ class MemberAdminController extends Controller
             'pointsTransactions' => fn($q) => $q->latest()->limit(20),
             'bookings'           => fn($q) => $q->latest()->limit(10),
             'nfcCards',
+            'guests' => fn($q) => $q->with([
+                'reservations' => fn($r) => $r->with('property:id,name,code')->latest('check_in')->limit(10),
+                'inquiries'    => fn($r) => $r->with('property:id,name,code')->latest()->limit(10),
+            ]),
         ])->findOrFail($id);
 
         $stats = [
@@ -115,11 +124,31 @@ class MemberAdminController extends Controller
             'total_spent'    => $member->bookings->sum('total_amount'),
         ];
 
+        // Aggregate CRM guest data for linked guests
+        $linkedGuest = $member->guests->first();
+        $guestData = null;
+        if ($linkedGuest) {
+            $guestData = [
+                'id'              => $linkedGuest->id,
+                'full_name'       => $linkedGuest->full_name,
+                'vip_level'       => $linkedGuest->vip_level,
+                'total_stays'     => $linkedGuest->total_stays,
+                'total_nights'    => $linkedGuest->total_nights,
+                'total_revenue'   => $linkedGuest->total_revenue,
+                'last_stay_date'  => $linkedGuest->last_stay_date,
+                'company'         => $linkedGuest->company,
+                'nationality'     => $linkedGuest->nationality,
+                'reservations'    => $linkedGuest->reservations,
+                'inquiries'       => $linkedGuest->inquiries,
+            ];
+        }
+
         return response()->json([
             'member'               => $member,
             'stats'                => $stats,
             'recent_transactions'  => $member->pointsTransactions,
             'progress'             => $member->getProgressToNextTier(),
+            'linked_guest'         => $guestData,
         ]);
     }
 

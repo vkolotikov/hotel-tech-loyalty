@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Download, Filter, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Download, Filter, Sparkles, Loader2, Link2, RefreshCw } from 'lucide-react'
 
 const VIP_COLORS: Record<string, string> = {
   Standard: 'bg-gray-500/20 text-gray-400',
@@ -39,6 +39,7 @@ export function Guests() {
   const [captureText, setCaptureText] = useState('')
   const [captureLoading, setCaptureLoading] = useState(false)
   const [captureResult, setCaptureResult] = useState<any>(null)
+  const [backfilling, setBackfilling] = useState(false)
 
   const params: any = { page, per_page: 25, sort, dir }
   if (search) params.search = search
@@ -69,6 +70,15 @@ export function Guests() {
     try {
       await triggerExport('/v1/admin/guests/export', { search, country: countryFilter, guest_type: guestType, vip_level: vipLevel, lifecycle_status: lifecycle, lead_source: source })
     } catch { toast.error('Export failed') } finally { setExporting(false) }
+  }
+
+  const handleBackfill = async () => {
+    setBackfilling(true)
+    try {
+      const res = await api.post('/v1/admin/guests/backfill-links')
+      toast.success(res.data.message)
+      qc.invalidateQueries({ queryKey: ['guests'] })
+    } catch { toast.error('Backfill failed') } finally { setBackfilling(false) }
   }
 
   const guests = data?.data ?? []
@@ -104,6 +114,9 @@ export function Guests() {
           <p className="text-sm text-[#8e8e93] mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleBackfill} disabled={backfilling} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-blue-500 text-[#8e8e93] hover:text-blue-400 font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title="Link unlinked guests to loyalty members by email match">
+            {backfilling ? <RefreshCw size={14} className="animate-spin" /> : <Link2 size={14} />} {backfilling ? 'Linking...' : 'Backfill Links'}
+          </button>
           <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-sm px-3 py-2 rounded-lg transition-colors">
             <Sparkles size={14} /> AI Capture
           </button>
@@ -166,6 +179,7 @@ export function Guests() {
                 <SortHeader col="company" label="Company" />
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Nationality</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">VIP Level</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Loyalty</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Guest Type</th>
                 <SortHeader col="total_stays" label="Total Stays" />
                 <SortHeader col="total_revenue" label="Total Revenue" />
@@ -175,8 +189,8 @@ export function Guests() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={12} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && guests.length === 0 && <tr><td colSpan={12} className="px-4 py-8 text-center text-[#636366]">No guests found</td></tr>}
+              {isLoading && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && guests.length === 0 && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">No guests found</td></tr>}
               {guests.map((g: any) => (
                 <tr key={g.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
                   <td className="px-4 py-3 font-medium text-white">{g.full_name}</td>
@@ -188,6 +202,15 @@ export function Guests() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${VIP_COLORS[g.vip_level] ?? VIP_COLORS.Standard}`}>
                       {g.vip_level ?? 'Standard'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.loyalty_tier ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-primary-500/20 text-primary-400">
+                        <Link2 size={10} /> {g.loyalty_tier}
+                      </span>
+                    ) : (
+                      <span className="text-[#636366] text-xs">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.guest_type ?? '—'}</td>
                   <td className="px-4 py-3 text-[#a0a0a0] text-center">{g.total_stays ?? 0}</td>

@@ -5,7 +5,7 @@ import { api, resolveImage } from '../lib/api'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Sparkles, Pencil, Save, X, Camera } from 'lucide-react'
+import { ArrowLeft, Sparkles, Pencil, Save, X, Camera, Hotel, FileText, Crown } from 'lucide-react'
 
 export function MemberDetail() {
   const { id } = useParams<{ id: string }>()
@@ -227,6 +227,91 @@ export function MemberDetail() {
               ))}
             </div>
           </div>
+
+          {/* Linked CRM Guest Profile */}
+          {data?.linked_guest && (
+            <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
+              <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2">
+                <Crown size={16} className="text-primary-400" />
+                <h2 className="font-semibold text-white">Linked CRM Guest</h2>
+                {data.linked_guest.vip_level && data.linked_guest.vip_level !== 'Standard' && (
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-400">
+                    VIP: {data.linked_guest.vip_level}
+                  </span>
+                )}
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Stays', value: data.linked_guest.total_stays ?? 0, color: 'text-blue-400' },
+                    { label: 'Total Nights', value: data.linked_guest.total_nights ?? 0, color: 'text-purple-400' },
+                    { label: 'CRM Revenue', value: `$${Number(data.linked_guest.total_revenue ?? 0).toLocaleString()}`, color: 'text-[#32d74b]' },
+                    { label: 'Last Stay', value: data.linked_guest.last_stay_date ? new Date(data.linked_guest.last_stay_date).toLocaleDateString() : '—', color: 'text-[#a0a0a0]' },
+                  ].map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-xs text-[#8e8e93]">{s.label}</p>
+                      <p className={`text-lg font-bold mt-0.5 ${s.color}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Reservations */}
+                {(data.linked_guest.reservations?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
+                      <Hotel size={13} /> Reservations
+                    </h3>
+                    <div className="space-y-1.5">
+                      {data.linked_guest.reservations.slice(0, 5).map((r: any) => (
+                        <div key={r.id} className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
+                          <div>
+                            <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
+                            <span className="text-[#636366] ml-2">{r.room_type}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[#a0a0a0]">{r.check_in} → {r.check_out}</span>
+                            <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              r.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
+                              r.status === 'checked_in' ? 'bg-blue-500/20 text-blue-400' :
+                              r.status === 'checked_out' ? 'bg-gray-500/20 text-gray-400' :
+                              'bg-yellow-500/20 text-yellow-400'
+                            }`}>{r.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Inquiries */}
+                {(data.linked_guest.inquiries?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
+                      <FileText size={13} /> Inquiries
+                    </h3>
+                    <div className="space-y-1.5">
+                      {data.linked_guest.inquiries.slice(0, 5).map((inq: any) => (
+                        <div key={inq.id} className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {inq.estimated_value && <span className="text-[#32d74b]">${Number(inq.estimated_value).toLocaleString()}</span>}
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              inq.status === 'won' ? 'bg-green-500/20 text-green-400' :
+                              inq.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                              inq.status === 'proposal' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>{inq.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column */}

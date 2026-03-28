@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LoyaltyMember extends Model
 {
@@ -108,6 +109,11 @@ class LoyaltyMember extends Model
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
+    }
+
+    public function guests(): HasMany
+    {
+        return $this->hasMany(Guest::class, 'member_id');
     }
 
     public function activeExpiryBuckets(): HasMany

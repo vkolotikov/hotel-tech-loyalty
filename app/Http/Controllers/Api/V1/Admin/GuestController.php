@@ -8,12 +8,16 @@ use App\Models\GuestActivity;
 use App\Models\GuestImportRun;
 use App\Models\GuestSegment;
 use App\Models\GuestTag;
+use App\Services\GuestMemberLinkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GuestController extends Controller
 {
+    public function __construct(
+        protected GuestMemberLinkService $linkService,
+    ) {}
     public function index(Request $request): JsonResponse
     {
         $query = Guest::query();
@@ -69,7 +73,8 @@ class GuestController extends Controller
         if (!empty($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
         $guest = Guest::create($v);
-        return response()->json($guest, 201);
+        $this->linkService->linkGuestToMember($guest);
+        return response()->json($guest->fresh(), 201);
     }
 
     public function show(Guest $guest): JsonResponse
@@ -127,13 +132,25 @@ class GuestController extends Controller
         if (isset($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
         $guest->update($v);
-        return response()->json($guest);
+        if (isset($v['email'])) {
+            $this->linkService->linkGuestToMember($guest->fresh());
+        }
+        return response()->json($guest->fresh());
     }
 
     public function destroy(Guest $guest): JsonResponse
     {
         $guest->delete();
         return response()->json(['message' => 'Guest deleted']);
+    }
+
+    public function backfillLinks(): JsonResponse
+    {
+        $result = $this->linkService->backfillAll();
+        return response()->json([
+            'message' => "Backfill complete: {$result['linked']} of {$result['checked']} guests linked to members.",
+            ...$result,
+        ]);
     }
 
     public function addActivity(Request $request, Guest $guest): JsonResponse
