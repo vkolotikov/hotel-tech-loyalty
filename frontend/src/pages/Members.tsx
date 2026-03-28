@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Search, ChevronRight, Plus, X } from 'lucide-react'
-import { api, resolveImageUrl } from '../lib/api'
+import { api } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
@@ -131,7 +131,7 @@ export function Members() {
                       <div className="flex items-center gap-3">
                         {m.user?.avatar_url ? (
                           <img
-                            src={resolveImageUrl(m.user.avatar_url)!}
+                            src={m.user.avatar_url.startsWith('http') ? m.user.avatar_url : `${(import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public').replace('/api', '')}${m.user.avatar_url}`}
                             alt={m.user.name}
                             className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                           />

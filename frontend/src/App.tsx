@@ -22,6 +22,8 @@ import { Guests } from './pages/Guests'
 import { Inquiries } from './pages/Inquiries'
 import { Reservations } from './pages/Reservations'
 import { Corporate } from './pages/Corporate'
+import { Planner } from './pages/Planner'
+import { Venues } from './pages/Venues'
 import AiChat from './components/AiChat'
 import { useTheme } from './hooks/useTheme'
 
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="/inquiries" element={<ProtectedRoute><Inquiries /></ProtectedRoute>} />
           <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
           <Route path="/corporate" element={<ProtectedRoute><Corporate /></ProtectedRoute>} />
+          <Route path="/planner" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
+          <Route path="/venues" element={<ProtectedRoute><Venues /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Menu, X, Hotel, Scan,
   Crown, Award, Building2, UserCheck, FileText,
-  CalendarCheck, Briefcase
+  CalendarCheck, Briefcase, ClipboardList, MapPin
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, API_URL } from '../lib/api'
@@ -21,6 +21,8 @@ const navItems = [
   { path: '/inquiries',    label: 'Inquiries',     icon: FileText },
   { path: '/reservations', label: 'Reservations',  icon: CalendarCheck },
   { path: '/corporate',    label: 'Corporate',     icon: Briefcase },
+  { path: '/planner',      label: 'Planner',       icon: ClipboardList },
+  { path: '/venues',       label: 'Venues',        icon: MapPin },
   { path: '/offers',       label: 'Offers',        icon: Gift },
   { path: '/tiers',        label: 'Tiers',         icon: Crown },
   { path: '/benefits',     label: 'Benefits',      icon: Award },
