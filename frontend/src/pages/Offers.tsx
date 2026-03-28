@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Star, Sparkles, Upload } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, resolveImage } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import { format } from 'date-fns'
@@ -51,7 +51,7 @@ export function Offers() {
               {offer.image_url && (
                 <div className="-mx-6 -mt-6 mb-4">
                   <img
-                    src={offer.image_url.startsWith('http') ? offer.image_url : `${(import.meta.env.VITE_API_URL || 'http://localhost/hotel-loyalty/backend/public').replace('/api', '')}${offer.image_url}`}
+                    src={resolveImage(offer.image_url)!}
                     alt={offer.title}
                     className="w-full h-36 object-cover"
                   />

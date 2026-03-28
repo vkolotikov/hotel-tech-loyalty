@@ -11,7 +11,7 @@ import {
   CalendarCheck, Briefcase, ClipboardList, MapPin
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-import { api, API_URL } from '../lib/api'
+import { api, resolveImage } from '../lib/api'
 
 const navItems = [
   { path: '/',             label: 'Dashboard',     icon: LayoutDashboard },
@@ -50,11 +50,7 @@ export function Layout({ children }: { children: ReactNode }) {
     for (const group of Object.values(groups) as any[][]) {
       if (!Array.isArray(group)) continue
       const found = group.find((s: any) => s.key === 'company_logo')
-      if (found?.value) {
-        const v = found.value as string
-        if (v.startsWith('http')) return v
-        return API_URL + v
-      }
+      if (found?.value) return resolveImage(found.value as string)
     }
     return null
   })()

@@ -13,6 +13,15 @@ export const APP_BASE = (() => {
   return ''
 })()
 
+/** Resolve a storage image URL for display. Handles absolute localhost URLs and relative /storage/ paths. */
+export function resolveImage(url: string | null | undefined): string | null {
+  if (!url) return null
+  const m = url.match(/(\/storage\/.*)/)
+  if (m) return API_URL + m[1]
+  if (url.startsWith('/')) return API_URL + url
+  return url
+}
+
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
