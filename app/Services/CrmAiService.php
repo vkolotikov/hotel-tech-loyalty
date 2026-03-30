@@ -74,9 +74,9 @@ class CrmAiService
         if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
 
         $settings  = CrmSetting::all()->pluck('value', 'key');
-        $roomTypes = json_decode($settings['room_types'] ?? '[]', true);
-        $sources   = json_decode($settings['lead_sources'] ?? '[]', true);
-        $inquiryTypes = json_decode($settings['inquiry_types'] ?? '[]', true);
+        $roomTypes = ($settings['room_types'] ?? []);
+        $sources   = ($settings['lead_sources'] ?? []);
+        $inquiryTypes = ($settings['inquiry_types'] ?? []);
 
         $system = "You extract guest inquiry information from raw text (emails, WhatsApp, phone notes, booking requests). "
             . "This is a hotel CRM. Extract guest and inquiry details. "
@@ -173,9 +173,9 @@ class CrmAiService
         if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
 
         $settings  = CrmSetting::all()->pluck('value', 'key');
-        $industries = json_decode($settings['industries'] ?? '[]', true);
-        $rateTypes  = json_decode($settings['rate_types'] ?? '[]', true);
-        $managers   = json_decode($settings['account_managers'] ?? '[]', true);
+        $industries = ($settings['industries'] ?? []);
+        $rateTypes  = ($settings['rate_types'] ?? []);
+        $managers   = ($settings['account_managers'] ?? []);
 
         $system = "You extract corporate account information from raw unstructured text (emails, contracts, proposals, business cards, meeting notes). "
             . "This is a hotel CRM for managing corporate clients with negotiated rates. "
@@ -259,13 +259,13 @@ class CrmAiService
     private function buildSystemPrompt(): string
     {
         $settings = CrmSetting::all()->pluck('value', 'key');
-        $roomTypes  = implode(', ', json_decode($settings['room_types'] ?? '[]', true));
-        $inqTypes   = implode(', ', json_decode($settings['inquiry_types'] ?? '[]', true));
-        $inqStatuses= implode(', ', json_decode($settings['inquiry_statuses'] ?? '[]', true));
-        $resStatuses= implode(', ', json_decode($settings['reservation_statuses'] ?? '[]', true));
-        $employees  = implode(', ', json_decode($settings['employees'] ?? '[]', true));
-        $currency   = json_decode($settings['currency_symbol'] ?? '"€"', true);
-        $mealPlans  = implode(', ', json_decode($settings['meal_plans'] ?? '[]', true));
+        $roomTypes  = implode(', ', ($settings['room_types'] ?? []));
+        $inqTypes   = implode(', ', ($settings['inquiry_types'] ?? []));
+        $inqStatuses= implode(', ', ($settings['inquiry_statuses'] ?? []));
+        $resStatuses= implode(', ', ($settings['reservation_statuses'] ?? []));
+        $employees  = implode(', ', ($settings['employees'] ?? []));
+        $currency   = ($settings['currency_symbol'] ?? '€');
+        $mealPlans  = implode(', ', ($settings['meal_plans'] ?? []));
 
         $properties = Property::where('is_active', true)->get(['id', 'name', 'code'])->map(fn($p) => "{$p->name} ({$p->code}, ID:{$p->id})")->implode(', ');
 
@@ -888,7 +888,8 @@ PROMPT;
             ->orderByDesc('week_points')->limit(5)->get()
             ->map(fn($m) => ['name' => $m->user?->name, 'points' => (int) $m->week_points])->toArray();
 
-        $currency = json_decode(CrmSetting::where('key', 'currency_symbol')->value('value') ?? '"€"', true);
+        $currencyRaw = CrmSetting::where('key', 'currency_symbol')->value('value') ?? '€';
+        $currency = is_string($currencyRaw) ? (json_decode($currencyRaw, true) ?? $currencyRaw) : $currencyRaw;
 
         $report = [
             'period'       => "{$from} to {$to}",
