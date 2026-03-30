@@ -68,7 +68,7 @@ class SaasAuthMiddleware
      */
     private function verifyJwt(string $token): array
     {
-        $secret = env('SAAS_JWT_SECRET', '');
+        $secret = config('services.saas.jwt_secret', '');
         if (!$secret) {
             return ['valid' => false, 'error' => 'JWT secret not configured'];
         }

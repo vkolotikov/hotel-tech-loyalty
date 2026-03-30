@@ -27,8 +27,8 @@ class CrmAiService
 
     public function __construct()
     {
-        $this->apiKey = env('ANTHROPIC_API_KEY', '');
-        $this->model  = env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514');
+        $this->apiKey = config('services.anthropic.api_key', '');
+        $this->model  = config('services.anthropic.model', 'claude-sonnet-4-20250514');
     }
 
     /* ────────── Public API ────────── */
