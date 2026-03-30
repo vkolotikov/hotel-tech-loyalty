@@ -87,8 +87,19 @@ export function useSettings(): CrmSettings {
     if (typeof val === 'string') {
       try { parsed = JSON.parse(val) } catch { /* keep as string */ }
     }
+    // If an object with numeric keys came back (PHP associative array), convert to array
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const defaultVal = (DEFAULTS as any)[key]
+      if (Array.isArray(defaultVal)) {
+        parsed = Object.values(parsed)
+      }
+    }
     if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
       parsed = parsed.map((g: any) => g.name ?? String(g))
+    }
+    // Ensure array fields stay arrays
+    if (Array.isArray((DEFAULTS as any)[key]) && !Array.isArray(parsed)) {
+      continue // skip bad value, keep default
     }
     merged[key] = parsed
   }
