@@ -105,7 +105,7 @@ export function Venues() {
     queryFn: () => api.get('/v1/admin/properties', { params: { per_page: 200 } }).then(r => r.data),
     staleTime: 5 * 60 * 1000,
   })
-  const properties = propertiesData?.data ?? propertiesData ?? []
+  const properties = propertiesData?.properties ?? propertiesData?.data ?? (Array.isArray(propertiesData) ? propertiesData : [])
 
   const { data: venuesData } = useQuery({
     queryKey: ['venues-all'],

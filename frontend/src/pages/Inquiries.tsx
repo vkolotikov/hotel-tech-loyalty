@@ -59,7 +59,7 @@ export function Inquiries() {
     queryFn: () => api.get('/v1/admin/properties', { params: { per_page: 200 } }).then(r => r.data),
     staleTime: 5 * 60 * 1000,
   })
-  const properties: any[] = propertiesData?.data ?? propertiesData ?? []
+  const properties: any[] = propertiesData?.properties ?? propertiesData?.data ?? (Array.isArray(propertiesData) ? propertiesData : [])
 
   const params: any = { page, per_page: 25, sort, dir }
   if (search) params.search = search
