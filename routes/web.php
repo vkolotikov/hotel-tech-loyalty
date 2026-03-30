@@ -23,7 +23,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/).*$');
+})->where('any', '^(?!api/|storage/|spa/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
