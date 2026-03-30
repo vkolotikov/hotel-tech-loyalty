@@ -268,6 +268,7 @@ Route::prefix('v1')->group(function () {
             Route::put('crm-settings/{key}',              [CrmSettingsController::class, 'update']);
 
             // ─── CRM: AI Assistant ────────────────────────────────────────────
+            Route::get('crm-ai/diagnose',                 [CrmAiController::class, 'diagnose']);
             Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
