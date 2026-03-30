@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
@@ -11,11 +12,13 @@ use App\Services\GuestMemberLinkService;
 use App\Services\LoyaltyService;
 use App\Services\NotificationService;
 use App\Services\OpenAiService;
+use App\Services\AnalyticsService;
 use App\Services\QrCodeService;
 use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MemberAdminController extends Controller
 {
@@ -91,6 +94,13 @@ class MemberAdminController extends Controller
             ['id' => $member->id, 'name' => $user->name, 'tier' => $tier->name]
         );
 
+        AuditLog::record('member_created', $member,
+            ['name' => $user->name, 'email' => $user->email, 'tier' => $tier->name],
+            [], $request->user(), "Member '{$user->name}' created"
+        );
+
+        AnalyticsService::clearDashboardCache();
+
         return response()->json([
             'message' => 'Member created successfully',
             'member'  => $member->load(['user', 'tier']),
@@ -162,6 +172,7 @@ class MemberAdminController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $member = LoyaltyMember::findOrFail($id);
+        $oldTierId = $member->tier_id;
 
         $validated = $request->validate([
             'is_active'         => 'sometimes|boolean',
@@ -175,6 +186,10 @@ class MemberAdminController extends Controller
             'date_of_birth'     => 'nullable|date',
             'avatar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
+
+        // Capture old values for audit
+        $oldMemberValues = $member->only(['is_active', 'marketing_consent', 'tier_id']);
+        $oldUserValues = $member->user->only(['name', 'email', 'phone', 'nationality', 'language', 'date_of_birth']);
 
         // Update member fields
         $memberFields = array_filter(
@@ -200,6 +215,28 @@ class MemberAdminController extends Controller
         if (!empty($userFields)) {
             $member->user->update($userFields);
         }
+
+        // Audit: general member update
+        $allChanges = array_merge($memberFields, $userFields);
+        if (!empty($allChanges)) {
+            AuditLog::record('member_updated', $member, $allChanges,
+                array_merge($oldMemberValues, $oldUserValues),
+                $request->user(), "Member #{$member->member_number} updated"
+            );
+        }
+
+        // Audit: specific tier override
+        if (isset($memberFields['tier_id']) && (int) $memberFields['tier_id'] !== (int) $oldTierId) {
+            $oldTierName = LoyaltyTier::find($oldTierId)?->name ?? 'Unknown';
+            $newTierName = LoyaltyTier::find($memberFields['tier_id'])?->name ?? 'Unknown';
+            AuditLog::record('tier_override', $member,
+                ['tier_id' => $memberFields['tier_id'], 'tier_name' => $newTierName],
+                ['tier_id' => $oldTierId, 'tier_name' => $oldTierName],
+                $request->user(), "Tier override: {$oldTierName} → {$newTierName}"
+            );
+        }
+
+        AnalyticsService::clearDashboardCache();
 
         return response()->json([
             'message' => 'Member updated',
@@ -302,6 +339,35 @@ class MemberAdminController extends Controller
         }
 
         return response()->json(['message' => 'Transaction reversed', 'reversal' => $reversal]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $query = LoyaltyMember::with(['user:id,name,email,phone', 'tier:id,name'])
+            ->when($request->search, function ($q, $search) {
+                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%"))
+                  ->orWhere('member_number', 'like', "%{$search}%");
+            })
+            ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
+            ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->orderByDesc('created_at');
+
+        return response()->streamDownload(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['ID','Member Number','Name','Email','Phone','Tier','Current Points','Lifetime Points','Active','Joined']);
+            $query->chunk(500, function ($rows) use ($out) {
+                foreach ($rows as $m) {
+                    fputcsv($out, [
+                        $m->id, $m->member_number, $m->user?->name, $m->user?->email, $m->user?->phone,
+                        $m->tier?->name, $m->current_points, $m->lifetime_points,
+                        $m->is_active ? 'Yes' : 'No', $m->joined_at?->toDateString(),
+                    ]);
+                }
+            });
+            fclose($out);
+        }, 'members-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function aiInsights(int $id): JsonResponse

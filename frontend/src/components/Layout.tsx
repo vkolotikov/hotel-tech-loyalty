@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Menu, X, Hotel, Scan,
   Crown, Award, Building2, UserCheck, FileText,
-  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio
+  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -34,6 +34,8 @@ const navItems: { path: string; label: string; icon: any; gate: NavGate }[] = [
   { path: '/analytics',    label: 'Analytics',     icon: BarChart2,        gate: 'can_view_analytics' },
   { path: '/ai',           label: 'AI Insights',   icon: Sparkles,         gate: 'can_view_analytics' },
   { path: '/notifications',label: 'Campaigns',     icon: Bell,             gate: 'admin' },
+  { path: '/email-templates',label: 'Email Templates', icon: Mail,           gate: 'admin' },
+  { path: '/audit-log',    label: 'Audit Log',     icon: ScrollText,       gate: 'admin' },
   { path: '/settings',     label: 'Settings',      icon: Settings,         gate: 'admin' },
 ]
 

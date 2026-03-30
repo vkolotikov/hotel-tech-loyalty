@@ -116,6 +116,8 @@ class LoyaltyService
             // Check tier upgrade
             $this->assessTier($freshMember);
 
+            AnalyticsService::clearDashboardCache();
+
             return $transaction;
         });
     }
@@ -183,6 +185,8 @@ class LoyaltyService
                 'balance'     => $member->fresh()->current_points,
             ]);
 
+            AnalyticsService::clearDashboardCache();
+
             return $transaction;
         });
     }
@@ -238,6 +242,8 @@ class LoyaltyService
 
             // Re-assess tier after reversal
             $this->assessTier($member->fresh());
+
+            AnalyticsService::clearDashboardCache();
 
             return $reversal;
         });
@@ -441,13 +447,18 @@ class LoyaltyService
      */
     public function getMemberSummary(LoyaltyMember $member): array
     {
-        $member->loadMissing(['tier', 'user']);
+        $member->loadMissing(['tier', 'user', 'guests']);
         $progress = $member->getProgressToNextTier();
         $recentTransactions = $member->pointsTransactions()
             ->where('is_reversed', false)
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
+
+        // Pull stay stats from linked CRM guest if available, else from bookings
+        $linkedGuest = $member->guests->first();
+        $totalStays  = $linkedGuest?->total_stays ?? $member->bookings()->count();
+        $totalNights = $linkedGuest?->total_nights ?? 0;
 
         return [
             'member_number'     => $member->member_number,
@@ -456,9 +467,14 @@ class LoyaltyService
             'current_points'    => $member->current_points,
             'lifetime_points'   => $member->lifetime_points,
             'qualifying_points' => $member->qualifying_points,
+            'referral_code'     => $member->referral_code,
+            'total_stays'       => $totalStays,
+            'total_nights'      => $totalNights,
             'progress'          => $progress,
             'recent_activity'   => $recentTransactions,
             'member_since'      => $member->joined_at->format('Y-m-d'),
+            'created_at'        => $member->created_at?->toIso8601String(),
+            'user'              => $member->user->only('id', 'name', 'email', 'phone', 'nationality', 'language', 'avatar_url'),
         ];
     }
 
@@ -517,9 +533,13 @@ class LoyaltyService
 
         $totalOutstanding = LoyaltyMember::where('is_active', true)->sum('current_points');
 
+        $ymSql = DB::getDriverName() === 'pgsql'
+            ? "TO_CHAR(expires_at, 'YYYY-MM')"
+            : "DATE_FORMAT(expires_at, '%Y-%m')";
+
         $expirySchedule = PointExpiryBucket::where('is_expired', false)
             ->where('remaining_points', '>', 0)
-            ->selectRaw("TO_CHAR(expires_at, 'YYYY-MM') as month, SUM(remaining_points) as points")
+            ->selectRaw("{$ymSql} as month, SUM(remaining_points) as points")
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('points', 'month');

@@ -10,6 +10,7 @@ use App\Services\AnalyticsService;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -23,20 +24,42 @@ class DashboardController extends Controller
     {
         $loyaltyKpis = $this->analytics->getDashboardKpis();
 
-        $today = now()->toDateString();
-        $monthStart = now()->startOfMonth()->toDateString();
+        $crmKpis = Cache::remember('dashboard:crm_kpis', 300, function () {
+            $today = now()->toDateString();
+            $monthStart = now()->startOfMonth()->toDateString();
 
-        $crmKpis = [
-            'total_guests'       => Guest::count(),
-            'active_inquiries'   => Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->count(),
-            'pipeline_value'     => (float) Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->sum('total_value'),
-            'arrivals_today'     => Reservation::where('check_in', $today)->where('status', 'Confirmed')->count(),
-            'departures_today'   => Reservation::where('check_out', $today)->where('status', 'Checked In')->count(),
-            'in_house_guests'    => Reservation::where('status', 'Checked In')->count(),
-            'crm_revenue_month'  => (float) Reservation::where('status', 'Checked Out')->where('checked_out_at', '>=', $monthStart)->sum('total_amount'),
-            'avg_daily_rate'     => (float) Reservation::whereIn('status', ['Confirmed', 'Checked In', 'Checked Out'])->where('check_in', '>=', $monthStart)->avg('rate_per_night'),
-            'conversion_rate'    => $this->conversionRate(),
-        ];
+            // Batch inquiry stats into one query (was 3 queries → 1)
+            $inquiryStats = Inquiry::selectRaw("
+                COUNT(CASE WHEN status NOT IN ('Confirmed','Lost') THEN 1 END) as active_count,
+                COALESCE(SUM(CASE WHEN status NOT IN ('Confirmed','Lost') THEN total_value END), 0) as pipeline_value,
+                COUNT(*) as total_count,
+                COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed_count
+            ")->first();
+
+            // Batch reservation stats into one query (was 5 queries → 1)
+            $reservationStats = Reservation::selectRaw("
+                COUNT(CASE WHEN check_in = ? AND status = 'Confirmed' THEN 1 END) as arrivals_today,
+                COUNT(CASE WHEN check_out = ? AND status = 'Checked In' THEN 1 END) as departures_today,
+                COUNT(CASE WHEN status = 'Checked In' THEN 1 END) as in_house,
+                COALESCE(SUM(CASE WHEN status = 'Checked Out' AND checked_out_at >= ? THEN total_amount END), 0) as revenue_month,
+                AVG(CASE WHEN status IN ('Confirmed','Checked In','Checked Out') AND check_in >= ? THEN rate_per_night END) as avg_rate
+            ", [$today, $today, $monthStart, $monthStart])->first();
+
+            $totalInquiries = (int) $inquiryStats->total_count;
+            $confirmedInquiries = (int) $inquiryStats->confirmed_count;
+
+            return [
+                'total_guests'      => Guest::count(),
+                'active_inquiries'  => (int) $inquiryStats->active_count,
+                'pipeline_value'    => (float) $inquiryStats->pipeline_value,
+                'arrivals_today'    => (int) $reservationStats->arrivals_today,
+                'departures_today'  => (int) $reservationStats->departures_today,
+                'in_house_guests'   => (int) $reservationStats->in_house,
+                'crm_revenue_month' => (float) $reservationStats->revenue_month,
+                'avg_daily_rate'    => (float) ($reservationStats->avg_rate ?? 0),
+                'conversion_rate'   => $totalInquiries > 0 ? round(($confirmedInquiries / $totalInquiries) * 100, 1) : 0,
+            ];
+        });
 
         return response()->json(array_merge($loyaltyKpis, $crmKpis));
     }
@@ -175,13 +198,4 @@ class DashboardController extends Controller
         return response()->json($inquiryTasks);
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    private function conversionRate(): float
-    {
-        $total = Inquiry::count();
-        if ($total === 0) return 0;
-        $confirmed = Inquiry::where('status', 'Confirmed')->count();
-        return round(($confirmed / $total) * 100, 1);
-    }
 }

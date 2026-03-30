@@ -9,7 +9,8 @@ class NotificationCampaign extends Model
 {
     protected $fillable = [
         'property_id', 'name', 'segment_rules', 'title', 'body', 'data',
-        'channel', 'scheduled_at', 'sent_at', 'target_count', 'sent_count',
+        'channel', 'email_template_id', 'email_subject', 'email_sent_count',
+        'scheduled_at', 'sent_at', 'target_count', 'sent_count',
         'opened_count', 'status', 'created_by',
     ];
 

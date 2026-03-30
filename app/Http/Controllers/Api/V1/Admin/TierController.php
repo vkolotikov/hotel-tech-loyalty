@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Services\AnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,6 +45,9 @@ class TierController extends Controller
 
         $tier = LoyaltyTier::create($validated);
 
+        AuditLog::record('tier_created', $tier, $validated, [], $request->user(), "Tier '{$tier->name}' created");
+        AnalyticsService::clearDashboardCache();
+
         return response()->json(['message' => 'Tier created', 'tier' => $tier], 201);
     }
 
@@ -68,7 +73,11 @@ class TierController extends Controller
             'sort_order'           => 'nullable|integer',
         ]);
 
+        $oldValues = $tier->only(array_keys($validated));
         $tier->update($validated);
+
+        AuditLog::record('tier_updated', $tier, $validated, $oldValues, $request->user(), "Tier '{$tier->name}' updated");
+        AnalyticsService::clearDashboardCache();
 
         return response()->json(['message' => 'Tier updated', 'tier' => $tier]);
     }

@@ -1,7 +1,12 @@
 <?php
 
+use App\Http\Controllers\ApiDocsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+
+// ─── API Documentation ──────────────────────────────────────────────────────
+Route::get('/api/docs',          [ApiDocsController::class, 'ui']);
+Route::get('/api/docs/spec.json',[ApiDocsController::class, 'spec']);
 
 // Serve uploaded files from storage (works without public/storage symlink)
 Route::get('/storage/{path}', function (string $path) {

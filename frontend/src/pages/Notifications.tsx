@@ -8,14 +8,27 @@ interface Campaign {
   name: string
   template: string
   status: string
+  channel: string
   segment_rules: Record<string, any>
   sent_count: number
+  email_sent_count: number
   opened_count: number
   scheduled_at: string | null
   created_at: string
 }
 
+interface EmailTemplate {
+  id: number
+  name: string
+  subject: string
+}
+
 const SEGMENT_TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']
+const CHANNELS = [
+  { value: 'push', label: 'Push Only' },
+  { value: 'email', label: 'Email Only' },
+  { value: 'both', label: 'Push + Email' },
+]
 
 export function Notifications() {
   const qc = useQueryClient()
@@ -29,6 +42,9 @@ export function Notifications() {
     points_min: '',
     points_max: '',
     scheduled_at: '',
+    channel: 'push',
+    email_template_id: '',
+    email_subject: '',
   })
 
   const { data, isLoading } = useQuery({
@@ -36,12 +52,21 @@ export function Notifications() {
     queryFn: () => api.get('/v1/admin/campaigns').then(r => r.data),
   })
 
+  const { data: templatesData } = useQuery({
+    queryKey: ['email-templates-list'],
+    queryFn: () => api.get('/v1/admin/email-templates').then(r => r.data),
+  })
+  const emailTemplates: EmailTemplate[] = templatesData?.templates ?? []
+
   const createMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/notifications/campaign', {
       name: form.name,
       template: form.template || `${form.title}\n\n${form.body}`,
       title: form.title,
       body: form.body,
+      channel: form.channel,
+      email_template_id: form.email_template_id ? Number(form.email_template_id) : undefined,
+      email_subject: form.email_subject || undefined,
       segment_rules: {
         tiers: form.tier_filter.length > 0 ? form.tier_filter : undefined,
         points_min: form.points_min ? Number(form.points_min) : undefined,
@@ -53,7 +78,7 @@ export function Notifications() {
       qc.invalidateQueries({ queryKey: ['campaigns'] })
       toast.success('Campaign created and sent!')
       setShowCreate(false)
-      setForm({ name: '', template: '', title: '', body: '', tier_filter: [], points_min: '', points_max: '', scheduled_at: '' })
+      setForm({ name: '', template: '', title: '', body: '', tier_filter: [], points_min: '', points_max: '', scheduled_at: '', channel: 'push', email_template_id: '', email_subject: '' })
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to create campaign'),
   })
@@ -81,7 +106,7 @@ export function Notifications() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Notification Campaigns</h1>
-          <p className="text-sm text-[#8e8e93] mt-1">Send targeted push notifications to members</p>
+          <p className="text-sm text-[#8e8e93] mt-1">Send targeted push notifications and emails to members</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -133,11 +158,12 @@ export function Notifications() {
             <thead className="bg-dark-surface2 text-[#8e8e93] text-xs uppercase tracking-wide">
               <tr>
                 <th className="px-6 py-3 text-left">Campaign</th>
+                <th className="px-6 py-3 text-left">Channel</th>
                 <th className="px-6 py-3 text-left">Status</th>
                 <th className="px-6 py-3 text-left">Segment</th>
-                <th className="px-6 py-3 text-right">Sent</th>
+                <th className="px-6 py-3 text-right">Push Sent</th>
+                <th className="px-6 py-3 text-right">Email Sent</th>
                 <th className="px-6 py-3 text-right">Opened</th>
-                <th className="px-6 py-3 text-right">Open Rate</th>
                 <th className="px-6 py-3 text-left">Date</th>
               </tr>
             </thead>
@@ -149,6 +175,15 @@ export function Notifications() {
                     <p className="text-[#636366] text-xs mt-0.5 truncate max-w-xs">{c.template?.split('\n')[0]}</p>
                   </td>
                   <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
+                      c.channel === 'both' ? 'bg-[#8b5cf6]/15 text-[#8b5cf6]'
+                      : c.channel === 'email' ? 'bg-[#0a84ff]/15 text-[#0a84ff]'
+                      : 'bg-[#32d74b]/15 text-[#32d74b]'
+                    }`}>
+                      {c.channel === 'both' ? 'PUSH+EMAIL' : (c.channel ?? 'push').toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor[c.status] ?? 'bg-dark-surface3 text-[#8e8e93]'}`}>
                       {c.status?.toUpperCase()}
                     </span>
@@ -157,10 +192,8 @@ export function Notifications() {
                     {c.segment_rules?.tiers?.join(', ') || 'All members'}
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-white">{(c.sent_count ?? 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-medium text-[#0a84ff]">{(c.email_sent_count ?? 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right font-medium text-[#32d74b]">{(c.opened_count ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right text-[#8e8e93]">
-                    {c.sent_count > 0 ? `${Math.round((c.opened_count / c.sent_count) * 100)}%` : '—'}
-                  </td>
                   <td className="px-6 py-4 text-[#8e8e93] text-xs">
                     {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
                   </td>
@@ -260,6 +293,68 @@ export function Notifications() {
                 </div>
               </div>
 
+              {/* Channel */}
+              <div>
+                <label className="block text-sm font-semibold text-[#a0a0a0] mb-2">Channel</label>
+                <div className="flex gap-2">
+                  {CHANNELS.map(ch => (
+                    <button
+                      key={ch.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, channel: ch.value }))}
+                      className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                        form.channel === ch.value
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-dark-surface2 text-[#8e8e93] border-dark-border hover:border-primary-500'
+                      }`}
+                    >
+                      {ch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email Template (shown when email or both selected) */}
+              {(form.channel === 'email' || form.channel === 'both') && (
+                <div className="space-y-3 p-4 rounded-xl bg-[#0a84ff]/5 border border-[#0a84ff]/20">
+                  <p className="text-xs font-semibold text-[#0a84ff] uppercase tracking-wide">Email Settings</p>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Email Template</label>
+                    <select
+                      value={form.email_template_id}
+                      onChange={e => {
+                        const tid = e.target.value
+                        const tpl = emailTemplates.find(t => String(t.id) === tid)
+                        setForm(f => ({
+                          ...f,
+                          email_template_id: tid,
+                          email_subject: tpl?.subject ?? f.email_subject,
+                        }))
+                      }}
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Select a template...</option>
+                      {emailTemplates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                    {emailTemplates.length === 0 && (
+                      <p className="text-xs text-[#636366] mt-1">No templates yet. Create one in Email Templates first.</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Subject Override (optional)</label>
+                    <input
+                      type="text"
+                      value={form.email_subject}
+                      onChange={e => setForm(f => ({ ...f, email_subject: e.target.value }))}
+                      placeholder="Leave blank to use template subject"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Schedule */}
               <div>
                 <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Schedule (optional — blank = send now)</label>
@@ -281,7 +376,7 @@ export function Notifications() {
               </button>
               <button
                 onClick={() => createMutation.mutate()}
-                disabled={!form.name || !form.title || !form.body || createMutation.isPending}
+                disabled={!form.name || !form.title || !form.body || createMutation.isPending || ((form.channel === 'email' || form.channel === 'both') && !form.email_template_id)}
                 className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {createMutation.isPending ? 'Sending...' : 'Send Campaign'}

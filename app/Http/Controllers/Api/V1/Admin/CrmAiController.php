@@ -32,4 +32,26 @@ class CrmAiController extends Controller
 
         return response()->json($result);
     }
+
+    public function captureMember(Request $request): JsonResponse
+    {
+        $request->validate([
+            'text' => 'required|string|max:10000',
+        ]);
+
+        $result = (new CrmAiService())->extractMember($request->input('text'));
+
+        return response()->json($result);
+    }
+
+    public function captureCorporate(Request $request): JsonResponse
+    {
+        $request->validate([
+            'text' => 'required|string|max:10000',
+        ]);
+
+        $result = (new CrmAiService())->extractCorporate($request->input('text'));
+
+        return response()->json($result);
+    }
 }

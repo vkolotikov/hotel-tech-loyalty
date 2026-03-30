@@ -8,9 +8,11 @@ use App\Models\Inquiry;
 use App\Models\Reservation;
 use App\Models\VenueBooking;
 use App\Services\AnalyticsService;
+use App\Models\LoyaltyMember;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnalyticsController extends Controller
 {
@@ -80,24 +82,30 @@ class AnalyticsController extends Controller
     public function crmTrends(Request $request): JsonResponse
     {
         $period = $request->get('period', 'months6');
-        [$from, $groupFormat] = match ($period) {
-            'days14'   => [now()->subDays(14)->toDateString(), 'YYYY-MM-DD'],
-            'weeks6'   => [now()->subWeeks(6)->startOfWeek()->toDateString(), 'IYYY-IW'],
-            'months6'  => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM'],
-            'months12' => [now()->subMonths(12)->startOfMonth()->toDateString(), 'YYYY-MM'],
-            default    => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM'],
+        $isPg = DB::getDriverName() === 'pgsql';
+
+        [$from, $pgFmt, $myFmt] = match ($period) {
+            'days14'   => [now()->subDays(14)->toDateString(), 'YYYY-MM-DD', '%Y-%m-%d'],
+            'weeks6'   => [now()->subWeeks(6)->startOfWeek()->toDateString(), $isPg ? 'IYYY-IW' : '%x-%v', '%x-%v'],
+            'months6'  => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m'],
+            'months12' => [now()->subMonths(12)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m'],
+            default    => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m'],
         };
 
-        $newGuests = Guest::select(DB::raw("to_char(created_at, '$groupFormat') as period"), DB::raw('count(*) as count'))
+        $periodSql = fn(string $col) => $isPg
+            ? "to_char({$col}, '{$pgFmt}')"
+            : "DATE_FORMAT({$col}, '{$myFmt}')";
+
+        $newGuests = Guest::select(DB::raw($periodSql('created_at') . ' as period'), DB::raw('count(*) as count'))
             ->where('created_at', '>=', $from)->groupBy('period')->pluck('count', 'period');
 
-        $newInquiries = Inquiry::select(DB::raw("to_char(created_at, '$groupFormat') as period"), DB::raw('count(*) as count'))
+        $newInquiries = Inquiry::select(DB::raw($periodSql('created_at') . ' as period'), DB::raw('count(*) as count'))
             ->where('created_at', '>=', $from)->groupBy('period')->pluck('count', 'period');
 
-        $confirmedInquiries = Inquiry::select(DB::raw("to_char(updated_at, '$groupFormat') as period"), DB::raw('count(*) as count'))
+        $confirmedInquiries = Inquiry::select(DB::raw($periodSql('updated_at') . ' as period'), DB::raw('count(*) as count'))
             ->where('status', 'Confirmed')->where('updated_at', '>=', $from)->groupBy('period')->pluck('count', 'period');
 
-        $revenue = Reservation::select(DB::raw("to_char(check_in, '$groupFormat') as period"), DB::raw('coalesce(sum(total_amount),0) as total'))
+        $revenue = Reservation::select(DB::raw($periodSql('check_in') . ' as period'), DB::raw('coalesce(sum(total_amount),0) as total'))
             ->whereIn('status', ['Confirmed', 'Checked In', 'Checked Out'])->where('check_in', '>=', $from)
             ->groupBy('period')->pluck('total', 'period');
 
@@ -163,19 +171,26 @@ class AnalyticsController extends Controller
     public function occupancyTrend(Request $request): JsonResponse
     {
         $period = $request->get('period', 'months6');
-        [$from, $groupFormat, $fixedDays] = match ($period) {
-            'days14'   => [now()->subDays(14)->toDateString(), 'YYYY-MM-DD', 1],
-            'weeks6'   => [now()->subWeeks(6)->startOfWeek()->toDateString(), 'IYYY-IW', 7],
-            'months6'  => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', null],
-            'months12' => [now()->subMonths(12)->startOfMonth()->toDateString(), 'YYYY-MM', null],
-            default    => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', null],
+        $isPg = DB::getDriverName() === 'pgsql';
+
+        [$from, $pgFmt, $myFmt, $fixedDays] = match ($period) {
+            'days14'   => [now()->subDays(14)->toDateString(), 'YYYY-MM-DD', '%Y-%m-%d', 1],
+            'weeks6'   => [now()->subWeeks(6)->startOfWeek()->toDateString(), $isPg ? 'IYYY-IW' : '%x-%v', '%x-%v', 7],
+            'months6'  => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m', null],
+            'months12' => [now()->subMonths(12)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m', null],
+            default    => [now()->subMonths(6)->startOfMonth()->toDateString(), 'YYYY-MM', '%Y-%m', null],
         };
+
+        $periodSql = $isPg ? "to_char(check_in, '{$pgFmt}')" : "DATE_FORMAT(check_in, '{$myFmt}')";
+        $dateDiffSql = $isPg
+            ? "(check_out::date - check_in::date)"
+            : "DATEDIFF(check_out, check_in)";
 
         $totalRooms = DB::table('properties')->where('is_active', true)->sum('total_rooms');
 
         $occupied = Reservation::select(
-                DB::raw("to_char(check_in, '$groupFormat') as period"),
-                DB::raw('sum(coalesce(num_nights, (check_out::date - check_in::date)) * coalesce(num_rooms,1)) as occupied_nights')
+                DB::raw("{$periodSql} as period"),
+                DB::raw("sum(coalesce(num_nights, {$dateDiffSql}) * coalesce(num_rooms,1)) as occupied_nights")
             )
             ->whereIn('status', ['Confirmed', 'Checked In', 'Checked Out'])
             ->where('check_in', '>=', $from)
@@ -247,6 +262,47 @@ class AnalyticsController extends Controller
             ->orderByDesc('revenue')
             ->get();
         return response()->json($data);
+    }
+
+    public function export(): StreamedResponse
+    {
+        return response()->streamDownload(function () {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            // Section 1: KPIs
+            $kpis = $this->analytics->getDashboardKpis();
+            fputcsv($out, ['=== KPI Summary ===']);
+            foreach ($kpis as $key => $value) {
+                fputcsv($out, [str_replace('_', ' ', ucfirst($key)), $value]);
+            }
+            fputcsv($out, []);
+
+            // Section 2: Tier Distribution
+            fputcsv($out, ['=== Tier Distribution ===']);
+            fputcsv($out, ['Tier', 'Count']);
+            foreach ($this->analytics->getTierDistribution() as $tier) {
+                fputcsv($out, [$tier['name'] ?? $tier['tier'] ?? '', $tier['count'] ?? 0]);
+            }
+            fputcsv($out, []);
+
+            // Section 3: Member Detail
+            fputcsv($out, ['=== Member Analytics ===']);
+            fputcsv($out, ['ID', 'Member Number', 'Name', 'Email', 'Tier', 'Current Points', 'Lifetime Points', 'Active', 'Joined']);
+            LoyaltyMember::with(['user:id,name,email', 'tier:id,name'])
+                ->orderByDesc('lifetime_points')
+                ->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $m) {
+                        fputcsv($out, [
+                            $m->id, $m->member_number, $m->user?->name, $m->user?->email,
+                            $m->tier?->name, $m->current_points, $m->lifetime_points,
+                            $m->is_active ? 'Yes' : 'No', $m->joined_at?->toDateString(),
+                        ]);
+                    }
+                });
+
+            fclose($out);
+        }, 'analytics-report-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
