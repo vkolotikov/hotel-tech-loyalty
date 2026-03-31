@@ -4,14 +4,8 @@ const isProduction = typeof window !== 'undefined' && window.location.hostname !
 export const API_BASE = isProduction ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api')
 export const API_URL = isProduction ? '' : API_BASE.replace(/\/api$/, '')
 
-/** Base path for the admin SPA (reads from <base> tag or defaults to "/"). */
-export const APP_BASE = (() => {
-  const el = document.querySelector('base')
-  if (el?.href) {
-    try { return new URL(el.href).pathname.replace(/\/+$/, '') } catch {}
-  }
-  return ''
-})()
+/** Base path for the admin SPA router (empty = served at root). */
+export const APP_BASE = ''
 
 /** Resolve a storage image URL for display. Handles absolute localhost URLs and relative /storage/ paths. */
 export function resolveImage(url: string | null | undefined): string | null {
