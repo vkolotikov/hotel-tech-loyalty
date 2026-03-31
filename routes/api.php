@@ -43,9 +43,11 @@ Route::prefix('v1')->group(function () {
     Route::get('admin/realtime/stream', [RealtimeController::class, 'stream']);
 
     Route::prefix('auth')->group(function () {
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login',    [AuthController::class, 'login']);
-        Route::post('trial',    [AuthController::class, 'startTrial']);
+        Route::post('register',    [AuthController::class, 'register']);
+        Route::post('login',       [AuthController::class, 'login']);
+        Route::post('trial',       [AuthController::class, 'startTrial']);
+        Route::post('send-code',   [AuthController::class, 'sendVerificationCode']);
+        Route::post('verify-code', [AuthController::class, 'verifyCode']);
     });
 
     // Public: fetch available plans from SaaS

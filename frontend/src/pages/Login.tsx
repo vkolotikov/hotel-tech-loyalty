@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Hotel, Lock, Mail, User, Building2, ArrowRight, Star,
   Users, BarChart3, CreditCard, Shield, Sparkles, Check, ChevronRight,
+  ShieldCheck,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
-type View = 'intro' | 'login' | 'trial'
+type View = 'intro' | 'login' | 'trial' | 'verify'
 
 interface PlanData {
   id: string
@@ -41,11 +42,19 @@ export function Login() {
   const [plans, setPlans] = useState<PlanData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Verification state
+  const [codeDigits, setCodeDigits] = useState(['', '', '', '', '', ''])
+  const [, setCodeSent] = useState(false)
+  const [verified, setVerified] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
 
-  // Handle SaaS JWT login via URL param (from SaaS "Launch" button)
+  // Handle SaaS JWT login via URL param
   useEffect(() => {
     const saasToken = searchParams.get('token')
     if (saasToken) {
@@ -68,6 +77,13 @@ export function Login() {
     }).catch(() => {})
   }, [])
 
+  // Countdown timer for resend
+  useEffect(() => {
+    if (countdown <= 0) return
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [countdown])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -83,8 +99,75 @@ export function Login() {
     }
   }
 
-  const handleTrial = async (e: React.FormEvent) => {
+  const handleSendCode = async () => {
+    if (!email) { setError('Please enter your email first.'); return }
+    setLoading(true)
+    setError('')
+    try {
+      await api.post('/v1/auth/send-code', { email, name })
+      setCodeSent(true)
+      setCountdown(60)
+      setView('verify')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not send verification code.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCodeChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return
+    const newDigits = [...codeDigits]
+    newDigits[index] = value.slice(-1)
+    setCodeDigits(newDigits)
+
+    // Auto-advance to next input
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus()
+    }
+
+    // Auto-submit when all 6 digits are entered
+    const fullCode = newDigits.join('')
+    if (fullCode.length === 6) {
+      verifyCode(fullCode)
+    }
+  }
+
+  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !codeDigits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleCodePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (pasted.length === 6) {
+      const digits = pasted.split('')
+      setCodeDigits(digits)
+      inputRefs.current[5]?.focus()
+      verifyCode(pasted)
+    }
+  }
+
+  const verifyCode = async (code: string) => {
+    setLoading(true)
+    setError('')
+    try {
+      await api.post('/v1/auth/verify-code', { email, code })
+      setVerified(true)
+      // Small delay for the checkmark animation, then proceed to create account
+      setTimeout(() => handleTrial(), 500)
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Invalid code. Please try again.')
+      setCodeDigits(['', '', '', '', '', ''])
+      inputRefs.current[0]?.focus()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTrial = async () => {
     setLoading(true)
     setError('')
     try {
@@ -99,6 +182,11 @@ export function Login() {
       navigate('/')
     } catch (err: any) {
       setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.')
+      // If verification error, go back to verify
+      if (err.response?.data?.error?.includes('verify')) {
+        setView('verify')
+        setVerified(false)
+      }
     } finally {
       setLoading(false)
     }
@@ -114,7 +202,6 @@ export function Login() {
   if (view === 'intro') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex flex-col">
-        {/* Hero */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
           <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-primary-500/20">
             <Hotel size={40} className="text-white" />
@@ -142,7 +229,6 @@ export function Login() {
             </button>
           </div>
 
-          {/* Features grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl w-full">
             {FEATURES.map((f) => (
               <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 hover:border-primary-500/20 transition-colors">
@@ -153,7 +239,6 @@ export function Login() {
             ))}
           </div>
 
-          {/* Plans preview */}
           {plans.length > 0 && (
             <div className="mt-16 w-full max-w-4xl">
               <h2 className="text-xl font-bold text-white text-center mb-2">Plans &amp; Pricing</h2>
@@ -175,7 +260,6 @@ export function Login() {
                       </div>
                       <p className="text-gray-500 text-xs mb-4">{plan.trialDays}-day free trial</p>
                       <p className="text-gray-400 text-xs leading-relaxed mb-4">{plan.description}</p>
-
                       {plan.planProducts && plan.planProducts.length > 0 && (
                         <div className="space-y-1.5 mb-5">
                           {plan.planProducts.map((pp: any, i: number) => (
@@ -186,7 +270,6 @@ export function Login() {
                           ))}
                         </div>
                       )}
-
                       <button
                         onClick={() => { setSelectedPlan(plan.slug); setView('trial') }}
                         className={'w-full py-2.5 rounded-lg font-medium text-sm transition-colors ' + (isPopular ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10')}
@@ -201,9 +284,85 @@ export function Login() {
           )}
         </div>
 
-        {/* Footer */}
         <div className="text-center py-6 text-gray-600 text-xs">
           Powered by <span className="text-gray-400">HotelTech</span> &middot; saas.hotel-tech.ai
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Verify View ────────────────────────────────────────────────────────────
+  if (view === 'verify') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${verified ? 'bg-green-500 shadow-green-500/20' : 'bg-gradient-to-br from-primary-500 to-primary-700 shadow-primary-500/20'}`}>
+              {verified ? <Check size={32} className="text-white" /> : <ShieldCheck size={32} className="text-white" />}
+            </div>
+            <h1 className="text-2xl font-bold text-white">
+              {verified ? 'Verified!' : 'Verify Your Email'}
+            </h1>
+            <p className="text-gray-500 mt-1">
+              {verified ? 'Creating your account...' : `Enter the 6-digit code sent to ${email}`}
+            </p>
+          </div>
+
+          {!verified && (
+            <div className="bg-[#141419] rounded-2xl border border-white/[0.06] p-8">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Code inputs */}
+              <div className="flex justify-center gap-3 mb-6" onPaste={handleCodePaste}>
+                {codeDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={el => { inputRefs.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleCodeChange(i, e.target.value)}
+                    onKeyDown={e => handleCodeKeyDown(i, e)}
+                    className="w-12 h-14 text-center text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    autoFocus={i === 0}
+                  />
+                ))}
+              </div>
+
+              {loading && (
+                <div className="flex justify-center mb-4">
+                  <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-3">
+                  Didn't receive the code?
+                </p>
+                <button
+                  onClick={handleSendCode}
+                  disabled={countdown > 0 || loading}
+                  className="text-sm text-primary-400 hover:text-primary-300 font-medium disabled:text-gray-600 disabled:cursor-not-allowed"
+                >
+                  {countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
+                </button>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
+                <button
+                  onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false) }}
+                  className="text-sm text-gray-500 hover:text-gray-400"
+                >
+                  Back to registration
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -213,7 +372,6 @@ export function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <button onClick={() => setView('intro')} className="inline-block">
             <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
@@ -226,7 +384,6 @@ export function Login() {
           </p>
         </div>
 
-        {/* Form Card */}
         <div className="bg-[#141419] rounded-2xl border border-white/[0.06] p-8">
           <h2 className="text-xl font-semibold text-white mb-6">
             {view === 'login' ? 'Sign in to your account' : 'Create your account'}
@@ -268,7 +425,7 @@ export function Login() {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleTrial} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Your Name</label>
@@ -336,12 +493,17 @@ export function Login() {
               )}
 
               <button type="submit" disabled={loading}
-                className="w-full bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50">
-                {loading ? 'Creating account...' : 'Start Free Trial'}
+                className="w-full bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {loading ? 'Sending code...' : (
+                  <>
+                    <ShieldCheck size={16} />
+                    Verify Email & Start Trial
+                  </>
+                )}
               </button>
 
               <p className="text-[11px] text-gray-600 text-center">
-                No credit card required. Full access during your trial period.
+                We'll send a verification code to your email. No credit card required.
               </p>
             </form>
           )}

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\VerificationCodeMail;
+use App\Models\EmailVerificationCode;
 use App\Models\LoyaltyMember;
 use App\Models\Staff;
 use App\Models\User;
@@ -14,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -160,6 +163,78 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /v1/auth/send-code — Send a 6-digit verification code to the email.
+     */
+    public function sendVerificationCode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:191',
+            'name'  => 'nullable|string|max:191',
+        ]);
+
+        // Rate limit: max 1 code per email per 60 seconds
+        $recent = EmailVerificationCode::where('email', $validated['email'])
+            ->where('created_at', '>', now()->subMinutes(1))
+            ->exists();
+
+        if ($recent) {
+            return response()->json(['error' => 'Please wait before requesting another code.'], 429);
+        }
+
+        // Generate 6-digit code
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Invalidate old codes
+        EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('verified_at')
+            ->delete();
+
+        EmailVerificationCode::create([
+            'email'      => $validated['email'],
+            'code'       => $code,
+            'expires_at' => now()->addMinutes(15),
+        ]);
+
+        try {
+            Mail::to($validated['email'])->send(new VerificationCodeMail($code, $validated['name'] ?? ''));
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['error' => 'Could not send verification email. Please try again.'], 503);
+        }
+
+        return response()->json(['message' => 'Verification code sent.']);
+    }
+
+    /**
+     * POST /v1/auth/verify-code — Verify the 6-digit code.
+     */
+    public function verifyCode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'code'  => 'required|string|size:6',
+        ]);
+
+        $record = EmailVerificationCode::where('email', $validated['email'])
+            ->where('code', $validated['code'])
+            ->whereNull('verified_at')
+            ->latest()
+            ->first();
+
+        if (!$record) {
+            return response()->json(['error' => 'Invalid verification code.'], 422);
+        }
+
+        if ($record->isExpired()) {
+            return response()->json(['error' => 'Code has expired. Please request a new one.'], 422);
+        }
+
+        $record->update(['verified_at' => now()]);
+
+        return response()->json(['verified' => true]);
+    }
+
+    /**
      * GET /v1/plans — Proxy to SaaS platform to fetch available plans.
      */
     public function plans(): JsonResponse
@@ -189,6 +264,16 @@ class AuthController extends Controller
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
         ]);
+
+        // Require verified email
+        $verified = EmailVerificationCode::where('email', $validated['email'])
+            ->whereNotNull('verified_at')
+            ->where('verified_at', '>', now()->subMinutes(30))
+            ->exists();
+
+        if (!$verified) {
+            return response()->json(['error' => 'Email not verified. Please verify your email first.'], 422);
+        }
 
         // Check if user already exists and is fully set up (bypass scopes)
         $existingUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
