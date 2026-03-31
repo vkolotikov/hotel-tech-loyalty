@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
@@ -20,12 +21,13 @@ const EMPTY_FORM = {
 
 export function Guests() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const settings = useSettings()
   const [search, setSearch] = useState('')
   const [countryFilter, setCountryFilter] = useState('')
   const [guestType, setGuestType] = useState('')
   const [vipLevel, setVipLevel] = useState('')
-  const [lifecycle, setLifecycle] = useState('')
+  const [lifecycle] = useState('')
   const [source, setSource] = useState('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
@@ -82,8 +84,8 @@ export function Guests() {
   }
 
   const guests = data?.data ?? []
-  const meta = data?.meta ?? {}
-  const hasFilters = countryFilter || guestType || vipLevel || lifecycle || source
+  const meta = { total: data?.total ?? 0, current_page: data?.current_page ?? 1, last_page: data?.last_page ?? 1 }
+  const hasFilters = countryFilter || guestType || vipLevel || source
 
   const toggleSort = (col: string) => {
     if (sort === col) setDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -154,15 +156,11 @@ export function Guests() {
               <option value="">All VIP Levels</option>
               {settings.vip_levels.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select value={lifecycle} onChange={e => { setLifecycle(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Lifecycle</option>
-              {settings.lifecycle_statuses.map(s => <option key={s}>{s}</option>)}
-            </select>
             <select value={source} onChange={e => { setSource(e.target.value); setPage(1) }} className={filterSel}>
               <option value="">All Sources</option>
               {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
             </select>
-            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setLifecycle(''); setSource(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
+            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setSource(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
           </div>
         )}
       </div>
@@ -192,7 +190,7 @@ export function Guests() {
               {isLoading && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
               {!isLoading && guests.length === 0 && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">No guests found</td></tr>}
               {guests.map((g: any) => (
-                <tr key={g.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
+                <tr key={g.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors cursor-pointer" onClick={() => navigate(`/guests/${g.id}`)}>
                   <td className="px-4 py-3 font-medium text-white">{g.full_name}</td>
                   <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.email ?? '—'}</td>
                   <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.phone ?? '—'}</td>

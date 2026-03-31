@@ -65,7 +65,7 @@ export function Members() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Members</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{(data as any)?.meta?.total ?? 0} total members</p>
+          <p className="text-sm text-[#8e8e93] mt-0.5">{(data as any)?.total ?? 0} total members</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -179,10 +179,10 @@ export function Members() {
         </div>
 
         {/* Pagination */}
-        {(data as any)?.meta && (
+        {(data as any)?.last_page > 1 && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-border">
             <p className="text-sm text-[#8e8e93]">
-              Showing {(data as any).meta.from ?? 0}–{(data as any).meta.to ?? 0} of {(data as any).meta.total} members
+              Showing {(data as any).from ?? 0}–{(data as any).to ?? 0} of {(data as any).total} members
             </p>
             <div className="flex gap-2">
               <button
@@ -194,7 +194,7 @@ export function Members() {
               </button>
               <button
                 onClick={() => setPage(p => p + 1)}
-                disabled={page >= ((data as any).meta.last_page ?? 1)}
+                disabled={page >= ((data as any).last_page ?? 1)}
                 className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Next

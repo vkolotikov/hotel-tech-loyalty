@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from './api'
+import { api, API_BASE } from './api'
 
 export interface CrmSettings {
   employees: string[]
@@ -112,7 +112,7 @@ export async function triggerExport(path: string, params: Record<string, any> = 
     if (v !== '' && v !== null && v !== undefined) qs.set(k, String(v))
   }
   const token = localStorage.getItem('auth_token')
-  const base = import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api'
+  const base = API_BASE
   const url = `${base}${path}${qs.toString() ? '?' + qs.toString() : ''}`
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'text/csv' } })
   if (!res.ok) throw new Error('Export failed')
