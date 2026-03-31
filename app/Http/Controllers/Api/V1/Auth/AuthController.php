@@ -13,6 +13,7 @@ use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -144,5 +145,169 @@ class AuthController extends Controller
             $member->update(['expo_push_token' => $validated['expo_push_token']]);
         }
         return response()->json(['message' => 'Push token updated']);
+    }
+
+    /**
+     * GET /v1/plans — Proxy to SaaS platform to fetch available plans.
+     */
+    public function plans(): JsonResponse
+    {
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['plans' => []]);
+        }
+
+        try {
+            $response = Http::timeout(5)->get("{$saasApi}/billing/plans");
+            return response()->json($response->json());
+        } catch (\Exception $e) {
+            return response()->json(['plans' => [], 'error' => 'Could not fetch plans']);
+        }
+    }
+
+    /**
+     * POST /v1/auth/trial — Register on SaaS platform, start trial, create local staff user.
+     *
+     * Accepts: name, email, password, hotel_name, plan (optional, defaults to starter)
+     * 1. Registers user + org on SaaS platform
+     * 2. Subscribes to a trial plan
+     * 3. Creates local staff user in loyalty DB
+     * 4. Returns SaaS JWT + local Sanctum token
+     */
+    public function startTrial(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'       => 'required|string|max:191',
+            'email'      => 'required|email|max:191',
+            'password'   => 'required|string|min:8',
+            'hotel_name' => 'required|string|max:191',
+            'plan'       => 'nullable|string|max:50',
+        ]);
+
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'SaaS platform not configured'], 503);
+        }
+
+        // Step 1: Register on SaaS platform
+        try {
+            $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
+                'name'             => $validated['name'],
+                'email'            => $validated['email'],
+                'password'         => $validated['password'],
+                'organizationName' => $validated['hotel_name'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Could not reach the subscription platform. Please try again.'], 503);
+        }
+
+        if (!$regResponse->successful()) {
+            $msg = $regResponse->json('error') ?? $regResponse->json('message') ?? 'Registration failed';
+            return response()->json(['error' => $msg], $regResponse->status());
+        }
+
+        $saasData = $regResponse->json();
+        $saasToken = $saasData['token'] ?? null;
+        $saasOrgId = $saasData['organization']['id'] ?? null;
+
+        // Step 2: Subscribe to trial plan
+        if ($saasToken) {
+            try {
+                // First get available plans to find the requested one
+                $plansRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/plans");
+                $plans = $plansRes->json('plans', []);
+                $targetSlug = $validated['plan'] ?? 'starter';
+                $planId = null;
+                foreach ($plans as $plan) {
+                    if (($plan['slug'] ?? '') === $targetSlug) {
+                        $planId = $plan['id'];
+                        break;
+                    }
+                }
+                // Fall back to first plan if slug not found
+                if (!$planId && count($plans) > 0) {
+                    $planId = $plans[0]['id'];
+                }
+
+                if ($planId) {
+                    Http::withToken($saasToken)->timeout(5)->post("{$saasApi}/billing/subscribe", [
+                        'planId'   => $planId,
+                        'interval' => 'MONTHLY',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Non-fatal — user is registered, trial can be started manually
+                report($e);
+            }
+        }
+
+        // Step 3: Create local staff user (or find existing)
+        $localUser = User::where('email', $validated['email'])->first();
+        if (!$localUser) {
+            $localUser = User::create([
+                'name'      => $validated['name'],
+                'email'     => $validated['email'],
+                'password'  => Hash::make($validated['password']),
+                'user_type' => 'staff',
+            ]);
+
+            // Create staff record
+            Staff::create([
+                'user_id'             => $localUser->id,
+                'role'                => 'super_admin',
+                'hotel_name'          => $validated['hotel_name'],
+                'can_award_points'    => true,
+                'can_redeem_points'   => true,
+                'can_manage_offers'   => true,
+                'can_view_analytics'  => true,
+            ]);
+        }
+
+        $sanctumToken = $localUser->createToken('admin')->plainTextToken;
+
+        return response()->json([
+            'token'      => $sanctumToken,
+            'saas_token' => $saasToken,
+            'user'       => $localUser,
+            'staff'      => $localUser->staff,
+            'org_id'     => $saasOrgId,
+            'message'    => 'Trial started! You have 14 days to explore all features.',
+        ], 201);
+    }
+
+    /**
+     * GET /v1/auth/subscription — Return current subscription status.
+     */
+    public function subscription(Request $request): JsonResponse
+    {
+        // If SaaS-authenticated, fetch from SaaS
+        $orgId = $request->attributes->get('saas_org_id');
+        if ($orgId) {
+            $saasApi = config('services.saas.api_url');
+            $token = $request->bearerToken();
+            try {
+                $response = Http::withToken($token)->timeout(5)->get("{$saasApi}/billing/subscriptions");
+                if ($response->successful()) {
+                    $subs = $response->json('subscriptions', []);
+                    foreach ($subs as $sub) {
+                        if (in_array($sub['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
+                            return response()->json([
+                                'active'     => true,
+                                'status'     => $sub['status'],
+                                'plan'       => $sub['plan'] ?? null,
+                                'trialEnd'   => $sub['trialEnd'] ?? null,
+                                'periodEnd'  => $sub['currentPeriodEnd'] ?? null,
+                            ]);
+                        }
+                    }
+                    return response()->json(['active' => false, 'status' => 'EXPIRED']);
+                }
+            } catch (\Exception $e) {
+                // Fail open
+            }
+        }
+
+        // For local-only users, always active
+        return response()->json(['active' => true, 'status' => 'LOCAL', 'plan' => null]);
     }
 }

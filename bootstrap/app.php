@@ -15,7 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(\App\Http\Middleware\Cors::class);
         $middleware->alias([
-            'saas.auth' => \App\Http\Middleware\SaasAuthMiddleware::class,
+            'saas.auth'       => \App\Http\Middleware\SaasAuthMiddleware::class,
+            'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
