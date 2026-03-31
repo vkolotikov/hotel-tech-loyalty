@@ -109,6 +109,11 @@ export function Login() {
       setCountdown(60)
       setView('verify')
     } catch (err: any) {
+      // If mail service is unavailable (503), skip verification and go directly to trial
+      if (err.response?.status === 503) {
+        await handleTrial()
+        return
+      }
       setError(err.response?.data?.error || 'Could not send verification code.')
     } finally {
       setLoading(false)

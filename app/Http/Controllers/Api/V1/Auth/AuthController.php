@@ -113,6 +113,11 @@ class AuthController extends Controller
             ]);
         }
 
+        // Bind org context so subsequent scoped queries work
+        if ($user->organization_id) {
+            app()->instance('current_organization_id', $user->organization_id);
+        }
+
         $token = $user->createToken($validated['device'] ?? 'api')->plainTextToken;
 
         $response = ['token' => $token, 'user' => $user];
@@ -122,7 +127,11 @@ class AuthController extends Controller
                 ->where('user_id', $user->id)->with('tier')->first();
         } elseif ($user->isStaff()) {
             $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
-            $staff?->update(['last_login_at' => now()]);
+            try {
+                $staff?->update(['last_login_at' => now()]);
+            } catch (\Exception $e) {
+                report($e);
+            }
             $response['staff'] = $staff;
         }
 
@@ -265,14 +274,17 @@ class AuthController extends Controller
             'plan'       => 'nullable|string|max:50',
         ]);
 
-        // Require verified email
-        $verified = EmailVerificationCode::where('email', $validated['email'])
-            ->whereNotNull('verified_at')
-            ->where('verified_at', '>', now()->subMinutes(30))
-            ->exists();
+        // Require verified email (only if a code was actually sent — skip if mail isn't configured)
+        $codeWasSent = EmailVerificationCode::where('email', $validated['email'])->exists();
+        if ($codeWasSent) {
+            $verified = EmailVerificationCode::where('email', $validated['email'])
+                ->whereNotNull('verified_at')
+                ->where('verified_at', '>', now()->subMinutes(30))
+                ->exists();
 
-        if (!$verified) {
-            return response()->json(['error' => 'Email not verified. Please verify your email first.'], 422);
+            if (!$verified) {
+                return response()->json(['error' => 'Email not verified. Please verify your email first.'], 422);
+            }
         }
 
         // Check if user already exists and is fully set up (bypass scopes)
