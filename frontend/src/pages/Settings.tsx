@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
-import { Bell, Brain, Cloud, Smartphone, FileText, Database, Save, RefreshCw, Palette, RotateCcw, Upload } from 'lucide-react'
+import { Bell, Brain, Cloud, Smartphone, FileText, Database, Save, RefreshCw, Palette, RotateCcw, Upload, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const TIER_COLORS: Record<string, string> = {
@@ -513,20 +513,20 @@ export function Settings() {
         <h2 className="text-base font-bold text-white mb-4">Quick Links</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            { label: 'Firebase Console', icon: <Bell size={18} />, desc: 'Push notifications' },
-            { label: 'OpenAI Platform', icon: <Brain size={18} />, desc: 'API usage & billing' },
-            { label: 'DigitalOcean', icon: <Cloud size={18} />, desc: 'Server management' },
-            { label: 'Expo Dashboard', icon: <Smartphone size={18} />, desc: 'Mobile builds' },
-            { label: 'Laravel Logs', icon: <FileText size={18} />, desc: 'storage/logs/laravel.log' },
-            { label: 'WAMP Admin', icon: <Database size={18} />, desc: 'Database management' },
+            { label: 'Firebase Console', icon: <Bell size={18} />, desc: 'Push notifications', url: 'https://console.firebase.google.com/' },
+            { label: 'OpenAI Platform', icon: <Brain size={18} />, desc: 'API usage & billing', url: 'https://platform.openai.com/' },
+            { label: 'DigitalOcean', icon: <Cloud size={18} />, desc: 'Server management', url: 'https://cloud.digitalocean.com/' },
+            { label: 'Expo Dashboard', icon: <Smartphone size={18} />, desc: 'Mobile builds', url: 'https://expo.dev/' },
+            { label: 'Laravel Cloud', icon: <FileText size={18} />, desc: 'Deployment & logs', url: 'https://cloud.laravel.com/' },
+            { label: 'Anthropic Console', icon: <Database size={18} />, desc: 'AI API dashboard', url: 'https://console.anthropic.com/' },
           ].map(link => (
-            <div key={link.label} className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:bg-dark-surface2 transition-colors cursor-default">
+            <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:bg-dark-surface2 hover:border-primary-500/30 transition-colors group">
               <div className="text-primary-400 mt-0.5">{link.icon}</div>
-              <div>
-                <p className="text-sm font-semibold text-white">{link.label}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white group-hover:text-primary-400 transition-colors flex items-center gap-1.5">{link.label} <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" /></p>
                 <p className="text-xs text-[#636366]">{link.desc}</p>
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>

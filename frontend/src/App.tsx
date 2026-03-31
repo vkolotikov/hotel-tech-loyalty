@@ -22,16 +22,19 @@ const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m
 const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
+const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const Benefits = lazy(() => import('./pages/Benefits').then(m => ({ default: m.Benefits })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Tiers = lazy(() => import('./pages/Tiers').then(m => ({ default: m.Tiers })))
 const Guests = lazy(() => import('./pages/Guests').then(m => ({ default: m.Guests })))
+const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Reservations = lazy(() => import('./pages/Reservations').then(m => ({ default: m.Reservations })))
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
+const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.AuditLog })))
 const AiChat = lazy(() => import('./components/AiChat'))
 
 function PageLoader() {
@@ -99,15 +102,18 @@ export default function App() {
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics"><AiInsights /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
+          <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />
           <Route path="/benefits" element={<LazyRoute gate="admin"><Benefits /></LazyRoute>} />
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/guests" element={<LazyRoute><Guests /></LazyRoute>} />
+          <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/reservations" element={<LazyRoute><Reservations /></LazyRoute>} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
+          <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -33,6 +33,15 @@ const SUGGESTION_GROUPS = [
       "Create a task for tomorrow: Staff meeting",
     ],
   },
+  {
+    label: 'AI Insights',
+    items: [
+      "Generate weekly performance report",
+      "Detect any anomalies or unusual patterns",
+      "Forecast occupancy for the next 2 weeks",
+      "Find stale inquiries and create follow-up tasks",
+    ],
+  },
 ]
 
 function formatMessage(text: string) {
@@ -152,7 +161,7 @@ export default function AiChat() {
       const res = await api.post('/v1/admin/crm-ai/chat', { messages: next.map(m => ({ role: m.role, content: m.content })) })
       const actions = res.data.actions ?? []
       setMessages([...next, { role: 'assistant', content: res.data.response, actions }])
-      if (actions.some((a: any) => a.tool?.startsWith('create_') || a.tool?.startsWith('update_') || a.tool?.startsWith('award_') || a.tool?.startsWith('redeem_'))) {
+      if (actions.some((a: any) => a.tool?.startsWith('create_') || a.tool?.startsWith('update_') || a.tool?.startsWith('award_') || a.tool?.startsWith('redeem_') || a.tool === 'analyze_inquiries_create_followups')) {
         qc.invalidateQueries()
       }
     } catch (e: any) {

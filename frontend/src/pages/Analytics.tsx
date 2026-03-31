@@ -6,6 +6,7 @@ import {
   ComposedChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts'
 import { api } from '../lib/api'
+import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
@@ -186,7 +187,10 @@ export function Analytics() {
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
           <p className="text-sm text-[#8e8e93] mt-1">Deep dive into loyalty & CRM performance</p>
         </div>
-        <button className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
+        <button
+          onClick={() => triggerExport('/v1/admin/analytics/export')}
+          className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+        >
           <Download size={15} /> Export Report
         </button>
       </div>

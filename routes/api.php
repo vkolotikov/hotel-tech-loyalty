@@ -45,7 +45,11 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login',    [AuthController::class, 'login']);
+        Route::post('trial',    [AuthController::class, 'startTrial']);
     });
+
+    // Public: fetch available plans from SaaS
+    Route::get('plans', [AuthController::class, 'plans']);
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
@@ -55,6 +59,7 @@ Route::prefix('v1')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);
             Route::delete('logout',     [AuthController::class, 'logout']);
             Route::post('push-token',   [AuthController::class, 'updatePushToken']);
+            Route::get('subscription',  [AuthController::class, 'subscription']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
@@ -273,6 +278,7 @@ Route::prefix('v1')->group(function () {
             Route::put('crm-settings/{key}',              [CrmSettingsController::class, 'update']);
 
             // ─── CRM: AI Assistant ────────────────────────────────────────────
+            Route::get('crm-ai/diagnose',                 [CrmAiController::class, 'diagnose']);
             Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);

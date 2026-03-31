@@ -133,15 +133,26 @@ export function Scan() {
           ) : (
             <div className="space-y-4">
               <h3 className="font-semibold text-white">NFC Card Scan</h3>
-              <p className="text-sm text-[#8e8e93]">Enter the NFC card UID or use a USB NFC reader:</p>
-              <input
-                type="text"
-                placeholder="NFC UID (e.g. 04:A3:B2:1C:F4)"
-                value={nfcUid}
-                onChange={(e) => setNfcUid(e.target.value)}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-                onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
-              />
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                <p className="text-xs text-blue-300">
+                  <strong>USB NFC Reader:</strong> Place your cursor in the field below, then tap the NFC card on your reader. The UID will be entered automatically.
+                </p>
+                <p className="text-xs text-blue-300/70 mt-1">
+                  If you don't have a USB reader, you can type the card UID manually (e.g. 04:A3:B2:1C:F4).
+                </p>
+              </div>
+              <div className="relative">
+                <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+                <input
+                  type="text"
+                  placeholder="Tap NFC card or enter UID..."
+                  value={nfcUid}
+                  onChange={(e) => setNfcUid(e.target.value)}
+                  autoFocus
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
+                  onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
+                />
+              </div>
               <button onClick={scanNfc} className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
                 Look Up Member
               </button>

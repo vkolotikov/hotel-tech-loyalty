@@ -22,6 +22,9 @@ class PlannerController extends Controller
         if ($weekStart = $request->get('week_start')) {
             $query->whereBetween('task_date', [$weekStart, date('Y-m-d', strtotime($weekStart . ' +6 days'))]);
         }
+        if (($from = $request->get('from')) && ($to = $request->get('to'))) {
+            $query->whereBetween('task_date', [$from, $to]);
+        }
         if ($employee = $request->get('employee')) {
             $query->where('employee_name', $employee);
         }

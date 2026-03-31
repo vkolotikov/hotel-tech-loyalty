@@ -8,7 +8,8 @@ import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Menu, X, Hotel, Scan,
   Crown, Award, Building2, UserCheck, FileText,
-  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio
+  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
+  AlertTriangle, Clock,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -34,6 +35,8 @@ const navItems: { path: string; label: string; icon: any; gate: NavGate }[] = [
   { path: '/analytics',    label: 'Analytics',     icon: BarChart2,        gate: 'can_view_analytics' },
   { path: '/ai',           label: 'AI Insights',   icon: Sparkles,         gate: 'can_view_analytics' },
   { path: '/notifications',label: 'Campaigns',     icon: Bell,             gate: 'admin' },
+  { path: '/email-templates',label: 'Email Templates', icon: Mail,           gate: 'admin' },
+  { path: '/audit-log',    label: 'Audit Log',     icon: ScrollText,       gate: 'admin' },
   { path: '/settings',     label: 'Settings',      icon: Settings,         gate: 'admin' },
 ]
 
@@ -224,9 +227,55 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
+          <SubscriptionBanner />
           {children}
         </main>
       </div>
     </div>
   )
+}
+
+function SubscriptionBanner() {
+  const { data } = useQuery({
+    queryKey: ['subscription-status'],
+    queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
+  if (!data || data.status === 'LOCAL' || data.status === 'ACTIVE') return null
+
+  if (data.status === 'TRIALING') {
+    const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
+    const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
+    return (
+      <div className="mb-4 bg-primary-500/10 border border-primary-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
+        <Clock size={16} className="text-primary-400 shrink-0" />
+        <span className="text-sm text-primary-300">
+          <strong>Trial</strong> {daysLeft !== null ? ' \u2014 ' + daysLeft + ' days remaining' : ''}.
+          {data.plan?.name ? ' Plan: ' + data.plan.name + '.' : ''}
+          {' '}Visit{' '}
+          <a href="https://saas.hotel-tech.ai/admin/subscription" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary-200">
+            Billing
+          </a>{' '}to subscribe.
+        </span>
+      </div>
+    )
+  }
+
+  if (data.status === 'EXPIRED' || !data.active) {
+    return (
+      <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
+        <AlertTriangle size={16} className="text-red-400 shrink-0" />
+        <span className="text-sm text-red-300">
+          <strong>Subscription expired.</strong> Some features may be limited.{' '}
+          <a href="https://saas.hotel-tech.ai/admin/subscription" target="_blank" rel="noopener noreferrer" className="underline hover:text-red-200">
+            Renew now
+          </a>
+        </span>
+      </div>
+    )
+  }
+
+  return null
 }

@@ -32,7 +32,9 @@ return [
     ],
 
     'saas' => [
-        'jwt_secret' => env('SAAS_JWT_SECRET', ''),
+        'jwt_secret'   => env('SAAS_JWT_SECRET', ''),
+        'platform_url' => env('SAAS_PLATFORM_URL', 'https://saas.hotel-tech.ai'),
+        'api_url'      => env('SAAS_API_URL', 'https://saas.hotel-tech.ai/api'),
     ],
 
     'cors' => [

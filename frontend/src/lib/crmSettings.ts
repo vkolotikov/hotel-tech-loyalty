@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from './api'
+import { api, API_BASE } from './api'
 
 export interface CrmSettings {
   employees: string[]
@@ -87,8 +87,19 @@ export function useSettings(): CrmSettings {
     if (typeof val === 'string') {
       try { parsed = JSON.parse(val) } catch { /* keep as string */ }
     }
+    // If an object with numeric keys came back (PHP associative array), convert to array
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const defaultVal = (DEFAULTS as any)[key]
+      if (Array.isArray(defaultVal)) {
+        parsed = Object.values(parsed)
+      }
+    }
     if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
       parsed = parsed.map((g: any) => g.name ?? String(g))
+    }
+    // Ensure array fields stay arrays
+    if (Array.isArray((DEFAULTS as any)[key]) && !Array.isArray(parsed)) {
+      continue // skip bad value, keep default
     }
     merged[key] = parsed
   }
@@ -101,7 +112,7 @@ export async function triggerExport(path: string, params: Record<string, any> = 
     if (v !== '' && v !== null && v !== undefined) qs.set(k, String(v))
   }
   const token = localStorage.getItem('auth_token')
-  const base = import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api'
+  const base = API_BASE
   const url = `${base}${path}${qs.toString() ? '?' + qs.toString() : ''}`
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'text/csv' } })
   if (!res.ok) throw new Error('Export failed')

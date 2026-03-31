@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react'
 
 const STATUS_COLORS: Record<string, string> = {
   Active: 'bg-green-500/20 text-green-400',
@@ -32,8 +32,12 @@ export function Corporate() {
   const [sort, setSort] = useState('company_name')
   const [dir, setDir] = useState<'asc' | 'desc'>('asc')
   const [showCreate, setShowCreate] = useState(false)
+  const [createTab, setCreateTab] = useState<'form' | 'ai'>('form')
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [captureText, setCaptureText] = useState('')
+  const [captureLoading, setCaptureLoading] = useState(false)
+  const [captureResult, setCaptureResult] = useState<any>(null)
 
   const params: any = { page, per_page: 25, sort, dir }
   if (search) params.search = search
@@ -176,47 +180,178 @@ export function Corporate() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCreate(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
               <div className="flex items-center gap-2">
                 <Building2 size={18} className="text-primary-400" />
                 <h2 className="text-lg font-bold text-white">Add Corporate Account</h2>
               </div>
-              <button onClick={() => setShowCreate(false)} className="text-[#636366] hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} className="text-[#636366] hover:text-white"><X size={18} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form) }} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="Company Name *" value={form.company_name} onChange={v => F('company_name', v)} required />
-                <Select label="Industry" value={form.industry} onChange={v => F('industry', v)} options={settings.industries} />
-                <Input label="Contact Person" value={form.contact_person} onChange={v => F('contact_person', v)} />
-                <Input label="Contact Email" value={form.contact_email} onChange={v => F('contact_email', v)} type="email" />
-                <Input label="Contact Phone" value={form.contact_phone} onChange={v => F('contact_phone', v)} />
-                <Select label="Account Manager" value={form.account_manager} onChange={v => F('account_manager', v)} options={settings.account_managers} />
-                <Input label="Contract Start" value={form.contract_start} onChange={v => F('contract_start', v)} type="date" />
-                <Input label="Contract End" value={form.contract_end} onChange={v => F('contract_end', v)} type="date" />
-                <Input label="Negotiated Rate" value={form.negotiated_rate} onChange={v => F('negotiated_rate', v)} type="number" />
-                <Select label="Rate Type" value={form.rate_type} onChange={v => F('rate_type', v)} options={settings.rate_types} />
-                <Input label="Discount %" value={form.discount_percentage} onChange={v => F('discount_percentage', v)} type="number" />
-                <Input label="Annual Room Nights Target" value={form.annual_room_nights_target} onChange={v => F('annual_room_nights_target', v)} type="number" />
-                <Input label="Payment Terms" value={form.payment_terms} onChange={v => F('payment_terms', v)} />
-                <Input label="Credit Limit" value={form.credit_limit} onChange={v => F('credit_limit', v)} type="number" />
-                <Input label="Billing Email" value={form.billing_email} onChange={v => F('billing_email', v)} type="email" />
-                <Input label="Tax ID" value={form.tax_id} onChange={v => F('tax_id', v)} />
+
+            {/* Tabs */}
+            <div className="flex border-b border-dark-border">
+              <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-[#8e8e93] hover:text-white'}`}>
+                <Plus size={14} className="inline mr-1.5 -mt-0.5" />Manual Entry
+              </button>
+              <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-[#8e8e93] hover:text-white'}`}>
+                <Sparkles size={14} className="inline mr-1.5 -mt-0.5" />AI Capture
+              </button>
+            </div>
+
+            {createTab === 'form' ? (
+              <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form) }} className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Company Name *" value={form.company_name} onChange={v => F('company_name', v)} required />
+                  <Select label="Industry" value={form.industry} onChange={v => F('industry', v)} options={settings.industries} />
+                  <Input label="Contact Person" value={form.contact_person} onChange={v => F('contact_person', v)} />
+                  <Input label="Contact Email" value={form.contact_email} onChange={v => F('contact_email', v)} type="email" />
+                  <Input label="Contact Phone" value={form.contact_phone} onChange={v => F('contact_phone', v)} />
+                  <Select label="Account Manager" value={form.account_manager} onChange={v => F('account_manager', v)} options={settings.account_managers} />
+                  <Input label="Contract Start" value={form.contract_start} onChange={v => F('contract_start', v)} type="date" />
+                  <Input label="Contract End" value={form.contract_end} onChange={v => F('contract_end', v)} type="date" />
+                  <Input label="Negotiated Rate" value={form.negotiated_rate} onChange={v => F('negotiated_rate', v)} type="number" />
+                  <Select label="Rate Type" value={form.rate_type} onChange={v => F('rate_type', v)} options={settings.rate_types} />
+                  <Input label="Discount %" value={form.discount_percentage} onChange={v => F('discount_percentage', v)} type="number" />
+                  <Input label="Annual Room Nights Target" value={form.annual_room_nights_target} onChange={v => F('annual_room_nights_target', v)} type="number" />
+                  <Input label="Payment Terms" value={form.payment_terms} onChange={v => F('payment_terms', v)} />
+                  <Input label="Credit Limit" value={form.credit_limit} onChange={v => F('credit_limit', v)} type="number" />
+                  <Input label="Billing Email" value={form.billing_email} onChange={v => F('billing_email', v)} type="email" />
+                  <Input label="Tax ID" value={form.tax_id} onChange={v => F('tax_id', v)} />
+                </div>
+                <Input label="Billing Address" value={form.billing_address} onChange={v => F('billing_address', v)} />
+                <div>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                  <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">Cancel</button>
+                  <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
+                    {createMutation.isPending ? 'Creating...' : 'Create Account'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-6">
+                {!captureResult ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-[#8e8e93]">Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.</p>
+                    <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
+                      placeholder="e.g. Following our meeting with Acme Corp (tech company), their travel manager Jane Doe (jane@acme.com, +1 555 0123) agreed to a corporate rate of $180/night with 15% discount. Contract runs Jan-Dec 2026, targeting 500 room nights. Payment net 30, credit limit $50,000. Tax ID: US12-3456789..."
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                    <div className="flex justify-end gap-3">
+                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                      <button
+                        onClick={async () => {
+                          if (!captureText.trim()) return
+                          setCaptureLoading(true)
+                          try {
+                            const res = await api.post('/v1/admin/crm-ai/capture-corporate', { text: captureText })
+                            if (res.data.success) {
+                              setCaptureResult(res.data.data)
+                            } else {
+                              toast.error(res.data.error || 'Failed to extract data')
+                            }
+                          } catch (e: any) {
+                            toast.error(e.response?.data?.message || 'AI extraction failed')
+                          } finally { setCaptureLoading(false) }
+                        }}
+                        disabled={captureLoading || !captureText.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
+                      >
+                        {captureLoading ? <><Loader2 size={14} className="animate-spin" /> Extracting...</> : <><Sparkles size={14} /> Extract</>}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
+                      AI extracted the following. Review and edit before creating the account.
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { key: 'company_name', label: 'Company Name *' },
+                        { key: 'industry', label: 'Industry' },
+                        { key: 'contact_person', label: 'Contact Person' },
+                        { key: 'contact_email', label: 'Contact Email' },
+                        { key: 'contact_phone', label: 'Contact Phone' },
+                        { key: 'account_manager', label: 'Account Manager' },
+                        { key: 'contract_start', label: 'Contract Start', type: 'date' },
+                        { key: 'contract_end', label: 'Contract End', type: 'date' },
+                        { key: 'negotiated_rate', label: 'Negotiated Rate', type: 'number' },
+                        { key: 'rate_type', label: 'Rate Type' },
+                        { key: 'discount_percentage', label: 'Discount %', type: 'number' },
+                        { key: 'annual_room_nights_target', label: 'Annual Room Nights', type: 'number' },
+                        { key: 'payment_terms', label: 'Payment Terms' },
+                        { key: 'credit_limit', label: 'Credit Limit', type: 'number' },
+                        { key: 'billing_email', label: 'Billing Email' },
+                        { key: 'tax_id', label: 'Tax ID' },
+                      ].map(({ key, label, type }) => (
+                        <div key={key}>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                          <input type={type || 'text'} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
+                            className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Billing Address</label>
+                      <input type="text" value={captureResult.billing_address ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, billing_address: e.target.value }))}
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                      <textarea value={captureResult.notes ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))} rows={3}
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                    </div>
+                    <div className="flex justify-between pt-1">
+                      <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">Back</button>
+                      <div className="flex gap-3">
+                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                        <button
+                          onClick={async () => {
+                            const r = captureResult
+                            try {
+                              await api.post('/v1/admin/corporate-accounts', {
+                                company_name: r.company_name,
+                                industry: r.industry || undefined,
+                                contact_person: r.contact_person || undefined,
+                                contact_email: r.contact_email || undefined,
+                                contact_phone: r.contact_phone || undefined,
+                                account_manager: r.account_manager || undefined,
+                                contract_start: r.contract_start || undefined,
+                                contract_end: r.contract_end || undefined,
+                                negotiated_rate: r.negotiated_rate || undefined,
+                                rate_type: r.rate_type || undefined,
+                                discount_percentage: r.discount_percentage || undefined,
+                                annual_room_nights_target: r.annual_room_nights_target || undefined,
+                                payment_terms: r.payment_terms || undefined,
+                                credit_limit: r.credit_limit || undefined,
+                                billing_address: r.billing_address || undefined,
+                                billing_email: r.billing_email || undefined,
+                                tax_id: r.tax_id || undefined,
+                                notes: r.notes || undefined,
+                              })
+                              qc.invalidateQueries({ queryKey: ['corporate-accounts'] })
+                              toast.success(`Corporate account created for ${r.company_name}`)
+                              setShowCreate(false); setCaptureResult(null); setCaptureText('')
+                            } catch (e: any) {
+                              toast.error(e.response?.data?.message || 'Failed to create account')
+                            }
+                          }}
+                          disabled={!captureResult.company_name}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          Create Account
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Input label="Billing Address" value={form.billing_address} onChange={v => F('billing_address', v)} />
-              <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
-                <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
-                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">Cancel</button>
-                <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
-                  {createMutation.isPending ? 'Creating...' : 'Create Account'}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}

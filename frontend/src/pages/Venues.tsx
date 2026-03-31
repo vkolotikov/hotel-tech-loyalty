@@ -5,7 +5,7 @@ import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import {
   Plus, Search, Filter, ChevronLeft, ChevronRight, X,
-  Calendar, Users as UsersIcon, MapPin, Building2,
+  Calendar, CalendarDays, CalendarRange, Users as UsersIcon, MapPin, Building2,
   Monitor, Coffee, CheckCircle, XCircle,
   AlertCircle, Play, ArrowRight,
 } from 'lucide-react'
@@ -76,6 +76,27 @@ const EMPTY_VENUE = {
   description: '',
 }
 
+function venueColor(venueType: string): string {
+  if (venueType === 'Spa') return 'bg-purple-500/10 border-purple-500'
+  if (venueType === 'Conference') return 'bg-blue-500/10 border-blue-500'
+  if (venueType === 'Meeting Room') return 'bg-cyan-500/10 border-cyan-500'
+  if (venueType === 'Banquet Hall') return 'bg-amber-500/10 border-amber-500'
+  return 'bg-gray-500/10 border-gray-500'
+}
+
+function BookingCard({ b, fmtTime }: { b: any; fmtTime: (t: string) => string }) {
+  return (
+    <div className={'rounded-lg px-3 py-2.5 border-l-2 ' + venueColor(b.venue_type)}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-400">{fmtTime(b.start_time)} - {fmtTime(b.end_time)}</div>
+        {b.status && <span className="text-[10px] text-gray-500">{b.status}</span>}
+      </div>
+      <div className="text-sm text-white font-medium mt-0.5">{b.event_name || b.venue_name}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{b.venue_name}{b.attendees ? ' \u00B7 ' + b.attendees + ' pax' : ''}{b.contact_name ? ' \u00B7 ' + b.contact_name : ''}</div>
+    </div>
+  )
+}
+
 export function Venues() {
   const qc = useQueryClient()
   const settings = useSettings()
@@ -96,8 +117,10 @@ export function Venues() {
   const [venueForm, setVenueForm] = useState({ ...EMPTY_VENUE })
   const [calDate, setCalDate] = useState(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
   })
+  const [calView, setCalView] = useState<'day' | 'week' | 'month'>('week')
+  const [calMonth, setCalMonth] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
 
   /* Data Queries */
   const { data: propertiesData } = useQuery({
@@ -105,7 +128,7 @@ export function Venues() {
     queryFn: () => api.get('/v1/admin/properties', { params: { per_page: 200 } }).then(r => r.data),
     staleTime: 5 * 60 * 1000,
   })
-  const properties = propertiesData?.data ?? propertiesData ?? []
+  const properties = propertiesData?.properties ?? propertiesData?.data ?? (Array.isArray(propertiesData) ? propertiesData : [])
 
   const { data: venuesData } = useQuery({
     queryKey: ['venues-all'],
@@ -129,17 +152,21 @@ export function Venues() {
   const bookings = bookingsData?.data ?? []
   const meta = bookingsData?.meta ?? {}
 
-  // Calendar data
-  const calFrom = new Date(calDate)
-  calFrom.setDate(calFrom.getDate() - calFrom.getDay())
-  const calTo = new Date(calFrom)
-  calTo.setDate(calTo.getDate() + 6)
-  const calFromStr = calFrom.toISOString().slice(0, 10)
-  const calToStr = calTo.toISOString().slice(0, 10)
+  // Calendar data — compute date range based on calView
+  const calRangeFrom = (() => {
+    if (calView === 'day') return calDate
+    if (calView === 'month') return calMonth.year + '-' + String(calMonth.month + 1).padStart(2, '0') + '-01'
+    const d = new Date(calDate); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10)
+  })()
+  const calRangeTo = (() => {
+    if (calView === 'day') return calDate
+    if (calView === 'month') { const ld = new Date(calMonth.year, calMonth.month + 1, 0).getDate(); return calMonth.year + '-' + String(calMonth.month + 1).padStart(2, '0') + '-' + String(ld).padStart(2, '0') }
+    const d = new Date(calRangeFrom); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10)
+  })()
 
   const { data: calendarRaw = {} } = useQuery({
-    queryKey: ['venue-calendar', calFromStr, calToStr],
-    queryFn: () => api.get('/v1/admin/venues/bookings/calendar', { params: { date_from: calFromStr, date_to: calToStr } }).then(r => r.data).catch(() => ({})),
+    queryKey: ['venue-calendar', calRangeFrom, calRangeTo],
+    queryFn: () => api.get('/v1/admin/venues/bookings/calendar', { params: { date_from: calRangeFrom, date_to: calRangeTo } }).then(r => r.data).catch(() => ({})),
     enabled: activeView === 'calendar',
   })
   const calendarData = calendarRaw as Record<string, any[]>
@@ -163,17 +190,46 @@ export function Venues() {
   const fmtTime = (t: string) => t?.slice(0, 5) || ''
 
   // Calendar helpers
+  const calWeekStart = new Date(calRangeFrom)
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(calFrom)
+    const d = new Date(calWeekStart)
     d.setDate(d.getDate() + i)
     return d
   })
-  const calWeekLabel = `${calFrom.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${calTo.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-  const shiftWeek = (dir: number) => {
-    const d = new Date(calDate)
-    d.setDate(d.getDate() + dir * 7)
-    setCalDate(d.toISOString().slice(0, 10))
+  const calWeekEnd = new Date(calWeekStart); calWeekEnd.setDate(calWeekEnd.getDate() + 6)
+  const calWeekLabel = calWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' \u2014 ' + calWeekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const DAY_NAMES_S = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  const shiftCal = (dir: number) => {
+    if (calView === 'day') {
+      const d = new Date(calDate); d.setDate(d.getDate() + dir); setCalDate(d.toISOString().slice(0, 10))
+    } else if (calView === 'week') {
+      const d = new Date(calDate); d.setDate(d.getDate() + dir * 7); setCalDate(d.toISOString().slice(0, 10))
+    } else {
+      setCalMonth(prev => { let m = prev.month + dir, y = prev.year; if (m < 0) { m = 11; y-- } if (m > 11) { m = 0; y++ } return { year: y, month: m } })
+    }
   }
+  const calGoToday = () => {
+    const now = new Date()
+    setCalDate(now.toISOString().slice(0, 10))
+    setCalMonth({ year: now.getFullYear(), month: now.getMonth() })
+  }
+
+  // Month grid for calendar
+  const calMonthWeeks = (() => {
+    const first = new Date(calMonth.year, calMonth.month, 1)
+    const lastDay = new Date(calMonth.year, calMonth.month + 1, 0).getDate()
+    const startDow = (first.getDay() + 6) % 7
+    const weeks: (Date | null)[][] = []
+    let week: (Date | null)[] = Array(startDow).fill(null)
+    for (let day = 1; day <= lastDay; day++) {
+      week.push(new Date(calMonth.year, calMonth.month, day))
+      if (week.length === 7) { weeks.push(week); week = [] }
+    }
+    if (week.length > 0) { while (week.length < 7) week.push(null); weeks.push(week) }
+    return weeks
+  })()
 
   return (
     <div className="p-6 space-y-5">
@@ -347,53 +403,112 @@ export function Venues() {
       {activeView === 'calendar' && (
         <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Calendar size={16} className="text-primary-400" />
-              Weekly Schedule
-            </h2>
+            <div className="flex items-center gap-3">
+              <div className="flex rounded-lg border border-dark-border overflow-hidden">
+                {([['day', CalendarDays, 'Day'], ['week', Calendar, 'Week'], ['month', CalendarRange, 'Month']] as const).map(([v, Icon, label]) => (
+                  <button key={v} onClick={() => setCalView(v as any)} className={'flex items-center gap-1 px-2.5 py-1.5 text-xs transition-colors ' + (calView === v ? 'bg-primary-500/10 text-primary-400' : 'text-gray-400 hover:text-white')}>
+                    <Icon size={12} /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => shiftWeek(-1)} className="p-1.5 rounded-lg border border-dark-border text-gray-400 hover:text-white"><ChevronLeft size={14} /></button>
-              <span className="text-xs text-gray-400 min-w-[180px] text-center">{calWeekLabel}</span>
-              <button onClick={() => shiftWeek(1)} className="p-1.5 rounded-lg border border-dark-border text-gray-400 hover:text-white"><ChevronRight size={14} /></button>
-              <button onClick={() => setCalDate(new Date().toISOString().slice(0, 10))} className="text-xs text-primary-400 hover:text-primary-300 px-2">Today</button>
+              <button onClick={() => shiftCal(-1)} className="p-1.5 rounded-lg border border-dark-border text-gray-400 hover:text-white"><ChevronLeft size={14} /></button>
+              <span className="text-xs text-gray-400 min-w-[180px] text-center">
+                {calView === 'day' && new Date(calDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {calView === 'week' && calWeekLabel}
+                {calView === 'month' && (MONTH_NAMES[calMonth.month] + ' ' + calMonth.year)}
+              </span>
+              <button onClick={() => shiftCal(1)} className="p-1.5 rounded-lg border border-dark-border text-gray-400 hover:text-white"><ChevronRight size={14} /></button>
+              <button onClick={calGoToday} className="text-xs text-primary-400 hover:text-primary-300 px-2">Today</button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {weekDays.map((day) => {
-              const ds = day.toISOString().slice(0, 10)
-              const isToday = ds === new Date().toISOString().slice(0, 10)
-              const dayBookings = calendarData[ds] ?? []
-              return (
-                <div key={ds} className={`rounded-xl border p-3 min-h-[180px] ${isToday ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border bg-dark-surface2/30'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-medium ${isToday ? 'text-primary-400' : 'text-gray-400'}`}>
-                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </span>
-                    <span className={`text-lg font-semibold ${isToday ? 'text-primary-400' : 'text-white'}`}>
-                      {day.getDate()}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {dayBookings.length === 0 && <p className="text-[10px] text-gray-600 text-center py-4">No bookings</p>}
-                    {dayBookings.map((b: any) => (
-                      <div key={b.id} className={`rounded-lg px-2 py-1.5 border-l-2 ${
-                        b.venue_type === 'Spa' ? 'bg-purple-500/10 border-purple-500' :
-                        b.venue_type === 'Conference' ? 'bg-blue-500/10 border-blue-500' :
-                        b.venue_type === 'Meeting Room' ? 'bg-cyan-500/10 border-cyan-500' :
-                        b.venue_type === 'Banquet Hall' ? 'bg-amber-500/10 border-amber-500' :
-                        'bg-gray-500/10 border-gray-500'
-                      }`}>
-                        <div className="text-[10px] text-gray-400">{fmtTime(b.start_time)} - {fmtTime(b.end_time)}</div>
-                        <div className="text-xs text-white font-medium truncate">{b.event_name || b.venue_name}</div>
-                        <div className="text-[10px] text-gray-500 truncate">{b.venue_name} {b.attendees ? `· ${b.attendees} pax` : ''}</div>
-                      </div>
-                    ))}
-                  </div>
+          {/* Day View */}
+          {calView === 'day' && (() => {
+            const dayBookings = calendarData[calDate] ?? []
+            return (
+              <div>
+                <h3 className="text-sm font-medium text-white mb-3">{dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}</h3>
+                {dayBookings.length === 0 && <p className="text-gray-600 text-sm text-center py-12">No bookings for this day</p>}
+                <div className="space-y-2">
+                  {dayBookings.map((b: any) => (
+                    <BookingCard key={b.id} b={b} fmtTime={fmtTime} />
+                  ))}
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            )
+          })()}
+
+          {/* Week View */}
+          {calView === 'week' && (
+            <div className="grid grid-cols-7 gap-2">
+              {weekDays.map((day) => {
+                const ds = day.toISOString().slice(0, 10)
+                const isToday = ds === new Date().toISOString().slice(0, 10)
+                const dayBookings = calendarData[ds] ?? []
+                return (
+                  <div key={ds} className={'rounded-xl border p-3 min-h-[180px] ' + (isToday ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border bg-dark-surface2/30')}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={'text-xs font-medium ' + (isToday ? 'text-primary-400' : 'text-gray-400')}>
+                        {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                      </span>
+                      <span className={'text-lg font-semibold ' + (isToday ? 'text-primary-400' : 'text-white')}>
+                        {day.getDate()}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {dayBookings.length === 0 && <p className="text-[10px] text-gray-600 text-center py-4">No bookings</p>}
+                      {dayBookings.map((b: any) => (
+                        <div key={b.id} className={'rounded-lg px-2 py-1.5 border-l-2 ' + venueColor(b.venue_type)}>
+                          <div className="text-[10px] text-gray-400">{fmtTime(b.start_time)} - {fmtTime(b.end_time)}</div>
+                          <div className="text-xs text-white font-medium truncate">{b.event_name || b.venue_name}</div>
+                          <div className="text-[10px] text-gray-500 truncate">{b.venue_name}{b.attendees ? ' \u00B7 ' + b.attendees + ' pax' : ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Month View */}
+          {calView === 'month' && (
+            <div>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {DAY_NAMES_S.map(d => <div key={d} className="text-center text-xs text-gray-500 font-medium py-1">{d}</div>)}
+              </div>
+              {calMonthWeeks.map((week, wi) => (
+                <div key={wi} className="grid grid-cols-7 gap-1 mb-1">
+                  {week.map((date, di) => {
+                    if (!date) return <div key={di} className="min-h-[80px] rounded-lg bg-dark-surface2/20" />
+                    const ds = date.toISOString().slice(0, 10)
+                    const isToday = ds === new Date().toISOString().slice(0, 10)
+                    const dayBookings = calendarData[ds] ?? []
+                    return (
+                      <div
+                        key={di}
+                        onClick={() => { setCalDate(ds); setCalView('day') }}
+                        className={'min-h-[80px] rounded-lg border p-2 cursor-pointer transition-colors hover:border-primary-500/40 ' +
+                          (isToday ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border/50 bg-dark-surface2/30')}
+                      >
+                        <div className={'text-xs font-semibold mb-1 ' + (isToday ? 'text-primary-400' : 'text-white')}>{date.getDate()}</div>
+                        <div className="space-y-0.5">
+                          {dayBookings.slice(0, 2).map((b: any) => (
+                            <div key={b.id} className={'text-[10px] px-1 py-0.5 rounded truncate border-l-2 text-gray-300 ' + venueColor(b.venue_type)}>
+                              {b.event_name || b.venue_name}
+                            </div>
+                          ))}
+                          {dayBookings.length > 2 && <div className="text-[10px] text-gray-500">+{dayBookings.length - 2} more</div>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
