@@ -178,42 +178,58 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'       => 'required|string|max:191',
-            'email'      => 'required|email|max:191',
+            'email'      => 'required|email|max:191|unique:users,email',
             'password'   => 'required|string|min:8',
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
         ]);
 
         $saasApi = config('services.saas.api_url');
-        if (!$saasApi) {
-            return response()->json(['error' => 'SaaS platform not configured'], 503);
-        }
 
-        // Step 1: Register on SaaS platform
-        try {
-            $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
-                'name'     => $validated['name'],
-                'email'    => $validated['email'],
-                'password' => $validated['password'],
-                'orgName'  => $validated['hotel_name'],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Could not reach the subscription platform. Please try again.'], 503);
-        }
+        $saasToken = null;
+        $saasOrgId = null;
 
-        if (!$regResponse->successful()) {
-            $msg = $regResponse->json('error') ?? $regResponse->json('message') ?? 'Registration failed';
-            return response()->json(['error' => $msg], $regResponse->status());
-        }
-
-        $saasData = $regResponse->json();
-        $saasToken = $saasData['token'] ?? null;
-        $saasOrgId = $saasData['organization']['id'] ?? null;
-
-        // Step 2: Subscribe to trial plan
-        if ($saasToken) {
+        // Step 1: Register on SaaS platform (if configured)
+        if ($saasApi) {
             try {
-                // First get available plans to find the requested one
+                $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
+                    'name'     => $validated['name'],
+                    'email'    => $validated['email'],
+                    'password' => $validated['password'],
+                    'orgName'  => $validated['hotel_name'],
+                ]);
+
+                if ($regResponse->successful()) {
+                    $saasData = $regResponse->json();
+                    $saasToken = $saasData['token'] ?? null;
+                    $saasOrgId = $saasData['organization']['id'] ?? null;
+                } else {
+                    // Forward SaaS validation errors but don't block local creation
+                    $body = $regResponse->json();
+                    $msg = $body['error'] ?? $body['message'] ?? null;
+
+                    // If email already taken on SaaS, forward as error
+                    if ($regResponse->status() === 422) {
+                        // Check if it's an email uniqueness issue
+                        $errors = $body['errors'] ?? [];
+                        $emailErrors = $errors['email'] ?? [];
+                        if ($emailErrors || str_contains($msg ?? '', 'email')) {
+                            return response()->json(['error' => 'This email is already registered. Please sign in instead.'], 422);
+                        }
+                        return response()->json(['error' => $msg ?? 'Registration failed on subscription platform.'], 422);
+                    }
+                    // Non-422 SaaS errors: log but continue with local-only account
+                    report(new \RuntimeException("SaaS register failed [{$regResponse->status()}]: " . ($msg ?? 'unknown')));
+                }
+            } catch (\Exception $e) {
+                // SaaS unreachable — continue with local-only account
+                report($e);
+            }
+        }
+
+        // Step 2: Subscribe to trial plan (non-fatal)
+        if ($saasToken && $saasApi) {
+            try {
                 $plansRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/plans");
                 $plans = $plansRes->json('plans', []);
                 $targetSlug = $validated['plan'] ?? 'starter';
@@ -224,7 +240,6 @@ class AuthController extends Controller
                         break;
                     }
                 }
-                // Fall back to first plan if slug not found
                 if (!$planId && count($plans) > 0) {
                     $planId = $plans[0]['id'];
                 }
@@ -236,15 +251,12 @@ class AuthController extends Controller
                     ]);
                 }
             } catch (\Exception $e) {
-                // Non-fatal — user is registered, trial can be started manually
                 report($e);
             }
         }
 
         // Step 3: Create local organization + staff user
-        $localUser = User::where('email', $validated['email'])->first();
-        if (!$localUser) {
-            // Create local organization linked to SaaS org
+        try {
             $org = null;
             if ($saasOrgId) {
                 $org = \App\Models\Organization::firstOrCreate(
@@ -254,21 +266,31 @@ class AuthController extends Controller
                         'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']),
                     ]
                 );
-                // Auto-setup defaults (tiers, benefits, settings)
-                app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+            } else {
+                // No SaaS org — create local-only org
+                $org = \App\Models\Organization::create([
+                    'name' => $validated['hotel_name'],
+                    'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']) . '-' . \Illuminate\Support\Str::random(4),
+                ]);
             }
+
+            // Auto-setup defaults (tiers, benefits, settings)
+            app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+
+            // Bind org context so BelongsToOrganization trait auto-assigns org_id
+            app()->instance('current_organization_id', $org->id);
 
             $localUser = User::create([
                 'name'            => $validated['name'],
                 'email'           => $validated['email'],
                 'password'        => Hash::make($validated['password']),
                 'user_type'       => 'staff',
-                'organization_id' => $org?->id,
+                'organization_id' => $org->id,
             ]);
 
             Staff::create([
                 'user_id'             => $localUser->id,
-                'organization_id'     => $org?->id,
+                'organization_id'     => $org->id,
                 'role'                => 'super_admin',
                 'hotel_name'          => $validated['hotel_name'],
                 'can_award_points'    => true,
@@ -276,6 +298,9 @@ class AuthController extends Controller
                 'can_manage_offers'   => true,
                 'can_view_analytics'  => true,
             ]);
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
         }
 
         $sanctumToken = $localUser->createToken('admin')->plainTextToken;
@@ -285,7 +310,7 @@ class AuthController extends Controller
             'saas_token' => $saasToken,
             'user'       => $localUser,
             'staff'      => $localUser->staff,
-            'org_id'     => $saasOrgId,
+            'org_id'     => $saasOrgId ?? $org->id,
             'message'    => 'Trial started! You have 14 days to explore all features.',
         ], 201);
     }
