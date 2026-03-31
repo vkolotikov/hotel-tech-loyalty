@@ -14,6 +14,10 @@ class TenantScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
+        if (!app()->bound('current_organization_id')) {
+            return;
+        }
+
         $orgId = app('current_organization_id');
 
         if ($orgId) {
