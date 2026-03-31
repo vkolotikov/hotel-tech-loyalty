@@ -115,9 +115,9 @@ class AuthController extends Controller
         $response = ['token' => $token, 'user' => $user];
 
         if ($user->isMember()) {
-            $response['member'] = $user->loyaltyMember?->load('tier');
+            $response['member'] = LoyaltyMember::withoutGlobalScopes()->where('user_id', $user->id)->with('tier')->first();
         } elseif ($user->isStaff()) {
-            $staff = $user->staff;
+            $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
             $staff?->update(['last_login_at' => now()]);
             $response['staff'] = $staff;
         }
@@ -178,11 +178,17 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'       => 'required|string|max:191',
-            'email'      => 'required|email|max:191|unique:users,email',
+            'email'      => 'required|email|max:191',
             'password'   => 'required|string|min:8',
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
         ]);
+
+        // Check if user already exists and is fully set up
+        $existingUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+        if ($existingUser && $existingUser->staff) {
+            return response()->json(['error' => 'This email is already registered. Please sign in instead.'], 422);
+        }
 
         $saasApi = config('services.saas.api_url');
 
@@ -204,25 +210,12 @@ class AuthController extends Controller
                     $saasToken = $saasData['token'] ?? null;
                     $saasOrgId = $saasData['organization']['id'] ?? null;
                 } else {
-                    // Forward SaaS validation errors but don't block local creation
+                    // SaaS 422 on email = already registered there; log but continue
                     $body = $regResponse->json();
-                    $msg = $body['error'] ?? $body['message'] ?? null;
-
-                    // If email already taken on SaaS, forward as error
-                    if ($regResponse->status() === 422) {
-                        // Check if it's an email uniqueness issue
-                        $errors = $body['errors'] ?? [];
-                        $emailErrors = $errors['email'] ?? [];
-                        if ($emailErrors || str_contains($msg ?? '', 'email')) {
-                            return response()->json(['error' => 'This email is already registered. Please sign in instead.'], 422);
-                        }
-                        return response()->json(['error' => $msg ?? 'Registration failed on subscription platform.'], 422);
-                    }
-                    // Non-422 SaaS errors: log but continue with local-only account
-                    report(new \RuntimeException("SaaS register failed [{$regResponse->status()}]: " . ($msg ?? 'unknown')));
+                    $msg = $body['error'] ?? $body['message'] ?? 'unknown';
+                    report(new \RuntimeException("SaaS register [{$regResponse->status()}]: {$msg}"));
                 }
             } catch (\Exception $e) {
-                // SaaS unreachable — continue with local-only account
                 report($e);
             }
         }
@@ -255,7 +248,7 @@ class AuthController extends Controller
             }
         }
 
-        // Step 3: Create local organization + staff user
+        // Step 3: Create or complete local organization + staff user
         try {
             $org = null;
             if ($saasOrgId) {
@@ -266,38 +259,52 @@ class AuthController extends Controller
                         'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']),
                     ]
                 );
-            } else {
-                // No SaaS org — create local-only org
+            }
+
+            // Re-use org from existing partial user, or create new
+            if (!$org && $existingUser?->organization_id) {
+                $org = \App\Models\Organization::find($existingUser->organization_id);
+            }
+            if (!$org) {
                 $org = \App\Models\Organization::create([
                     'name' => $validated['hotel_name'],
                     'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']) . '-' . \Illuminate\Support\Str::random(4),
                 ]);
             }
 
-            // Auto-setup defaults (tiers, benefits, settings)
-            app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
-
             // Bind org context so BelongsToOrganization trait auto-assigns org_id
             app()->instance('current_organization_id', $org->id);
 
-            $localUser = User::create([
-                'name'            => $validated['name'],
-                'email'           => $validated['email'],
-                'password'        => Hash::make($validated['password']),
-                'user_type'       => 'staff',
-                'organization_id' => $org->id,
-            ]);
+            // Auto-setup defaults (tiers, benefits, settings) — idempotent via firstOrCreate
+            app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
 
-            Staff::create([
-                'user_id'             => $localUser->id,
-                'organization_id'     => $org->id,
-                'role'                => 'super_admin',
-                'hotel_name'          => $validated['hotel_name'],
-                'can_award_points'    => true,
-                'can_redeem_points'   => true,
-                'can_manage_offers'   => true,
-                'can_view_analytics'  => true,
-            ]);
+            // Create or re-use the local user
+            $localUser = $existingUser;
+            if (!$localUser) {
+                $localUser = User::create([
+                    'name'            => $validated['name'],
+                    'email'           => $validated['email'],
+                    'password'        => Hash::make($validated['password']),
+                    'user_type'       => 'staff',
+                    'organization_id' => $org->id,
+                ]);
+            } elseif (!$localUser->organization_id) {
+                $localUser->update(['organization_id' => $org->id]);
+            }
+
+            // Create staff record if missing
+            if (!$localUser->staff) {
+                Staff::create([
+                    'user_id'             => $localUser->id,
+                    'organization_id'     => $org->id,
+                    'role'                => 'super_admin',
+                    'hotel_name'          => $validated['hotel_name'],
+                    'can_award_points'    => true,
+                    'can_redeem_points'   => true,
+                    'can_manage_offers'   => true,
+                    'can_view_analytics'  => true,
+                ]);
+            }
         } catch (\Exception $e) {
             report($e);
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
@@ -308,7 +315,7 @@ class AuthController extends Controller
         return response()->json([
             'token'      => $sanctumToken,
             'saas_token' => $saasToken,
-            'user'       => $localUser,
+            'user'       => $localUser->fresh(),
             'staff'      => $localUser->staff,
             'org_id'     => $saasOrgId ?? $org->id,
             'message'    => 'Trial started! You have 14 days to explore all features.',

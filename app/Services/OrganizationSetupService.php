@@ -49,12 +49,12 @@ class OrganizationSetupService
 
         // Create default benefits
         $benefits = [
-            ['name' => 'Welcome Drink',       'description' => 'Complimentary welcome drink on arrival', 'category' => 'food_beverage', 'sort_order' => 1],
-            ['name' => 'Late Checkout',        'description' => 'Late checkout until 2pm',               'category' => 'room',           'sort_order' => 2],
-            ['name' => 'Room Upgrade',         'description' => 'Complimentary room upgrade (subject to availability)', 'category' => 'room', 'sort_order' => 3],
-            ['name' => 'Spa Discount',         'description' => '15% discount on all spa treatments',   'category' => 'spa',            'sort_order' => 4],
-            ['name' => 'Early Check-in',       'description' => 'Early check-in from 11am',              'category' => 'room',           'sort_order' => 5],
-            ['name' => 'Airport Transfer',     'description' => 'Complimentary airport transfer',        'category' => 'transport',      'sort_order' => 6],
+            ['name' => 'Welcome Drink',       'code' => 'welcome_drink',    'description' => 'Complimentary welcome drink on arrival', 'category' => 'food_beverage', 'sort_order' => 1],
+            ['name' => 'Late Checkout',        'code' => 'late_checkout',    'description' => 'Late checkout until 2pm',               'category' => 'room',           'sort_order' => 2],
+            ['name' => 'Room Upgrade',         'code' => 'room_upgrade',     'description' => 'Complimentary room upgrade (subject to availability)', 'category' => 'room', 'sort_order' => 3],
+            ['name' => 'Spa Discount',         'code' => 'spa_discount',     'description' => '15% discount on all spa treatments',   'category' => 'spa',            'sort_order' => 4],
+            ['name' => 'Early Check-in',       'code' => 'early_checkin',    'description' => 'Early check-in from 11am',              'category' => 'room',           'sort_order' => 5],
+            ['name' => 'Airport Transfer',     'code' => 'airport_transfer', 'description' => 'Complimentary airport transfer',        'category' => 'transport',      'sort_order' => 6],
         ];
 
         foreach ($benefits as $b) {
