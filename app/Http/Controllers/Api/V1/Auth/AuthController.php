@@ -375,8 +375,11 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Setup defaults (idempotent) — also binds current_organization_id
-            app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+            // Bind org context for BelongsToOrganization trait
+            app()->instance('current_organization_id', $org->id);
+
+            // NOTE: Do NOT call setupDefaults() here — let the Setup wizard handle it
+            // so the user gets to choose blank vs demo data.
 
             // Create or re-use local user
             $localUser = $existingUser;
