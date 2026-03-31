@@ -17,13 +17,16 @@ class OrganizationSetupService
 {
     /**
      * Set up a new organization with default tiers and settings.
-     * Always called when an org is first created.
+     * Idempotent — safe to call multiple times (uses firstOrCreate).
      */
     public function setupDefaults(Organization $org): void
     {
+        // Bind org context for BelongsToOrganization trait
+        app()->instance('current_organization_id', $org->id);
+
         // Create default property
-        $property = Property::firstOrCreate(
-            ['organization_id' => $org->id, 'code' => Str::upper(Str::substr($org->slug, 0, 5)) . '01'],
+        Property::withoutGlobalScopes()->firstOrCreate(
+            ['organization_id' => $org->id, 'code' => Str::upper(Str::substr($org->slug ?? 'HTL', 0, 5)) . '01'],
             [
                 'name'    => $org->name . ' Main',
                 'city'    => '',
@@ -31,40 +34,40 @@ class OrganizationSetupService
             ]
         );
 
-        // Create default tiers
+        // Create default tiers — column is "earn_rate" not "earn_multiplier"
         $tiers = [
-            ['name' => 'Bronze',   'min_points' => 0,     'earn_multiplier' => 1.0,  'color_hex' => '#CD7F32', 'sort_order' => 1],
-            ['name' => 'Silver',   'min_points' => 1000,  'earn_multiplier' => 1.25, 'color_hex' => '#C0C0C0', 'sort_order' => 2],
-            ['name' => 'Gold',     'min_points' => 5000,  'earn_multiplier' => 1.5,  'color_hex' => '#FFD700', 'sort_order' => 3],
-            ['name' => 'Platinum', 'min_points' => 15000, 'earn_multiplier' => 2.0,  'color_hex' => '#E5E4E2', 'sort_order' => 4],
-            ['name' => 'Diamond',  'min_points' => 50000, 'earn_multiplier' => 3.0,  'color_hex' => '#B9F2FF', 'sort_order' => 5],
+            ['name' => 'Bronze',   'min_points' => 0,     'earn_rate' => 1.0,  'color_hex' => '#CD7F32', 'sort_order' => 1],
+            ['name' => 'Silver',   'min_points' => 1000,  'earn_rate' => 1.25, 'color_hex' => '#C0C0C0', 'sort_order' => 2],
+            ['name' => 'Gold',     'min_points' => 5000,  'earn_rate' => 1.5,  'color_hex' => '#FFD700', 'sort_order' => 3],
+            ['name' => 'Platinum', 'min_points' => 15000, 'earn_rate' => 2.0,  'color_hex' => '#E5E4E2', 'sort_order' => 4],
+            ['name' => 'Diamond',  'min_points' => 50000, 'earn_rate' => 3.0,  'color_hex' => '#B9F2FF', 'sort_order' => 5],
         ];
 
         foreach ($tiers as $tier) {
-            LoyaltyTier::firstOrCreate(
+            LoyaltyTier::withoutGlobalScopes()->firstOrCreate(
                 ['organization_id' => $org->id, 'name' => $tier['name']],
                 array_merge($tier, ['is_active' => true])
             );
         }
 
-        // Create default benefits
+        // Create default benefits — code is NOT NULL
         $benefits = [
-            ['name' => 'Welcome Drink',       'code' => 'welcome_drink',    'description' => 'Complimentary welcome drink on arrival', 'category' => 'food_beverage', 'sort_order' => 1],
-            ['name' => 'Late Checkout',        'code' => 'late_checkout',    'description' => 'Late checkout until 2pm',               'category' => 'room',           'sort_order' => 2],
-            ['name' => 'Room Upgrade',         'code' => 'room_upgrade',     'description' => 'Complimentary room upgrade (subject to availability)', 'category' => 'room', 'sort_order' => 3],
-            ['name' => 'Spa Discount',         'code' => 'spa_discount',     'description' => '15% discount on all spa treatments',   'category' => 'spa',            'sort_order' => 4],
-            ['name' => 'Early Check-in',       'code' => 'early_checkin',    'description' => 'Early check-in from 11am',              'category' => 'room',           'sort_order' => 5],
-            ['name' => 'Airport Transfer',     'code' => 'airport_transfer', 'description' => 'Complimentary airport transfer',        'category' => 'transport',      'sort_order' => 6],
+            ['name' => 'Welcome Drink',   'code' => 'welcome_drink',    'description' => 'Complimentary welcome drink on arrival', 'category' => 'food_beverage', 'sort_order' => 1],
+            ['name' => 'Late Checkout',    'code' => 'late_checkout',    'description' => 'Late checkout until 2pm',               'category' => 'room',           'sort_order' => 2],
+            ['name' => 'Room Upgrade',     'code' => 'room_upgrade',     'description' => 'Complimentary room upgrade (subject to availability)', 'category' => 'room', 'sort_order' => 3],
+            ['name' => 'Spa Discount',     'code' => 'spa_discount',     'description' => '15% discount on all spa treatments',   'category' => 'spa',            'sort_order' => 4],
+            ['name' => 'Early Check-in',   'code' => 'early_checkin',    'description' => 'Early check-in from 11am',              'category' => 'room',           'sort_order' => 5],
+            ['name' => 'Airport Transfer', 'code' => 'airport_transfer', 'description' => 'Complimentary airport transfer',        'category' => 'transport',      'sort_order' => 6],
         ];
 
         foreach ($benefits as $b) {
-            BenefitDefinition::firstOrCreate(
-                ['organization_id' => $org->id, 'name' => $b['name']],
+            BenefitDefinition::withoutGlobalScopes()->firstOrCreate(
+                ['organization_id' => $org->id, 'code' => $b['code']],
                 array_merge($b, ['is_active' => true])
             );
         }
 
-        // Default settings
+        // Default settings — type, group, label are NOT NULL
         $defaults = [
             ['key' => 'hotel_name',            'value' => $org->name, 'type' => 'text',   'group' => 'general',  'label' => 'Hotel Name'],
             ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Welcome Bonus Points'],
@@ -76,7 +79,7 @@ class OrganizationSetupService
         ];
 
         foreach ($defaults as $setting) {
-            HotelSetting::firstOrCreate(
+            HotelSetting::withoutGlobalScopes()->firstOrCreate(
                 ['organization_id' => $org->id, 'key' => $setting['key']],
                 $setting
             );
@@ -88,13 +91,14 @@ class OrganizationSetupService
      */
     public function seedSampleData(Organization $org): void
     {
-        $bronzeTier = LoyaltyTier::where('organization_id', $org->id)->where('name', 'Bronze')->first();
-        $silverTier = LoyaltyTier::where('organization_id', $org->id)->where('name', 'Silver')->first();
-        $goldTier   = LoyaltyTier::where('organization_id', $org->id)->where('name', 'Gold')->first();
+        app()->instance('current_organization_id', $org->id);
 
-        if (!$bronzeTier) return; // setupDefaults not run yet
+        $bronzeTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Bronze')->first();
+        $silverTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Silver')->first();
+        $goldTier   = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Gold')->first();
 
-        // Sample members
+        if (!$bronzeTier) return;
+
         $sampleMembers = [
             ['name' => 'Alice Johnson',  'email' => "alice.{$org->id}@sample.hotel-tech.ai",  'tier' => $goldTier,   'points' => 7500],
             ['name' => 'Bob Smith',      'email' => "bob.{$org->id}@sample.hotel-tech.ai",    'tier' => $silverTier, 'points' => 2200],
@@ -104,7 +108,7 @@ class OrganizationSetupService
         ];
 
         foreach ($sampleMembers as $sm) {
-            $user = User::firstOrCreate(
+            $user = User::withoutGlobalScopes()->firstOrCreate(
                 ['email' => $sm['email']],
                 [
                     'name'            => $sm['name'],
@@ -114,7 +118,7 @@ class OrganizationSetupService
                 ]
             );
 
-            $member = LoyaltyMember::firstOrCreate(
+            LoyaltyMember::withoutGlobalScopes()->firstOrCreate(
                 ['user_id' => $user->id],
                 [
                     'organization_id' => $org->id,
@@ -130,7 +134,6 @@ class OrganizationSetupService
             );
         }
 
-        // Sample guests (CRM)
         $sampleGuests = [
             ['first_name' => 'James',   'last_name' => 'Anderson', 'email' => 'james.a@example.com',   'vip_level' => 'gold',   'total_stays' => 12, 'total_revenue' => 15000],
             ['first_name' => 'Sophie',  'last_name' => 'Martin',   'email' => 'sophie.m@example.com',  'vip_level' => 'silver', 'total_stays' => 5,  'total_revenue' => 6500],
@@ -138,12 +141,12 @@ class OrganizationSetupService
         ];
 
         foreach ($sampleGuests as $sg) {
-            Guest::firstOrCreate(
+            Guest::withoutGlobalScopes()->firstOrCreate(
                 ['organization_id' => $org->id, 'email' => $sg['email']],
                 array_merge($sg, [
-                    'guest_type'      => 'individual',
-                    'source'          => 'sample',
-                    'last_stay_date'  => now()->subDays(random_int(5, 90)),
+                    'guest_type'     => 'individual',
+                    'source'         => 'sample',
+                    'last_stay_date' => now()->subDays(random_int(5, 90)),
                 ])
             );
         }

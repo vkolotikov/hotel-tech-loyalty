@@ -139,8 +139,9 @@ class SaasAuthMiddleware
             }
         }
 
-        // Find or create local staff user
-        $user = User::where('email', $email)->where('user_type', 'staff')->first();
+        // Find or create local staff user (bypass tenant scopes — no context yet)
+        $user = User::withoutGlobalScopes()
+            ->where('email', $email)->where('user_type', 'staff')->first();
 
         if (!$user) {
             $user = User::create([
@@ -158,7 +159,7 @@ class SaasAuthMiddleware
                 default => 'receptionist',
             };
 
-            Staff::create([
+            Staff::withoutGlobalScopes()->create([
                 'user_id'           => $user->id,
                 'organization_id'   => $org?->id,
                 'role'              => $localRole,
@@ -170,10 +171,10 @@ class SaasAuthMiddleware
                 'is_active'         => true,
             ]);
         } elseif ($org && !$user->organization_id) {
-            // Link existing user to org if not yet linked
             $user->update(['organization_id' => $org->id]);
-            if ($user->staff && !$user->staff->organization_id) {
-                $user->staff->update(['organization_id' => $org->id]);
+            $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
+            if ($staff && !$staff->organization_id) {
+                $staff->update(['organization_id' => $org->id]);
             }
         }
 

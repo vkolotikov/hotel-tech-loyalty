@@ -49,12 +49,14 @@ class AuthController extends Controller
         ]);
 
         // Find default tier (Bronze)
-        $defaultTier = \App\Models\LoyaltyTier::where('min_points', 0)->where('is_active', true)->first();
+        $defaultTier = \App\Models\LoyaltyTier::withoutGlobalScopes()
+            ->where('min_points', 0)->where('is_active', true)->first();
 
         // Find referrer if code provided
         $referredBy = null;
         if (!empty($validated['referral_code'])) {
-            $referredBy = LoyaltyMember::where('referral_code', $validated['referral_code'])->first();
+            $referredBy = LoyaltyMember::withoutGlobalScopes()
+                ->where('referral_code', $validated['referral_code'])->first();
         }
 
         $qrToken = $this->qrService->generateToken(new LoyaltyMember(['id' => 0, 'member_number' => '']));
@@ -99,7 +101,8 @@ class AuthController extends Controller
             'device'   => 'nullable|string|max:50',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        // No tenant context at login — bypass global scopes
+        $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -107,15 +110,13 @@ class AuthController extends Controller
             ]);
         }
 
-        // Revoke old tokens if needed
-        // $user->tokens()->delete();
-
         $token = $user->createToken($validated['device'] ?? 'api')->plainTextToken;
 
         $response = ['token' => $token, 'user' => $user];
 
         if ($user->isMember()) {
-            $response['member'] = LoyaltyMember::withoutGlobalScopes()->where('user_id', $user->id)->with('tier')->first();
+            $response['member'] = LoyaltyMember::withoutGlobalScopes()
+                ->where('user_id', $user->id)->with('tier')->first();
         } elseif ($user->isStaff()) {
             $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
             $staff?->update(['last_login_at' => now()]);
@@ -127,8 +128,18 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('loyaltyMember.tier', 'staff');
-        return response()->json($user);
+        $user = $request->user();
+        // Bypass scopes for relationship loading — user may not have tenant context yet
+        $member = LoyaltyMember::withoutGlobalScopes()
+            ->where('user_id', $user->id)->with('tier')->first();
+        $staff = Staff::withoutGlobalScopes()
+            ->where('user_id', $user->id)->first();
+
+        $data = $user->toArray();
+        $data['loyalty_member'] = $member;
+        $data['staff'] = $staff;
+
+        return response()->json($data);
     }
 
     public function logout(Request $request): JsonResponse
@@ -140,7 +151,8 @@ class AuthController extends Controller
     public function updatePushToken(Request $request): JsonResponse
     {
         $validated = $request->validate(['expo_push_token' => 'required|string']);
-        $member = $request->user()->loyaltyMember;
+        $member = LoyaltyMember::withoutGlobalScopes()
+            ->where('user_id', $request->user()->id)->first();
         if ($member) {
             $member->update(['expo_push_token' => $validated['expo_push_token']]);
         }
@@ -167,12 +179,6 @@ class AuthController extends Controller
 
     /**
      * POST /v1/auth/trial — Register on SaaS platform, start trial, create local staff user.
-     *
-     * Accepts: name, email, password, hotel_name, plan (optional, defaults to starter)
-     * 1. Registers user + org on SaaS platform
-     * 2. Subscribes to a trial plan
-     * 3. Creates local staff user in loyalty DB
-     * 4. Returns SaaS JWT + local Sanctum token
      */
     public function startTrial(Request $request): JsonResponse
     {
@@ -184,14 +190,17 @@ class AuthController extends Controller
             'plan'       => 'nullable|string|max:50',
         ]);
 
-        // Check if user already exists and is fully set up
+        // Check if user already exists and is fully set up (bypass scopes)
         $existingUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
-        if ($existingUser && $existingUser->staff) {
+        $existingStaff = $existingUser
+            ? Staff::withoutGlobalScopes()->where('user_id', $existingUser->id)->first()
+            : null;
+
+        if ($existingUser && $existingStaff) {
             return response()->json(['error' => 'This email is already registered. Please sign in instead.'], 422);
         }
 
         $saasApi = config('services.saas.api_url');
-
         $saasToken = null;
         $saasOrgId = null;
 
@@ -210,7 +219,6 @@ class AuthController extends Controller
                     $saasToken = $saasData['token'] ?? null;
                     $saasOrgId = $saasData['organization']['id'] ?? null;
                 } else {
-                    // SaaS 422 on email = already registered there; log but continue
                     $body = $regResponse->json();
                     $msg = $body['error'] ?? $body['message'] ?? 'unknown';
                     report(new \RuntimeException("SaaS register [{$regResponse->status()}]: {$msg}"));
@@ -236,7 +244,6 @@ class AuthController extends Controller
                 if (!$planId && count($plans) > 0) {
                     $planId = $plans[0]['id'];
                 }
-
                 if ($planId) {
                     Http::withToken($saasToken)->timeout(5)->post("{$saasApi}/billing/subscribe", [
                         'planId'   => $planId,
@@ -261,7 +268,6 @@ class AuthController extends Controller
                 );
             }
 
-            // Re-use org from existing partial user, or create new
             if (!$org && $existingUser?->organization_id) {
                 $org = \App\Models\Organization::find($existingUser->organization_id);
             }
@@ -272,13 +278,10 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Bind org context so BelongsToOrganization trait auto-assigns org_id
-            app()->instance('current_organization_id', $org->id);
-
-            // Auto-setup defaults (tiers, benefits, settings) — idempotent via firstOrCreate
+            // Setup defaults (idempotent) — also binds current_organization_id
             app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
 
-            // Create or re-use the local user
+            // Create or re-use local user
             $localUser = $existingUser;
             if (!$localUser) {
                 $localUser = User::create([
@@ -292,9 +295,9 @@ class AuthController extends Controller
                 $localUser->update(['organization_id' => $org->id]);
             }
 
-            // Create staff record if missing
-            if (!$localUser->staff) {
-                Staff::create([
+            // Create staff record if missing (bypass scopes for check)
+            if (!$existingStaff) {
+                Staff::withoutGlobalScopes()->create([
                     'user_id'             => $localUser->id,
                     'organization_id'     => $org->id,
                     'role'                => 'super_admin',
@@ -311,12 +314,13 @@ class AuthController extends Controller
         }
 
         $sanctumToken = $localUser->createToken('admin')->plainTextToken;
+        $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
 
         return response()->json([
             'token'      => $sanctumToken,
             'saas_token' => $saasToken,
             'user'       => $localUser->fresh(),
-            'staff'      => $localUser->staff,
+            'staff'      => $staff,
             'org_id'     => $saasOrgId ?? $org->id,
             'message'    => 'Trial started! You have 14 days to explore all features.',
         ], 201);
@@ -327,7 +331,6 @@ class AuthController extends Controller
      */
     public function subscription(Request $request): JsonResponse
     {
-        // If SaaS-authenticated, fetch from SaaS
         $orgId = $request->attributes->get('saas_org_id');
         if ($orgId) {
             $saasApi = config('services.saas.api_url');
@@ -354,7 +357,6 @@ class AuthController extends Controller
             }
         }
 
-        // For local-only users, always active
         return response()->json(['active' => true, 'status' => 'LOCAL', 'plan' => null]);
     }
 }
