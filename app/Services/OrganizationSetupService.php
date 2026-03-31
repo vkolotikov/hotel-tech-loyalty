@@ -66,19 +66,19 @@ class OrganizationSetupService
 
         // Default settings
         $defaults = [
-            'hotel_name'           => $org->name,
-            'welcome_bonus_points' => '500',
-            'referrer_bonus_points'=> '250',
-            'referee_bonus_points' => '250',
-            'points_expiry_months' => '24',
-            'points_per_currency'  => '10',
-            'currency_symbol'      => '€',
+            ['key' => 'hotel_name',            'value' => $org->name, 'type' => 'text',   'group' => 'general',  'label' => 'Hotel Name'],
+            ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Welcome Bonus Points'],
+            ['key' => 'referrer_bonus_points', 'value' => '250',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Referrer Bonus Points'],
+            ['key' => 'referee_bonus_points',  'value' => '250',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Referee Bonus Points'],
+            ['key' => 'points_expiry_months',  'value' => '24',       'type' => 'number', 'group' => 'loyalty',  'label' => 'Points Expiry (Months)'],
+            ['key' => 'points_per_currency',   'value' => '10',       'type' => 'number', 'group' => 'loyalty',  'label' => 'Points per Currency Unit'],
+            ['key' => 'currency_symbol',       'value' => '€',        'type' => 'text',   'group' => 'general',  'label' => 'Currency Symbol'],
         ];
 
-        foreach ($defaults as $key => $value) {
+        foreach ($defaults as $setting) {
             HotelSetting::firstOrCreate(
-                ['organization_id' => $org->id, 'key' => $key],
-                ['value' => $value]
+                ['organization_id' => $org->id, 'key' => $setting['key']],
+                $setting
             );
         }
     }
