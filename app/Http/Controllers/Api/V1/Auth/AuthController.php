@@ -192,10 +192,10 @@ class AuthController extends Controller
         // Step 1: Register on SaaS platform
         try {
             $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
-                'name'             => $validated['name'],
-                'email'            => $validated['email'],
-                'password'         => $validated['password'],
-                'organizationName' => $validated['hotel_name'],
+                'name'     => $validated['name'],
+                'email'    => $validated['email'],
+                'password' => $validated['password'],
+                'orgName'  => $validated['hotel_name'],
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Could not reach the subscription platform. Please try again.'], 503);
