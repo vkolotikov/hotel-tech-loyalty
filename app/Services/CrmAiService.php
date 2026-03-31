@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CrmSetting;
+use App\Models\EmailTemplate;
 use App\Models\Guest;
 use App\Models\Inquiry;
 use App\Models\LoyaltyMember;
@@ -14,7 +15,9 @@ use App\Models\Reservation;
 use App\Models\SpecialOffer;
 use App\Models\CorporateAccount;
 use App\Models\VenueBooking;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 class CrmAiService
 {
@@ -24,8 +27,8 @@ class CrmAiService
 
     public function __construct()
     {
-        $this->apiKey = env('ANTHROPIC_API_KEY', '');
-        $this->model  = env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514');
+        $this->apiKey = config('services.anthropic.api_key', '');
+        $this->model  = config('services.anthropic.model', 'claude-sonnet-4-20250514');
     }
 
     /* ────────── Public API ────────── */
@@ -71,9 +74,9 @@ class CrmAiService
         if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
 
         $settings  = CrmSetting::all()->pluck('value', 'key');
-        $roomTypes = json_decode($settings['room_types'] ?? '[]', true);
-        $sources   = json_decode($settings['lead_sources'] ?? '[]', true);
-        $inquiryTypes = json_decode($settings['inquiry_types'] ?? '[]', true);
+        $roomTypes = ($settings['room_types'] ?? []);
+        $sources   = ($settings['lead_sources'] ?? []);
+        $inquiryTypes = ($settings['inquiry_types'] ?? []);
 
         $system = "You extract guest inquiry information from raw text (emails, WhatsApp, phone notes, booking requests). "
             . "This is a hotel CRM. Extract guest and inquiry details. "
@@ -123,6 +126,104 @@ class CrmAiService
         return ['success' => false, 'error' => 'Could not extract inquiry from the text.'];
     }
 
+    public function extractMember(string $text): array
+    {
+        if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
+
+        $tiers = LoyaltyTier::where('is_active', true)->orderBy('sort_order')->pluck('name')->toArray();
+
+        $system = "You extract loyalty member information from raw unstructured text (emails, registration forms, business cards, WhatsApp messages, phone notes, CRM notes). "
+            . "This is a hotel loyalty program. Extract personal details for member enrollment. "
+            . "Available tiers: " . implode(', ', $tiers) . ". Default to Bronze if unclear. "
+            . "Generate a secure temporary password if none is mentioned (8+ chars, mixed case, digits).";
+
+        $tools = [[
+            'name' => 'save_extracted_member',
+            'description' => 'Save the extracted member information for enrollment.',
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'name'        => ['type' => 'string', 'description' => 'Full name of the person'],
+                    'email'       => ['type' => 'string', 'description' => 'Email address'],
+                    'phone'       => ['type' => 'string', 'description' => 'Phone number if found'],
+                    'password'    => ['type' => 'string', 'description' => 'Generated temporary password (8+ chars)'],
+                    'tier'        => ['type' => 'string', 'description' => 'Suggested tier name', 'enum' => array_merge($tiers, ['Bronze'])],
+                    'nationality' => ['type' => 'string', 'description' => 'Nationality or country if found'],
+                    'language'    => ['type' => 'string', 'description' => 'Preferred language if found'],
+                    'notes'       => ['type' => 'string', 'description' => 'Any additional context or notes extracted'],
+                ],
+                'required' => ['name', 'email', 'password'],
+            ],
+        ]];
+
+        $messages = [['role' => 'user', 'content' => "Extract member enrollment information:\n\n" . $text]];
+        $res = $this->call($system, $messages, $tools, ['type' => 'tool', 'name' => 'save_extracted_member']);
+
+        foreach ($res['content'] ?? [] as $block) {
+            if (($block['type'] ?? '') === 'tool_use' && $block['name'] === 'save_extracted_member') {
+                return ['success' => true, 'data' => $block['input']];
+            }
+        }
+
+        return ['success' => false, 'error' => 'Could not extract member information from the text.'];
+    }
+
+    public function extractCorporate(string $text): array
+    {
+        if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
+
+        $settings  = CrmSetting::all()->pluck('value', 'key');
+        $industries = ($settings['industries'] ?? []);
+        $rateTypes  = ($settings['rate_types'] ?? []);
+        $managers   = ($settings['account_managers'] ?? []);
+
+        $system = "You extract corporate account information from raw unstructured text (emails, contracts, proposals, business cards, meeting notes). "
+            . "This is a hotel CRM for managing corporate clients with negotiated rates. "
+            . "Industries: " . implode(', ', $industries ?: ['Technology', 'Finance', 'Healthcare', 'Hospitality', 'Government', 'Education', 'Other']) . ". "
+            . "Rate types: " . implode(', ', $rateTypes ?: ['BAR', 'Corporate', 'Government', 'Wholesale']) . ". "
+            . "Account managers: " . implode(', ', $managers ?: []) . ".";
+
+        $tools = [[
+            'name' => 'save_extracted_corporate',
+            'description' => 'Save the extracted corporate account information.',
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'company_name'              => ['type' => 'string', 'description' => 'Company/organization name'],
+                    'industry'                  => ['type' => 'string', 'description' => 'Industry sector'],
+                    'contact_person'            => ['type' => 'string', 'description' => 'Primary contact person name'],
+                    'contact_email'             => ['type' => 'string', 'description' => 'Contact email'],
+                    'contact_phone'             => ['type' => 'string', 'description' => 'Contact phone'],
+                    'account_manager'           => ['type' => 'string', 'description' => 'Assigned account manager'],
+                    'contract_start'            => ['type' => 'string', 'description' => 'Contract start date YYYY-MM-DD'],
+                    'contract_end'              => ['type' => 'string', 'description' => 'Contract end date YYYY-MM-DD'],
+                    'negotiated_rate'           => ['type' => 'number', 'description' => 'Negotiated room rate'],
+                    'rate_type'                 => ['type' => 'string', 'description' => 'Rate type'],
+                    'discount_percentage'       => ['type' => 'number', 'description' => 'Discount percentage'],
+                    'annual_room_nights_target' => ['type' => 'integer', 'description' => 'Target annual room nights'],
+                    'payment_terms'             => ['type' => 'string', 'description' => 'Payment terms (e.g. Net 30)'],
+                    'credit_limit'              => ['type' => 'number', 'description' => 'Credit limit amount'],
+                    'billing_address'           => ['type' => 'string', 'description' => 'Billing address'],
+                    'billing_email'             => ['type' => 'string', 'description' => 'Billing/invoicing email'],
+                    'tax_id'                    => ['type' => 'string', 'description' => 'Tax ID / VAT number'],
+                    'notes'                     => ['type' => 'string', 'description' => 'Additional notes or context'],
+                ],
+                'required' => ['company_name'],
+            ],
+        ]];
+
+        $messages = [['role' => 'user', 'content' => "Extract corporate account information:\n\n" . $text]];
+        $res = $this->call($system, $messages, $tools, ['type' => 'tool', 'name' => 'save_extracted_corporate']);
+
+        foreach ($res['content'] ?? [] as $block) {
+            if (($block['type'] ?? '') === 'tool_use' && $block['name'] === 'save_extracted_corporate') {
+                return ['success' => true, 'data' => $block['input']];
+            }
+        }
+
+        return ['success' => false, 'error' => 'Could not extract corporate information from the text.'];
+    }
+
     /* ────────── Claude HTTP ────────── */
 
     private function call(string $system, array $messages, array $tools, ?array $toolChoice = null): array
@@ -158,13 +259,13 @@ class CrmAiService
     private function buildSystemPrompt(): string
     {
         $settings = CrmSetting::all()->pluck('value', 'key');
-        $roomTypes  = implode(', ', json_decode($settings['room_types'] ?? '[]', true));
-        $inqTypes   = implode(', ', json_decode($settings['inquiry_types'] ?? '[]', true));
-        $inqStatuses= implode(', ', json_decode($settings['inquiry_statuses'] ?? '[]', true));
-        $resStatuses= implode(', ', json_decode($settings['reservation_statuses'] ?? '[]', true));
-        $employees  = implode(', ', json_decode($settings['employees'] ?? '[]', true));
-        $currency   = json_decode($settings['currency_symbol'] ?? '"€"', true);
-        $mealPlans  = implode(', ', json_decode($settings['meal_plans'] ?? '[]', true));
+        $roomTypes  = implode(', ', ($settings['room_types'] ?? []));
+        $inqTypes   = implode(', ', ($settings['inquiry_types'] ?? []));
+        $inqStatuses= implode(', ', ($settings['inquiry_statuses'] ?? []));
+        $resStatuses= implode(', ', ($settings['reservation_statuses'] ?? []));
+        $employees  = implode(', ', ($settings['employees'] ?? []));
+        $currency   = ($settings['currency_symbol'] ?? '€');
+        $mealPlans  = implode(', ', ($settings['meal_plans'] ?? []));
 
         $properties = Property::where('is_active', true)->get(['id', 'name', 'code'])->map(fn($p) => "{$p->name} ({$p->code}, ID:{$p->id})")->implode(', ');
 
@@ -204,6 +305,10 @@ Capabilities:
 - Loyalty: Search members, view full profiles with points history, award/redeem points, view tiers and offers.
 - Planning: View planner tasks, create tasks, view venue bookings.
 - AI Analysis: Analyze member churn risk, generate personalized offers, create upsell scripts (powered by GPT-4o).
+- Weekly Reports: Generate weekly performance reports with KPIs, comparisons, and top earners. Optionally email them.
+- Anomaly Detection: Detect unusual patterns — large point transactions, inactive VIPs, booking revenue outliers, redemption spikes, cancellation surges.
+- Occupancy Forecasting: Predict occupancy for the next 14 days based on confirmed reservations vs property capacity.
+- Inquiry Follow-ups: Analyze stale/overdue inquiries and auto-create planner tasks for follow-up.
 
 Rules:
 - Always use tools for real data — never invent IDs, names, or numbers.
@@ -366,6 +471,21 @@ PROMPT;
                 'status'    => ['type' => 'string', 'description' => 'Booking status filter'],
                 'limit'     => ['type' => 'integer', 'description' => 'Max results (default 10)'],
             ], []),
+
+            $this->tool('generate_weekly_report', 'Generate and optionally email a weekly performance report covering KPIs, bookings, loyalty, pipeline, and highlights. Returns the report text.', [
+                'email_to' => ['type' => 'string', 'description' => 'Email address to send the report to (optional — omit to just display)'],
+            ], []),
+
+            $this->tool('detect_anomalies', 'Detect unusual patterns: abnormal point transactions, spending spikes, booking anomalies, and inactive high-value members. Returns flagged items.', [], []),
+
+            $this->tool('forecast_occupancy', 'Predict occupancy for the next 14 days based on confirmed reservations vs property capacity. Returns daily forecast with occupancy percentages.', [
+                'property_id' => ['type' => 'integer', 'description' => 'Property ID (optional — omit for all properties combined)'],
+            ], []),
+
+            $this->tool('analyze_inquiries_create_followups', 'Analyze open inquiries that need follow-up (no task set, stale, or overdue) and auto-create planner tasks for each. Returns created tasks.', [
+                'days_stale' => ['type' => 'integer', 'description' => 'Days without activity to consider stale (default 3)'],
+                'assign_to'  => ['type' => 'string', 'description' => 'Employee name to assign tasks to (optional)'],
+            ], []),
         ];
     }
 
@@ -404,6 +524,10 @@ PROMPT;
                 'analyze_member'         => $this->toolAnalyzeMember($in),
                 'create_planner_task'    => $this->toolCreatePlannerTask($in),
                 'search_venue_bookings'  => $this->toolSearchVenueBookings($in),
+                'generate_weekly_report' => $this->toolGenerateWeeklyReport($in),
+                'detect_anomalies'       => $this->toolDetectAnomalies(),
+                'forecast_occupancy'     => $this->toolForecastOccupancy($in),
+                'analyze_inquiries_create_followups' => $this->toolAnalyzeInquiriesCreateFollowups($in),
                 default                  => ['success' => false, 'data' => ['error' => "Unknown tool: $name"]],
             };
         } catch (\Throwable $e) {
@@ -725,5 +849,323 @@ PROMPT;
         if (!empty($in['date_to'])) $q->where('booking_date', '<=', $in['date_to']);
         if (!empty($in['status'])) $q->where('status', $in['status']);
         return ['success' => true, 'data' => $q->orderBy('booking_date')->limit($limit)->get()->toArray()];
+    }
+
+    /* ────────── Advanced AI Tools ────────── */
+
+    private function toolGenerateWeeklyReport(array $in): array
+    {
+        $now   = now();
+        $from  = $now->copy()->subDays(7)->toDateString();
+        $to    = $now->toDateString();
+        $prevFrom = $now->copy()->subDays(14)->toDateString();
+        $prevTo   = $now->copy()->subDays(7)->toDateString();
+
+        // Current week metrics
+        $newGuests      = Guest::whereBetween('created_at', [$from, $to])->count();
+        $newMembers     = LoyaltyMember::whereBetween('created_at', [$from, $to])->count();
+        $newInquiries   = Inquiry::whereBetween('created_at', [$from, $to])->count();
+        $confirmedInq   = Inquiry::where('status', 'Confirmed')->whereBetween('updated_at', [$from, $to])->count();
+        $lostInq        = Inquiry::where('status', 'Lost')->whereBetween('updated_at', [$from, $to])->count();
+        $reservations   = Reservation::whereBetween('created_at', [$from, $to]);
+        $resCount       = (clone $reservations)->count();
+        $resRevenue     = round((float) (clone $reservations)->sum('total_amount'), 2);
+        $checkIns       = Reservation::where('status', 'Checked In')->whereBetween('checked_in_at', [$from, $to])->count();
+        $checkOuts      = Reservation::whereNotNull('checked_out_at')->whereBetween('checked_out_at', [$from, $to])->count();
+        $pointsAwarded  = (int) PointsTransaction::where('type', 'earn')->whereBetween('created_at', [$from, $to])->sum('points');
+        $pointsRedeemed = (int) PointsTransaction::where('type', 'redeem')->whereBetween('created_at', [$from, $to])->sum('points');
+        $pipelineValue  = round((float) Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->sum('total_value'), 2);
+
+        // Previous week for comparison
+        $prevGuests  = Guest::whereBetween('created_at', [$prevFrom, $prevTo])->count();
+        $prevRes     = Reservation::whereBetween('created_at', [$prevFrom, $prevTo])->count();
+        $prevRevenue = round((float) Reservation::whereBetween('created_at', [$prevFrom, $prevTo])->sum('total_amount'), 2);
+
+        // Top performers
+        $topMembers = LoyaltyMember::with('user:id,name')
+            ->whereHas('pointsTransactions', fn($q) => $q->where('type', 'earn')->whereBetween('created_at', [$from, $to]))
+            ->withSum(['pointsTransactions as week_points' => fn($q) => $q->where('type', 'earn')->whereBetween('created_at', [$from, $to])], 'points')
+            ->orderByDesc('week_points')->limit(5)->get()
+            ->map(fn($m) => ['name' => $m->user?->name, 'points' => (int) $m->week_points])->toArray();
+
+        $currencyRaw = CrmSetting::where('key', 'currency_symbol')->value('value') ?? '€';
+        $currency = is_string($currencyRaw) ? (json_decode($currencyRaw, true) ?? $currencyRaw) : $currencyRaw;
+
+        $report = [
+            'period'       => "{$from} to {$to}",
+            'guests'       => ['new' => $newGuests, 'prev_week' => $prevGuests],
+            'members'      => ['new' => $newMembers],
+            'inquiries'    => ['new' => $newInquiries, 'confirmed' => $confirmedInq, 'lost' => $lostInq, 'pipeline_value' => $pipelineValue],
+            'reservations' => ['new' => $resCount, 'prev_week' => $prevRes, 'revenue' => $resRevenue, 'prev_revenue' => $prevRevenue],
+            'operations'   => ['check_ins' => $checkIns, 'check_outs' => $checkOuts],
+            'loyalty'      => ['points_awarded' => $pointsAwarded, 'points_redeemed' => $pointsRedeemed],
+            'top_earners'  => $topMembers,
+            'currency'     => $currency,
+        ];
+
+        // Email if requested
+        if (!empty($in['email_to'])) {
+            $email = $in['email_to'];
+            $subject = "Weekly Hotel Report — {$from} to {$to}";
+            $html = "<h2>Weekly Performance Report</h2><p><strong>Period:</strong> {$from} to {$to}</p>"
+                . "<h3>Guests & Members</h3><p>New guests: {$newGuests} | New members: {$newMembers}</p>"
+                . "<h3>Inquiries</h3><p>New: {$newInquiries} | Confirmed: {$confirmedInq} | Lost: {$lostInq} | Pipeline: {$currency}{$pipelineValue}</p>"
+                . "<h3>Reservations</h3><p>New: {$resCount} | Revenue: {$currency}{$resRevenue}</p>"
+                . "<h3>Operations</h3><p>Check-ins: {$checkIns} | Check-outs: {$checkOuts}</p>"
+                . "<h3>Loyalty</h3><p>Points awarded: {$pointsAwarded} | Redeemed: {$pointsRedeemed}</p>";
+
+            Mail::html($html, function ($msg) use ($email, $subject) {
+                $msg->to($email)->subject($subject);
+            });
+            $report['emailed_to'] = $email;
+        }
+
+        return ['success' => true, 'data' => $report];
+    }
+
+    private function toolDetectAnomalies(): array
+    {
+        $anomalies = [];
+
+        // 1. Unusually large point transactions (last 7 days, > 3x average)
+        $avgPoints = (float) PointsTransaction::where('type', 'earn')->avg('points') ?: 100;
+        $threshold = $avgPoints * 3;
+        $largeTransactions = PointsTransaction::with(['member.user:id,name'])
+            ->where('type', 'earn')
+            ->where('points', '>', $threshold)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->latest()->limit(10)->get();
+
+        foreach ($largeTransactions as $tx) {
+            $anomalies[] = [
+                'type'     => 'large_point_transaction',
+                'severity' => 'warning',
+                'detail'   => "{$tx->points} pts awarded to {$tx->member?->user?->name} (avg is " . round($avgPoints) . ")",
+                'entity'   => "PointsTransaction #{$tx->id}",
+                'date'     => $tx->created_at?->toDateString(),
+            ];
+        }
+
+        // 2. High-value members inactive > 60 days
+        $inactiveVIPs = LoyaltyMember::with(['user:id,name', 'tier:id,name'])
+            ->where('lifetime_points', '>', 5000)
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('last_activity_at', '<', now()->subDays(60))
+                  ->orWhereNull('last_activity_at');
+            })
+            ->orderByDesc('lifetime_points')->limit(10)->get();
+
+        foreach ($inactiveVIPs as $m) {
+            $lastActivity = $m->last_activity_at?->toDateString() ?? 'never';
+            $anomalies[] = [
+                'type'     => 'inactive_high_value_member',
+                'severity' => 'attention',
+                'detail'   => "{$m->user?->name} ({$m->tier?->name}, {$m->lifetime_points} lifetime pts) — last active: {$lastActivity}",
+                'entity'   => "Member #{$m->id}",
+                'date'     => $lastActivity,
+            ];
+        }
+
+        // 3. Booking revenue outliers (last 30 days, > 3x average)
+        $avgRevenue = (float) Reservation::whereNotNull('total_amount')->where('total_amount', '>', 0)->avg('total_amount') ?: 500;
+        $revThreshold = $avgRevenue * 3;
+        $highBookings = Reservation::with(['guest:id,full_name'])
+            ->where('total_amount', '>', $revThreshold)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->latest()->limit(10)->get();
+
+        foreach ($highBookings as $r) {
+            $anomalies[] = [
+                'type'     => 'high_value_booking',
+                'severity' => 'info',
+                'detail'   => "Reservation #{$r->id} ({$r->guest?->full_name}) — " . number_format($r->total_amount, 2) . " (avg " . number_format($avgRevenue, 2) . ")",
+                'entity'   => "Reservation #{$r->id}",
+                'date'     => $r->created_at?->toDateString(),
+            ];
+        }
+
+        // 4. Sudden point redemption spikes (member redeemed > 50% of balance in one go)
+        $bigRedemptions = PointsTransaction::with(['member.user:id,name'])
+            ->where('type', 'redeem')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->latest()->limit(30)->get();
+
+        foreach ($bigRedemptions as $tx) {
+            $member = $tx->member;
+            if ($member) {
+                $total = $member->current_points + abs($tx->points);
+                if ($total > 0 && (abs($tx->points) / $total) > 0.5) {
+                    $anomalies[] = [
+                        'type'     => 'large_redemption',
+                        'severity' => 'warning',
+                        'detail'   => "{$member->user?->name} redeemed " . abs($tx->points) . " pts (" . round(abs($tx->points) / $total * 100) . "% of balance)",
+                        'entity'   => "Member #{$member->id}",
+                        'date'     => $tx->created_at?->toDateString(),
+                    ];
+                }
+            }
+        }
+
+        // 5. Cancelled reservation spike (last 7 days vs prev 7 days)
+        $recentCancels = Reservation::where('status', 'Cancelled')->where('cancelled_at', '>=', now()->subDays(7))->count();
+        $prevCancels   = Reservation::where('status', 'Cancelled')->whereBetween('cancelled_at', [now()->subDays(14), now()->subDays(7)])->count();
+        if ($recentCancels > 0 && ($prevCancels == 0 || $recentCancels / max($prevCancels, 1) >= 2)) {
+            $anomalies[] = [
+                'type'     => 'cancellation_spike',
+                'severity' => 'warning',
+                'detail'   => "{$recentCancels} cancellations this week vs {$prevCancels} last week",
+                'entity'   => 'Reservations',
+                'date'     => now()->toDateString(),
+            ];
+        }
+
+        return ['success' => true, 'data' => [
+            'anomaly_count' => count($anomalies),
+            'anomalies'     => $anomalies,
+            'thresholds'    => [
+                'points_avg'  => round($avgPoints),
+                'points_3x'   => round($threshold),
+                'revenue_avg' => round($avgRevenue, 2),
+                'revenue_3x'  => round($revThreshold, 2),
+            ],
+        ]];
+    }
+
+    private function toolForecastOccupancy(array $in): array
+    {
+        $propertyId = $in['property_id'] ?? null;
+        $today = now()->toDateString();
+        $endDate = now()->addDays(13)->toDateString();
+
+        // Total room capacity
+        $capacityQuery = Property::where('is_active', true);
+        if ($propertyId) $capacityQuery->where('id', $propertyId);
+        $totalRooms = (int) $capacityQuery->sum('room_count') ?: 100; // fallback
+
+        $propertyName = $propertyId ? Property::find($propertyId)?->name : 'All Properties';
+
+        // Get confirmed + checked-in reservations overlapping the 14-day window
+        $reservations = Reservation::whereIn('status', ['Confirmed', 'Checked In'])
+            ->where('check_in', '<=', $endDate)
+            ->where('check_out', '>=', $today)
+            ->when($propertyId, fn($q) => $q->where('property_id', $propertyId))
+            ->get(['check_in', 'check_out', 'num_rooms']);
+
+        $forecast = [];
+        for ($i = 0; $i < 14; $i++) {
+            $date = now()->addDays($i)->toDateString();
+            $dayName = now()->addDays($i)->format('D');
+            $occupiedRooms = 0;
+
+            foreach ($reservations as $res) {
+                $ci = $res->check_in->toDateString();
+                $co = $res->check_out->toDateString();
+                if ($date >= $ci && $date < $co) {
+                    $occupiedRooms += $res->num_rooms ?? 1;
+                }
+            }
+
+            $pct = $totalRooms > 0 ? round($occupiedRooms / $totalRooms * 100, 1) : 0;
+            $forecast[] = [
+                'date'           => $date,
+                'day'            => $dayName,
+                'occupied_rooms' => $occupiedRooms,
+                'total_rooms'    => $totalRooms,
+                'occupancy_pct'  => $pct,
+                'status'         => $pct >= 90 ? 'near_full' : ($pct >= 70 ? 'healthy' : ($pct >= 40 ? 'moderate' : 'low')),
+            ];
+        }
+
+        $avgOccupancy = count($forecast) > 0 ? round(array_sum(array_column($forecast, 'occupancy_pct')) / count($forecast), 1) : 0;
+        $peakDay = collect($forecast)->sortByDesc('occupancy_pct')->first();
+        $lowDay  = collect($forecast)->sortBy('occupancy_pct')->first();
+
+        return ['success' => true, 'data' => [
+            'property'       => $propertyName,
+            'total_rooms'    => $totalRooms,
+            'avg_occupancy'  => $avgOccupancy,
+            'peak_day'       => $peakDay,
+            'lowest_day'     => $lowDay,
+            'daily_forecast' => $forecast,
+        ]];
+    }
+
+    private function toolAnalyzeInquiriesCreateFollowups(array $in): array
+    {
+        $daysStale = $in['days_stale'] ?? 3;
+        $assignTo  = $in['assign_to'] ?? null;
+        $staleDate = now()->subDays($daysStale)->toDateString();
+
+        // Find open inquiries needing follow-up
+        $inquiries = Inquiry::with(['guest:id,full_name', 'property:id,name,code'])
+            ->whereNotIn('status', ['Confirmed', 'Lost'])
+            ->where(function ($q) use ($staleDate) {
+                // No next task set
+                $q->whereNull('next_task_due')
+                // Or task is overdue
+                ->orWhere(function ($q2) {
+                    $q2->where('next_task_due', '<', now()->toDateString())->where('next_task_completed', false);
+                })
+                // Or no activity for N days
+                ->orWhere('updated_at', '<', $staleDate);
+            })
+            ->orderBy('total_value', 'desc')
+            ->limit(20)
+            ->get();
+
+        $createdTasks = [];
+        foreach ($inquiries as $inq) {
+            $guestName = $inq->guest?->full_name ?? 'Unknown';
+            $propName  = $inq->property?->name ?? '';
+            $value     = $inq->total_value ? " ({$inq->total_value})" : '';
+
+            // Determine task type and priority
+            $isOverdue = $inq->next_task_due && $inq->next_task_due < now()->toDateString() && !$inq->next_task_completed;
+            $priority  = $isOverdue ? 'High' : ($inq->priority === 'High' ? 'High' : 'Normal');
+
+            $title = $isOverdue
+                ? "Overdue follow-up: {$guestName} — {$inq->inquiry_type}{$value}"
+                : "Follow up: {$guestName} — {$inq->inquiry_type}{$value}";
+
+            $description = "Auto-generated from inquiry #{$inq->id}."
+                . " Status: {$inq->status}."
+                . ($propName ? " Property: {$propName}." : '')
+                . ($inq->check_in ? " Check-in: {$inq->check_in->toDateString()}." : '')
+                . ($inq->special_requests ? " Notes: {$inq->special_requests}" : '');
+
+            $task = PlannerTask::create([
+                'title'         => $title,
+                'task_date'     => now()->addDay()->toDateString(),
+                'employee_name' => $assignTo ?? $inq->assigned_to,
+                'priority'      => $priority,
+                'task_group'    => 'Sales',
+                'description'   => $description,
+                'completed'     => false,
+            ]);
+
+            // Update inquiry's next task
+            $inq->update([
+                'next_task_type'      => 'Follow-up',
+                'next_task_due'       => now()->addDay()->toDateString(),
+                'next_task_completed' => false,
+            ]);
+
+            $createdTasks[] = [
+                'task_id'    => $task->id,
+                'inquiry_id' => $inq->id,
+                'guest'      => $guestName,
+                'title'      => $title,
+                'priority'   => $priority,
+                'assigned_to'=> $task->employee_name,
+                'due_date'   => $task->task_date->toDateString(),
+            ];
+        }
+
+        return ['success' => true, 'data' => [
+            'inquiries_analyzed' => $inquiries->count(),
+            'tasks_created'      => count($createdTasks),
+            'tasks'              => $createdTasks,
+        ]];
     }
 }

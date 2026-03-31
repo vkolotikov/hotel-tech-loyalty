@@ -2,17 +2,20 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Organization;
+use App\Models\Staff;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * SaaS Platform JWT authentication middleware.
  *
  * Checks for a Bearer JWT issued by the SaaS Platform's /api/auth/token endpoint.
- * If valid, authenticates the request (creating a synthetic user if needed).
- * If no Bearer token is present, passes through to let Sanctum handle auth.
+ * If valid, authenticates the request (creating a local user + organization if needed).
  */
 class SaasAuthMiddleware
 {
@@ -25,6 +28,7 @@ class SaasAuthMiddleware
             $request->attributes->set('saas_user_id', $gatewayUserId);
             $request->attributes->set('saas_user_email', $request->header('X-Saas-User-Email', ''));
             $request->attributes->set('saas_org_id', $request->header('X-Saas-Org-Id', ''));
+            $request->attributes->set('saas_org_slug', $request->header('X-Saas-Org-Slug', ''));
             $request->attributes->set('saas_role', $request->header('X-Saas-Role', ''));
             $this->authenticateSaasUser($request);
             return $next($request);
@@ -44,12 +48,12 @@ class SaasAuthMiddleware
                     $request->attributes->set('saas_user_id', $user['id'] ?? '');
                     $request->attributes->set('saas_user_email', $user['email'] ?? '');
                     $request->attributes->set('saas_org_id', $org['id'] ?? '');
+                    $request->attributes->set('saas_org_slug', $org['slug'] ?? '');
                     $request->attributes->set('saas_role', $org['role'] ?? '');
                     $this->authenticateSaasUser($request);
                     return $next($request);
                 }
 
-                // Invalid token present — reject
                 return response()->json([
                     'error' => $result['error'] ?? 'Invalid or expired SaaS token',
                     'code' => 'unauthorized',
@@ -61,14 +65,9 @@ class SaasAuthMiddleware
         return $next($request);
     }
 
-    /**
-     * Verify a JWT token using the SaasAuth PHP SDK.
-     *
-     * @return array SDK result with 'valid', 'user', 'organization', 'error' keys
-     */
     private function verifyJwt(string $token): array
     {
-        $secret = env('SAAS_JWT_SECRET', '');
+        $secret = config('services.saas.jwt_secret', '');
         if (!$secret) {
             return ['valid' => false, 'error' => 'JWT secret not configured'];
         }
@@ -99,36 +98,85 @@ class SaasAuthMiddleware
             'user'  => [
                 'id'    => $data['userId'] ?? $data['sub'] ?? '',
                 'email' => $data['email'] ?? '',
+                'name'  => $data['name'] ?? '',
             ],
             'organization' => isset($data['currentOrgId']) ? [
                 'id'   => $data['currentOrgId'],
                 'slug' => $data['currentOrgSlug'] ?? '',
+                'name' => $data['currentOrgName'] ?? '',
                 'role' => $data['role'] ?? 'STAFF',
             ] : null,
         ];
     }
 
     /**
-     * Find or create a local user matching the SaaS identity and authenticate them.
+     * Find or create a local user + organization matching the SaaS identity.
      */
     private function authenticateSaasUser(Request $request): void
     {
         $email = $request->attributes->get('saas_user_email');
-        if (!$email) {
-            return;
+        $saasOrgId = $request->attributes->get('saas_org_id');
+
+        if (!$email) return;
+
+        // Find or create local organization linked to SaaS org
+        $org = null;
+        if ($saasOrgId) {
+            $isNew = false;
+            $org = Organization::where('saas_org_id', $saasOrgId)->first();
+            if (!$org) {
+                $org = Organization::create([
+                    'saas_org_id' => $saasOrgId,
+                    'name' => $request->attributes->get('saas_org_slug') ?: 'Organization',
+                    'slug' => $request->attributes->get('saas_org_slug') ?: Str::slug($saasOrgId),
+                ]);
+                $isNew = true;
+            }
+
+            // Auto-setup defaults for new organizations
+            if ($isNew) {
+                app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+            }
         }
 
-        // Try to find existing staff user by email
-        $user = \App\Models\User::where('email', $email)
-            ->where('user_type', 'staff')
-            ->first();
+        // Find or create local staff user
+        $user = User::where('email', $email)->where('user_type', 'staff')->first();
 
-        if ($user) {
-            Auth::login($user);
+        if (!$user) {
+            $user = User::create([
+                'name'            => $request->attributes->get('saas_user_email'),
+                'email'           => $email,
+                'password'        => bcrypt(Str::random(32)),
+                'user_type'       => 'staff',
+                'organization_id' => $org?->id,
+            ]);
+
+            $saasRole = $request->attributes->get('saas_role', 'STAFF');
+            $localRole = match (strtoupper($saasRole)) {
+                'OWNER' => 'super_admin',
+                'ADMIN' => 'manager',
+                default => 'receptionist',
+            };
+
+            Staff::create([
+                'user_id'           => $user->id,
+                'organization_id'   => $org?->id,
+                'role'              => $localRole,
+                'hotel_name'        => $org?->name ?? 'Hotel',
+                'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
+                'can_redeem_points' => true,
+                'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
+                'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
+                'is_active'         => true,
+            ]);
+        } elseif ($org && !$user->organization_id) {
+            // Link existing user to org if not yet linked
+            $user->update(['organization_id' => $org->id]);
+            if ($user->staff && !$user->staff->organization_id) {
+                $user->staff->update(['organization_id' => $org->id]);
+            }
         }
-        // If no local user found, the request still proceeds as saas_authenticated
-        // but controllers that need Auth::user() won't have one.
-        // Admin routes typically need a local staff user, so consider provisioning one
-        // or handling this case in controllers.
+
+        Auth::login($user);
     }
 }

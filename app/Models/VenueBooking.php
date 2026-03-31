@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToOrganization;
 
 class VenueBooking extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'venue_id', 'guest_id', 'corporate_account_id',
+        'organization_id', 'venue_id', 'guest_id', 'corporate_account_id',
         'booking_date', 'start_time', 'end_time',
         'event_name', 'event_type', 'attendees', 'setup_style',
         'catering_required', 'av_required', 'special_requirements',

@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToOrganization;
 
 class Staff extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'user_id', 'role', 'hotel_name', 'department',
+        'organization_id', 'user_id', 'role', 'hotel_name', 'department',
         'can_award_points', 'can_redeem_points', 'can_manage_offers',
         'can_view_analytics', 'is_active', 'last_login_at',
     ];

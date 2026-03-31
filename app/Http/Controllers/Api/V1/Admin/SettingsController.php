@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,7 +49,17 @@ class SettingsController extends Controller
         ]);
 
         foreach ($validated['settings'] as $item) {
+            $setting = HotelSetting::where('key', $item['key'])->first();
+            $oldValue = $setting?->value;
             HotelSetting::setValue($item['key'], $item['value']);
+            AuditLog::record(
+                'setting_updated',
+                $setting ?? HotelSetting::where('key', $item['key'])->first(),
+                ['value' => $item['value']],
+                ['value' => $oldValue],
+                $request->user(),
+                "Setting '{$item['key']}' changed"
+            );
         }
 
         return response()->json(['message' => 'Settings updated']);
@@ -82,6 +93,15 @@ class SettingsController extends Controller
                 'description' => 'Logo displayed in the app header and member cards',
             ]);
         }
+
+        AuditLog::record(
+            'logo_uploaded',
+            HotelSetting::where('key', 'company_logo')->first(),
+            ['url' => $url],
+            [],
+            $request->user(),
+            'Company logo updated'
+        );
 
         return response()->json(['message' => 'Logo uploaded', 'url' => $url]);
     }

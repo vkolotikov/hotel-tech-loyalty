@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToOrganization;
 
 class CorporateAccount extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'company_name', 'industry', 'tax_id', 'billing_address', 'billing_email',
+        'organization_id', 'company_name', 'industry', 'tax_id', 'billing_address', 'billing_email',
         'contact_person', 'contact_email', 'contact_phone', 'account_manager',
         'contract_start', 'contract_end', 'negotiated_rate', 'rate_type',
         'discount_percentage', 'annual_room_nights_target', 'annual_room_nights_actual',

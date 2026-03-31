@@ -5,11 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\BelongsToOrganization;
 
 class CampaignSegment extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'name', 'description', 'rules', 'estimated_size',
+        'organization_id', 'name', 'description', 'rules', 'estimated_size',
         'last_computed_at', 'created_by', 'is_dynamic',
     ];
 

@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToOrganization;
 
 class PointsTransaction extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'property_id', 'outlet_id',
+        'organization_id', 'member_id', 'property_id', 'outlet_id',
         'type', 'points', 'qualifying_points', 'balance_after', 'description',
         'reference_type', 'reference_id', 'source_type', 'source_id',
         'staff_id', 'amount_spent', 'earn_rate',

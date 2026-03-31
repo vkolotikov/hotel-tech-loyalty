@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToOrganization;
 
 class PlannerTask extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'employee_name', 'title', 'task_date', 'start_time', 'end_time',
+        'organization_id', 'employee_name', 'title', 'task_date', 'start_time', 'end_time',
         'status', 'priority', 'task_group', 'task_category',
         'duration_minutes', 'completed', 'description',
     ];

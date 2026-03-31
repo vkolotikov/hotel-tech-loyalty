@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Traits\BelongsToOrganization;
 
 class LoyaltyMember extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'user_id', 'member_number', 'tier_id', 'lifetime_points', 'current_points',
+        'organization_id', 'user_id', 'member_number', 'tier_id', 'lifetime_points', 'current_points',
         'qualifying_points', 'tier_review_date', 'tier_effective_from', 'tier_effective_until',
         'tier_qualification_model', 'qualifying_nights', 'qualifying_stays', 'qualifying_spend',
         'tier_locked', 'property_id',

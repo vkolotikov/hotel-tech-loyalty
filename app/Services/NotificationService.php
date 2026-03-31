@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\PushNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
@@ -69,6 +71,36 @@ class NotificationService
             );
         } catch (\Throwable $e) {
             Log::error('Push notification failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send a campaign email to a member using a rendered template.
+     */
+    public function sendCampaignEmail(LoyaltyMember $member, EmailTemplate $template, array $extraTags = []): bool
+    {
+        if (!$member->email_notifications) {
+            return false;
+        }
+
+        $member->loadMissing(['user', 'tier']);
+        $email = $member->user->email ?? null;
+
+        if (!$email) {
+            return false;
+        }
+
+        $rendered = $template->render($member, $extraTags);
+
+        try {
+            Mail::html($rendered['html'], function ($message) use ($email, $rendered, $member) {
+                $message->to($email, $member->user->name)
+                        ->subject($rendered['subject']);
+            });
+            return true;
+        } catch (\Throwable $e) {
+            Log::error("Campaign email failed for member {$member->id}: " . $e->getMessage());
+            return false;
         }
     }
 

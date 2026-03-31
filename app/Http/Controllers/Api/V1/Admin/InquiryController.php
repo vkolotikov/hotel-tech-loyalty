@@ -188,10 +188,33 @@ class InquiryController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $query = Inquiry::with(['guest:id,full_name,company', 'property:id,name']);
+
         if ($s = $request->get('search')) {
-            $query->whereHas('guest', fn($q) => $q->where('full_name', 'ilike', "%$s%"));
+            $query->where(function ($q) use ($s) {
+                $q->where('event_name', 'ilike', "%$s%")
+                  ->orWhere('room_type_requested', 'ilike', "%$s%")
+                  ->orWhereHas('guest', fn($q2) => $q2->where('full_name', 'ilike', "%$s%")->orWhere('company', 'ilike', "%$s%"));
+            });
         }
-        if ($v = $request->get('status')) $query->where('status', $v);
+        if ($v = $request->get('status'))        $query->where('status', $v);
+        if ($v = $request->get('priority'))      $query->where('priority', $v);
+        if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
+        if ($v = $request->get('property_id'))   $query->where('property_id', $v);
+        if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
+        if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
+        if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
+        if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
+        if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
+        if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
+        if ($v = $request->get('task_due')) {
+            match ($v) {
+                'today'   => $query->where('next_task_due', now()->toDateString())->where('next_task_completed', false),
+                'overdue' => $query->where('next_task_due', '<', now()->toDateString())->where('next_task_completed', false),
+                'soon'    => $query->whereBetween('next_task_due', [now()->toDateString(), now()->addDays(3)->toDateString()])->where('next_task_completed', false),
+                default   => null,
+            };
+        }
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');

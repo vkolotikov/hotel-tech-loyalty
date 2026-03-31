@@ -5,11 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\BelongsToOrganization;
 
 class LoyaltyTier extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'name', 'min_points', 'max_points', 'earn_rate', 'bonus_nights',
+        'organization_id', 'name', 'min_points', 'max_points', 'earn_rate', 'bonus_nights',
         'color_hex', 'icon', 'perks', 'sort_order', 'is_active',
     ];
 

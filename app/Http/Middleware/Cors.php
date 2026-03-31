@@ -25,7 +25,7 @@ class Cors
 
     private function headers(Request $request): array
     {
-        $allowed = env('CORS_ALLOWED_ORIGINS', '*');
+        $allowed = config('services.cors.allowed_origins', '*');
 
         if ($allowed !== '*') {
             $origins = array_map('trim', explode(',', $allowed));

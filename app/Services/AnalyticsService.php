@@ -7,27 +7,74 @@ use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\PointExpiryBucket;
 use App\Models\PointsTransaction;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsService
 {
+    // Cache TTLs in seconds
+    private const TTL_SHORT  = 300;   // 5 minutes — for KPIs / dashboard
+    private const TTL_MEDIUM = 900;   // 15 minutes — for analytics charts
+    private const TTL_LONG   = 3600;  // 1 hour — for slow-moving data
+
+    /* ────────────────────────────────────────────────
+     *  DB-agnostic SQL helpers (MySQL + PostgreSQL)
+     * ──────────────────────────────────────────────── */
+
+    private static function isPostgres(): bool
+    {
+        return DB::getDriverName() === 'pgsql';
+    }
+
+    private static function yearMonthSql(string $column): string
+    {
+        return self::isPostgres()
+            ? "TO_CHAR({$column}, 'YYYY-MM')"
+            : "DATE_FORMAT({$column}, '%Y-%m')";
+    }
+
+    private static function yearSql(string $column): string
+    {
+        return self::isPostgres()
+            ? "EXTRACT(YEAR FROM {$column})::int"
+            : "YEAR({$column})";
+    }
+
+    private static function monthSql(string $column): string
+    {
+        return self::isPostgres()
+            ? "EXTRACT(MONTH FROM {$column})::int"
+            : "MONTH({$column})";
+    }
+
+    private static function dateDiffSql(string $end, string $start): string
+    {
+        return self::isPostgres()
+            ? "({$end}::date - {$start}::date)"
+            : "DATEDIFF({$end}, {$start})";
+    }
+
+    private static function toCharSql(string $column, string $pgFormat, string $mysqlFormat): string
+    {
+        return self::isPostgres()
+            ? "to_char({$column}, '{$pgFormat}')"
+            : "DATE_FORMAT({$column}, '{$mysqlFormat}')";
+    }
+
     // ───────────────────────────────────────────────
     //  Standardized metric definitions
     // ───────────────────────────────────────────────
 
-    /** Total enrolled members (active or inactive). */
     public function totalMembers(): int
     {
         return LoyaltyMember::count();
     }
 
-    /** Members with is_active = true. */
     public function activeMembers(): int
     {
         return LoyaltyMember::where('is_active', true)->count();
     }
 
-    /** Members who earned or redeemed within the last N days. */
     public function engagedMembers(int $days = 30): int
     {
         return LoyaltyMember::where('is_active', true)
@@ -35,7 +82,6 @@ class AnalyticsService
             ->count();
     }
 
-    /** Members who have earned at least once in the period. */
     public function earningMembers(\DateTimeInterface $from, \DateTimeInterface $to): int
     {
         return LoyaltyMember::whereHas('pointsTransactions', function ($q) use ($from, $to) {
@@ -43,7 +89,6 @@ class AnalyticsService
         })->count();
     }
 
-    /** Members who have redeemed at least once in the period. */
     public function redeemingMembers(\DateTimeInterface $from, \DateTimeInterface $to): int
     {
         return LoyaltyMember::whereHas('pointsTransactions', function ($q) use ($from, $to) {
@@ -51,343 +96,367 @@ class AnalyticsService
         })->count();
     }
 
-    /** Total outstanding redeemable points. */
     public function totalOutstandingPoints(): int
     {
         return (int) LoyaltyMember::where('is_active', true)->sum('current_points');
     }
 
-    /** Point liability in estimated currency. */
     public function pointLiabilityCurrency(): float
     {
         $rate = LoyaltyTier::avg('points_to_currency_rate') ?: 0.01;
         return round($this->totalOutstandingPoints() * $rate, 2);
     }
 
-    /** Redemption rate = redeemed / (earned + redeemed) in period. */
     public function redemptionRate(\DateTimeInterface $from, \DateTimeInterface $to): float
     {
-        $earned = PointsTransaction::where('points', '>', 0)
-            ->where('is_reversed', false)
+        $row = PointsTransaction::where('is_reversed', false)
             ->whereBetween('created_at', [$from, $to])
-            ->sum('points');
+            ->selectRaw("SUM(CASE WHEN points > 0 THEN points ELSE 0 END) as earned")
+            ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
+            ->first();
 
-        $redeemed = PointsTransaction::where('type', 'redeem')
-            ->where('is_reversed', false)
-            ->whereBetween('created_at', [$from, $to])
-            ->sum(DB::raw('ABS(points)'));
-
+        $earned = (float) ($row->earned ?? 0);
+        $redeemed = (float) ($row->redeemed ?? 0);
         $total = $earned + $redeemed;
         return $total > 0 ? round($redeemed / $total * 100, 1) : 0;
     }
 
     // ───────────────────────────────────────────────
-    //  Dashboard KPIs — uses standardized metrics
+    //  Dashboard KPIs — cached, uses standardized metrics
     // ───────────────────────────────────────────────
 
     public function getDashboardKpis(): array
     {
-        $now = now();
-        $monthStart = $now->copy()->startOfMonth();
-        $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
-        $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
-        $todayStart = $now->copy()->startOfDay();
+        return Cache::remember('dashboard:loyalty_kpis', self::TTL_SHORT, function () {
+            $now = now();
+            $monthStart = $now->copy()->startOfMonth();
+            $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
+            $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
+            $todayStart = $now->copy()->startOfDay();
 
-        $pointsIssuedThisMonth = PointsTransaction::where('points', '>', 0)
-            ->where('is_reversed', false)
-            ->where('created_at', '>=', $monthStart)
-            ->sum('points');
+            // Batch points queries: one query for month, one for today
+            $monthPoints = PointsTransaction::where('is_reversed', false)
+                ->where('created_at', '>=', $monthStart)
+                ->selectRaw("SUM(CASE WHEN points > 0 THEN points ELSE 0 END) as issued")
+                ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
+                ->first();
 
-        $pointsRedeemedThisMonth = PointsTransaction::where('type', 'redeem')
-            ->where('is_reversed', false)
-            ->where('created_at', '>=', $monthStart)
-            ->sum(DB::raw('ABS(points)'));
+            $todayPoints = PointsTransaction::where('is_reversed', false)
+                ->where('created_at', '>=', $todayStart)
+                ->selectRaw("SUM(CASE WHEN points > 0 THEN points ELSE 0 END) as issued")
+                ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
+                ->first();
 
-        return [
-            // Standardized counts
-            'total_members'              => $this->totalMembers(),
-            'active_members'             => $this->activeMembers(),
-            'engaged_members_30d'        => $this->engagedMembers(30),
+            // Batch member counts in one query
+            $memberStats = LoyaltyMember::selectRaw("COUNT(*) as total")
+                ->selectRaw("SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active")
+                ->selectRaw("SUM(CASE WHEN is_active = true AND last_activity_at >= ? THEN 1 ELSE 0 END) as engaged", [$now->copy()->subDays(30)])
+                ->selectRaw("SUM(CASE WHEN joined_at >= ? THEN 1 ELSE 0 END) as new_month", [$monthStart])
+                ->selectRaw("SUM(CASE WHEN joined_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as new_last_month", [$lastMonthStart, $lastMonthEnd])
+                ->selectRaw("SUM(CASE WHEN joined_at >= ? THEN 1 ELSE 0 END) as new_today", [$todayStart])
+                ->selectRaw("AVG(CASE WHEN is_active = true THEN current_points END) as avg_points")
+                ->first();
 
-            // Period metrics
-            'new_members_this_month'     => LoyaltyMember::where('joined_at', '>=', $monthStart)->count(),
-            'new_members_last_month'     => LoyaltyMember::whereBetween('joined_at', [$lastMonthStart, $lastMonthEnd])->count(),
-            'points_issued_this_month'   => $pointsIssuedThisMonth,
-            'points_redeemed_this_month' => $pointsRedeemedThisMonth,
-
-            // Today at a glance
-            'new_members_today'          => LoyaltyMember::where('joined_at', '>=', $todayStart)->count(),
-            'points_issued_today'        => PointsTransaction::where('points', '>', 0)
-                ->where('is_reversed', false)
-                ->where('created_at', '>=', $todayStart)->sum('points'),
-            'points_redeemed_today'      => PointsTransaction::where('type', 'redeem')
-                ->where('is_reversed', false)
-                ->where('created_at', '>=', $todayStart)->sum(DB::raw('ABS(points)')),
-
-            // Operations
-            'active_stays'               => Booking::where('status', 'checked_in')->count(),
-            'revenue_this_month'         => Booking::where('created_at', '>=', $monthStart)->sum('total_amount'),
-
-            // Financial
-            'total_outstanding_points'   => $this->totalOutstandingPoints(),
-            'point_liability_currency'   => $this->pointLiabilityCurrency(),
-            'redemption_rate'            => $this->redemptionRate($monthStart, $now),
-
-            // Distribution
-            'tier_distribution'          => $this->getTierDistribution(),
-            'avg_points_per_member'      => round(LoyaltyMember::where('is_active', true)->avg('current_points') ?? 0),
-        ];
+            return [
+                'total_members'              => (int) $memberStats->total,
+                'active_members'             => (int) $memberStats->active,
+                'engaged_members_30d'        => (int) $memberStats->engaged,
+                'new_members_this_month'     => (int) $memberStats->new_month,
+                'new_members_last_month'     => (int) $memberStats->new_last_month,
+                'points_issued_this_month'   => (int) ($monthPoints->issued ?? 0),
+                'points_redeemed_this_month' => (int) ($monthPoints->redeemed ?? 0),
+                'new_members_today'          => (int) $memberStats->new_today,
+                'points_issued_today'        => (int) ($todayPoints->issued ?? 0),
+                'points_redeemed_today'      => (int) ($todayPoints->redeemed ?? 0),
+                'active_stays'               => Booking::where('status', 'checked_in')->count(),
+                'revenue_this_month'         => Booking::where('created_at', '>=', $monthStart)->sum('total_amount'),
+                'total_outstanding_points'   => $this->totalOutstandingPoints(),
+                'point_liability_currency'   => $this->pointLiabilityCurrency(),
+                'redemption_rate'            => $this->redemptionRate($monthStart, $now),
+                'tier_distribution'          => $this->getTierDistribution(),
+                'avg_points_per_member'      => round($memberStats->avg_points ?? 0),
+            ];
+        });
     }
 
     public function getTierDistribution(): array
     {
-        return LoyaltyTier::leftJoin('loyalty_members', function ($join) {
-                $join->on('loyalty_tiers.id', '=', 'loyalty_members.tier_id')
-                     ->where('loyalty_members.is_active', true);
-            })
-            ->select(
-                'loyalty_tiers.id',
-                'loyalty_tiers.name as tier',
-                'loyalty_tiers.color_hex as color',
-                DB::raw('COUNT(loyalty_members.id) as count')
-            )
-            ->where('loyalty_tiers.is_active', true)
-            ->groupBy('loyalty_tiers.id', 'loyalty_tiers.name', 'loyalty_tiers.color_hex')
-            ->orderBy('loyalty_tiers.sort_order')
-            ->get()
-            ->toArray();
+        return Cache::remember('analytics:tier_distribution', self::TTL_LONG, function () {
+            return LoyaltyTier::leftJoin('loyalty_members', function ($join) {
+                    $join->on('loyalty_tiers.id', '=', 'loyalty_members.tier_id')
+                         ->where('loyalty_members.is_active', true);
+                })
+                ->select(
+                    'loyalty_tiers.id',
+                    'loyalty_tiers.name as tier',
+                    'loyalty_tiers.color_hex as color',
+                    DB::raw('COUNT(loyalty_members.id) as count')
+                )
+                ->where('loyalty_tiers.is_active', true)
+                ->groupBy('loyalty_tiers.id', 'loyalty_tiers.name', 'loyalty_tiers.color_hex')
+                ->orderBy('loyalty_tiers.sort_order')
+                ->get()
+                ->toArray();
+        });
     }
 
     public function getPointsOverTime(int $days = 30): array
     {
-        return PointsTransaction::select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw("SUM(CASE WHEN points > 0 AND is_reversed = false THEN points ELSE 0 END) as earned"),
-                DB::raw("SUM(CASE WHEN type = 'redeem' AND is_reversed = false THEN ABS(points) ELSE 0 END) as redeemed")
-            )
-            ->where('created_at', '>=', now()->subDays($days))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->toArray();
+        return Cache::remember("analytics:points_over_time:{$days}", self::TTL_SHORT, function () use ($days) {
+            return PointsTransaction::select(
+                    DB::raw('DATE(created_at) as date'),
+                    DB::raw("SUM(CASE WHEN points > 0 AND is_reversed = false THEN points ELSE 0 END) as earned"),
+                    DB::raw("SUM(CASE WHEN type = 'redeem' AND is_reversed = false THEN ABS(points) ELSE 0 END) as redeemed")
+                )
+                ->where('created_at', '>=', now()->subDays($days))
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->toArray();
+        });
     }
 
     public function getMemberGrowth(int $months = 12): array
     {
-        return LoyaltyMember::select(
-                DB::raw("EXTRACT(YEAR FROM joined_at)::int as year"),
-                DB::raw("EXTRACT(MONTH FROM joined_at)::int as month"),
-                DB::raw('COUNT(*) as new_members')
-            )
-            ->where('joined_at', '>=', now()->subMonths($months))
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get()
-            ->map(fn($row) => [
-                'date'        => sprintf('%d-%02d', $row->year, $row->month),
-                'new_members' => $row->new_members,
-            ])
-            ->toArray();
+        return Cache::remember("analytics:member_growth:{$months}", self::TTL_MEDIUM, function () use ($months) {
+            $yearSql = self::yearSql('joined_at');
+            $monthSql = self::monthSql('joined_at');
+
+            return LoyaltyMember::select(
+                    DB::raw("{$yearSql} as year"),
+                    DB::raw("{$monthSql} as month"),
+                    DB::raw('COUNT(*) as new_members')
+                )
+                ->where('joined_at', '>=', now()->subMonths($months))
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get()
+                ->map(fn($row) => [
+                    'date'        => sprintf('%d-%02d', $row->year, $row->month),
+                    'new_members' => $row->new_members,
+                ])
+                ->toArray();
+        });
     }
 
     public function getTopMembers(int $limit = 10): array
     {
-        return LoyaltyMember::with(['user:id,name,email', 'tier:id,name,color_hex'])
-            ->where('is_active', true)
-            ->orderByDesc('lifetime_points')
-            ->limit($limit)
-            ->get()
-            ->map(fn($m) => [
-                'id'              => $m->id,
-                'member_number'   => $m->member_number,
-                'name'            => $m->user->name,
-                'email'           => $m->user->email,
-                'tier'            => $m->tier->name,
-                'tier_color'      => $m->tier->color_hex,
-                'lifetime_points' => $m->lifetime_points,
-                'current_points'  => $m->current_points,
-                'qualifying_points' => $m->qualifying_points,
-            ])
-            ->toArray();
+        return Cache::remember("analytics:top_members:{$limit}", self::TTL_MEDIUM, function () use ($limit) {
+            return LoyaltyMember::with(['user:id,name,email', 'tier:id,name,color_hex'])
+                ->where('is_active', true)
+                ->orderByDesc('lifetime_points')
+                ->limit($limit)
+                ->get()
+                ->map(fn($m) => [
+                    'id'              => $m->id,
+                    'member_number'   => $m->member_number,
+                    'name'            => $m->user->name,
+                    'email'           => $m->user->email,
+                    'tier'            => $m->tier->name,
+                    'tier_color'      => $m->tier->color_hex,
+                    'lifetime_points' => $m->lifetime_points,
+                    'current_points'  => $m->current_points,
+                    'qualifying_points' => $m->qualifying_points,
+                ])
+                ->toArray();
+        });
     }
 
     public function getRevenueByRoomType(): array
     {
-        return Booking::select('room_type', DB::raw('SUM(total_amount) as revenue'), DB::raw('COUNT(*) as stays'))
-            ->whereNotNull('room_type')
-            ->groupBy('room_type')
-            ->orderByDesc('revenue')
-            ->get()
-            ->toArray();
+        return Cache::remember('analytics:revenue_by_room_type', self::TTL_MEDIUM, function () {
+            return Booking::select('room_type', DB::raw('SUM(total_amount) as revenue'), DB::raw('COUNT(*) as stays'))
+                ->whereNotNull('room_type')
+                ->groupBy('room_type')
+                ->orderByDesc('revenue')
+                ->get()
+                ->toArray();
+        });
     }
 
     public function getWeeklyKpiSummary(): array
     {
-        $weekStart = now()->startOfWeek();
-        $lastWeekStart = now()->subWeek()->startOfWeek();
-        $lastWeekEnd = now()->subWeek()->endOfWeek();
+        return Cache::remember('analytics:weekly_kpi_summary', self::TTL_SHORT, function () {
+            $weekStart = now()->startOfWeek();
+            $lastWeekStart = now()->subWeek()->startOfWeek();
+            $lastWeekEnd = now()->subWeek()->endOfWeek();
 
-        $buildPeriod = fn($from, $to) => [
-            'new_members'     => LoyaltyMember::whereBetween('joined_at', [$from, $to])->count(),
-            'points_issued'   => PointsTransaction::where('points', '>', 0)->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum('points'),
-            'points_redeemed' => PointsTransaction::where('type', 'redeem')->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum(DB::raw('ABS(points)')),
-            'new_bookings'    => Booking::whereBetween('created_at', [$from, $to])->count(),
-            'revenue'         => Booking::whereBetween('created_at', [$from, $to])->sum('total_amount'),
-        ];
+            $buildPeriod = fn($from, $to) => [
+                'new_members'     => LoyaltyMember::whereBetween('joined_at', [$from, $to])->count(),
+                'points_issued'   => PointsTransaction::where('points', '>', 0)->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum('points'),
+                'points_redeemed' => PointsTransaction::where('type', 'redeem')->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum(DB::raw('ABS(points)')),
+                'new_bookings'    => Booking::whereBetween('created_at', [$from, $to])->count(),
+                'revenue'         => Booking::whereBetween('created_at', [$from, $to])->sum('total_amount'),
+            ];
 
-        return [
-            'week'              => $buildPeriod($weekStart, now()),
-            'last_week'         => $buildPeriod($lastWeekStart, $lastWeekEnd),
-            'tier_distribution' => $this->getTierDistribution(),
-            'top_members'       => $this->getTopMembers(5),
-        ];
+            return [
+                'week'              => $buildPeriod($weekStart, now()),
+                'last_week'         => $buildPeriod($lastWeekStart, $lastWeekEnd),
+                'tier_distribution' => $this->getTierDistribution(),
+                'top_members'       => $this->getTopMembers(5),
+            ];
+        });
     }
 
-    /**
-     * Point expiry forecast — how many points expire per month.
-     */
     public function getExpiryForecast(int $months = 6): array
     {
-        return PointExpiryBucket::where('is_expired', false)
-            ->where('remaining_points', '>', 0)
-            ->where('expires_at', '<=', now()->addMonths($months))
-            ->selectRaw("TO_CHAR(expires_at, 'YYYY-MM') as month, SUM(remaining_points) as points, COUNT(DISTINCT member_id) as members")
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get()
-            ->toArray();
+        $ymSql = self::yearMonthSql('expires_at');
+        return Cache::remember("analytics:expiry_forecast:{$months}", self::TTL_LONG, function () use ($months, $ymSql) {
+            return PointExpiryBucket::where('is_expired', false)
+                ->where('remaining_points', '>', 0)
+                ->where('expires_at', '<=', now()->addMonths($months))
+                ->selectRaw("{$ymSql} as month, SUM(remaining_points) as points, COUNT(DISTINCT member_id) as members")
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+                ->toArray();
+        });
     }
 
-    /**
-     * Revenue trend over time (monthly).
-     */
     public function getRevenueTrend(int $months = 12): array
     {
-        return Booking::selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, SUM(total_amount) as revenue, COUNT(*) as bookings")
-            ->where('created_at', '>=', now()->subMonths($months))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get()
-            ->toArray();
+        $ymSql = self::yearMonthSql('created_at');
+        return Cache::remember("analytics:revenue_trend:{$months}", self::TTL_MEDIUM, function () use ($months, $ymSql) {
+            return Booking::selectRaw("{$ymSql} as month, SUM(total_amount) as revenue, COUNT(*) as bookings")
+                ->where('created_at', '>=', now()->subMonths($months))
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+                ->toArray();
+        });
     }
 
-    /**
-     * Booking trends (daily) for a given period.
-     */
     public function getBookingTrends(int $days = 30): array
     {
-        return Booking::selectRaw("DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue, SUM(nights) as nights")
-            ->where('created_at', '>=', now()->subDays($days))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->toArray();
+        return Cache::remember("analytics:booking_trends:{$days}", self::TTL_SHORT, function () use ($days) {
+            return Booking::selectRaw("DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue, SUM(nights) as nights")
+                ->where('created_at', '>=', now()->subDays($days))
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->toArray();
+        });
     }
 
     /**
-     * Member engagement breakdown: active, inactive, new, at-risk.
+     * Member engagement breakdown — single query with CASE aggregations.
      */
     public function getMemberEngagement(): array
     {
-        $now = now();
-        $total = LoyaltyMember::count();
-        $active = LoyaltyMember::where('is_active', true)
-            ->where('last_activity_at', '>=', $now->copy()->subDays(30))
-            ->count();
-        $atRisk = LoyaltyMember::where('is_active', true)
-            ->where('last_activity_at', '<', $now->copy()->subDays(30))
-            ->where('last_activity_at', '>=', $now->copy()->subDays(90))
-            ->count();
-        $dormant = LoyaltyMember::where('is_active', true)
-            ->where(function ($q) use ($now) {
-                $q->where('last_activity_at', '<', $now->copy()->subDays(90))
-                  ->orWhereNull('last_activity_at');
-            })
-            ->count();
-        $newMembers = LoyaltyMember::where('joined_at', '>=', $now->copy()->subDays(30))->count();
-        $inactive = LoyaltyMember::where('is_active', false)->count();
+        return Cache::remember('analytics:member_engagement', self::TTL_MEDIUM, function () {
+            $now = now();
+            $d30 = $now->copy()->subDays(30);
+            $d90 = $now->copy()->subDays(90);
 
-        return [
-            ['segment' => 'Active', 'count' => $active, 'color' => '#32d74b'],
-            ['segment' => 'New (30d)', 'count' => $newMembers, 'color' => '#6366f1'],
-            ['segment' => 'At Risk', 'count' => $atRisk, 'color' => '#f59e0b'],
-            ['segment' => 'Dormant', 'count' => $dormant, 'color' => '#ef4444'],
-            ['segment' => 'Inactive', 'count' => $inactive, 'color' => '#636366'],
-        ];
+            $stats = LoyaltyMember::selectRaw("COUNT(*) as total")
+                ->selectRaw("SUM(CASE WHEN is_active = true AND last_activity_at >= ? THEN 1 ELSE 0 END) as active", [$d30])
+                ->selectRaw("SUM(CASE WHEN is_active = true AND last_activity_at < ? AND last_activity_at >= ? THEN 1 ELSE 0 END) as at_risk", [$d30, $d90])
+                ->selectRaw("SUM(CASE WHEN is_active = true AND (last_activity_at < ? OR last_activity_at IS NULL) THEN 1 ELSE 0 END) as dormant", [$d90])
+                ->selectRaw("SUM(CASE WHEN joined_at >= ? THEN 1 ELSE 0 END) as new_members", [$d30])
+                ->selectRaw("SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive")
+                ->first();
+
+            return [
+                ['segment' => 'Active', 'count' => (int) $stats->active, 'color' => '#32d74b'],
+                ['segment' => 'New (30d)', 'count' => (int) $stats->new_members, 'color' => '#6366f1'],
+                ['segment' => 'At Risk', 'count' => (int) $stats->at_risk, 'color' => '#f59e0b'],
+                ['segment' => 'Dormant', 'count' => (int) $stats->dormant, 'color' => '#ef4444'],
+                ['segment' => 'Inactive', 'count' => (int) $stats->inactive, 'color' => '#636366'],
+            ];
+        });
     }
 
     /**
-     * Points balance distribution — how many members in each points range.
+     * Points balance distribution — single query with CASE aggregations.
      */
     public function getPointsDistribution(): array
     {
-        $ranges = [
-            ['label' => '0', 'min' => 0, 'max' => 0],
-            ['label' => '1-500', 'min' => 1, 'max' => 500],
-            ['label' => '501-2k', 'min' => 501, 'max' => 2000],
-            ['label' => '2k-5k', 'min' => 2001, 'max' => 5000],
-            ['label' => '5k-10k', 'min' => 5001, 'max' => 10000],
-            ['label' => '10k+', 'min' => 10001, 'max' => 999999999],
-        ];
+        return Cache::remember('analytics:points_distribution', self::TTL_MEDIUM, function () {
+            $stats = LoyaltyMember::where('is_active', true)
+                ->selectRaw("SUM(CASE WHEN current_points = 0 THEN 1 ELSE 0 END) as r0")
+                ->selectRaw("SUM(CASE WHEN current_points BETWEEN 1 AND 500 THEN 1 ELSE 0 END) as r1")
+                ->selectRaw("SUM(CASE WHEN current_points BETWEEN 501 AND 2000 THEN 1 ELSE 0 END) as r2")
+                ->selectRaw("SUM(CASE WHEN current_points BETWEEN 2001 AND 5000 THEN 1 ELSE 0 END) as r3")
+                ->selectRaw("SUM(CASE WHEN current_points BETWEEN 5001 AND 10000 THEN 1 ELSE 0 END) as r4")
+                ->selectRaw("SUM(CASE WHEN current_points > 10000 THEN 1 ELSE 0 END) as r5")
+                ->first();
 
-        return collect($ranges)->map(function ($r) {
             return [
-                'range' => $r['label'],
-                'members' => LoyaltyMember::where('is_active', true)
-                    ->whereBetween('current_points', [$r['min'], $r['max']])
-                    ->count(),
+                ['range' => '0',      'members' => (int) $stats->r0],
+                ['range' => '1-500',  'members' => (int) $stats->r1],
+                ['range' => '501-2k', 'members' => (int) $stats->r2],
+                ['range' => '2k-5k',  'members' => (int) $stats->r3],
+                ['range' => '5k-10k', 'members' => (int) $stats->r4],
+                ['range' => '10k+',   'members' => (int) $stats->r5],
             ];
-        })->toArray();
+        });
     }
 
     /**
-     * Redemption rate over time (monthly).
+     * Redemption rate over time — single query with monthly grouping.
      */
     public function getRedemptionTrend(int $months = 12): array
     {
-        $result = [];
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $from = now()->subMonths($i)->startOfMonth();
-            $to = now()->subMonths($i)->endOfMonth();
+        $ymSql = self::yearMonthSql('created_at');
+        return Cache::remember("analytics:redemption_trend:{$months}", self::TTL_LONG, function () use ($months, $ymSql) {
+            $rows = PointsTransaction::where('is_reversed', false)
+                ->where('created_at', '>=', now()->subMonths($months)->startOfMonth())
+                ->selectRaw("{$ymSql} as month")
+                ->selectRaw("SUM(CASE WHEN points > 0 THEN points ELSE 0 END) as earned")
+                ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
 
-            $earned = PointsTransaction::where('points', '>', 0)
-                ->where('is_reversed', false)
-                ->whereBetween('created_at', [$from, $to])
-                ->sum('points');
+            return $rows->map(function ($r) {
+                $earned = (int) $r->earned;
+                $redeemed = (int) $r->redeemed;
+                $total = $earned + $redeemed;
+                return [
+                    'month'    => $r->month,
+                    'earned'   => $earned,
+                    'redeemed' => $redeemed,
+                    'rate'     => $total > 0 ? round($redeemed / $total * 100, 1) : 0,
+                ];
+            })->toArray();
+        });
+    }
 
-            $redeemed = PointsTransaction::where('type', 'redeem')
-                ->where('is_reversed', false)
-                ->whereBetween('created_at', [$from, $to])
-                ->sum(DB::raw('ABS(points)'));
-
-            $total = $earned + $redeemed;
-            $result[] = [
-                'month' => $from->format('Y-m'),
-                'earned' => (int) $earned,
-                'redeemed' => (int) $redeemed,
-                'rate' => $total > 0 ? round($redeemed / $total * 100, 1) : 0,
-            ];
-        }
-        return $result;
+    public function getBookingMetrics(int $months = 12): array
+    {
+        $ymSql = self::yearMonthSql('created_at');
+        return Cache::remember("analytics:booking_metrics:{$months}", self::TTL_MEDIUM, function () use ($months, $ymSql) {
+            return Booking::selectRaw("{$ymSql} as month, AVG(nights) as avg_nights, AVG(total_amount) as avg_spend, COUNT(*) as bookings")
+                ->where('created_at', '>=', now()->subMonths($months))
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+                ->map(fn($r) => [
+                    'month' => $r->month,
+                    'avg_nights' => round($r->avg_nights, 1),
+                    'avg_spend' => round($r->avg_spend, 0),
+                    'bookings' => $r->bookings,
+                ])
+                ->toArray();
+        });
     }
 
     /**
-     * Avg stay duration and avg spend per booking over time.
+     * Bust dashboard-related caches. Call after points/member/booking changes.
      */
-    public function getBookingMetrics(int $months = 12): array
+    public static function clearDashboardCache(): void
     {
-        return Booking::selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, AVG(nights) as avg_nights, AVG(total_amount) as avg_spend, COUNT(*) as bookings")
-            ->where('created_at', '>=', now()->subMonths($months))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get()
-            ->map(fn($r) => [
-                'month' => $r->month,
-                'avg_nights' => round($r->avg_nights, 1),
-                'avg_spend' => round($r->avg_spend, 0),
-                'bookings' => $r->bookings,
-            ])
-            ->toArray();
+        $keys = [
+            'dashboard:loyalty_kpis',
+            'dashboard:crm_kpis',
+            'analytics:tier_distribution',
+            'analytics:weekly_kpi_summary',
+            'analytics:member_engagement',
+            'analytics:points_distribution',
+        ];
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
     }
 }

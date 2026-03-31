@@ -1,17 +1,18 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores/authStore'
-import { APP_BASE } from './lib/api'
+import { APP_BASE, api } from './lib/api'
 import { Layout, canAccess } from './components/Layout'
 import type { NavGate } from './components/Layout'
 import { useTheme } from './hooks/useTheme'
 
-// Eager: Login (entry point) + Dashboard (most visited)
+// Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
+import { Setup } from './pages/Setup'
 
 // Lazy-loaded pages
 const Members = lazy(() => import('./pages/Members').then(m => ({ default: m.Members })))
@@ -47,8 +48,22 @@ function ThemeLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore()
+  const { token, user } = useAuthStore()
+  const [setupDone, setSetupDone] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!token || user?.user_type !== 'staff') {
+      setSetupDone(true) // members skip setup check
+      return
+    }
+    api.get('/v1/admin/setup/status')
+      .then(r => setSetupDone(r.data.setup_complete))
+      .catch(() => setSetupDone(true)) // fail open
+  }, [token, user])
+
   if (!token) return <Navigate to="/login" replace />
+  if (setupDone === null) return <PageLoader />
+  if (!setupDone) return <Setup onComplete={() => setSetupDone(true)} />
   return <Layout>{children}</Layout>
 }
 

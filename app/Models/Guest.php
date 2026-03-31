@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToOrganization;
 
 class Guest extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'salutation', 'first_name', 'last_name', 'full_name', 'email', 'phone', 'mobile',
+        'organization_id', 'member_id', 'salutation', 'first_name', 'last_name', 'full_name', 'email', 'phone', 'mobile',
         'company', 'position_title', 'guest_type', 'nationality', 'country', 'city',
         'address', 'postal_code', 'date_of_birth', 'passport_no', 'id_number',
         'vip_level', 'loyalty_tier', 'loyalty_id', 'preferred_language',

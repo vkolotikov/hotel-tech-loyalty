@@ -5,11 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\BelongsToOrganization;
 
 class BenefitDefinition extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'name', 'code', 'description', 'category', 'fulfillment_mode',
+        'organization_id', 'name', 'code', 'description', 'category', 'fulfillment_mode',
         'usage_limit_per_stay', 'usage_limit_per_year', 'requires_active_stay',
         'operational_constraints', 'sort_order', 'is_active',
     ];

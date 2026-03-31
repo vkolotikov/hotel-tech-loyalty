@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Default value for tenant scope — overridden by TenantMiddleware per request
+        $this->app->instance('current_organization_id', null);
     }
 
     /**

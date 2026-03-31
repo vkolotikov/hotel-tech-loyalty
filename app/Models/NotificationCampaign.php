@@ -4,12 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToOrganization;
 
 class NotificationCampaign extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'property_id', 'name', 'segment_rules', 'title', 'body', 'data',
-        'channel', 'scheduled_at', 'sent_at', 'target_count', 'sent_count',
+        'organization_id', 'property_id', 'name', 'segment_rules', 'title', 'body', 'data',
+        'channel', 'email_template_id', 'email_subject', 'email_sent_count',
+        'scheduled_at', 'sent_at', 'target_count', 'sent_count',
         'opened_count', 'status', 'created_by',
     ];
 

@@ -25,6 +25,20 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY', ''),
+        'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+    ],
+
+    'saas' => [
+        'jwt_secret' => env('SAAS_JWT_SECRET', ''),
+    ],
+
+    'cors' => [
+        'allowed_origins' => env('CORS_ALLOWED_ORIGINS', '*'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

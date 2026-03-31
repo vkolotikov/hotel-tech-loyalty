@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToOrganization;
 
 class SpecialOffer extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date',
+        'organization_id', 'title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date',
         'usage_limit', 'times_used', 'per_member_limit', 'image_url', 'terms_conditions',
         'is_active', 'is_featured', 'ai_generated', 'created_by',
     ];

@@ -20,15 +20,18 @@ use App\Http\Controllers\Api\V1\Admin\TierController;
 use App\Http\Controllers\Api\V1\Admin\BenefitAdminController;
 use App\Http\Controllers\Api\V1\Admin\PropertyAdminController;
 use App\Http\Controllers\Api\V1\Admin\CampaignSegmentController;
+use App\Http\Controllers\Api\V1\Admin\EmailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\GuestController;
 use App\Http\Controllers\Api\V1\Admin\InquiryController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
 use App\Http\Controllers\Api\V1\Admin\VenueController;
+use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
 use App\Http\Controllers\Api\V1\Admin\CrmAiController;
 use App\Http\Controllers\Api\V1\Admin\RealtimeController;
+use App\Http\Controllers\Api\V1\Admin\SetupController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -46,7 +49,7 @@ Route::prefix('v1')->group(function () {
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
-    Route::middleware(['saas.auth', 'auth:sanctum'])->group(function () {
+    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);
@@ -78,6 +81,10 @@ Route::prefix('v1')->group(function () {
         // ─── Admin Routes ──────────────────────────────────────────────────────
         Route::prefix('admin')->group(function () {
 
+            // Organization setup
+            Route::get('setup/status',       [SetupController::class, 'status']);
+            Route::post('setup/initialize',  [SetupController::class, 'initialize']);
+
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);
             Route::get('dashboard/points-chart',   [DashboardController::class, 'pointsChart']);
             Route::get('dashboard/member-growth',  [DashboardController::class, 'memberGrowth']);
@@ -100,6 +107,7 @@ Route::prefix('v1')->group(function () {
             Route::put('tiers/{id}',              [TierController::class, 'update']);
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
+            Route::get('members/export',          [MemberAdminController::class, 'export']);
             Route::post('members',                [MemberAdminController::class, 'store']);
             Route::get('members/{id}',            [MemberAdminController::class, 'show']);
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);
@@ -146,6 +154,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('segments/{id}',                     [CampaignSegmentController::class, 'destroy']);
             Route::get('segments/{id}/preview',                [CampaignSegmentController::class, 'preview']);
 
+            Route::get('analytics/export',              [AnalyticsController::class, 'export']);
             Route::get('analytics/overview',             [AnalyticsController::class, 'overview']);
             Route::get('analytics/points',               [AnalyticsController::class, 'points']);
             Route::get('analytics/member-growth',        [AnalyticsController::class, 'memberGrowth']);
@@ -169,6 +178,15 @@ Route::prefix('v1')->group(function () {
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
+
+            // ─── Email Templates ─────────────────────────────────────────────
+            Route::get('email-templates',                  [EmailTemplateController::class, 'index']);
+            Route::post('email-templates',                 [EmailTemplateController::class, 'store']);
+            Route::get('email-templates/merge-tags',       [EmailTemplateController::class, 'mergeTags']);
+            Route::get('email-templates/{id}',             [EmailTemplateController::class, 'show']);
+            Route::put('email-templates/{id}',             [EmailTemplateController::class, 'update']);
+            Route::delete('email-templates/{id}',          [EmailTemplateController::class, 'destroy']);
+            Route::get('email-templates/{id}/preview',     [EmailTemplateController::class, 'preview']);
 
             Route::get('settings',                        [SettingsController::class, 'index']);
             Route::put('settings',                        [SettingsController::class, 'update']);
@@ -245,6 +263,11 @@ Route::prefix('v1')->group(function () {
             Route::put('venues/bookings/{venueBooking}',  [VenueController::class, 'updateBooking']);
             Route::delete('venues/bookings/{venueBooking}', [VenueController::class, 'destroyBooking']);
 
+            // ─── Audit Logs ──────────────────────────────────────────────────
+            Route::get('audit-logs',                      [AuditLogController::class, 'index']);
+            Route::get('audit-logs/actions',              [AuditLogController::class, 'actions']);
+            Route::get('audit-logs/subject-types',        [AuditLogController::class, 'subjectTypes']);
+
             // ─── CRM: Settings ────────────────────────────────────────────────
             Route::get('crm-settings',                    [CrmSettingsController::class, 'index']);
             Route::put('crm-settings/{key}',              [CrmSettingsController::class, 'update']);
@@ -252,6 +275,8 @@ Route::prefix('v1')->group(function () {
             // ─── CRM: AI Assistant ────────────────────────────────────────────
             Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
+            Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
+            Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
 
             // ─── Realtime (polling fallback) ─────────────────────────────────
             Route::get('realtime/poll',                    [RealtimeController::class, 'poll']);

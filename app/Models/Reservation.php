@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToOrganization;
 
 class Reservation extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'guest_id', 'inquiry_id', 'corporate_account_id', 'property_id',
+        'organization_id', 'guest_id', 'inquiry_id', 'corporate_account_id', 'property_id',
         'confirmation_no', 'check_in', 'check_out', 'num_nights', 'num_rooms',
         'num_adults', 'num_children', 'room_type', 'room_number',
         'rate_per_night', 'total_amount', 'meal_plan', 'payment_status', 'payment_method',
