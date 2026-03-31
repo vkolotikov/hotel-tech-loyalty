@@ -241,19 +241,34 @@ class AuthController extends Controller
             }
         }
 
-        // Step 3: Create local staff user (or find existing)
+        // Step 3: Create local organization + staff user
         $localUser = User::where('email', $validated['email'])->first();
         if (!$localUser) {
+            // Create local organization linked to SaaS org
+            $org = null;
+            if ($saasOrgId) {
+                $org = \App\Models\Organization::firstOrCreate(
+                    ['saas_org_id' => $saasOrgId],
+                    [
+                        'name' => $validated['hotel_name'],
+                        'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']),
+                    ]
+                );
+                // Auto-setup defaults (tiers, benefits, settings)
+                app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+            }
+
             $localUser = User::create([
-                'name'      => $validated['name'],
-                'email'     => $validated['email'],
-                'password'  => Hash::make($validated['password']),
-                'user_type' => 'staff',
+                'name'            => $validated['name'],
+                'email'           => $validated['email'],
+                'password'        => Hash::make($validated['password']),
+                'user_type'       => 'staff',
+                'organization_id' => $org?->id,
             ]);
 
-            // Create staff record
             Staff::create([
                 'user_id'             => $localUser->id,
+                'organization_id'     => $org?->id,
                 'role'                => 'super_admin',
                 'hotel_name'          => $validated['hotel_name'],
                 'can_award_points'    => true,

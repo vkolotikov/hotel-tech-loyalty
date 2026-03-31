@@ -17,7 +17,7 @@ trait BelongsToOrganization
         static::addGlobalScope(new TenantScope());
 
         static::creating(function ($model) {
-            if (empty($model->organization_id)) {
+            if (empty($model->organization_id) && app()->bound('current_organization_id')) {
                 $model->organization_id = app('current_organization_id');
             }
         });
