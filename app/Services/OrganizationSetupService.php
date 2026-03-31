@@ -144,8 +144,9 @@ class OrganizationSetupService
             Guest::withoutGlobalScopes()->firstOrCreate(
                 ['organization_id' => $org->id, 'email' => $sg['email']],
                 array_merge($sg, [
-                    'guest_type'     => 'individual',
-                    'source'         => 'sample',
+                    'full_name'      => $sg['first_name'] . ' ' . $sg['last_name'],
+                    'guest_type'     => 'Individual',
+                    'lead_source'    => 'Sample Data',
                     'last_stay_date' => now()->subDays(random_int(5, 90)),
                 ])
             );

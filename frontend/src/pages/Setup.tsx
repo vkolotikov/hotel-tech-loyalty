@@ -82,7 +82,7 @@ export function Setup({ onComplete }: Props) {
               value={hotelName}
               onChange={e => setHotelName(e.target.value)}
               placeholder="e.g. Grand Hotel Vienna"
-              className="w-full px-3 py-2.5 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
