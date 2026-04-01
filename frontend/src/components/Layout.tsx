@@ -37,13 +37,18 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
       { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
-      { path: '/ai',              label: 'AI Insights',      icon: Sparkles,  gate: 'can_view_analytics' },
-      { path: '/chatbot-config',  label: 'Chatbot Config',   icon: Bot,       gate: 'admin' },
-      { path: '/knowledge-base',  label: 'Knowledge Base',   icon: BookOpen,       gate: 'admin' },
-      { path: '/widget-builder',  label: 'Chat Widget',      icon: MessageSquare,  gate: 'admin' },
-      { path: '/chat-inbox',      label: 'Chat Inbox',      icon: Inbox,          gate: 'all' },
-      { path: '/popup-rules',     label: 'Popup Rules',     icon: Zap,            gate: 'admin' },
-      { path: '/training',        label: 'AI Training',     icon: GraduationCap,  gate: 'admin' },
+      { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics' },
+    ],
+  },
+  {
+    label: 'AI Chat',
+    items: [
+      { path: '/chat-inbox',      label: 'Inbox',          icon: Inbox,          gate: 'all' },
+      { path: '/widget-builder',  label: 'Widget',         icon: MessageSquare,  gate: 'admin' },
+      { path: '/chatbot-config',  label: 'Chatbot Config', icon: Bot,            gate: 'admin' },
+      { path: '/knowledge-base',  label: 'Knowledge Base', icon: BookOpen,       gate: 'admin' },
+      { path: '/popup-rules',     label: 'Popup Rules',    icon: Zap,            gate: 'admin' },
+      { path: '/training',        label: 'AI Training',    icon: GraduationCap,  gate: 'admin' },
     ],
   },
   {
