@@ -21,6 +21,7 @@
   var orgId        = me.getAttribute('data-org') || ''
   var lang         = me.getAttribute('data-lang') || 'en'
   var primaryColor = me.getAttribute('data-primary-color') || ''
+  var theme        = me.getAttribute('data-theme') || ''
   var containerId  = me.getAttribute('data-container') || 'hoteltech-booking'
 
   if (!orgId) {
@@ -36,6 +37,7 @@
   var iframeSrc = baseUrl + '/booking-widget?org=' + encodeURIComponent(orgId)
   if (lang)         iframeSrc += '&lang=' + encodeURIComponent(lang)
   if (primaryColor) iframeSrc += '&color=' + encodeURIComponent(primaryColor)
+  if (theme)        iframeSrc += '&theme=' + encodeURIComponent(theme)
 
   // Create or find container
   var container = document.getElementById(containerId)

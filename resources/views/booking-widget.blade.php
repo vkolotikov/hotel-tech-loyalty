@@ -5,141 +5,226 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Book Your Stay</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --primary: {{ $color ?: '#c9a84c' }};
-  --bg: #0d0d0d;
-  --surface: #161616;
-  --border: #2c2c2c;
-  --text: #ffffff;
-  --text2: #8e8e93;
+  --primary: {{ $color ?: '#2d6a4f' }};
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, #000);
+  --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --border: #e8e4df;
+  --text: #1a1a1a;
+  --text-secondary: #6b7280;
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
   --radius: 12px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow: 0 2px 8px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.08);
 }
+[data-theme="dark"] {
+  --bg: #0d0d0d;
+  --surface: #1a1a1a;
+  --border: #2c2c2c;
+  --text: #f5f5f5;
+  --text-secondary: #8e8e93;
+  --error-bg: rgba(220,38,38,.1);
+  --success-bg: rgba(22,163,74,.1);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.2);
+  --shadow: 0 2px 8px rgba(0,0,0,.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.4);
+}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 button{cursor:pointer;font-family:inherit}
-input,select{font-family:inherit}
+input,select,textarea{font-family:inherit}
 
-.widget{max-width:560px;margin:0 auto;padding:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
-.card h2{font-size:16px;font-weight:700;margin-bottom:4px}
-.card p.sub{font-size:12px;color:var(--text2);margin-bottom:16px}
+/* Layout */
+.widget{max-width:680px;margin:0 auto;padding:20px 16px}
 
-/* Steps indicator */
-.steps{display:flex;gap:8px;margin-bottom:20px}
-.step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .3s}
-.step.active{background:var(--primary)}
-.step.done{background:var(--primary);opacity:.5}
+/* Header */
+.widget-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.widget-header img{height:36px;width:auto;border-radius:6px}
+.widget-header .prop-name{font-size:18px;font-weight:700;letter-spacing:-.02em}
 
-/* Form elements */
-.field{margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:5px}
-.field input,.field select{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
-.field input:focus,.field select:focus{border-color:var(--primary)}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* Step indicator */
+.stepper{display:flex;align-items:flex-start;justify-content:center;gap:0;margin-bottom:28px;padding:0 8px}
+.stepper-item{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.stepper-item:not(:last-child)::after{content:'';position:absolute;top:15px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--border);transition:background .4s}
+.stepper-item:not(:last-child).done::after{background:var(--primary)}
+.step-circle{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:2px solid var(--border);background:var(--surface);color:var(--text-secondary);transition:all .3s;position:relative;z-index:1}
+.stepper-item.active .step-circle{border-color:var(--primary);background:var(--primary);color:#fff}
+.stepper-item.done .step-circle{border-color:var(--primary);background:var(--primary);color:#fff}
+.step-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);margin-top:6px;text-align:center;white-space:nowrap}
+.stepper-item.active .step-label{color:var(--primary)}
+.stepper-item.done .step-label{color:var(--primary)}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;transition:all .2s}
-.btn-primary{background:var(--primary);color:#000}
-.btn-primary:hover{opacity:.9}
-.btn-secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{background:rgba(255,255,255,.1)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-row{display:flex;gap:10px;margin-top:16px}
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s}
+.card-title{font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px}
+
+/* Form fields */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.field textarea{resize:vertical;min-height:72px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;transition:all .2s;text-decoration:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--text-secondary);background:var(--primary-light)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn-row{display:flex;gap:12px;margin-top:20px}
 .btn-row .btn{flex:1}
 
-/* Unit cards */
-.unit{display:flex;gap:14px;padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;transition:all .2s}
-.unit:hover,.unit.selected{border-color:var(--primary);background:rgba(255,255,255,.02)}
-.unit.selected{box-shadow:0 0 0 1px var(--primary)}
-.unit-img{width:90px;height:68px;border-radius:8px;object-fit:cover;background:var(--border);flex-shrink:0}
-.unit-info{flex:1;min-width:0}
-.unit-name{font-size:14px;font-weight:600}
-.unit-desc{font-size:11px;color:var(--text2);margin:2px 0 4px}
-.unit-price{font-size:15px;font-weight:700;color:var(--primary)}
-.unit-price span{font-size:11px;color:var(--text2);font-weight:400}
+/* Room cards */
+.room-card{display:flex;gap:16px;padding:16px;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:12px;transition:all .25s;cursor:pointer}
+.room-card:hover{border-color:color-mix(in srgb, var(--primary) 40%, var(--border));box-shadow:var(--shadow)}
+.room-card.selected{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 1px var(--primary)}
+.room-img{width:110px;height:90px;border-radius:8px;object-fit:cover;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);overflow:hidden}
+.room-img img{width:100%;height:100%;object-fit:cover}
+.room-body{flex:1;min-width:0;display:flex;flex-direction:column}
+.room-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.room-desc{font-size:12px;color:var(--text-secondary);margin-bottom:auto;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.room-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-secondary);margin:6px 0}
+.room-meta svg{flex-shrink:0}
+.room-pricing{display:flex;align-items:baseline;gap:6px;margin-top:4px}
+.room-price{font-size:18px;font-weight:700;color:var(--primary)}
+.room-price-unit{font-size:12px;color:var(--text-secondary)}
+.room-total{font-size:11px;color:var(--text-secondary)}
+.room-select-btn{margin-top:8px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;align-self:flex-start}
+.room-card.selected .room-select-btn,.room-select-btn:hover{background:var(--primary);color:#fff}
 
 /* Extras */
-.extra{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
-.extra label{flex:1;font-size:13px;cursor:pointer}
-.extra .price{font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap}
-.extra input[type="checkbox"]{width:18px;height:18px;accent-color:var(--primary)}
+.extra-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:10px;transition:all .2s;cursor:pointer}
+.extra-card.checked{border-color:var(--primary);background:var(--primary-light)}
+.extra-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.extra-card.checked .extra-check{background:var(--primary);border-color:var(--primary)}
+.extra-info{flex:1;min-width:0}
+.extra-name{font-size:14px;font-weight:600}
+.extra-desc{font-size:12px;color:var(--text-secondary)}
+.extra-price{font-size:14px;font-weight:700;color:var(--primary);white-space:nowrap}
 
-/* Summary */
-.summary-line{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
-.summary-line.total{border-top:1px solid var(--border);padding-top:12px;margin-top:8px;font-size:15px;font-weight:700}
-.summary-line.total .amount{color:var(--primary)}
+/* Details layout */
+.details-grid{display:grid;grid-template-columns:1fr 280px;gap:16px}
+@media(max-width:600px){
+  .details-grid{grid-template-columns:1fr}
+  .details-grid .summary-card{order:-1}
+  .row{grid-template-columns:1fr}
+  .stepper{gap:0;padding:0}
+  .step-label{font-size:9px}
+  .room-card{flex-direction:column}
+  .room-img{width:100%;height:140px}
+}
 
-/* Success */
-.success{text-align:center;padding:32px 16px}
-.success .icon{width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,.12);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px}
-.success .icon svg{color:#22c55e}
-.success h2{font-size:20px;margin-bottom:8px}
-.success p{color:var(--text2);font-size:13px}
-.success .ref{display:inline-block;margin-top:12px;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:14px;letter-spacing:1px}
-
-/* Loading */
-.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text2);font-size:13px}
-.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;margin-right:10px}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* Summary sidebar */
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);position:sticky;top:16px}
+.summary-card h3{font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.summary-line{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text-secondary)}
+.summary-line span:last-child{font-weight:500;color:var(--text)}
+.summary-total{display:flex;justify-content:space-between;padding-top:12px;margin-top:10px;border-top:2px solid var(--border);font-size:17px;font-weight:700}
+.summary-total span:last-child{color:var(--primary)}
 
 /* Error */
-.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:#f87171}
+.error-box{background:var(--error-bg);border:1px solid color-mix(in srgb, var(--error) 20%, transparent);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--error);display:flex;align-items:center;gap:8px}
+
+/* Success */
+.success-wrap{text-align:center;padding:40px 20px}
+.success-icon{width:64px;height:64px;border-radius:50%;background:var(--success-bg);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;animation:scaleIn .4s ease-out}
+.success-icon svg{color:var(--success);width:32px;height:32px}
+.success-wrap h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.success-wrap p{color:var(--text-secondary);font-size:14px;max-width:380px;margin:0 auto}
+.success-ref{display:inline-block;margin-top:16px;padding:10px 20px;background:var(--primary-light);border:1px solid color-mix(in srgb, var(--primary) 25%, transparent);border-radius:8px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;font-size:16px;font-weight:600;letter-spacing:1.5px;color:var(--primary)}
+
+/* Shimmer loading */
+.shimmer{background:linear-gradient(90deg,var(--border) 25%,color-mix(in srgb, var(--border) 50%, var(--surface)) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.shimmer-line{height:14px;margin-bottom:10px;border-radius:6px}
+.shimmer-block{height:80px;margin-bottom:12px}
+.shimmer-circle{width:30px;height:30px;border-radius:50%}
+
+/* Confetti */
+@keyframes scaleIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes confettiDrop{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(60px) rotate(360deg);opacity:0}}
+.confetti-container{position:relative;height:0;overflow:visible}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confettiDrop 1.2s ease-out forwards;opacity:0}
+
+/* Step transition */
+.step-content{animation:fadeSlideIn .35s ease-out}
+@keyframes fadeSlideIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
 
 /* Powered by */
-.powered{text-align:center;padding:12px;font-size:10px;color:var(--text2);opacity:.6}
-.powered a{color:var(--text2);text-decoration:none}
+.powered{text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text-secondary);opacity:.5}
+.powered a{color:var(--text-secondary);text-decoration:none}
+.powered a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="widget" id="app">
-  <div class="loading"><div class="spinner"></div> Loading booking widget&hellip;</div>
+  <div style="padding:60px 0;text-align:center">
+    <div class="shimmer shimmer-line" style="width:60%;margin:0 auto 20px"></div>
+    <div class="shimmer shimmer-line" style="width:40%;margin:0 auto 20px"></div>
+    <div class="shimmer shimmer-block" style="max-width:400px;margin:0 auto"></div>
+  </div>
 </div>
 
 <script>
 ;(function(){
 'use strict';
 
-var ORG_ID  = '{{ $orgId }}';
-var API_BASE = '{{ $apiBase }}';
-var LANG    = '{{ $lang }}';
+var ORG_ID   = @json($orgId);
+var API_BASE = @json($apiBase);
+var LANG     = @json($lang);
+var THEME    = @json($theme ?? 'light');
+var CURRENCY = 'EUR';
 
-/* ─── State ───────────────────────────────────────────────────────────── */
+/* --- State --- */
 var state = {
-  step: 1,         // 1=search, 2=select unit, 3=extras, 4=guest details, 5=success
+  step: 1,
   config: null,
+  style: null,
   loading: true,
+  searching: false,
   error: null,
-  // Search
   checkIn: '',
   checkOut: '',
   adults: 2,
   children: 0,
-  // Results
+  promo: '',
   available: [],
   selectedUnit: null,
-  // Extras
   selectedExtras: {},
-  // Quote
   quote: null,
   quoteLoading: false,
-  // Guest
   firstName: '',
   lastName: '',
   email: '',
   phone: '',
-  // Confirm
+  requests: '',
   confirming: false,
-  confirmation: null,
+  confirmation: null
 };
 
 var $app = document.getElementById('app');
+var STEPS = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
 
-/* ─── API helper ──────────────────────────────────────────────────────── */
+/* --- API --- */
 function apiGet(path, params) {
   params = params || {};
   params.org = ORG_ID;
   var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
-  return fetch(API_BASE + '/v1/booking/' + path + '?' + qs)
-    .then(function(r){ return r.json(); });
+  return fetch(API_BASE + '/v1/booking/' + path + '?' + qs).then(function(r){ return r.json(); });
 }
 function apiPost(path, body) {
   body = body || {};
@@ -151,222 +236,316 @@ function apiPost(path, body) {
   }).then(function(r){ return r.json(); });
 }
 
-/* ─── Render ──────────────────────────────────────────────────────────── */
+/* --- Render --- */
 function render() {
   var html = '';
 
-  // Steps
-  html += '<div class="steps">';
-  for (var i = 1; i <= 4; i++) {
-    var cls = i < state.step ? 'step done' : (i === state.step ? 'step active' : 'step');
-    html += '<div class="' + cls + '"></div>';
+  // Header
+  if (state.style) {
+    html += '<div class="widget-header">';
+    if (state.style.show_logo && state.style.logo_url) {
+      html += '<img src="' + esc(state.style.logo_url) + '" alt="">';
+    }
+    if (state.style.property_name) {
+      html += '<span class="prop-name">' + esc(state.style.property_name) + '</span>';
+    }
+    html += '</div>';
   }
-  html += '</div>';
 
+  // Stepper (hide on success)
+  if (state.step <= 4) {
+    html += '<div class="stepper">';
+    for (var i = 0; i < 4; i++) {
+      var cls = (i + 1) < state.step ? 'stepper-item done' : ((i + 1) === state.step ? 'stepper-item active' : 'stepper-item');
+      html += '<div class="' + cls + '">';
+      html += '<div class="step-circle">' + ((i + 1) < state.step ? svgCheck() : (i + 1)) + '</div>';
+      html += '<div class="step-label">' + STEPS[i] + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Content
+  html += '<div class="step-content">';
   if (state.loading) {
-    html += '<div class="loading"><div class="spinner"></div> Loading&hellip;</div>';
+    html += renderShimmer();
   } else if (state.step === 1) {
     html += renderSearch();
   } else if (state.step === 2) {
-    html += renderUnits();
+    html += renderRooms();
   } else if (state.step === 3) {
     html += renderExtras();
   } else if (state.step === 4) {
-    html += renderGuest();
+    html += renderDetails();
   } else if (state.step === 5) {
     html += renderSuccess();
   }
+  html += '</div>';
 
-  html += '<div class="powered">Powered by <a href="#">Hotel Tech</a></div>';
+  html += '<div class="powered">Powered by <a href="#">HotelTech</a></div>';
 
   $app.innerHTML = html;
   bindEvents();
   notifyHeight();
 }
 
-/* ─── Step 1: Search ──────────────────────────────────────────────────── */
-function renderSearch() {
-  var today = new Date().toISOString().slice(0,10);
+/* --- Shimmer --- */
+function renderShimmer() {
   var h = '<div class="card">';
-  h += '<h2>Find Your Perfect Stay</h2>';
-  h += '<p class="sub">Select dates and guests to check availability</p>';
-  if (state.error) h += '<div class="error-box">' + esc(state.error) + '</div>';
-  h += '<div class="row"><div class="field"><label>Check-in</label>';
-  h += '<input type="date" id="w-checkin" min="'+today+'" value="'+esc(state.checkIn)+'"></div>';
-  h += '<div class="field"><label>Check-out</label>';
-  h += '<input type="date" id="w-checkout" min="'+today+'" value="'+esc(state.checkOut)+'"></div></div>';
-  h += '<div class="row"><div class="field"><label>Adults</label>';
-  h += '<select id="w-adults">';
-  for (var a = 1; a <= 10; a++) h += '<option value="'+a+'"'+(state.adults===a?' selected':'')+'>'+a+'</option>';
-  h += '</select></div>';
-  h += '<div class="field"><label>Children</label>';
-  h += '<select id="w-children">';
-  for (var c = 0; c <= 6; c++) h += '<option value="'+c+'"'+(state.children===c?' selected':'')+'>'+c+'</option>';
-  h += '</select></div></div>';
-  h += '<button class="btn btn-primary" id="w-search">Search Availability</button>';
+  h += '<div class="shimmer shimmer-line" style="width:50%;height:20px;margin-bottom:12px"></div>';
+  h += '<div class="shimmer shimmer-line" style="width:80%"></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">';
+  h += '<div class="shimmer" style="height:42px"></div><div class="shimmer" style="height:42px"></div>';
+  h += '<div class="shimmer" style="height:42px"></div><div class="shimmer" style="height:42px"></div>';
+  h += '</div>';
+  h += '<div class="shimmer" style="height:44px;margin-top:16px"></div>';
   h += '</div>';
   return h;
 }
 
-/* ─── Step 2: Unit Selection ──────────────────────────────────────────── */
-function renderUnits() {
+/* --- Step 1: Search --- */
+function renderSearch() {
+  var today = new Date().toISOString().slice(0, 10);
   var h = '<div class="card">';
-  h += '<h2>Available Rooms</h2>';
-  h += '<p class="sub">' + esc(state.checkIn) + ' &rarr; ' + esc(state.checkOut) + ' &middot; ' + state.adults + ' adult' + (state.adults>1?'s':'') + '</p>';
+  h += '<div class="card-title">Find Your Perfect Stay</div>';
+  h += '<div class="card-sub">Select your dates and guests to see available rooms</div>';
+  if (state.error) h += errorHtml(state.error);
+  h += '<div class="row">';
+  h += field('Check-in', '<input type="date" id="w-ci" min="' + today + '" value="' + esc(state.checkIn) + '">');
+  h += field('Check-out', '<input type="date" id="w-co" min="' + today + '" value="' + esc(state.checkOut) + '">');
+  h += '</div>';
+  h += '<div class="row">';
+  h += field('Adults', selectHtml('w-adults', range(1, 10), state.adults));
+  h += field('Children', selectHtml('w-children', range(0, 6), state.children));
+  h += '</div>';
+  h += field('Promo Code <span style="font-weight:400;opacity:.7">(optional)</span>', '<input type="text" id="w-promo" value="' + esc(state.promo) + '" placeholder="Enter code">');
+  h += '<button class="btn btn-primary" id="w-search"' + (state.searching ? ' disabled' : '') + '>';
+  h += state.searching ? spinner() + ' Searching...' : svgSearch() + ' Search Rooms';
+  h += '</button>';
+  h += '</div>';
+  return h;
+}
+
+/* --- Step 2: Rooms --- */
+function renderRooms() {
+  var n = nights();
+  var h = '<div class="card">';
+  h += '<div class="card-title">Available Rooms</div>';
+  h += '<div class="card-sub">' + formatDate(state.checkIn) + ' &mdash; ' + formatDate(state.checkOut) + ' &middot; ' + n + ' night' + (n > 1 ? 's' : '') + ' &middot; ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</div>';
+
   if (state.available.length === 0) {
-    h += '<p style="text-align:center;padding:24px;color:var(--text2)">No rooms available for the selected dates. Please try different dates.</p>';
+    h += '<div style="text-align:center;padding:32px 16px;color:var(--text-secondary)">';
+    h += '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.5"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>';
+    h += '<p style="font-size:14px;font-weight:500">No rooms available</p>';
+    h += '<p style="font-size:13px;margin-top:4px">Try different dates or fewer guests</p></div>';
   } else {
     state.available.forEach(function(u) {
       var sel = state.selectedUnit && state.selectedUnit.id === u.id;
-      h += '<div class="unit'+(sel?' selected':'')+'" data-unit="'+esc(u.id)+'">';
-      if (u.image) h += '<img class="unit-img" src="'+esc(u.image)+'" alt="'+esc(u.name)+'">';
-      else h += '<div class="unit-img"></div>';
-      h += '<div class="unit-info"><div class="unit-name">'+esc(u.name)+'</div>';
-      h += '<div class="unit-desc">'+(u.description ? esc(u.description) : 'Max '+u.max_guests+' guests')+'</div>';
-      h += '<div class="unit-price">'+formatCurrency(u.price_per_night)+' <span>/ night</span></div>';
+      h += '<div class="room-card' + (sel ? ' selected' : '') + '" data-unit="' + esc(u.id) + '">';
+      h += '<div class="room-img">';
+      if (u.image) {
+        h += '<img src="' + esc(u.image) + '" alt="' + esc(u.name) + '">';
+      } else {
+        h += '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7"/><path d="M21 10H3M7 10V7a5 5 0 0110 0v3"/></svg>';
+      }
+      h += '</div>';
+      h += '<div class="room-body">';
+      h += '<div class="room-name">' + esc(u.name) + '</div>';
+      if (u.description) h += '<div class="room-desc">' + esc(u.description) + '</div>';
+      h += '<div class="room-meta">';
+      h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Max ' + (u.max_guests || '--') + ' guests';
+      if (u.bed_type) h += ' &middot; ' + esc(u.bed_type);
+      h += '</div>';
+      h += '<div class="room-pricing">';
+      h += '<span class="room-price">' + formatCurrency(u.price_per_night) + '</span>';
+      h += '<span class="room-price-unit">/ night</span>';
+      h += '<span class="room-total">&middot; ' + formatCurrency(u.price_per_night * n) + ' total</span>';
+      h += '</div>';
+      h += '<button class="room-select-btn">' + (sel ? svgCheck() + ' Selected' : 'Select') + '</button>';
       h += '</div></div>';
     });
   }
+
   h += '<div class="btn-row">';
-  h += '<button class="btn btn-secondary" id="w-back1">&larr; Back</button>';
-  if (state.available.length > 0) h += '<button class="btn btn-primary'+(state.selectedUnit?'':' disabled')+'" id="w-next2" '+(state.selectedUnit?'':'disabled')+'>Continue &rarr;</button>';
+  h += '<button class="btn btn-outline" id="w-back1">' + svgArrowLeft() + ' Back</button>';
+  if (state.available.length > 0) {
+    h += '<button class="btn btn-primary" id="w-next2"' + (state.selectedUnit ? '' : ' disabled') + '>Continue ' + svgArrowRight() + '</button>';
+  }
   h += '</div></div>';
   return h;
 }
 
-/* ─── Step 3: Extras ──────────────────────────────────────────────────── */
+/* --- Step 3: Extras --- */
 function renderExtras() {
   var extras = (state.config && state.config.extras) || [];
   var h = '<div class="card">';
-  h += '<h2>Enhance Your Stay</h2>';
-  h += '<p class="sub">Optional extras to make your visit even better</p>';
+  h += '<div class="card-title">Enhance Your Stay</div>';
+  h += '<div class="card-sub">Add optional extras to make your visit even better</div>';
+
   if (extras.length === 0) {
-    h += '<p style="text-align:center;padding:16px;color:var(--text2)">No extras available.</p>';
+    h += '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:14px">No extras available for this booking.</div>';
   } else {
     extras.forEach(function(ex) {
       var checked = !!state.selectedExtras[ex.id];
-      h += '<div class="extra"><input type="checkbox" id="ex-'+esc(ex.id)+'" data-extra="'+esc(ex.id)+'"'+(checked?' checked':'')+'>';
-      h += '<label for="ex-'+esc(ex.id)+'">'+esc(ex.name)+(ex.description ? ' <span style="color:var(--text2);font-size:11px">&middot; '+esc(ex.description)+'</span>' : '')+'</label>';
-      h += '<span class="price">'+formatCurrency(ex.price)+'</span></div>';
+      h += '<div class="extra-card' + (checked ? ' checked' : '') + '" data-extra-card="' + esc(ex.id) + '">';
+      h += '<div class="extra-check">' + (checked ? svgCheck('#fff') : '') + '</div>';
+      h += '<div class="extra-info"><div class="extra-name">' + esc(ex.name) + '</div>';
+      if (ex.description) h += '<div class="extra-desc">' + esc(ex.description) + '</div>';
+      h += '</div>';
+      h += '<div class="extra-price">' + formatCurrency(ex.price) + '</div>';
+      h += '</div>';
     });
   }
+
   h += '<div class="btn-row">';
-  h += '<button class="btn btn-secondary" id="w-back2">&larr; Back</button>';
-  h += '<button class="btn btn-primary" id="w-next3">'+(state.quoteLoading?'Loading...':'Review & Book &rarr;')+'</button>';
-  h += '</div></div>';
+  h += '<button class="btn btn-outline" id="w-back2">' + svgArrowLeft() + ' Back</button>';
+  h += '<button class="btn btn-primary" id="w-next3"' + (state.quoteLoading ? ' disabled' : '') + '>';
+  h += state.quoteLoading ? spinner() + ' Calculating...' : 'Review Booking ' + svgArrowRight();
+  h += '</button></div></div>';
   return h;
 }
 
-/* ─── Step 4: Guest Details & Summary ─────────────────────────────────── */
-function renderGuest() {
+/* --- Step 4: Details --- */
+function renderDetails() {
   var q = state.quote || {};
+  var n = nights();
   var h = '';
-  if (state.error) h += '<div class="error-box">' + esc(state.error) + '</div>';
+  if (state.error) h += errorHtml(state.error);
 
-  // Summary
-  h += '<div class="card">';
-  h += '<h2>Booking Summary</h2>';
-  h += '<p class="sub">' + esc(state.checkIn) + ' &rarr; ' + esc(state.checkOut) + '</p>';
-  if (state.selectedUnit) {
-    h += '<div class="summary-line"><span>'+esc(state.selectedUnit.name)+' &times; '+nights()+' night'+(nights()>1?'s':'')+'</span><span>'+formatCurrency(q.room_total || state.selectedUnit.price_per_night * nights())+'</span></div>';
-  }
-  if (q.extras && q.extras.length) {
-    q.extras.forEach(function(ex){
-      h += '<div class="summary-line"><span>'+esc(ex.name)+'</span><span>'+formatCurrency(ex.price)+'</span></div>';
-    });
-  }
-  h += '<div class="summary-line total"><span>Total</span><span class="amount">'+formatCurrency(q.total || 0)+'</span></div>';
-  h += '</div>';
+  h += '<div class="details-grid">';
 
   // Guest form
-  h += '<div class="card">';
-  h += '<h2>Guest Details</h2>';
-  h += '<p class="sub">Please fill in your information to complete the booking</p>';
+  h += '<div class="card"><div class="card-title">Guest Details</div>';
+  h += '<div class="card-sub">Fill in your information to complete the reservation</div>';
   h += '<div class="row">';
-  h += '<div class="field"><label>First Name *</label><input id="w-fname" value="'+esc(state.firstName)+'" placeholder="John"></div>';
-  h += '<div class="field"><label>Last Name *</label><input id="w-lname" value="'+esc(state.lastName)+'" placeholder="Doe"></div>';
+  h += field('First Name *', '<input id="w-fname" value="' + esc(state.firstName) + '" placeholder="John">');
+  h += field('Last Name *', '<input id="w-lname" value="' + esc(state.lastName) + '" placeholder="Doe">');
   h += '</div>';
-  h += '<div class="field"><label>Email *</label><input type="email" id="w-email" value="'+esc(state.email)+'" placeholder="john@example.com"></div>';
-  h += '<div class="field"><label>Phone</label><input type="tel" id="w-phone" value="'+esc(state.phone)+'" placeholder="+1 234 567 890"></div>';
+  h += field('Email Address *', '<input type="email" id="w-email" value="' + esc(state.email) + '" placeholder="john@example.com">');
+  h += field('Phone Number', '<input type="tel" id="w-phone" value="' + esc(state.phone) + '" placeholder="+1 234 567 890">');
+  h += field('Special Requests', '<textarea id="w-requests" placeholder="Any special requirements...">' + esc(state.requests) + '</textarea>');
   h += '<div class="btn-row">';
-  h += '<button class="btn btn-secondary" id="w-back3">&larr; Back</button>';
-  h += '<button class="btn btn-primary" id="w-confirm"'+(state.confirming?' disabled':'')+'>'+
-       (state.confirming ? '<div class="spinner" style="width:16px;height:16px;margin:0"></div> Confirming...' : 'Confirm Booking') + '</button>';
-  h += '</div></div>';
+  h += '<button class="btn btn-outline" id="w-back3">' + svgArrowLeft() + ' Back</button>';
+  h += '<button class="btn btn-primary" id="w-confirm"' + (state.confirming ? ' disabled' : '') + '>';
+  h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
+  h += '</button></div></div>';
+
+  // Summary sidebar
+  h += '<div class="summary-card">';
+  h += '<h3>Booking Summary</h3>';
+  h += '<div class="summary-line"><span>' + formatDate(state.checkIn) + '</span><span>' + formatDate(state.checkOut) + '</span></div>';
+  h += '<div class="summary-line"><span>' + n + ' night' + (n > 1 ? 's' : '') + ', ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + '</span><span></span></div>';
+  if (state.selectedUnit) {
+    h += '<div style="margin:10px 0;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">';
+    h += '<div class="summary-line"><span>' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
+    h += '</div>';
+  }
+  if (q.extras && q.extras.length) {
+    q.extras.forEach(function(ex) {
+      h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+    });
+  }
+  h += '<div class="summary-total"><span>Total</span><span>' + formatCurrency(q.total || 0) + '</span></div>';
+  h += '</div>';
+
+  h += '</div>'; // details-grid
   return h;
 }
 
-/* ─── Step 5: Success ─────────────────────────────────────────────────── */
+/* --- Step 5: Success --- */
 function renderSuccess() {
   var c = state.confirmation || {};
-  var h = '<div class="card"><div class="success">';
-  h += '<div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>';
+  var h = '<div class="card">';
+  h += renderConfetti();
+  h += '<div class="success-wrap">';
+  h += '<div class="success-icon">' + svgCheckLg() + '</div>';
   h += '<h2>Booking Confirmed!</h2>';
-  h += '<p>Thank you for your reservation. A confirmation email has been sent to <strong>'+esc(state.email)+'</strong>.</p>';
-  if (c.reference) h += '<div class="ref">'+esc(c.reference)+'</div>';
-  h += '<div style="margin-top:20px"><button class="btn btn-secondary" id="w-newbooking">Make Another Booking</button></div>';
+  h += '<p>Thank you for your reservation. A confirmation email has been sent to <strong>' + esc(state.email) + '</strong>.</p>';
+  if (c.reference) h += '<div class="success-ref">' + esc(c.reference) + '</div>';
+  h += '<div style="margin-top:24px"><button class="btn btn-outline" id="w-new" style="max-width:220px;margin:0 auto">Make Another Booking</button></div>';
   h += '</div></div>';
   return h;
 }
 
-/* ─── Event Binding ───────────────────────────────────────────────────── */
+/* --- Confetti --- */
+function renderConfetti() {
+  var colors = ['var(--primary)', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#10b981'];
+  var h = '<div class="confetti-container">';
+  for (var i = 0; i < 18; i++) {
+    var left = Math.random() * 100;
+    var delay = Math.random() * 0.6;
+    var c = colors[i % colors.length];
+    h += '<div class="confetti-piece" style="left:' + left + '%;background:' + c + ';animation-delay:' + delay.toFixed(2) + 's;top:-10px"></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* --- Event binding --- */
 function bindEvents() {
   on('w-search', 'click', doSearch);
-  on('w-back1', 'click', function(){ state.step = 1; render(); });
-  on('w-back2', 'click', function(){ state.step = 2; render(); });
-  on('w-back3', 'click', function(){ state.step = 3; render(); });
+  on('w-back1', 'click', function() { state.step = 1; state.error = null; render(); });
+  on('w-back2', 'click', function() { state.step = 2; render(); });
+  on('w-back3', 'click', function() { state.step = 3; render(); });
   on('w-next2', 'click', doSelectUnit);
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);
-  on('w-newbooking', 'click', function(){
+  on('w-new', 'click', function() {
     state.step = 1; state.selectedUnit = null; state.selectedExtras = {};
     state.quote = null; state.confirmation = null; state.error = null;
-    state.firstName = ''; state.lastName = ''; state.email = ''; state.phone = '';
+    state.firstName = ''; state.lastName = ''; state.email = ''; state.phone = ''; state.requests = '';
     render();
   });
 
-  // Unit selection
-  var units = document.querySelectorAll('.unit[data-unit]');
-  for (var i = 0; i < units.length; i++) {
-    (function(el){
-      el.addEventListener('click', function(){
+  // Room cards
+  var rooms = document.querySelectorAll('.room-card[data-unit]');
+  for (var i = 0; i < rooms.length; i++) {
+    (function(el) {
+      el.addEventListener('click', function() {
         var uid = el.getAttribute('data-unit');
-        state.selectedUnit = state.available.find(function(u){ return String(u.id) === uid; }) || null;
+        state.selectedUnit = state.available.find(function(u) { return String(u.id) === uid; }) || null;
         render();
       });
-    })(units[i]);
+    })(rooms[i]);
   }
 
-  // Extra checkboxes
-  var exts = document.querySelectorAll('[data-extra]');
-  for (var j = 0; j < exts.length; j++) {
-    (function(el){
-      el.addEventListener('change', function(){
-        var eid = el.getAttribute('data-extra');
-        if (el.checked) state.selectedExtras[eid] = true;
-        else delete state.selectedExtras[eid];
+  // Extra cards
+  var exCards = document.querySelectorAll('[data-extra-card]');
+  for (var j = 0; j < exCards.length; j++) {
+    (function(el) {
+      el.addEventListener('click', function() {
+        var eid = el.getAttribute('data-extra-card');
+        if (state.selectedExtras[eid]) delete state.selectedExtras[eid];
+        else state.selectedExtras[eid] = true;
+        render();
       });
-    })(exts[j]);
+    })(exCards[j]);
   }
 
-  // Sync input values on change
-  onInput('w-checkin',  function(v){ state.checkIn = v; });
-  onInput('w-checkout', function(v){ state.checkOut = v; });
-  onInput('w-adults',   function(v){ state.adults = parseInt(v)||2; });
-  onInput('w-children', function(v){ state.children = parseInt(v)||0; });
-  onInput('w-fname',    function(v){ state.firstName = v; });
-  onInput('w-lname',    function(v){ state.lastName = v; });
-  onInput('w-email',    function(v){ state.email = v; });
-  onInput('w-phone',    function(v){ state.phone = v; });
+  // Sync inputs
+  onInput('w-ci', function(v) { state.checkIn = v; });
+  onInput('w-co', function(v) { state.checkOut = v; });
+  onInput('w-adults', function(v) { state.adults = parseInt(v) || 2; });
+  onInput('w-children', function(v) { state.children = parseInt(v) || 0; });
+  onInput('w-promo', function(v) { state.promo = v; });
+  onInput('w-fname', function(v) { state.firstName = v; });
+  onInput('w-lname', function(v) { state.lastName = v; });
+  onInput('w-email', function(v) { state.email = v; });
+  onInput('w-phone', function(v) { state.phone = v; });
+  onInput('w-requests', function(v) { state.requests = v; });
 }
 
-/* ─── Actions ─────────────────────────────────────────────────────────── */
+/* --- Actions --- */
 function doSearch() {
   state.error = null;
-  if (!state.checkIn || !state.checkOut) { state.error = 'Please select check-in and check-out dates.'; render(); return; }
-  if (state.checkIn >= state.checkOut) { state.error = 'Check-out must be after check-in.'; render(); return; }
+  if (!state.checkIn || !state.checkOut) { state.error = 'Please select both check-in and check-out dates.'; render(); return; }
+  if (state.checkIn >= state.checkOut) { state.error = 'Check-out date must be after check-in.'; render(); return; }
+  var cfg = state.config || {};
+  var n = nights();
+  if (cfg.min_nights && n < cfg.min_nights) { state.error = 'Minimum stay is ' + cfg.min_nights + ' nights.'; render(); return; }
+  if (cfg.max_nights && n > cfg.max_nights) { state.error = 'Maximum stay is ' + cfg.max_nights + ' nights.'; render(); return; }
 
-  state.loading = true; render();
+  state.searching = true; render();
   apiGet('availability', {
     check_in: state.checkIn,
     check_out: state.checkOut,
@@ -376,11 +555,11 @@ function doSearch() {
     state.available = data.available || [];
     state.selectedUnit = null;
     state.step = 2;
-    state.loading = false;
+    state.searching = false;
     render();
-  }).catch(function(err) {
+  }).catch(function() {
     state.error = 'Failed to check availability. Please try again.';
-    state.loading = false;
+    state.searching = false;
     render();
   });
 }
@@ -393,8 +572,7 @@ function doSelectUnit() {
 
 function doQuote() {
   state.quoteLoading = true; state.error = null; render();
-
-  var extras = Object.keys(state.selectedExtras).map(function(id){ return { id: id, quantity: 1 }; });
+  var extras = Object.keys(state.selectedExtras).map(function(id) { return { id: id, quantity: 1 }; });
 
   apiPost('quote', {
     unit_id: String(state.selectedUnit.id),
@@ -411,24 +589,25 @@ function doQuote() {
     render();
   }).catch(function() {
     state.quoteLoading = false;
-    state.error = 'Failed to generate quote.';
+    state.error = 'Failed to generate quote. Please try again.';
     render();
   });
 }
 
 function doConfirm() {
-  if (!state.firstName || !state.lastName || !state.email) {
-    state.error = 'Please fill in all required fields.'; render(); return;
-  }
-  state.confirming = true; state.error = null; render();
+  state.error = null;
+  if (!state.firstName.trim()) { state.error = 'First name is required.'; render(); return; }
+  if (!state.lastName.trim()) { state.error = 'Last name is required.'; render(); return; }
+  if (!state.email.trim() || state.email.indexOf('@') < 1) { state.error = 'A valid email address is required.'; render(); return; }
+  state.confirming = true; render();
 
   apiPost('confirm', {
     hold_token: state.quote ? state.quote.hold_token : '',
     guest: {
-      first_name: state.firstName,
-      last_name: state.lastName,
-      email: state.email,
-      phone: state.phone
+      first_name: state.firstName.trim(),
+      last_name: state.lastName.trim(),
+      email: state.email.trim(),
+      phone: state.phone.trim()
     }
   }).then(function(data) {
     state.confirming = false;
@@ -443,49 +622,86 @@ function doConfirm() {
   });
 }
 
-/* ─── Helpers ─────────────────────────────────────────────────────────── */
-function on(id, evt, fn) {
-  var el = document.getElementById(id);
-  if (el) el.addEventListener(evt, fn);
-}
+/* --- Helpers --- */
+function on(id, evt, fn) { var el = document.getElementById(id); if (el) el.addEventListener(evt, fn); }
 function onInput(id, fn) {
   var el = document.getElementById(id);
-  if (el) el.addEventListener('input', function(){ fn(el.value); });
-  if (el && el.tagName === 'SELECT') el.addEventListener('change', function(){ fn(el.value); });
+  if (!el) return;
+  el.addEventListener('input', function() { fn(el.value); });
+  if (el.tagName === 'SELECT') el.addEventListener('change', function() { fn(el.value); });
 }
-function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+function esc(s) { if (s === null || s === undefined) return ''; var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 function nights() {
   if (!state.checkIn || !state.checkOut) return 1;
-  var a = new Date(state.checkIn), b = new Date(state.checkOut);
-  return Math.max(1, Math.round((b - a) / 86400000));
+  return Math.max(1, Math.round((new Date(state.checkOut) - new Date(state.checkIn)) / 86400000));
 }
 function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '';
-  return new Intl.NumberFormat(LANG === 'de' ? 'de-DE' : 'en-US', { style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:2 }).format(amount);
+  var loc = LANG === 'de' ? 'de-DE' : (LANG === 'fr' ? 'fr-FR' : 'en-US');
+  return new Intl.NumberFormat(loc, { style: 'currency', currency: CURRENCY, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
 }
+function formatDate(d) {
+  if (!d) return '';
+  var dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString(LANG === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function range(a, b) { var r = []; for (var i = a; i <= b; i++) r.push(i); return r; }
+function field(label, input) { return '<div class="field"><label>' + label + '</label>' + input + '</div>'; }
+function selectHtml(id, opts, val) {
+  var h = '<select id="' + id + '">';
+  opts.forEach(function(o) { h += '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + o + '</option>'; });
+  h += '</select>';
+  return h;
+}
+function errorHtml(msg) { return '<div class="error-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + esc(msg) + '</div>'; }
+function spinner() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .7s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>'; }
 function notifyHeight() {
-  try {
-    var h = document.documentElement.scrollHeight;
-    window.parent.postMessage({ type: 'hoteltech-widget-height', height: h }, '*');
-  } catch(e){}
+  try { window.parent.postMessage({ type: 'hoteltech-widget-height', height: document.documentElement.scrollHeight }, '*'); } catch (e) {}
 }
 
-/* ─── Init ────────────────────────────────────────────────────────────── */
+// SVG icons
+function svgSearch() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'; }
+function svgCheck(c) { return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + (c || 'currentColor') + '" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'; }
+function svgCheckLg() { return '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'; }
+function svgArrowLeft() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'; }
+function svgArrowRight() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'; }
+function svgLock() { return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'; }
+
+/* --- Apply style config --- */
+function applyStyle(cfg) {
+  var s = cfg.style || {};
+  state.style = s;
+  var root = document.documentElement;
+  var theme = s.theme || THEME;
+  if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+  if (s.primary_color) root.style.setProperty('--primary', s.primary_color);
+  if (s.border_radius) root.style.setProperty('--radius', s.border_radius + 'px');
+  if (s.font_family) root.style.setProperty('--font', s.font_family);
+  if (cfg.currency) CURRENCY = cfg.currency;
+}
+
+/* --- Spin keyframe (inline for spinner) --- */
+var styleTag = document.createElement('style');
+styleTag.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(styleTag);
+
+/* --- Init --- */
 apiGet('config').then(function(data) {
   state.config = data;
   state.loading = false;
+  applyStyle(data);
 
-  // Pre-set tomorrow and day-after as defaults
+  // Sensible default dates
   var d = new Date();
   d.setDate(d.getDate() + 1);
-  state.checkIn = d.toISOString().slice(0,10);
+  state.checkIn = d.toISOString().slice(0, 10);
   d.setDate(d.getDate() + 2);
-  state.checkOut = d.toISOString().slice(0,10);
+  state.checkOut = d.toISOString().slice(0, 10);
 
   render();
 }).catch(function() {
   state.loading = false;
-  state.error = 'Unable to load booking configuration.';
+  state.error = 'Unable to load booking configuration. Please refresh the page.';
   render();
 });
 

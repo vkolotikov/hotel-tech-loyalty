@@ -26,10 +26,28 @@ class BookingPublicController extends Controller
         $extras   = $this->getJsonSetting($orgId, 'booking_extras', config('booking.extras', []));
         $policies = $this->getJsonSetting($orgId, 'booking_policies', config('booking.policies', []));
 
+        $currency  = $this->getStringSetting($orgId, 'booking_currency', 'EUR');
+        $minNights = (int) $this->getStringSetting($orgId, 'booking_min_nights', '1');
+        $maxNights = (int) $this->getStringSetting($orgId, 'booking_max_nights', '30');
+
+        $style = [
+            'theme'         => $this->getStringSetting($orgId, 'booking_widget_theme', 'light'),
+            'primary_color' => $this->getStringSetting($orgId, 'booking_widget_color', '#2d6a4f'),
+            'border_radius' => (int) $this->getStringSetting($orgId, 'booking_widget_radius', '12'),
+            'show_name'     => $this->getStringSetting($orgId, 'booking_widget_show_name', 'true') === 'true',
+            'property_name' => $this->getStringSetting($orgId, 'booking_widget_property_name', ''),
+            'show_logo'     => $this->getStringSetting($orgId, 'booking_widget_show_logo', 'false') === 'true',
+            'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', ''),
+        ];
+
         return response()->json([
-            'units'    => $units,
-            'extras'   => $extras,
-            'policies' => $policies,
+            'units'      => $units,
+            'extras'     => $extras,
+            'policies'   => $policies,
+            'currency'   => $currency,
+            'min_nights' => $minNights,
+            'max_nights' => $maxNights,
+            'style'      => $style,
         ]);
     }
 
@@ -165,6 +183,18 @@ class BookingPublicController extends Controller
         if ($org) {
             app()->instance('current_organization_id', $org->id);
         }
+    }
+
+    private function getStringSetting(?int $orgId, string $key, string $default = ''): string
+    {
+        if (!$orgId) return $default;
+
+        $value = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', $key)
+            ->value('value');
+
+        return $value !== null ? (string) $value : $default;
     }
 
     private function getJsonSetting(?int $orgId, string $key, $default = [])

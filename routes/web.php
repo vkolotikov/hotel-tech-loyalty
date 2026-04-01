@@ -28,6 +28,22 @@ Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
     return view('booking-widget', compact('orgId', 'lang', 'color', 'apiBase'));
 });
 
+// ─── Standalone Booking Page ────────────────────────────────────────────────
+Route::get('/book/{token}', function (string $token) {
+    $org = \App\Models\Organization::where('widget_token', $token)->first();
+    if (!$org) {
+        abort(404, 'Booking page not found');
+    }
+    $apiBase = url('/') . '/api';
+    return view('booking-widget', [
+        'orgId'  => $token,
+        'lang'   => request('lang', 'en'),
+        'color'  => request('color', ''),
+        'apiBase' => $apiBase,
+        'standalone' => true,
+    ]);
+});
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -35,7 +51,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
