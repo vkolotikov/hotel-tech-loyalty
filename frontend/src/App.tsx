@@ -25,6 +25,8 @@ const ChatbotConfig = lazy(() => import('./pages/ChatbotConfig').then(m => ({ de
 const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
 const WidgetBuilder = lazy(() => import('./pages/WidgetBuilder').then(m => ({ default: m.WidgetBuilder })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
+const PopupRules = lazy(() => import('./pages/PopupRules').then(m => ({ default: m.PopupRules })))
+const Training = lazy(() => import('./pages/Training').then(m => ({ default: m.Training })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
@@ -114,6 +116,8 @@ export default function App() {
           <Route path="/knowledge-base" element={<LazyRoute gate="admin"><KnowledgeBase /></LazyRoute>} />
           <Route path="/widget-builder" element={<LazyRoute gate="admin"><WidgetBuilder /></LazyRoute>} />
           <Route path="/chat-inbox" element={<LazyRoute gate="all"><ChatInbox /></LazyRoute>} />
+          <Route path="/popup-rules" element={<LazyRoute gate="admin"><PopupRules /></LazyRoute>} />
+          <Route path="/training" element={<LazyRoute gate="admin"><Training /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />

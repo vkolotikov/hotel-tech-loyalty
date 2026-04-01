@@ -38,6 +38,8 @@ use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\BookingPublicController;
 use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
 use App\Http\Controllers\Api\V1\Admin\ChatInboxController;
+use App\Http\Controllers\Api\V1\Admin\PopupRuleController;
+use App\Http\Controllers\Api\V1\Admin\TrainingController;
 use App\Http\Controllers\Api\V1\Widget\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +77,7 @@ Route::prefix('v1')->group(function () {
         Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
         Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage']);
         Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead']);
+        Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
     });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
@@ -244,6 +247,20 @@ Route::prefix('v1')->group(function () {
             Route::put('chat-inbox/{id}/status',              [ChatInboxController::class, 'updateStatus']);
             Route::post('chat-inbox/{id}/messages',           [ChatInboxController::class, 'sendMessage']);
             Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
+
+            // ─── Popup Automation Rules ──────────────────────────────────────
+            Route::get('popup-rules',                         [PopupRuleController::class, 'index']);
+            Route::post('popup-rules',                        [PopupRuleController::class, 'store']);
+            Route::put('popup-rules/{id}',                    [PopupRuleController::class, 'update']);
+            Route::delete('popup-rules/{id}',                 [PopupRuleController::class, 'destroy']);
+
+            // ─── AI Training / Fine-tuning ───────────────────────────────────
+            Route::get('training/jobs',                       [TrainingController::class, 'index']);
+            Route::post('training/jobs',                      [TrainingController::class, 'store']);
+            Route::get('training/jobs/{id}',                  [TrainingController::class, 'show']);
+            Route::post('training/jobs/{id}/cancel',          [TrainingController::class, 'cancel']);
+            Route::get('training/stats',                      [TrainingController::class, 'stats']);
+            Route::post('training/export-data',               [TrainingController::class, 'exportData']);
 
             // ─── Knowledge Base ──────────────────────────────────────────────
             Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);

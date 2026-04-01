@@ -9,6 +9,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\ChatWidgetConfig;
+use App\Models\PopupRule;
 use App\Services\KnowledgeService;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
@@ -271,6 +272,33 @@ class WidgetChatController extends Controller
             'success' => true,
             'inquiry_id' => $inquiry->id,
         ]);
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/popup-rules
+     * Return active popup rules for the widget.
+     */
+    public function getPopupRules(string $widgetKey): JsonResponse
+    {
+        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$config) {
+            return response()->json(['rules' => []]);
+        }
+
+        $rules = PopupRule::where('organization_id', $config->organization_id)
+            ->active()
+            ->orderByDesc('priority')
+            ->get(['id', 'trigger_type', 'trigger_value', 'url_match_type', 'url_match_value', 'visitor_type', 'language_targets', 'message', 'quick_replies', 'priority']);
+
+        // Increment impressions
+        PopupRule::where('organization_id', $config->organization_id)
+            ->active()
+            ->increment('impressions_count');
+
+        return response()->json(['rules' => $rules]);
     }
 
     private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName): string
