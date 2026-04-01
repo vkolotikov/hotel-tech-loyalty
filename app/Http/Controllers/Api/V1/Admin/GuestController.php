@@ -209,12 +209,24 @@ class GuestController extends Controller
 
     public function bulkUpdate(Request $request): JsonResponse
     {
+        $allowedFields = [
+            'vip_level', 'segment', 'status', 'language', 'nationality',
+            'notes', 'salutation', 'company',
+        ];
+
         $v = $request->validate([
             'ids'    => 'required|array|min:1',
             'ids.*'  => 'integer|exists:guests,id',
             'fields' => 'required|array',
         ]);
-        Guest::whereIn('id', $v['ids'])->update($v['fields']);
+
+        // Strip any fields not in the whitelist to prevent tenant escape / PII manipulation
+        $safeFields = array_intersect_key($v['fields'], array_flip($allowedFields));
+        if (empty($safeFields)) {
+            return response()->json(['error' => 'No valid fields provided'], 422);
+        }
+
+        Guest::whereIn('id', $v['ids'])->update($safeFields);
         return response()->json(['updated' => count($v['ids'])]);
     }
 

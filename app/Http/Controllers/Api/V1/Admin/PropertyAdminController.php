@@ -31,7 +31,7 @@ class PropertyAdminController extends Controller
             'currency'  => 'nullable|string|max:3',
             'phone'     => 'nullable|string|max:30',
             'email'     => 'nullable|email',
-            'image'     => 'nullable|image|max:5120',
+            'image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         // Provide defaults for NOT NULL columns in the DB schema
@@ -71,7 +71,7 @@ class PropertyAdminController extends Controller
             'phone'     => 'nullable|string|max:30',
             'email'     => 'nullable|email',
             'is_active' => 'sometimes|boolean',
-            'image'     => 'nullable|image|max:5120',
+            'image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         // Handle image upload

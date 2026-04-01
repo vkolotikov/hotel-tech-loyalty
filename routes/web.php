@@ -16,6 +16,18 @@ Route::get('/storage/{path}', function (string $path) {
     abort(404);
 })->where('path', '.*');
 
+// ─── Public Booking Widget (embeddable) ─────────────────────────────────────
+Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
+    $orgId = $request->query('org', '');
+    $lang  = $request->query('lang', 'en');
+    $color = $request->query('color', '');
+
+    // Build the API base URL relative to this server
+    $apiBase = rtrim(url('/'), '/') . '/api';
+
+    return view('booking-widget', compact('orgId', 'lang', 'color', 'apiBase'));
+});
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -23,7 +35,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

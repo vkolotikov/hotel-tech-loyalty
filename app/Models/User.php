@@ -17,7 +17,7 @@ class User extends Authenticatable
         'nationality', 'language', 'avatar_url', 'user_type', 'organization_id',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'email_verified_at', 'organization_id'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',

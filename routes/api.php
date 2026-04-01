@@ -41,10 +41,8 @@ Route::prefix('v1')->group(function () {
     // ─── Public ──────────────────────────────────────────────────────────────────
     Route::get('theme', [SettingsController::class, 'theme']);
 
-    // SSE stream — auth via query token (EventSource can't send headers)
-    Route::get('admin/realtime/stream', [RealtimeController::class, 'stream']);
-
-    Route::prefix('auth')->group(function () {
+    // Auth routes — rate-limited to prevent brute-force
+    Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
         Route::post('register',    [AuthController::class, 'register']);
         Route::post('login',       [AuthController::class, 'login']);
         Route::post('trial',       [AuthController::class, 'startTrial']);
@@ -56,7 +54,7 @@ Route::prefix('v1')->group(function () {
     Route::get('plans', [AuthController::class, 'plans']);
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
-    Route::prefix('booking')->group(function () {
+    Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('config',                [BookingPublicController::class, 'config']);
         Route::get('availability',          [BookingPublicController::class, 'availability']);
         Route::get('unit/{unitId}/rates',   [BookingPublicController::class, 'unitRates']);
@@ -67,7 +65,7 @@ Route::prefix('v1')->group(function () {
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
-    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant'])->group(function () {
+    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'throttle:120,1'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);
@@ -97,8 +95,8 @@ Route::prefix('v1')->group(function () {
         // ─── AI Chatbot ────────────────────────────────────────────────────────
         Route::post('chatbot/message', [ChatbotController::class, 'message']);
 
-        // ─── Admin Routes ──────────────────────────────────────────────────────
-        Route::prefix('admin')->group(function () {
+        // ─── Admin Routes (staff only) ─────────────────────────────────────────
+        Route::prefix('admin')->middleware(['admin', 'check.subscription'])->group(function () {
 
             // Organization setup
             Route::get('setup/status',       [SetupController::class, 'status']);
@@ -311,7 +309,8 @@ Route::prefix('v1')->group(function () {
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
             Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
 
-            // ─── Realtime (polling fallback) ─────────────────────────────────
+            // ─── Realtime ────────────────────────────────────────────────────
+            Route::get('realtime/stream',                 [RealtimeController::class, 'stream']);
             Route::get('realtime/poll',                    [RealtimeController::class, 'poll']);
         });
     });

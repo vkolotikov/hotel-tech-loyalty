@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class Booking extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'booking_reference', 'hotel_name', 'room_type',
+        'organization_id', 'member_id', 'booking_reference', 'hotel_name', 'room_type',
         'check_in', 'check_out', 'nights', 'total_amount', 'currency',
         'status', 'points_earned', 'points_redeemed', 'source',
         'special_requests', 'rating', 'review', 'webhook_payload',

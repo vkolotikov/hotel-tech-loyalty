@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TierBenefit extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'tier_id', 'benefit_id', 'property_id', 'value',
+        'organization_id', 'tier_id', 'benefit_id', 'property_id', 'value',
         'custom_description', 'is_active',
     ];
 

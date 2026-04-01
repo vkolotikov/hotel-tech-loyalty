@@ -17,8 +17,17 @@ trait BelongsToOrganization
         static::addGlobalScope(new TenantScope());
 
         static::creating(function ($model) {
-            if (empty($model->organization_id) && app()->bound('current_organization_id')) {
+            // Always force organization_id from the current tenant context.
+            // This prevents request data from overriding the org (tenant escape).
+            if (app()->bound('current_organization_id') && app('current_organization_id')) {
                 $model->organization_id = app('current_organization_id');
+            }
+        });
+
+        static::updating(function ($model) {
+            // Prevent changing organization_id on existing records
+            if ($model->isDirty('organization_id') && $model->getOriginal('organization_id')) {
+                $model->organization_id = $model->getOriginal('organization_id');
             }
         });
     }

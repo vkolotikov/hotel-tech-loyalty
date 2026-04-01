@@ -15,6 +15,10 @@ class TenantScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         if (!app()->bound('current_organization_id')) {
+            // Fail-closed: if no org context is set, return NO results
+            // rather than silently returning ALL tenants' data.
+            // Use withoutGlobalScopes() explicitly when cross-tenant access is intended.
+            $builder->whereRaw('1 = 0');
             return;
         }
 
@@ -22,6 +26,9 @@ class TenantScope implements Scope
 
         if ($orgId) {
             $builder->where($model->getTable() . '.organization_id', $orgId);
+        } else {
+            // Org context is bound but null — fail-closed
+            $builder->whereRaw('1 = 0');
         }
     }
 }

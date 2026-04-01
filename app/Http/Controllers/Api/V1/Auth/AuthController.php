@@ -38,7 +38,14 @@ class AuthController extends Controller
             'nationality'   => 'nullable|string|max:100',
             'language'      => 'nullable|string|max:10',
             'referral_code' => 'nullable|string|max:20',
+            'organization_id' => 'nullable|integer|exists:organizations,id',
         ]);
+
+        // Bind org context for tenant-scoped queries (tier lookup, settings, etc.)
+        $orgId = $validated['organization_id'] ?? null;
+        if ($orgId && !app()->bound('current_organization_id')) {
+            app()->instance('current_organization_id', $orgId);
+        }
 
         $user = User::create([
             'name'          => $validated['name'],
@@ -49,17 +56,26 @@ class AuthController extends Controller
             'nationality'   => $validated['nationality'] ?? null,
             'language'      => $validated['language'] ?? 'en',
             'user_type'     => 'member',
+            'organization_id' => $orgId,
         ]);
 
-        // Find default tier (Bronze)
-        $defaultTier = \App\Models\LoyaltyTier::withoutGlobalScopes()
-            ->where('min_points', 0)->where('is_active', true)->first();
+        // Find default tier (Bronze) — scoped to the org if available
+        $tierQuery = \App\Models\LoyaltyTier::withoutGlobalScopes()
+            ->where('min_points', 0)->where('is_active', true);
+        if ($orgId) {
+            $tierQuery->where('organization_id', $orgId);
+        }
+        $defaultTier = $tierQuery->first();
 
-        // Find referrer if code provided
+        // Find referrer if code provided — scoped to same org
         $referredBy = null;
         if (!empty($validated['referral_code'])) {
-            $referredBy = LoyaltyMember::withoutGlobalScopes()
-                ->where('referral_code', $validated['referral_code'])->first();
+            $referrerQuery = LoyaltyMember::withoutGlobalScopes()
+                ->where('referral_code', $validated['referral_code']);
+            if ($orgId) {
+                $referrerQuery->where('organization_id', $orgId);
+            }
+            $referredBy = $referrerQuery->first();
         }
 
         $qrToken = $this->qrService->generateToken(new LoyaltyMember(['id' => 0, 'member_number' => '']));
@@ -72,16 +88,19 @@ class AuthController extends Controller
             'referral_code'=> $this->qrService->generateReferralCode(),
             'referred_by'  => $referredBy?->id,
             'joined_at'    => now(),
-            'points_expiry_date' => now()->addMonths((int) HotelSetting::getValue('points_expiry_months', 24)),
+            'points_expiry_date' => now()->addMonths((int) ($orgId ? HotelSetting::getValue('points_expiry_months', 24) : 24)),
         ]);
 
-        // Award welcome bonus
-        $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('welcome_bonus_points', 500), 'Welcome bonus points', 'bonus');
+        // Award welcome bonus (use org-scoped settings with safe fallbacks)
+        $welcomeBonus = (int) ($orgId ? HotelSetting::getValue('welcome_bonus_points', 500) : 500);
+        $this->loyaltyService->awardPoints($member, $welcomeBonus, 'Welcome bonus points', 'bonus');
 
         // Award referral points if applicable
         if ($referredBy) {
-            $this->loyaltyService->awardPoints($referredBy, (int) HotelSetting::getValue('referrer_bonus_points', 250), "Referral: {$user->name} joined", 'referral');
-            $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('referee_bonus_points', 250), 'Referral bonus for joining via referral', 'referral');
+            $referrerBonus = (int) ($orgId ? HotelSetting::getValue('referrer_bonus_points', 250) : 250);
+            $refereeBonus = (int) ($orgId ? HotelSetting::getValue('referee_bonus_points', 250) : 250);
+            $this->loyaltyService->awardPoints($referredBy, $referrerBonus, "Referral: {$user->name} joined", 'referral');
+            $this->loyaltyService->awardPoints($member, $refereeBonus, 'Referral bonus for joining via referral', 'referral');
         }
 
         // Auto-link existing CRM guests by email
@@ -147,9 +166,16 @@ class AuthController extends Controller
         $staff = Staff::withoutGlobalScopes()
             ->where('user_id', $user->id)->first();
 
-        $data = $user->toArray();
-        $data['loyalty_member'] = $member;
-        $data['staff'] = $staff;
+        $data = [
+            'id'        => $user->id,
+            'name'      => $user->name,
+            'email'     => $user->email,
+            'phone'     => $user->phone,
+            'user_type' => $user->user_type,
+            'avatar_url'=> $user->avatar_url,
+            'loyalty_member' => $member,
+            'staff'     => $staff,
+        ];
 
         return response()->json($data);
     }
@@ -224,6 +250,13 @@ class AuthController extends Controller
             'code'  => 'required|string|size:6',
         ]);
 
+        // Brute-force protection: max 5 failed attempts per email per 15 minutes
+        $attemptKey = 'verify_attempts:' . strtolower($validated['email']);
+        $attempts = (int) \Illuminate\Support\Facades\Cache::get($attemptKey, 0);
+        if ($attempts >= 5) {
+            return response()->json(['error' => 'Too many verification attempts. Please request a new code.'], 429);
+        }
+
         $record = EmailVerificationCode::where('email', $validated['email'])
             ->where('code', $validated['code'])
             ->whereNull('verified_at')
@@ -231,6 +264,7 @@ class AuthController extends Controller
             ->first();
 
         if (!$record) {
+            \Illuminate\Support\Facades\Cache::put($attemptKey, $attempts + 1, now()->addMinutes(15));
             return response()->json(['error' => 'Invalid verification code.'], 422);
         }
 
@@ -239,6 +273,9 @@ class AuthController extends Controller
         }
 
         $record->update(['verified_at' => now()]);
+
+        // Clear attempt counter on success
+        \Illuminate\Support\Facades\Cache::forget($attemptKey);
 
         return response()->json(['verified' => true]);
     }

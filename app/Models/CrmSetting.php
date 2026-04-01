@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class CrmSetting extends Model
 {
-    protected $fillable = ['key', 'value'];
+    use BelongsToOrganization;
+
+    protected $fillable = ['organization_id', 'key', 'value'];
 
     protected $casts = ['value' => 'json'];
 }

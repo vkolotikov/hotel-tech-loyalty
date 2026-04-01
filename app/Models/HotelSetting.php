@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class HotelSetting extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = ['key', 'value', 'type', 'group', 'label', 'description', 'scope'];
 
     public function getTypedValueAttribute()

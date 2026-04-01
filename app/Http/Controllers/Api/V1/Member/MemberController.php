@@ -47,7 +47,11 @@ class MemberController extends Controller
         $member = $user->loyaltyMember;
         $member->update(array_filter($validated, fn($k) => in_array($k, ['email_notifications', 'push_notifications', 'marketing_consent']), ARRAY_FILTER_USE_KEY));
 
-        return response()->json(['message' => 'Profile updated', 'user' => $user, 'member' => $member]);
+        return response()->json([
+            'message' => 'Profile updated',
+            'user'    => $user->only('id', 'name', 'email', 'phone', 'date_of_birth', 'nationality', 'language', 'avatar_url'),
+            'member'  => $member,
+        ]);
     }
 
     public function card(Request $request): JsonResponse

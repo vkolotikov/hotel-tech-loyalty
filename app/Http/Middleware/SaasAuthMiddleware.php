@@ -21,17 +21,38 @@ class SaasAuthMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Check for gateway-injected headers first
+        // Check for gateway-injected headers — only trust if HMAC signature is valid.
+        // The gateway must sign headers with the shared secret (SAAS_GATEWAY_SECRET).
         $gatewayUserId = $request->header('X-Saas-User-Id');
         if ($gatewayUserId) {
-            $request->attributes->set('saas_authenticated', true);
-            $request->attributes->set('saas_user_id', $gatewayUserId);
-            $request->attributes->set('saas_user_email', $request->header('X-Saas-User-Email', ''));
-            $request->attributes->set('saas_org_id', $request->header('X-Saas-Org-Id', ''));
-            $request->attributes->set('saas_org_slug', $request->header('X-Saas-Org-Slug', ''));
-            $request->attributes->set('saas_role', $request->header('X-Saas-Role', ''));
-            $this->authenticateSaasUser($request);
-            return $next($request);
+            $gatewaySecret = config('services.saas.gateway_secret', '');
+            $signature = $request->header('X-Saas-Signature', '');
+
+            if (!$gatewaySecret || !$signature) {
+                // No gateway secret configured or no signature — reject gateway headers
+                // Strip untrusted headers and fall through to JWT/Sanctum auth
+            } else {
+                // Verify HMAC signature over the gateway header values
+                $payload = implode('|', [
+                    $gatewayUserId,
+                    $request->header('X-Saas-User-Email', ''),
+                    $request->header('X-Saas-Org-Id', ''),
+                    $request->header('X-Saas-Role', ''),
+                ]);
+                $expected = hash_hmac('sha256', $payload, $gatewaySecret);
+
+                if (hash_equals($expected, $signature)) {
+                    $request->attributes->set('saas_authenticated', true);
+                    $request->attributes->set('saas_user_id', $gatewayUserId);
+                    $request->attributes->set('saas_user_email', $request->header('X-Saas-User-Email', ''));
+                    $request->attributes->set('saas_org_id', $request->header('X-Saas-Org-Id', ''));
+                    $request->attributes->set('saas_org_slug', $request->header('X-Saas-Org-Slug', ''));
+                    $request->attributes->set('saas_role', $request->header('X-Saas-Role', ''));
+                    $this->authenticateSaasUser($request);
+                    return $next($request);
+                }
+                // Invalid signature — fall through, do NOT trust headers
+            }
         }
 
         // Check for Bearer token

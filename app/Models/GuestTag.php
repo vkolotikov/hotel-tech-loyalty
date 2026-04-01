@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class GuestTag extends Model
 {
-    protected $fillable = ['name', 'color'];
+    use BelongsToOrganization;
+
+    protected $fillable = ['organization_id', 'name', 'color'];
 }

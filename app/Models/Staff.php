@@ -15,6 +15,8 @@ class Staff extends Model
         'can_view_analytics', 'is_active', 'last_login_at',
     ];
 
+    protected $hidden = ['organization_id', 'created_at', 'updated_at'];
+
     protected $casts = [
         'can_award_points' => 'boolean',
         'can_redeem_points' => 'boolean',

@@ -128,7 +128,7 @@ class BookingPublicController extends Controller
     public function webhook(Request $request): JsonResponse
     {
         $secret = config('services.smoobu.webhook_secret');
-        if ($secret && $request->header('X-Webhook-Secret') !== $secret) {
+        if (!$secret || !hash_equals($secret, (string) $request->header('X-Webhook-Secret', ''))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -146,10 +146,24 @@ class BookingPublicController extends Controller
 
     private function bindOrg(Request $request): void
     {
-        // Widget passes org via query param or header
+        if (app()->bound('current_organization_id')) {
+            return;
+        }
+
+        // Widget passes org via opaque widget_token (preferred) or legacy org_id
+        $token = $request->input('org') ?? $request->header('X-Org-Token');
         $orgId = $request->input('org_id') ?? $request->header('X-Org-Id');
-        if ($orgId && !app()->bound('current_organization_id')) {
-            app()->instance('current_organization_id', (int) $orgId);
+
+        $org = null;
+        if ($token) {
+            $org = \App\Models\Organization::where('widget_token', $token)->first();
+        } elseif ($orgId) {
+            // Legacy fallback — will be deprecated
+            $org = \App\Models\Organization::find((int) $orgId);
+        }
+
+        if ($org) {
+            app()->instance('current_organization_id', $org->id);
         }
     }
 

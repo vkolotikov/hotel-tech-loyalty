@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class NfcCard extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'uid', 'card_type', 'issued_at', 'issued_by',
+        'organization_id', 'member_id', 'uid', 'card_type', 'issued_at', 'issued_by',
         'last_scanned_at', 'last_scanned_by', 'scan_count', 'is_active', 'notes',
     ];
 

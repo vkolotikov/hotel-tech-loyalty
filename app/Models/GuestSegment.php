@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class GuestSegment extends Model
 {
-    protected $fillable = ['name', 'filters'];
+    use BelongsToOrganization;
+
+    protected $fillable = ['organization_id', 'name', 'filters'];
 
     protected $casts = ['filters' => 'array'];
 }

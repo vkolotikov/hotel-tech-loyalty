@@ -658,8 +658,66 @@ export function Settings() {
 
   /* ─── Tab: Booking ───────────────────────────────────────────────────── */
 
+  const widgetToken = settingsData?.widget_token || ''
+  const widgetBaseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? window.location.origin
+    : 'http://localhost/hotel-tech/apps/loyalty/backend/public'
+  const embedSnippet = `<!-- Hotel Tech Booking Widget -->\n<div id="hoteltech-booking"></div>\n<script src="${widgetBaseUrl}/widget/booking-loader.js"\n        data-org="${widgetToken}"></script>`
+  const iframePreviewUrl = `${widgetBaseUrl}/booking-widget?org=${widgetToken}`
+  const [embedCopied, setEmbedCopied] = useState(false)
+
   const renderBooking = () => (
     <div className="space-y-6">
+      {/* Embed Code */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+          <Globe size={15} className="text-blue-400" /> Embeddable Booking Widget
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">
+          Copy the code below and paste it into any page on your website. Each company gets a unique widget scoped to their organization.
+        </p>
+
+        {!widgetToken ? (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+            <p className="text-xs text-amber-400">No organization found. Complete the setup wizard first to get your booking widget embed code.</p>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{embedSnippet}</pre>
+              <button
+                onClick={() => { navigator.clipboard.writeText(embedSnippet); setEmbedCopied(true); setTimeout(() => setEmbedCopied(false), 2000); }}
+                className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                style={{ background: embedCopied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', color: embedCopied ? '#22c55e' : '#8e8e93', border: embedCopied ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(255,255,255,0.08)' }}
+              >
+                {embedCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center gap-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <Shield size={11} /> Widget Token: <code className="bg-white/[0.04] px-1.5 py-0.5 rounded text-gray-400 text-[10px]">{widgetToken}</code>
+              </span>
+              <a href={iframePreviewUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
+                <ExternalLink size={11} /> Preview widget
+              </a>
+            </div>
+
+            {/* Customization hint */}
+            <div className="mt-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                <strong className="text-gray-400">Optional attributes:</strong>{' '}
+                <code className="text-gray-400">data-lang="en"</code> for language,{' '}
+                <code className="text-gray-400">data-primary-color="#c9a84c"</code> to match your brand,{' '}
+                <code className="text-gray-400">data-container="my-id"</code> for a custom container element ID.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Booking Settings */}
       <div className={cardClass} style={cardStyle}>
         <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
           <Calendar size={15} className="text-emerald-400" /> Booking Engine Configuration

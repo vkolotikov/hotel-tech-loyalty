@@ -25,18 +25,25 @@ class Cors
 
     private function headers(Request $request): array
     {
-        $allowed = config('services.cors.allowed_origins', '*');
+        $configured = config('services.cors.allowed_origins', '');
+        $origin = $request->header('Origin', '');
 
-        if ($allowed !== '*') {
-            $origins = array_map('trim', explode(',', $allowed));
-            $origin  = $request->header('Origin', '');
-            $allowed = in_array($origin, $origins) ? $origin : $origins[0];
+        if ($configured && $configured !== '*') {
+            // Explicit allowlist — only reflect matching origins
+            $origins = array_map('trim', explode(',', $configured));
+            $allowed = in_array($origin, $origins) ? $origin : 'null';
+        } elseif (app()->environment('local', 'testing')) {
+            // Dev: allow any origin for convenience
+            $allowed = $origin ?: '*';
+        } else {
+            // Production without explicit config: deny by default
+            $allowed = 'null';
         }
 
         return [
             'Access-Control-Allow-Origin'  => $allowed,
             'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
+            'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With, X-Org-Token, Idempotency-Key, X-Request-Id',
             'Access-Control-Max-Age'       => '86400',
         ];
     }

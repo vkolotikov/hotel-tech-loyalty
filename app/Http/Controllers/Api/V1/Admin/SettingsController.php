@@ -113,17 +113,37 @@ class SettingsController extends Controller
             });
         });
 
-        return response()->json(['settings' => $settings]);
+        // Include the org's widget token for the booking embed code
+        $widgetToken = null;
+        if ($user && $user->organization_id) {
+            $org = \App\Models\Organization::find($user->organization_id);
+            $widgetToken = $org?->widget_token;
+        }
+
+        return response()->json(['settings' => $settings, 'widget_token' => $widgetToken]);
     }
 
     public function theme(): JsonResponse
     {
-        $settings = HotelSetting::where('group', 'appearance')->pluck('value', 'key');
+        // Public endpoint — bypass tenant scope but only return appearance settings.
+        // In multi-tenant context, the org is resolved from query param if provided.
+        $query = HotelSetting::withoutGlobalScopes()->where('group', 'appearance');
+
+        // If org context is available (e.g., from request), scope to it
+        if (app()->bound('current_organization_id') && app('current_organization_id')) {
+            $query->where('organization_id', app('current_organization_id'));
+        }
+
+        $settings = $query->pluck('value', 'key');
         return response()->json(['theme' => $settings]);
     }
 
     public function update(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $staff = $user?->staff;
+        $isSuperAdmin = $staff && $staff->role === 'super_admin';
+
         $validated = $request->validate([
             'settings'         => 'required|array',
             'settings.*.key'   => 'required|string',
@@ -132,6 +152,11 @@ class SettingsController extends Controller
 
         foreach ($validated['settings'] as $item) {
             $setting = HotelSetting::where('key', $item['key'])->first();
+
+            // Non-super-admins cannot write system-scoped settings
+            if (!$isSuperAdmin && $setting && $setting->scope === 'system') {
+                continue;
+            }
 
             // Skip empty secret submissions (user didn't type a new key)
             if (in_array($item['key'], self::SECRET_KEYS) && ($item['value'] === '' || $item['value'] === null)) {
@@ -143,7 +168,10 @@ class SettingsController extends Controller
             if ($setting) {
                 $setting->update(['value' => is_array($item['value']) ? json_encode($item['value']) : (string) $item['value']]);
             } else {
-                // Auto-create if key doesn't exist yet (upsert)
+                // Only super_admin can create new setting keys
+                if (!$isSuperAdmin) {
+                    continue;
+                }
                 HotelSetting::create([
                     'key'   => $item['key'],
                     'value' => is_array($item['value']) ? json_encode($item['value']) : (string) $item['value'],
@@ -169,7 +197,7 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
-            'logo' => 'required|image|mimes:jpeg,png,jpg,webp,svg|max:4096',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $path = $request->file('logo')->store('logos', 'public');
@@ -199,9 +227,14 @@ class SettingsController extends Controller
         return response()->json(['message' => 'Logo uploaded', 'url' => $url]);
     }
 
-    /** Test an integration connection. */
+    /** Test an integration connection (manager+ only). */
     public function testIntegration(Request $request): JsonResponse
     {
+        $staff = $request->user()?->staff;
+        if (!$staff || !in_array($staff->role, ['super_admin', 'manager'])) {
+            return response()->json(['success' => false, 'message' => 'Insufficient permissions'], 403);
+        }
+
         $type = $request->input('type');
 
         return match ($type) {

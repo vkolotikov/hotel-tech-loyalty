@@ -20,6 +20,14 @@ class DemoDataSeeder extends Seeder
 
     public function run(): void
     {
+        // Bind org context so fail-closed TenantScope allows queries
+        $org = \App\Models\Organization::first();
+        if (!$org) {
+            $this->command->error('No organization found. Run the organization seeder first.');
+            return;
+        }
+        app()->instance('current_organization_id', $org->id);
+
         $tiers = LoyaltyTier::orderBy('min_points')->get()->keyBy('name');
 
         // ─── Admin Staff User ──────────────────────────────────────────────────

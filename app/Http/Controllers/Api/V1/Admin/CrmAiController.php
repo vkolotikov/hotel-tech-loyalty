@@ -18,15 +18,10 @@ class CrmAiController extends Controller
     {
         $checks = [];
 
-        // 1. Config check
+        // 1. Config check — only expose boolean presence, never key content
         $apiKey = config("services.anthropic.api_key", "");
         $checks["anthropic_key_set"] = !empty($apiKey);
-        $checks["anthropic_key_length"] = strlen($apiKey);
-        $checks["anthropic_key_prefix"] = $apiKey ? substr($apiKey, 0, 7) . "..." : "(empty)";
         $checks["anthropic_model"] = config("services.anthropic.model", "(not set)");
-
-        // 2. Raw env check (for debugging config cache)
-        $checks["raw_env_key_set"] = !empty(env("ANTHROPIC_API_KEY"));
         $checks["config_cached"] = app()->configurationIsCached();
 
         // 3. DB connectivity

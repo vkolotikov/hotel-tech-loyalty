@@ -25,6 +25,10 @@ class Guest extends Model
         'external_source', 'external_ref', 'email_key', 'phone_key', 'notes',
     ];
 
+    protected $hidden = ['passport_no', 'id_number'];
+
+    protected $appends = ['passport_masked', 'id_number_masked'];
+
     protected $casts = [
         'email_consent'    => 'boolean',
         'marketing_consent'=> 'boolean',
@@ -36,6 +40,22 @@ class Guest extends Model
         'total_revenue'    => 'decimal:2',
         'avg_daily_rate'   => 'decimal:2',
     ];
+
+    public function getPassportMaskedAttribute(): ?string
+    {
+        if (!$this->passport_no) return null;
+        $len = strlen($this->passport_no);
+        if ($len <= 4) return str_repeat('*', $len);
+        return str_repeat('*', $len - 4) . substr($this->passport_no, -4);
+    }
+
+    public function getIdNumberMaskedAttribute(): ?string
+    {
+        if (!$this->id_number) return null;
+        $len = strlen($this->id_number);
+        if ($len <= 4) return str_repeat('*', $len);
+        return str_repeat('*', $len - 4) . substr($this->id_number, -4);
+    }
 
     public function member(): BelongsTo
     {
