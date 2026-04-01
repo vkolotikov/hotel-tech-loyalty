@@ -89,7 +89,7 @@ export function PopupRules() {
           <Zap className="text-primary-500" size={28} />
           <div>
             <h1 className="text-2xl font-bold text-white">Popup Automation Rules</h1>
-            <p className="text-sm text-[#8e8e93]">Configure when the chat widget auto-opens with a message</p>
+            <p className="text-sm text-t-secondary">Configure when the chat widget auto-opens with a message</p>
           </div>
         </div>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm) }}
@@ -103,33 +103,33 @@ export function PopupRules() {
         <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-white font-semibold">{editId ? 'Edit Rule' : 'New Popup Rule'}</h3>
-            <button onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm) }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+            <button onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm) }} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">Rule Name</label>
+              <label className="block text-sm text-t-secondary mb-1">Rule Name</label>
               <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Welcome popup" />
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Welcome popup" />
             </div>
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">Priority</label>
+              <label className="block text-sm text-t-secondary mb-1">Priority</label>
               <input type="number" min={0} value={form.priority} onChange={e => setForm(p => ({ ...p, priority: Number(e.target.value) }))}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
             </div>
           </div>
 
           {/* Trigger */}
           <div>
-            <label className="block text-sm text-[#8e8e93] mb-2">Trigger Type</label>
+            <label className="block text-sm text-t-secondary mb-2">Trigger Type</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {TRIGGER_TYPES.map(t => (
                 <button key={t.value} onClick={() => setForm(p => ({ ...p, trigger_type: t.value }))}
                   className={`p-3 rounded-lg border text-left transition-colors ${
-                    form.trigger_type === t.value ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border hover:border-[#555]'
+                    form.trigger_type === t.value ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border hover:border-dark-border2'
                   }`}>
                   <div className="text-sm font-medium text-white">{t.label}</div>
-                  <div className="text-xs text-[#8e8e93] mt-0.5">{t.desc}</div>
+                  <div className="text-xs text-t-secondary mt-0.5">{t.desc}</div>
                 </button>
               ))}
             </div>
@@ -137,50 +137,50 @@ export function PopupRules() {
 
           {(form.trigger_type === 'time_delay' || form.trigger_type === 'scroll_depth') && (
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">
+              <label className="block text-sm text-t-secondary mb-1">
                 {form.trigger_type === 'time_delay' ? 'Delay (seconds)' : 'Scroll Depth (%)'}
               </label>
               <input type="text" value={form.trigger_value} onChange={e => setForm(p => ({ ...p, trigger_value: e.target.value }))}
-                className="w-32 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={form.trigger_type === 'time_delay' ? '5' : '50'} />
+                className="w-32 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={form.trigger_type === 'time_delay' ? '5' : '50'} />
             </div>
           )}
 
           {/* URL Matching */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">URL Match Type</label>
+              <label className="block text-sm text-t-secondary mb-1">URL Match Type</label>
               <select value={form.url_match_type} onChange={e => setForm(p => ({ ...p, url_match_type: e.target.value }))}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
                 {URL_MATCH_TYPES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm text-[#8e8e93] mb-1">URL Pattern (optional)</label>
+              <label className="block text-sm text-t-secondary mb-1">URL Pattern (optional)</label>
               <input type="text" value={form.url_match_value} onChange={e => setForm(p => ({ ...p, url_match_value: e.target.value }))}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="/booking, /rooms, etc." />
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="/booking, /rooms, etc." />
             </div>
           </div>
 
           {/* Visitor Type */}
           <div>
-            <label className="block text-sm text-[#8e8e93] mb-1">Visitor Type</label>
+            <label className="block text-sm text-t-secondary mb-1">Visitor Type</label>
             <select value={form.visitor_type} onChange={e => setForm(p => ({ ...p, visitor_type: e.target.value }))}
-              className="w-48 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+              className="w-48 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
               {VISITOR_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
             </select>
           </div>
 
           {/* Message */}
           <div>
-            <label className="block text-sm text-[#8e8e93] mb-1">Popup Message</label>
+            <label className="block text-sm text-t-secondary mb-1">Popup Message</label>
             <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} rows={3}
-              className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
               placeholder="Hi! Looking for the perfect room? I can help you find one..." />
           </div>
 
           {/* Quick Replies */}
           <div>
-            <label className="block text-sm text-[#8e8e93] mb-1">Quick Reply Buttons</label>
+            <label className="block text-sm text-t-secondary mb-1">Quick Reply Buttons</label>
             <div className="flex flex-wrap gap-1 mb-2">
               {form.quick_replies.map((r, i) => (
                 <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-1 rounded text-xs">
@@ -192,20 +192,20 @@ export function PopupRules() {
             <div className="flex gap-2">
               <input type="text" value={newReply} onChange={e => setNewReply(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addReply())}
-                className="flex-1 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add quick reply..." />
-              <button onClick={addReply} className="bg-[#333] text-white px-3 py-2 rounded-lg text-sm hover:bg-[#444]"><Plus size={14} /></button>
+                className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add quick reply..." />
+              <button onClick={addReply} className="bg-dark-surface4 text-white px-3 py-2 rounded-lg text-sm hover:bg-dark-border2"><Plus size={14} /></button>
             </div>
           </div>
 
           {/* Active toggle */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
-              className="w-4 h-4 rounded border-dark-border bg-[#1c1c1e] text-primary-500" />
+              className="w-4 h-4 rounded border-dark-border bg-dark-surface text-primary-500" />
             <span className="text-sm text-white">Active</span>
           </label>
 
           <div className="flex justify-end gap-2">
-            <button onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm) }} className="px-4 py-2 text-sm text-[#8e8e93] hover:text-white">Cancel</button>
+            <button onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
             <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}
               className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
               <Save size={14} /> {saveMutation.isPending ? 'Saving...' : 'Save'}
@@ -216,9 +216,9 @@ export function PopupRules() {
 
       {/* Rules List */}
       {isLoading ? (
-        <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+        <div className="text-center text-t-secondary py-12">Loading...</div>
       ) : rules.length === 0 ? (
-        <div className="text-center text-[#8e8e93] py-12">
+        <div className="text-center text-t-secondary py-12">
           <Zap size={40} className="mx-auto mb-3 opacity-30" />
           <p>No popup rules yet. Create one to auto-engage visitors.</p>
         </div>
@@ -230,12 +230,12 @@ export function PopupRules() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-white font-medium">{rule.name}</span>
-                    <span className="text-xs bg-[#333] text-[#8e8e93] px-2 py-0.5 rounded">{triggerLabel(rule.trigger_type)}</span>
-                    {rule.trigger_value && <span className="text-xs text-[#555]">({rule.trigger_value}{rule.trigger_type === 'scroll_depth' ? '%' : 's'})</span>}
+                    <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{triggerLabel(rule.trigger_type)}</span>
+                    {rule.trigger_value && <span className="text-xs text-dark-border2">({rule.trigger_value}{rule.trigger_type === 'scroll_depth' ? '%' : 's'})</span>}
                     {!rule.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
                   </div>
-                  <p className="text-sm text-[#8e8e93] line-clamp-1">{rule.message}</p>
-                  <div className="flex items-center gap-4 mt-1 text-xs text-[#555]">
+                  <p className="text-sm text-t-secondary line-clamp-1">{rule.message}</p>
+                  <div className="flex items-center gap-4 mt-1 text-xs text-dark-border2">
                     {rule.url_match_value && <span>URL: {rule.url_match_type} "{rule.url_match_value}"</span>}
                     <span>Visitor: {rule.visitor_type}</span>
                     <span className="flex items-center gap-1"><Eye size={10} /> {rule.impressions_count}</span>
@@ -251,9 +251,9 @@ export function PopupRules() {
                   )}
                 </div>
                 <div className="flex gap-1 ml-4">
-                  <button onClick={() => editRule(rule)} className="p-2 text-[#8e8e93] hover:text-white"><Pencil size={14} /></button>
+                  <button onClick={() => editRule(rule)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
                   <button onClick={() => { if (confirm('Delete this rule?')) deleteMutation.mutate(rule.id) }}
-                    className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                    className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                 </div>
               </div>
             </div>

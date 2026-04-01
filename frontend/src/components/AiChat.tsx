@@ -245,7 +245,7 @@ export default function AiChat() {
               </div>
               <div>
                 <div className="text-base font-semibold text-white mb-1">How can I help?</div>
-                <div className="text-xs text-[#8e8e93] max-w-[280px] mx-auto">
+                <div className="text-xs text-t-secondary max-w-[280px] mx-auto">
                   I can search guests, manage loyalty members & points, handle reservations, analyze churn risk, and more.
                 </div>
               </div>
@@ -290,7 +290,7 @@ export default function AiChat() {
             </div>
             {msg.role === 'user' && (
               <div className="w-7 h-7 rounded-lg bg-dark-surface2 flex items-center justify-center flex-shrink-0 mt-0.5 border border-dark-border">
-                <User size={14} className="text-[#8e8e93]" />
+                <User size={14} className="text-t-secondary" />
               </div>
             )}
           </div>
@@ -316,7 +316,7 @@ export default function AiChat() {
               <Bot size={14} className="text-primary-400" />
             </div>
             <div className="bg-dark-surface border border-dark-border rounded-2xl rounded-bl-md px-3.5 py-2.5">
-              <div className="flex items-center gap-2 text-[13px] text-[#8e8e93]">
+              <div className="flex items-center gap-2 text-[13px] text-t-secondary">
                 <Loader2 size={14} className="animate-spin text-primary-400" />
                 <span>{toolStatus || 'Thinking…'}</span>
               </div>

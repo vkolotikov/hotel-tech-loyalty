@@ -88,14 +88,14 @@ export function ChatInbox() {
     active: 'bg-green-500/20 text-green-400',
     waiting: 'bg-yellow-500/20 text-yellow-400',
     resolved: 'bg-blue-500/20 text-blue-400',
-    archived: 'bg-[#333] text-[#8e8e93]',
+    archived: 'bg-dark-surface4 text-t-secondary',
   }
 
   const senderStyles: Record<string, { bg: string; align: string; icon: any }> = {
-    visitor: { bg: 'bg-[#1c1c1e] border border-dark-border', align: 'justify-start', icon: User },
+    visitor: { bg: 'bg-dark-surface border border-dark-border', align: 'justify-start', icon: User },
     ai: { bg: 'bg-primary-600/20 border border-primary-500/30', align: 'justify-start', icon: Bot },
     agent: { bg: 'bg-blue-600/30 border border-blue-500/30', align: 'justify-end', icon: User },
-    system: { bg: 'bg-[#1c1c1e]/50', align: 'justify-center', icon: AlertCircle },
+    system: { bg: 'bg-dark-surface/50', align: 'justify-center', icon: AlertCircle },
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -113,15 +113,15 @@ export function ChatInbox() {
           <Inbox className="text-primary-500" size={28} />
           <div>
             <h1 className="text-2xl font-bold text-white">Chat Inbox</h1>
-            <p className="text-sm text-[#8e8e93]">Manage visitor and member chat conversations</p>
+            <p className="text-sm text-t-secondary">Manage visitor and member chat conversations</p>
           </div>
         </div>
         {stats && (
           <div className="flex gap-4 text-xs">
-            <div className="text-center"><div className="text-lg font-bold text-green-400">{stats.active}</div><div className="text-[#8e8e93]">Active</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-yellow-400">{stats.waiting}</div><div className="text-[#8e8e93]">Waiting</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-red-400">{stats.unassigned}</div><div className="text-[#8e8e93]">Unassigned</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-blue-400">{stats.resolved_today}</div><div className="text-[#8e8e93]">Resolved Today</div></div>
+            <div className="text-center"><div className="text-lg font-bold text-green-400">{stats.active}</div><div className="text-t-secondary">Active</div></div>
+            <div className="text-center"><div className="text-lg font-bold text-yellow-400">{stats.waiting}</div><div className="text-t-secondary">Waiting</div></div>
+            <div className="text-center"><div className="text-lg font-bold text-red-400">{stats.unassigned}</div><div className="text-t-secondary">Unassigned</div></div>
+            <div className="text-center"><div className="text-lg font-bold text-blue-400">{stats.resolved_today}</div><div className="text-t-secondary">Resolved Today</div></div>
           </div>
         )}
       </div>
@@ -132,16 +132,16 @@ export function ChatInbox() {
           {/* Filters */}
           <div className="p-3 border-b border-dark-border space-y-2">
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#555]" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-border2" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg pl-8 pr-3 py-1.5 text-white text-xs"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-8 pr-3 py-1.5 text-white text-xs"
                 placeholder="Search by name or email..." />
             </div>
             <div className="flex gap-1">
               {(['all', 'active', 'waiting', 'resolved', 'archived'] as ConvStatus[]).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
                   className={`flex-1 py-1 px-2 rounded text-xs capitalize transition-colors ${
-                    statusFilter === s ? 'bg-primary-600 text-white' : 'text-[#8e8e93] hover:text-white hover:bg-[#222]'
+                    statusFilter === s ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white hover:bg-dark-surface3'
                   }`}>{s}</button>
               ))}
             </div>
@@ -150,9 +150,9 @@ export function ChatInbox() {
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
-              <div className="text-center text-[#8e8e93] py-8 text-sm">Loading...</div>
+              <div className="text-center text-t-secondary py-8 text-sm">Loading...</div>
             ) : conversations.length === 0 ? (
-              <div className="text-center text-[#8e8e93] py-8 text-sm">No conversations found</div>
+              <div className="text-center text-t-secondary py-8 text-sm">No conversations found</div>
             ) : conversations.map((c: any) => (
               <button key={c.id} onClick={() => setSelectedId(c.id)}
                 className={`w-full text-left p-3 border-b border-dark-border hover:bg-[#1a1a1a] transition-colors ${
@@ -167,13 +167,13 @@ export function ChatInbox() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#8e8e93] truncate">{c.visitor_email || c.channel}</span>
-                  <span className="text-[10px] text-[#555]">
+                  <span className="text-xs text-t-secondary truncate">{c.visitor_email || c.channel}</span>
+                  <span className="text-[10px] text-dark-border2">
                     {c.last_message_at ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true }) : ''}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  {c.assigned_agent && <span className="text-[10px] text-[#8e8e93]">@ {c.assigned_agent.name}</span>}
+                  {c.assigned_agent && <span className="text-[10px] text-t-secondary">@ {c.assigned_agent.name}</span>}
                   {c.unread_count > 0 && (
                     <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{c.unread_count}</span>
                   )}
@@ -195,7 +195,7 @@ export function ChatInbox() {
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[conv.status] || ''}`}>{conv.status}</span>
                   {conv.member?.tier && <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">{conv.member.tier.name}</span>}
                 </div>
-                <div className="text-xs text-[#8e8e93] mt-0.5">
+                <div className="text-xs text-t-secondary mt-0.5">
                   {conv.visitor_email && <span>{conv.visitor_email}</span>}
                   {conv.visitor_phone && <span> | {conv.visitor_phone}</span>}
                   <span> | {conv.channel}</span>
@@ -219,7 +219,7 @@ export function ChatInbox() {
                 )}
                 {conv.status !== 'archived' && (
                   <button onClick={() => updateStatus.mutate('archived')}
-                    className="flex items-center gap-1 text-xs bg-[#333] text-[#8e8e93] px-3 py-1.5 rounded-lg hover:bg-[#444]">
+                    className="flex items-center gap-1 text-xs bg-dark-surface4 text-t-secondary px-3 py-1.5 rounded-lg hover:bg-dark-border2">
                     <Archive size={12} /> Archive
                   </button>
                 )}
@@ -231,18 +231,18 @@ export function ChatInbox() {
               <div className="p-4 border-b border-dark-border bg-green-900/10 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-white">Capture Lead as Inquiry</h3>
-                  <button onClick={() => setShowLeadForm(false)} className="text-[#8e8e93] hover:text-white"><X size={14} /></button>
+                  <button onClick={() => setShowLeadForm(false)} className="text-t-secondary hover:text-white"><X size={14} /></button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <input type="text" value={leadForm.name} onChange={e => setLeadForm(p => ({ ...p, name: e.target.value }))}
-                    className="bg-[#1c1c1e] border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Name" />
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Name" />
                   <input type="email" value={leadForm.email} onChange={e => setLeadForm(p => ({ ...p, email: e.target.value }))}
-                    className="bg-[#1c1c1e] border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Email" />
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Email" />
                   <input type="text" value={leadForm.phone} onChange={e => setLeadForm(p => ({ ...p, phone: e.target.value }))}
-                    className="bg-[#1c1c1e] border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Phone" />
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Phone" />
                 </div>
                 <textarea value={leadForm.notes} onChange={e => setLeadForm(p => ({ ...p, notes: e.target.value }))}
-                  rows={2} className="w-full bg-[#1c1c1e] border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Notes..." />
+                  rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Notes..." />
                 <button onClick={() => captureLead.mutate(leadForm)} disabled={captureLead.isPending}
                   className="bg-green-600 text-white px-4 py-1.5 rounded text-xs hover:bg-green-700 disabled:opacity-50">
                   {captureLead.isPending ? 'Saving...' : 'Create Inquiry'}
@@ -259,7 +259,7 @@ export function ChatInbox() {
                 if (msg.sender_type === 'system') {
                   return (
                     <div key={msg.id} className="flex justify-center">
-                      <span className="text-[10px] text-[#555] bg-[#1c1c1e] px-3 py-1 rounded-full">{msg.content}</span>
+                      <span className="text-[10px] text-dark-border2 bg-dark-surface px-3 py-1 rounded-full">{msg.content}</span>
                     </div>
                   )
                 }
@@ -267,16 +267,16 @@ export function ChatInbox() {
                 return (
                   <div key={msg.id} className={`flex ${style.align} gap-2`}>
                     {msg.sender_type !== 'agent' && (
-                      <div className="w-7 h-7 rounded-full bg-[#333] flex items-center justify-center flex-shrink-0">
-                        <Icon size={12} className="text-[#8e8e93]" />
+                      <div className="w-7 h-7 rounded-full bg-dark-surface4 flex items-center justify-center flex-shrink-0">
+                        <Icon size={12} className="text-t-secondary" />
                       </div>
                     )}
                     <div className={`${style.bg} rounded-xl px-3 py-2 max-w-[70%]`}>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] font-medium text-[#8e8e93] capitalize">
+                        <span className="text-[10px] font-medium text-t-secondary capitalize">
                           {msg.sender_type === 'agent' ? (msg.sender_user?.name || 'Agent') : msg.sender_type}
                         </span>
-                        <span className="text-[10px] text-[#555]">
+                        <span className="text-[10px] text-dark-border2">
                           {msg.created_at ? formatDistanceToNow(new Date(msg.created_at), { addSuffix: true }) : ''}
                         </span>
                       </div>
@@ -302,7 +302,7 @@ export function ChatInbox() {
                     onChange={e => setReplyText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={2}
-                    className="flex-1 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm resize-none"
+                    className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm resize-none"
                     placeholder="Type a reply as agent... (Enter to send, Shift+Enter for newline)"
                   />
                   <button
@@ -318,7 +318,7 @@ export function ChatInbox() {
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-dark-surface border border-dark-border rounded-xl">
-            <div className="text-center text-[#8e8e93]">
+            <div className="text-center text-t-secondary">
               <MessageSquare size={48} className="mx-auto mb-3 opacity-20" />
               <p className="text-sm">Select a conversation to view messages</p>
             </div>

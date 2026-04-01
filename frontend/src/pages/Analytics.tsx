@@ -185,7 +185,7 @@ export function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-sm text-[#8e8e93] mt-1">Deep dive into loyalty & CRM performance</p>
+          <p className="text-sm text-t-secondary mt-1">Deep dive into loyalty & CRM performance</p>
         </div>
         <button
           onClick={() => triggerExport('/v1/admin/analytics/export')}
@@ -204,7 +204,7 @@ export function Analytics() {
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex-1 justify-center whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
-                : 'text-[#8e8e93] hover:text-white hover:bg-dark-surface2'
+                : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
             }`}
           >
             {tab.icon}
@@ -226,7 +226,7 @@ export function Analytics() {
               <div key={m.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
                 <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
                 <p className="text-2xl font-bold text-white">{m.value}</p>
-                <p className="text-xs text-[#8e8e93] mt-0.5">{m.label}</p>
+                <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
               </div>
             ))}
           </div>
@@ -241,7 +241,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -295,7 +295,7 @@ export function Analytics() {
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-[#e0e0e0]">{t.tier}</span>
-                            <span className="text-xs text-[#8e8e93]">{t.count} ({pct}%)</span>
+                            <span className="text-xs text-t-secondary">{t.count} ({pct}%)</span>
                           </div>
                           <div className="h-1.5 bg-dark-surface3 rounded-full">
                             <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
@@ -333,7 +333,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -358,7 +358,7 @@ export function Analytics() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[#8e8e93] text-xs uppercase tracking-wide border-b border-dark-border">
+                  <tr className="text-left text-t-secondary text-xs uppercase tracking-wide border-b border-dark-border">
                     <th className="pb-3 font-semibold">#</th>
                     <th className="pb-3 font-semibold">Member</th>
                     <th className="pb-3 font-semibold">Tier</th>
@@ -408,7 +408,7 @@ export function Analytics() {
               <div key={m.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
                 <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
                 <p className="text-2xl font-bold text-white">{m.value}</p>
-                <p className="text-xs text-[#8e8e93] mt-0.5">{m.label}</p>
+                <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
               </div>
             ))}
           </div>
@@ -419,7 +419,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -494,19 +494,19 @@ export function Analytics() {
 
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-              <p className="text-xs text-[#8e8e93] mb-1">Outstanding Points</p>
+              <p className="text-xs text-t-secondary mb-1">Outstanding Points</p>
               <p className="text-2xl font-bold text-amber-400">{(kpis?.total_outstanding_points ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-              <p className="text-xs text-[#8e8e93] mb-1">Estimated Liability</p>
+              <p className="text-xs text-t-secondary mb-1">Estimated Liability</p>
               <p className="text-2xl font-bold text-purple-400">${(kpis?.point_liability_currency ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-              <p className="text-xs text-[#8e8e93] mb-1">Avg Points / Member</p>
+              <p className="text-xs text-t-secondary mb-1">Avg Points / Member</p>
               <p className="text-2xl font-bold text-blue-400">{(kpis?.avg_points_per_member ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-              <p className="text-xs text-[#8e8e93] mb-1">Engaged Members (30d)</p>
+              <p className="text-xs text-t-secondary mb-1">Engaged Members (30d)</p>
               <p className="text-2xl font-bold text-[#32d74b]">{(kpis?.engaged_members_30d ?? 0).toLocaleString()}</p>
             </div>
           </div>
@@ -526,7 +526,7 @@ export function Analytics() {
               <div key={m.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
                 <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
                 <p className="text-2xl font-bold text-white">{m.value}</p>
-                <p className="text-xs text-[#8e8e93] mt-0.5">{m.label}</p>
+                <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
               </div>
             ))}
           </div>
@@ -553,7 +553,7 @@ export function Analytics() {
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-[#e0e0e0]">{e.segment}</span>
-                            <span className="text-xs text-[#8e8e93]">{e.count} ({pct}%)</span>
+                            <span className="text-xs text-t-secondary">{e.count} ({pct}%)</span>
                           </div>
                           <div className="h-1.5 bg-dark-surface3 rounded-full">
                             <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: e.color }} />
@@ -587,7 +587,7 @@ export function Analytics() {
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-[#e0e0e0]">{t.tier}</span>
-                            <span className="text-xs text-[#8e8e93]">{t.count} ({pct}%)</span>
+                            <span className="text-xs text-t-secondary">{t.count} ({pct}%)</span>
                           </div>
                           <div className="h-1.5 bg-dark-surface3 rounded-full">
                             <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
@@ -607,7 +607,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -654,7 +654,7 @@ export function Analytics() {
               <div key={m.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
                 <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
                 <p className="text-2xl font-bold text-white">{m.value}</p>
-                <p className="text-xs text-[#8e8e93] mt-0.5">{m.label}</p>
+                <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
               </div>
             ))}
           </div>
@@ -665,7 +665,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {BOOKING_RANGES.map(r => (
                   <button key={r.days} onClick={() => setBookingDays(r.days)}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {r.label}
                   </button>
                 ))}
@@ -748,7 +748,7 @@ export function Analytics() {
                 { label: 'New Guests', curr: revenueComparison.current.new_guests, pct: revenueComparison.changes.guests_pct, fmt: (v: number) => v.toLocaleString() },
               ].map(item => (
                 <div key={item.label} className="bg-dark-surface rounded-xl border border-dark-border p-5">
-                  <p className="text-xs text-[#8e8e93] mb-2">{item.label}</p>
+                  <p className="text-xs text-t-secondary mb-2">{item.label}</p>
                   <p className="text-2xl font-bold text-white">{item.fmt(item.curr)}</p>
                   <div className={`flex items-center gap-1 text-xs mt-1 ${item.pct >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
                     {item.pct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
@@ -766,7 +766,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {CRM_PERIOD_OPTIONS.map(p => (
                   <button key={p.value} onClick={() => setCrmPeriod(p.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {p.label}
                   </button>
                 ))}
@@ -839,7 +839,7 @@ export function Analytics() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[#8e8e93] text-xs uppercase tracking-wide border-b border-dark-border">
+                  <tr className="text-left text-t-secondary text-xs uppercase tracking-wide border-b border-dark-border">
                     <th className="pb-3 font-semibold">Property</th>
                     <th className="pb-3 font-semibold text-right">Bookings</th>
                     <th className="pb-3 font-semibold text-right">Revenue</th>
@@ -918,7 +918,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {CRM_PERIOD_OPTIONS.map(p => (
                   <button key={p.value} onClick={() => setCrmPeriod(p.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-[#8e8e93] hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {p.label}
                   </button>
                 ))}

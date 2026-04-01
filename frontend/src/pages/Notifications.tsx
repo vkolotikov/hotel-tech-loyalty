@@ -93,7 +93,7 @@ export function Notifications() {
   }
 
   const statusColor: Record<string, string> = {
-    draft: 'bg-dark-surface3 text-[#8e8e93]',
+    draft: 'bg-dark-surface3 text-t-secondary',
     scheduled: 'bg-[#ffd60a]/15 text-[#ffd60a]',
     sending: 'bg-[#0a84ff]/15 text-[#0a84ff]',
     sent: 'bg-[#32d74b]/15 text-[#32d74b]',
@@ -106,7 +106,7 @@ export function Notifications() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Notification Campaigns</h1>
-          <p className="text-sm text-[#8e8e93] mt-1">Send targeted push notifications and emails to members</p>
+          <p className="text-sm text-t-secondary mt-1">Send targeted push notifications and emails to members</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -119,17 +119,17 @@ export function Notifications() {
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-dark-surface rounded-xl p-5 border border-dark-border">
-          <p className="text-sm text-[#8e8e93]">Total Campaigns</p>
+          <p className="text-sm text-t-secondary">Total Campaigns</p>
           <p className="text-3xl font-bold text-white mt-1">{data?.total ?? 0}</p>
         </div>
         <div className="bg-dark-surface rounded-xl p-5 border border-dark-border">
-          <p className="text-sm text-[#8e8e93]">Total Sent</p>
+          <p className="text-sm text-t-secondary">Total Sent</p>
           <p className="text-3xl font-bold text-blue-400 mt-1">
             {(data?.campaigns ?? []).reduce((s: number, c: Campaign) => s + (c.sent_count ?? 0), 0).toLocaleString()}
           </p>
         </div>
         <div className="bg-dark-surface rounded-xl p-5 border border-dark-border">
-          <p className="text-sm text-[#8e8e93]">Avg Open Rate</p>
+          <p className="text-sm text-t-secondary">Avg Open Rate</p>
           <p className="text-3xl font-bold text-[#32d74b] mt-1">
             {(() => {
               const camps = data?.campaigns ?? []
@@ -150,12 +150,12 @@ export function Notifications() {
           <div className="p-12 text-center text-[#636366]">Loading...</div>
         ) : (data?.campaigns ?? []).length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-[#8e8e93] font-medium">No campaigns yet</p>
+            <p className="text-t-secondary font-medium">No campaigns yet</p>
             <p className="text-sm text-[#636366] mt-1">Create your first campaign to engage members</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-dark-surface2 text-[#8e8e93] text-xs uppercase tracking-wide">
+            <thead className="bg-dark-surface2 text-t-secondary text-xs uppercase tracking-wide">
               <tr>
                 <th className="px-6 py-3 text-left">Campaign</th>
                 <th className="px-6 py-3 text-left">Channel</th>
@@ -184,7 +184,7 @@ export function Notifications() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor[c.status] ?? 'bg-dark-surface3 text-[#8e8e93]'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor[c.status] ?? 'bg-dark-surface3 text-t-secondary'}`}>
                       {c.status?.toUpperCase()}
                     </span>
                   </td>
@@ -194,7 +194,7 @@ export function Notifications() {
                   <td className="px-6 py-4 text-right font-medium text-white">{(c.sent_count ?? 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right font-medium text-[#0a84ff]">{(c.email_sent_count ?? 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right font-medium text-[#32d74b]">{(c.opened_count ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-[#8e8e93] text-xs">
+                  <td className="px-6 py-4 text-t-secondary text-xs">
                     {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
                   </td>
                 </tr>
@@ -260,7 +260,7 @@ export function Notifications() {
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                         form.tier_filter.includes(tier)
                           ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-dark-surface2 text-[#8e8e93] border-dark-border hover:border-primary-500'
+                          : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
                       }`}
                     >
                       {tier}
@@ -305,7 +305,7 @@ export function Notifications() {
                       className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
                         form.channel === ch.value
                           ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-dark-surface2 text-[#8e8e93] border-dark-border hover:border-primary-500'
+                          : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
                       }`}
                     >
                       {ch.label}

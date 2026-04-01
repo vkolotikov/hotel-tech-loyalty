@@ -144,7 +144,7 @@ export function Properties() {
         <form onSubmit={handleSubmit} className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">{editId ? 'Edit' : 'New'} Property</h2>
-            <button type="button" onClick={() => { setShowForm(false); clearImage() }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+            <button type="button" onClick={() => { setShowForm(false); clearImage() }} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
 
           {/* Image Upload */}
@@ -203,7 +203,7 @@ export function Properties() {
       )}
 
       {isLoading ? (
-        <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+        <div className="text-center text-t-secondary py-12">Loading...</div>
       ) : (
         <div className="space-y-4">
           {properties.map(p => (
@@ -224,19 +224,19 @@ export function Properties() {
                   )}
                   <div>
                     <h3 className="text-white font-medium">{p.name}</h3>
-                    <p className="text-xs text-[#8e8e93]">{p.code} · {p.city}{p.country ? `, ${p.country}` : ''} · {p.currency || 'USD'}</p>
+                    <p className="text-xs text-t-secondary">{p.code} · {p.city}{p.country ? `, ${p.country}` : ''} · {p.currency || 'USD'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-[#8e8e93]">{p.outlets_count} outlets</span>
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(p) }} className="text-[#8e8e93] hover:text-white p-1"><Pencil size={14} /></button>
+                  <span className="text-xs text-t-secondary">{p.outlets_count} outlets</span>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(p) }} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
                 </div>
               </div>
 
               {expandedProperty === p.id && (
                 <div className="border-t border-dark-border px-6 py-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-[#8e8e93]">Outlets</h4>
+                    <h4 className="text-sm font-medium text-t-secondary">Outlets</h4>
                     <button onClick={() => setShowOutletForm(!showOutletForm)}
                       className="flex items-center gap-1 text-primary-400 hover:text-primary-300 text-xs">
                       <Plus size={14} /> Add Outlet
@@ -264,23 +264,23 @@ export function Properties() {
                   {outlets.length > 0 ? outlets.map(o => (
                     <div key={o.id} className="flex items-center justify-between bg-dark-bg rounded-lg px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <Store size={14} className="text-[#8e8e93]" />
+                        <Store size={14} className="text-t-secondary" />
                         <span className="text-white text-sm">{o.name}</span>
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-[#8e8e93]">{o.type.replace('_', ' ')}</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{o.type.replace('_', ' ')}</span>
                       </div>
                       {o.earn_rate_override && (
                         <span className="text-xs text-primary-400">{o.earn_rate_override}x earn rate</span>
                       )}
                     </div>
                   )) : (
-                    <p className="text-sm text-[#8e8e93]">No outlets yet</p>
+                    <p className="text-sm text-t-secondary">No outlets yet</p>
                   )}
                 </div>
               )}
             </div>
           ))}
           {properties.length === 0 && (
-            <div className="text-center text-[#8e8e93] py-12 bg-dark-surface border border-dark-border rounded-xl">No properties configured</div>
+            <div className="text-center text-t-secondary py-12 bg-dark-surface border border-dark-border rounded-xl">No properties configured</div>
           )}
         </div>
       )}

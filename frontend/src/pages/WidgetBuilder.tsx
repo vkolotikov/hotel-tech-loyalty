@@ -96,7 +96,7 @@ export function WidgetBuilder() {
 
   const LauncherIcon = launcherIconComponent
 
-  if (isLoading) return <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+  if (isLoading) return <div className="text-center text-t-secondary py-12">Loading...</div>
 
   return (
     <div className="space-y-6">
@@ -105,7 +105,7 @@ export function WidgetBuilder() {
         <MessageSquare className="text-primary-500" size={28} />
         <div>
           <h1 className="text-2xl font-bold text-white">Chat Widget Builder</h1>
-          <p className="text-sm text-[#8e8e93]">Customize your embeddable chat widget for your hotel website</p>
+          <p className="text-sm text-t-secondary">Customize your embeddable chat widget for your hotel website</p>
         </div>
       </div>
 
@@ -118,29 +118,29 @@ export function WidgetBuilder() {
             <h2 className="text-lg font-semibold text-white">General</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Company Name</label>
+                <label className="block text-sm text-t-secondary mb-1">Company Name</label>
                 <input type="text" value={f.company_name || ''} onChange={e => update('company_name', e.target.value)}
-                  className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Your Hotel Name" />
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Your Hotel Name" />
               </div>
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Position</label>
+                <label className="block text-sm text-t-secondary mb-1">Position</label>
                 <select value={f.position || 'bottom-right'} onChange={e => update('position', e.target.value)}
-                  className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
                   <option value="bottom-right">Bottom Right</option>
                   <option value="bottom-left">Bottom Left</option>
                 </select>
               </div>
             </div>
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">Welcome Message</label>
+              <label className="block text-sm text-t-secondary mb-1">Welcome Message</label>
               <textarea value={f.welcome_message || ''} onChange={e => update('welcome_message', e.target.value)} rows={2}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="Hello! How can I help you today?" />
             </div>
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-1">Offline Message</label>
+              <label className="block text-sm text-t-secondary mb-1">Offline Message</label>
               <input type="text" value={f.offline_message || ''} onChange={e => update('offline_message', e.target.value)}
-                className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="We're currently offline. Leave a message and we'll get back to you." />
             </div>
           </div>
@@ -151,7 +151,7 @@ export function WidgetBuilder() {
 
             {/* Color */}
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-2">Brand Color</label>
+              <label className="block text-sm text-t-secondary mb-2">Brand Color</label>
               <div className="flex items-center gap-3">
                 <div className="flex gap-1.5">
                   {COLOR_PRESETS.map(c => (
@@ -162,18 +162,18 @@ export function WidgetBuilder() {
                 </div>
                 <input type="color" value={f.primary_color || '#c9a84c'} onChange={e => update('primary_color', e.target.value)}
                   className="w-8 h-8 rounded cursor-pointer border-0" />
-                <span className="text-xs text-[#8e8e93] font-mono">{f.primary_color || '#c9a84c'}</span>
+                <span className="text-xs text-t-secondary font-mono">{f.primary_color || '#c9a84c'}</span>
               </div>
             </div>
 
             {/* Icon Style */}
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-2">Icon Style</label>
+              <label className="block text-sm text-t-secondary mb-2">Icon Style</label>
               <div className="grid grid-cols-5 gap-2">
                 {ICON_STYLES.map(s => (
                   <button key={s} onClick={() => update('icon_style', s)}
                     className={`py-2 px-3 rounded-lg border text-xs font-medium capitalize transition-colors ${
-                      (f.icon_style || 'classic') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-[#8e8e93] hover:border-[#555]'
+                      (f.icon_style || 'classic') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
                     }`}>{s}</button>
                 ))}
               </div>
@@ -181,12 +181,12 @@ export function WidgetBuilder() {
 
             {/* Launcher Shape */}
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-2">Launcher Shape</label>
+              <label className="block text-sm text-t-secondary mb-2">Launcher Shape</label>
               <div className="flex gap-2">
                 {LAUNCHER_SHAPES.map(s => (
                   <button key={s.value} onClick={() => update('launcher_shape', s.value)}
                     className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                      (f.launcher_shape || 'circle') === s.value ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-[#8e8e93] hover:border-[#555]'
+                      (f.launcher_shape || 'circle') === s.value ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
                     }`}>{s.label}</button>
                 ))}
               </div>
@@ -194,12 +194,12 @@ export function WidgetBuilder() {
 
             {/* Launcher Icon */}
             <div>
-              <label className="block text-sm text-[#8e8e93] mb-2">Launcher Icon</label>
+              <label className="block text-sm text-t-secondary mb-2">Launcher Icon</label>
               <div className="grid grid-cols-6 gap-2">
                 {LAUNCHER_ICONS.map(i => (
                   <button key={i.value} onClick={() => update('launcher_icon', i.value)}
                     className={`flex flex-col items-center gap-1 py-3 rounded-lg border transition-colors ${
-                      (f.launcher_icon || 'chat') === i.value ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-[#8e8e93] hover:border-[#555]'
+                      (f.launcher_icon || 'chat') === i.value ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
                     }`}>
                     <i.icon size={18} />
                     <span className="text-xs">{i.label}</span>
@@ -217,7 +217,7 @@ export function WidgetBuilder() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" checked={f.lead_capture_enabled ?? true}
                   onChange={e => update('lead_capture_enabled', e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                <div className="w-11 h-6 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
               </label>
               <span className="text-sm text-white">Enable lead capture form</span>
             </div>
@@ -225,7 +225,7 @@ export function WidgetBuilder() {
             {(f.lead_capture_enabled ?? true) && (
               <>
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-2">Capture Fields</label>
+                  <label className="block text-sm text-t-secondary mb-2">Capture Fields</label>
                   <div className="flex gap-4">
                     {['name', 'email', 'phone'].map(field => {
                       const fields = f.lead_capture_fields || { name: true, email: true, phone: false }
@@ -233,7 +233,7 @@ export function WidgetBuilder() {
                         <label key={field} className="flex items-center gap-2 cursor-pointer">
                           <input type="checkbox" checked={fields[field] ?? false}
                             onChange={e => update('lead_capture_fields', { ...fields, [field]: e.target.checked })}
-                            className="w-4 h-4 rounded border-dark-border bg-[#1c1c1e] text-primary-500 focus:ring-primary-500" />
+                            className="w-4 h-4 rounded border-dark-border bg-dark-surface text-primary-500 focus:ring-primary-500" />
                           <span className="text-sm text-white capitalize">{field}</span>
                         </label>
                       )
@@ -241,10 +241,10 @@ export function WidgetBuilder() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-1">Delay before showing form (seconds)</label>
+                  <label className="block text-sm text-t-secondary mb-1">Delay before showing form (seconds)</label>
                   <input type="number" min={0} max={300} value={f.lead_capture_delay ?? 0}
                     onChange={e => update('lead_capture_delay', parseInt(e.target.value) || 0)}
-                    className="w-32 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                    className="w-32 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
               </>
             )}
@@ -254,17 +254,17 @@ export function WidgetBuilder() {
           {config?.id && (
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
               <h2 className="text-lg font-semibold text-white">Embed Code</h2>
-              <p className="text-sm text-[#8e8e93]">Copy this code and paste it before the closing <code className="text-primary-400">&lt;/body&gt;</code> tag of your website.</p>
+              <p className="text-sm text-t-secondary">Copy this code and paste it before the closing <code className="text-primary-400">&lt;/body&gt;</code> tag of your website.</p>
 
-              <div className="bg-[#1c1c1e] rounded-lg p-3 flex items-center gap-2">
+              <div className="bg-dark-surface rounded-lg p-3 flex items-center gap-2">
                 <code className="text-xs text-green-400 flex-1 break-all">{embedData?.embed_code || 'Save config first to generate embed code'}</code>
-                <button onClick={copyEmbed} className="text-[#8e8e93] hover:text-white p-1">
+                <button onClick={copyEmbed} className="text-t-secondary hover:text-white p-1">
                   {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 text-xs text-[#555]">
-                <span>Widget Key: <code className="text-[#8e8e93]">{config.widget_key}</code></span>
+              <div className="flex items-center gap-3 text-xs text-dark-border2">
+                <span>Widget Key: <code className="text-t-secondary">{config.widget_key}</code></span>
                 <span>|</span>
                 <button onClick={() => regenKey.mutate()} disabled={regenKey.isPending}
                   className="flex items-center gap-1 text-primary-400 hover:text-primary-300">
@@ -279,7 +279,7 @@ export function WidgetBuilder() {
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={f.is_active ?? true}
                 onChange={e => update('is_active', e.target.checked)}
-                className="w-4 h-4 rounded border-dark-border bg-[#1c1c1e] text-primary-500" />
+                className="w-4 h-4 rounded border-dark-border bg-dark-surface text-primary-500" />
               <span className="text-sm text-white">Widget Active</span>
             </label>
             <button onClick={() => saveMutation.mutate(f)} disabled={saveMutation.isPending}

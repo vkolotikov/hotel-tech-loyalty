@@ -28,7 +28,7 @@ export function StatCard({ title, value, change, icon, color = 'bg-primary-500' 
     <Card>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-[#8e8e93]">{title}</p>
+          <p className="text-sm font-medium text-t-secondary">{title}</p>
           <p className="text-2xl font-bold text-white mt-1">{value}</p>
           {change !== undefined && (
             <p className={clsx('text-sm mt-1', change >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]')}>

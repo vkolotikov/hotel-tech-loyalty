@@ -176,7 +176,7 @@ export function MemberDetail() {
             <h1 className="text-2xl font-bold text-white">{user?.name}</h1>
             {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
           </div>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{user?.email} · {member?.member_number}</p>
+          <p className="text-sm text-t-secondary mt-0.5">{user?.email} · {member?.member_number}</p>
         </div>
         {(isAdmin || staff?.can_view_analytics) && (
           <button
@@ -202,7 +202,7 @@ export function MemberDetail() {
               { label: 'Total Spent', value: `$${(data?.stats?.total_spent ?? 0).toLocaleString()}`, color: 'text-orange-400' },
             ].map(stat => (
               <div key={stat.label} className="bg-dark-surface rounded-xl p-4 border border-dark-border">
-                <p className="text-xs text-[#8e8e93]">{stat.label}</p>
+                <p className="text-xs text-t-secondary">{stat.label}</p>
                 <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
               </div>
             ))}
@@ -254,7 +254,7 @@ export function MemberDetail() {
                     { label: 'Last Stay', value: data.linked_guest.last_stay_date ? new Date(data.linked_guest.last_stay_date).toLocaleDateString() : '—', color: 'text-[#a0a0a0]' },
                   ].map(s => (
                     <div key={s.label} className="text-center">
-                      <p className="text-xs text-[#8e8e93]">{s.label}</p>
+                      <p className="text-xs text-t-secondary">{s.label}</p>
                       <p className={`text-lg font-bold mt-0.5 ${s.color}`}>{s.value}</p>
                     </div>
                   ))}
@@ -407,31 +407,31 @@ export function MemberDetail() {
                   <span className="text-xs text-[#636366]">Click to change photo</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Name</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Name</label>
                   <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Email</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Email</label>
                   <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Phone</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Phone</label>
                   <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+1 234 567 8900" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Nationality</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Nationality</label>
                   <input type="text" value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Language</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Language</label>
                   <input type="text" value={editForm.language} onChange={e => setEditForm(f => ({ ...f, language: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="en" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Date of Birth</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Date of Birth</label>
                   <DatePicker value={editForm.date_of_birth} onChange={v => setEditForm(f => ({ ...f, date_of_birth: v }))} placeholder="Select date of birth" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#8e8e93] mb-1">Tier</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Tier</label>
                   <select value={editForm.tier_id} onChange={e => setEditForm(f => ({ ...f, tier_id: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                     {(tiersData?.tiers ?? []).map((t: any) => (
                       <option key={t.id} value={t.id}>{t.name}</option>
@@ -456,31 +456,31 @@ export function MemberDetail() {
             ) : (
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Phone</dt>
+                  <dt className="text-t-secondary">Phone</dt>
                   <dd className="text-white">{user?.phone || '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Nationality</dt>
+                  <dt className="text-t-secondary">Nationality</dt>
                   <dd className="text-white">{user?.nationality || '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Language</dt>
+                  <dt className="text-t-secondary">Language</dt>
                   <dd className="text-white">{user?.language || '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Date of Birth</dt>
+                  <dt className="text-t-secondary">Date of Birth</dt>
                   <dd className="text-white">{user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Joined</dt>
+                  <dt className="text-t-secondary">Joined</dt>
                   <dd className="text-white">{member?.joined_at ? new Date(member.joined_at).toLocaleDateString() : '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">Status</dt>
+                  <dt className="text-t-secondary">Status</dt>
                   <dd className={member?.is_active ? 'text-[#32d74b] font-medium' : 'text-[#ff375f] font-medium'}>{member?.is_active ? 'Active' : 'Inactive'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[#8e8e93]">NFC Card</dt>
+                  <dt className="text-t-secondary">NFC Card</dt>
                   <dd className={member?.nfc_uid ? 'text-[#32d74b] font-medium' : 'text-[#636366]'}>{member?.nfc_uid ? 'Active' : 'None'}</dd>
                 </div>
               </dl>

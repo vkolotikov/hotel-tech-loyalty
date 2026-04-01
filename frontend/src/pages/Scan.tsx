@@ -171,7 +171,7 @@ export function Scan() {
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-lg">{member.name}</h3>
-                    <p className="text-sm text-[#8e8e93]">{member.email}</p>
+                    <p className="text-sm text-t-secondary">{member.email}</p>
                     <p className="text-xs text-[#636366] font-mono">{member.member_number}</p>
                   </div>
                 </div>
@@ -181,18 +181,18 @@ export function Scan() {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-dark-surface2 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-white">{member.current_points?.toLocaleString()}</p>
-                  <p className="text-xs text-[#8e8e93]">Current Points</p>
+                  <p className="text-xs text-t-secondary">Current Points</p>
                 </div>
                 <div className="bg-dark-surface2 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-white">{member.lifetime_points?.toLocaleString()}</p>
-                  <p className="text-xs text-[#8e8e93]">Lifetime Points</p>
+                  <p className="text-xs text-t-secondary">Lifetime Points</p>
                 </div>
               </div>
 
               {/* Progress to next tier */}
               {member.progress?.next_tier && (
                 <div className="mb-4">
-                  <div className="flex justify-between text-xs text-[#8e8e93] mb-1">
+                  <div className="flex justify-between text-xs text-t-secondary mb-1">
                     <span>{member.tier?.name}</span>
                     <span>{member.progress.next_tier.name} — {member.progress.points_needed.toLocaleString()} pts needed</span>
                   </div>

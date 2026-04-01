@@ -167,7 +167,7 @@ export function EmailTemplates() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Email Templates</h1>
-          <p className="text-sm text-[#8e8e93] mt-1">
+          <p className="text-sm text-t-secondary mt-1">
             Build HTML email templates with merge tags for personalized campaigns
           </p>
         </div>
@@ -185,7 +185,7 @@ export function EmailTemplates() {
       ) : templates.length === 0 ? (
         <div className="bg-dark-surface rounded-xl border border-dark-border p-12 text-center">
           <div className="text-4xl mb-3">&#9993;</div>
-          <p className="text-[#8e8e93] font-medium">No email templates yet</p>
+          <p className="text-t-secondary font-medium">No email templates yet</p>
           <p className="text-sm text-[#636366] mt-1">Create your first template to start sending email campaigns</p>
           <button
             onClick={openCreate}
@@ -219,7 +219,7 @@ export function EmailTemplates() {
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                     t.is_active
                       ? 'bg-[#32d74b]/15 text-[#32d74b]'
-                      : 'bg-dark-surface3 text-[#8e8e93]'
+                      : 'bg-dark-surface3 text-t-secondary'
                   }`}>
                     {t.is_active ? 'Active' : 'Inactive'}
                   </span>
@@ -245,7 +245,7 @@ export function EmailTemplates() {
                   </button>
                   <button
                     onClick={() => handlePreview(t.id)}
-                    className="flex-1 text-xs font-semibold text-[#8e8e93] hover:text-white bg-dark-surface2 hover:bg-dark-surface3 rounded-lg py-1.5 transition-colors"
+                    className="flex-1 text-xs font-semibold text-t-secondary hover:text-white bg-dark-surface2 hover:bg-dark-surface3 rounded-lg py-1.5 transition-colors"
                   >
                     Preview
                   </button>

@@ -74,7 +74,7 @@ export function AiInsights() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">AI Insights</h1>
-            <p className="text-sm text-[#8e8e93] flex items-center gap-1.5">
+            <p className="text-sm text-t-secondary flex items-center gap-1.5">
               Powered by
               <span className="text-[10px] font-semibold bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded-full border border-green-500/20">GPT-4o</span>
               <span className="text-[#636366]">+</span>
@@ -90,28 +90,28 @@ export function AiInsights() {
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Users size={14} className="text-primary-400" />
-              <span className="text-xs text-[#8e8e93]">Total Members</span>
+              <span className="text-xs text-t-secondary">Total Members</span>
             </div>
             <div className="text-2xl font-bold text-white">{tierStats.total?.toLocaleString()}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Award size={14} className="text-amber-400" />
-              <span className="text-xs text-[#8e8e93]">Tier Levels</span>
+              <span className="text-xs text-t-secondary">Tier Levels</span>
             </div>
             <div className="text-2xl font-bold text-white">{tierStats.tiers?.length ?? 0}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Zap size={14} className="text-green-400" />
-              <span className="text-xs text-[#8e8e93]">AI Models</span>
+              <span className="text-xs text-t-secondary">AI Models</span>
             </div>
             <div className="text-lg font-bold text-white mt-0.5">GPT-4o + Claude</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Target size={14} className="text-purple-400" />
-              <span className="text-xs text-[#8e8e93]">Capabilities</span>
+              <span className="text-xs text-t-secondary">Capabilities</span>
             </div>
             <div className="text-lg font-bold text-white mt-0.5">Churn · Offers · Upsell</div>
           </div>

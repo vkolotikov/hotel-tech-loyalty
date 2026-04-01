@@ -142,7 +142,7 @@ export function Tiers() {
         <form onSubmit={handleSubmit} className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">{editId ? 'Edit' : 'New'} Tier</h2>
-            <button type="button" onClick={() => setShowForm(false)} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+            <button type="button" onClick={() => setShowForm(false)} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tier Name" required
@@ -177,11 +177,11 @@ export function Tiers() {
               <option value="calendar_year">Calendar Year</option>
               <option value="anniversary_year">Anniversary Year</option>
             </select>
-            <label className="flex items-center gap-2 text-sm text-[#8e8e93]">
+            <label className="flex items-center gap-2 text-sm text-t-secondary">
               <input type="checkbox" checked={form.soft_landing} onChange={e => setForm({ ...form, soft_landing: e.target.checked })} className="rounded" />
               Soft Landing
             </label>
-            <label className="flex items-center gap-2 text-sm text-[#8e8e93]">
+            <label className="flex items-center gap-2 text-sm text-t-secondary">
               <input type="checkbox" checked={form.invitation_only} onChange={e => setForm({ ...form, invitation_only: e.target.checked })} className="rounded" />
               Invitation Only
             </label>
@@ -196,7 +196,7 @@ export function Tiers() {
       )}
 
       {isLoading ? (
-        <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+        <div className="text-center text-t-secondary py-12">Loading...</div>
       ) : (
         <div className="space-y-4">
           {tiers.map(t => (
@@ -209,7 +209,7 @@ export function Tiers() {
                   </div>
                   <div>
                     <h3 className="text-white font-medium">{t.name}</h3>
-                    <p className="text-xs text-[#8e8e93]">
+                    <p className="text-xs text-t-secondary">
                       {t.min_points.toLocaleString()} pts
                       {t.max_points ? ` - ${t.max_points.toLocaleString()} pts` : '+'}
                       {' · '}{t.earn_rate}x earn
@@ -218,18 +218,18 @@ export function Tiers() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1 text-[#8e8e93]">
+                  <div className="flex items-center gap-1 text-t-secondary">
                     <Users size={14} />
                     <span className="text-sm">{t.member_count}</span>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(t) }} className="text-[#8e8e93] hover:text-white p-1"><Pencil size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(t) }} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
                 </div>
               </div>
 
               {expandedTier === t.id && (
                 <div className="border-t border-dark-border px-6 py-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-[#8e8e93]">Tier Benefits</h4>
+                    <h4 className="text-sm font-medium text-t-secondary">Tier Benefits</h4>
                   </div>
 
                   {tierBenefits.map(tb => (
@@ -239,7 +239,7 @@ export function Tiers() {
                         <span className="text-white text-sm">{tb.benefit.name}</span>
                         {tb.value && <span className="text-xs text-primary-400">({tb.value})</span>}
                       </div>
-                      <button onClick={() => removeBenefitMutation.mutate(tb.id)} className="text-[#8e8e93] hover:text-red-400 text-xs">Remove</button>
+                      <button onClick={() => removeBenefitMutation.mutate(tb.id)} className="text-t-secondary hover:text-red-400 text-xs">Remove</button>
                     </div>
                   ))}
 

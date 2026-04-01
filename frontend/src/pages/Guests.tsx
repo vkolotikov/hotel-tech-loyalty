@@ -93,7 +93,7 @@ export function Guests() {
   }
 
   const SortHeader = ({ col, label }: { col: string; label: string }) => (
-    <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] cursor-pointer hover:text-gray-300 select-none" onClick={() => toggleSort(col)}>
+    <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary cursor-pointer hover:text-gray-300 select-none" onClick={() => toggleSort(col)}>
       {label} {sort === col ? (dir === 'asc' ? '↑' : '↓') : ''}
     </th>
   )
@@ -113,16 +113,16 @@ export function Guests() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Guests</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{meta.total ?? 0} total</p>
+          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleBackfill} disabled={backfilling} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-blue-500 text-[#8e8e93] hover:text-blue-400 font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title="Link unlinked guests to loyalty members by email match">
+          <button onClick={handleBackfill} disabled={backfilling} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-blue-500 text-t-secondary hover:text-blue-400 font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title="Link unlinked guests to loyalty members by email match">
             {backfilling ? <RefreshCw size={14} className="animate-spin" /> : <Link2 size={14} />} {backfilling ? 'Linking...' : 'Backfill Links'}
           </button>
           <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-sm px-3 py-2 rounded-lg transition-colors">
             <Sparkles size={14} /> AI Capture
           </button>
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-[#8e8e93] hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
             <Download size={14} /> Export
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
@@ -138,7 +138,7 @@ export function Guests() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search name, email, phone, company..." className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
-          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-[#8e8e93] hover:text-white'}`}>
+          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> Filters {hasFilters ? '●' : ''}
           </button>
         </div>
@@ -173,12 +173,12 @@ export function Guests() {
               <tr className="border-b border-dark-border">
                 <SortHeader col="full_name" label="Full Name" />
                 <SortHeader col="email" label="Email" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Phone</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Phone</th>
                 <SortHeader col="company" label="Company" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Nationality</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">VIP Level</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Loyalty</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Guest Type</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Nationality</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">VIP Level</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Loyalty</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Guest Type</th>
                 <SortHeader col="total_stays" label="Total Stays" />
                 <SortHeader col="total_revenue" label="Total Revenue" />
                 <SortHeader col="last_stay" label="Last Stay" />
@@ -213,8 +213,8 @@ export function Guests() {
                   <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.guest_type ?? '—'}</td>
                   <td className="px-4 py-3 text-[#a0a0a0] text-center">{g.total_stays ?? 0}</td>
                   <td className="px-4 py-3 text-[#a0a0a0]">{g.total_revenue ? `${settings.currency_symbol}${Number(g.total_revenue).toLocaleString()}` : '—'}</td>
-                  <td className="px-4 py-3 text-[#8e8e93] text-xs">{g.last_stay ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#8e8e93] text-xs">{g.created_at?.slice(0, 10)}</td>
+                  <td className="px-4 py-3 text-t-secondary text-xs">{g.last_stay ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-secondary text-xs">{g.created_at?.slice(0, 10)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button onClick={e => { e.stopPropagation(); if (confirm('Delete this guest?')) deleteMutation.mutate(g.id) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#636366] hover:text-red-400 transition-colors">
@@ -232,7 +232,7 @@ export function Guests() {
       {/* Pagination */}
       {meta.last_page > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-[#8e8e93]">Page {meta.current_page} of {meta.last_page}</span>
+          <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
           <div className="flex gap-2">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
             <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
@@ -347,7 +347,7 @@ export function Guests() {
 
             {!captureResult ? (
               <div className="space-y-3">
-                <p className="text-xs text-[#8e8e93]">Paste an email, booking request, or any inquiry message. AI will extract guest and inquiry information automatically.</p>
+                <p className="text-xs text-t-secondary">Paste an email, booking request, or any inquiry message. AI will extract guest and inquiry information automatically.</p>
                 <textarea
                   value={captureText}
                   onChange={e => setCaptureText(e.target.value)}

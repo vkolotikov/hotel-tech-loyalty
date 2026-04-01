@@ -135,7 +135,7 @@ export function KnowledgeBase() {
         <BookOpen className="text-primary-500" size={28} />
         <div>
           <h1 className="text-2xl font-bold text-white">Knowledge Base</h1>
-          <p className="text-sm text-[#8e8e93]">Manage FAQ items, categories, and documents that power the AI assistant</p>
+          <p className="text-sm text-t-secondary">Manage FAQ items, categories, and documents that power the AI assistant</p>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export function KnowledgeBase() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-primary-600 text-white' : 'text-[#8e8e93] hover:text-white'
+              tab === t.key ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
             }`}
           >
             <t.icon size={16} />
@@ -166,7 +166,7 @@ export function KnowledgeBase() {
           {/* Toolbar */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555]" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-border2" />
               <input
                 type="text"
                 value={search}
@@ -196,39 +196,39 @@ export function KnowledgeBase() {
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold">{editItemId ? 'Edit FAQ Item' : 'New FAQ Item'}</h3>
-                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="text-t-secondary hover:text-white"><X size={18} /></button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-1">Category</label>
+                  <label className="block text-sm text-t-secondary mb-1">Category</label>
                   <select
                     value={itemForm.category_id || ''}
                     onChange={e => setItemForm(p => ({ ...p, category_id: e.target.value ? Number(e.target.value) : null }))}
-                    className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                    className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                   >
                     <option value="">None</option>
                     {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-1">Priority</label>
-                  <input type="number" min={0} value={itemForm.priority} onChange={e => setItemForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                  <label className="block text-sm text-t-secondary mb-1">Priority</label>
+                  <input type="number" min={0} value={itemForm.priority} onChange={e => setItemForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Question</label>
-                <input type="text" value={itemForm.question} onChange={e => setItemForm(p => ({ ...p, question: e.target.value }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="What is the check-in time?" />
+                <label className="block text-sm text-t-secondary mb-1">Question</label>
+                <input type="text" value={itemForm.question} onChange={e => setItemForm(p => ({ ...p, question: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="What is the check-in time?" />
               </div>
 
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Answer</label>
-                <textarea value={itemForm.answer} onChange={e => setItemForm(p => ({ ...p, answer: e.target.value }))} rows={4} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Check-in time is 3:00 PM..." />
+                <label className="block text-sm text-t-secondary mb-1">Answer</label>
+                <textarea value={itemForm.answer} onChange={e => setItemForm(p => ({ ...p, answer: e.target.value }))} rows={4} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Check-in time is 3:00 PM..." />
               </div>
 
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Keywords</label>
+                <label className="block text-sm text-t-secondary mb-1">Keywords</label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {itemForm.keywords.map((kw, i) => (
                     <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded text-xs">
@@ -238,13 +238,13 @@ export function KnowledgeBase() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add keyword..." />
-                  <button onClick={addKeyword} className="bg-[#333] text-white px-3 py-2 rounded-lg text-sm hover:bg-[#444]"><Plus size={14} /></button>
+                  <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add keyword..." />
+                  <button onClick={addKeyword} className="bg-dark-surface4 text-white px-3 py-2 rounded-lg text-sm hover:bg-dark-border2"><Plus size={14} /></button>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2">
-                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-[#8e8e93] hover:text-white">Cancel</button>
+                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
                 <button onClick={() => saveItem.mutate(itemForm)} disabled={saveItem.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
                   <Save size={14} /> {saveItem.isPending ? 'Saving...' : 'Save'}
                 </button>
@@ -254,9 +254,9 @@ export function KnowledgeBase() {
 
           {/* Items List */}
           {loadingItems ? (
-            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">Loading...</div>
           ) : items.length === 0 ? (
-            <div className="text-center text-[#8e8e93] py-12">
+            <div className="text-center text-t-secondary py-12">
               <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
               <p>No FAQ items yet. Add your first one to help the AI answer questions.</p>
             </div>
@@ -268,10 +268,10 @@ export function KnowledgeBase() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-white font-medium text-sm">{item.question}</span>
-                        {item.category && <span className="text-xs bg-[#333] text-[#8e8e93] px-2 py-0.5 rounded">{item.category.name}</span>}
+                        {item.category && <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{item.category.name}</span>}
                         {!item.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
                       </div>
-                      <p className="text-sm text-[#8e8e93] line-clamp-2">{item.answer}</p>
+                      <p className="text-sm text-t-secondary line-clamp-2">{item.answer}</p>
                       {item.keywords?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {item.keywords.map((kw: string, i: number) => (
@@ -279,11 +279,11 @@ export function KnowledgeBase() {
                           ))}
                         </div>
                       )}
-                      <div className="text-xs text-[#555] mt-1">Used {item.use_count} times | Priority: {item.priority}</div>
+                      <div className="text-xs text-dark-border2 mt-1">Used {item.use_count} times | Priority: {item.priority}</div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => editItem(item)} className="p-2 text-[#8e8e93] hover:text-white"><Pencil size={14} /></button>
-                      <button onClick={() => { if (confirm('Delete this FAQ item?')) deleteItem.mutate(item.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => editItem(item)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
+                      <button onClick={() => { if (confirm('Delete this FAQ item?')) deleteItem.mutate(item.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -309,24 +309,24 @@ export function KnowledgeBase() {
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold">{editCatId ? 'Edit Category' : 'New Category'}</h3>
-                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="text-t-secondary hover:text-white"><X size={18} /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-1">Name</label>
-                  <input type="text" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Category name" />
+                  <label className="block text-sm text-t-secondary mb-1">Name</label>
+                  <input type="text" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Category name" />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#8e8e93] mb-1">Priority</label>
-                  <input type="number" min={0} value={catForm.priority} onChange={e => setCatForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                  <label className="block text-sm text-t-secondary mb-1">Priority</label>
+                  <input type="number" min={0} value={catForm.priority} onChange={e => setCatForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-[#8e8e93] mb-1">Description</label>
-                <textarea value={catForm.description} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                <label className="block text-sm text-t-secondary mb-1">Description</label>
+                <textarea value={catForm.description} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-[#8e8e93] hover:text-white">Cancel</button>
+                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
                 <button onClick={() => saveCat.mutate(catForm)} disabled={saveCat.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
                   <Save size={14} /> {saveCat.isPending ? 'Saving...' : 'Save'}
                 </button>
@@ -335,9 +335,9 @@ export function KnowledgeBase() {
           )}
 
           {loadingCats ? (
-            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">Loading...</div>
           ) : categories.length === 0 ? (
-            <div className="text-center text-[#8e8e93] py-12">
+            <div className="text-center text-t-secondary py-12">
               <FolderOpen size={40} className="mx-auto mb-3 opacity-30" />
               <p>No categories yet. Create one to organize your FAQ items.</p>
             </div>
@@ -348,14 +348,14 @@ export function KnowledgeBase() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-medium">{cat.name}</span>
-                      <span className="text-xs text-[#8e8e93]">({cat.items_count || 0} items)</span>
+                      <span className="text-xs text-t-secondary">({cat.items_count || 0} items)</span>
                       {!cat.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
                     </div>
-                    {cat.description && <p className="text-sm text-[#8e8e93] mt-1">{cat.description}</p>}
+                    {cat.description && <p className="text-sm text-t-secondary mt-1">{cat.description}</p>}
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => editCat(cat)} className="p-2 text-[#8e8e93] hover:text-white"><Pencil size={14} /></button>
-                    <button onClick={() => { if (confirm('Delete this category?')) deleteCat.mutate(cat.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                    <button onClick={() => editCat(cat)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
+                    <button onClick={() => { if (confirm('Delete this category?')) deleteCat.mutate(cat.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -369,8 +369,8 @@ export function KnowledgeBase() {
         <div className="space-y-4">
           {/* Upload Area */}
           <div className="bg-dark-surface border-2 border-dashed border-dark-border rounded-xl p-8 text-center">
-            <Upload size={32} className="mx-auto mb-3 text-[#555]" />
-            <p className="text-sm text-[#8e8e93] mb-3">Upload PDF, DOCX, or TXT files to extend the AI's knowledge</p>
+            <Upload size={32} className="mx-auto mb-3 text-dark-border2" />
+            <p className="text-sm text-t-secondary mb-3">Upload PDF, DOCX, or TXT files to extend the AI's knowledge</p>
             <label className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm cursor-pointer">
               <Upload size={16} />
               Choose File
@@ -390,9 +390,9 @@ export function KnowledgeBase() {
 
           {/* Documents List */}
           {loadingDocs ? (
-            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">Loading...</div>
           ) : documents.length === 0 ? (
-            <div className="text-center text-[#8e8e93] py-8">
+            <div className="text-center text-t-secondary py-8">
               <p>No documents uploaded yet.</p>
             </div>
           ) : (
@@ -407,7 +407,7 @@ export function KnowledgeBase() {
                           <span className="text-white font-medium text-sm">{doc.file_name}</span>
                           {statusBadge(doc.processing_status)}
                         </div>
-                        <div className="text-xs text-[#555] mt-0.5">
+                        <div className="text-xs text-dark-border2 mt-0.5">
                           {doc.size_bytes ? `${(doc.size_bytes / 1024).toFixed(1)} KB` : ''}
                           {doc.chunks_count > 0 && ` | ${doc.chunks_count} chunks`}
                           {doc.mime_type && ` | ${doc.mime_type}`}
@@ -416,15 +416,15 @@ export function KnowledgeBase() {
                     </div>
                     <div className="flex gap-1">
                       {doc.processing_status === 'failed' && (
-                        <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-[#8e8e93] hover:text-primary-400" title="Reprocess"><RotateCcw size={14} /></button>
+                        <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-t-secondary hover:text-primary-400" title="Reprocess"><RotateCcw size={14} /></button>
                       )}
-                      <button onClick={() => { if (confirm('Delete this document?')) deleteDoc.mutate(doc.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => { if (confirm('Delete this document?')) deleteDoc.mutate(doc.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                     </div>
                   </div>
                   {doc.extracted_text && (
                     <details className="mt-2">
-                      <summary className="text-xs text-[#8e8e93] cursor-pointer hover:text-white">Preview extracted text</summary>
-                      <pre className="text-xs text-[#8e8e93] mt-2 bg-[#1c1c1e] rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap">{doc.extracted_text.substring(0, 1000)}{doc.extracted_text.length > 1000 ? '...' : ''}</pre>
+                      <summary className="text-xs text-t-secondary cursor-pointer hover:text-white">Preview extracted text</summary>
+                      <pre className="text-xs text-t-secondary mt-2 bg-dark-surface rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap">{doc.extracted_text.substring(0, 1000)}{doc.extracted_text.length > 1000 ? '...' : ''}</pre>
                     </details>
                   )}
                 </div>

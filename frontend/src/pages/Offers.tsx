@@ -75,7 +75,7 @@ export function Offers() {
                   <h4 className="font-semibold text-white">{offer.title}</h4>
                 </div>
               </div>
-              <p className="text-sm text-[#8e8e93] mb-3 line-clamp-2">{offer.description}</p>
+              <p className="text-sm text-t-secondary mb-3 line-clamp-2">{offer.description}</p>
               <div className="text-sm text-[#636366] mb-4">
                 {format(new Date(offer.start_date), 'MMM d')} — {format(new Date(offer.end_date), 'MMM d, yyyy')}
                 {offer.usage_limit && <span className="ml-2">· {offer.times_used}/{offer.usage_limit} used</span>}

@@ -124,19 +124,19 @@ export function Benefits() {
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
             showInactive
               ? 'border-primary-500/50 bg-primary-500/10 text-primary-400'
-              : 'border-dark-border bg-dark-surface text-[#8e8e93] hover:text-white'
+              : 'border-dark-border bg-dark-surface text-t-secondary hover:text-white'
           }`}
         >
           {showInactive ? <Eye size={14} /> : <EyeOff size={14} />}
           Show inactive
           {inactiveCount > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-dark-surface2 text-[#8e8e93]">{inactiveCount}</span>
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{inactiveCount}</span>
           )}
         </button>
 
         {/* Category filter dropdown */}
         <div className="flex items-center gap-2">
-          <Filter size={14} className="text-[#8e8e93]" />
+          <Filter size={14} className="text-t-secondary" />
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
@@ -150,7 +150,7 @@ export function Benefits() {
         </div>
 
         {/* Summary counts */}
-        <div className="ml-auto text-xs text-[#8e8e93]">
+        <div className="ml-auto text-xs text-t-secondary">
           {activeCount} active · {inactiveCount} inactive · {filteredBenefits.length} shown
         </div>
       </div>
@@ -159,7 +159,7 @@ export function Benefits() {
         <form onSubmit={handleSubmit} className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">{editId ? 'Edit' : 'New'} Benefit</h2>
-            <button type="button" onClick={() => setShowForm(false)} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+            <button type="button" onClick={() => setShowForm(false)} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Name" required
@@ -183,7 +183,7 @@ export function Benefits() {
           </div>
           <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description"
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" rows={2} />
-          <label className="flex items-center gap-2 text-sm text-[#8e8e93]">
+          <label className="flex items-center gap-2 text-sm text-t-secondary">
             <input type="checkbox" checked={form.requires_active_stay} onChange={e => setForm({ ...form, requires_active_stay: e.target.checked })}
               className="rounded border-dark-border" />
             Requires active stay
@@ -196,12 +196,12 @@ export function Benefits() {
       )}
 
       {isLoading ? (
-        <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+        <div className="text-center text-t-secondary py-12">Loading...</div>
       ) : (
         <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-dark-border text-[#8e8e93] text-xs uppercase">
+              <tr className="border-b border-dark-border text-t-secondary text-xs uppercase">
                 <th className="text-left px-4 py-3">Benefit</th>
                 <th className="text-left px-4 py-3">Code</th>
                 <th className="text-left px-4 py-3">Category</th>
@@ -227,12 +227,12 @@ export function Benefits() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-[#8e8e93] font-mono">{b.code}</td>
+                  <td className="px-4 py-3 text-sm text-t-secondary font-mono">{b.code}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-[#8e8e93]">{b.category}</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{b.category}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-[#8e8e93]">{b.fulfillment_mode.replace('_', ' ')}</td>
-                  <td className="px-4 py-3 text-sm text-[#8e8e93]">
+                  <td className="px-4 py-3 text-sm text-t-secondary">{b.fulfillment_mode.replace('_', ' ')}</td>
+                  <td className="px-4 py-3 text-sm text-t-secondary">
                     {b.usage_limit_per_stay && `${b.usage_limit_per_stay}/stay`}
                     {b.usage_limit_per_stay && b.usage_limit_per_year && ' · '}
                     {b.usage_limit_per_year && `${b.usage_limit_per_year}/yr`}
@@ -256,13 +256,13 @@ export function Benefits() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => startEdit(b)} className="text-[#8e8e93] hover:text-white p-1"><Pencil size={14} /></button>
-                    <button onClick={() => deleteMutation.mutate(b.id)} className="text-[#8e8e93] hover:text-red-400 p-1 ml-1"><Trash2 size={14} /></button>
+                    <button onClick={() => startEdit(b)} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
+                    <button onClick={() => deleteMutation.mutate(b.id)} className="text-t-secondary hover:text-red-400 p-1 ml-1"><Trash2 size={14} /></button>
                   </td>
                 </tr>
               ))}
               {filteredBenefits.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-[#8e8e93]">
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-t-secondary">
                   {allBenefits.length === 0 ? 'No benefits defined yet' : 'No benefits match the current filters'}
                 </td></tr>
               )}

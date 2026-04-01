@@ -97,7 +97,7 @@ export function AuditLog() {
           <ScrollText size={24} className="text-primary-400" />
           <div>
             <h1 className="text-2xl font-bold text-white">Audit Log</h1>
-            <p className="text-sm text-[#8e8e93] mt-0.5">Track all changes for compliance and operations</p>
+            <p className="text-sm text-t-secondary mt-0.5">Track all changes for compliance and operations</p>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export function AuditLog() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[#8e8e93] border-b border-dark-border">
+              <tr className="text-left text-t-secondary border-b border-dark-border">
                 <th className="pb-3 font-medium">Timestamp</th>
                 <th className="pb-3 font-medium">Action</th>
                 <th className="pb-3 font-medium">Entity</th>
@@ -213,7 +213,7 @@ export function AuditLog() {
         {/* Pagination */}
         {(data as any)?.meta && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-border">
-            <p className="text-sm text-[#8e8e93]">
+            <p className="text-sm text-t-secondary">
               Showing {(data as any).meta.from ?? 0}–{(data as any).meta.to ?? 0} of {(data as any).meta.total}
             </p>
             <div className="flex gap-2">

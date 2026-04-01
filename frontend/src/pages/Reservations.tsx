@@ -118,7 +118,7 @@ export function Reservations() {
   }
 
   const SortHeader = ({ col, label }: { col: string; label: string }) => (
-    <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
+    <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
       {label} {sort === col ? (dir === 'asc' ? '↑' : '↓') : ''}
     </th>
   )
@@ -134,10 +134,10 @@ export function Reservations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{meta.total ?? 0} total</p>
+          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-[#8e8e93] hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
             <Download size={14} /> Export
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
@@ -155,7 +155,7 @@ export function Reservations() {
           { key: '', label: 'All' },
         ].map(({ key, label }) => (
           <button key={label} onClick={() => setQuick(key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-[#8e8e93] hover:text-white hover:border-dark-border2'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
             {label}
           </button>
         ))}
@@ -168,7 +168,7 @@ export function Reservations() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search confirmation no, guest name, company..." className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
-          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-[#8e8e93] hover:text-white'}`}>
+          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> Filters {hasFilters ? '●' : ''}
           </button>
         </div>
@@ -199,11 +199,11 @@ export function Reservations() {
               {settings.booking_channels.map(s => <option key={s}>{s}</option>)}
             </select>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-[#8e8e93]">From</span>
+              <span className="text-xs text-t-secondary">From</span>
               <input type="date" value={checkInFrom} onChange={e => { setCheckInFrom(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-[#8e8e93]">To</span>
+              <span className="text-xs text-t-secondary">To</span>
               <input type="date" value={checkInTo} onChange={e => { setCheckInTo(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
             {hasFilters && <button onClick={clearFilters} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
@@ -217,16 +217,16 @@ export function Reservations() {
           <thead>
             <tr className="border-b border-dark-border">
               <SortHeader col="confirmation_no" label="Conf. No" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Guest</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Property</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Guest</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Property</th>
               <SortHeader col="check_in" label="Check-in" />
               <SortHeader col="check_out" label="Check-out" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Nights</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Room</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Nights</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Room</th>
               <SortHeader col="total_amount" label="Total" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Payment</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93]">Status</th>
-              <th className="px-4 py-3 text-xs font-medium text-[#8e8e93]">Actions</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Payment</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Status</th>
+              <th className="px-4 py-3 text-xs font-medium text-t-secondary">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -246,12 +246,12 @@ export function Reservations() {
                 <td className="px-4 py-3 text-[#a0a0a0] text-xs">{r.room_type ?? '—'}{r.room_number ? ` #${r.room_number}` : ''}</td>
                 <td className="px-4 py-3 text-gray-300 text-xs font-medium">{r.total_amount != null ? `${settings.currency_symbol}${Number(r.total_amount).toLocaleString()}` : '—'}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-500/20 text-[#8e8e93]'}`}>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
                     {r.payment_status ?? '—'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[r.status] ?? 'bg-gray-500/20 text-[#8e8e93]'}`}>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[r.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
                     {r.status ?? '—'}
                   </span>
                 </td>
@@ -282,7 +282,7 @@ export function Reservations() {
       {/* Pagination */}
       {meta.last_page > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-[#8e8e93]">Page {meta.current_page} of {meta.last_page}</span>
+          <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
           <div className="flex gap-2">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
             <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>

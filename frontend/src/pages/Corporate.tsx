@@ -70,7 +70,7 @@ export function Corporate() {
   }
 
   const SortHeader = ({ col, label }: { col: string; label: string }) => (
-    <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
+    <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
       {label} {sort === col ? (dir === 'asc' ? '↑' : '↓') : ''}
     </th>
   )
@@ -83,7 +83,7 @@ export function Corporate() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Corporate Accounts</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{meta.total ?? 0} total</p>
+          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <button onClick={() => { setShowCreate(true); setForm({ ...EMPTY_FORM }) }} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
           <Plus size={15} /> Add Account
@@ -120,7 +120,7 @@ export function Corporate() {
                 <SortHeader col="industry" label="Industry" />
                 <SortHeader col="contact_person" label="Contact" />
                 <SortHeader col="account_manager" label="Manager" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Contract</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Contract</th>
                 <SortHeader col="negotiated_rate" label="Rate" />
                 <SortHeader col="discount_percentage" label="Discount" />
                 <SortHeader col="annual_revenue" label="Revenue" />
@@ -149,7 +149,7 @@ export function Corporate() {
                     <td className="px-4 py-3 text-gray-300">{a.discount_percentage != null ? `${a.discount_percentage}%` : '—'}</td>
                     <td className="px-4 py-3 text-primary-400 font-medium">{a.annual_revenue != null ? fmt(a.annual_revenue) : '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-[#8e8e93]'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-t-secondary'}`}>
                         {a.status}
                       </span>
                     </td>
@@ -169,7 +169,7 @@ export function Corporate() {
 
         {meta.last_page > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border">
-            <span className="text-xs text-[#8e8e93]">Page {meta.current_page} of {meta.last_page} ({meta.total} results)</span>
+            <span className="text-xs text-t-secondary">Page {meta.current_page} of {meta.last_page} ({meta.total} results)</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronLeft size={16} /></button>
               <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronRight size={16} /></button>
@@ -192,10 +192,10 @@ export function Corporate() {
 
             {/* Tabs */}
             <div className="flex border-b border-dark-border">
-              <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-[#8e8e93] hover:text-white'}`}>
+              <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-t-secondary hover:text-white'}`}>
                 <Plus size={14} className="inline mr-1.5 -mt-0.5" />Manual Entry
               </button>
-              <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-[#8e8e93] hover:text-white'}`}>
+              <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-t-secondary hover:text-white'}`}>
                 <Sparkles size={14} className="inline mr-1.5 -mt-0.5" />AI Capture
               </button>
             </div>
@@ -237,7 +237,7 @@ export function Corporate() {
               <div className="p-6">
                 {!captureResult ? (
                   <div className="space-y-3">
-                    <p className="text-xs text-[#8e8e93]">Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.</p>
+                    <p className="text-xs text-t-secondary">Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder="e.g. Following our meeting with Acme Corp (tech company), their travel manager Jane Doe (jane@acme.com, +1 555 0123) agreed to a corporate rate of $180/night with 15% discount. Contract runs Jan-Dec 2026, targeting 500 room nights. Payment net 30, credit limit $50,000. Tax ID: US12-3456789..."
                       className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
@@ -370,18 +370,18 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
         <InfoBlock label="Tax ID" value={info.tax_id || '—'} />
         <InfoBlock label="Rate Type" value={info.rate_type || '—'} />
       </div>
-      {info.billing_address && <div><span className="text-xs text-[#8e8e93]">Billing Address</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
-      {info.notes && <div><span className="text-xs text-[#8e8e93]">Notes</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
+      {info.billing_address && <div><span className="text-xs text-t-secondary">Billing Address</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
+      {info.notes && <div><span className="text-xs text-t-secondary">Notes</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
       {detail?.recent_reservations?.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-[#8e8e93] uppercase tracking-wide mb-2">Recent Reservations</h4>
+          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Recent Reservations</h4>
           <div className="space-y-1">
             {detail.recent_reservations.map((r: any) => (
               <div key={r.id} className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs">
                 <span className="text-gray-300">{r.guest_name || r.reference}</span>
                 <span className="text-[#636366]">{r.check_in} — {r.check_out}</span>
                 <span className="text-primary-400">{fmt(r.total)}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs ${r.status === 'Confirmed' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-[#8e8e93]'}`}>{r.status}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${r.status === 'Confirmed' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-t-secondary'}`}>{r.status}</span>
               </div>
             ))}
           </div>
@@ -395,7 +395,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
 }
 
 function InfoBlock({ label, value }: { label: string; value: string }) {
-  return <div><span className="text-xs text-[#8e8e93]">{label}</span><p className="text-sm text-gray-300 mt-0.5">{value}</p></div>
+  return <div><span className="text-xs text-t-secondary">{label}</span><p className="text-sm text-gray-300 mt-0.5">{value}</p></div>
 }
 
 function Input({ label, value, onChange, type = 'text', required }: { label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean }) {

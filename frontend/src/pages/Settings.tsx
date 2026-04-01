@@ -189,7 +189,9 @@ export function Settings() {
     const p = PRESETS[name]
     if (!p) return
     setEditedSettings(prev => ({ ...prev, ...p }))
-    toast.success(`Applied "${name}" — Save to apply`)
+    // Auto-save preset immediately
+    const settings = Object.entries(p).map(([key, value]) => ({ key, value }))
+    saveMutation.mutate(settings)
   }
 
   const toggleReveal = (key: string) => {

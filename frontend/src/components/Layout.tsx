@@ -219,7 +219,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 {!collapsed ? (
                   <button
                     onClick={() => toggleGroup(label)}
-                    className="flex items-center justify-between w-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#636366] hover:text-[#8e8e93] transition-colors"
+                    className="flex items-center justify-between w-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#636366] hover:text-t-secondary transition-colors"
                   >
                     <span>{label}</span>
                     <ChevronDown size={12} className={clsx('transition-transform', isOpen ? '' : '-rotate-90')} />
@@ -241,7 +241,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         collapsed ? 'justify-center px-0' : 'px-3',
                         active
                           ? 'bg-primary-600/20 text-primary-400'
-                          : 'text-[#8e8e93] hover:text-white hover:bg-dark-surface2'
+                          : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
                       )}
                     >
                       <Icon size={17} className="flex-shrink-0" />
@@ -257,7 +257,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Collapse toggle */}
         <button
           onClick={toggleSidebar}
-          className="absolute -right-3 top-16 w-6 h-6 bg-dark-surface border border-dark-border rounded-full flex items-center justify-center text-[#8e8e93] hover:text-white hover:bg-dark-surface2 transition-colors z-10"
+          className="absolute -right-3 top-16 w-6 h-6 bg-dark-surface border border-dark-border rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors z-10"
         >
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
@@ -281,7 +281,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <button
             onClick={handleLogout}
             title={collapsed ? 'Logout' : undefined}
-            className={clsx('flex items-center gap-2 text-[#8e8e93] hover:text-white text-xs transition-colors', collapsed ? 'justify-center w-full' : '')}
+            className={clsx('flex items-center gap-2 text-t-secondary hover:text-white text-xs transition-colors', collapsed ? 'justify-center w-full' : '')}
           >
             <LogOut size={15} />
             {!collapsed && 'Logout'}
@@ -296,7 +296,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="flex-1" />
 
           {/* Live indicator */}
-          <div className="flex items-center gap-1.5 text-xs text-[#8e8e93]">
+          <div className="flex items-center gap-1.5 text-xs text-t-secondary">
             <Radio size={12} className={connected ? 'text-green-400' : 'text-red-400'} />
             <span className={connected ? 'text-green-400' : 'text-red-400'}>{connected ? 'Live' : 'Offline'}</span>
           </div>
@@ -305,7 +305,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => { setShowNotifPanel(p => !p); setSeenCount(events.length) }}
-              className="relative p-1.5 text-[#8e8e93] hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors"
+              className="relative p-1.5 text-t-secondary hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors"
             >
               <Bell size={18} />
               {unseenCount > 0 && (
@@ -332,7 +332,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-white truncate">{evt.title}</p>
-                          {evt.body && <p className="text-[11px] text-[#8e8e93] truncate">{evt.body}</p>}
+                          {evt.body && <p className="text-[11px] text-t-secondary truncate">{evt.body}</p>}
                         </div>
                         <span className="text-[10px] text-[#636366] flex-shrink-0 whitespace-nowrap">
                           {new Date(evt.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

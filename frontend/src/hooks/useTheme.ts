@@ -42,7 +42,6 @@ function hexToRgb(hex: string): string {
   return `${r} ${g} ${b}`
 }
 
-// Generate lighter/darker shades from a base hex
 function generateShades(hex: string) {
   const h = hex.replace('#', '')
   const r = parseInt(h.slice(0, 2), 16)
@@ -55,15 +54,17 @@ function generateShades(hex: string) {
   return {
     50: `${lighten(r, 0.9)} ${lighten(g, 0.9)} ${lighten(b, 0.9)}`,
     100: `${lighten(r, 0.8)} ${lighten(g, 0.8)} ${lighten(b, 0.8)}`,
+    200: `${lighten(r, 0.6)} ${lighten(g, 0.6)} ${lighten(b, 0.6)}`,
+    300: `${lighten(r, 0.35)} ${lighten(g, 0.35)} ${lighten(b, 0.35)}`,
     400: `${lighten(r, 0.15)} ${lighten(g, 0.15)} ${lighten(b, 0.15)}`,
     500: `${r} ${g} ${b}`,
     600: `${darken(r, 0.12)} ${darken(g, 0.12)} ${darken(b, 0.12)}`,
     700: `${darken(r, 0.25)} ${darken(g, 0.25)} ${darken(b, 0.25)}`,
+    800: `${darken(r, 0.35)} ${darken(g, 0.35)} ${darken(b, 0.35)}`,
     900: `${darken(r, 0.45)} ${darken(g, 0.45)} ${darken(b, 0.45)}`,
   }
 }
 
-// Surface shade helper — lightens a dark surface color slightly
 function surfaceShade(hex: string, amount: number): string {
   const h = hex.replace('#', '')
   const r = Math.min(255, parseInt(h.slice(0, 2), 16) + amount)
@@ -89,10 +90,13 @@ export function useTheme() {
     const shades = generateShades(theme.primary_color)
     root.style.setProperty('--color-primary-50', shades[50])
     root.style.setProperty('--color-primary-100', shades[100])
+    root.style.setProperty('--color-primary-200', shades[200])
+    root.style.setProperty('--color-primary-300', shades[300])
     root.style.setProperty('--color-primary-400', shades[400])
     root.style.setProperty('--color-primary-500', shades[500])
     root.style.setProperty('--color-primary-600', shades[600])
     root.style.setProperty('--color-primary-700', shades[700])
+    root.style.setProperty('--color-primary-800', shades[800])
     root.style.setProperty('--color-primary-900', shades[900])
 
     // Dark surfaces
@@ -100,9 +104,28 @@ export function useTheme() {
     root.style.setProperty('--color-dark-surface', hexToRgb(theme.surface_color))
     root.style.setProperty('--color-dark-surface2', surfaceShade(theme.surface_color, 8))
     root.style.setProperty('--color-dark-surface3', surfaceShade(theme.surface_color, 16))
+    root.style.setProperty('--color-dark-surface4', surfaceShade(theme.surface_color, 24))
     root.style.setProperty('--color-dark-border', hexToRgb(theme.border_color))
     root.style.setProperty('--color-dark-border2', surfaceShade(theme.border_color, 12))
-  }, [theme.primary_color, theme.background_color, theme.surface_color, theme.border_color])
+
+    // Text colors
+    root.style.setProperty('--color-text-primary', hexToRgb(theme.text_color))
+    root.style.setProperty('--color-text-secondary', hexToRgb(theme.text_secondary_color))
+
+    // Accent / status colors
+    root.style.setProperty('--color-accent', hexToRgb(theme.accent_color))
+    root.style.setProperty('--color-error', hexToRgb(theme.error_color))
+    root.style.setProperty('--color-warning', hexToRgb(theme.warning_color))
+    root.style.setProperty('--color-info', hexToRgb(theme.info_color))
+
+    // Apply to body directly for immediate visual effect
+    document.body.style.backgroundColor = theme.background_color
+    document.body.style.color = theme.text_color
+  }, [
+    theme.primary_color, theme.background_color, theme.surface_color,
+    theme.border_color, theme.text_color, theme.text_secondary_color,
+    theme.accent_color, theme.error_color, theme.warning_color, theme.info_color,
+  ])
 
   return theme
 }

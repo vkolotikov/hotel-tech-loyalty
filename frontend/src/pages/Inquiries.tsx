@@ -16,7 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
   Lost: 'bg-red-500/20 text-red-400',
 }
 const PRIORITY_COLORS: Record<string, string> = {
-  Low: 'text-[#8e8e93]', Medium: 'text-blue-400', High: 'text-red-400',
+  Low: 'text-t-secondary', Medium: 'text-blue-400', High: 'text-red-400',
 }
 
 const MICE_TYPES = ['Event/MICE', 'Conference', 'Wedding']
@@ -104,7 +104,7 @@ export function Inquiries() {
   }
 
   const SortHeader = ({ col, label }: { col: string; label: string }) => (
-    <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
+    <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
       {label} {sort === col ? (dir === 'asc' ? '↑' : '↓') : ''}
     </th>
   )
@@ -118,13 +118,13 @@ export function Inquiries() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Inquiries</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{meta.total ?? 0} total</p>
+          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-sm px-3 py-2 rounded-lg transition-colors">
             <Sparkles size={14} /> AI Capture
           </button>
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-[#8e8e93] hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
             <Download size={14} /> Export
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
@@ -144,7 +144,7 @@ export function Inquiries() {
             <option value="">All Statuses</option>
             {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
           </select>
-          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-[#8e8e93] hover:text-white'}`}>
+          <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> Filters {hasFilters ? '●' : ''}
           </button>
         </div>
@@ -177,7 +177,7 @@ export function Inquiries() {
               <option value="overdue">Overdue</option>
               <option value="soon">Due Soon (3d)</option>
             </select>
-            <label className="flex items-center gap-2 text-sm text-[#8e8e93] cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-t-secondary cursor-pointer">
               <input type="checkbox" checked={activeOnly} onChange={e => { setActiveOnly(e.target.checked); setPage(1) }} className="accent-primary-500" />
               Active only
             </label>
@@ -192,17 +192,17 @@ export function Inquiries() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border">
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Guest</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Property</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Property</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Type</th>
                 <SortHeader col="check_in" label="Check-in" />
                 <SortHeader col="check_out" label="Check-out" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Nights</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Rooms</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Nights</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Rooms</th>
                 <SortHeader col="total_value" label="Total Value" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Priority</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#8e8e93] whitespace-nowrap">Assigned</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Priority</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Assigned</th>
                 <SortHeader col="next_task_due" label="Next Task" />
                 <th className="px-4 py-3" />
               </tr>
@@ -229,11 +229,11 @@ export function Inquiries() {
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{inq.num_rooms ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0]">{inq.total_value ? `${settings.currency_symbol}${Number(inq.total_value).toLocaleString()}` : '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-[#8e8e93]'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
                         {inq.status}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 text-xs font-medium ${PRIORITY_COLORS[inq.priority] ?? 'text-[#8e8e93]'}`}>{inq.priority}</td>
+                    <td className={`px-4 py-3 text-xs font-medium ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>{inq.priority}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.assigned_to ?? '—'}</td>
                     <td className="px-4 py-3">
                       {inq.next_task_type && !inq.next_task_completed ? (
@@ -266,7 +266,7 @@ export function Inquiries() {
       {/* Pagination */}
       {meta.last_page > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-[#8e8e93]">Page {meta.current_page} of {meta.last_page}</span>
+          <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
           <div className="flex gap-2">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
             <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
@@ -437,7 +437,7 @@ export function Inquiries() {
 
             {!captureResult ? (
               <div className="space-y-3">
-                <p className="text-xs text-[#8e8e93]">Paste an email, booking request, or hotel inquiry. AI will extract guest and inquiry details automatically.</p>
+                <p className="text-xs text-t-secondary">Paste an email, booking request, or hotel inquiry. AI will extract guest and inquiry details automatically.</p>
                 <textarea
                   value={captureText}
                   onChange={e => setCaptureText(e.target.value)}

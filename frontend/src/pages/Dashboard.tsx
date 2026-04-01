@@ -137,7 +137,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-[#8e8e93] text-sm mt-1 flex items-center gap-1.5">
+          <p className="text-t-secondary text-sm mt-1 flex items-center gap-1.5">
             <Calendar size={13} />
             {format(new Date(), "EEEE, MMMM d, yyyy")}
           </p>
@@ -228,7 +228,7 @@ export function Dashboard() {
             const isUp = change >= 0
             return (
               <div key={item.label} className="bg-dark-surface rounded-xl border border-dark-border p-4">
-                <p className="text-xs text-[#8e8e93] mb-1">{item.label}</p>
+                <p className="text-xs text-t-secondary mb-1">{item.label}</p>
                 <p className="text-lg font-bold text-white">
                   {item.isCurrency ? `$${Number(item.curr).toLocaleString()}` : Number(item.curr).toLocaleString()}
                 </p>
@@ -320,7 +320,7 @@ export function Dashboard() {
                   className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                     pointsDays === r.days
                       ? 'bg-primary-600 text-white shadow-sm'
-                      : 'text-[#8e8e93] hover:text-white'
+                      : 'text-t-secondary hover:text-white'
                   }`}
                 >
                   {r.label}
@@ -461,7 +461,7 @@ export function Dashboard() {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   t.is_overdue ? 'bg-[#ff375f]/15 text-[#ff375f]' :
                   t.priority === 'High' ? 'bg-amber-500/15 text-amber-400' :
-                  'bg-dark-surface3 text-[#8e8e93]'
+                  'bg-dark-surface3 text-t-secondary'
                 }`}>
                   {t.is_overdue ? 'Overdue' : t.priority}
                 </span>
@@ -556,19 +556,19 @@ export function Dashboard() {
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-[#8e8e93] mb-1">Outstanding Points</p>
+              <p className="text-xs text-t-secondary mb-1">Outstanding Points</p>
               <p className="text-xl font-bold text-amber-400">{(kpis?.total_outstanding_points ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-[#8e8e93] mb-1">Estimated Liability</p>
+              <p className="text-xs text-t-secondary mb-1">Estimated Liability</p>
               <p className="text-xl font-bold text-purple-400">${(kpis?.point_liability_currency ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-[#8e8e93] mb-1">Conversion Rate</p>
+              <p className="text-xs text-t-secondary mb-1">Conversion Rate</p>
               <p className="text-xl font-bold text-blue-400">{kpis?.conversion_rate ?? 0}%</p>
             </div>
             <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-[#8e8e93] mb-1">Avg Daily Rate</p>
+              <p className="text-xs text-t-secondary mb-1">Avg Daily Rate</p>
               <p className="text-xl font-bold text-[#32d74b]">${Number(kpis?.avg_daily_rate ?? 0).toFixed(0)}</p>
             </div>
           </div>

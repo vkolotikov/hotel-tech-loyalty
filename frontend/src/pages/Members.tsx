@@ -65,7 +65,7 @@ export function Members() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Members</h1>
-          <p className="text-sm text-[#8e8e93] mt-0.5">{(data as any)?.total ?? 0} total members</p>
+          <p className="text-sm text-t-secondary mt-0.5">{(data as any)?.total ?? 0} total members</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -112,7 +112,7 @@ export function Members() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[#8e8e93] border-b border-dark-border">
+              <tr className="text-left text-t-secondary border-b border-dark-border">
                 <th className="pb-3 font-medium">Member</th>
                 <th className="pb-3 font-medium">Number</th>
                 <th className="pb-3 font-medium">Tier</th>
@@ -164,7 +164,7 @@ export function Members() {
                     <td className="py-3"><TierBadge tier={m.tier?.name} color={m.tier?.color_hex} /></td>
                     <td className="py-3 font-semibold text-white">{m.current_points?.toLocaleString()}</td>
                     <td className="py-3 text-[#a0a0a0]">{m.lifetime_points?.toLocaleString()}</td>
-                    <td className="py-3 text-[#8e8e93] text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
+                    <td className="py-3 text-t-secondary text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
                     <td className="py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
                         {m.is_active ? 'Active' : 'Inactive'}
@@ -181,7 +181,7 @@ export function Members() {
         {/* Pagination */}
         {(data as any)?.last_page > 1 && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-border">
-            <p className="text-sm text-[#8e8e93]">
+            <p className="text-sm text-t-secondary">
               Showing {(data as any).from ?? 0}–{(data as any).to ?? 0} of {(data as any).total} members
             </p>
             <div className="flex gap-2">
@@ -217,10 +217,10 @@ export function Members() {
 
             {/* Tabs */}
             <div className="flex border-b border-dark-border">
-              <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-[#8e8e93] hover:text-white'}`}>
+              <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-t-secondary hover:text-white'}`}>
                 <Plus size={14} className="inline mr-1.5 -mt-0.5" />Manual Entry
               </button>
-              <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-[#8e8e93] hover:text-white'}`}>
+              <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-t-secondary hover:text-white'}`}>
                 <Sparkles size={14} className="inline mr-1.5 -mt-0.5" />AI Capture
               </button>
             </div>
@@ -273,7 +273,7 @@ export function Members() {
               <div className="p-6">
                 {!captureResult ? (
                   <div className="space-y-3">
-                    <p className="text-xs text-[#8e8e93]">Paste an email, registration form, business card text, or any message. AI will extract member details automatically.</p>
+                    <p className="text-xs text-t-secondary">Paste an email, registration form, business card text, or any message. AI will extract member details automatically.</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder="e.g. Hi, I'd like to sign up for the loyalty program. My name is Sarah Johnson, email sarah.j@acme.com, phone +971 50 123 4567. I'm a British national and I travel frequently for business..."
                       className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
@@ -333,7 +333,7 @@ export function Members() {
                     {captureResult.notes && (
                       <div>
                         <label className="block text-xs text-[#a0a0a0] mb-1">AI Notes</label>
-                        <p className="text-xs text-[#8e8e93] bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2">{captureResult.notes}</p>
+                        <p className="text-xs text-t-secondary bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2">{captureResult.notes}</p>
                       </div>
                     )}
                     <div className="flex justify-between pt-1">
