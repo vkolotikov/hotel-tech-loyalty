@@ -36,6 +36,8 @@ use App\Http\Controllers\Api\V1\Admin\RealtimeController;
 use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\BookingPublicController;
+use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
+use App\Http\Controllers\Api\V1\Widget\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -64,6 +66,14 @@ Route::prefix('v1')->group(function () {
         Route::post('confirm',              [BookingPublicController::class, 'confirm']);
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
+    });
+
+    // ─── Public Chat Widget API ────────────────────────────────────────────────
+    Route::prefix('widget')->middleware('throttle:30,1')->group(function () {
+        Route::get('{widgetKey}/config',    [WidgetChatController::class, 'getConfig']);
+        Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
+        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage']);
+        Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead']);
     });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
@@ -218,6 +228,12 @@ Route::prefix('v1')->group(function () {
             Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);
             Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
             Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
+
+            // ─── Chat Widget Configuration ───────────────────────────────────
+            Route::get('widget-config',                       [ChatWidgetConfigController::class, 'show']);
+            Route::put('widget-config',                       [ChatWidgetConfigController::class, 'update']);
+            Route::post('widget-config/regenerate-key',       [ChatWidgetConfigController::class, 'regenerateKey']);
+            Route::get('widget-config/embed-code',            [ChatWidgetConfigController::class, 'embedCode']);
 
             // ─── Knowledge Base ──────────────────────────────────────────────
             Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);

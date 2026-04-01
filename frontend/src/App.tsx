@@ -23,6 +23,7 @@ const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offer
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
 const ChatbotConfig = lazy(() => import('./pages/ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
 const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
+const WidgetBuilder = lazy(() => import('./pages/WidgetBuilder').then(m => ({ default: m.WidgetBuilder })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
@@ -110,6 +111,7 @@ export default function App() {
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics"><AiInsights /></LazyRoute>} />
           <Route path="/chatbot-config" element={<LazyRoute gate="admin"><ChatbotConfig /></LazyRoute>} />
           <Route path="/knowledge-base" element={<LazyRoute gate="admin"><KnowledgeBase /></LazyRoute>} />
+          <Route path="/widget-builder" element={<LazyRoute gate="admin"><WidgetBuilder /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />

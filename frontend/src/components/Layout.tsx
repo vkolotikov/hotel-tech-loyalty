@@ -6,7 +6,7 @@ import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
-  Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen,
+  Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen, MessageSquare,
   Crown, Award, Building2, UserCheck, FileText,
   CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
@@ -39,7 +39,8 @@ const navGroups: NavGroup[] = [
       { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
       { path: '/ai',              label: 'AI Insights',      icon: Sparkles,  gate: 'can_view_analytics' },
       { path: '/chatbot-config',  label: 'Chatbot Config',   icon: Bot,       gate: 'admin' },
-      { path: '/knowledge-base',  label: 'Knowledge Base',   icon: BookOpen,  gate: 'admin' },
+      { path: '/knowledge-base',  label: 'Knowledge Base',   icon: BookOpen,       gate: 'admin' },
+      { path: '/widget-builder',  label: 'Chat Widget',      icon: MessageSquare,  gate: 'admin' },
     ],
   },
   {
