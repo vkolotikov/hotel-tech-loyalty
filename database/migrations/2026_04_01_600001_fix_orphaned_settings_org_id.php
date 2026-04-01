@@ -22,6 +22,22 @@ return new class extends Migration
             return;
         }
 
+        // Some settings already have org_id (from the original assignment migration)
+        // while duplicates were seeded later with NULL org_id.
+        // Delete orphaned duplicates where an org-scoped version already exists.
+        $existingKeys = DB::table('hotel_settings')
+            ->where('organization_id', $org->id)
+            ->pluck('key')
+            ->toArray();
+
+        if (!empty($existingKeys)) {
+            DB::table('hotel_settings')
+                ->whereNull('organization_id')
+                ->whereIn('key', $existingKeys)
+                ->delete();
+        }
+
+        // Assign remaining orphans (no duplicate conflict)
         DB::table('hotel_settings')
             ->whereNull('organization_id')
             ->update(['organization_id' => $org->id]);
