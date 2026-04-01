@@ -33,59 +33,49 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    label: 'Main',
+    label: 'Overview',
     items: [
-      { path: '/',     label: 'Dashboard', icon: LayoutDashboard, gate: 'all' },
-      { path: '/scan', label: 'Scan',      icon: Scan,            gate: 'all' },
+      { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
+      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
+      { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics' },
     ],
   },
   {
-    label: 'Loyalty',
+    label: 'Guests & Loyalty',
     items: [
-      { path: '/members',  label: 'Members',  icon: Users,  gate: 'all' },
-      { path: '/tiers',    label: 'Tiers',    icon: Crown,  gate: 'admin' },
-      { path: '/benefits', label: 'Benefits', icon: Award,  gate: 'admin' },
-      { path: '/offers',   label: 'Offers',   icon: Gift,   gate: 'can_manage_offers' },
-    ],
-  },
-  {
-    label: 'CRM',
-    items: [
-      { path: '/guests',       label: 'Guests',       icon: UserCheck,    gate: 'all' },
-      { path: '/inquiries',    label: 'Inquiries',    icon: FileText,     gate: 'all' },
-      { path: '/reservations', label: 'Reservations', icon: CalendarCheck, gate: 'all' },
-      { path: '/corporate',    label: 'Corporate',    icon: Briefcase,    gate: 'admin' },
+      { path: '/members',  label: 'Members',  icon: Users,     gate: 'all' },
+      { path: '/guests',   label: 'Guests',   icon: UserCheck, gate: 'all' },
+      { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin' },
+      { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin' },
+      { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers' },
     ],
   },
   {
     label: 'Bookings',
     items: [
-      { path: '/bookings',             label: 'Bookings',    icon: BedDouble,    gate: 'all' },
-      { path: '/bookings/calendar',    label: 'Calendar',    icon: CalendarDays, gate: 'all' },
-      { path: '/bookings/payments',     label: 'Payments',    icon: CreditCard,   gate: 'all' },
-      { path: '/bookings/submissions', label: 'Submissions', icon: ListChecks,   gate: 'admin' },
+      { path: '/bookings',             label: 'Bookings',     icon: BedDouble,     gate: 'all' },
+      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all' },
+      { path: '/reservations',         label: 'Reservations', icon: CalendarCheck, gate: 'all' },
+      { path: '/bookings/payments',    label: 'Payments',     icon: CreditCard,    gate: 'all' },
+      { path: '/bookings/submissions', label: 'Submissions',  icon: ListChecks,    gate: 'admin' },
+    ],
+  },
+  {
+    label: 'CRM & Marketing',
+    items: [
+      { path: '/inquiries',       label: 'Inquiries',       icon: FileText,  gate: 'all' },
+      { path: '/corporate',       label: 'Corporate',       icon: Briefcase, gate: 'admin' },
+      { path: '/notifications',   label: 'Campaigns',       icon: Bell,      gate: 'admin' },
+      { path: '/email-templates', label: 'Email Templates', icon: Mail,      gate: 'admin' },
     ],
   },
   {
     label: 'Operations',
     items: [
       { path: '/planner',    label: 'Planner',    icon: ClipboardList, gate: 'all' },
-      { path: '/venues',     label: 'Venues',     icon: MapPin,        gate: 'admin' },
       { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin' },
-    ],
-  },
-  {
-    label: 'Marketing',
-    items: [
-      { path: '/notifications',    label: 'Campaigns',       icon: Bell,  gate: 'admin' },
-      { path: '/email-templates',  label: 'Email Templates', icon: Mail,  gate: 'admin' },
-    ],
-  },
-  {
-    label: 'Insights',
-    items: [
-      { path: '/analytics', label: 'Analytics',   icon: BarChart2, gate: 'can_view_analytics' },
-      { path: '/ai',        label: 'AI Insights', icon: Sparkles,  gate: 'can_view_analytics' },
+      { path: '/venues',     label: 'Venues',     icon: MapPin,        gate: 'admin' },
+      { path: '/scan',       label: 'Scan',       icon: Scan,          gate: 'all' },
     ],
   },
   {
