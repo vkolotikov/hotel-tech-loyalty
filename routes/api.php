@@ -210,6 +210,7 @@ Route::prefix('v1')->group(function () {
             Route::get('settings',                        [SettingsController::class, 'index']);
             Route::put('settings',                        [SettingsController::class, 'update']);
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
+            Route::post('settings/test-integration',      [SettingsController::class, 'testIntegration']);
 
             // ─── Guest-Member Auto-Link ───────────────────────────────────────
             Route::post('guests/backfill-links',          [GuestController::class, 'backfillLinks']);
