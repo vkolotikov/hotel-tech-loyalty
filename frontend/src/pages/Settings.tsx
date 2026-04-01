@@ -6,7 +6,7 @@ import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
   Mail, Wifi, CheckCircle, XCircle, Eye, EyeOff,
-  ChevronRight, Zap, Globe, Users, Star, Layers
+  Zap, Globe, Users, Star, Layers
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -733,39 +733,32 @@ export function Settings() {
         )}
       </div>
 
-      {/* Tab Navigation + Content */}
-      <div className="flex gap-6">
-        {/* Sidebar Tabs */}
-        <div className="w-56 flex-shrink-0">
-          <nav className="space-y-1 sticky top-6">
-            {TABS.map(tab => {
-              const active = activeTab === tab.id
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                    active ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
-                  }`}
-                  style={active ? {
-                    background: 'linear-gradient(135deg, rgba(116,200,149,0.12), rgba(116,200,149,0.04))',
-                    border: '1px solid rgba(116,200,149,0.15)',
-                  } : { border: '1px solid transparent' }}>
-                  <tab.icon size={16} className={active ? 'text-emerald-400' : ''} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">{tab.label}</div>
-                    {active && <div className="text-[10px] text-gray-500 mt-0.5 truncate">{tab.desc}</div>}
-                  </div>
-                  {active && <ChevronRight size={12} className="text-emerald-400/50" />}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {renderTabContent()}
+      {/* Top Tab Navigation */}
+      <div className="rounded-2xl p-1.5 border border-white/[0.06]"
+        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+        <div className="flex gap-1 overflow-x-auto">
+          {TABS.map(tab => {
+            const active = activeTab === tab.id
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                  active ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                }`}
+                style={active ? {
+                  background: 'linear-gradient(135deg, rgba(116,200,149,0.15), rgba(116,200,149,0.05))',
+                  border: '1px solid rgba(116,200,149,0.2)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                } : { border: '1px solid transparent' }}>
+                <tab.icon size={15} className={active ? 'text-emerald-400' : ''} />
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
       </div>
+
+      {/* Content */}
+      {renderTabContent()}
     </div>
   )
 }
