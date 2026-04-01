@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class HotelSetting extends Model
 {
-    protected $fillable = ['key', 'value', 'type', 'group', 'label', 'description'];
+    protected $fillable = ['key', 'value', 'type', 'group', 'label', 'description', 'scope'];
 
     public function getTypedValueAttribute()
     {

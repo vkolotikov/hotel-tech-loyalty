@@ -21,6 +21,19 @@ class SettingsController extends Controller
         'whatsapp_access_token', 'whatsapp_verify_token',
         'google_maps_api_key',
         'custom_webhook_secret',
+        // PMS provider secrets
+        'cloudbeds_api_key', 'cloudbeds_client_secret',
+        'mews_access_token', 'mews_client_token',
+        'guesty_api_key', 'guesty_api_secret',
+        'hostaway_api_key',
+        'beds24_api_key',
+        'lodgify_api_key',
+        'little_hotelier_api_key',
+        'roomraccoon_api_key',
+        // Channel secrets
+        'booking_com_api_key',
+        'airbnb_api_key',
+        'expedia_api_key',
     ];
 
     /** Env fallback map: setting key → env variable name. */
@@ -55,9 +68,21 @@ class SettingsController extends Controller
         'google_tag_manager_id'        => 'GOOGLE_TAG_MANAGER_ID',
     ];
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $settings = HotelSetting::all()->groupBy('group')->map(function ($group) {
+        $user = $request->user();
+        $staff = $user?->staff;
+        $isSuperAdmin = $staff && $staff->role === 'super_admin';
+
+        $query = HotelSetting::query();
+        // Non-super-admins can only see company-scoped settings
+        if (!$isSuperAdmin) {
+            $query->where(function ($q) {
+                $q->where('scope', 'company')->orWhereNull('scope');
+            });
+        }
+
+        $settings = $query->get()->groupBy('group')->map(function ($group) {
             return $group->map(function ($setting) {
                 $value = $setting->typed_value;
 
@@ -83,6 +108,7 @@ class SettingsController extends Controller
                     'type'        => $setting->type,
                     'label'       => $setting->label,
                     'description' => $setting->description,
+                    'scope'       => $setting->scope ?? 'company',
                 ];
             });
         });

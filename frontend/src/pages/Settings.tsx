@@ -81,24 +81,26 @@ interface Tab {
   label: string
   icon: any
   desc: string
-  groups?: string[]       // which setting groups this tab shows
-  custom?: boolean        // has custom rendering
+  groups?: string[]
+  custom?: boolean
+  superAdminOnly?: boolean
 }
 
 const TABS: Tab[] = [
-  { id: 'general',       label: 'General',        icon: Settings2,  desc: 'Company info, account & system',       groups: ['general'],      custom: true },
-  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',          groups: ['appearance'],   custom: true },
-  { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',              groups: ['points'],       custom: true },
-  { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',     groups: ['notifications'] },
-  { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'API keys, AI models, PMS & SMTP',      groups: ['integrations'], custom: true },
-  { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',         groups: ['booking'],      custom: true },
-  { id: 'system',        label: 'System',          icon: Shield,     desc: 'System info & quick links',            custom: true },
+  { id: 'general',       label: 'General',        icon: Settings2,  desc: 'Company info & account',              groups: ['general'],      custom: true },
+  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true },
+  { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',             groups: ['points'],       custom: true },
+  { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'] },
+  { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
+  { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true },
+  { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
 export function Settings() {
-  const { user } = useAuthStore()
+  const { user, staff } = useAuthStore()
+  const isSuperAdmin = staff?.role === 'super_admin'
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState('general')
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({})
@@ -544,86 +546,109 @@ export function Settings() {
   const renderIntegrations = () => {
     const intSettings = groupSettings('integrations')
 
-    // Group integration settings into categorized sections
-    const sections: { id: string; title: string; subtitle: string; icon: any; keys: string[]; testType?: string }[] = [
-      { id: 'openai',    title: 'OpenAI',              subtitle: 'GPT models for chatbot, insights & offers',            icon: Brain,          keys: ['ai_openai_api_key', 'ai_openai_model'],                                                                              testType: 'openai' },
-      { id: 'anthropic', title: 'Anthropic',           subtitle: 'Claude models for CRM AI assistant',                   icon: Brain,          keys: ['ai_anthropic_api_key', 'ai_anthropic_model'],                                                                        testType: 'anthropic' },
-      { id: 'stripe',    title: 'Stripe',              subtitle: 'Payment processing for bookings & invoices',           icon: CreditCard,     keys: ['stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret', 'stripe_currency'],                            testType: 'stripe' },
-      { id: 'smoobu',    title: 'Smoobu PMS',          subtitle: 'Property management & channel sync',                   icon: Calendar,       keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'],     testType: 'smoobu' },
-      { id: 'mail',      title: 'Email / SMTP',        subtitle: 'Transactional emails & notifications',                 icon: Mail,           keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'],                    testType: 'mail' },
-      { id: 'twilio',    title: 'Twilio',              subtitle: 'SMS notifications & booking confirmations',            icon: Phone,          keys: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number'],                                                    testType: 'twilio' },
-      { id: 'whatsapp',  title: 'WhatsApp Business',   subtitle: 'Guest messaging via Meta Cloud API',                   icon: MessageSquare,  keys: ['whatsapp_phone_id', 'whatsapp_access_token', 'whatsapp_verify_token'],                                               testType: 'whatsapp' },
-      { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',                     icon: Smartphone,     keys: ['expo_access_token'] },
-      { id: 'google',    title: 'Google Services',     subtitle: 'Maps, Analytics & Tag Manager',                        icon: Map,            keys: ['google_maps_api_key', 'google_analytics_id', 'google_tag_manager_id'],                                               testType: 'google_maps' },
-      { id: 'webhooks',  title: 'Webhooks & Zapier',   subtitle: 'Outbound event notifications & automation',            icon: Link2,          keys: ['zapier_webhook_url', 'custom_webhook_url', 'custom_webhook_secret'] },
+    type Section = { id: string; title: string; subtitle: string; icon: any; keys: string[]; testType?: string }
+
+    // ── PMS / Booking Engines ──
+    const pmsSections: Section[] = [
+      { id: 'smoobu',           title: 'Smoobu',            subtitle: 'All-in-one vacation rental PMS & channel manager',    icon: Calendar,  keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'], testType: 'smoobu' },
+      { id: 'cloudbeds',        title: 'Cloudbeds',         subtitle: 'Hotel & hostel PMS with built-in booking engine',     icon: Calendar,  keys: ['cloudbeds_api_key', 'cloudbeds_property_id', 'cloudbeds_client_id', 'cloudbeds_client_secret'] },
+      { id: 'mews',             title: 'Mews',              subtitle: 'Modern cloud-native PMS for hotels & hostels',        icon: Calendar,  keys: ['mews_access_token', 'mews_client_token', 'mews_platform_url'] },
+      { id: 'guesty',           title: 'Guesty',            subtitle: 'Vacation rental & short-term property management',    icon: Calendar,  keys: ['guesty_api_key', 'guesty_api_secret', 'guesty_account_id'] },
+      { id: 'hostaway',         title: 'Hostaway',          subtitle: 'Vacation rental management & channel distribution',   icon: Calendar,  keys: ['hostaway_api_key', 'hostaway_account_id'] },
+      { id: 'beds24',           title: 'Beds24',            subtitle: 'Channel manager & PMS for all property types',        icon: Calendar,  keys: ['beds24_api_key', 'beds24_property_id'] },
+      { id: 'lodgify',          title: 'Lodgify',           subtitle: 'Vacation rental software with booking website',       icon: Calendar,  keys: ['lodgify_api_key', 'lodgify_property_id'] },
+      { id: 'little_hotelier',  title: 'Little Hotelier',   subtitle: 'Small hotel & B&B management system',                icon: Calendar,  keys: ['little_hotelier_api_key', 'little_hotelier_property_id'] },
+      { id: 'roomraccoon',      title: 'RoomRaccoon',       subtitle: 'Hotel management with revenue optimization',          icon: Calendar,  keys: ['roomraccoon_api_key', 'roomraccoon_property_id'] },
     ]
 
-    return (
-      <div className="space-y-3">
-        {sections.map(section => {
-          const items = section.keys.map(k => intSettings.find((s: any) => s.key === k)).filter(Boolean)
-          if (items.length === 0) return null
-          const isOpen = expandedSections.has(section.id)
-          const result = section.testType ? testResults[section.testType] : null
-          // Check if any key in this section has a value
-          const hasAnyValue = items.some((s: any) => s.has_value)
+    // ── OTA / Channels ──
+    const channelSections: Section[] = [
+      { id: 'booking_com', title: 'Booking.com',  subtitle: 'Connectivity partner API for availability & rates', icon: Globe,    keys: ['booking_com_hotel_id', 'booking_com_api_key'] },
+      { id: 'airbnb',      title: 'Airbnb',       subtitle: 'Host API for listing & reservation sync',          icon: Globe,    keys: ['airbnb_api_key', 'airbnb_listing_ids'] },
+      { id: 'expedia',     title: 'Expedia',      subtitle: 'EPS API for rates, availability & bookings',       icon: Globe,    keys: ['expedia_api_key', 'expedia_property_id'] },
+    ]
 
-          return (
-            <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
-              style={{
-                background: result
-                  ? result.success
-                    ? 'linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%)'
-                    : 'linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%)'
-                  : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
-                boxShadow: '0 16px 30px rgba(0,0,0,0.18)',
-              }}>
-              {/* Collapsible header */}
-              <button onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
-                  <section.icon size={16} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-white">{section.title}</h3>
-                    {hasAnyValue && (
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>
-                    )}
-                    {result && (
-                      <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
-                        result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'
-                      }`}>
-                        {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />}
-                        {result.message}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
-                </div>
-                <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-              </button>
+    // ── Payments & Communication ──
+    const serviceSections: Section[] = [
+      { id: 'stripe',    title: 'Stripe',              subtitle: 'Payment processing for bookings & invoices',  icon: CreditCard,    keys: ['stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret', 'stripe_currency'], testType: 'stripe' },
+      { id: 'mail',      title: 'Email / SMTP',        subtitle: 'Transactional emails & notifications',        icon: Mail,          keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'], testType: 'mail' },
+      { id: 'twilio',    title: 'Twilio',              subtitle: 'SMS notifications & booking confirmations',   icon: Phone,         keys: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number'], testType: 'twilio' },
+      { id: 'whatsapp',  title: 'WhatsApp Business',   subtitle: 'Guest messaging via Meta Cloud API',          icon: MessageSquare, keys: ['whatsapp_phone_id', 'whatsapp_access_token', 'whatsapp_verify_token'], testType: 'whatsapp' },
+      { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',            icon: Smartphone,    keys: ['expo_access_token'] },
+      { id: 'google',    title: 'Google Services',     subtitle: 'Maps, Analytics & Tag Manager',               icon: Map,           keys: ['google_maps_api_key', 'google_analytics_id', 'google_tag_manager_id'], testType: 'google_maps' },
+      { id: 'webhooks',  title: 'Webhooks & Zapier',   subtitle: 'Outbound event notifications & automation',   icon: Link2,         keys: ['zapier_webhook_url', 'custom_webhook_url', 'custom_webhook_secret'] },
+    ]
 
-              {/* Collapsible content */}
-              {isOpen && (
-                <div className="px-6 pb-5 border-t border-white/[0.04]">
-                  {/* Test button */}
-                  {section.testType && (
-                    <div className="flex justify-end pt-4 pb-2">
-                      <button onClick={() => testConnection(section.testType!)}
-                        disabled={testingIntegration === section.testType}
-                        className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
-                        {testingIntegration === section.testType
-                          ? <><RefreshCw size={13} className="animate-spin" /> Testing...</>
-                          : <><Wifi size={13} /> Test Connection</>
-                        }
-                      </button>
-                    </div>
-                  )}
-                  {items.map((s: any) => renderSettingRow(s))}
+    const allSections = [
+      { label: 'Property Management Systems', sections: pmsSections },
+      { label: 'OTA & Channels', sections: channelSections },
+      { label: 'Payments & Communication', sections: serviceSections },
+    ]
+
+    const renderSection = (section: Section) => {
+      const items = section.keys.map(k => intSettings.find((s: any) => s.key === k)).filter(Boolean)
+      if (items.length === 0) return null
+      const isOpen = expandedSections.has(section.id)
+      const result = section.testType ? testResults[section.testType] : null
+      const hasAnyValue = items.some((s: any) => s.has_value)
+
+      return (
+        <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
+          style={{
+            background: result
+              ? result.success
+                ? 'linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%)'
+                : 'linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%)'
+              : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+          }}>
+          <button onClick={() => toggleSection(section.id)}
+            className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.02] transition-colors">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+              <section.icon size={15} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">{section.title}</span>
+                {hasAnyValue && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
+                {result && (
+                  <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
+                    {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />} {result.message}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
+            </div>
+            <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isOpen && (
+            <div className="px-5 pb-4 border-t border-white/[0.04]">
+              {section.testType && (
+                <div className="flex justify-end pt-3 pb-1">
+                  <button onClick={() => testConnection(section.testType!)}
+                    disabled={testingIntegration === section.testType}
+                    className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40 text-xs'}>
+                    {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test</>}
+                  </button>
                 </div>
               )}
+              {items.map((s: any) => renderSettingRow(s))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-8">
+        {allSections.map(group => {
+          const rendered = group.sections.map(s => renderSection(s)).filter(Boolean)
+          if (rendered.length === 0) return null
+          return (
+            <div key={group.label}>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1 mb-3">{group.label}</h3>
+              <div className="space-y-2">{rendered}</div>
             </div>
           )
         })}
@@ -647,61 +672,116 @@ export function Settings() {
     </div>
   )
 
-  /* ─── Tab: System ────────────────────────────────────────────────────── */
+  /* ─── Tab: AI & System (super admin only) ─────────────────────────────── */
 
-  const renderSystem = () => (
-    <div className="space-y-6">
-      {/* System Info */}
-      <div className={cardClass} style={cardStyle}>
-        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Shield size={15} className="text-emerald-400" /> System Information
-        </h3>
-        <dl className="space-y-0">
-          {[
-            { label: 'API URL', value: import.meta.env.VITE_API_URL ?? 'localhost' },
-            { label: 'App Version', value: 'v1.0.0' },
-            { label: 'Stack', value: 'Laravel + React + Expo' },
-            { label: 'AI Provider', value: getVal('ai_openai_model') || getVal('ai_anthropic_model') || 'Not configured' },
-            { label: 'PMS', value: getVal('booking_smoobu_api_key') ? 'Smoobu (Connected)' : 'Smoobu (Not configured)' },
-          ].map((item, i) => (
-            <div key={i} className="flex justify-between py-3 border-b border-white/[0.04] last:border-0">
-              <dt className="text-sm text-gray-500">{item.label}</dt>
-              <dd className="text-sm font-medium text-white">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+  const renderAiSystem = () => {
+    const intSettings = groupSettings('integrations')
+    const aiSections = [
+      { id: 'openai',    title: 'OpenAI',    subtitle: 'GPT models for chatbot, insights & offers', icon: Brain, keys: ['ai_openai_api_key', 'ai_openai_model'], testType: 'openai' },
+      { id: 'anthropic', title: 'Anthropic',  subtitle: 'Claude models for CRM AI assistant',        icon: Brain, keys: ['ai_anthropic_api_key', 'ai_anthropic_model'], testType: 'anthropic' },
+    ]
 
-      {/* Quick Links */}
-      <div className={cardClass} style={cardStyle}>
-        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <ExternalLink size={15} className="text-emerald-400" /> Quick Links
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {[
-            { label: 'OpenAI Platform', icon: <Brain size={16} />, desc: 'API usage & billing', url: 'https://platform.openai.com/' },
-            { label: 'Anthropic Console', icon: <Brain size={16} />, desc: 'Claude API dashboard', url: 'https://console.anthropic.com/' },
-            { label: 'Smoobu', icon: <Calendar size={16} />, desc: 'PMS backoffice', url: 'https://login.smoobu.com/' },
-            { label: 'Expo Dashboard', icon: <Smartphone size={16} />, desc: 'Mobile builds', url: 'https://expo.dev/' },
-            { label: 'Laravel Cloud', icon: <Cloud size={16} />, desc: 'Deployment & logs', url: 'https://cloud.laravel.com/' },
-            { label: 'DigitalOcean', icon: <Database size={16} />, desc: 'Server management', url: 'https://cloud.digitalocean.com/' },
-          ].map(link => (
-            <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
-              style={{ background: 'rgba(15,28,24,0.5)' }}>
-              <div className="text-emerald-400 mt-0.5">{link.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
-                  {link.label} <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                </p>
-                <p className="text-[11px] text-gray-600">{link.desc}</p>
+    return (
+      <div className="space-y-6">
+        {/* AI Providers */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">AI Providers</h3>
+          {aiSections.map(section => {
+            const items = section.keys.map(k => intSettings.find((s: any) => s.key === k)).filter(Boolean)
+            if (items.length === 0) return null
+            const isOpen = expandedSections.has(section.id)
+            const result = section.testType ? testResults[section.testType] : null
+            const hasAnyValue = items.some((s: any) => s.has_value)
+
+            return (
+              <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden" style={cardStyle}>
+                <button onClick={() => toggleSection(section.id)}
+                  className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+                    <section.icon size={16} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">{section.title}</span>
+                      {hasAnyValue && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
+                      {result && (
+                        <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
+                          {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />} {result.message}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
+                  </div>
+                  <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-5 border-t border-white/[0.04]">
+                    <div className="flex justify-end pt-4 pb-2">
+                      <button onClick={() => testConnection(section.testType)}
+                        disabled={testingIntegration === section.testType}
+                        className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+                        {testingIntegration === section.testType ? <><RefreshCw size={13} className="animate-spin" /> Testing...</> : <><Wifi size={13} /> Test Connection</>}
+                      </button>
+                    </div>
+                    {items.map((s: any) => renderSettingRow(s))}
+                  </div>
+                )}
               </div>
-            </a>
-          ))}
+            )
+          })}
+        </div>
+
+        {/* System Info */}
+        <div className={cardClass} style={cardStyle}>
+          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <Shield size={15} className="text-emerald-400" /> System Information
+          </h3>
+          <dl className="space-y-0">
+            {[
+              { label: 'API URL', value: import.meta.env.VITE_API_URL ?? 'localhost' },
+              { label: 'App Version', value: 'v1.0.0' },
+              { label: 'Stack', value: 'Laravel + React + Expo' },
+              { label: 'AI Provider', value: getVal('ai_openai_model') || getVal('ai_anthropic_model') || 'Not configured' },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between py-3 border-b border-white/[0.04] last:border-0">
+                <dt className="text-sm text-gray-500">{item.label}</dt>
+                <dd className="text-sm font-medium text-white">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* Quick Links */}
+        <div className={cardClass} style={cardStyle}>
+          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <ExternalLink size={15} className="text-emerald-400" /> Quick Links
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { label: 'OpenAI Platform', icon: <Brain size={16} />, desc: 'API usage & billing', url: 'https://platform.openai.com/' },
+              { label: 'Anthropic Console', icon: <Brain size={16} />, desc: 'Claude API dashboard', url: 'https://console.anthropic.com/' },
+              { label: 'Expo Dashboard', icon: <Smartphone size={16} />, desc: 'Mobile builds', url: 'https://expo.dev/' },
+              { label: 'Laravel Cloud', icon: <Cloud size={16} />, desc: 'Deployment & logs', url: 'https://cloud.laravel.com/' },
+              { label: 'DigitalOcean', icon: <Database size={16} />, desc: 'Server management', url: 'https://cloud.digitalocean.com/' },
+            ].map(link => (
+              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
+                style={{ background: 'rgba(15,28,24,0.5)' }}>
+                <div className="text-emerald-400 mt-0.5">{link.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                    {link.label} <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </p>
+                  <p className="text-[11px] text-gray-600">{link.desc}</p>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   /* ─── Render Active Tab ──────────────────────────────────────────────── */
 
@@ -728,7 +808,7 @@ export function Settings() {
       case 'loyalty': return renderLoyalty()
       case 'integrations': return renderIntegrations()
       case 'booking': return renderBooking()
-      case 'system': return renderSystem()
+      case 'ai_system': return renderAiSystem()
       default: {
         // Generic tab — just render its settings
         return (
@@ -780,7 +860,7 @@ export function Settings() {
       <div className="rounded-2xl p-1.5 border border-white/[0.06]"
         style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
         <div className="flex gap-1 overflow-x-auto">
-          {TABS.map(tab => {
+          {TABS.filter(tab => !tab.superAdminOnly || isSuperAdmin).map(tab => {
             const active = activeTab === tab.id
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
