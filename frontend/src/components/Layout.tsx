@@ -10,6 +10,7 @@ import {
   Crown, Award, Building2, UserCheck, FileText,
   CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
+  BedDouble, CalendarDays, ListChecks,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -54,6 +55,14 @@ const navGroups: NavGroup[] = [
       { path: '/inquiries',    label: 'Inquiries',    icon: FileText,     gate: 'all' },
       { path: '/reservations', label: 'Reservations', icon: CalendarCheck, gate: 'all' },
       { path: '/corporate',    label: 'Corporate',    icon: Briefcase,    gate: 'admin' },
+    ],
+  },
+  {
+    label: 'Bookings',
+    items: [
+      { path: '/bookings',             label: 'Bookings',    icon: BedDouble,    gate: 'all' },
+      { path: '/bookings/calendar',    label: 'Calendar',    icon: CalendarDays, gate: 'all' },
+      { path: '/bookings/submissions', label: 'Submissions', icon: ListChecks,   gate: 'admin' },
     ],
   },
   {

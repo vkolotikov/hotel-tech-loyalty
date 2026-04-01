@@ -35,6 +35,10 @@ const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
 const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.AuditLog })))
+const Bookings = lazy(() => import('./pages/Bookings').then(m => ({ default: m.Bookings })))
+const BookingDetail = lazy(() => import('./pages/BookingDetail').then(m => ({ default: m.BookingDetail })))
+const BookingCalendar = lazy(() => import('./pages/BookingCalendar').then(m => ({ default: m.BookingCalendar })))
+const BookingSubmissions = lazy(() => import('./pages/BookingSubmissions').then(m => ({ default: m.BookingSubmissions })))
 const AiChat = lazy(() => import('./components/AiChat'))
 
 function PageLoader() {
@@ -113,6 +117,10 @@ export default function App() {
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
+          <Route path="/bookings" element={<LazyRoute><Bookings /></LazyRoute>} />
+          <Route path="/bookings/calendar" element={<LazyRoute><BookingCalendar /></LazyRoute>} />
+          <Route path="/bookings/submissions" element={<LazyRoute gate="admin"><BookingSubmissions /></LazyRoute>} />
+          <Route path="/bookings/:id" element={<LazyRoute><BookingDetail /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

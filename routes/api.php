@@ -32,6 +32,8 @@ use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
 use App\Http\Controllers\Api\V1\Admin\CrmAiController;
 use App\Http\Controllers\Api\V1\Admin\RealtimeController;
 use App\Http\Controllers\Api\V1\Admin\SetupController;
+use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
+use App\Http\Controllers\Api\V1\BookingPublicController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -52,6 +54,16 @@ Route::prefix('v1')->group(function () {
 
     // Public: fetch available plans from SaaS
     Route::get('plans', [AuthController::class, 'plans']);
+
+    // ─── Public Booking Widget API ──────────────────────────────────────────
+    Route::prefix('booking')->group(function () {
+        Route::get('config',                [BookingPublicController::class, 'config']);
+        Route::get('availability',          [BookingPublicController::class, 'availability']);
+        Route::get('unit/{unitId}/rates',   [BookingPublicController::class, 'unitRates']);
+        Route::post('quote',                [BookingPublicController::class, 'quote']);
+        Route::post('confirm',              [BookingPublicController::class, 'confirm']);
+        Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
+    });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
@@ -269,6 +281,18 @@ Route::prefix('v1')->group(function () {
             Route::post('venues/bookings',                [VenueController::class, 'storeBooking']);
             Route::put('venues/bookings/{venueBooking}',  [VenueController::class, 'updateBooking']);
             Route::delete('venues/bookings/{venueBooking}', [VenueController::class, 'destroyBooking']);
+
+            // ─── Booking Engine (Admin) ──────────────────────────────────────
+            Route::get('bookings/dashboard',              [BookingAdminController::class, 'dashboard']);
+            Route::get('bookings/calendar',               [BookingAdminController::class, 'calendar']);
+            Route::get('bookings/submissions',            [BookingAdminController::class, 'submissions']);
+            Route::get('bookings/payments',               [BookingAdminController::class, 'payments']);
+            Route::post('bookings/sync',                  [BookingAdminController::class, 'syncAll']);
+            Route::get('bookings',                        [BookingAdminController::class, 'index']);
+            Route::get('bookings/{id}',                   [BookingAdminController::class, 'show']);
+            Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);
+            Route::patch('bookings/{id}/status',          [BookingAdminController::class, 'updateStatus']);
+            Route::post('bookings/{id}/sync',             [BookingAdminController::class, 'syncOne']);
 
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);

@@ -47,4 +47,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'smoobu' => [
+        'provider'       => env('SMOOBU_PROVIDER', 'mock'),
+        'base_url'       => env('SMOOBU_BASE_URL', 'https://login.smoobu.com/api/'),
+        'api_key'        => env('SMOOBU_API_KEY', ''),
+        'channel_id'     => env('SMOOBU_CHANNEL_ID', ''),
+        'webhook_secret' => env('SMOOBU_WEBHOOK_SECRET', ''),
+        'timeout'        => env('SMOOBU_TIMEOUT_SECONDS', 8),
+    ],
+
 ];
