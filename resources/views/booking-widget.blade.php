@@ -168,6 +168,60 @@ input,select,textarea{font-family:inherit}
 .powered{text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text-secondary);opacity:.5}
 .powered a{color:var(--text-secondary);text-decoration:none}
 .powered a:hover{text-decoration:underline}
+
+/* Calendar date picker */
+.date-trigger{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text);width:100%;text-align:left}
+.date-trigger:hover{border-color:var(--primary)}
+.date-trigger.active{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.date-trigger svg{flex-shrink:0;color:var(--text-secondary)}
+.date-trigger .date-text{flex:1}
+.date-trigger .date-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);display:block;margin-bottom:2px}
+.date-trigger .date-value{font-weight:600}
+.date-trigger .date-placeholder{color:var(--text-secondary);font-weight:400}
+
+.cal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding-top:10vh;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.cal-popup{background:var(--surface);border-radius:16px;box-shadow:var(--shadow-lg);border:1px solid var(--border);padding:24px;max-width:640px;width:95%;max-height:80vh;overflow-y:auto;animation:slideUp .2s ease-out}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.cal-header h3{font-size:16px;font-weight:700}
+.cal-close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-secondary);border-radius:8px;font-size:18px;cursor:pointer}
+.cal-close:hover{background:var(--primary-light);color:var(--text)}
+
+.cal-months{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:520px){.cal-months{grid-template-columns:1fr}}
+.cal-month-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-month-title{font-size:14px;font-weight:600}
+.cal-nav{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface);border-radius:6px;cursor:pointer;color:var(--text-secondary);font-size:12px}
+.cal-nav:hover{border-color:var(--primary);color:var(--primary)}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.cal-dow{font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);text-align:center;padding:4px 0 8px;letter-spacing:.5px}
+.cal-day{text-align:center;padding:2px;position:relative;cursor:pointer}
+.cal-day.empty{cursor:default}
+.cal-day.disabled{cursor:not-allowed;opacity:.35}
+.cal-day .day-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:42px;border-radius:8px;transition:all .15s;padding:3px 0}
+.cal-day:not(.empty):not(.disabled):hover .day-inner{background:var(--primary-light)}
+.cal-day .day-num{font-size:13px;font-weight:500;line-height:1.2}
+.cal-day .day-price{font-size:9px;color:var(--text-secondary);font-weight:500;line-height:1.2;margin-top:1px}
+.cal-day .day-price.cheap{color:var(--success)}
+
+/* Range selection states */
+.cal-day.range-start .day-inner{background:var(--primary);color:#fff;border-radius:8px 0 0 8px}
+.cal-day.range-start .day-price{color:rgba(255,255,255,.7)}
+.cal-day.range-end .day-inner{background:var(--primary);color:#fff;border-radius:0 8px 8px 0}
+.cal-day.range-end .day-price{color:rgba(255,255,255,.7)}
+.cal-day.range-start.range-end .day-inner{border-radius:8px}
+.cal-day.in-range .day-inner{background:var(--primary-light);border-radius:0}
+.cal-day.in-range .day-num{color:var(--primary)}
+
+.cal-footer{display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.cal-footer .cal-summary{font-size:13px;color:var(--text-secondary)}
+.cal-footer .cal-summary strong{color:var(--text);font-weight:600}
+.cal-footer .cal-apply{padding:10px 24px;border:none;border-radius:8px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;cursor:pointer;transition:all .2s}
+.cal-footer .cal-apply:hover{opacity:.9}
+.cal-footer .cal-apply:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -213,7 +267,13 @@ var state = {
   phone: '',
   requests: '',
   confirming: false,
-  confirmation: null
+  confirmation: null,
+  calendarOpen: false,
+  calendarPrices: {},
+  calendarPricesLoading: false,
+  calendarMonth: new Date().getMonth(),
+  calendarYear: new Date().getFullYear(),
+  pickingCheckout: false
 };
 
 var $app = document.getElementById('app');
@@ -310,10 +370,23 @@ function renderSearch() {
   h += '<div class="card-title">Find Your Perfect Stay</div>';
   h += '<div class="card-sub">Select your dates and guests to see available rooms</div>';
   if (state.error) h += errorHtml(state.error);
+
+  // Date picker triggers
   h += '<div class="row">';
-  h += field('Check-in', '<input type="date" id="w-ci" min="' + today + '" value="' + esc(state.checkIn) + '">');
-  h += field('Check-out', '<input type="date" id="w-co" min="' + today + '" value="' + esc(state.checkOut) + '">');
-  h += '</div>';
+  h += '<div class="field"><label>Check-in</label>';
+  h += '<button class="date-trigger' + (state.calendarOpen && !state.pickingCheckout ? ' active' : '') + '" id="w-ci-trigger">';
+  h += svgCalendar();
+  h += '<div class="date-text"><span class="date-label">Check-in</span>';
+  h += state.checkIn ? '<span class="date-value">' + formatDate(state.checkIn) + '</span>' : '<span class="date-placeholder">Select date</span>';
+  h += '</div></button></div>';
+
+  h += '<div class="field"><label>Check-out</label>';
+  h += '<button class="date-trigger' + (state.calendarOpen && state.pickingCheckout ? ' active' : '') + '" id="w-co-trigger">';
+  h += svgCalendar();
+  h += '<div class="date-text"><span class="date-label">Check-out</span>';
+  h += state.checkOut ? '<span class="date-value">' + formatDate(state.checkOut) + '</span>' : '<span class="date-placeholder">Select date</span>';
+  h += '</div></button></div></div>';
+
   h += '<div class="row">';
   h += field('Adults', selectHtml('w-adults', range(1, 10), state.adults));
   h += field('Children', selectHtml('w-children', range(0, 6), state.children));
@@ -323,6 +396,120 @@ function renderSearch() {
   h += state.searching ? spinner() + ' Searching...' : svgSearch() + ' Search Rooms';
   h += '</button>';
   h += '</div>';
+
+  // Calendar popup
+  if (state.calendarOpen) {
+    h += renderCalendar();
+  }
+
+  return h;
+}
+
+/* --- Calendar popup --- */
+function renderCalendar() {
+  var h = '<div class="cal-overlay" id="cal-overlay">';
+  h += '<div class="cal-popup">';
+
+  // Header
+  h += '<div class="cal-header">';
+  h += '<h3>' + (state.pickingCheckout ? 'Select check-out date' : 'Select check-in date') + '</h3>';
+  h += '<button class="cal-close" id="cal-close">&times;</button>';
+  h += '</div>';
+
+  // Two months
+  h += '<div class="cal-months">';
+  h += renderMonth(state.calendarYear, state.calendarMonth);
+  var nextMonth = state.calendarMonth + 1;
+  var nextYear = state.calendarYear;
+  if (nextMonth > 11) { nextMonth = 0; nextYear++; }
+  h += renderMonth(nextYear, nextMonth);
+  h += '</div>';
+
+  // Footer with summary
+  h += '<div class="cal-footer">';
+  var summaryText = '';
+  if (state.checkIn && state.checkOut) {
+    var n = nights();
+    summaryText = '<strong>' + formatDate(state.checkIn) + '</strong> &mdash; <strong>' + formatDate(state.checkOut) + '</strong> &middot; ' + n + ' night' + (n > 1 ? 's' : '');
+  } else if (state.checkIn) {
+    summaryText = '<strong>' + formatDate(state.checkIn) + '</strong> &mdash; select check-out';
+  } else {
+    summaryText = 'Select your dates';
+  }
+  h += '<div class="cal-summary">' + summaryText + '</div>';
+  h += '<button class="cal-apply" id="cal-apply"' + (state.checkIn && state.checkOut ? '' : ' disabled') + '>Apply</button>';
+  h += '</div>';
+
+  h += '</div></div>';
+  return h;
+}
+
+function renderMonth(year, month) {
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dows = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  var today = new Date().toISOString().slice(0,10);
+
+  var h = '<div class="cal-month">';
+
+  // Month header with nav
+  h += '<div class="cal-month-header">';
+  if (month === state.calendarMonth && year === state.calendarYear) {
+    h += '<button class="cal-nav" id="cal-prev">&lsaquo;</button>';
+  } else {
+    h += '<div></div>';
+  }
+  h += '<div class="cal-month-title">' + months[month] + ' ' + year + '</div>';
+  if (month !== state.calendarMonth || year !== state.calendarYear) {
+    h += '<button class="cal-nav" id="cal-next">&rsaquo;</button>';
+  } else {
+    h += '<div></div>';
+  }
+  h += '</div>';
+
+  // DOW headers
+  h += '<div class="cal-grid">';
+  dows.forEach(function(d) { h += '<div class="cal-dow">' + d + '</div>'; });
+
+  // First day of month (Monday = 0)
+  var firstDate = new Date(year, month, 1);
+  var startDow = (firstDate.getDay() + 6) % 7; // 0=Mon
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Empty cells before first day
+  for (var e = 0; e < startDow; e++) {
+    h += '<div class="cal-day empty"><div class="day-inner"></div></div>';
+  }
+
+  // Day cells
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    var isPast = dateStr < today;
+    var isStart = state.checkIn === dateStr;
+    var isEnd = state.checkOut === dateStr;
+    var inRange = state.checkIn && state.checkOut && dateStr > state.checkIn && dateStr < state.checkOut;
+
+    var cls = 'cal-day';
+    if (isPast) cls += ' disabled';
+    if (isStart) cls += ' range-start';
+    if (isEnd) cls += ' range-end';
+    if (inRange) cls += ' in-range';
+
+    h += '<div class="' + cls + '" data-date="' + dateStr + '">';
+    h += '<div class="day-inner">';
+    h += '<span class="day-num">' + d + '</span>';
+
+    // Price under date
+    var price = state.calendarPrices[dateStr];
+    if (price && !isPast) {
+      var cheapest = getCheapestPrice();
+      var isCheap = cheapest > 0 && price <= cheapest * 1.1;
+      h += '<span class="day-price' + (isCheap ? ' cheap' : '') + '">' + formatCompactPrice(price) + '</span>';
+    }
+
+    h += '</div></div>';
+  }
+
+  h += '</div></div>';
   return h;
 }
 
@@ -522,9 +709,72 @@ function bindEvents() {
     })(exCards[j]);
   }
 
+  // Calendar triggers
+  on('w-ci-trigger', 'click', function() {
+    state.calendarOpen = true;
+    state.pickingCheckout = false;
+    loadCalendarPrices();
+    render();
+  });
+  on('w-co-trigger', 'click', function() {
+    state.calendarOpen = true;
+    state.pickingCheckout = true;
+    loadCalendarPrices();
+    render();
+  });
+
+  // Calendar popup events
+  on('cal-close', 'click', function() { state.calendarOpen = false; render(); });
+  on('cal-overlay', 'click', function(e) {
+    if (e.target.id === 'cal-overlay') { state.calendarOpen = false; render(); }
+  });
+  on('cal-prev', 'click', function() {
+    var now = new Date();
+    var minMonth = now.getMonth();
+    var minYear = now.getFullYear();
+    if (state.calendarYear === minYear && state.calendarMonth <= minMonth) return;
+    state.calendarMonth--;
+    if (state.calendarMonth < 0) { state.calendarMonth = 11; state.calendarYear--; }
+    loadCalendarPrices();
+    render();
+  });
+  on('cal-next', 'click', function() {
+    state.calendarMonth++;
+    if (state.calendarMonth > 11) { state.calendarMonth = 0; state.calendarYear++; }
+    loadCalendarPrices();
+    render();
+  });
+  on('cal-apply', 'click', function() { state.calendarOpen = false; render(); });
+
+  // Calendar day clicks
+  var days = document.querySelectorAll('.cal-day[data-date]:not(.disabled)');
+  for (var di = 0; di < days.length; di++) {
+    (function(el) {
+      el.addEventListener('click', function() {
+        var date = el.getAttribute('data-date');
+        if (!state.checkIn || state.pickingCheckout === false) {
+          // Picking check-in
+          state.checkIn = date;
+          state.checkOut = '';
+          state.pickingCheckout = true;
+        } else {
+          // Picking check-out
+          if (date <= state.checkIn) {
+            // Clicked before check-in, reset
+            state.checkIn = date;
+            state.checkOut = '';
+          } else {
+            state.checkOut = date;
+            // Auto-close after both selected
+            state.calendarOpen = false;
+          }
+        }
+        render();
+      });
+    })(days[di]);
+  }
+
   // Sync inputs
-  onInput('w-ci', function(v) { state.checkIn = v; });
-  onInput('w-co', function(v) { state.checkOut = v; });
   onInput('w-adults', function(v) { state.adults = parseInt(v) || 2; });
   onInput('w-children', function(v) { state.children = parseInt(v) || 0; });
   onInput('w-promo', function(v) { state.promo = v; });
@@ -657,6 +907,49 @@ function errorHtml(msg) { return '<div class="error-box"><svg width="16" height=
 function spinner() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .7s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>'; }
 function notifyHeight() {
   try { window.parent.postMessage({ type: 'hoteltech-widget-height', height: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+}
+
+function getCheapestPrice() {
+  var prices = state.calendarPrices;
+  var min = Infinity;
+  var today = new Date().toISOString().slice(0,10);
+  for (var d in prices) {
+    if (d >= today && prices[d] > 0 && prices[d] < min) min = prices[d];
+  }
+  return min === Infinity ? 0 : min;
+}
+
+function formatCompactPrice(amount) {
+  if (!amount) return '';
+  return CURRENCY === 'EUR' ? '\u20ac' + amount : (CURRENCY === 'USD' ? '$' + amount : (CURRENCY === 'GBP' ? '\u00a3' + amount : amount + ' ' + CURRENCY));
+}
+
+function svgCalendar() {
+  return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+}
+
+function loadCalendarPrices() {
+  if (state.calendarPricesLoading) return;
+  var start = state.calendarYear + '-' + String(state.calendarMonth + 1).padStart(2, '0') + '-01';
+  // Load 3 months of prices
+  var endDate = new Date(state.calendarYear, state.calendarMonth + 3, 0);
+  var end = endDate.toISOString().slice(0, 10);
+
+  state.calendarPricesLoading = true;
+  apiGet('calendar-prices', { start: start, end: end })
+    .then(function(data) {
+      state.calendarPricesLoading = false;
+      if (data.prices) {
+        // Merge with existing prices
+        for (var d in data.prices) {
+          state.calendarPrices[d] = data.prices[d];
+        }
+      }
+      render();
+    })
+    .catch(function() {
+      state.calendarPricesLoading = false;
+    });
 }
 
 // SVG icons

@@ -142,6 +142,26 @@ class BookingPublicController extends Controller
         }
     }
 
+    /** GET /v1/booking/calendar-prices — cheapest per-night price for each day in range. */
+    public function calendarPrices(Request $request, AvailabilityService $availability): JsonResponse
+    {
+        $this->bindOrg($request);
+
+        $validated = $request->validate([
+            'start' => 'required|date',
+            'end'   => 'required|date|after:start',
+        ]);
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $cacheKey = "booking:calendar:{$orgId}:{$validated['start']}:{$validated['end']}";
+
+        $prices = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($validated, $availability) {
+            return $availability->calendarPrices($validated['start'], $validated['end']);
+        });
+
+        return response()->json(['prices' => $prices]);
+    }
+
     /** POST /v1/booking/webhooks/smoobu — Smoobu webhook receiver. */
     public function webhook(Request $request): JsonResponse
     {

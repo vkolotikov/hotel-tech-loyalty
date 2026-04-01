@@ -54,6 +54,69 @@ class AvailabilityService
         return $data[$unitId] ?? [];
     }
 
+    /** Get cheapest price per night for each date in a range. Returns ['2026-04-15' => 89, ...] */
+    public function calendarPrices(string $start, string $end): array
+    {
+        $units = $this->getUnitsConfig();
+        if (empty($units)) return [];
+
+        $prices = [];
+        $current = new \DateTime($start);
+        $endDate = new \DateTime($end);
+
+        // For mock mode, generate deterministic-ish prices
+        if ($this->smoobu->isMock()) {
+            while ($current <= $endDate) {
+                $dateStr = $current->format('Y-m-d');
+                $dayOfWeek = (int) $current->format('N'); // 1=Mon, 7=Sun
+
+                // Find cheapest unit base price
+                $cheapest = PHP_INT_MAX;
+                foreach ($units as $unit) {
+                    $base = $unit['price_per_night'] ?? 100;
+                    // Weekend markup (Fri/Sat)
+                    $price = ($dayOfWeek >= 5 && $dayOfWeek <= 6) ? (int)($base * 1.2) : $base;
+                    // Slight daily variation using date hash
+                    $seed = crc32($dateStr . ($unit['id'] ?? ''));
+                    $variation = ($seed % 21) - 10; // -10 to +10
+                    $price = max(1, $price + $variation);
+                    $cheapest = min($cheapest, $price);
+                }
+
+                $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : $cheapest;
+                $current->modify('+1 day');
+            }
+            return $prices;
+        }
+
+        // Real PMS mode: query rates for each 1-night window
+        // (batch if the PMS supports date-range rate queries)
+        try {
+            $rates = $this->smoobu->getRates($start, $end);
+            $data = $rates['data'] ?? $rates;
+
+            while ($current <= $endDate) {
+                $dateStr = $current->format('Y-m-d');
+                $cheapest = PHP_INT_MAX;
+
+                foreach ($data as $unitId => $rate) {
+                    $nightlyRate = $rate['price_per_night'] ?? 0;
+                    if ($nightlyRate > 0) {
+                        $cheapest = min($cheapest, $nightlyRate);
+                    }
+                }
+
+                $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : $cheapest;
+                $current->modify('+1 day');
+            }
+        } catch (\Throwable $e) {
+            // If rate fetch fails, return empty — calendar will just not show prices
+            \Illuminate\Support\Facades\Log::warning('Calendar prices fetch failed', ['error' => $e->getMessage()]);
+        }
+
+        return $prices;
+    }
+
     private function getUnitsConfig(): array
     {
         $json = \App\Models\HotelSetting::withoutGlobalScopes()

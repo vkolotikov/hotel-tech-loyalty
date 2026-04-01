@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
         Route::get('unit/{unitId}/rates',   [BookingPublicController::class, 'unitRates']);
         Route::post('quote',                [BookingPublicController::class, 'quote']);
         Route::post('confirm',              [BookingPublicController::class, 'confirm']);
+        Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 
