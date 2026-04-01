@@ -68,8 +68,10 @@ class ChatWidgetConfigController extends Controller
         $baseUrl = config('app.url', $request->getSchemeAndHttpHost());
 
         return response()->json([
-            'embed_code' => $config->generateEmbedCode($baseUrl),
-            'widget_key' => $config->widget_key,
+            'embed_code'  => $config->generateEmbedCode($baseUrl),
+            'iframe_code' => $config->generateIframeCode($baseUrl),
+            'api_info'    => $config->getApiInfo($baseUrl),
+            'widget_key'  => $config->widget_key,
         ]);
     }
 }

@@ -6,8 +6,9 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
 const BASE_MODELS = [
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (recommended)' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini (recommended)' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest)' },
 ]
 
 export function Training() {

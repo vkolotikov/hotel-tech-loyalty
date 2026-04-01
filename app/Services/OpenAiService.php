@@ -6,6 +6,7 @@ use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\LoyaltyMember;
 use OpenAI\Laravel\Facades\OpenAI;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class OpenAiService
@@ -19,7 +20,7 @@ class OpenAiService
 
     /**
      * Send a chat message from a member and get AI response.
-     * Accepts optional behavior/model config and knowledge context for enhanced chatbot.
+     * Supports OpenAI, Anthropic, and Google providers via model config.
      */
     public function chat(
         array $messages,
@@ -32,10 +33,39 @@ class OpenAiService
             ? $this->buildConfiguredSystemPrompt($member, $behaviorConfig, $knowledgeContext)
             : $this->buildMemberSystemPrompt($member);
 
+        $provider = $modelConfig->provider ?? 'openai';
         $model = $modelConfig->model_name ?? $this->model;
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
 
+        try {
+            return match ($provider) {
+                'anthropic' => $this->callAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens),
+                'google'    => $this->callGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens),
+                default     => $this->callOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens, $modelConfig),
+            };
+        } catch (\Throwable $e) {
+            Log::error("AI chat error [{$provider}/{$model}]: " . $e->getMessage());
+
+            if ($behaviorConfig?->fallback_message) {
+                return $behaviorConfig->fallback_message;
+            }
+
+            return "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
+        }
+    }
+
+    /**
+     * Call via OpenAI SDK (GPT models + o-series).
+     */
+    private function callOpenAi(
+        string $systemPrompt,
+        array $messages,
+        string $model,
+        float $temperature,
+        int $maxTokens,
+        ?ChatbotModelConfig $modelConfig = null,
+    ): string {
         $allMessages = array_merge(
             [['role' => 'system', 'content' => $systemPrompt]],
             $messages
@@ -58,26 +88,91 @@ class OpenAiService
             $params['presence_penalty'] = (float) $modelConfig->presence_penalty;
         }
 
-        try {
-            $response = OpenAI::chat()->create($params);
+        $response = OpenAI::chat()->create($params);
+        $reply = $response->choices[0]->message->content;
 
-            $reply = $response->choices[0]->message->content;
+        return $reply ?: '';
+    }
 
-            // If behavior config has a fallback and AI returned empty
-            if (empty($reply) && $behaviorConfig?->fallback_message) {
-                return $behaviorConfig->fallback_message;
-            }
+    /**
+     * Call Anthropic Messages API directly via HTTP.
+     */
+    private function callAnthropic(
+        string $systemPrompt,
+        array $messages,
+        string $model,
+        float $temperature,
+        int $maxTokens,
+    ): string {
+        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
 
-            return $reply;
-        } catch (\Throwable $e) {
-            Log::error('OpenAI chat error: ' . $e->getMessage());
-
-            if ($behaviorConfig?->fallback_message) {
-                return $behaviorConfig->fallback_message;
-            }
-
-            return "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
+        if (!$apiKey) {
+            throw new \RuntimeException('Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env');
         }
+
+        $response = Http::withHeaders([
+            'x-api-key'         => $apiKey,
+            'anthropic-version' => '2023-06-01',
+            'content-type'      => 'application/json',
+        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
+            'model'      => $model,
+            'max_tokens' => $maxTokens,
+            'temperature' => min($temperature, 1.0), // Anthropic max temp is 1.0
+            'system'     => $systemPrompt,
+            'messages'   => $messages,
+        ]);
+
+        if ($response->failed()) {
+            throw new \RuntimeException('Anthropic API error: ' . $response->body());
+        }
+
+        $data = $response->json();
+        return $data['content'][0]['text'] ?? '';
+    }
+
+    /**
+     * Call Google Gemini API directly via HTTP.
+     */
+    private function callGoogle(
+        string $systemPrompt,
+        array $messages,
+        string $model,
+        float $temperature,
+        int $maxTokens,
+    ): string {
+        $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
+
+        if (!$apiKey) {
+            throw new \RuntimeException('Google Gemini API key not configured. Set GOOGLE_GEMINI_API_KEY in .env');
+        }
+
+        // Convert messages to Gemini format
+        $contents = [];
+        foreach ($messages as $msg) {
+            $contents[] = [
+                'role'  => $msg['role'] === 'assistant' ? 'model' : 'user',
+                'parts' => [['text' => $msg['content']]],
+            ];
+        }
+
+        $response = Http::timeout(60)->post(
+            "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
+            [
+                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+                'contents'           => $contents,
+                'generationConfig'   => [
+                    'temperature'     => $temperature,
+                    'maxOutputTokens' => $maxTokens,
+                ],
+            ]
+        );
+
+        if ($response->failed()) {
+            throw new \RuntimeException('Gemini API error: ' . $response->body());
+        }
+
+        $data = $response->json();
+        return $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
     }
 
     /**
@@ -156,7 +251,6 @@ Return JSON only with: score (float 0-1), reason (string), recommendation (strin
     public function generateInsightReport(array $kpis): string
     {
         $prompt = "You are a hotel loyalty program analyst. Write a concise, actionable weekly insight report (3-4 paragraphs) based on these KPIs:
-
 " . json_encode($kpis, JSON_PRETTY_PRINT) . "
 
 Focus on: key trends, what's working, what needs attention, and 2 specific recommendations for next week.";

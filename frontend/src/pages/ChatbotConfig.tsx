@@ -25,9 +25,24 @@ const REPLY_LENGTHS = [
 ]
 
 const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
-  { value: 'anthropic', label: 'Anthropic', models: ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'] },
-  { value: 'google', label: 'Google', models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
+  { value: 'openai', label: 'OpenAI', models: [
+    { value: 'gpt-4.1', label: 'GPT-4.1 (latest, best)' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest)' },
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'o3-mini', label: 'o3-mini (reasoning)' },
+  ]},
+  { value: 'anthropic', label: 'Anthropic', models: [
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (most capable)' },
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fastest)' },
+  ]},
+  { value: 'google', label: 'Google', models: [
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (latest)' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  ]},
 ]
 
 type Tab = 'behavior' | 'model'
@@ -340,7 +355,7 @@ export function ChatbotConfig() {
                   onChange={e => {
                     updateModel('provider', e.target.value)
                     const prov = PROVIDERS.find(p => p.value === e.target.value)
-                    if (prov) updateModel('model_name', prov.models[0])
+                    if (prov) updateModel('model_name', prov.models[0].value)
                   }}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
@@ -354,7 +369,7 @@ export function ChatbotConfig() {
                   onChange={e => updateModel('model_name', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
-                  {(selectedProvider?.models || []).map(m => <option key={m} value={m}>{m}</option>)}
+                  {(selectedProvider?.models || []).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
             </div>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
-  MessageSquare, Save, Copy, RefreshCw, Check, Eye,
+  MessageSquare, Save, Copy, RefreshCw, Check, Eye, Code, Globe, Braces,
   MessageCircle, HelpCircle, Quote, Headphones, ShoppingBag,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -36,6 +36,7 @@ const COLOR_PRESETS = [
 export function WidgetBuilder() {
   const qc = useQueryClient()
   const [copied, setCopied] = useState(false)
+  const [embedTab, setEmbedTab] = useState<'script' | 'iframe' | 'api'>('script')
 
   const { data: config, isLoading } = useQuery({
     queryKey: ['widget-config'],
@@ -75,13 +76,12 @@ export function WidgetBuilder() {
     },
   })
 
-  const copyEmbed = () => {
-    if (embedData?.embed_code) {
-      navigator.clipboard.writeText(embedData.embed_code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toast.success('Embed code copied!')
-    }
+  const copyCode = (text?: string) => {
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    toast.success('Copied to clipboard!')
   }
 
   const launcherIconComponent = LAUNCHER_ICONS.find(i => i.value === (f.launcher_icon || 'chat'))?.icon || MessageSquare
@@ -250,25 +250,81 @@ export function WidgetBuilder() {
             )}
           </div>
 
-          {/* Embed Code */}
+          {/* Installation */}
           {config?.id && (
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-              <h2 className="text-lg font-semibold text-white">Embed Code</h2>
-              <p className="text-sm text-t-secondary">Copy this code and paste it before the closing <code className="text-primary-400">&lt;/body&gt;</code> tag of your website.</p>
+              <h2 className="text-lg font-semibold text-white">Install on Your Website</h2>
+              <p className="text-sm text-t-secondary">Choose an installation method. Each customer gets a unique widget linked to your organization.</p>
 
-              <div className="bg-dark-surface rounded-lg p-3 flex items-center gap-2">
-                <code className="text-xs text-green-400 flex-1 break-all">{embedData?.embed_code || 'Save config first to generate embed code'}</code>
-                <button onClick={copyEmbed} className="text-t-secondary hover:text-white p-1">
-                  {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-                </button>
+              {/* Tabs */}
+              <div className="flex gap-1 bg-dark-bg rounded-lg p-1">
+                {([
+                  { id: 'script' as const, label: 'Script Tag', icon: Code, desc: 'Recommended' },
+                  { id: 'iframe' as const, label: 'Iframe', icon: Globe, desc: 'Simple' },
+                  { id: 'api' as const, label: 'API', icon: Braces, desc: 'Custom' },
+                ]).map(t => (
+                  <button key={t.id} onClick={() => setEmbedTab(t.id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                      embedTab === t.id ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
+                    }`}>
+                    <t.icon size={13} /> {t.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="flex items-center gap-3 text-xs text-dark-border2">
-                <span>Widget Key: <code className="text-t-secondary">{config.widget_key}</code></span>
-                <span>|</span>
+              {/* Script Tab */}
+              {embedTab === 'script' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-t-secondary">Paste this before the closing <code className="text-primary-400">&lt;/body&gt;</code> tag. The widget loads async and won't block your page.</p>
+                  <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
+                    <pre className="text-xs text-green-400 whitespace-pre-wrap break-all font-mono">{embedData?.embed_code || 'Save config first'}</pre>
+                    <button onClick={() => copyCode(embedData?.embed_code)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface3 text-t-secondary hover:text-white p-1.5 rounded">
+                      {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Iframe Tab */}
+              {embedTab === 'iframe' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-t-secondary">Drop-in iframe — no JavaScript required. Works with any CMS including WordPress, Wix, Squarespace.</p>
+                  <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
+                    <pre className="text-xs text-blue-400 whitespace-pre-wrap break-all font-mono">{embedData?.iframe_code || 'Save config first'}</pre>
+                    <button onClick={() => copyCode(embedData?.iframe_code)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface3 text-t-secondary hover:text-white p-1.5 rounded">
+                      {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* API Tab */}
+              {embedTab === 'api' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-t-secondary">Build a custom integration using the REST API. Use these endpoints from your app or backend.</p>
+                  {embedData?.api_info?.endpoints && Object.entries(embedData.api_info.endpoints).map(([name, ep]: [string, any]) => (
+                    <div key={name} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg px-3 py-2">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>{ep.method}</span>
+                      <code className="text-xs text-t-secondary font-mono flex-1 truncate">{ep.url}</code>
+                      <button onClick={() => copyCode(ep.url)} className="text-t-secondary hover:text-white p-1">
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Widget Key & API Key */}
+              <div className="flex items-center gap-4 pt-2 border-t border-dark-border text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-t-secondary">Widget Key:</span>
+                  <code className="text-primary-400 font-mono">{config.widget_key?.slice(0, 12)}...</code>
+                  <button onClick={() => copyCode(config.widget_key)} className="text-t-secondary hover:text-white"><Copy size={11} /></button>
+                </div>
+                <div className="flex-1" />
                 <button onClick={() => regenKey.mutate()} disabled={regenKey.isPending}
-                  className="flex items-center gap-1 text-primary-400 hover:text-primary-300">
-                  <RefreshCw size={12} /> Regenerate API Key
+                  className="flex items-center gap-1 text-primary-400 hover:text-primary-300 text-xs">
+                  <RefreshCw size={12} className={regenKey.isPending ? 'animate-spin' : ''} /> Regenerate API Key
                 </button>
               </div>
             </div>
@@ -292,7 +348,7 @@ export function WidgetBuilder() {
         {/* ═══ RIGHT: Live Preview ═══ */}
         <div className="lg:col-span-1">
           <div className="sticky top-6 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-[#8e8e93]">
+            <div className="flex items-center gap-2 text-sm text-t-secondary">
               <Eye size={16} />
               <span>Live Preview</span>
             </div>
@@ -363,7 +419,7 @@ export function WidgetBuilder() {
 
             {/* Launcher Button Preview */}
             <div className="flex items-center gap-3">
-              <span className="text-xs text-[#8e8e93]">Launcher button:</span>
+              <span className="text-xs text-t-secondary">Launcher button:</span>
               <button
                 className={`w-14 h-14 flex items-center justify-center text-white shadow-lg ${shapeStyles[f.launcher_shape || 'circle'] || 'rounded-full'}`}
                 style={{ backgroundColor: f.primary_color || '#c9a84c' }}

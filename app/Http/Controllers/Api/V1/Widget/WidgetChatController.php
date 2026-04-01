@@ -154,27 +154,20 @@ class WidgetChatController extends Controller
             -20
         );
 
-        // Call OpenAI directly (no member object for widget visitors)
+        // Call AI provider (supports OpenAI, Anthropic, Google)
+        $provider = $modelConfig->provider ?? 'openai';
         $model = $modelConfig->model_name ?? 'gpt-4o';
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
 
         try {
-            $allMessages = array_merge(
-                [['role' => 'system', 'content' => $systemPrompt]],
-                $contextMessages
-            );
-
-            $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
-                'model' => $model,
-                'messages' => $allMessages,
-                'max_tokens' => $maxTokens,
-                'temperature' => $temperature,
-            ]);
-
-            $aiResponse = $response->choices[0]->message->content;
+            $aiResponse = match ($provider) {
+                'anthropic' => $this->callAnthropic($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
+                'google'    => $this->callGoogle($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
+                default     => $this->callOpenAi($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
+            };
         } catch (\Throwable $e) {
-            \Log::error('Widget chat error: ' . $e->getMessage());
+            \Log::error("Widget chat error [{$provider}/{$model}]: " . $e->getMessage());
             $aiResponse = $behaviorConfig->fallback_message
                 ?? "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
         }
@@ -357,5 +350,57 @@ class WidgetChatController extends Controller
         }
 
         return implode("\n", $parts);
+    }
+
+    private function callOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    {
+        $allMessages = array_merge([['role' => 'system', 'content' => $system]], $messages);
+        $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
+            'model' => $model, 'messages' => $allMessages,
+            'max_tokens' => $maxTokens, 'temperature' => $temp,
+        ]);
+        return $response->choices[0]->message->content ?? '';
+    }
+
+    private function callAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    {
+        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
+        if (!$apiKey) throw new \RuntimeException('Anthropic API key not configured');
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'x-api-key' => $apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
+        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
+            'model' => $model, 'max_tokens' => $maxTokens,
+            'temperature' => min($temp, 1.0), 'system' => $system, 'messages' => $messages,
+        ]);
+
+        if ($response->failed()) throw new \RuntimeException('Anthropic API error: ' . $response->body());
+        return $response->json()['content'][0]['text'] ?? '';
+    }
+
+    private function callGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    {
+        $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
+        if (!$apiKey) throw new \RuntimeException('Google Gemini API key not configured');
+
+        $contents = [];
+        foreach ($messages as $msg) {
+            $contents[] = [
+                'role' => $msg['role'] === 'assistant' ? 'model' : 'user',
+                'parts' => [['text' => $msg['content']]],
+            ];
+        }
+
+        $response = \Illuminate\Support\Facades\Http::timeout(60)->post(
+            "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
+            [
+                'system_instruction' => ['parts' => [['text' => $system]]],
+                'contents' => $contents,
+                'generationConfig' => ['temperature' => $temp, 'maxOutputTokens' => $maxTokens],
+            ]
+        );
+
+        if ($response->failed()) throw new \RuntimeException('Gemini API error: ' . $response->body());
+        return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
     }
 }
