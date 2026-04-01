@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
-import { API_URL } from '../lib/api'
+import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 
 export interface RealtimeEvent {
@@ -31,17 +31,17 @@ const INVALIDATION_MAP: Record<string, string[]> = {
   reservation: ['dashboard-kpis', 'dashboard-recent-activity', 'reservations'],
 }
 
+const POLL_INTERVAL = 5000 // 5 seconds
+
 export function useRealtimeEvents() {
   const { token } = useAuthStore()
   const qc = useQueryClient()
   const lastIdRef = useRef(0)
-  const retryRef = useRef(0)
-  const esRef = useRef<EventSource | null>(null)
   const [connected, setConnected] = useState(false)
   const [events, setEvents] = useState<RealtimeEvent[]>([])
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const handleEvent = useCallback((event: RealtimeEvent) => {
-    // Show toast notification
     const icon = EVENT_ICONS[event.type] || '🔔'
     toast(
       `${icon} ${event.title}\n${event.body || ''}`,
@@ -57,66 +57,50 @@ export function useRealtimeEvents() {
       }
     )
 
-    // Add to local event feed (keep last 20)
     setEvents(prev => [event, ...prev].slice(0, 20))
 
-    // Invalidate relevant queries for auto-refresh
     const keys = INVALIDATION_MAP[event.type]
     if (keys) {
       keys.forEach(key => qc.invalidateQueries({ queryKey: [key] }))
     }
   }, [qc])
 
-  const connect = useCallback(() => {
+  const poll = useCallback(async () => {
     if (!token) return
-
-    const isProduction = window.location.hostname !== 'localhost'
-    const baseUrl = isProduction ? '/api' : (API_URL + '/api')
-    const url = `${baseUrl}/v1/admin/realtime/stream?last_id=${lastIdRef.current}&token=${encodeURIComponent(token)}`
-
-    const es = new EventSource(url)
-    esRef.current = es
-
-    es.addEventListener('connected', () => {
+    try {
+      const { data } = await api.get('/v1/admin/realtime/poll', {
+        params: { last_id: lastIdRef.current },
+      })
       setConnected(true)
-      retryRef.current = 0
-    })
 
-    es.addEventListener('notification', (e) => {
-      try {
-        const data = JSON.parse(e.data) as RealtimeEvent
-        if (e.lastEventId) lastIdRef.current = Number(e.lastEventId)
-        handleEvent(data)
-      } catch {}
-    })
-
-    es.addEventListener('reconnect', (e) => {
-      try {
-        const data = JSON.parse(e.data)
-        if (data.last_id) lastIdRef.current = data.last_id
-      } catch {}
-      es.close()
-      // Reconnect immediately after server-initiated close
-      setTimeout(() => connect(), 500)
-    })
-
-    es.onerror = () => {
+      if (data.events?.length) {
+        for (const evt of data.events) {
+          handleEvent(evt)
+        }
+      }
+      if (data.last_id) {
+        lastIdRef.current = data.last_id
+      }
+    } catch {
       setConnected(false)
-      es.close()
-      // Exponential backoff: 2s, 4s, 8s, 16s, max 30s
-      const delay = Math.min(2000 * Math.pow(2, retryRef.current), 30000)
-      retryRef.current++
-      setTimeout(() => connect(), delay)
     }
   }, [token, handleEvent])
 
   useEffect(() => {
-    connect()
+    if (!token) return
+
+    // Initial poll immediately
+    poll()
+
+    intervalRef.current = setInterval(poll, POLL_INTERVAL)
+
     return () => {
-      esRef.current?.close()
-      esRef.current = null
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
-  }, [connect])
+  }, [token, poll])
 
   return { connected, events }
 }

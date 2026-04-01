@@ -310,7 +310,6 @@ Route::prefix('v1')->group(function () {
             Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
 
             // ─── Realtime ────────────────────────────────────────────────────
-            Route::get('realtime/stream',                 [RealtimeController::class, 'stream']);
             Route::get('realtime/poll',                    [RealtimeController::class, 'poll']);
         });
     });
