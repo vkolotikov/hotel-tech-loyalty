@@ -6,7 +6,8 @@ import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
   Mail, Wifi, CheckCircle, XCircle, Eye, EyeOff,
-  Zap, Globe, Users, Star, Layers
+  Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
+  ChevronDown, Link2, Phone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,6 +29,10 @@ const SECRET_KEYS = [
   'ai_openai_api_key', 'ai_anthropic_api_key',
   'booking_smoobu_api_key', 'booking_smoobu_webhook_secret',
   'mail_password', 'expo_access_token',
+  'stripe_secret_key', 'stripe_webhook_secret',
+  'twilio_auth_token',
+  'whatsapp_access_token', 'whatsapp_verify_token',
+  'google_maps_api_key', 'custom_webhook_secret',
 ]
 
 const PRESETS: Record<string, Record<string, string>> = {
@@ -100,6 +105,7 @@ export function Settings() {
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
@@ -202,6 +208,14 @@ export function Settings() {
       toast.error(`${type}: connection test failed`)
     }
     setTestingIntegration(null)
+  }
+
+  const toggleSection = (id: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
   const hasChanges = Object.keys(editedSettings).length > 0
@@ -530,57 +544,86 @@ export function Settings() {
   const renderIntegrations = () => {
     const intSettings = groupSettings('integrations')
 
-    // Group integration settings into sections
-    const sections: { title: string; icon: any; keys: string[]; testType?: string }[] = [
-      { title: 'OpenAI', icon: Brain, keys: ['ai_openai_api_key', 'ai_openai_model'], testType: 'openai' },
-      { title: 'Anthropic', icon: Brain, keys: ['ai_anthropic_api_key', 'ai_anthropic_model'], testType: 'anthropic' },
-      { title: 'Smoobu PMS', icon: Calendar, keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'], testType: 'smoobu' },
-      { title: 'Email / SMTP', icon: Mail, keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'], testType: 'mail' },
-      { title: 'Push Notifications', icon: Smartphone, keys: ['expo_access_token'] },
+    // Group integration settings into categorized sections
+    const sections: { id: string; title: string; subtitle: string; icon: any; keys: string[]; testType?: string }[] = [
+      { id: 'openai',    title: 'OpenAI',              subtitle: 'GPT models for chatbot, insights & offers',            icon: Brain,          keys: ['ai_openai_api_key', 'ai_openai_model'],                                                                              testType: 'openai' },
+      { id: 'anthropic', title: 'Anthropic',           subtitle: 'Claude models for CRM AI assistant',                   icon: Brain,          keys: ['ai_anthropic_api_key', 'ai_anthropic_model'],                                                                        testType: 'anthropic' },
+      { id: 'stripe',    title: 'Stripe',              subtitle: 'Payment processing for bookings & invoices',           icon: CreditCard,     keys: ['stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret', 'stripe_currency'],                            testType: 'stripe' },
+      { id: 'smoobu',    title: 'Smoobu PMS',          subtitle: 'Property management & channel sync',                   icon: Calendar,       keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'],     testType: 'smoobu' },
+      { id: 'mail',      title: 'Email / SMTP',        subtitle: 'Transactional emails & notifications',                 icon: Mail,           keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'],                    testType: 'mail' },
+      { id: 'twilio',    title: 'Twilio',              subtitle: 'SMS notifications & booking confirmations',            icon: Phone,          keys: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number'],                                                    testType: 'twilio' },
+      { id: 'whatsapp',  title: 'WhatsApp Business',   subtitle: 'Guest messaging via Meta Cloud API',                   icon: MessageSquare,  keys: ['whatsapp_phone_id', 'whatsapp_access_token', 'whatsapp_verify_token'],                                               testType: 'whatsapp' },
+      { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',                     icon: Smartphone,     keys: ['expo_access_token'] },
+      { id: 'google',    title: 'Google Services',     subtitle: 'Maps, Analytics & Tag Manager',                        icon: Map,            keys: ['google_maps_api_key', 'google_analytics_id', 'google_tag_manager_id'],                                               testType: 'google_maps' },
+      { id: 'webhooks',  title: 'Webhooks & Zapier',   subtitle: 'Outbound event notifications & automation',            icon: Link2,          keys: ['zapier_webhook_url', 'custom_webhook_url', 'custom_webhook_secret'] },
     ]
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-3">
         {sections.map(section => {
           const items = section.keys.map(k => intSettings.find((s: any) => s.key === k)).filter(Boolean)
           if (items.length === 0) return null
+          const isOpen = expandedSections.has(section.id)
           const result = section.testType ? testResults[section.testType] : null
+          // Check if any key in this section has a value
+          const hasAnyValue = items.some((s: any) => s.has_value)
 
           return (
-            <div key={section.title} className={cardClass} style={{
-              ...cardStyle,
-              background: result
-                ? result.success
-                  ? 'linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%)'
-                  : 'linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%)'
-                : cardStyle.background,
-            }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <section.icon size={15} className="text-emerald-400" /> {section.title}
-                </h3>
-                <div className="flex items-center gap-2">
-                  {result && (
-                    <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
-                      result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'
-                    }`}>
-                      {result.success ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                      {result.message}
-                    </span>
-                  )}
-                  {section.testType && (
-                    <button onClick={() => testConnection(section.testType!)}
-                      disabled={testingIntegration === section.testType}
-                      className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
-                      {testingIntegration === section.testType
-                        ? <><RefreshCw size={13} className="animate-spin" /> Testing...</>
-                        : <><Wifi size={13} /> Test Connection</>
-                      }
-                    </button>
-                  )}
+            <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
+              style={{
+                background: result
+                  ? result.success
+                    ? 'linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%)'
+                    : 'linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%)'
+                  : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
+                boxShadow: '0 16px 30px rgba(0,0,0,0.18)',
+              }}>
+              {/* Collapsible header */}
+              <button onClick={() => toggleSection(section.id)}
+                className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+                  <section.icon size={16} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
                 </div>
-              </div>
-              {items.map((s: any) => renderSettingRow(s))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">{section.title}</h3>
+                    {hasAnyValue && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>
+                    )}
+                    {result && (
+                      <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                        result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'
+                      }`}>
+                        {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />}
+                        {result.message}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
+                </div>
+                <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Collapsible content */}
+              {isOpen && (
+                <div className="px-6 pb-5 border-t border-white/[0.04]">
+                  {/* Test button */}
+                  {section.testType && (
+                    <div className="flex justify-end pt-4 pb-2">
+                      <button onClick={() => testConnection(section.testType!)}
+                        disabled={testingIntegration === section.testType}
+                        className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+                        {testingIntegration === section.testType
+                          ? <><RefreshCw size={13} className="animate-spin" /> Testing...</>
+                          : <><Wifi size={13} /> Test Connection</>
+                        }
+                      </button>
+                    </div>
+                  )}
+                  {items.map((s: any) => renderSettingRow(s))}
+                </div>
+              )}
             </div>
           )
         })}
