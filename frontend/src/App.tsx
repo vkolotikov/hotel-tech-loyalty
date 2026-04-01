@@ -21,6 +21,8 @@ const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
 const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
 const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
+const ChatbotConfig = lazy(() => import('./pages/ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
+const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
@@ -106,6 +108,8 @@ export default function App() {
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics"><AiInsights /></LazyRoute>} />
+          <Route path="/chatbot-config" element={<LazyRoute gate="admin"><ChatbotConfig /></LazyRoute>} />
+          <Route path="/knowledge-base" element={<LazyRoute gate="admin"><KnowledgeBase /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />

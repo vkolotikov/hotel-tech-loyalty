@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ChatbotBehaviorConfig;
+use App\Models\ChatbotModelConfig;
 use App\Models\LoyaltyMember;
 use OpenAI\Laravel\Facades\OpenAI;
 use Illuminate\Support\Facades\Log;
@@ -17,27 +19,63 @@ class OpenAiService
 
     /**
      * Send a chat message from a member and get AI response.
+     * Accepts optional behavior/model config and knowledge context for enhanced chatbot.
      */
-    public function chat(array $messages, LoyaltyMember $member): string
-    {
-        $systemPrompt = $this->buildMemberSystemPrompt($member);
+    public function chat(
+        array $messages,
+        LoyaltyMember $member,
+        ?ChatbotBehaviorConfig $behaviorConfig = null,
+        ?ChatbotModelConfig $modelConfig = null,
+        string $knowledgeContext = '',
+    ): string {
+        $systemPrompt = $behaviorConfig
+            ? $this->buildConfiguredSystemPrompt($member, $behaviorConfig, $knowledgeContext)
+            : $this->buildMemberSystemPrompt($member);
+
+        $model = $modelConfig->model_name ?? $this->model;
+        $temperature = (float) ($modelConfig->temperature ?? 0.7);
+        $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
 
         $allMessages = array_merge(
             [['role' => 'system', 'content' => $systemPrompt]],
             $messages
         );
 
-        try {
-            $response = OpenAI::chat()->create([
-                'model'       => $this->model,
-                'messages'    => $allMessages,
-                'max_tokens'  => 500,
-                'temperature' => 0.7,
-            ]);
+        $params = [
+            'model'       => $model,
+            'messages'    => $allMessages,
+            'max_tokens'  => $maxTokens,
+            'temperature' => $temperature,
+        ];
 
-            return $response->choices[0]->message->content;
+        if ($modelConfig && $modelConfig->top_p < 1.0) {
+            $params['top_p'] = (float) $modelConfig->top_p;
+        }
+        if ($modelConfig && $modelConfig->frequency_penalty > 0) {
+            $params['frequency_penalty'] = (float) $modelConfig->frequency_penalty;
+        }
+        if ($modelConfig && $modelConfig->presence_penalty > 0) {
+            $params['presence_penalty'] = (float) $modelConfig->presence_penalty;
+        }
+
+        try {
+            $response = OpenAI::chat()->create($params);
+
+            $reply = $response->choices[0]->message->content;
+
+            // If behavior config has a fallback and AI returned empty
+            if (empty($reply) && $behaviorConfig?->fallback_message) {
+                return $behaviorConfig->fallback_message;
+            }
+
+            return $reply;
         } catch (\Throwable $e) {
             Log::error('OpenAI chat error: ' . $e->getMessage());
+
+            if ($behaviorConfig?->fallback_message) {
+                return $behaviorConfig->fallback_message;
+            }
+
             return "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
         }
     }
@@ -191,6 +229,89 @@ Review: {$text}";
             Log::error('OpenAI suggestUpsell error: ' . $e->getMessage());
             return "Welcome back, {$member->user->name}! Would you like to learn about our current promotions?";
         }
+    }
+
+    /**
+     * Build system prompt using the configurable behavior settings + knowledge context.
+     */
+    private function buildConfiguredSystemPrompt(
+        LoyaltyMember $member,
+        ChatbotBehaviorConfig $config,
+        string $knowledgeContext = '',
+    ): string {
+        $member->loadMissing(['tier', 'user']);
+
+        $toneMap = [
+            'professional' => 'Be professional and courteous.',
+            'friendly' => 'Be warm, friendly, and approachable.',
+            'casual' => 'Use a casual, relaxed conversational style.',
+            'formal' => 'Maintain a formal, respectful tone.',
+        ];
+
+        $lengthMap = [
+            'concise' => 'Keep replies short and to the point (1-2 sentences).',
+            'moderate' => 'Provide moderately detailed replies (2-4 sentences).',
+            'detailed' => 'Give thorough, detailed responses.',
+        ];
+
+        $parts = [];
+
+        // Identity
+        if ($config->identity) {
+            $parts[] = $config->identity;
+        } else {
+            $parts[] = "You are {$config->assistant_name}, a hotel concierge AI assistant.";
+        }
+
+        // Goal
+        if ($config->goal) {
+            $parts[] = "Your goal: {$config->goal}";
+        }
+
+        // Tone and style
+        $parts[] = $toneMap[$config->tone] ?? $toneMap['professional'];
+        $parts[] = $lengthMap[$config->reply_length] ?? $lengthMap['moderate'];
+
+        // Language
+        if ($config->language && $config->language !== 'en') {
+            $parts[] = "Respond in language: {$config->language}.";
+        }
+
+        // Core rules
+        if (!empty($config->core_rules)) {
+            $parts[] = "Rules you MUST follow:";
+            foreach ($config->core_rules as $rule) {
+                $parts[] = "- {$rule}";
+            }
+        }
+
+        // Escalation policy
+        if ($config->escalation_policy) {
+            $parts[] = "Escalation policy: {$config->escalation_policy}";
+        }
+
+        // Custom instructions
+        if ($config->custom_instructions) {
+            $parts[] = $config->custom_instructions;
+        }
+
+        // Member context
+        $parts[] = "\n## Current Guest Context";
+        $parts[] = "- Name: {$member->user->name}";
+        $parts[] = "- Tier: {$member->tier->name}";
+        $parts[] = "- Points Balance: {$member->current_points}";
+        if ($member->tier->perks) {
+            $parts[] = "- Tier Perks: " . implode(', ', $member->tier->perks);
+        }
+        $parts[] = "- Date: " . now()->format('Y-m-d');
+
+        // Knowledge context
+        if ($knowledgeContext) {
+            $parts[] = "\n{$knowledgeContext}";
+            $parts[] = "Use the knowledge base above to answer questions when relevant. If the answer is not in the knowledge base, use your general knowledge.";
+        }
+
+        return implode("\n", $parts);
     }
 
     private function buildMemberSystemPrompt(LoyaltyMember $member): string

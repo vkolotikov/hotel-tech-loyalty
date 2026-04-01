@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\V1\Admin\VenueController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
 use App\Http\Controllers\Api\V1\Admin\CrmAiController;
+use App\Http\Controllers\Api\V1\Admin\ChatbotConfigController;
+use App\Http\Controllers\Api\V1\Admin\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\Admin\RealtimeController;
 use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
@@ -210,6 +212,26 @@ Route::prefix('v1')->group(function () {
             Route::put('settings',                        [SettingsController::class, 'update']);
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
             Route::post('settings/test-integration',      [SettingsController::class, 'testIntegration']);
+
+            // ─── Chatbot Configuration ───────────────────────────────────────
+            Route::get('chatbot-config/behavior',             [ChatbotConfigController::class, 'getBehavior']);
+            Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);
+            Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
+            Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
+
+            // ─── Knowledge Base ──────────────────────────────────────────────
+            Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);
+            Route::post('knowledge/categories',               [KnowledgeBaseController::class, 'storeCategory']);
+            Route::put('knowledge/categories/{id}',           [KnowledgeBaseController::class, 'updateCategory']);
+            Route::delete('knowledge/categories/{id}',        [KnowledgeBaseController::class, 'destroyCategory']);
+            Route::get('knowledge/items',                     [KnowledgeBaseController::class, 'indexItems']);
+            Route::post('knowledge/items',                    [KnowledgeBaseController::class, 'storeItem']);
+            Route::put('knowledge/items/{id}',                [KnowledgeBaseController::class, 'updateItem']);
+            Route::delete('knowledge/items/{id}',             [KnowledgeBaseController::class, 'destroyItem']);
+            Route::get('knowledge/documents',                 [KnowledgeBaseController::class, 'indexDocuments']);
+            Route::post('knowledge/documents',                [KnowledgeBaseController::class, 'uploadDocument']);
+            Route::delete('knowledge/documents/{id}',         [KnowledgeBaseController::class, 'destroyDocument']);
+            Route::post('knowledge/documents/{id}/reprocess', [KnowledgeBaseController::class, 'reprocessDocument']);
 
             // ─── Guest-Member Auto-Link ───────────────────────────────────────
             Route::post('guests/backfill-links',          [GuestController::class, 'backfillLinks']);

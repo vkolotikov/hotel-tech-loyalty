@@ -1,0 +1,438 @@
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '../lib/api'
+import { BookOpen, Plus, Pencil, Trash2, Upload, FileText, FolderOpen, Search, X, Save, RotateCcw } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+type Tab = 'items' | 'categories' | 'documents'
+
+const emptyItem = { question: '', answer: '', keywords: [] as string[], priority: 0, category_id: null as number | null, is_active: true }
+const emptyCategory = { name: '', description: '', priority: 0, is_active: true }
+
+export function KnowledgeBase() {
+  const qc = useQueryClient()
+  const [tab, setTab] = useState<Tab>('items')
+  const [search, setSearch] = useState('')
+  const [filterCat, setFilterCat] = useState<string>('')
+
+  // ─── Items ───
+  const [showItemForm, setShowItemForm] = useState(false)
+  const [editItemId, setEditItemId] = useState<number | null>(null)
+  const [itemForm, setItemForm] = useState(emptyItem)
+  const [newKeyword, setNewKeyword] = useState('')
+
+  const { data: items = [], isLoading: loadingItems } = useQuery({
+    queryKey: ['knowledge-items', search, filterCat],
+    queryFn: () => api.get('/v1/admin/knowledge/items', { params: { search: search || undefined, category_id: filterCat || undefined } }).then(r => r.data),
+  })
+
+  const saveItem = useMutation({
+    mutationFn: (data: any) => editItemId ? api.put(`/v1/admin/knowledge/items/${editItemId}`, data) : api.post('/v1/admin/knowledge/items', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['knowledge-items'] })
+      setShowItemForm(false)
+      setEditItemId(null)
+      setItemForm(emptyItem)
+      toast.success(editItemId ? 'Item updated' : 'Item created')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
+  })
+
+  const deleteItem = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/items/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-items'] }); toast.success('Deleted') },
+  })
+
+  // ─── Categories ───
+  const [showCatForm, setShowCatForm] = useState(false)
+  const [editCatId, setEditCatId] = useState<number | null>(null)
+  const [catForm, setCatForm] = useState(emptyCategory)
+
+  const { data: categories = [], isLoading: loadingCats } = useQuery({
+    queryKey: ['knowledge-categories'],
+    queryFn: () => api.get('/v1/admin/knowledge/categories').then(r => r.data),
+  })
+
+  const saveCat = useMutation({
+    mutationFn: (data: any) => editCatId ? api.put(`/v1/admin/knowledge/categories/${editCatId}`, data) : api.post('/v1/admin/knowledge/categories', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['knowledge-categories'] })
+      setShowCatForm(false)
+      setEditCatId(null)
+      setCatForm(emptyCategory)
+      toast.success(editCatId ? 'Category updated' : 'Category created')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
+  })
+
+  const deleteCat = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/categories/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-categories'] }); toast.success('Deleted') },
+  })
+
+  // ─── Documents ───
+  const { data: documents = [], isLoading: loadingDocs } = useQuery({
+    queryKey: ['knowledge-documents'],
+    queryFn: () => api.get('/v1/admin/knowledge/documents').then(r => r.data),
+  })
+
+  const uploadDoc = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return api.post('/v1/admin/knowledge/documents', fd)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Document uploaded') },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+  })
+
+  const deleteDoc = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/documents/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Deleted') },
+  })
+
+  const reprocessDoc = useMutation({
+    mutationFn: (id: number) => api.post(`/v1/admin/knowledge/documents/${id}/reprocess`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Reprocessing started') },
+  })
+
+  const addKeyword = () => {
+    if (!newKeyword.trim()) return
+    setItemForm(prev => ({ ...prev, keywords: [...prev.keywords, newKeyword.trim()] }))
+    setNewKeyword('')
+  }
+
+  const removeKeyword = (i: number) => {
+    setItemForm(prev => ({ ...prev, keywords: prev.keywords.filter((_, idx) => idx !== i) }))
+  }
+
+  const editItem = (item: any) => {
+    setEditItemId(item.id)
+    setItemForm({ question: item.question, answer: item.answer, keywords: item.keywords || [], priority: item.priority, category_id: item.category_id, is_active: item.is_active })
+    setShowItemForm(true)
+  }
+
+  const editCat = (cat: any) => {
+    setEditCatId(cat.id)
+    setCatForm({ name: cat.name, description: cat.description || '', priority: cat.priority, is_active: cat.is_active })
+    setShowCatForm(true)
+  }
+
+  const statusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      pending: 'bg-yellow-500/20 text-yellow-400',
+      processing: 'bg-blue-500/20 text-blue-400',
+      completed: 'bg-green-500/20 text-green-400',
+      failed: 'bg-red-500/20 text-red-400',
+    }
+    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.pending}`}>{status}</span>
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <BookOpen className="text-primary-500" size={28} />
+        <div>
+          <h1 className="text-2xl font-bold text-white">Knowledge Base</h1>
+          <p className="text-sm text-[#8e8e93]">Manage FAQ items, categories, and documents that power the AI assistant</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-dark-surface border border-dark-border rounded-lg p-1 w-fit">
+        {[
+          { key: 'items' as Tab, label: 'FAQ Items', icon: FileText, count: items.length },
+          { key: 'categories' as Tab, label: 'Categories', icon: FolderOpen, count: categories.length },
+          { key: 'documents' as Tab, label: 'Documents', icon: Upload, count: documents.length },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              tab === t.key ? 'bg-primary-600 text-white' : 'text-[#8e8e93] hover:text-white'
+            }`}
+          >
+            <t.icon size={16} />
+            {t.label}
+            <span className="text-xs opacity-60">({t.count})</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ═══ FAQ ITEMS TAB ═══ */}
+      {tab === 'items' && (
+        <div className="space-y-4">
+          {/* Toolbar */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555]" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-white text-sm"
+                placeholder="Search questions or answers..."
+              />
+            </div>
+            <select
+              value={filterCat}
+              onChange={e => setFilterCat(e.target.value)}
+              className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+            >
+              <option value="">All Categories</option>
+              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button
+              onClick={() => { setShowItemForm(true); setEditItemId(null); setItemForm(emptyItem) }}
+              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+            >
+              <Plus size={16} /> Add FAQ
+            </button>
+          </div>
+
+          {/* Item Form */}
+          {showItemForm && (
+            <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-semibold">{editItemId ? 'Edit FAQ Item' : 'New FAQ Item'}</h3>
+                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-[#8e8e93] mb-1">Category</label>
+                  <select
+                    value={itemForm.category_id || ''}
+                    onChange={e => setItemForm(p => ({ ...p, category_id: e.target.value ? Number(e.target.value) : null }))}
+                    className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  >
+                    <option value="">None</option>
+                    {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-[#8e8e93] mb-1">Priority</label>
+                  <input type="number" min={0} value={itemForm.priority} onChange={e => setItemForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#8e8e93] mb-1">Question</label>
+                <input type="text" value={itemForm.question} onChange={e => setItemForm(p => ({ ...p, question: e.target.value }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="What is the check-in time?" />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#8e8e93] mb-1">Answer</label>
+                <textarea value={itemForm.answer} onChange={e => setItemForm(p => ({ ...p, answer: e.target.value }))} rows={4} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Check-in time is 3:00 PM..." />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#8e8e93] mb-1">Keywords</label>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {itemForm.keywords.map((kw, i) => (
+                    <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded text-xs">
+                      {kw}
+                      <button onClick={() => removeKeyword(i)}><X size={12} /></button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add keyword..." />
+                  <button onClick={addKeyword} className="bg-[#333] text-white px-3 py-2 rounded-lg text-sm hover:bg-[#444]"><Plus size={14} /></button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-[#8e8e93] hover:text-white">Cancel</button>
+                <button onClick={() => saveItem.mutate(itemForm)} disabled={saveItem.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+                  <Save size={14} /> {saveItem.isPending ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Items List */}
+          {loadingItems ? (
+            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+          ) : items.length === 0 ? (
+            <div className="text-center text-[#8e8e93] py-12">
+              <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
+              <p>No FAQ items yet. Add your first one to help the AI answer questions.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {items.map((item: any) => (
+                <div key={item.id} className="bg-dark-surface border border-dark-border rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-medium text-sm">{item.question}</span>
+                        {item.category && <span className="text-xs bg-[#333] text-[#8e8e93] px-2 py-0.5 rounded">{item.category.name}</span>}
+                        {!item.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
+                      </div>
+                      <p className="text-sm text-[#8e8e93] line-clamp-2">{item.answer}</p>
+                      {item.keywords?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {item.keywords.map((kw: string, i: number) => (
+                            <span key={i} className="text-xs bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded">{kw}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-xs text-[#555] mt-1">Used {item.use_count} times | Priority: {item.priority}</div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => editItem(item)} className="p-2 text-[#8e8e93] hover:text-white"><Pencil size={14} /></button>
+                      <button onClick={() => { if (confirm('Delete this FAQ item?')) deleteItem.mutate(item.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ CATEGORIES TAB ═══ */}
+      {tab === 'categories' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => { setShowCatForm(true); setEditCatId(null); setCatForm(emptyCategory) }}
+              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+            >
+              <Plus size={16} /> Add Category
+            </button>
+          </div>
+
+          {showCatForm && (
+            <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-semibold">{editCatId ? 'Edit Category' : 'New Category'}</h3>
+                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="text-[#8e8e93] hover:text-white"><X size={18} /></button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-[#8e8e93] mb-1">Name</label>
+                  <input type="text" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Category name" />
+                </div>
+                <div>
+                  <label className="block text-sm text-[#8e8e93] mb-1">Priority</label>
+                  <input type="number" min={0} value={catForm.priority} onChange={e => setCatForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-[#8e8e93] mb-1">Description</label>
+                <textarea value={catForm.description} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full bg-[#1c1c1e] border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-[#8e8e93] hover:text-white">Cancel</button>
+                <button onClick={() => saveCat.mutate(catForm)} disabled={saveCat.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+                  <Save size={14} /> {saveCat.isPending ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loadingCats ? (
+            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+          ) : categories.length === 0 ? (
+            <div className="text-center text-[#8e8e93] py-12">
+              <FolderOpen size={40} className="mx-auto mb-3 opacity-30" />
+              <p>No categories yet. Create one to organize your FAQ items.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {categories.map((cat: any) => (
+                <div key={cat.id} className="bg-dark-surface border border-dark-border rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-medium">{cat.name}</span>
+                      <span className="text-xs text-[#8e8e93]">({cat.items_count || 0} items)</span>
+                      {!cat.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
+                    </div>
+                    {cat.description && <p className="text-sm text-[#8e8e93] mt-1">{cat.description}</p>}
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => editCat(cat)} className="p-2 text-[#8e8e93] hover:text-white"><Pencil size={14} /></button>
+                    <button onClick={() => { if (confirm('Delete this category?')) deleteCat.mutate(cat.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ DOCUMENTS TAB ═══ */}
+      {tab === 'documents' && (
+        <div className="space-y-4">
+          {/* Upload Area */}
+          <div className="bg-dark-surface border-2 border-dashed border-dark-border rounded-xl p-8 text-center">
+            <Upload size={32} className="mx-auto mb-3 text-[#555]" />
+            <p className="text-sm text-[#8e8e93] mb-3">Upload PDF, DOCX, or TXT files to extend the AI's knowledge</p>
+            <label className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm cursor-pointer">
+              <Upload size={16} />
+              Choose File
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) uploadDoc.mutate(file)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            {uploadDoc.isPending && <p className="text-sm text-primary-400 mt-2">Uploading and processing...</p>}
+          </div>
+
+          {/* Documents List */}
+          {loadingDocs ? (
+            <div className="text-center text-[#8e8e93] py-12">Loading...</div>
+          ) : documents.length === 0 ? (
+            <div className="text-center text-[#8e8e93] py-8">
+              <p>No documents uploaded yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {documents.map((doc: any) => (
+                <div key={doc.id} className="bg-dark-surface border border-dark-border rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText size={20} className="text-primary-400" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium text-sm">{doc.file_name}</span>
+                          {statusBadge(doc.processing_status)}
+                        </div>
+                        <div className="text-xs text-[#555] mt-0.5">
+                          {doc.size_bytes ? `${(doc.size_bytes / 1024).toFixed(1)} KB` : ''}
+                          {doc.chunks_count > 0 && ` | ${doc.chunks_count} chunks`}
+                          {doc.mime_type && ` | ${doc.mime_type}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      {doc.processing_status === 'failed' && (
+                        <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-[#8e8e93] hover:text-primary-400" title="Reprocess"><RotateCcw size={14} /></button>
+                      )}
+                      <button onClick={() => { if (confirm('Delete this document?')) deleteDoc.mutate(doc.id) }} className="p-2 text-[#8e8e93] hover:text-red-400"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                  {doc.extracted_text && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-[#8e8e93] cursor-pointer hover:text-white">Preview extracted text</summary>
+                      <pre className="text-xs text-[#8e8e93] mt-2 bg-[#1c1c1e] rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap">{doc.extracted_text.substring(0, 1000)}{doc.extracted_text.length > 1000 ? '...' : ''}</pre>
+                    </details>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
