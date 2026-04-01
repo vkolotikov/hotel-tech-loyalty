@@ -55,15 +55,16 @@ export function BookingSubmissions() {
                 <th className="text-left p-3">Unit</th>
                 <th className="text-left p-3">Dates</th>
                 <th className="text-right p-3">Total</th>
+                <th className="text-left p-3">Method</th>
                 <th className="text-left p-3">Reference</th>
                 <th className="text-left p-3">Error</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="p-8 text-center text-gray-500">Loading...</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-gray-500">Loading...</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-gray-500">No submissions yet.</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-gray-500">No submissions yet.</td></tr>
               ) : items.map((s: any) => (
                 <tr key={s.id} className="border-b border-dark-700/50 hover:bg-dark-700/30">
                   <td className="p-3 text-gray-400 text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleString()}</td>
@@ -85,6 +86,7 @@ export function BookingSubmissions() {
                   <td className="p-3 text-right text-white font-medium">
                     {s.gross_total ? `€${Number(s.gross_total).toFixed(2)}` : '—'}
                   </td>
+                  <td className="p-3 text-gray-400 text-xs">{s.payment_method || '—'}</td>
                   <td className="p-3 text-primary-400 text-xs">{s.booking_reference || '—'}</td>
                   <td className="p-3 text-red-400/80 text-xs max-w-[200px] truncate" title={s.failure_message || ''}>
                     {s.failure_code ? `${s.failure_code}: ${s.failure_message || ''}` : ''}

@@ -38,6 +38,7 @@ const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.A
 const Bookings = lazy(() => import('./pages/Bookings').then(m => ({ default: m.Bookings })))
 const BookingDetail = lazy(() => import('./pages/BookingDetail').then(m => ({ default: m.BookingDetail })))
 const BookingCalendar = lazy(() => import('./pages/BookingCalendar').then(m => ({ default: m.BookingCalendar })))
+const BookingPayments = lazy(() => import('./pages/BookingPayments').then(m => ({ default: m.BookingPayments })))
 const BookingSubmissions = lazy(() => import('./pages/BookingSubmissions').then(m => ({ default: m.BookingSubmissions })))
 const AiChat = lazy(() => import('./components/AiChat'))
 
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
           <Route path="/bookings" element={<LazyRoute><Bookings /></LazyRoute>} />
           <Route path="/bookings/calendar" element={<LazyRoute><BookingCalendar /></LazyRoute>} />
+          <Route path="/bookings/payments" element={<LazyRoute><BookingPayments /></LazyRoute>} />
           <Route path="/bookings/submissions" element={<LazyRoute gate="admin"><BookingSubmissions /></LazyRoute>} />
           <Route path="/bookings/:id" element={<LazyRoute><BookingDetail /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />

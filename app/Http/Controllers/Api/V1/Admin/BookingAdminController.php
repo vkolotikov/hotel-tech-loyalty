@@ -3,73 +3,160 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\BookingNote;
 use App\Models\BookingSubmission;
 use App\Services\BookingEngineService;
 use App\Services\SmoobuClient;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BookingAdminController extends Controller
 {
-    /** GET /v1/admin/bookings/dashboard — booking KPIs. */
+    /** GET /v1/admin/bookings/dashboard — rich booking KPIs & analytics. */
     public function dashboard(Request $request): JsonResponse
     {
         $period = $request->input('period', 'month');
-        $from   = match ($period) {
+        $unitId = $request->input('unit_id');
+        $from = match ($period) {
             'week'  => now()->subWeek(),
             'year'  => now()->subYear(),
             default => now()->subMonth(),
         };
 
-        $bookings = BookingMirror::where('created_at', '>=', $from);
+        $base = BookingMirror::where('created_at', '>=', $from);
+        if ($unitId) $base = $base->where('apartment_id', $unitId);
 
-        $total    = (clone $bookings)->count();
-        $revenue  = (clone $bookings)->sum('price_total');
-        $confirmed = (clone $bookings)->where('booking_state', 'confirmed')->count();
-        $cancelled = (clone $bookings)->where('booking_state', 'cancelled')->count();
+        $all = (clone $base)->get();
 
-        $avgStay  = (clone $bookings)
-            ->whereNotNull('arrival_date')
-            ->whereNotNull('departure_date')
-            ->selectRaw('AVG(departure_date - arrival_date) as avg_nights')
-            ->value('avg_nights');
+        $total     = $all->count();
+        $revenue   = $all->sum('price_total');
+        $paid      = $all->sum('price_paid');
+        $confirmed = $all->where('booking_state', 'confirmed')->count();
+        $cancelled = $all->where('booking_state', 'cancelled')->count();
+        $pending   = $all->where('payment_status', 'pending')->count();
+        $avgStay   = $all->filter(fn ($b) => $b->arrival_date && $b->departure_date)
+            ->avg(fn ($b) => Carbon::parse($b->arrival_date)->diffInDays(Carbon::parse($b->departure_date)));
 
-        $byUnit = BookingMirror::where('created_at', '>=', $from)
-            ->whereNotNull('apartment_name')
-            ->selectRaw('apartment_name, apartment_id, COUNT(*) as count, SUM(price_total) as revenue')
-            ->groupBy('apartment_name', 'apartment_id')
-            ->orderByDesc('count')
-            ->get();
+        // Payment mix analytics (donut chart)
+        $paymentMix = $all->groupBy(fn ($b) => $b->payment_status ?: 'unknown')
+            ->map(fn ($group, $key) => [
+                'label' => $this->paymentStateLabel($key),
+                'key'   => $key,
+                'count' => $group->count(),
+                'total' => round($group->sum('price_total'), 2),
+            ])->values();
 
-        $byChannel = BookingMirror::where('created_at', '>=', $from)
-            ->whereNotNull('channel_name')
-            ->selectRaw("channel_name, COUNT(*) as count")
-            ->groupBy('channel_name')
-            ->orderByDesc('count')
-            ->get();
+        // Arrivals timeline (bar chart — next 14 days)
+        $arrivalDays = [];
+        for ($i = 0; $i < 14; $i++) {
+            $date = now()->addDays($i)->toDateString();
+            $dayBookings = BookingMirror::where('arrival_date', $date)
+                ->where('booking_state', '!=', 'cancelled');
+            if ($unitId) $dayBookings = $dayBookings->where('apartment_id', $unitId);
+            $arrivalDays[] = [
+                'date'  => $date,
+                'label' => now()->addDays($i)->format('D j'),
+                'count' => $dayBookings->count(),
+            ];
+        }
+
+        // Unit performance (horizontal bars)
+        $unitPerf = $all->groupBy('apartment_name')->map(fn ($group, $name) => [
+            'unit_name'   => $name,
+            'unit_id'     => $group->first()->apartment_id,
+            'bookings'    => $group->count(),
+            'revenue'     => round($group->sum('price_total'), 2),
+            'paid'        => round($group->sum('price_paid'), 2),
+            'balance'     => round($group->sum('price_total') - $group->sum('price_paid'), 2),
+            'avg_nights'  => round($group->filter(fn ($b) => $b->arrival_date && $b->departure_date)
+                ->avg(fn ($b) => Carbon::parse($b->arrival_date)->diffInDays(Carbon::parse($b->departure_date))), 1),
+        ])->values();
+
+        // Channel mix
+        $channelMix = $all->groupBy(fn ($b) => $b->channel_name ?: 'Direct')
+            ->map(fn ($group, $name) => [
+                'label' => $name,
+                'count' => $group->count(),
+            ])->values();
+
+        // Available units for filter dropdown
+        $units = BookingMirror::whereNotNull('apartment_id')
+            ->select('apartment_id', 'apartment_name')
+            ->distinct()
+            ->orderBy('apartment_name')
+            ->get()
+            ->map(fn ($u) => ['id' => $u->apartment_id, 'name' => $u->apartment_name]);
+
+        // Recent unpaid bookings
+        $recentUnpaid = BookingMirror::whereNotNull('price_total')
+            ->whereRaw('COALESCE(price_paid, 0) < price_total')
+            ->where('booking_state', '!=', 'cancelled')
+            ->orderByDesc('arrival_date')
+            ->limit(8)
+            ->get(['id', 'reservation_id', 'booking_reference', 'guest_name', 'apartment_name',
+                   'channel_name', 'arrival_date', 'departure_date', 'price_total', 'price_paid',
+                   'payment_status', 'payment_method']);
+
+        // Recent submissions
+        $recentSubs = BookingSubmission::orderByDesc('created_at')
+            ->limit(8)
+            ->get(['id', 'outcome', 'guest_name', 'unit_name', 'check_in', 'check_out',
+                   'gross_total', 'payment_method', 'created_at']);
 
         // Upcoming arrivals (next 7 days)
-        $arrivals = BookingMirror::whereBetween('arrival_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
+        $arrivalsQuery = BookingMirror::whereBetween('arrival_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
             ->where('booking_state', '!=', 'cancelled')
             ->orderBy('arrival_date')
-            ->limit(10)
-            ->get(['id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date', 'adults', 'children', 'internal_status']);
+            ->limit(10);
+        if ($unitId) $arrivalsQuery = $arrivalsQuery->where('apartment_id', $unitId);
+        $arrivals = $arrivalsQuery->get(['id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date', 'adults', 'children', 'internal_status', 'payment_status']);
+
+        // Sync health
+        $lastSync = AuditLog::where('action', 'like', 'booking.%')->orderByDesc('created_at')->first();
+        $mirrorCount = BookingMirror::count();
+
+        // Scope info
+        $periodLabel = ucfirst($period);
+        $scopeLabel = "Last {$periodLabel}";
 
         return response()->json([
-            'total'      => $total,
-            'revenue'    => round((float) $revenue, 2),
-            'confirmed'  => $confirmed,
-            'cancelled'  => $cancelled,
-            'avg_nights' => $avgStay ? round((float) $avgStay, 1) : 0,
-            'by_unit'    => $byUnit,
-            'by_channel' => $byChannel,
-            'arrivals'   => $arrivals,
+            'scope' => [
+                'period' => $period,
+                'label'  => $scopeLabel,
+                'from'   => $from->toDateString(),
+                'to'     => now()->toDateString(),
+            ],
+            'filters' => ['units' => $units],
+            'kpis' => [
+                ['key' => 'total_bookings', 'label' => 'Total Bookings', 'value' => $total, 'displayValue' => (string) $total],
+                ['key' => 'revenue', 'label' => 'Revenue', 'value' => $revenue, 'displayValue' => '€' . number_format($revenue, 0)],
+                ['key' => 'confirmed', 'label' => 'Confirmed', 'value' => $confirmed, 'displayValue' => (string) $confirmed],
+                ['key' => 'cancelled', 'label' => 'Cancelled', 'value' => $cancelled, 'displayValue' => (string) $cancelled],
+                ['key' => 'pending_payment', 'label' => 'Pending Payment', 'value' => $pending, 'displayValue' => (string) $pending],
+                ['key' => 'avg_stay', 'label' => 'Avg Stay', 'value' => round($avgStay ?? 0, 1), 'displayValue' => round($avgStay ?? 0, 1) . ' nights'],
+                ['key' => 'balance_due', 'label' => 'Balance Due', 'value' => round($revenue - $paid, 2), 'displayValue' => '€' . number_format($revenue - $paid, 0)],
+            ],
+            'analytics' => [
+                'paymentMix'      => $paymentMix,
+                'arrivalPace'     => ['days' => $arrivalDays, 'total' => array_sum(array_column($arrivalDays, 'count'))],
+                'unitPerformance' => $unitPerf,
+                'channelMix'      => $channelMix,
+            ],
+            'arrivals'             => $arrivals,
+            'recentUnpaidBookings' => $recentUnpaid,
+            'recentSubmissions'    => $recentSubs,
+            'syncHealth' => [
+                'lastSyncAt'          => $lastSync?->created_at?->toIso8601String(),
+                'mirroredBookingCount' => $mirrorCount,
+            ],
         ]);
     }
 
-    /** GET /v1/admin/bookings — paginated booking list. */
+    /** GET /v1/admin/bookings — paginated booking list with full filters. */
     public function index(Request $request): JsonResponse
     {
         $query = BookingMirror::with('guest:id,first_name,last_name,email')
@@ -87,11 +174,15 @@ class BookingAdminController extends Controller
         if ($status = $request->input('status')) {
             $query->where('internal_status', $status);
         }
-
+        if ($paymentState = $request->input('payment_status')) {
+            $query->where('payment_status', $paymentState);
+        }
         if ($unitId = $request->input('unit_id')) {
             $query->where('apartment_id', $unitId);
         }
-
+        if ($state = $request->input('booking_state')) {
+            $query->where('booking_state', $state);
+        }
         if ($from = $request->input('from')) {
             $query->where('arrival_date', '>=', $from);
         }
@@ -99,23 +190,56 @@ class BookingAdminController extends Controller
             $query->where('arrival_date', '<=', $to);
         }
 
-        return response()->json($query->paginate($request->integer('per_page', 25)));
+        $paginated = $query->paginate($request->integer('per_page', 25));
+
+        // Add computed balance_due to each item
+        $items = collect($paginated->items())->map(function ($b) {
+            $arr = $b->toArray();
+            $arr['balance_due'] = round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2);
+            return $arr;
+        });
+
+        // Available units for filter dropdown
+        $units = BookingMirror::whereNotNull('apartment_id')
+            ->select('apartment_id', 'apartment_name')
+            ->distinct()
+            ->orderBy('apartment_name')
+            ->get()
+            ->map(fn ($u) => ['id' => $u->apartment_id, 'name' => $u->apartment_name]);
+
+        return response()->json([
+            'data'         => $items,
+            'current_page' => $paginated->currentPage(),
+            'last_page'    => $paginated->lastPage(),
+            'per_page'     => $paginated->perPage(),
+            'total'        => $paginated->total(),
+            'filters'      => ['units' => $units],
+        ]);
     }
 
-    /** GET /v1/admin/bookings/{id} — single booking detail. */
+    /** GET /v1/admin/bookings/{id} — full booking detail with related data. */
     public function show(int $id): JsonResponse
     {
         $booking = BookingMirror::with(['priceElements', 'notes.staff', 'guest'])
             ->findOrFail($id);
 
-        return response()->json($booking);
+        $arr = $booking->toArray();
+        $arr['balance_due'] = round(($booking->price_total ?? 0) - ($booking->price_paid ?? 0), 2);
+
+        // Related submissions
+        $arr['submissions'] = BookingSubmission::where('reservation_id', $booking->reservation_id)
+            ->orWhere('booking_reference', $booking->booking_reference)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        return response()->json($arr);
     }
 
     /** POST /v1/admin/bookings/{id}/notes — add a staff note. */
     public function addNote(Request $request, int $id): JsonResponse
     {
         $booking = BookingMirror::findOrFail($id);
-
         $validated = $request->validate(['body' => 'required|string|max:2000']);
 
         $staff = \App\Models\Staff::withoutGlobalScopes()
@@ -133,7 +257,7 @@ class BookingAdminController extends Controller
         return $this->show($id);
     }
 
-    /** PATCH /v1/admin/bookings/{id}/status — update internal status. */
+    /** PATCH /v1/admin/bookings/{id}/status — update internal status / invoice / payment. */
     public function updateStatus(Request $request, int $id): JsonResponse
     {
         $booking = BookingMirror::findOrFail($id);
@@ -141,20 +265,21 @@ class BookingAdminController extends Controller
         $validated = $request->validate([
             'internal_status' => 'nullable|string|max:40',
             'invoice_state'   => 'nullable|string|max:40',
+            'payment_status'  => 'nullable|string|max:40',
+            'price_paid'      => 'nullable|numeric|min:0',
         ]);
 
         $booking->update(array_filter($validated, fn ($v) => $v !== null));
 
-        return response()->json($booking->fresh());
+        return $this->show($id);
     }
 
     /** POST /v1/admin/bookings/{id}/sync — re-fetch from PMS. */
     public function syncOne(int $id, BookingEngineService $service): JsonResponse
     {
         $booking = BookingMirror::findOrFail($id);
-        $updated = $service->syncReservation($booking->reservation_id);
-
-        return response()->json($updated);
+        $service->syncReservation($booking->reservation_id);
+        return $this->show($id);
     }
 
     /** POST /v1/admin/bookings/sync — bulk sync from PMS. */
@@ -167,18 +292,10 @@ class BookingAdminController extends Controller
         $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));
         $to   = $request->input('to', now()->addMonths(3)->format('Y-m-d'));
 
-        $page    = 1;
-        $synced  = 0;
-        $maxPages = 10;
+        $page = 1; $synced = 0; $maxPages = 10;
 
         while ($page <= $maxPages) {
-            $response = $smoobu->listReservations([
-                'from'      => $from,
-                'to'        => $to,
-                'page'      => $page,
-                'pageSize'  => 100,
-            ]);
-
+            $response = $smoobu->listReservations(['from' => $from, 'to' => $to, 'page' => $page, 'pageSize' => 100]);
             $bookings = $response['bookings'] ?? [];
             if (empty($bookings)) break;
 
@@ -187,20 +304,19 @@ class BookingAdminController extends Controller
                 $synced++;
             }
 
-            $totalPages = $response['page_count'] ?? 1;
-            if ($page >= $totalPages) break;
+            if ($page >= ($response['page_count'] ?? 1)) break;
             $page++;
         }
 
         return response()->json(['message' => "Synced {$synced} reservations.", 'synced' => $synced]);
     }
 
-    /** GET /v1/admin/bookings/calendar — calendar view data. */
+    /** GET /v1/admin/bookings/calendar — calendar view with full data. */
     public function calendar(Request $request): JsonResponse
     {
         $month = $request->input('month', now()->format('Y-m'));
-        $start = \Carbon\Carbon::parse($month . '-01')->startOfMonth()->subDays(7);
-        $end   = \Carbon\Carbon::parse($month . '-01')->endOfMonth()->addDays(7);
+        $start = Carbon::parse($month . '-01')->startOfMonth()->subDays(7);
+        $end   = Carbon::parse($month . '-01')->endOfMonth()->addDays(7);
 
         $bookings = BookingMirror::where(function ($q) use ($start, $end) {
                 $q->whereBetween('arrival_date', [$start, $end])
@@ -211,7 +327,9 @@ class BookingAdminController extends Controller
                   });
             })
             ->where('booking_state', '!=', 'cancelled')
-            ->get(['id', 'reservation_id', 'guest_name', 'apartment_id', 'apartment_name', 'arrival_date', 'departure_date', 'adults', 'children', 'internal_status', 'booking_state']);
+            ->get(['id', 'reservation_id', 'guest_name', 'apartment_id', 'apartment_name',
+                   'arrival_date', 'departure_date', 'adults', 'children',
+                   'internal_status', 'booking_state', 'payment_status', 'price_total', 'price_paid']);
 
         return response()->json([
             'bookings' => $bookings,
@@ -239,16 +357,44 @@ class BookingAdminController extends Controller
         return response()->json($query->paginate(25));
     }
 
-    /** GET /v1/admin/bookings/payments — payment overview. */
+    /** GET /v1/admin/bookings/payments — payment overview with computed fields. */
     public function payments(Request $request): JsonResponse
     {
         $query = BookingMirror::whereNotNull('price_total')
             ->orderByDesc('arrival_date');
 
         if ($status = $request->input('payment_status')) {
-            $query->where('payment_status', $status);
+            if ($status === 'open') {
+                $query->whereRaw('COALESCE(price_paid, 0) < price_total');
+            } else {
+                $query->where('payment_status', $status);
+            }
         }
 
-        return response()->json($query->paginate(25));
+        $paginated = $query->paginate(25);
+
+        $items = collect($paginated->items())->map(function ($b) {
+            $arr = $b->toArray();
+            $arr['balance_due'] = round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2);
+            return $arr;
+        });
+
+        return response()->json([
+            'data'         => $items,
+            'current_page' => $paginated->currentPage(),
+            'last_page'    => $paginated->lastPage(),
+            'total'        => $paginated->total(),
+        ]);
+    }
+
+    // ─── Helpers ───────────────────────────────────────────────────────────
+
+    private function paymentStateLabel(string $key): string
+    {
+        return match ($key) {
+            'invoice_waiting' => 'Invoice waiting',
+            'channel_managed' => 'Channel managed',
+            default           => ucfirst(str_replace('_', ' ', $key)),
+        };
     }
 }
