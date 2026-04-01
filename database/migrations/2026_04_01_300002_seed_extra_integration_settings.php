@@ -35,6 +35,8 @@ return new class extends Migration
             ['key' => 'custom_webhook_secret', 'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Custom Webhook Secret', 'description' => 'Secret for HMAC signature verification'],
         ];
 
+        $orgId = DB::table('organizations')->value('id');
+
         foreach ($settings as $s) {
             $exists = DB::table('hotel_settings')
                 ->where('key', $s['key'])
@@ -42,6 +44,7 @@ return new class extends Migration
 
             if (!$exists) {
                 DB::table('hotel_settings')->insert(array_merge($s, [
+                    'organization_id' => $orgId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));

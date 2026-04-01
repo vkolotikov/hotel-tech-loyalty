@@ -17,6 +17,8 @@ return new class extends Migration
             ['key' => 'booking_widget_logo_url',      'value' => '',        'type' => 'string',  'group' => 'booking', 'label' => 'Widget Logo URL',    'description' => 'URL of logo image for booking widget'],
         ];
 
+        $orgId = DB::table('organizations')->value('id');
+
         foreach ($settings as $s) {
             $exists = DB::table('hotel_settings')
                 ->where('key', $s['key'])
@@ -24,6 +26,7 @@ return new class extends Migration
 
             if (!$exists) {
                 DB::table('hotel_settings')->insert(array_merge($s, [
+                    'organization_id' => $orgId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));

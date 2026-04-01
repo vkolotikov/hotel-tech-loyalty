@@ -223,8 +223,12 @@ export function Settings() {
 
   const hasChanges = Object.keys(editedSettings).length > 0
 
-  // Get settings for a group
-  const groupSettings = (groupName: string): any[] => allSettings[groupName] ?? []
+  // Get settings for a group (handle both array and object responses)
+  const groupSettings = (groupName: string): any[] => {
+    const raw = allSettings[groupName]
+    if (!raw) return []
+    return Array.isArray(raw) ? raw : Object.values(raw)
+  }
 
   // Get settings for the current tab
   const tabSettings = useMemo(() => {

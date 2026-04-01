@@ -71,9 +71,12 @@ return new class extends Migration
             ['key' => 'expedia_property_id',  'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expedia Property ID',  'description' => 'Your property ID on Expedia', 'scope' => 'company'],
         ];
 
+        $orgId = DB::table('organizations')->value('id');
+
         foreach ($settings as $s) {
             if (!DB::table('hotel_settings')->where('key', $s['key'])->exists()) {
                 DB::table('hotel_settings')->insert(array_merge($s, [
+                    'organization_id' => $orgId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));

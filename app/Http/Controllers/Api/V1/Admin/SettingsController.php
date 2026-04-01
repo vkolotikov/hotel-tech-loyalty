@@ -110,7 +110,7 @@ class SettingsController extends Controller
                     'description' => $setting->description,
                     'scope'       => $setting->scope ?? 'company',
                 ];
-            });
+            })->values(); // Reset keys so JSON serializes as array, not object
         });
 
         // Include the org's widget token for the booking embed code

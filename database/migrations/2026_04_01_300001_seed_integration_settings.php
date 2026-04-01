@@ -41,6 +41,8 @@ return new class extends Migration
             ['key' => 'booking_mock_mode',  'value' => 'true', 'type' => 'boolean', 'group' => 'booking', 'label' => 'Mock Mode',   'description' => 'Use mock PMS data instead of real Smoobu API'],
         ];
 
+        $orgId = DB::table('organizations')->value('id');
+
         foreach ($settings as $s) {
             $exists = DB::table('hotel_settings')
                 ->where('key', $s['key'])
@@ -48,6 +50,7 @@ return new class extends Migration
 
             if (!$exists) {
                 DB::table('hotel_settings')->insert(array_merge($s, [
+                    'organization_id' => $orgId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));
