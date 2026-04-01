@@ -26,9 +26,12 @@ const REPLY_LENGTHS = [
 
 const PROVIDERS = [
   { value: 'openai', label: 'OpenAI', models: [
-    { value: 'gpt-4.1', label: 'GPT-4.1 (latest, best)' },
+    { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+    { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest)' },
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'o3-mini', label: 'o3-mini (reasoning)' },
