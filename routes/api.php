@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\BookingPublicController;
 use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
+use App\Http\Controllers\Api\V1\Admin\ChatInboxController;
 use App\Http\Controllers\Api\V1\Widget\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
@@ -234,6 +235,15 @@ Route::prefix('v1')->group(function () {
             Route::put('widget-config',                       [ChatWidgetConfigController::class, 'update']);
             Route::post('widget-config/regenerate-key',       [ChatWidgetConfigController::class, 'regenerateKey']);
             Route::get('widget-config/embed-code',            [ChatWidgetConfigController::class, 'embedCode']);
+
+            // ─── Chat Inbox ──────────────────────────────────────────────────
+            Route::get('chat-inbox',                          [ChatInboxController::class, 'index']);
+            Route::get('chat-inbox/stats',                    [ChatInboxController::class, 'stats']);
+            Route::get('chat-inbox/{id}',                     [ChatInboxController::class, 'show']);
+            Route::put('chat-inbox/{id}/assign',              [ChatInboxController::class, 'assign']);
+            Route::put('chat-inbox/{id}/status',              [ChatInboxController::class, 'updateStatus']);
+            Route::post('chat-inbox/{id}/messages',           [ChatInboxController::class, 'sendMessage']);
+            Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
 
             // ─── Knowledge Base ──────────────────────────────────────────────
             Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);

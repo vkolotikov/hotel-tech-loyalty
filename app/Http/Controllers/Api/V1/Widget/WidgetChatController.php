@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1\Widget;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
+use App\Models\ChatConversation;
+use App\Models\ChatMessage;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\ChatWidgetConfig;
@@ -70,8 +72,10 @@ class WidgetChatController extends Controller
         }
 
         $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
+        $visitorName = $request->input('visitor_name');
 
-        $conversation = AiConversation::firstOrCreate(
+        // Create AiConversation for AI message history
+        AiConversation::firstOrCreate(
             ['session_id' => $sessionId],
             [
                 'organization_id' => $config->organization_id,
@@ -79,6 +83,18 @@ class WidgetChatController extends Controller
                 'messages' => [],
                 'model' => 'gpt-4o',
                 'is_active' => true,
+            ]
+        );
+
+        // Create ChatConversation for inbox tracking
+        ChatConversation::firstOrCreate(
+            ['session_id' => $sessionId],
+            [
+                'organization_id' => $config->organization_id,
+                'visitor_name' => $visitorName,
+                'channel' => 'widget',
+                'status' => 'active',
+                'last_message_at' => now(),
             ]
         );
 
@@ -168,6 +184,27 @@ class WidgetChatController extends Controller
             'messages' => $messages,
             'tokens_used' => $conversation->tokens_used + (int) (strlen($aiResponse) / 4),
         ]);
+
+        // Store in chat_messages for inbox
+        $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
+        if ($chatConv) {
+            ChatMessage::create([
+                'conversation_id' => $chatConv->id,
+                'sender_type' => 'visitor',
+                'content' => $request->message,
+                'created_at' => now(),
+            ]);
+            ChatMessage::create([
+                'conversation_id' => $chatConv->id,
+                'sender_type' => 'ai',
+                'content' => $aiResponse,
+                'created_at' => now(),
+            ]);
+            $chatConv->update([
+                'last_message_at' => now(),
+                'messages_count' => $chatConv->messages_count + 2,
+            ]);
+        }
 
         return response()->json([
             'response' => $aiResponse,

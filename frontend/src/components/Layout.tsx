@@ -6,7 +6,7 @@ import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
-  Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen, MessageSquare,
+  Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen, MessageSquare, Inbox,
   Crown, Award, Building2, UserCheck, FileText,
   CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
@@ -41,6 +41,7 @@ const navGroups: NavGroup[] = [
       { path: '/chatbot-config',  label: 'Chatbot Config',   icon: Bot,       gate: 'admin' },
       { path: '/knowledge-base',  label: 'Knowledge Base',   icon: BookOpen,       gate: 'admin' },
       { path: '/widget-builder',  label: 'Chat Widget',      icon: MessageSquare,  gate: 'admin' },
+      { path: '/chat-inbox',      label: 'Chat Inbox',      icon: Inbox,          gate: 'all' },
     ],
   },
   {
