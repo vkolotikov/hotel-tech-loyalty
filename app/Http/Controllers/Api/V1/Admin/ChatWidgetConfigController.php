@@ -43,6 +43,9 @@ class ChatWidgetConfigController extends Controller
         try {
             $orgId = $request->user()->organization_id;
 
+            // Coalesce nulls to defaults for non-nullable columns
+            $validated['company_name'] = $validated['company_name'] ?? '';
+
             $config = ChatWidgetConfig::where('organization_id', $orgId)->first();
 
             if (!$config) {
