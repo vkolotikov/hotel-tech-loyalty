@@ -7,15 +7,20 @@ use App\Models\ChatWidgetConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ChatWidgetConfigController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-        $config = ChatWidgetConfig::getForOrg($orgId);
+        try {
+            $orgId = $request->user()->organization_id;
+            $config = ChatWidgetConfig::getForOrg($orgId);
 
-        return response()->json($config);
+            return response()->json($config);
+        } catch (Throwable $e) {
+            return $this->debugError($e);
+        }
     }
 
     public function update(Request $request): JsonResponse
@@ -35,43 +40,87 @@ class ChatWidgetConfigController extends Controller
             'is_active'            => 'nullable|boolean',
         ]);
 
-        $orgId = $request->user()->organization_id;
+        try {
+            $orgId = $request->user()->organization_id;
 
-        $config = ChatWidgetConfig::where('organization_id', $orgId)->first();
+            $config = ChatWidgetConfig::where('organization_id', $orgId)->first();
 
-        if (!$config) {
-            $config = ChatWidgetConfig::create(array_merge($validated, [
-                'organization_id' => $orgId,
-                'widget_key' => Str::uuid()->toString(),
-                'api_key' => Str::random(48),
-            ]));
-        } else {
-            $config->update($validated);
+            if (!$config) {
+                $config = ChatWidgetConfig::create(array_merge($validated, [
+                    'organization_id' => $orgId,
+                    'widget_key'      => Str::uuid()->toString(),
+                    'api_key'         => Str::random(48),
+                ]));
+            } else {
+                $config->update($validated);
+            }
+
+            return response()->json($config);
+        } catch (Throwable $e) {
+            return $this->debugError($e);
         }
-
-        return response()->json($config);
     }
 
     public function regenerateKey(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-        $config = ChatWidgetConfig::where('organization_id', $orgId)->firstOrFail();
-        $config->regenerateApiKey();
+        try {
+            $orgId = $request->user()->organization_id;
+            // TenantScope filters by org; fall back gracefully if no config yet.
+            $config = ChatWidgetConfig::getForOrg($orgId);
 
-        return response()->json($config);
+            if (!$config->exists) {
+                return response()->json(['error' => 'No widget configuration found. Save a configuration first.'], 404);
+            }
+
+            $config->regenerateApiKey();
+
+            return response()->json($config);
+        } catch (Throwable $e) {
+            return $this->debugError($e);
+        }
     }
 
     public function embedCode(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-        $config = ChatWidgetConfig::where('organization_id', $orgId)->firstOrFail();
-        $baseUrl = config('app.url', $request->getSchemeAndHttpHost());
+        try {
+            $orgId  = $request->user()->organization_id;
+            $config = ChatWidgetConfig::getForOrg($orgId);
 
+            // Auto-create a default config if none exists yet.
+            if (!$config->exists) {
+                $config = ChatWidgetConfig::create([
+                    'organization_id' => $orgId,
+                    'widget_key'      => Str::uuid()->toString(),
+                    'api_key'         => Str::random(48),
+                ]);
+            }
+
+            $baseUrl = config('app.url', $request->getSchemeAndHttpHost());
+
+            return response()->json([
+                'embed_code'  => $config->generateEmbedCode($baseUrl),
+                'iframe_code' => $config->generateIframeCode($baseUrl),
+                'api_info'    => $config->getApiInfo($baseUrl),
+                'widget_key'  => $config->widget_key,
+            ]);
+        } catch (Throwable $e) {
+            return $this->debugError($e);
+        }
+    }
+
+    /**
+     * Return a JSON error response with full debug info.
+     * Exposed on all environments intentionally until the production
+     * issue is diagnosed — restrict to non-production once resolved.
+     */
+    private function debugError(Throwable $e): JsonResponse
+    {
         return response()->json([
-            'embed_code'  => $config->generateEmbedCode($baseUrl),
-            'iframe_code' => $config->generateIframeCode($baseUrl),
-            'api_info'    => $config->getApiInfo($baseUrl),
-            'widget_key'  => $config->widget_key,
-        ]);
+            'error'   => $e->getMessage(),
+            'class'   => get_class($e),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'trace'   => collect($e->getTrace())->take(15)->toArray(),
+        ], 500);
     }
 }

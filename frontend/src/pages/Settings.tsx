@@ -8,7 +8,8 @@ import {
   Mail, Wifi, CheckCircle, XCircle, Eye, EyeOff,
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, Link2, Phone,
-  Bed, Plus, Trash2, Clock, DollarSign, Image, ToggleLeft, Copy, Sun, Moon
+  Bed, Plus, Trash2, Clock, DollarSign, Image, ToggleLeft, Copy, Sun, Moon,
+  Code, Check
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -94,6 +95,7 @@ const TABS: Tab[] = [
   { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'] },
   { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
   { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true },
+  { id: 'chat_widget',   label: 'Chat Widget',     icon: MessageSquare, desc: 'Website chatbot widget & embed code', custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
 
@@ -152,6 +154,54 @@ export function Settings() {
     },
     onError: () => toast.error('Logo upload failed'),
   })
+
+  /* ── Chat Widget Queries ─────────────────────────────────────────────── */
+
+  const { data: widgetConfig } = useQuery({
+    queryKey: ['widget-config'],
+    queryFn: () => api.get('/v1/admin/widget-config').then(r => r.data),
+    enabled: activeTab === 'chat_widget',
+  })
+
+  const { data: widgetEmbed } = useQuery({
+    queryKey: ['widget-embed'],
+    queryFn: () => api.get('/v1/admin/widget-config/embed-code').then(r => r.data),
+    enabled: activeTab === 'chat_widget' && !!widgetConfig?.id,
+  })
+
+  const [widgetForm, setWidgetForm] = useState<any>(null)
+  const wf = widgetForm ?? widgetConfig ?? {}
+  const updateWidget = (key: string, value: any) => setWidgetForm((prev: any) => ({ ...(prev ?? widgetConfig ?? {}), [key]: value }))
+
+  const widgetSaveMutation = useMutation({
+    mutationFn: (data: any) => api.put('/v1/admin/widget-config', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['widget-config'] })
+      qc.invalidateQueries({ queryKey: ['widget-embed'] })
+      setWidgetForm(null)
+      toast.success('Widget config saved')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Save failed'),
+  })
+
+  const widgetRegenKey = useMutation({
+    mutationFn: () => api.post('/v1/admin/widget-config/regenerate-key'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['widget-config'] })
+      qc.invalidateQueries({ queryKey: ['widget-embed'] })
+      toast.success('API key regenerated')
+    },
+  })
+
+  const [embedTab, setEmbedTab] = useState<'script' | 'iframe' | 'api'>('script')
+  const [copied, setCopied] = useState(false)
+  const copyCode = (text?: string) => {
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    toast.success('Copied!')
+  }
 
   /* ── Handlers ────────────────────────────────────────────────────────── */
 
@@ -1245,6 +1295,198 @@ export function Settings() {
     </div>
   )
 
+  /* ─── Tab: Chat Widget ────────────────────────────────────────────────── */
+
+  const renderChatWidget = () => (
+    <div className="space-y-6">
+      {/* General Settings */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <MessageSquare size={15} className="text-emerald-400" /> Widget Settings
+        </h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Company Name</label>
+              <input type="text" value={wf.company_name || ''} onChange={e => updateWidget('company_name', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Your Hotel Name" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Position</label>
+              <select value={wf.position || 'bottom-right'} onChange={e => updateWidget('position', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Welcome Message</label>
+            <textarea value={wf.welcome_message || ''} onChange={e => updateWidget('welcome_message', e.target.value)} rows={2}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Hello! How can I help you today?" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Offline Message</label>
+            <input type="text" value={wf.offline_message || ''} onChange={e => updateWidget('offline_message', e.target.value)}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white"
+              placeholder="We're currently offline. Leave a message and we'll get back to you." />
+          </div>
+
+          {/* Brand Color */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Brand Color</label>
+            <div className="flex items-center gap-3">
+              {['#c9a84c', '#2d6a4f', '#1d4ed8', '#7c3aed', '#dc2626', '#0891b2', '#ea580c', '#16a34a'].map(c => (
+                <button key={c} onClick={() => updateWidget('primary_color', c)}
+                  className={`w-7 h-7 rounded-full border-2 transition-all ${(wf.primary_color || '#c9a84c') === c ? 'border-white scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: c }} />
+              ))}
+              <input type="color" value={wf.primary_color || '#c9a84c'} onChange={e => updateWidget('primary_color', e.target.value)}
+                className="w-7 h-7 rounded cursor-pointer border-0" />
+              <span className="text-xs text-gray-500 font-mono">{wf.primary_color || '#c9a84c'}</span>
+            </div>
+          </div>
+
+          {/* Launcher */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-2">Launcher Shape</label>
+              <div className="flex gap-2">
+                {['circle', 'rounded-square', 'pill', 'square'].map(s => (
+                  <button key={s} onClick={() => updateWidget('launcher_shape', s)}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs capitalize transition-colors ${
+                      (wf.launcher_shape || 'circle') === s ? 'border-emerald-500/30 bg-emerald-500/10 text-white' : 'border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                    }`}>{s.replace('-', ' ')}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-2">Launcher Icon</label>
+              <div className="flex gap-2">
+                {['chat', 'message', 'support', 'question', 'sales'].map(i => (
+                  <button key={i} onClick={() => updateWidget('launcher_icon', i)}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs capitalize transition-colors ${
+                      (wf.launcher_icon || 'chat') === i ? 'border-emerald-500/30 bg-emerald-500/10 text-white' : 'border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                    }`}>{i}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Lead Capture */}
+          <div className="flex items-center gap-3 pt-2 border-t border-white/[0.04]">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={wf.lead_capture_enabled ?? true}
+                onChange={e => updateWidget('lead_capture_enabled', e.target.checked)} className="sr-only peer" />
+              <div className="w-9 h-5 bg-white/[0.06] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+            </label>
+            <span className="text-sm text-white">Lead capture form</span>
+            {(wf.lead_capture_enabled ?? true) && (
+              <div className="flex gap-3 ml-4">
+                {['name', 'email', 'phone'].map(field => (
+                  <label key={field} className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={(wf.lead_capture_fields || { name: true, email: true, phone: false })[field] ?? false}
+                      onChange={e => updateWidget('lead_capture_fields', { ...(wf.lead_capture_fields || { name: true, email: true, phone: false }), [field]: e.target.checked })}
+                      className="w-3.5 h-3.5 rounded border-white/[0.12] bg-white/[0.03] text-emerald-500" />
+                    <span className="text-xs text-gray-400 capitalize">{field}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Active + Save */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={wf.is_active ?? true} onChange={e => updateWidget('is_active', e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-white/[0.12] bg-white/[0.03] text-emerald-500" />
+              <span className="text-sm text-white">Widget Active</span>
+            </label>
+            <button onClick={() => widgetSaveMutation.mutate(wf)} disabled={widgetSaveMutation.isPending}
+              className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+              <Save size={13} /> {widgetSaveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Embed Code / Integration */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <Code size={15} className="text-emerald-400" /> Integration Code
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">Choose an installation method. Each organization gets a unique widget key.</p>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-white/[0.02] rounded-lg p-1 mb-4">
+          {([
+            { id: 'script' as const, label: 'Script Tag' },
+            { id: 'iframe' as const, label: 'Iframe' },
+            { id: 'api' as const, label: 'API' },
+          ]).map(t => (
+            <button key={t.id} onClick={() => setEmbedTab(t.id)}
+              className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                embedTab === t.id ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'text-gray-500 hover:text-white'
+              }`}>{t.label}</button>
+          ))}
+        </div>
+
+        {embedTab === 'script' && (
+          <div className="space-y-2">
+            <p className="text-[11px] text-gray-500">Paste this before the closing <code className="text-emerald-400">&lt;/body&gt;</code> tag on your website.</p>
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 relative group">
+              <pre className="text-xs text-green-400 whitespace-pre-wrap break-all font-mono">{widgetEmbed?.embed_code || (widgetConfig?.id ? 'Loading...' : 'Save widget config first')}</pre>
+              <button onClick={() => copyCode(widgetEmbed?.embed_code)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/[0.06] text-gray-400 hover:text-white p-1.5 rounded">
+                {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {embedTab === 'iframe' && (
+          <div className="space-y-2">
+            <p className="text-[11px] text-gray-500">Drop-in iframe — works with WordPress, Wix, Squarespace, and any CMS.</p>
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 relative group">
+              <pre className="text-xs text-blue-400 whitespace-pre-wrap break-all font-mono">{widgetEmbed?.iframe_code || (widgetConfig?.id ? 'Loading...' : 'Save widget config first')}</pre>
+              <button onClick={() => copyCode(widgetEmbed?.iframe_code)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/[0.06] text-gray-400 hover:text-white p-1.5 rounded">
+                {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {embedTab === 'api' && (
+          <div className="space-y-2">
+            <p className="text-[11px] text-gray-500">REST API endpoints for custom integrations.</p>
+            {widgetEmbed?.api_info?.endpoints && Object.entries(widgetEmbed.api_info.endpoints).map(([name, ep]: [string, any]) => (
+              <div key={name} className="flex items-center gap-2 bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>{ep.method}</span>
+                <code className="text-xs text-gray-400 font-mono flex-1 truncate">{ep.url}</code>
+                <button onClick={() => copyCode(ep.url)} className="text-gray-500 hover:text-white p-1"><Copy size={12} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Widget Key & Regen */}
+        {widgetConfig?.id && (
+          <div className="flex items-center gap-4 pt-4 mt-4 border-t border-white/[0.04] text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500">Widget Key:</span>
+              <code className="text-emerald-400 font-mono">{widgetConfig.widget_key?.slice(0, 12)}...</code>
+              <button onClick={() => copyCode(widgetConfig.widget_key)} className="text-gray-500 hover:text-white"><Copy size={11} /></button>
+            </div>
+            <div className="flex-1" />
+            <button onClick={() => widgetRegenKey.mutate()} disabled={widgetRegenKey.isPending}
+              className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-xs">
+              <RefreshCw size={12} className={widgetRegenKey.isPending ? 'animate-spin' : ''} /> Regenerate API Key
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   /* ─── Tab: AI & System (super admin only) ─────────────────────────────── */
 
   const renderAiSystem = () => {
@@ -1381,6 +1623,7 @@ export function Settings() {
       case 'loyalty': return renderLoyalty()
       case 'integrations': return renderIntegrations()
       case 'booking': return renderBooking()
+      case 'chat_widget': return renderChatWidget()
       case 'ai_system': return renderAiSystem()
       default: {
         // Generic tab — just render its settings
