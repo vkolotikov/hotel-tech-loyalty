@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
   X, Send, Loader2, Sparkles, Trash2, Maximize2, Minimize2,
-  Bot, User, ChevronRight, Zap,
+  Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX,
 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
@@ -50,6 +50,24 @@ const SUGGESTION_GROUPS = [
     ],
   },
 ]
+
+/* ── Voice helpers ─────────────────────────────────────────────── */
+
+const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+const hasSpeechRecognition = !!SpeechRecognition
+const hasSpeechSynthesis = typeof window !== 'undefined' && 'speechSynthesis' in window
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/#{1,3}\s/g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/[-•*]\s+/g, '')
+    .replace(/\d+[.)]\s+/g, '')
+    .trim()
+}
+
+/* ── Message formatting ────────────────────────────────────────── */
 
 function formatMessage(text: string) {
   const lines = text.split('\n')
@@ -105,7 +123,6 @@ function formatMessage(text: string) {
 }
 
 function formatInline(text: string) {
-  // Bold, inline code, then return
   const parts: any[] = []
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g
   let lastIndex = 0
@@ -121,6 +138,8 @@ function formatInline(text: string) {
   if (lastIndex < text.length) parts.push(text.slice(lastIndex))
   return parts.length > 0 ? parts : text
 }
+
+/* ── Main Component ────────────────────────────────────────────── */
 
 export default function AiChat() {
   const qc = useQueryClient()
@@ -138,6 +157,14 @@ export default function AiChat() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Voice state
+  const [listening, setListening] = useState(false)
+  const [ttsEnabled, setTtsEnabled] = useState(() => {
+    try { return sessionStorage.getItem('ai_tts') === '1' } catch { return false }
+  })
+  const [speaking, setSpeaking] = useState(false)
+  const recognitionRef = useRef<any>(null)
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
@@ -150,36 +177,163 @@ export default function AiChat() {
     try { sessionStorage.setItem('ai_chat_messages', JSON.stringify(messages)) } catch {}
   }, [messages])
 
+  useEffect(() => {
+    try { sessionStorage.setItem('ai_tts', ttsEnabled ? '1' : '0') } catch {}
+  }, [ttsEnabled])
+
+  // Cleanup speech on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) try { recognitionRef.current.stop() } catch {}
+      if (hasSpeechSynthesis) speechSynthesis.cancel()
+    }
+  }, [])
+
+  /* ── TTS ── */
+  const speak = useCallback((text: string) => {
+    if (!hasSpeechSynthesis || !ttsEnabled) return
+    speechSynthesis.cancel()
+    const cleaned = stripMarkdown(text)
+    // Split into chunks for long text (max ~200 chars per utterance for reliability)
+    const sentences = cleaned.match(/[^.!?\n]+[.!?\n]?/g) || [cleaned]
+    const chunks: string[] = []
+    let current = ''
+    for (const s of sentences) {
+      if ((current + s).length > 200) {
+        if (current) chunks.push(current.trim())
+        current = s
+      } else {
+        current += s
+      }
+    }
+    if (current.trim()) chunks.push(current.trim())
+
+    let idx = 0
+    const speakNext = () => {
+      if (idx >= chunks.length) { setSpeaking(false); return }
+      const utt = new SpeechSynthesisUtterance(chunks[idx])
+      utt.rate = 1.05
+      utt.pitch = 1.0
+      // Prefer a natural voice
+      const voices = speechSynthesis.getVoices()
+      const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en') && v.localService)
+        || voices.find(v => v.lang.startsWith('en'))
+      if (preferred) utt.voice = preferred
+      utt.onend = () => { idx++; speakNext() }
+      utt.onerror = () => { idx++; speakNext() }
+      speechSynthesis.speak(utt)
+    }
+    setSpeaking(true)
+    speakNext()
+  }, [ttsEnabled])
+
+  const stopSpeaking = useCallback(() => {
+    if (hasSpeechSynthesis) speechSynthesis.cancel()
+    setSpeaking(false)
+  }, [])
+
+  /* ── STT ── */
+  const startListening = useCallback(() => {
+    if (!hasSpeechRecognition || listening) return
+    const recognition = new SpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    let finalTranscript = ''
+    let interimTranscript = ''
+
+    recognition.onstart = () => setListening(true)
+
+    recognition.onresult = (e: any) => {
+      finalTranscript = ''
+      interimTranscript = ''
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          finalTranscript += e.results[i][0].transcript
+        } else {
+          interimTranscript += e.results[i][0].transcript
+        }
+      }
+      setInput(finalTranscript || interimTranscript)
+    }
+
+    recognition.onend = () => {
+      setListening(false)
+      recognitionRef.current = null
+      // Auto-send if we got a final transcript
+      if (finalTranscript.trim()) {
+        // Use a small delay to let state settle
+        setTimeout(() => {
+          const textarea = document.querySelector('[data-ai-input]') as HTMLTextAreaElement
+          if (textarea?.value.trim()) {
+            // Trigger send via custom event
+            textarea.dispatchEvent(new CustomEvent('voice-send'))
+          }
+        }, 100)
+      }
+    }
+
+    recognition.onerror = (e: any) => {
+      if (e.error !== 'aborted') console.warn('Speech recognition error:', e.error)
+      setListening(false)
+      recognitionRef.current = null
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }, [listening])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch {}
+    }
+  }, [])
+
+  /* ── Send ── */
   const send = useCallback(async (text?: string) => {
     const msg = (text || input).trim()
     if (!msg || loading) return
 
+    stopSpeaking()
     const next: Message[] = [...messages, { role: 'user', content: msg }]
     setMessages(next)
     setInput('')
     setLoading(true)
     setToolStatus(null)
 
-    // Simulate tool status for UX
     const statusTimer = setTimeout(() => setToolStatus('Searching data…'), 2000)
     const statusTimer2 = setTimeout(() => setToolStatus('Processing results…'), 5000)
 
     try {
       const res = await api.post('/v1/admin/crm-ai/chat', { messages: next.map(m => ({ role: m.role, content: m.content })) })
       const actions = res.data.actions ?? []
-      setMessages([...next, { role: 'assistant', content: res.data.response, actions }])
+      const response = res.data.response
+      setMessages([...next, { role: 'assistant', content: response, actions }])
       if (actions.some((a: any) => a.tool?.startsWith('create_') || a.tool?.startsWith('update_') || a.tool?.startsWith('award_') || a.tool?.startsWith('redeem_') || a.tool === 'analyze_inquiries_create_followups' || a.tool === 'update_pms_booking' || a.tool === 'update_setting')) {
         qc.invalidateQueries()
       }
+      // Auto-speak response
+      if (ttsEnabled && response) speak(response)
     } catch (e: any) {
-      setMessages([...next, { role: 'assistant', content: 'Error: ' + (e.response?.data?.message || 'Could not reach AI service.') }])
+      const errMsg = 'Error: ' + (e.response?.data?.message || 'Could not reach AI service.')
+      setMessages([...next, { role: 'assistant', content: errMsg }])
     } finally {
       clearTimeout(statusTimer)
       clearTimeout(statusTimer2)
       setLoading(false)
       setToolStatus(null)
     }
-  }, [input, loading, messages, qc])
+  }, [input, loading, messages, qc, ttsEnabled, speak, stopSpeaking])
+
+  // Listen for voice-send custom event
+  useEffect(() => {
+    const handler = () => { if (input.trim()) send() }
+    const textarea = document.querySelector('[data-ai-input]')
+    textarea?.addEventListener('voice-send', handler)
+    return () => textarea?.removeEventListener('voice-send', handler)
+  }, [input, send])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -189,6 +343,7 @@ export default function AiChat() {
   }
 
   const clearChat = () => {
+    stopSpeaking()
     setMessages([])
     sessionStorage.removeItem('ai_chat_messages')
   }
@@ -227,6 +382,16 @@ export default function AiChat() {
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          {/* TTS toggle */}
+          {hasSpeechSynthesis && (
+            <button
+              onClick={() => { if (speaking) stopSpeaking(); setTtsEnabled(!ttsEnabled) }}
+              className={`p-1.5 rounded-lg transition-colors ${ttsEnabled ? 'bg-primary-500/15 text-primary-400' : 'hover:bg-dark-surface text-[#636366] hover:text-gray-300'}`}
+              title={ttsEnabled ? 'Voice responses ON — click to disable' : 'Voice responses OFF — click to enable'}
+            >
+              {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            </button>
+          )}
           {messages.length > 0 && (
             <button onClick={clearChat} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-gray-300 transition-colors" title="Clear chat">
               <Trash2 size={14} />
@@ -235,7 +400,7 @@ export default function AiChat() {
           <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-gray-300 transition-colors" title={expanded ? 'Minimize' : 'Expand'}>
             {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
-          <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-white transition-colors">
+          <button onClick={() => { stopSpeaking(); setOpen(false) }} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-white transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -254,6 +419,7 @@ export default function AiChat() {
                 <div className="text-base font-semibold text-white mb-1">How can I help?</div>
                 <div className="text-xs text-t-secondary max-w-[280px] mx-auto">
                   I can search any data, manage bookings & loyalty, analyze trends, generate reports, and guide you through every feature.
+                  {hasSpeechRecognition && <span className="block mt-1 text-primary-400/70">Tap the mic button to use voice input.</span>}
                 </div>
               </div>
             </div>
@@ -293,7 +459,21 @@ export default function AiChat() {
                 ? 'bg-primary-600 text-dark-bg rounded-br-md font-medium'
                 : 'bg-dark-surface text-[#c8c8c8] border border-dark-border rounded-bl-md'
             }`}>
-              {msg.role === 'assistant' ? formatMessage(msg.content) : msg.content}
+              {msg.role === 'assistant' ? (
+                <div className="group/msg relative">
+                  {formatMessage(msg.content)}
+                  {/* Per-message speak button */}
+                  {hasSpeechSynthesis && msg.content && (
+                    <button
+                      onClick={() => speaking ? stopSpeaking() : speak(msg.content)}
+                      className="absolute -top-1 -right-1 opacity-0 group-hover/msg:opacity-100 p-1 rounded-md bg-dark-surface2 border border-dark-border text-[#636366] hover:text-primary-400 transition-all"
+                      title={speaking ? 'Stop speaking' : 'Read aloud'}
+                    >
+                      {speaking ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                    </button>
+                  )}
+                </div>
+              ) : msg.content}
             </div>
             {msg.role === 'user' && (
               <div className="w-7 h-7 rounded-lg bg-dark-surface2 flex items-center justify-center flex-shrink-0 mt-0.5 border border-dark-border">
@@ -342,15 +522,34 @@ export default function AiChat() {
       {/* Input */}
       <div className="px-3 py-3 border-t border-dark-border flex-shrink-0 bg-dark-surface/50">
         <div className="flex gap-2">
+          {/* Mic button */}
+          {hasSpeechRecognition && (
+            <button
+              type="button"
+              onClick={listening ? stopListening : startListening}
+              disabled={loading}
+              className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${
+                listening
+                  ? 'bg-red-500 text-white shadow-md shadow-red-500/30 animate-pulse'
+                  : 'bg-dark-surface border border-dark-border text-[#636366] hover:text-primary-400 hover:border-primary-500/30'
+              } disabled:opacity-40`}
+              title={listening ? 'Stop recording' : 'Voice input'}
+            >
+              {listening ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          )}
           <textarea
             ref={inputRef}
+            data-ai-input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything about guests, loyalty, reservations…"
+            placeholder={listening ? 'Listening…' : 'Ask anything about guests, loyalty, reservations…'}
             disabled={loading}
             rows={1}
-            className="flex-1 bg-dark-surface border border-dark-border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px]"
+            className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
+              listening ? 'border-red-500/50 ring-1 ring-red-500/30' : 'border-dark-border'
+            }`}
             style={{ minHeight: '42px' }}
           />
           <button
@@ -363,7 +562,14 @@ export default function AiChat() {
           </button>
         </div>
         <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className="text-[10px] text-[#4a4a4a]">Shift+Enter for new line</span>
+          <span className="text-[10px] text-[#4a4a4a]">
+            {listening ? (
+              <span className="text-red-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+                Recording… tap mic to stop
+              </span>
+            ) : 'Shift+Enter for new line'}
+          </span>
           <span className="text-[10px] text-[#4a4a4a]">{messages.length} messages</span>
         </div>
       </div>
