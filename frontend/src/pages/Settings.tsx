@@ -9,7 +9,7 @@ import {
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, Link2, Phone,
   Bed, Plus, Trash2, Clock, DollarSign, Image, ToggleLeft, Copy, Sun, Moon,
-  Code, Check
+  Code, Check, Mic, Volume2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -202,6 +202,28 @@ export function Settings() {
     setTimeout(() => setCopied(false), 2000)
     toast.success('Copied!')
   }
+
+  /* ── Voice Agent Queries ───────────────────────────────────────────── */
+
+  const { data: voiceConfig } = useQuery({
+    queryKey: ['voice-agent-config'],
+    queryFn: () => api.get('/v1/admin/voice-agent/config').then(r => r.data),
+    enabled: activeTab === 'chat_widget',
+  })
+
+  const [voiceForm, setVoiceForm] = useState<any>(null)
+  const vf = voiceForm ?? voiceConfig ?? {}
+  const updateVoice = (key: string, value: any) => setVoiceForm((prev: any) => ({ ...(prev ?? voiceConfig ?? {}), [key]: value }))
+
+  const voiceSaveMutation = useMutation({
+    mutationFn: (data: any) => api.put('/v1/admin/voice-agent/config', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['voice-agent-config'] })
+      setVoiceForm(null)
+      toast.success('Voice config saved')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Save failed'),
+  })
 
   /* ── Handlers ────────────────────────────────────────────────────────── */
 
@@ -1483,6 +1505,114 @@ export function Settings() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Voice Agent Configuration */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <Mic size={15} className="text-emerald-400" /> Voice Agent (AI Voice-to-Voice)
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">Enable real-time voice conversations on your website widget using OpenAI Realtime API. Visitors can talk to your AI assistant via WebRTC.</p>
+
+        <div className="space-y-4">
+          {/* Enable toggles */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={vf.is_active ?? false}
+                  onChange={e => updateVoice('is_active', e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 bg-white/[0.06] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+              </label>
+              <span className="text-sm text-white">Voice Agent Active</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={vf.realtime_enabled ?? false}
+                  onChange={e => updateVoice('realtime_enabled', e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 bg-white/[0.06] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+              </label>
+              <span className="text-sm text-white">Realtime (WebRTC)</span>
+            </div>
+          </div>
+
+          {/* Voice Selection */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Voice</label>
+            <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+              {['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse'].map(v => (
+                <button key={v} onClick={() => updateVoice('voice', v)}
+                  className={`py-2 rounded-lg border text-xs font-medium capitalize transition-colors ${
+                    (vf.voice || 'alloy') === v ? 'border-emerald-500/30 bg-emerald-500/10 text-white' : 'border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                  }`}>
+                  <Volume2 size={12} className="inline mr-1" />{v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Model Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Realtime Model</label>
+              <select value={vf.realtime_model || 'gpt-4o-realtime-preview'} onChange={e => updateVoice('realtime_model', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
+                <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview</option>
+                <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">TTS Model</label>
+              <select value={vf.tts_model || 'gpt-4o-mini-tts'} onChange={e => updateVoice('tts_model', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
+                <option value="gpt-4o-mini-tts">gpt-4o-mini-tts</option>
+                <option value="tts-1">tts-1</option>
+                <option value="tts-1-hd">tts-1-hd</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Temperature */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Temperature: {vf.temperature ?? 0.8}</label>
+            <input type="range" min="0" max="1.5" step="0.1" value={vf.temperature ?? 0.8}
+              onChange={e => updateVoice('temperature', parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+          </div>
+
+          {/* Language */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Language</label>
+            <select value={vf.language || 'en'} onChange={e => updateVoice('language', e.target.value)}
+              className="w-48 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="ar">Arabic</option>
+              <option value="zh">Chinese</option>
+              <option value="ja">Japanese</option>
+            </select>
+          </div>
+
+          {/* Voice Instructions */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Voice Agent Instructions (optional — overrides text chatbot personality for voice)</label>
+            <textarea value={vf.voice_instructions || ''} onChange={e => updateVoice('voice_instructions', e.target.value)} rows={5}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white font-mono"
+              placeholder="Leave empty to auto-generate from chatbot behavior config. Or customize: personality, tone, rules for voice conversations..." />
+          </div>
+
+          {/* Save */}
+          <div className="flex justify-end pt-2 border-t border-white/[0.04]">
+            <button onClick={() => voiceSaveMutation.mutate(vf)} disabled={voiceSaveMutation.isPending}
+              className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+              <Save size={13} /> {voiceSaveMutation.isPending ? 'Saving...' : 'Save Voice Config'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

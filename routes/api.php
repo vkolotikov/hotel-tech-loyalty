@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
 use App\Http\Controllers\Api\V1\Admin\ChatInboxController;
 use App\Http\Controllers\Api\V1\Admin\PopupRuleController;
 use App\Http\Controllers\Api\V1\Admin\TrainingController;
+use App\Http\Controllers\Api\V1\Admin\VoiceAgentController;
 use App\Http\Controllers\Api\V1\Widget\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +79,7 @@ Route::prefix('v1')->group(function () {
         Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage']);
         Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
+        Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession']);
     });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
@@ -275,6 +277,10 @@ Route::prefix('v1')->group(function () {
             Route::post('knowledge/documents',                [KnowledgeBaseController::class, 'uploadDocument']);
             Route::delete('knowledge/documents/{id}',         [KnowledgeBaseController::class, 'destroyDocument']);
             Route::post('knowledge/documents/{id}/reprocess', [KnowledgeBaseController::class, 'reprocessDocument']);
+
+            // ─── Voice Agent ─────────────────────────────────────────────────
+            Route::get('voice-agent/config',                    [VoiceAgentController::class, 'show']);
+            Route::put('voice-agent/config',                    [VoiceAgentController::class, 'update']);
 
             // ─── Guest-Member Auto-Link ───────────────────────────────────────
             Route::post('guests/backfill-links',          [GuestController::class, 'backfillLinks']);

@@ -28,6 +28,10 @@
   var isSpeaking = false;
   var ttsEnabled = false;
   var recognition = null;
+  var isVoiceCall = false;
+  var voicePc = null; // WebRTC PeerConnection
+  var voiceDataChannel = null;
+  var voiceAudioEl = null;
 
   // ── Styles ──
   var STYLES = '\
@@ -85,6 +89,21 @@
     .htchat-typing span:nth-child(2) { animation-delay: 0.2s; }\
     .htchat-typing span:nth-child(3) { animation-delay: 0.4s; }\
     @keyframes htchat-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }\
+    #htchat-voice-call-btn { background: #22c55e; color: white; border: none; width: 38px; height: 38px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }\
+    #htchat-voice-call-btn:hover { background: #16a34a; }\
+    #htchat-voice-call-btn.active { background: #ef4444; animation: htchat-pulse-mic 1.5s ease-in-out infinite; }\
+    #htchat-voice-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
+    #htchat-voice-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 10; border-radius: 16px; }\
+    #htchat-voice-overlay .voice-wave { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }\
+    #htchat-voice-overlay .voice-wave::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); animation: htchat-voice-ring 2s ease-in-out infinite; }\
+    #htchat-voice-overlay .voice-wave::after { content: ""; position: absolute; inset: -20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); animation: htchat-voice-ring 2s ease-in-out infinite 0.5s; }\
+    #htchat-voice-overlay .voice-wave svg { width: 32px; height: 32px; fill: none; stroke: white; stroke-width: 2; }\
+    #htchat-voice-overlay p { color: white; font-size: 14px; font-weight: 500; }\
+    #htchat-voice-overlay .voice-status { color: rgba(255,255,255,0.6); font-size: 12px; }\
+    #htchat-voice-overlay .end-call-btn { background: #ef4444; color: white; border: none; padding: 12px 28px; border-radius: 24px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 8px; transition: background 0.2s; }\
+    #htchat-voice-overlay .end-call-btn:hover { background: #dc2626; }\
+    #htchat-voice-overlay .end-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
+    @keyframes htchat-voice-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }\
     @media (max-width: 480px) { #htchat-panel { width: calc(100vw - 20px); height: calc(100vh - 80px); right: 10px !important; bottom: 70px !important; border-radius: 12px; } }\
   ';
 
@@ -98,6 +117,8 @@
     volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
     volumeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
     sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.91 5.63L20 10.5l-4.69 3.19L16.82 20 12 16.5 7.18 20l1.51-6.31L4 10.5l6.09-1.87z"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+    phoneOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
   };
 
   // ── Init ──
@@ -176,6 +197,7 @@
         </div>\
         <div id="htchat-header-actions">\
           ' + (hasTTS ? '<button id="htchat-tts-btn" title="Toggle voice responses">' + ICONS.volumeOff + '</button>' : '') + '\
+          <button id="htchat-voice-call-btn" title="Voice call" style="display:none">' + ICONS.phone + '</button>\
           <button id="htchat-close-btn">' + ICONS.close + '</button>\
         </div>\
       </div>\
@@ -210,6 +232,7 @@
     if (hasTTS) {
       document.getElementById('htchat-tts-btn').onclick = toggleTTS;
     }
+    document.getElementById('htchat-voice-call-btn').onclick = toggleVoiceCall;
 
     renderMessages();
   }
@@ -240,6 +263,11 @@
         if (h3) h3.textContent = data.company_name;
       }
       if (data.welcome_message) renderMessages();
+      // Show voice call button if enabled
+      if (data.voice_enabled) {
+        var vcBtn = document.getElementById('htchat-voice-call-btn');
+        if (vcBtn) vcBtn.style.display = 'flex';
+      }
     }).catch(function () {});
   }
 
@@ -446,6 +474,198 @@
   function stopSpeaking() {
     if (hasTTS) speechSynthesis.cancel();
     isSpeaking = false;
+  }
+
+  // ── Voice Agent: WebRTC ──
+  function toggleVoiceCall() {
+    if (isVoiceCall) {
+      endVoiceCall();
+    } else {
+      startVoiceCall();
+    }
+  }
+
+  function startVoiceCall() {
+    if (isVoiceCall) return;
+    showVoiceOverlay('Connecting…');
+
+    // 1. Get ephemeral token from our backend
+    fetch(API + '/realtime-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Failed'); });
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data.client_secret) throw new Error('No client secret');
+        return connectWebRTC(data.client_secret, data.voice);
+      })
+      .catch(function (err) {
+        console.error('HotelChat voice error:', err);
+        removeVoiceOverlay();
+        alert('Voice call unavailable: ' + (err.message || 'Unknown error'));
+      });
+  }
+
+  function connectWebRTC(ephemeralKey, voice) {
+    // 2. Create PeerConnection
+    voicePc = new RTCPeerConnection();
+
+    // 3. Set up audio output
+    voiceAudioEl = document.createElement('audio');
+    voiceAudioEl.autoplay = true;
+    voicePc.ontrack = function (e) {
+      voiceAudioEl.srcObject = e.streams[0];
+    };
+
+    // 4. Get microphone and add track
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      stream.getTracks().forEach(function (track) {
+        voicePc.addTrack(track, stream);
+      });
+
+      // 5. Create data channel for events
+      voiceDataChannel = voicePc.createDataChannel('oai-events');
+      voiceDataChannel.onopen = function () {
+        isVoiceCall = true;
+        updateVoiceCallUI(true);
+        updateVoiceOverlayStatus('Listening…');
+        // Send initial response.create to tell the model to greet
+        voiceDataChannel.send(JSON.stringify({
+          type: 'response.create',
+          response: {
+            modalities: ['text', 'audio'],
+            instructions: 'Greet the caller warmly and ask how you can help.',
+          },
+        }));
+      };
+      voiceDataChannel.onmessage = function (e) {
+        handleRealtimeEvent(JSON.parse(e.data));
+      };
+      voiceDataChannel.onclose = function () {
+        endVoiceCall();
+      };
+
+      // 6. Create and set local offer
+      return voicePc.createOffer();
+    }).then(function (offer) {
+      return voicePc.setLocalDescription(offer);
+    }).then(function () {
+      // 7. Send offer to OpenAI Realtime API
+      var model = 'gpt-4o-realtime-preview';
+      return fetch('https://api.openai.com/v1/realtime?model=' + model, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + ephemeralKey,
+          'Content-Type': 'application/sdp',
+        },
+        body: voicePc.localDescription.sdp,
+      });
+    }).then(function (r) {
+      if (!r.ok) throw new Error('OpenAI Realtime SDP exchange failed');
+      return r.text();
+    }).then(function (sdp) {
+      return voicePc.setRemoteDescription({ type: 'answer', sdp: sdp });
+    });
+  }
+
+  function handleRealtimeEvent(event) {
+    if (!event || !event.type) return;
+
+    switch (event.type) {
+      case 'response.audio_transcript.done':
+        // AI finished speaking — add transcript to chat
+        if (event.transcript) {
+          messages.push({ role: 'assistant', content: event.transcript });
+          renderMessages();
+        }
+        break;
+
+      case 'conversation.item.input_audio_transcription.completed':
+        // User speech transcribed
+        if (event.transcript) {
+          messages.push({ role: 'user', content: event.transcript });
+          renderMessages();
+        }
+        break;
+
+      case 'input_audio_buffer.speech_started':
+        updateVoiceOverlayStatus('Listening…');
+        break;
+
+      case 'input_audio_buffer.speech_stopped':
+        updateVoiceOverlayStatus('Processing…');
+        break;
+
+      case 'response.audio.started':
+      case 'response.created':
+        updateVoiceOverlayStatus('Speaking…');
+        break;
+
+      case 'response.done':
+        updateVoiceOverlayStatus('Listening…');
+        break;
+
+      case 'error':
+        console.error('Realtime error:', event.error);
+        break;
+    }
+  }
+
+  function endVoiceCall() {
+    isVoiceCall = false;
+
+    if (voiceDataChannel) {
+      try { voiceDataChannel.close(); } catch (e) {}
+      voiceDataChannel = null;
+    }
+    if (voicePc) {
+      voicePc.getSenders().forEach(function (sender) {
+        if (sender.track) sender.track.stop();
+      });
+      try { voicePc.close(); } catch (e) {}
+      voicePc = null;
+    }
+    if (voiceAudioEl) {
+      voiceAudioEl.srcObject = null;
+      voiceAudioEl = null;
+    }
+
+    updateVoiceCallUI(false);
+    removeVoiceOverlay();
+  }
+
+  function showVoiceOverlay(status) {
+    removeVoiceOverlay();
+    var panel = document.getElementById('htchat-panel');
+    if (!panel) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'htchat-voice-overlay';
+    overlay.innerHTML = '\
+      <div class="voice-wave" style="background:' + getColor() + '">' + ICONS.phone + '</div>\
+      <p>Voice Call</p>\
+      <span class="voice-status" id="htchat-voice-status">' + (status || 'Connecting…') + '</span>\
+      <button class="end-call-btn" id="htchat-end-call">' + ICONS.phoneOff + ' End Call</button>';
+    panel.appendChild(overlay);
+    document.getElementById('htchat-end-call').onclick = endVoiceCall;
+  }
+
+  function updateVoiceOverlayStatus(text) {
+    var el = document.getElementById('htchat-voice-status');
+    if (el) el.textContent = text;
+  }
+
+  function removeVoiceOverlay() {
+    var overlay = document.getElementById('htchat-voice-overlay');
+    if (overlay) overlay.remove();
+  }
+
+  function updateVoiceCallUI(active) {
+    var btn = document.getElementById('htchat-voice-call-btn');
+    if (btn) {
+      btn.className = active ? 'active' : '';
+      btn.innerHTML = active ? ICONS.phoneOff : ICONS.phone;
+      btn.title = active ? 'End voice call' : 'Voice call';
+    }
   }
 
   // ── Helpers ──

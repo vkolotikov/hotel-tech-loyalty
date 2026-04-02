@@ -38,6 +38,7 @@ class WidgetChatController extends Controller
         }
 
         $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
+        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
 
         return response()->json([
             'company_name'    => $config->company_name,
@@ -55,6 +56,7 @@ class WidgetChatController extends Controller
             'assistant_name'  => $behavior->assistant_name ?? 'Hotel Assistant',
             'assistant_avatar' => $behavior->assistant_avatar ?? null,
             'offline_message' => $config->offline_message,
+            'voice_enabled'   => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
         ]);
     }
 
@@ -402,5 +404,112 @@ class WidgetChatController extends Controller
 
         if ($response->failed()) throw new \RuntimeException('Gemini API error: ' . $response->body());
         return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/realtime-session
+     * Creates an ephemeral OpenAI Realtime API session for voice-to-voice.
+     * Returns a client_secret that the widget uses to establish WebRTC.
+     */
+    public function createRealtimeSession(Request $request, string $widgetKey): JsonResponse
+    {
+        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
+
+        if (!$voiceConfig || !$voiceConfig->is_active || !$voiceConfig->realtime_enabled) {
+            return response()->json(['error' => 'Voice agent not enabled'], 403);
+        }
+
+        $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!$apiKey) {
+            return response()->json(['error' => 'OpenAI not configured'], 500);
+        }
+
+        // Build instructions from behavior config + voice config + knowledge
+        $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
+        $instructions = $this->buildVoiceInstructions($config, $behavior, $voiceConfig);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->post('https://api.openai.com/v1/realtime/sessions', [
+                'model' => $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview',
+                'voice' => $voiceConfig->voice ?? 'alloy',
+                'instructions' => $instructions,
+                'input_audio_transcription' => ['model' => 'gpt-4o-transcribe'],
+                'temperature' => $voiceConfig->temperature ?? 0.8,
+            ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'error' => 'Failed to create realtime session',
+                    'details' => $response->json(),
+                ], 502);
+            }
+
+            $data = $response->json();
+
+            return response()->json([
+                'client_secret' => $data['client_secret']['value'] ?? null,
+                'expires_at' => $data['client_secret']['expires_at'] ?? null,
+                'session_id' => $data['id'] ?? null,
+                'voice' => $voiceConfig->voice,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function buildVoiceInstructions(
+        ChatWidgetConfig $widget,
+        ?ChatbotBehaviorConfig $behavior,
+        \App\Models\VoiceAgentConfig $voiceConfig,
+    ): string {
+        $companyName = $widget->company_name ?: 'our hotel';
+        $assistantName = $behavior->assistant_name ?? 'Hotel Assistant';
+
+        $base = $voiceConfig->voice_instructions;
+
+        if (!$base) {
+            $tone = $behavior->tone ?? 'professional';
+            $style = $behavior->sales_style ?? 'consultative';
+
+            $base = <<<PROMPT
+# Identity
+You are {$assistantName}, the voice AI assistant for {$companyName}.
+
+# Task
+Help hotel guests and website visitors with questions about the hotel: rooms, amenities, check-in/out, dining, booking, loyalty program, and local recommendations.
+
+# Tone
+{$tone}, warm, and {$style}. Be concise in voice — keep answers to 2-3 sentences unless more detail is requested.
+
+# Rules
+- Always greet the caller warmly
+- If you don't know specific hotel details, suggest they contact the front desk
+- Never make up prices or availability — offer to connect them with reservations
+- If they want to book, collect their name, dates, and room preference, then confirm
+- Speak naturally with occasional filler words for a human feel
+PROMPT;
+        }
+
+        // Inject knowledge context
+        try {
+            $knowledgeSummary = $this->knowledge->getKnowledgeContext('hotel information general', $widget->organization_id);
+            if ($knowledgeSummary) {
+                $base .= "\n\n# Hotel Knowledge Base\n" . $knowledgeSummary;
+            }
+        } catch (\Throwable $e) {
+            // Knowledge service failure shouldn't break voice
+        }
+
+        return $base;
     }
 }
