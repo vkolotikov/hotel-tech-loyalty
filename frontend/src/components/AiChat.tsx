@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
   X, Send, Loader2, Sparkles, Trash2, Maximize2, Minimize2,
-  Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX,
+  Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff,
 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
@@ -165,6 +165,13 @@ export default function AiChat() {
   const [speaking, setSpeaking] = useState(false)
   const recognitionRef = useRef<any>(null)
 
+  // Voice call (WebRTC) state
+  const [voiceCallActive, setVoiceCallActive] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState('')
+  const voicePcRef = useRef<RTCPeerConnection | null>(null)
+  const voiceDcRef = useRef<RTCDataChannel | null>(null)
+  const voiceAudioRef = useRef<HTMLAudioElement | null>(null)
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
@@ -181,11 +188,12 @@ export default function AiChat() {
     try { sessionStorage.setItem('ai_tts', ttsEnabled ? '1' : '0') } catch {}
   }, [ttsEnabled])
 
-  // Cleanup speech on unmount
+  // Cleanup speech + voice call on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) try { recognitionRef.current.stop() } catch {}
       if (hasSpeechSynthesis) speechSynthesis.cancel()
+      endVoiceCall()
     }
   }, [])
 
@@ -291,6 +299,112 @@ export default function AiChat() {
     }
   }, [])
 
+  /* ── Voice Call (WebRTC) ── */
+  const startVoiceCall = useCallback(async () => {
+    if (voiceCallActive) return
+    setVoiceStatus('Connecting…')
+    setVoiceCallActive(true)
+
+    try {
+      // 1. Get ephemeral token
+      const res = await api.post('/v1/admin/crm-ai/realtime-session')
+      const { client_secret } = res.data
+      if (!client_secret) throw new Error('No client secret received')
+
+      // 2. Create PeerConnection
+      const pc = new RTCPeerConnection()
+      voicePcRef.current = pc
+
+      // 3. Audio output
+      const audioEl = document.createElement('audio')
+      audioEl.autoplay = true
+      voiceAudioRef.current = audioEl
+      pc.ontrack = (e) => { audioEl.srcObject = e.streams[0] }
+
+      // 4. Get mic
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream.getTracks().forEach(track => pc.addTrack(track, stream))
+
+      // 5. Data channel
+      const dc = pc.createDataChannel('oai-events')
+      voiceDcRef.current = dc
+
+      dc.onopen = () => {
+        setVoiceStatus('Listening…')
+        dc.send(JSON.stringify({
+          type: 'response.create',
+          response: { modalities: ['text', 'audio'], instructions: 'Greet the user briefly and ask how you can help.' },
+        }))
+      }
+
+      dc.onmessage = (e) => {
+        const event = JSON.parse(e.data)
+        switch (event.type) {
+          case 'response.audio_transcript.done':
+            if (event.transcript) {
+              setMessages(prev => [...prev, { role: 'assistant', content: event.transcript }])
+            }
+            break
+          case 'conversation.item.input_audio_transcription.completed':
+            if (event.transcript) {
+              setMessages(prev => [...prev, { role: 'user', content: event.transcript }])
+            }
+            break
+          case 'input_audio_buffer.speech_started':
+            setVoiceStatus('Listening…')
+            break
+          case 'input_audio_buffer.speech_stopped':
+            setVoiceStatus('Processing…')
+            break
+          case 'response.audio.started':
+          case 'response.created':
+            setVoiceStatus('Speaking…')
+            break
+          case 'response.done':
+            setVoiceStatus('Listening…')
+            break
+          case 'error':
+            console.error('Realtime error:', event.error)
+            break
+        }
+      }
+
+      dc.onclose = () => endVoiceCall()
+
+      // 6. SDP exchange
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+
+      const sdpRes = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
+        body: pc.localDescription!.sdp,
+      })
+
+      if (!sdpRes.ok) throw new Error('SDP exchange failed')
+      const answerSdp = await sdpRes.text()
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+
+    } catch (err: any) {
+      console.error('Voice call error:', err)
+      setVoiceCallActive(false)
+      setVoiceStatus('')
+      alert('Voice call failed: ' + (err.message || 'Unknown error'))
+    }
+  }, [voiceCallActive])
+
+  const endVoiceCall = useCallback(() => {
+    if (voiceDcRef.current) { try { voiceDcRef.current.close() } catch {} voiceDcRef.current = null }
+    if (voicePcRef.current) {
+      voicePcRef.current.getSenders().forEach(s => { if (s.track) s.track.stop() })
+      try { voicePcRef.current.close() } catch {}
+      voicePcRef.current = null
+    }
+    if (voiceAudioRef.current) { voiceAudioRef.current.srcObject = null; voiceAudioRef.current = null }
+    setVoiceCallActive(false)
+    setVoiceStatus('')
+  }, [])
+
   /* ── Send ── */
   const send = useCallback(async (text?: string) => {
     const msg = (text || input).trim()
@@ -382,6 +496,18 @@ export default function AiChat() {
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          {/* Voice Call */}
+          <button
+            onClick={voiceCallActive ? endVoiceCall : startVoiceCall}
+            className={`p-1.5 rounded-lg transition-colors ${
+              voiceCallActive
+                ? 'bg-red-500/20 text-red-400 animate-pulse'
+                : 'hover:bg-dark-surface text-[#636366] hover:text-green-400'
+            }`}
+            title={voiceCallActive ? 'End voice call' : 'Start voice call'}
+          >
+            {voiceCallActive ? <PhoneOff size={14} /> : <Phone size={14} />}
+          </button>
           {/* TTS toggle */}
           {hasSpeechSynthesis && (
             <button
@@ -405,6 +531,32 @@ export default function AiChat() {
           </button>
         </div>
       </div>
+
+      {/* Voice Call Overlay */}
+      {voiceCallActive && (
+        <div className="absolute inset-0 z-10 bg-dark-bg/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 rounded-2xl">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
+              <Phone size={32} className="text-dark-bg" />
+            </div>
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-primary-400/30 animate-ping" />
+            <div className="absolute -inset-3 rounded-full border border-primary-400/15 animate-pulse" />
+          </div>
+          <div className="text-center">
+            <div className="text-white font-semibold text-base">Voice Call Active</div>
+            <div className="text-primary-400 text-sm mt-1">{voiceStatus}</div>
+          </div>
+          <button
+            onClick={endVoiceCall}
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30 mt-2"
+          >
+            <PhoneOff size={16} /> End Call
+          </button>
+          <p className="text-[11px] text-[#636366] max-w-[250px] text-center mt-2">
+            Speak naturally — the AI will respond in voice. Transcripts appear in chat history.
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">

@@ -117,4 +117,82 @@ class CrmAiController extends Controller
             return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * POST /api/v1/admin/crm-ai/realtime-session
+     * Creates an ephemeral OpenAI Realtime API session for voice-to-voice in admin AI chat.
+     */
+    public function createRealtimeSession(Request $request): JsonResponse
+    {
+        $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!$apiKey) {
+            return response()->json(['error' => 'OpenAI API key not configured'], 500);
+        }
+
+        $orgId = $request->user()->organization_id;
+        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $orgId)->first();
+
+        $voice = $voiceConfig->voice ?? 'alloy';
+        $model = $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview';
+        $temperature = $voiceConfig->temperature ?? 0.8;
+
+        // Build admin-specific instructions
+        $user = $request->user();
+        $instructions = <<<PROMPT
+# Identity
+You are the AI Assistant for Hotel Tech Platform — an admin tool for hotel staff.
+
+# Context
+You're speaking with {$user->name}, a hotel staff member. Help them with:
+- CRM data: guests, inquiries, reservations, corporate accounts
+- Loyalty program: members, points, tiers, offers, benefits
+- Booking engine: PMS bookings, calendar, payments
+- Campaigns, venues, events
+- Platform guidance and best practices
+
+# Tone
+Professional but friendly. Be concise in voice — keep answers to 2-3 sentences. If they ask for data you can't look up in voice mode, suggest they use the text chat for detailed queries.
+
+# Rules
+- This is an internal admin tool, not guest-facing
+- You can discuss sensitive data like revenue, guest info, bookings
+- If asked to perform actions (create records, award points), explain that actions require the text chat — voice mode is for quick questions and guidance
+- Be proactive with suggestions and tips
+PROMPT;
+
+        if ($voiceConfig && $voiceConfig->voice_instructions) {
+            $instructions = $voiceConfig->voice_instructions;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->post('https://api.openai.com/v1/realtime/sessions', [
+                'model' => $model,
+                'voice' => $voice,
+                'instructions' => $instructions,
+                'input_audio_transcription' => ['model' => 'gpt-4o-transcribe'],
+                'temperature' => $temperature,
+            ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'error' => 'Failed to create realtime session',
+                    'details' => $response->json(),
+                ], 502);
+            }
+
+            $data = $response->json();
+
+            return response()->json([
+                'client_secret' => $data['client_secret']['value'] ?? null,
+                'expires_at' => $data['client_secret']['expires_at'] ?? null,
+                'session_id' => $data['id'] ?? null,
+                'voice' => $voice,
+                'model' => $model,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
