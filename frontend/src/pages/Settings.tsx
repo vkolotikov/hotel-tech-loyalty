@@ -307,6 +307,40 @@ export function Settings() {
       )
     }
 
+    // AI model dropdowns
+    if (setting.key === 'ai_openai_model') {
+      const models = [
+        { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
+        { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+        { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
+        { value: 'gpt-4.1', label: 'GPT-4.1' },
+        { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+        { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+        { value: 'gpt-4o', label: 'GPT-4o' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+        { value: 'o3-mini', label: 'o3-mini (reasoning)' },
+      ]
+      return (
+        <select value={currentVal || 'gpt-4o'} onChange={e => handleChange(setting.key, e.target.value)} className={inputClass}>
+          {models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      )
+    }
+
+    if (setting.key === 'ai_anthropic_model') {
+      const models = [
+        { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (most capable)' },
+        { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+        { value: 'claude-sonnet-4-6-20250610', label: 'Claude Sonnet 4.6' },
+        { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fastest)' },
+      ]
+      return (
+        <select value={currentVal || 'claude-sonnet-4-20250514'} onChange={e => handleChange(setting.key, e.target.value)} className={inputClass}>
+          {models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      )
+    }
+
     return <input type="text" value={currentVal} onChange={e => handleChange(setting.key, e.target.value)} className={inputClass} />
   }
 
