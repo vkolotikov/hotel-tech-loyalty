@@ -30,7 +30,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   )
 }
 
-const selectClass = 'w-full px-3 py-2.5 bg-[#0f1c18] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+const selectClass = 'w-full px-3 py-2.5 bg-dark-surface border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary-500/40'
 
 export function BookingDetail() {
   const { id } = useParams<{ id: string }>()
@@ -78,7 +78,7 @@ export function BookingDetail() {
         </Link>
         <div className="flex-1 min-w-0">
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-1"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>
+            style={{ background: 'rgba(var(--color-primary-rgb, 116,200,149),0.12)', color: 'rgb(var(--color-primary-rgb, 116,200,149))' }}>
             Reservation
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{b.booking_reference || `#${b.reservation_id}`}</h1>
@@ -129,7 +129,7 @@ export function BookingDetail() {
                     </div>
                   ))}
                   {b.guest && (
-                    <Link to={`/guests/${b.guest.id}`} className="inline-flex items-center gap-1 text-xs font-medium mt-2" style={{ color: '#74c895' }}>
+                    <Link to={`/guests/${b.guest.id}`} className="inline-flex items-center gap-1 text-xs font-medium mt-2 text-primary-400">
                       View CRM Profile →
                     </Link>
                   )}
@@ -234,12 +234,12 @@ export function BookingDetail() {
             <div className="flex gap-2 mb-4">
               <input type="text" value={noteBody} onChange={e => setNoteBody(e.target.value)}
                 placeholder="Add a note..."
-                className="flex-1 px-4 py-2.5 bg-[#0f1c18] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+                className="flex-1 px-4 py-2.5 bg-dark-surface border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
                 onKeyDown={e => { if (e.key === 'Enter' && noteBody.trim()) addNote.mutate() }}
               />
               <button onClick={() => addNote.mutate()} disabled={!noteBody.trim() || addNote.isPending}
                 className="px-4 py-2.5 rounded-xl text-white disabled:opacity-40 transition-all hover:scale-[1.02]"
-                style={{ background: 'linear-gradient(135deg, #74c895, #5ab4b2)' }}>
+                style={{ background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)' }}>
                 <Send size={14} />
               </button>
             </div>
@@ -248,7 +248,7 @@ export function BookingDetail() {
                 {b.notes.map((n: any) => (
                   <div key={n.id} className="rounded-xl p-4" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="flex justify-between items-start mb-1.5">
-                      <span className="text-xs font-bold" style={{ color: '#74c895' }}>{n.staff?.hotel_name || 'Staff'}</span>
+                      <span className="text-xs font-bold text-primary-400">{n.staff?.hotel_name || 'Staff'}</span>
                       <span className="text-[10px] text-gray-600">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="text-sm text-gray-300 leading-relaxed">{n.body}</p>

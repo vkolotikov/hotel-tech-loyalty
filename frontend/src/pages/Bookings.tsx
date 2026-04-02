@@ -24,7 +24,11 @@ const PAY_PILL: Record<string, string> = {
   channel_managed: 'bg-teal-500/15 text-teal-400 border border-teal-500/20',
 }
 
-const CHART_COLORS = ['#74c895', '#f0b56f', '#5ab4b2', '#e4846f', '#d5c06a', '#81a6e8']
+const CHART_COLORS = [
+  'var(--color-primary, #74c895)',
+  'var(--color-accent, #f0b56f)',
+  '#5ab4b2', '#e4846f', '#d5c06a', '#81a6e8',
+]
 
 function payLabel(s: string) {
   return s === 'invoice_waiting' ? 'Invoice waiting' : s === 'channel_managed' ? 'Channel managed' : s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
@@ -249,7 +253,7 @@ export function Bookings() {
     balance_due:     { icon: Clock,         color: 'text-orange-400',  gradient: 'from-orange-500/20' },
   }
 
-  const selectClass = 'bg-[#0f1c18] border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 appearance-none cursor-pointer'
+  const selectClass = 'bg-dark-surface border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500/40 appearance-none cursor-pointer'
 
   return (
     <div className="space-y-7">
@@ -257,7 +261,7 @@ export function Bookings() {
       <div className="flex items-center justify-between">
         <div>
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>
+            style={{ background: 'rgba(var(--color-primary-rgb, 116,200,149),0.12)', color: 'rgb(var(--color-primary-rgb, 116,200,149))' }}>
             Booking Engine
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Reservations</h1>
@@ -266,8 +270,8 @@ export function Bookings() {
         <button onClick={handleSync} disabled={syncing}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:scale-[1.02]"
           style={{
-            background: 'linear-gradient(135deg, #74c895, #5ab4b2)',
-            boxShadow: '0 8px 20px rgba(116,200,149,0.25)',
+            background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)',
+            boxShadow: '0 8px 20px rgba(var(--color-primary-rgb, 116,200,149),0.25)',
           }}>
           <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
           {syncing ? 'Syncing...' : 'Sync PMS'}
@@ -282,7 +286,7 @@ export function Bookings() {
               className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${period === p
                 ? 'text-white shadow-lg'
                 : 'text-gray-500 hover:text-gray-300'}`}
-              style={period === p ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 16px rgba(116,200,149,0.2)' } : {}}>
+              style={period === p ? { background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)', boxShadow: '0 6px 16px rgba(var(--color-primary-rgb, 116,200,149),0.2)' } : {}}>
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
@@ -451,7 +455,7 @@ export function Bookings() {
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search guest, email, reference..."
-              className="w-full pl-10 pr-4 py-2.5 bg-[#0f1c18] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+              className="w-full pl-10 pr-4 py-2.5 bg-dark-surface border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
             />
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass}>
@@ -520,8 +524,7 @@ export function Bookings() {
                   </td>
                   <td className="p-4 text-center">
                     <Link to={`/bookings/${b.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium transition-colors"
-                      style={{ color: '#74c895' }}>
+                      className="inline-flex items-center gap-1 text-xs font-medium transition-colors text-primary-400 hover:text-primary-300">
                       <Eye size={13} /> View
                     </Link>
                   </td>

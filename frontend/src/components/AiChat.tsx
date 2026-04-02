@@ -10,11 +10,19 @@ type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
 
 const SUGGESTION_GROUPS = [
   {
-    label: 'CRM',
+    label: 'CRM & Guests',
     items: [
       "How many arrivals today?",
       "Show in-house VIP guests",
       "What's our pipeline value?",
+    ],
+  },
+  {
+    label: 'Booking Engine',
+    items: [
+      "Show PMS booking dashboard for this month",
+      "Which bookings are unpaid?",
+      "Forecast occupancy for next 2 weeks",
     ],
   },
   {
@@ -26,20 +34,19 @@ const SUGGESTION_GROUPS = [
     ],
   },
   {
-    label: 'Operations',
+    label: 'AI & Reports',
     items: [
-      "What tasks are planned for today?",
-      "Show venue bookings this week",
-      "Create a task for tomorrow: Staff meeting",
+      "Generate weekly performance report",
+      "Detect anomalies or unusual patterns",
+      "Find stale inquiries and create follow-ups",
     ],
   },
   {
-    label: 'AI Insights',
+    label: 'System Guide',
     items: [
-      "Generate weekly performance report",
-      "Detect any anomalies or unusual patterns",
-      "Forecast occupancy for the next 2 weeks",
-      "Find stale inquiries and create follow-up tasks",
+      "How do I use this platform?",
+      "What are the best practices for daily operations?",
+      "How do I set up the booking widget on my website?",
     ],
   },
 ]
@@ -161,7 +168,7 @@ export default function AiChat() {
       const res = await api.post('/v1/admin/crm-ai/chat', { messages: next.map(m => ({ role: m.role, content: m.content })) })
       const actions = res.data.actions ?? []
       setMessages([...next, { role: 'assistant', content: res.data.response, actions }])
-      if (actions.some((a: any) => a.tool?.startsWith('create_') || a.tool?.startsWith('update_') || a.tool?.startsWith('award_') || a.tool?.startsWith('redeem_') || a.tool === 'analyze_inquiries_create_followups')) {
+      if (actions.some((a: any) => a.tool?.startsWith('create_') || a.tool?.startsWith('update_') || a.tool?.startsWith('award_') || a.tool?.startsWith('redeem_') || a.tool === 'analyze_inquiries_create_followups' || a.tool === 'update_pms_booking' || a.tool === 'update_setting')) {
         qc.invalidateQueries()
       }
     } catch (e: any) {
@@ -246,7 +253,7 @@ export default function AiChat() {
               <div>
                 <div className="text-base font-semibold text-white mb-1">How can I help?</div>
                 <div className="text-xs text-t-secondary max-w-[280px] mx-auto">
-                  I can search guests, manage loyalty members & points, handle reservations, analyze churn risk, and more.
+                  I can search any data, manage bookings & loyalty, analyze trends, generate reports, and guide you through every feature.
                 </div>
               </div>
             </div>

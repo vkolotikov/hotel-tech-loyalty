@@ -13,8 +13,13 @@ use App\Models\PlannerTask;
 use App\Models\Property;
 use App\Models\Reservation;
 use App\Models\SpecialOffer;
+use App\Models\BookingMirror;
+use App\Models\BookingSubmission;
 use App\Models\CorporateAccount;
+use App\Models\HotelSetting;
+use App\Models\NotificationCampaign;
 use App\Models\VenueBooking;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -282,13 +287,24 @@ class CrmAiService
         $activeOffers = SpecialOffer::active()->count();
         $totalPoints  = LoyaltyMember::sum('current_points');
 
+        // Booking engine context
+        $pmsCount     = BookingMirror::count();
+        $pmsUpcoming  = BookingMirror::where('arrival_date', '>=', $today)->where('booking_state', '!=', 'cancelled')->count();
+        $pmsBalance   = round((float) BookingMirror::selectRaw('COALESCE(SUM(price_total), 0) - COALESCE(SUM(price_paid), 0) as balance')->value('balance'), 2);
+
         return <<<PROMPT
-You are an AI assistant for a unified Hotel CRM & Loyalty platform. You help manage guest profiles, inquiries (sales pipeline), reservations, properties, loyalty members, points, tiers, offers, planner tasks, venue bookings, and more.
+You are an expert AI assistant for the Hotel Tech platform — a comprehensive hotel management system. You are the central intelligence hub that connects CRM, Loyalty, Booking Engine, Events, and Operations into a unified workflow.
+
+Your role is threefold:
+1. **Data assistant** — Search, analyze, and report on any data across all modules
+2. **Action executor** — Create, update, and manage records (guests, bookings, points, tasks, settings)
+3. **Strategic advisor** — Provide recommendations, detect issues, forecast trends, and guide best practices
 
 Hotel snapshot ({$today}):
 - {$guestCount} guests, {$memberCount} loyalty members, {$activeInq} active inquiries ({$currency}{$pipelineVal} pipeline)
-- {$inHouse} in-house guests, {$arrivalsToday} arrivals today
+- {$inHouse} in-house guests, {$arrivalsToday} CRM arrivals today
 - Loyalty: {$totalPoints} total points in circulation, {$activeOffers} active offers
+- Booking Engine: {$pmsCount} PMS bookings, {$pmsUpcoming} upcoming, {$currency}{$pmsBalance} outstanding balance
 
 Properties: {$properties}
 Tier ladder: {$tiers}
@@ -300,23 +316,51 @@ Meal plans: {$mealPlans}
 Team: {$employees}
 Currency: {$currency}
 
-Capabilities:
-- CRM: Search/create/update guests, inquiries, reservations. View hotel stats.
-- Loyalty: Search members, view full profiles with points history, award/redeem points, view tiers and offers.
-- Planning: View planner tasks, create tasks, view venue bookings.
-- AI Analysis: Analyze member churn risk, generate personalized offers, create upsell scripts (powered by GPT-4o).
-- Weekly Reports: Generate weekly performance reports with KPIs, comparisons, and top earners. Optionally email them.
-- Anomaly Detection: Detect unusual patterns — large point transactions, inactive VIPs, booking revenue outliers, redemption spikes, cancellation surges.
-- Occupancy Forecasting: Predict occupancy for the next 14 days based on confirmed reservations vs property capacity.
-- Inquiry Follow-ups: Analyze stale/overdue inquiries and auto-create planner tasks for follow-up.
+Capabilities — grouped by module:
+
+**CRM & Guest Management:**
+- Search/create/update guests, inquiries, reservations, corporate accounts
+- View hotel stats and pipeline KPIs
+- Extract leads from raw text (emails, WhatsApp, phone notes)
+
+**Loyalty Program:**
+- Search members, view full profiles with points history and tier progress
+- Award/redeem points, view tiers and offers
+- Analyze individual member churn risk, generate personalized offers, create upsell scripts
+
+**Booking Engine (PMS):**
+- Search PMS bookings synced from Smoobu/external channels (separate from CRM reservations)
+- View PMS dashboard with KPIs, payment mix, upcoming arrivals, unpaid bookings
+- Update booking status, payment status, and amounts
+- Get detailed booking info with price elements and guest notes
+
+**Planning & Events:**
+- View/create planner tasks, view venue/event bookings
+
+**Analytics & AI:**
+- Generate weekly performance reports (with optional email delivery)
+- Detect anomalies: unusual transactions, inactive VIPs, revenue outliers, cancellation spikes
+- Forecast occupancy for next 14 days by property
+- Analyze stale inquiries and auto-create follow-up tasks
+
+**System Administration:**
+- View and update hotel settings (appearance, integrations, booking config, AI settings)
+- Check system health (API keys, data counts, sync status)
+
+**System Guide:**
+- Explain how any module works, provide best practices, suggest workflows
+- When user asks "how do I..." or "what should I do about..." — use get_system_guide tool
 
 Rules:
-- Always use tools for real data — never invent IDs, names, or numbers.
-- When creating/updating records, state what you did with IDs.
-- Be concise. Use bullet points for lists. Format numbers with locale separators.
+- Always use tools to fetch real data — never fabricate IDs, names, or numbers.
+- When creating/updating records, confirm what you did and include record IDs.
+- Be concise but thorough. Use bullet points for lists. Format numbers clearly.
 - Monetary values use {$currency}. Points have no currency symbol.
-- If ambiguous, ask a clarifying question.
+- If a question is ambiguous, ask a clarifying question rather than guessing.
 - For loyalty member analysis (churn, offers, upsell), use the analyze_member tool.
+- When asked about "bookings", determine whether the user means PMS bookings (search_pms_bookings) or CRM reservations (search_reservations). If unclear, ask.
+- When asked for guidance or best practices, use the get_system_guide tool to provide comprehensive, actionable advice.
+- Proactively suggest next actions when relevant. E.g. after showing unpaid bookings, suggest following up.
 PROMPT;
     }
 
@@ -486,6 +530,50 @@ PROMPT;
                 'days_stale' => ['type' => 'integer', 'description' => 'Days without activity to consider stale (default 3)'],
                 'assign_to'  => ['type' => 'string', 'description' => 'Employee name to assign tasks to (optional)'],
             ], []),
+
+            // ── Booking Engine (PMS) Tools ──
+            $this->tool('search_pms_bookings', 'Search PMS bookings (synced from Smoobu/channels). Use this for booking engine queries — different from CRM reservations.', [
+                'search'         => ['type' => 'string', 'description' => 'Guest name, email, or booking reference'],
+                'status'         => ['type' => 'string', 'description' => 'Internal status: new, confirmed, checked-in, checked-out, cancelled, no-show'],
+                'payment_status' => ['type' => 'string', 'description' => 'Payment status: paid, pending, open, invoice_waiting, channel_managed'],
+                'unit_id'        => ['type' => 'integer', 'description' => 'Apartment/unit ID filter'],
+                'from_date'      => ['type' => 'string', 'description' => 'Arrival from YYYY-MM-DD'],
+                'to_date'        => ['type' => 'string', 'description' => 'Arrival to YYYY-MM-DD'],
+                'limit'          => ['type' => 'integer', 'description' => 'Max results (default 10)'],
+            ], []),
+
+            $this->tool('get_pms_booking', 'Get full PMS booking detail with price elements, notes, and submissions.', [
+                'id' => ['type' => 'integer', 'description' => 'BookingMirror ID (required)'],
+            ], ['id']),
+
+            $this->tool('get_pms_dashboard', 'Get PMS booking dashboard: KPIs (total, revenue, confirmed, cancelled, avg stay, balance due), payment mix, upcoming arrivals, unpaid bookings. Use period: week/month/year.', [
+                'period'  => ['type' => 'string', 'description' => 'week, month, or year (default month)'],
+                'unit_id' => ['type' => 'integer', 'description' => 'Filter by apartment/unit ID'],
+            ], []),
+
+            $this->tool('update_pms_booking', 'Update a PMS booking\'s internal status, invoice state, payment status, or price paid.', [
+                'id'              => ['type' => 'integer', 'description' => 'BookingMirror ID (required)'],
+                'internal_status' => ['type' => 'string', 'description' => 'new, confirmed, checked-in, checked-out, cancelled, no-show'],
+                'invoice_state'   => ['type' => 'string', 'description' => 'not_applicable, to_issue, issued, waiting_funds, funds_received'],
+                'payment_status'  => ['type' => 'string', 'description' => 'paid, pending, open, invoice_waiting, channel_managed'],
+                'price_paid'      => ['type' => 'number', 'description' => 'Amount paid in EUR'],
+            ], ['id']),
+
+            // ── Settings & System Tools ──
+            $this->tool('get_settings', 'Get hotel system settings. Optionally filter by group: appearance, integrations, booking, ai_system, notifications, general.', [
+                'group' => ['type' => 'string', 'description' => 'Settings group filter (optional)'],
+            ], []),
+
+            $this->tool('update_setting', 'Update a single hotel setting by key. Use get_settings first to see available keys.', [
+                'key'   => ['type' => 'string', 'description' => 'Setting key (required)'],
+                'value' => ['type' => 'string', 'description' => 'New value (required)'],
+            ], ['key', 'value']),
+
+            $this->tool('get_system_guide', 'Get comprehensive guide on how to use this hotel platform. Covers all modules, best practices, use cases, and step-by-step workflows. Use when user asks "how do I...", "what can I do with...", "best practices for..." etc.', [
+                'topic' => ['type' => 'string', 'description' => 'Specific topic: overview, crm, loyalty, bookings, ai, campaigns, venues, settings, or best_practices (default: overview)'],
+            ], []),
+
+            $this->tool('get_system_health', 'Check system health: configured integrations, data counts, sync status, API keys status, recent errors.', [], []),
         ];
     }
 
@@ -528,6 +616,14 @@ PROMPT;
                 'detect_anomalies'       => $this->toolDetectAnomalies(),
                 'forecast_occupancy'     => $this->toolForecastOccupancy($in),
                 'analyze_inquiries_create_followups' => $this->toolAnalyzeInquiriesCreateFollowups($in),
+                'search_pms_bookings'    => $this->toolSearchPmsBookings($in),
+                'get_pms_booking'        => $this->toolGetPmsBooking($in),
+                'get_pms_dashboard'      => $this->toolGetPmsDashboard($in),
+                'update_pms_booking'     => $this->toolUpdatePmsBooking($in),
+                'get_settings'           => $this->toolGetSettings($in),
+                'update_setting'         => $this->toolUpdateSetting($in),
+                'get_system_guide'       => $this->toolGetSystemGuide($in),
+                'get_system_health'      => $this->toolGetSystemHealth(),
                 default                  => ['success' => false, 'data' => ['error' => "Unknown tool: $name"]],
             };
         } catch (\Throwable $e) {
@@ -1167,5 +1263,363 @@ PROMPT;
             'tasks_created'      => count($createdTasks),
             'tasks'              => $createdTasks,
         ]];
+    }
+
+    /* ────────── Booking Engine (PMS) Tools ────────── */
+
+    private function toolSearchPmsBookings(array $in): array
+    {
+        $limit = min($in['limit'] ?? 10, 30);
+        $q = BookingMirror::query();
+        if (!empty($in['search'])) {
+            $s = $in['search'];
+            $q->where(fn($q2) => $q2->where('guest_name', 'ilike', "%$s%")
+                ->orWhere('guest_email', 'ilike', "%$s%")
+                ->orWhere('booking_reference', 'ilike', "%$s%")
+                ->orWhere('reservation_id', 'ilike', "%$s%"));
+        }
+        if (!empty($in['status']))         $q->where('internal_status', $in['status']);
+        if (!empty($in['payment_status'])) $q->where('payment_status', $in['payment_status']);
+        if (!empty($in['unit_id']))        $q->where('apartment_id', $in['unit_id']);
+        if (!empty($in['from_date']))      $q->where('arrival_date', '>=', $in['from_date']);
+        if (!empty($in['to_date']))        $q->where('arrival_date', '<=', $in['to_date']);
+
+        $bookings = $q->orderByDesc('arrival_date')->limit($limit)
+            ->get(['id', 'reservation_id', 'booking_reference', 'guest_name', 'guest_email',
+                   'apartment_name', 'channel_name', 'arrival_date', 'departure_date',
+                   'adults', 'children', 'price_total', 'price_paid', 'payment_status',
+                   'internal_status', 'booking_state'])
+            ->map(function ($b) {
+                $arr = $b->toArray();
+                $arr['balance_due'] = round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2);
+                $arr['nights'] = $b->arrival_date && $b->departure_date
+                    ? $b->arrival_date->diffInDays($b->departure_date) : 0;
+                return $arr;
+            });
+
+        return ['success' => true, 'data' => ['count' => $bookings->count(), 'bookings' => $bookings->toArray()]];
+    }
+
+    private function toolGetPmsBooking(array $in): array
+    {
+        $b = BookingMirror::with(['priceElements', 'notes.staff', 'guest'])->find($in['id']);
+        if (!$b) return ['success' => false, 'data' => ['error' => 'PMS booking not found']];
+
+        $arr = $b->toArray();
+        $arr['balance_due'] = round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2);
+        $arr['nights'] = $b->arrival_date && $b->departure_date
+            ? $b->arrival_date->diffInDays($b->departure_date) : 0;
+
+        $arr['submissions'] = BookingSubmission::where('reservation_id', $b->reservation_id)
+            ->orWhere('booking_reference', $b->booking_reference)
+            ->orderByDesc('created_at')->limit(10)->get()->toArray();
+
+        // Remove raw_json to save tokens
+        unset($arr['raw_json']);
+
+        return ['success' => true, 'data' => $arr];
+    }
+
+    private function toolGetPmsDashboard(array $in): array
+    {
+        $period = $in['period'] ?? 'month';
+        $unitId = $in['unit_id'] ?? null;
+        $from = match ($period) {
+            'week'  => now()->subWeek(),
+            'year'  => now()->subYear(),
+            default => now()->subMonth(),
+        };
+
+        $base = BookingMirror::where('created_at', '>=', $from);
+        if ($unitId) $base = $base->where('apartment_id', $unitId);
+        $all = (clone $base)->get();
+
+        $total     = $all->count();
+        $revenue   = round($all->sum('price_total'), 2);
+        $paid      = round($all->sum('price_paid'), 2);
+        $confirmed = $all->where('booking_state', 'confirmed')->count();
+        $cancelled = $all->where('booking_state', 'cancelled')->count();
+        $pending   = $all->where('payment_status', 'pending')->count();
+
+        // Upcoming arrivals
+        $arrivals = BookingMirror::whereBetween('arrival_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
+            ->where('booking_state', '!=', 'cancelled')
+            ->when($unitId, fn($q) => $q->where('apartment_id', $unitId))
+            ->orderBy('arrival_date')->limit(10)
+            ->get(['id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date', 'payment_status', 'price_total'])
+            ->toArray();
+
+        // Unpaid
+        $unpaid = BookingMirror::whereNotNull('price_total')
+            ->whereRaw('COALESCE(price_paid, 0) < price_total')
+            ->where('booking_state', '!=', 'cancelled')
+            ->orderByDesc('price_total')->limit(5)
+            ->get(['id', 'guest_name', 'apartment_name', 'price_total', 'price_paid', 'arrival_date'])
+            ->map(fn($b) => array_merge($b->toArray(), ['balance' => round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2)]))->toArray();
+
+        return ['success' => true, 'data' => [
+            'period'    => $period,
+            'total'     => $total,
+            'revenue'   => $revenue,
+            'paid'      => $paid,
+            'balance'   => round($revenue - $paid, 2),
+            'confirmed' => $confirmed,
+            'cancelled' => $cancelled,
+            'pending_payment' => $pending,
+            'upcoming_arrivals' => $arrivals,
+            'top_unpaid' => $unpaid,
+        ]];
+    }
+
+    private function toolUpdatePmsBooking(array $in): array
+    {
+        $b = BookingMirror::find($in['id']);
+        if (!$b) return ['success' => false, 'data' => ['error' => 'PMS booking not found']];
+
+        $allowed = ['internal_status', 'invoice_state', 'payment_status', 'price_paid'];
+        $fields = collect($in)->only($allowed)->filter(fn($v) => $v !== null)->toArray();
+        if (empty($fields)) return ['success' => false, 'data' => ['error' => 'No valid fields to update']];
+
+        $b->update($fields);
+        return ['success' => true, 'data' => ['id' => $b->id, 'message' => 'PMS booking updated', 'fields' => array_keys($fields)]];
+    }
+
+    /* ────────── Settings & System Tools ────────── */
+
+    private function toolGetSettings(array $in): array
+    {
+        $q = HotelSetting::query();
+        if (!empty($in['group'])) $q->where('group', $in['group']);
+        $settings = $q->orderBy('group')->orderBy('key')
+            ->get(['key', 'value', 'type', 'group', 'label', 'description'])
+            ->map(function ($s) {
+                return [
+                    'key'   => $s->key,
+                    'value' => $s->typed_value,
+                    'group' => $s->group,
+                    'label' => $s->label,
+                ];
+            });
+        return ['success' => true, 'data' => $settings->toArray()];
+    }
+
+    private function toolUpdateSetting(array $in): array
+    {
+        $setting = HotelSetting::where('key', $in['key'])->first();
+        if (!$setting) return ['success' => false, 'data' => ['error' => "Setting '{$in['key']}' not found"]];
+
+        HotelSetting::setValue($in['key'], $in['value']);
+        return ['success' => true, 'data' => ['key' => $in['key'], 'new_value' => $in['value'], 'message' => "Setting '{$in['key']}' updated"]];
+    }
+
+    private function toolGetSystemGuide(array $in): array
+    {
+        $topic = $in['topic'] ?? 'overview';
+
+        $guides = [
+            'overview' => [
+                'title' => 'Hotel Tech Platform — Complete Guide',
+                'sections' => [
+                    'What is this platform?' => 'A unified hotel management system combining CRM (guest profiles, sales pipeline, reservations), Loyalty Program (tiers, points, benefits, offers), Booking Engine (PMS sync, calendar, payments), AI Assistant (chat, insights, automation), Event/Venue management, and Campaign notifications — all in one admin panel.',
+                    'Main modules' => [
+                        'CRM' => 'Guest profiles, inquiries (sales pipeline), reservations, corporate accounts, planner/tasks',
+                        'Loyalty' => 'Member tiers (Bronze→Diamond), points system, special offers, benefits, NFC cards, QR scanning',
+                        'Booking Engine' => 'PMS bookings synced from Smoobu/channels, calendar view, payment tracking, booking submissions',
+                        'AI Chat' => 'Floating assistant that can search data, create records, analyze members, generate reports, detect anomalies',
+                        'AI Insights' => 'Churn prediction, personalized offers, upsell scripts, weekly reports',
+                        'Venues & Events' => 'Venue management, event bookings with capacity and pricing',
+                        'Campaigns' => 'Notification campaigns with audience segmentation',
+                        'Settings' => 'Theme colors, integrations (Smoobu, OpenAI, Anthropic, Google AI), booking engine config, AI model selection',
+                    ],
+                    'Quick start' => '1. Configure Settings (appearance, integrations) → 2. Add Properties → 3. Set up Loyalty Tiers → 4. Import/create Guests → 5. Start managing inquiries and reservations → 6. Use AI assistant for insights and automation',
+                ],
+            ],
+            'crm' => [
+                'title' => 'CRM Module Guide',
+                'sections' => [
+                    'Guest Management' => 'Create guest profiles with contact info, VIP level, preferences. Track total stays, revenue, and activity. Link guests to loyalty members for unified profiles.',
+                    'Sales Pipeline (Inquiries)' => 'Track leads from initial inquiry to confirmation. Statuses: New → Proposal Sent → Negotiating → Confirmed/Lost. Set priorities, assign to team members, track follow-up tasks.',
+                    'Reservations' => 'Manual CRM reservations with check-in/check-out flows. Different from PMS bookings — these are created by your team. Auto-updates guest stats on check-out.',
+                    'Corporate Accounts' => 'Manage B2B clients with negotiated rates, contracts, credit limits, and room night targets.',
+                    'Best practices' => [
+                        'Always link guests to loyalty members when possible for unified tracking',
+                        'Use the AI to capture leads from emails/WhatsApp — paste text and let AI extract details',
+                        'Set follow-up tasks on every open inquiry to prevent leads from going cold',
+                        'Use the planner to organize daily tasks by team member',
+                    ],
+                ],
+            ],
+            'loyalty' => [
+                'title' => 'Loyalty Program Guide',
+                'sections' => [
+                    'Tier System' => 'Bronze (0pts, 1x) → Silver (1000pts, 1.25x) → Gold (5000pts, 1.5x) → Platinum (15000pts, 2x) → Diamond (50000pts, 3x). Higher tiers earn points faster.',
+                    'Points Operations' => 'Earn: stays, purchases, promotions. Redeem: rewards, room upgrades, experiences. Adjust: manual corrections. Bonus: promotional awards. Never delete transactions — use reverse type.',
+                    'Special Offers' => 'Create tier-targeted offers with date ranges. AI can generate personalized offers based on member behavior.',
+                    'Benefits' => 'Define benefits per tier: late checkout, room upgrades, welcome amenities, lounge access, etc.',
+                    'Member Cards' => 'QR codes for mobile identification. NFC cards for physical scanning. Both link to member profiles.',
+                    'Best practices' => [
+                        'Use AI to detect members at churn risk and proactively engage them',
+                        'Create seasonal offers targeting specific tiers to drive engagement',
+                        'Monitor the points ledger for anomalies (unusual large transactions)',
+                        'Use the qualification window (calendar year) to motivate tier progression',
+                    ],
+                ],
+            ],
+            'bookings' => [
+                'title' => 'Booking Engine Guide',
+                'sections' => [
+                    'Two systems' => 'PMS Bookings (BookingMirror): Synced from Smoobu/external channels — these are real-time booking data. CRM Reservations: Manual reservations created by your team for direct bookings.',
+                    'PMS Dashboard' => 'KPIs: total bookings, revenue, confirmed/cancelled, avg stay, balance due. Charts: payment mix, arrival pace, unit performance, channel mix.',
+                    'Booking Calendar' => 'Visual calendar showing all bookings across units. Great for quick overview of occupancy.',
+                    'Payment Tracking' => 'Track paid vs outstanding amounts. Filter by payment status. Monitor unpaid bookings.',
+                    'Booking Submissions' => 'Log of all booking attempts through the public booking engine, including failures.',
+                    'Sync' => 'Click "Sync PMS" to pull latest data from Smoobu. Auto-sync happens on webhook events.',
+                    'Settings > Booking' => 'Configure the public booking widget: rooms/units, extras/add-ons, policies, pricing. Generate embed code for your website.',
+                    'Best practices' => [
+                        'Sync PMS regularly to keep data fresh',
+                        'Monitor balance due KPI to follow up on unpaid bookings',
+                        'Use the AI to forecast occupancy and identify booking trends',
+                        'Check submissions log if guests report booking issues',
+                    ],
+                ],
+            ],
+            'ai' => [
+                'title' => 'AI System Guide',
+                'sections' => [
+                    'AI Chat (floating button)' => 'The bottom-right chat button is your AI assistant. It can: search any data, create/update records, analyze members, generate reports, detect anomalies, forecast occupancy. Just ask in natural language.',
+                    'What AI can do' => [
+                        'CRM: Search guests, create/update profiles, manage inquiries and reservations',
+                        'Loyalty: Search members, award/redeem points, analyze churn risk, suggest personalized offers',
+                        'Bookings: Search PMS bookings, view dashboard, update payment status',
+                        'Reports: Generate weekly performance reports, email them to stakeholders',
+                        'Anomaly detection: Find unusual patterns in points, spending, bookings, cancellations',
+                        'Occupancy forecasting: Predict next 14 days occupancy based on current reservations',
+                        'Auto follow-ups: Analyze stale inquiries and create planner tasks',
+                        'Settings: View and update system settings',
+                        'System guide: Ask "how do I..." questions about any module',
+                    ],
+                    'AI Insights page' => 'Dedicated page for: weekly loyalty reports, individual member analysis (churn risk + offer suggestions + upsell scripts).',
+                    'AI in CRM' => 'Paste email/WhatsApp text → AI extracts guest info and creates inquiry. Also extracts member enrollment and corporate account data.',
+                    'Chatbot Config' => 'Configure the AI personality: name, tone, sales style, reply length, core rules. Choose AI model and provider (OpenAI, Anthropic, Google).',
+                    'Knowledge Base' => 'Add FAQ items and documents for the chatbot to reference. The AI uses this to answer guest questions accurately.',
+                    'Best practices' => [
+                        'Start with simple questions like "How many arrivals today?" to get comfortable',
+                        'Ask AI to "generate a weekly report" every Monday for team meetings',
+                        'Use "detect anomalies" weekly to catch issues early',
+                        'Ask AI to "forecast occupancy" before making pricing decisions',
+                        'Paste raw emails into AI chat and say "extract this lead" — much faster than manual entry',
+                    ],
+                ],
+            ],
+            'campaigns' => [
+                'title' => 'Campaign & Notification Guide',
+                'sections' => [
+                    'Campaigns' => 'Create push notification campaigns targeting specific member segments. Set audience filters by tier, activity, join date.',
+                    'Segments' => 'Define reusable audience segments for targeted campaigns.',
+                    'Best practices' => [
+                        'Segment by tier for personalized messaging',
+                        'Use campaigns to promote seasonal offers',
+                        'Send re-engagement campaigns to inactive members',
+                    ],
+                ],
+            ],
+            'venues' => [
+                'title' => 'Venue & Event Guide',
+                'sections' => [
+                    'Venues' => 'Manage hotel venues (ballroom, meeting rooms, restaurant). Define capacity, pricing, amenities, images.',
+                    'Event Bookings' => 'Create event bookings linked to venues. Track status, guest count, revenue.',
+                    'Best practices' => [
+                        'Keep venue availability updated',
+                        'Link venue bookings to guest profiles for relationship tracking',
+                        'Use the AI to check venue bookings for the week',
+                    ],
+                ],
+            ],
+            'settings' => [
+                'title' => 'Settings Guide',
+                'sections' => [
+                    'Appearance' => 'Theme colors (primary, accent, dark palette). Logo upload. Presets: Default Gold, Ocean Blue, Royal Purple, Forest Green, Sunset Orange, Midnight.',
+                    'AI & System' => 'Select AI models for OpenAI and Anthropic. Configure API keys.',
+                    'Integrations' => 'Smoobu (PMS sync), OpenAI, Anthropic, Google Gemini API keys. Webhook URLs.',
+                    'Booking' => 'Public booking widget config: rooms/units, extras, policies, embed code.',
+                    'Notifications' => 'Push notification settings, email templates.',
+                ],
+            ],
+            'best_practices' => [
+                'title' => 'Best Practices for Hotel Tech Platform',
+                'sections' => [
+                    'Daily routine' => [
+                        '1. Check arrivals today (AI: "How many arrivals today?")',
+                        '2. Review unpaid bookings dashboard',
+                        '3. Check planner tasks for the day',
+                        '4. Review and respond to new inquiries',
+                        '5. Use AI to detect any anomalies',
+                    ],
+                    'Weekly routine' => [
+                        '1. Generate weekly performance report via AI',
+                        '2. Review loyalty member engagement and churn risks',
+                        '3. Run "analyze stale inquiries" to auto-create follow-ups',
+                        '4. Check occupancy forecast for next 2 weeks',
+                        '5. Review and adjust active offers and campaigns',
+                    ],
+                    'Data quality' => [
+                        'Always link guests to loyalty members for complete profiles',
+                        'Keep PMS synced — click "Sync PMS" if data looks stale',
+                        'Use AI data extraction instead of manual entry when possible',
+                        'Set follow-up tasks on every open inquiry',
+                    ],
+                    'Revenue optimization' => [
+                        'Monitor payment mix — follow up on "open" and "pending" payments',
+                        'Use AI occupancy forecast to adjust pricing',
+                        'Create tier-specific offers to drive loyalty engagement',
+                        'Track corporate account room night targets vs actuals',
+                    ],
+                ],
+            ],
+        ];
+
+        $guide = $guides[$topic] ?? $guides['overview'];
+        return ['success' => true, 'data' => $guide];
+    }
+
+    private function toolGetSystemHealth(): array
+    {
+        $health = [];
+
+        // Data counts
+        $health['data'] = [
+            'guests'          => Guest::count(),
+            'loyalty_members' => LoyaltyMember::count(),
+            'inquiries'       => Inquiry::count(),
+            'reservations'    => Reservation::count(),
+            'pms_bookings'    => BookingMirror::count(),
+            'properties'      => Property::where('is_active', true)->count(),
+            'active_offers'   => SpecialOffer::active()->count(),
+            'knowledge_items' => DB::table('knowledge_items')->where('is_active', true)->count(),
+        ];
+
+        // Integration status
+        $health['integrations'] = [
+            'smoobu_api_key'   => !empty(config('services.smoobu.api_key')) ? 'configured' : 'missing',
+            'openai_api_key'   => !empty(config('openai.api_key')) ? 'configured' : 'missing',
+            'anthropic_api_key'=> !empty(config('services.anthropic.api_key')) ? 'configured' : 'missing',
+            'google_gemini_key'=> !empty(config('services.google.gemini_api_key')) ? 'configured' : 'missing',
+        ];
+
+        // Last PMS sync
+        $lastSync = DB::table('audit_logs')->where('action', 'like', 'booking.%')->orderByDesc('created_at')->first();
+        $health['pms_sync'] = [
+            'last_sync_at' => $lastSync?->created_at ?? 'never',
+            'total_mirrored' => BookingMirror::count(),
+        ];
+
+        // Recent errors (last 24h)
+        $health['recent_activity'] = [
+            'new_guests_24h'  => Guest::where('created_at', '>=', now()->subDay())->count(),
+            'new_bookings_24h'=> BookingMirror::where('created_at', '>=', now()->subDay())->count(),
+            'new_inquiries_24h'=> Inquiry::where('created_at', '>=', now()->subDay())->count(),
+        ];
+
+        return ['success' => true, 'data' => $health];
     }
 }
