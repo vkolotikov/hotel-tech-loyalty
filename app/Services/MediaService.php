@@ -28,7 +28,9 @@ class MediaService
     public static function upload(UploadedFile $file, string $folder): string
     {
         $disk = static::disk();
-        $path = $file->storePublicly($folder, $disk);
+        $orgId = app('current_organization_id');
+        $prefix = $orgId ? "org-{$orgId}/{$folder}" : $folder;
+        $path = $file->storePublicly($prefix, $disk);
 
         if ($disk === 'public') {
             return '/storage/' . $path;
