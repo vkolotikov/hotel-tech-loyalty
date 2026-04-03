@@ -198,18 +198,30 @@ class BookingEngineService
         $data = $this->smoobu->getReservation($reservationId);
         if (empty($data)) return null;
 
+        return $this->upsertBookingFromData($data);
+    }
+
+    /**
+     * Upsert a booking mirror from already-fetched Smoobu data (no extra API call).
+     */
+    public function upsertBookingFromData(array $data): ?BookingMirror
+    {
+        if (empty($data['id'])) return null;
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+
         $guestEmail = $data['email'] ?? null;
         $guestId    = null;
         if ($guestEmail) {
             $guest = Guest::withoutGlobalScopes()
-                ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
+                ->where('organization_id', $orgId)
                 ->where('email', $guestEmail)
                 ->first();
             $guestId = $guest?->id;
         }
 
         return BookingMirror::updateOrCreate(
-            ['organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null, 'reservation_id' => (string) $data['id']],
+            ['organization_id' => $orgId, 'reservation_id' => (string) $data['id']],
             [
                 'booking_reference' => $data['reference-id'] ?? null,
                 'booking_type'      => $data['type'] ?? 'reservation',

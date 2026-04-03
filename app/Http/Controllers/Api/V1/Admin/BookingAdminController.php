@@ -302,7 +302,8 @@ class BookingAdminController extends Controller
 
                 foreach ($bookings as $b) {
                     try {
-                        $service->syncReservation((string) ($b['id'] ?? ''));
+                        // Use data from list response directly — no extra API call per booking
+                        $service->upsertBookingFromData($b);
                         $synced++;
                     } catch (\Throwable $e) {
                         $errors++;
