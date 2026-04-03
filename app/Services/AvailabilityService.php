@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BookingRoom;
 use Illuminate\Support\Facades\Cache;
 
 class AvailabilityService
@@ -16,29 +17,36 @@ class AvailabilityService
         $cached   = Cache::get($cacheKey);
         if ($cached) return $cached;
 
-        $units   = $this->getUnitsConfig();
-        $rates   = $this->smoobu->getRates($checkIn, $checkOut);
+        $rooms   = $this->getRooms();
+        $unitIds = array_keys($rooms);
+        $rates   = $this->smoobu->getRates($checkIn, $checkOut, $unitIds);
         $data    = $rates['data'] ?? $rates;
         $results = [];
 
-        foreach ($units as $id => $unit) {
+        foreach ($rooms as $id => $room) {
             $rate = $data[$id] ?? null;
             if (!$rate || !($rate['available'] ?? false)) continue;
-            if ($adults + $children > ($unit['max_guests'] ?? 99)) continue;
+            if ($adults + $children > ($room['max_guests'] ?? 99)) continue;
 
             $results[] = [
                 'id'              => (string) $id,
-                'name'            => $unit['name'] ?? '',
-                'slug'            => $unit['slug'] ?? '',
-                'max_guests'      => $unit['max_guests'] ?? 0,
-                'bedrooms'        => $unit['bedrooms'] ?? 0,
-                'image'           => $unit['thumbnail'] ?? $unit['image'] ?? '',
-                'description'     => $unit['description'] ?? '',
+                'name'            => $room['name'] ?? '',
+                'slug'            => $room['slug'] ?? '',
+                'max_guests'      => $room['max_guests'] ?? 0,
+                'bedrooms'        => $room['bedrooms'] ?? 0,
+                'bed_type'        => $room['bed_type'] ?? '',
+                'size'            => $room['size'] ?? '',
+                'image'           => $room['image'] ?? '',
+                'gallery'         => $room['gallery'] ?? [],
+                'description'     => $room['description'] ?? '',
+                'short_description' => $room['short_description'] ?? '',
+                'amenities'       => $room['amenities'] ?? [],
+                'tags'            => $room['tags'] ?? [],
                 'available'       => true,
-                'price_per_night' => $rate['price_per_night'] ?? 0,
+                'price_per_night' => $rate['price_per_night'] ?? $room['base_price'] ?? 0,
                 'total_price'     => $rate['price'] ?? 0,
                 'currency'        => $rate['currency'] ?? 'EUR',
-                'min_stay'        => $rate['min_stay'] ?? 2,
+                'min_stay'        => $rate['min_stay'] ?? 1,
             ];
         }
 
@@ -55,32 +63,27 @@ class AvailabilityService
         return $data[$unitId] ?? [];
     }
 
-    /** Get cheapest price per night for each date in a range. Returns ['2026-04-15' => 89, ...] */
+    /** Get cheapest price per night for each date in a range. */
     public function calendarPrices(string $start, string $end): array
     {
-        $units = $this->getUnitsConfig();
-        if (empty($units)) return [];
+        $rooms = $this->getRooms();
+        if (empty($rooms)) return [];
 
-        $prices = [];
+        $prices  = [];
         $current = new \DateTime($start);
         $endDate = new \DateTime($end);
 
-        // For mock mode, generate deterministic-ish prices
         if ($this->smoobu->isMock()) {
             while ($current <= $endDate) {
-                $dateStr = $current->format('Y-m-d');
-                $dayOfWeek = (int) $current->format('N'); // 1=Mon, 7=Sun
+                $dateStr   = $current->format('Y-m-d');
+                $dayOfWeek = (int) $current->format('N');
+                $cheapest  = PHP_INT_MAX;
 
-                // Find cheapest unit base price
-                $cheapest = PHP_INT_MAX;
-                foreach ($units as $unit) {
-                    $base = $unit['price_per_night'] ?? 100;
-                    // Weekend markup (Fri/Sat)
-                    $price = ($dayOfWeek >= 5 && $dayOfWeek <= 6) ? (int)($base * 1.2) : $base;
-                    // Slight daily variation using date hash
-                    $seed = crc32($dateStr . ($unit['id'] ?? ''));
-                    $variation = ($seed % 21) - 10; // -10 to +10
-                    $price = max(1, $price + $variation);
+                foreach ($rooms as $room) {
+                    $base  = $room['base_price'] ?? $room['price_per_night'] ?? 100;
+                    $price = ($dayOfWeek >= 5 && $dayOfWeek <= 6) ? (int)($base * 1.2) : (int) $base;
+                    $seed  = crc32($dateStr . ($room['id'] ?? ''));
+                    $price = max(1, $price + ($seed % 21) - 10);
                     $cheapest = min($cheapest, $price);
                 }
 
@@ -90,38 +93,56 @@ class AvailabilityService
             return $prices;
         }
 
-        // Real PMS mode: query rates for each 1-night window
-        // (batch if the PMS supports date-range rate queries)
         try {
             $rates = $this->smoobu->getRates($start, $end);
-            $data = $rates['data'] ?? $rates;
+            $data  = $rates['data'] ?? $rates;
 
             while ($current <= $endDate) {
-                $dateStr = $current->format('Y-m-d');
+                $dateStr  = $current->format('Y-m-d');
                 $cheapest = PHP_INT_MAX;
 
                 foreach ($data as $unitId => $rate) {
                     $nightlyRate = $rate['price_per_night'] ?? 0;
-                    if ($nightlyRate > 0) {
-                        $cheapest = min($cheapest, $nightlyRate);
-                    }
+                    if ($nightlyRate > 0) $cheapest = min($cheapest, $nightlyRate);
                 }
 
                 $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : $cheapest;
                 $current->modify('+1 day');
             }
         } catch (\Throwable $e) {
-            // If rate fetch fails, return empty — calendar will just not show prices
             \Illuminate\Support\Facades\Log::warning('Calendar prices fetch failed', ['error' => $e->getMessage()]);
         }
 
         return $prices;
     }
 
-    private function getUnitsConfig(): array
+    /**
+     * Get rooms config — reads from booking_rooms table (primary) with fallback to JSON settings.
+     * Returns array keyed by pms_id (or DB id if no pms_id).
+     */
+    private function getRooms(): array
     {
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+
+        // Primary: booking_rooms table
+        $dbRooms = BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($dbRooms->isNotEmpty()) {
+            $result = [];
+            foreach ($dbRooms as $room) {
+                $key = $room->pms_id ?: (string) $room->id;
+                $result[$key] = $room->toArray();
+            }
+            return $result;
+        }
+
+        // Fallback: legacy JSON settings
         $json = \App\Models\HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
+            ->where('organization_id', $orgId)
             ->where('key', 'booking_units')
             ->value('value');
 
@@ -130,6 +151,6 @@ class AvailabilityService
             if (is_array($decoded) && !empty($decoded)) return $decoded;
         }
 
-        return config('booking.units', []);
+        return [];
     }
 }

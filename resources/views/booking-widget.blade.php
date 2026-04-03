@@ -91,32 +91,33 @@ input,select,textarea{font-family:inherit}
 .btn-row{display:flex;gap:12px;margin-top:20px}
 .btn-row .btn{flex:1}
 
-/* Room cards — rich vertical layout */
-.room-card{display:flex;flex-direction:column;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
+/* Room cards — horizontal layout (image left, info right) */
+.room-card{display:flex;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
 .room-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 .room-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
-.room-hero{height:220px;background:var(--border);position:relative;overflow:hidden}
+.room-hero{width:280px;min-height:240px;background:var(--border);position:relative;overflow:hidden;flex-shrink:0}
 .room-hero img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
 .room-card:hover .room-hero img{transform:scale(1.03)}
 .room-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);opacity:.4}
-.room-tags{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap}
-.room-tag{padding:4px 10px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;font-size:11px;font-weight:600;color:#1a1a1a}
-.room-body{padding:20px;display:flex;flex-direction:column}
-.room-name{font-family:var(--font-display);font-size:1.5rem;font-weight:600;margin-bottom:4px;line-height:1.2}
-.room-specs{display:flex;gap:12px;font-size:12px;color:var(--text-secondary);margin:6px 0 10px;flex-wrap:wrap}
+.room-tags{position:absolute;top:10px;left:10px;display:flex;gap:5px;flex-wrap:wrap}
+.room-tag{padding:3px 9px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;font-size:10px;font-weight:600;color:#1a1a1a}
+.room-body{padding:18px;display:flex;flex-direction:column;flex:1;min-width:0}
+.room-name{font-family:var(--font-display);font-size:1.4rem;font-weight:600;margin-bottom:4px;line-height:1.2}
+.room-specs{display:flex;gap:10px;font-size:11px;color:var(--text-secondary);margin:5px 0 8px;flex-wrap:wrap}
 .room-spec{display:flex;align-items:center;gap:4px}
-.room-desc{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.room-amenities{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:16px}
-.room-amenity{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);font-weight:500}
-.room-amenity svg{flex-shrink:0;color:var(--primary);opacity:.8}
-.room-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
-.room-pricing{display:flex;align-items:baseline;gap:6px}
-.room-price{font-size:22px;font-weight:700;color:var(--primary)}
-.room-price-unit{font-size:12px;color:var(--text-secondary)}
-.room-total{font-size:11px;color:var(--text-secondary);margin-left:4px}
-.room-select-btn{padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap}
+.room-spec svg{flex-shrink:0}
+.room-desc{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.room-amenities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.room-amenity{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-secondary);font-weight:500;padding:3px 8px;background:color-mix(in srgb, var(--primary) 6%, transparent);border-radius:6px}
+.room-amenity svg{flex-shrink:0;color:var(--primary);opacity:.7;width:13px;height:13px}
+.room-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.room-pricing{display:flex;align-items:baseline;gap:5px}
+.room-price{font-size:20px;font-weight:700;color:var(--primary)}
+.room-price-unit{font-size:11px;color:var(--text-secondary)}
+.room-total{font-size:10px;color:var(--text-secondary);margin-left:3px}
+.room-select-btn{padding:9px 20px;border-radius:10px;font-size:12px;font-weight:600;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap}
 .room-card.selected .room-select-btn,.room-select-btn:hover{background:var(--primary);color:#fff}
-@media(max-width:600px){.room-hero{height:180px}}
+@media(max-width:600px){.room-card{flex-direction:column}.room-hero{width:100%;min-height:180px}}
 
 /* Summary sidebar with hero */
 .summary-sidebar{position:sticky;top:16px}
@@ -633,8 +634,13 @@ function renderRooms() {
     state.available.forEach(function(u) {
       var sel = state.selectedUnit && state.selectedUnit.id === u.id;
       var img = getRoomImage(u);
-      var tags = getRoomTags(u);
-      var amenities = getRoomAmenities(u);
+      // Use API-provided tags/amenities from admin, fallback to derived
+      var tags = (u.tags && u.tags.length) ? u.tags : getRoomTags(u);
+      var apiAmenities = (u.amenities && u.amenities.length) ? u.amenities.map(function(a) {
+        var label = a.charAt(0).toUpperCase() + a.slice(1).replace(/_/g, ' ');
+        return {icon: a, label: label};
+      }) : null;
+      var amenities = apiAmenities || getRoomAmenities(u);
 
       h += '<div class="room-card' + (sel ? ' selected' : '') + '" data-unit="' + esc(u.id) + '">';
       // Hero image
@@ -708,21 +714,23 @@ function renderSummary() {
   }
 
   h += '<div class="summary-card" style="' + (state.selectedUnit ? 'border-radius:0 0 var(--radius) var(--radius)' : '') + '">';
-  h += '<h3>Your Stay Summary</h3>';
-  h += '<div class="summary-line"><span>Check-in</span><span>' + formatDate(state.checkIn) + '</span></div>';
-  h += '<div class="summary-line"><span>Check-out</span><span>' + formatDate(state.checkOut) + '</span></div>';
-  h += '<div class="summary-line"><span>Duration</span><span>' + n + ' night' + (n > 1 ? 's' : '') + '</span></div>';
-  h += '<div class="summary-line"><span>Guests</span><span>' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</span></div>';
+  h += '<h3>' + svgClipboard() + ' Your Stay Summary</h3>';
+
+  // Dates with icons
+  h += '<div class="summary-line"><span>' + svgCalendarSmall() + ' Check-in</span><span>' + formatDate(state.checkIn) + '</span></div>';
+  h += '<div class="summary-line"><span>' + svgCalendarSmall() + ' Check-out</span><span>' + formatDate(state.checkOut) + '</span></div>';
+  h += '<div class="summary-line"><span>' + svgMoon() + ' Duration</span><span>' + n + ' night' + (n > 1 ? 's' : '') + '</span></div>';
+  h += '<div class="summary-line"><span>' + svgUsers() + ' Guests</span><span>' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</span></div>';
 
   if (state.selectedUnit) {
     h += '<div style="margin:12px 0;padding-top:12px;border-top:1px solid var(--border)">';
-    h += '<div class="summary-line"><span>' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
+    h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
     h += '</div>';
   }
 
   if (q.extras && q.extras.length) {
     q.extras.forEach(function(ex) {
-      h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+      h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
     });
   }
 
@@ -731,7 +739,7 @@ function renderSummary() {
     var selExtras = state.config.extras.filter(function(ex) { return state.selectedExtras[ex.id]; });
     if (selExtras.length) {
       selExtras.forEach(function(ex) {
-        h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+        h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
       });
     }
   }
@@ -742,6 +750,19 @@ function renderSummary() {
   }
   if (total > 0) {
     h += '<div class="summary-total"><span>Total</span><span>' + formatCurrency(total) + '</span></div>';
+  }
+
+  // Continue button in summary
+  if (state.step === 2 && state.selectedUnit) {
+    h += '<button class="btn btn-primary" id="w-summary-next" style="margin-top:16px">Continue ' + svgArrowRight() + '</button>';
+  } else if (state.step === 3) {
+    h += '<button class="btn btn-primary" id="w-summary-quote" style="margin-top:16px"' + (state.quoteLoading ? ' disabled' : '') + '>';
+    h += state.quoteLoading ? spinner() + ' Calculating...' : 'Review Booking ' + svgArrowRight();
+    h += '</button>';
+  } else if (state.step === 4) {
+    h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.confirming ? ' disabled' : '') + '>';
+    h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
+    h += '</button>';
   }
 
   h += '</div></div>';
@@ -851,6 +872,10 @@ function bindEvents() {
   on('w-next2', 'click', doSelectUnit);
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);
+  // Summary sidebar buttons
+  on('w-summary-next', 'click', doSelectUnit);
+  on('w-summary-quote', 'click', doQuote);
+  on('w-summary-confirm', 'click', doConfirm);
   on('w-new', 'click', function() {
     state.step = 1; state.selectedUnit = null; state.selectedExtras = {};
     state.quote = null; state.confirmation = null; state.error = null;
@@ -1152,6 +1177,12 @@ function svgCheckLg() { return '<svg width="32" height="32" viewBox="0 0 24 24" 
 function svgArrowLeft() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'; }
 function svgArrowRight() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'; }
 function svgLock() { return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'; }
+function svgClipboard() { return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:4px"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>'; }
+function svgCalendarSmall() { return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:3px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'; }
+function svgMoon() { return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:3px"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>'; }
+function svgUsers() { return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:3px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>'; }
+function svgBed() { return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:3px"><path d="M2 4v16M2 8h18a2 2 0 012 2v10M2 17h20M6 8v-2a2 2 0 012-2h8a2 2 0 012 2v2"/></svg>'; }
+function svgStar() { return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:3px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'; }
 
 /* --- Apply style config --- */
 function applyStyle(cfg) {

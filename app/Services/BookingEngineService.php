@@ -399,8 +399,26 @@ class BookingEngineService
 
     private function getUnitsConfig(): array
     {
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+
+        // Primary: booking_rooms table
+        $dbRooms = \App\Models\BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->get();
+
+        if ($dbRooms->isNotEmpty()) {
+            $result = [];
+            foreach ($dbRooms as $room) {
+                $key = $room->pms_id ?: (string) $room->id;
+                $result[$key] = $room->toArray();
+            }
+            return $result;
+        }
+
+        // Fallback: legacy JSON settings
         $json = \App\Models\HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
+            ->where('organization_id', $orgId)
             ->where('key', 'booking_units')
             ->value('value');
 
@@ -409,6 +427,6 @@ class BookingEngineService
             if (is_array($decoded) && !empty($decoded)) return $decoded;
         }
 
-        return config('booking.units', []);
+        return [];
     }
 }

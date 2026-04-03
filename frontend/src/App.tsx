@@ -47,6 +47,8 @@ const BookingDetail = lazy(() => import('./pages/BookingDetail').then(m => ({ de
 const BookingCalendar = lazy(() => import('./pages/BookingCalendar').then(m => ({ default: m.BookingCalendar })))
 const BookingPayments = lazy(() => import('./pages/BookingPayments').then(m => ({ default: m.BookingPayments })))
 const BookingSubmissions = lazy(() => import('./pages/BookingSubmissions').then(m => ({ default: m.BookingSubmissions })))
+const BookingRooms = lazy(() => import('./pages/BookingRooms'))
+const BookingExtras = lazy(() => import('./pages/BookingExtras'))
 const AiChat = lazy(() => import('./components/AiChat'))
 
 function PageLoader() {
@@ -135,6 +137,8 @@ export default function App() {
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
           <Route path="/bookings" element={<LazyRoute product="booking"><Bookings /></LazyRoute>} />
+          <Route path="/booking-rooms" element={<LazyRoute gate="admin" product="booking"><BookingRooms /></LazyRoute>} />
+          <Route path="/booking-extras" element={<LazyRoute gate="admin" product="booking"><BookingExtras /></LazyRoute>} />
           <Route path="/bookings/calendar" element={<LazyRoute product="booking"><BookingCalendar /></LazyRoute>} />
           <Route path="/bookings/payments" element={<LazyRoute product="booking"><BookingPayments /></LazyRoute>} />
           <Route path="/bookings/submissions" element={<LazyRoute gate="admin" product="booking"><BookingSubmissions /></LazyRoute>} />

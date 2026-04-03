@@ -35,6 +35,8 @@ use App\Http\Controllers\Api\V1\Admin\KnowledgeBaseController;
 use App\Http\Controllers\Api\V1\Admin\RealtimeController;
 use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
+use App\Http\Controllers\Api\V1\Admin\BookingRoomController;
+use App\Http\Controllers\Api\V1\Admin\BookingExtraController;
 use App\Http\Controllers\Api\V1\BookingPublicController;
 use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
 use App\Http\Controllers\Api\V1\Admin\ChatInboxController;
@@ -365,6 +367,13 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);
             Route::patch('bookings/{id}/status',          [BookingAdminController::class, 'updateStatus']);
             Route::post('bookings/{id}/sync',             [BookingAdminController::class, 'syncOne']);
+
+            // ─── Booking Rooms & Extras (Admin) ─────────────────────────────
+            Route::post('booking-rooms/sync',             [BookingRoomController::class, 'sync']);
+            Route::post('booking-rooms/reorder',          [BookingRoomController::class, 'reorder']);
+            Route::post('booking-rooms/{id}/remove-gallery', [BookingRoomController::class, 'removeGallery']);
+            Route::apiResource('booking-rooms',           BookingRoomController::class);
+            Route::apiResource('booking-extras',          BookingExtraController::class);
 
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);

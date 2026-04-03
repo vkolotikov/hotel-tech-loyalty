@@ -23,39 +23,79 @@ class BookingPublicController extends Controller
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
 
-        $units    = $this->getJsonSetting($orgId, 'booking_units', []);
-        // Auto-sync apartments from PMS if no units configured yet
-        if (empty($units)) {
-            try {
-                $smoobu = app(SmoobuClient::class);
-                $response = $smoobu->getApartments();
-                $apartments = $response['apartments'] ?? [];
-                $synced = [];
-                foreach ($apartments as $apt) {
-                    $id = (string) ($apt['id'] ?? '');
-                    if (!$id) continue;
-                    $rooms = $apt['rooms'] ?? [];
-                    $synced[$id] = [
-                        'id' => $id, 'name' => $apt['name'] ?? "Unit {$id}",
-                        'slug' => \Illuminate\Support\Str::slug($apt['name'] ?? "unit-{$id}"),
-                        'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
-                        'bedrooms' => $rooms['bedrooms'] ?? 1,
-                        'price_per_night' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
-                        'thumbnail' => $apt['imageUrl'] ?? $apt['mainImage'] ?? '',
-                        'description' => $apt['description'] ?? '',
-                    ];
-                }
-                if (!empty($synced)) {
-                    HotelSetting::withoutGlobalScopes()->updateOrCreate(
-                        ['key' => 'booking_units', 'organization_id' => $orgId],
-                        ['value' => json_encode($synced), 'type' => 'json', 'group' => 'booking'],
-                    );
-                    $units = $synced;
-                }
-            } catch (\Throwable) {}
+        // Load rooms from DB table (primary) with legacy JSON fallback
+        $dbRooms = \App\Models\BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($dbRooms->isNotEmpty()) {
+            $units = $dbRooms->map(fn($r) => [
+                'id' => $r->pms_id ?: (string) $r->id,
+                'name' => $r->name,
+                'description' => $r->description,
+                'short_description' => $r->short_description,
+                'max_guests' => $r->max_guests,
+                'bedrooms' => $r->bedrooms,
+                'bed_type' => $r->bed_type,
+                'size' => $r->size,
+                'image' => $r->image,
+                'gallery' => $r->gallery ?? [],
+                'amenities' => $r->amenities ?? [],
+                'tags' => $r->tags ?? [],
+                'base_price' => (float) $r->base_price,
+            ])->values()->toArray();
+        } else {
+            // Legacy fallback — auto-sync from PMS if no rooms exist yet
+            $units = $this->getJsonSetting($orgId, 'booking_units', []);
+            if (empty($units)) {
+                try {
+                    $smoobu = app(SmoobuClient::class);
+                    $response = $smoobu->getApartments();
+                    foreach ($response['apartments'] ?? [] as $apt) {
+                        $pmsId = (string) ($apt['id'] ?? '');
+                        if (!$pmsId) continue;
+                        $rooms = $apt['rooms'] ?? [];
+                        \App\Models\BookingRoom::withoutGlobalScopes()->create([
+                            'organization_id' => $orgId, 'pms_id' => $pmsId,
+                            'name' => $apt['name'] ?? "Unit {$pmsId}",
+                            'slug' => \Illuminate\Support\Str::slug($apt['name'] ?? "unit-{$pmsId}"),
+                            'description' => $apt['description'] ?? '',
+                            'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
+                            'bedrooms' => $rooms['bedrooms'] ?? 1,
+                            'base_price' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
+                        ]);
+                    }
+                    // Re-read
+                    $dbRooms = \App\Models\BookingRoom::withoutGlobalScopes()
+                        ->where('organization_id', $orgId)->where('is_active', true)->orderBy('sort_order')->get();
+                    $units = $dbRooms->map(fn($r) => [
+                        'id' => $r->pms_id ?: (string) $r->id, 'name' => $r->name,
+                        'description' => $r->description, 'max_guests' => $r->max_guests,
+                        'image' => $r->image, 'amenities' => $r->amenities ?? [], 'tags' => $r->tags ?? [],
+                        'base_price' => (float) $r->base_price,
+                    ])->values()->toArray();
+                } catch (\Throwable) {}
+            }
         }
-        $extras   = $this->getJsonSetting($orgId, 'booking_extras', config('booking.extras', []));
-        $policies = $this->getJsonSetting($orgId, 'booking_policies', config('booking.policies', []));
+
+        // Load extras from DB table (primary) with legacy JSON fallback
+        $dbExtras = \App\Models\BookingExtra::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $extras = $dbExtras->isNotEmpty()
+            ? $dbExtras->map(fn($e) => [
+                'id' => (string) $e->id, 'name' => $e->name, 'description' => $e->description,
+                'price' => (float) $e->price, 'price_type' => $e->price_type,
+                'image' => $e->image, 'icon' => $e->icon, 'category' => $e->category,
+            ])->values()->toArray()
+            : $this->getJsonSetting($orgId, 'booking_extras', []);
+
+        $policies = $this->getJsonSetting($orgId, 'booking_policies', []);
 
         $currency  = $this->getStringSetting($orgId, 'booking_currency', 'EUR');
         $minNights = (int) $this->getStringSetting($orgId, 'booking_min_nights', '1');
