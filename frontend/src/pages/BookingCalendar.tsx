@@ -120,10 +120,31 @@ export function BookingCalendar() {
 
   function barCols(b: any) {
     const f = days[0], l = days[days.length - 1]
-    if (b.departure_date <= f || b.arrival_date > l) return null
-    let s = days.indexOf(b.arrival_date); if (s < 0) s = 0
-    let e = days.indexOf(b.departure_date); if (e < 0) e = days.length
+    const arrDate = (b.arrival_date || '').slice(0, 10)
+    const depDate = (b.departure_date || '').slice(0, 10)
+    if (!arrDate || !depDate) return null
+    if (depDate <= f || arrDate > l) return null
+    let s = days.indexOf(arrDate); if (s < 0) s = 0
+    let e = days.indexOf(depDate); if (e < 0) e = days.length
     return s < e ? { start: s + 1, end: e + 1 } : null
+  }
+
+  /** Assign each booking a row index so overlapping bookings stack vertically */
+  function assignRows(list: any[]): { booking: any; cols: { start: number; end: number }; row: number }[] {
+    const items = list.map(b => ({ booking: b, cols: barCols(b) })).filter(x => x.cols !== null) as { booking: any; cols: { start: number; end: number } }[]
+    // Sort by start column, then by span length descending
+    items.sort((a, b) => a.cols.start - b.cols.start || (b.cols.end - b.cols.start) - (a.cols.end - a.cols.start))
+    const rows: number[][] = [] // each row tracks the rightmost occupied column
+    return items.map(item => {
+      let row = 0
+      for (; row < rows.length; row++) {
+        // Check if this row is free (no overlap with existing items in this row)
+        if (rows[row].every(endCol => item.cols.start >= endCol)) break
+      }
+      if (row === rows.length) rows.push([])
+      rows[row].push(item.cols.end)
+      return { ...item, row }
+    })
   }
 
   function uStats(list: any[]) {
@@ -277,37 +298,48 @@ export function BookingCalendar() {
                 </div>
 
                 {/* Bars area */}
-                <div className="flex-1 relative" style={{ minHeight: 56 }}>
-                  {/* Day cell backgrounds */}
-                  <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
-                    {days.map(d => {
-                      const dt = new Date(d), isWe = dt.getDay() === 0 || dt.getDay() === 6, isToday = d === today
-                      return <div key={d} className="border-r border-white/[0.02]"
-                        style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }} />
-                    })}
-                  </div>
+                {(() => {
+                  const laid = assignRows(udata.bookings)
+                  const rowCount = Math.max(1, ...laid.map(l => l.row + 1))
+                  const ROW_H = 30, ROW_GAP = 4, PAD = 4
+                  const areaH = rowCount * ROW_H + (rowCount - 1) * ROW_GAP + PAD * 2
+                  return (
+                    <div className="flex-1 relative" style={{ minHeight: Math.max(56, areaH) }}>
+                      {/* Day cell backgrounds */}
+                      <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+                        {days.map(d => {
+                          const dt = new Date(d), isWe = dt.getDay() === 0 || dt.getDay() === 6, isToday = d === today
+                          return <div key={d} className="border-r border-white/[0.02]"
+                            style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }} />
+                        })}
+                      </div>
 
-                  {/* Booking bars */}
-                  <div className="absolute inset-0 grid items-center" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)`, gridTemplateRows: '1fr' }}>
-                    {udata.bookings.map((b: any) => {
-                      const cols = barCols(b)
-                      if (!cols) return null
-                      const s = BAR_STYLE[b.payment_status] || DEFAULT_BAR
-                      return (
-                        <Link key={b.id} to={`/bookings/${b.id}`}
-                          className="flex items-center px-2.5 rounded-xl text-[10px] font-bold truncate z-[1] transition-all hover:brightness-110 hover:-translate-y-px"
-                          style={{
-                            gridColumn: `${cols.start} / ${cols.end}`, gridRow: 1,
-                            height: 32, background: s.bg, border: `1px solid ${s.border}`, color: s.text,
-                            boxShadow: `0 6px 14px rgba(0,0,0,0.2)`,
-                          }}
-                          title={`${b.guest_name} — ${b.apartment_name}\n${b.arrival_date} → ${b.departure_date}${b.price_total ? `\n€${b.price_total}` : ''}`}>
-                          {shortGuest(b.guest_name)}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
+                      {/* Booking bars — positioned absolutely within grid columns */}
+                      {laid.map(({ booking: b, cols, row }) => {
+                        const payStatus = b.payment_status || (Number(b.price_paid || 0) >= Number(b.price_total || 1) && Number(b.price_total) > 0 ? 'paid' : 'open')
+                        const s = BAR_STYLE[payStatus] || DEFAULT_BAR
+                        const leftPct = ((cols.start - 1) / colCount) * 100
+                        const widthPct = ((cols.end - cols.start) / colCount) * 100
+                        const arrFmt = b.arrival_date ? new Date(b.arrival_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : ''
+                        const depFmt = b.departure_date ? new Date(b.departure_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : ''
+                        return (
+                          <Link key={b.id} to={`/bookings/${b.id}`}
+                            className="absolute flex items-center px-2 rounded-lg text-[10px] font-bold truncate z-[1] transition-all hover:brightness-110 hover:-translate-y-px"
+                            style={{
+                              left: `${leftPct}%`, width: `${widthPct}%`,
+                              top: PAD + row * (ROW_H + ROW_GAP),
+                              height: ROW_H, background: s.bg, border: `1px solid ${s.border}`, color: s.text,
+                              boxShadow: `0 4px 10px rgba(0,0,0,0.2)`,
+                            }}
+                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n€${Number(b.price_total).toLocaleString()}` : ''}`}>
+                            {shortGuest(b.guest_name)}
+                            {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">€{Number(b.price_total).toLocaleString()}</span> : null}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}
