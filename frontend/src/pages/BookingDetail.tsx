@@ -141,8 +141,8 @@ export function BookingDetail() {
                 </h3>
                 <div className="space-y-3">
                   {[
-                    ['Arrival', b.arrival_date],
-                    ['Departure', b.departure_date],
+                    ['Arrival', b.arrival_date ? new Date(b.arrival_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
+                    ['Departure', b.departure_date ? new Date(b.departure_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
                     ['Nights', nights],
                     ['Guests', `${b.adults || 0} adults, ${b.children || 0} children`],
                   ].map(([label, val]) => (

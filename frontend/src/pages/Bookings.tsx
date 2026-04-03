@@ -5,6 +5,36 @@ import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
+/* ── Helpers ─────────────────────────────────────────────────────── */
+
+function fmtDate(d: string | null | undefined): string {
+  if (!d) return '—'
+  try {
+    const date = new Date(d)
+    if (isNaN(date.getTime())) return d
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch { return d }
+}
+
+function fmtDateShort(d: string | null | undefined): string {
+  if (!d) return '—'
+  try {
+    const date = new Date(d)
+    if (isNaN(date.getTime())) return d
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  } catch { return d }
+}
+
+function derivePaymentStatus(b: any): string {
+  if (b.payment_status && b.payment_status !== 'unknown') return b.payment_status
+  const total = Number(b.price_total || 0)
+  const paid = Number(b.price_paid || 0)
+  if (total <= 0) return 'open'
+  if (paid >= total) return 'paid'
+  if (paid > 0) return 'pending'
+  return 'open'
+}
+
 /* ── Shared constants ────────────────────────────────────────────── */
 
 const STATUS_PILL: Record<string, string> = {
@@ -368,7 +398,7 @@ export function Bookings() {
                       <div className="text-[11px] text-gray-500 mt-0.5">{a.apartment_name} · {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      <div className="text-[11px] font-medium" style={{ color: '#74c895' }}>{a.arrival_date}</div>
+                      <div className="text-[11px] font-medium" style={{ color: '#74c895' }}>{fmtDateShort(a.arrival_date)}</div>
                       {a.payment_status && (
                         <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[a.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
                           {payLabel(a.payment_status)}
@@ -392,7 +422,7 @@ export function Bookings() {
                     style={{ background: 'linear-gradient(180deg, rgba(22,35,30,0.95), rgba(19,33,29,0.98))', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
-                      <div className="text-[11px] text-gray-500">{b.apartment_name} · {b.arrival_date} → {b.departure_date}</div>
+                      <div className="text-[11px] text-gray-500">{b.apartment_name} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3 tabular-nums">
                       <div className="text-xs text-emerald-400 font-semibold">€{Number(b.price_paid || 0).toFixed(0)}</div>
@@ -492,15 +522,23 @@ export function Bookings() {
                 </td></tr>
               ) : bookings.length === 0 ? (
                 <tr><td colSpan={10} className="p-12 text-center text-gray-600">No bookings found.</td></tr>
-              ) : bookings.map((b: any) => (
+              ) : bookings.map((b: any) => {
+                const payStatus = derivePaymentStatus(b)
+                const nights = b.arrival_date && b.departure_date
+                  ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
+                  : null
+                return (
                 <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                   <td className="p-4">
                     <div className="text-white font-medium">{b.guest_name || '—'}</div>
                     <div className="text-gray-600 text-[11px]">{b.guest_email || ''}</div>
                   </td>
                   <td className="p-4 text-gray-400 text-xs">{b.apartment_name || '—'}</td>
-                  <td className="p-4 text-gray-400 text-xs tabular-nums">{b.arrival_date || '—'}</td>
-                  <td className="p-4 text-gray-400 text-xs tabular-nums">{b.departure_date || '—'}</td>
+                  <td className="p-4 text-gray-400 text-xs tabular-nums">{fmtDate(b.arrival_date)}</td>
+                  <td className="p-4 text-xs tabular-nums">
+                    <span className="text-gray-400">{fmtDate(b.departure_date)}</span>
+                    {nights && <span className="text-gray-600 ml-1.5">({nights}n)</span>}
+                  </td>
                   <td className="p-4 text-right text-white font-semibold tabular-nums">
                     {b.price_total ? `€${Number(b.price_total).toLocaleString()}` : '—'}
                   </td>
@@ -511,16 +549,14 @@ export function Bookings() {
                   </td>
                   <td className="p-4 text-gray-500 text-[11px]">{b.channel_name || '—'}</td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_PILL[b.internal_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                      {(b.internal_status || 'new').replace(/-/g, ' ')}
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_PILL[b.internal_status] || STATUS_PILL[b.booking_state] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+                      {(b.internal_status || b.booking_state || 'new').replace(/-/g, ' ')}
                     </span>
                   </td>
                   <td className="p-4">
-                    {b.payment_status && (
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                        {payLabel(b.payment_status)}
-                      </span>
-                    )}
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${PAY_PILL[payStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+                      {payLabel(payStatus)}
+                    </span>
                   </td>
                   <td className="p-4 text-center">
                     <Link to={`/bookings/${b.id}`}
@@ -529,7 +565,8 @@ export function Bookings() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

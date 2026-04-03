@@ -220,25 +220,53 @@ class BookingEngineService
             $guestId = $guest?->id;
         }
 
-        // Helper: Smoobu returns "Yes"/"No" strings for paid statuses
+        // Helper: Smoobu returns "Yes"/"No"/"YES" strings for paid statuses
         $toBool = fn($v) => is_string($v) ? strtolower($v) === 'yes' : (bool) $v;
 
         // Smoobu price-paid is "Yes"/"No" → convert to numeric (full price if paid, 0 if not)
         $pricePaidRaw = $data['price-paid'] ?? null;
-        $pricePaid = ($pricePaidRaw && $toBool($pricePaidRaw)) ? ($data['price'] ?? 0) : 0;
+        $priceTotal = $data['price'] ?? 0;
+        $pricePaid = ($pricePaidRaw && $toBool($pricePaidRaw)) ? $priceTotal : 0;
+
+        // Derive payment status from Smoobu data
+        $isBlocked = $data['is-blocked-booking'] ?? false;
+        if ($isBlocked) {
+            $paymentStatus = null;
+        } elseif ($pricePaid >= $priceTotal && $priceTotal > 0) {
+            $paymentStatus = 'paid';
+        } elseif ($pricePaid > 0 && $pricePaid < $priceTotal) {
+            $paymentStatus = 'pending';
+        } else {
+            $paymentStatus = 'open';
+        }
 
         // Smoobu list uses 'type' field (reservation/cancellation), not numeric 'status'
-        $bookingState = match ($data['type'] ?? 'reservation') {
+        $type = $data['type'] ?? 'reservation';
+        $bookingState = match ($type) {
             'cancellation'            => 'cancelled',
             'modification of booking' => 'confirmed',
             default                   => 'confirmed',
         };
 
+        // Derive internal_status from booking state + dates
+        $arrivalDate = $data['arrival'] ?? null;
+        $departureDate = $data['departure'] ?? null;
+        $today = now()->toDateString();
+        if ($type === 'cancellation') {
+            $internalStatus = 'cancelled';
+        } elseif ($departureDate && $departureDate < $today) {
+            $internalStatus = 'checked-out';
+        } elseif ($arrivalDate && $arrivalDate <= $today && $departureDate && $departureDate >= $today) {
+            $internalStatus = 'checked-in';
+        } else {
+            $internalStatus = 'confirmed';
+        }
+
         return BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => (string) $data['id']],
             [
                 'booking_reference'  => $data['reference-id'] ?? null,
-                'booking_type'       => $data['type'] ?? 'reservation',
+                'booking_type'       => $type,
                 'booking_state'      => $bookingState,
                 'apartment_id'       => $data['apartment']['id'] ?? null,
                 'apartment_name'     => $data['apartment']['name'] ?? null,
@@ -248,16 +276,25 @@ class BookingEngineService
                 'guest_name'         => $data['guest-name'] ?? null,
                 'guest_email'        => $data['email'] ?? null,
                 'guest_phone'        => $data['phone'] ?? null,
+                'guest_language'     => $data['language'] ?? null,
                 'adults'             => $data['adults'] ?? null,
                 'children'           => $data['children'] ?? null,
-                'arrival_date'       => $data['arrival'] ?? null,
-                'departure_date'     => $data['departure'] ?? null,
-                'price_total'        => $data['price'] ?? null,
+                'arrival_date'       => $arrivalDate,
+                'departure_date'     => $departureDate,
+                'check_in_time'      => $data['check-in'] ?? null,
+                'check_out_time'     => $data['check-out'] ?? null,
+                'notice'             => $data['notice'] ?? null,
+                'guest_app_url'      => $data['guest-app-url'] ?? null,
+                'price_total'        => $priceTotal,
                 'price_paid'         => $pricePaid,
                 'prepayment_amount'  => $data['prepayment'] ?? null,
                 'prepayment_paid'    => $toBool($data['prepayment-paid'] ?? false),
                 'deposit_amount'     => $data['deposit'] ?? null,
                 'deposit_paid'       => $toBool($data['deposit-paid'] ?? false),
+                'payment_status'     => $paymentStatus,
+                'internal_status'    => $internalStatus,
+                'source_created_at'  => $data['created-at'] ?? null,
+                'source_updated_at'  => $data['modified-at'] ?? $data['modifiedAt'] ?? null,
                 'synced_at'          => now(),
                 'raw_json'           => $data,
             ]

@@ -318,6 +318,16 @@ class BookingAdminController extends Controller
             $msg = "Synced {$synced} reservations.";
             if ($errors) $msg .= " {$errors} failed.";
 
+            // Log sync event for dashboard "Last Sync"
+            try {
+                AuditLog::create([
+                    'organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                    'user_id'         => $request->user()?->id,
+                    'action'          => 'booking.sync',
+                    'description'     => "PMS sync: {$synced} synced, {$errors} failed",
+                ]);
+            } catch (\Throwable) {}
+
             return response()->json(['message' => $msg, 'synced' => $synced, 'errors' => $errors]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PMS sync failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

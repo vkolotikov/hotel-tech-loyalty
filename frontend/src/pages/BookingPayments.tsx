@@ -80,7 +80,7 @@ export function BookingPayments() {
                 </div>
                 {/* Stay */}
                 <div className="text-xs text-gray-400 tabular-nums min-w-[150px]">
-                  {b.arrival_date && b.departure_date ? `${b.arrival_date} → ${b.departure_date}` : '—'}
+                  {b.arrival_date && b.departure_date ? `${new Date(b.arrival_date).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})} → ${new Date(b.departure_date).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}` : '—'}
                 </div>
                 {/* Financial */}
                 <div className="flex items-center gap-5 tabular-nums min-w-[260px] justify-end">
