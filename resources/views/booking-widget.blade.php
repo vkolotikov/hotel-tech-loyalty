@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Book Your Stay</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --primary: {{ $color ?: '#2d6a4f' }};
@@ -20,8 +20,9 @@
   --error-bg: #fef2f2;
   --success: #16a34a;
   --success-bg: #f0fdf4;
-  --radius: 12px;
+  --radius: 18px;
   --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
   --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
   --shadow: 0 2px 8px rgba(0,0,0,.06);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.08);
@@ -45,7 +46,9 @@ button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit}
 
 /* Layout */
-.widget{max-width:680px;margin:0 auto;padding:20px 16px}
+.widget{max-width:980px;margin:0 auto;padding:20px 16px}
+.page-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media(max-width:780px){.page-layout{grid-template-columns:1fr}}
 
 /* Header */
 .widget-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
@@ -88,23 +91,40 @@ input,select,textarea{font-family:inherit}
 .btn-row{display:flex;gap:12px;margin-top:20px}
 .btn-row .btn{flex:1}
 
-/* Room cards */
-.room-card{display:flex;gap:16px;padding:16px;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:12px;transition:all .25s;cursor:pointer}
-.room-card:hover{border-color:color-mix(in srgb, var(--primary) 40%, var(--border));box-shadow:var(--shadow)}
-.room-card.selected{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 1px var(--primary)}
-.room-img{width:110px;height:90px;border-radius:8px;object-fit:cover;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);overflow:hidden}
-.room-img img{width:100%;height:100%;object-fit:cover}
-.room-body{flex:1;min-width:0;display:flex;flex-direction:column}
-.room-name{font-size:15px;font-weight:600;margin-bottom:2px}
-.room-desc{font-size:12px;color:var(--text-secondary);margin-bottom:auto;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.room-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-secondary);margin:6px 0}
-.room-meta svg{flex-shrink:0}
-.room-pricing{display:flex;align-items:baseline;gap:6px;margin-top:4px}
-.room-price{font-size:18px;font-weight:700;color:var(--primary)}
+/* Room cards — rich vertical layout */
+.room-card{display:grid;grid-template-columns:280px minmax(0,1fr) 200px;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
+.room-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.room-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
+.room-hero{height:220px;background:var(--border);position:relative;overflow:hidden}
+.room-hero img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.room-card:hover .room-hero img{transform:scale(1.03)}
+.room-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);opacity:.4}
+.room-tags{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap}
+.room-tag{padding:4px 10px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;font-size:11px;font-weight:600;color:#1a1a1a}
+.room-body{padding:20px;display:flex;flex-direction:column}
+.room-name{font-family:var(--font-display);font-size:1.5rem;font-weight:600;margin-bottom:4px;line-height:1.2}
+.room-specs{display:flex;gap:12px;font-size:12px;color:var(--text-secondary);margin:6px 0 10px;flex-wrap:wrap}
+.room-spec{display:flex;align-items:center;gap:4px}
+.room-desc{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.room-amenities{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:16px}
+.room-amenity{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);font-weight:500}
+.room-amenity svg{flex-shrink:0;color:var(--primary);opacity:.8}
+.room-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+.room-pricing{display:flex;align-items:baseline;gap:6px}
+.room-price{font-size:22px;font-weight:700;color:var(--primary)}
 .room-price-unit{font-size:12px;color:var(--text-secondary)}
-.room-total{font-size:11px;color:var(--text-secondary)}
-.room-select-btn{margin-top:8px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;align-self:flex-start}
+.room-total{font-size:11px;color:var(--text-secondary);margin-left:4px}
+.room-select-btn{padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap}
 .room-card.selected .room-select-btn,.room-select-btn:hover{background:var(--primary);color:#fff}
+@media(max-width:900px){.room-card{grid-template-columns:1fr}}
+@media(min-width:901px){.room-hero{grid-row:1/4}.room-body{grid-column:2/4}}
+
+/* Summary sidebar with hero */
+.summary-sidebar{position:sticky;top:16px}
+.summary-hero{position:relative;height:180px;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;background:var(--border)}
+.summary-hero img{width:100%;height:100%;object-fit:cover}
+.summary-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 60%)}
+.summary-hero-title{position:absolute;bottom:14px;left:16px;right:16px;color:#fff;font-family:var(--font-display);font-size:1.25rem;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.4)}
 
 /* Extras */
 .extra-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:10px;transition:all .2s;cursor:pointer}
@@ -118,14 +138,14 @@ input,select,textarea{font-family:inherit}
 
 /* Details layout */
 .details-grid{display:grid;grid-template-columns:1fr 280px;gap:16px}
-@media(max-width:600px){
+@media(max-width:780px){
   .details-grid{grid-template-columns:1fr}
   .details-grid .summary-card{order:-1}
   .row{grid-template-columns:1fr}
   .stepper{gap:0;padding:0}
   .step-label{font-size:9px}
-  .room-card{flex-direction:column}
-  .room-img{width:100%;height:140px}
+  .room-card{grid-template-columns:1fr}
+  .room-hero{height:200px}
 }
 
 /* Summary sidebar */
@@ -279,6 +299,73 @@ var state = {
 
 var $app = document.getElementById('app');
 var STEPS = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
+
+/* Fallback images for known ForRest room names */
+var FALLBACK_IMAGES = {
+  'deluxe': 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&h=400&fit=crop',
+  'lodge': 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=600&h=400&fit=crop',
+  'tiny': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=600&h=400&fit=crop',
+  'sauna': 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=600&h=400&fit=crop',
+  'suite': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&h=400&fit=crop',
+  'studio': 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&h=400&fit=crop',
+  'default': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop'
+};
+
+function getRoomImage(unit) {
+  if (unit.image) return unit.image;
+  var name = (unit.name || '').toLowerCase();
+  for (var key in FALLBACK_IMAGES) {
+    if (key !== 'default' && name.indexOf(key) >= 0) return FALLBACK_IMAGES[key];
+  }
+  return FALLBACK_IMAGES['default'];
+}
+
+function getRoomAmenities(unit) {
+  var name = (unit.name || '').toLowerCase();
+  var desc = (unit.description || '').toLowerCase();
+  var all = name + ' ' + desc;
+  var amenities = [];
+  if (all.indexOf('kitchen') >= 0 || all.indexOf('cook') >= 0) amenities.push({icon: 'kitchen', label: 'Kitchen'});
+  if (all.indexOf('sauna') >= 0) amenities.push({icon: 'sauna', label: 'Sauna'});
+  if (all.indexOf('jacuzzi') >= 0 || all.indexOf('hot tub') >= 0) amenities.push({icon: 'jacuzzi', label: 'Jacuzzi'});
+  if (all.indexOf('bbq') >= 0 || all.indexOf('grill') >= 0) amenities.push({icon: 'bbq', label: 'BBQ'});
+  if (all.indexOf('wifi') >= 0 || all.indexOf('wi-fi') >= 0) amenities.push({icon: 'wifi', label: 'WiFi'});
+  if (all.indexOf('parking') >= 0) amenities.push({icon: 'parking', label: 'Parking'});
+  if (all.indexOf('terrace') >= 0 || all.indexOf('balcony') >= 0) amenities.push({icon: 'terrace', label: 'Terrace'});
+  if (all.indexOf('garden') >= 0 || all.indexOf('forest') >= 0 || all.indexOf('nature') >= 0) amenities.push({icon: 'nature', label: 'Nature'});
+  // Always add a few defaults if fewer than 3
+  if (amenities.length < 2) amenities.push({icon: 'wifi', label: 'WiFi'});
+  if (amenities.length < 3) amenities.push({icon: 'parking', label: 'Parking'});
+  return amenities;
+}
+
+function getRoomTags(unit) {
+  var name = (unit.name || '').toLowerCase();
+  var desc = (unit.description || '').toLowerCase();
+  var all = name + ' ' + desc;
+  var tags = [];
+  if (all.indexOf('forest') >= 0) tags.push('Forest view');
+  if (all.indexOf('lake') >= 0 || all.indexOf('water') >= 0) tags.push('Lake view');
+  if (all.indexOf('deluxe') >= 0 || all.indexOf('luxury') >= 0) tags.push('Deluxe');
+  if (all.indexOf('private') >= 0) tags.push('Private');
+  if (all.indexOf('family') >= 0) tags.push('Family');
+  if (unit.max_guests && unit.max_guests >= 4) tags.push('Spacious');
+  return tags;
+}
+
+function svgAmenity(icon) {
+  var svgs = {
+    kitchen: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h3v10H3zM18 2h3v10h-3zM10 2v6a2 2 0 004 0V2M12 12v10M3 12h18"/></svg>',
+    sauna: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 10c0 0-1 2-1 4s1 4 1 4M12 10c0 0-1 2-1 4s1 4 1 4M17 10c0 0-1 2-1 4s1 4 1 4M4 20h16M8 4a2 2 0 114 0"/></svg>',
+    jacuzzi: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12h20M4 12v6a2 2 0 002 2h12a2 2 0 002-2v-6M6 12V6a2 2 0 014 0v1M9 4c1-1 3-1 4 0"/></svg>',
+    bbq: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="10" r="6"/><path d="M12 16v4M8 20h8M9 6c0-2 6-2 6 0"/></svg>',
+    wifi: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12.55a11 11 0 0114 0M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1"/></svg>',
+    parking: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 010 6H9"/></svg>',
+    terrace: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7h20zM2 7v15h20V7M8 22V10M16 22V10"/></svg>',
+    nature: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20V8M8 14l4-6 4 6M6 18l6-8 6 8M4 22h16"/></svg>'
+  };
+  return svgs[icon] || '';
+}
 
 /* --- API --- */
 function apiGet(path, params) {
@@ -522,39 +609,62 @@ function renderMonth(year, month) {
 /* --- Step 2: Rooms --- */
 function renderRooms() {
   var n = nights();
-  var h = '<div class="card">';
-  h += '<div class="card-title">Available Rooms</div>';
-  h += '<div class="card-sub">' + formatDate(state.checkIn) + ' &mdash; ' + formatDate(state.checkOut) + ' &middot; ' + n + ' night' + (n > 1 ? 's' : '') + ' &middot; ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</div>';
+  var h = '<div class="page-layout">';
+  h += '<div>';  // left column
+  h += '<div style="margin-bottom:20px">';
+  h += '<h2 style="font-family:var(--font-display);font-size:1.8rem;font-weight:600;margin-bottom:4px">Available Rooms</h2>';
+  h += '<p style="font-size:13px;color:var(--text-secondary)">' + formatDate(state.checkIn) + ' &mdash; ' + formatDate(state.checkOut) + ' &middot; ' + n + ' night' + (n > 1 ? 's' : '') + ' &middot; ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</p>';
+  h += '</div>';
 
   if (state.available.length === 0) {
-    h += '<div style="text-align:center;padding:32px 16px;color:var(--text-secondary)">';
-    h += '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.5"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>';
-    h += '<p style="font-size:14px;font-weight:500">No rooms available</p>';
-    h += '<p style="font-size:13px;margin-top:4px">Try different dates or fewer guests</p></div>';
+    h += '<div class="card" style="text-align:center;padding:48px 20px;color:var(--text-secondary)">';
+    h += '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:16px;opacity:.4"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>';
+    h += '<p style="font-size:15px;font-weight:600">No rooms available</p>';
+    h += '<p style="font-size:13px;margin-top:6px">Try different dates or fewer guests</p></div>';
   } else {
     state.available.forEach(function(u) {
       var sel = state.selectedUnit && state.selectedUnit.id === u.id;
+      var img = getRoomImage(u);
+      var tags = getRoomTags(u);
+      var amenities = getRoomAmenities(u);
+
       h += '<div class="room-card' + (sel ? ' selected' : '') + '" data-unit="' + esc(u.id) + '">';
-      h += '<div class="room-img">';
-      if (u.image) {
-        h += '<img src="' + esc(u.image) + '" alt="' + esc(u.name) + '">';
-      } else {
-        h += '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7"/><path d="M21 10H3M7 10V7a5 5 0 0110 0v3"/></svg>';
+      // Hero image
+      h += '<div class="room-hero">';
+      h += '<img src="' + esc(img) + '" alt="' + esc(u.name) + '" loading="lazy">';
+      if (tags.length) {
+        h += '<div class="room-tags">';
+        tags.forEach(function(t) { h += '<span class="room-tag">' + esc(t) + '</span>'; });
+        h += '</div>';
       }
       h += '</div>';
+      // Body
       h += '<div class="room-body">';
       h += '<div class="room-name">' + esc(u.name) + '</div>';
-      if (u.description) h += '<div class="room-desc">' + esc(u.description) + '</div>';
-      h += '<div class="room-meta">';
-      h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Max ' + (u.max_guests || '--') + ' guests';
-      if (u.bed_type) h += ' &middot; ' + esc(u.bed_type);
+      // Specs
+      h += '<div class="room-specs">';
+      h += '<span class="room-spec"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Max ' + (u.max_guests || '--') + ' guests</span>';
+      if (u.bed_type) h += '<span class="room-spec">&middot; ' + esc(u.bed_type) + '</span>';
+      if (u.size) h += '<span class="room-spec">&middot; ' + esc(u.size) + '</span>';
       h += '</div>';
+      if (u.description) h += '<div class="room-desc">' + esc(u.description) + '</div>';
+      // Amenities
+      if (amenities.length) {
+        h += '<div class="room-amenities">';
+        amenities.forEach(function(a) {
+          h += '<span class="room-amenity">' + svgAmenity(a.icon) + ' ' + a.label + '</span>';
+        });
+        h += '</div>';
+      }
+      // Footer with price + button
+      h += '<div class="room-footer">';
       h += '<div class="room-pricing">';
       h += '<span class="room-price">' + formatCurrency(u.price_per_night) + '</span>';
       h += '<span class="room-price-unit">/ night</span>';
       h += '<span class="room-total">&middot; ' + formatCurrency(u.price_per_night * n) + ' total</span>';
       h += '</div>';
-      h += '<button class="room-select-btn">' + (sel ? svgCheck() + ' Selected' : 'Select') + '</button>';
+      h += '<button class="room-select-btn">' + (sel ? svgCheck() + ' Selected' : 'Choose this room') + '</button>';
+      h += '</div>';
       h += '</div></div>';
     });
   }
@@ -564,6 +674,68 @@ function renderRooms() {
   if (state.available.length > 0) {
     h += '<button class="btn btn-primary" id="w-next2"' + (state.selectedUnit ? '' : ' disabled') + '>Continue ' + svgArrowRight() + '</button>';
   }
+  h += '</div>';
+  h += '</div>';  // end left column
+
+  // Right sidebar — summary
+  h += renderSummary();
+  h += '</div>';  // end page-layout
+  return h;
+}
+
+/* --- Sticky Summary Sidebar --- */
+function renderSummary() {
+  var n = nights();
+  var q = state.quote || {};
+  var h = '<div class="summary-sidebar">';
+
+  // Hero image if room selected
+  if (state.selectedUnit) {
+    var img = getRoomImage(state.selectedUnit);
+    h += '<div class="summary-hero">';
+    h += '<img src="' + esc(img) + '" alt="' + esc(state.selectedUnit.name) + '">';
+    h += '<div class="summary-hero-overlay"></div>';
+    h += '<div class="summary-hero-title">' + esc(state.selectedUnit.name) + '</div>';
+    h += '</div>';
+  }
+
+  h += '<div class="summary-card" style="' + (state.selectedUnit ? 'border-radius:0 0 var(--radius) var(--radius)' : '') + '">';
+  h += '<h3>Your Stay Summary</h3>';
+  h += '<div class="summary-line"><span>Check-in</span><span>' + formatDate(state.checkIn) + '</span></div>';
+  h += '<div class="summary-line"><span>Check-out</span><span>' + formatDate(state.checkOut) + '</span></div>';
+  h += '<div class="summary-line"><span>Duration</span><span>' + n + ' night' + (n > 1 ? 's' : '') + '</span></div>';
+  h += '<div class="summary-line"><span>Guests</span><span>' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</span></div>';
+
+  if (state.selectedUnit) {
+    h += '<div style="margin:12px 0;padding-top:12px;border-top:1px solid var(--border)">';
+    h += '<div class="summary-line"><span>' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
+    h += '</div>';
+  }
+
+  if (q.extras && q.extras.length) {
+    q.extras.forEach(function(ex) {
+      h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+    });
+  }
+
+  // Extras from selection (before quote)
+  if (!q.extras && state.config && state.config.extras) {
+    var selExtras = state.config.extras.filter(function(ex) { return state.selectedExtras[ex.id]; });
+    if (selExtras.length) {
+      selExtras.forEach(function(ex) {
+        h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+      });
+    }
+  }
+
+  var total = q.total || (state.selectedUnit ? state.selectedUnit.price_per_night * n : 0);
+  if (!q.total && state.config && state.config.extras) {
+    state.config.extras.forEach(function(ex) { if (state.selectedExtras[ex.id]) total += (ex.price || 0); });
+  }
+  if (total > 0) {
+    h += '<div class="summary-total"><span>Total</span><span>' + formatCurrency(total) + '</span></div>';
+  }
+
   h += '</div></div>';
   return h;
 }
@@ -571,7 +743,9 @@ function renderRooms() {
 /* --- Step 3: Extras --- */
 function renderExtras() {
   var extras = (state.config && state.config.extras) || [];
-  var h = '<div class="card">';
+  var h = '<div class="page-layout">';
+  h += '<div>';
+  h += '<div class="card">';
   h += '<div class="card-title">Enhance Your Stay</div>';
   h += '<div class="card-sub">Add optional extras to make your visit even better</div>';
 
@@ -595,17 +769,18 @@ function renderExtras() {
   h += '<button class="btn btn-primary" id="w-next3"' + (state.quoteLoading ? ' disabled' : '') + '>';
   h += state.quoteLoading ? spinner() + ' Calculating...' : 'Review Booking ' + svgArrowRight();
   h += '</button></div></div>';
+  h += '</div>';
+  h += renderSummary();
+  h += '</div>';
   return h;
 }
 
 /* --- Step 4: Details --- */
 function renderDetails() {
-  var q = state.quote || {};
-  var n = nights();
   var h = '';
   if (state.error) h += errorHtml(state.error);
 
-  h += '<div class="details-grid">';
+  h += '<div class="page-layout">';
 
   // Guest form
   h += '<div class="card"><div class="card-title">Guest Details</div>';
@@ -623,25 +798,10 @@ function renderDetails() {
   h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
   h += '</button></div></div>';
 
-  // Summary sidebar
-  h += '<div class="summary-card">';
-  h += '<h3>Booking Summary</h3>';
-  h += '<div class="summary-line"><span>' + formatDate(state.checkIn) + '</span><span>' + formatDate(state.checkOut) + '</span></div>';
-  h += '<div class="summary-line"><span>' + n + ' night' + (n > 1 ? 's' : '') + ', ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + '</span><span></span></div>';
-  if (state.selectedUnit) {
-    h += '<div style="margin:10px 0;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">';
-    h += '<div class="summary-line"><span>' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
-    h += '</div>';
-  }
-  if (q.extras && q.extras.length) {
-    q.extras.forEach(function(ex) {
-      h += '<div class="summary-line"><span>' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
-    });
-  }
-  h += '<div class="summary-total"><span>Total</span><span>' + formatCurrency(q.total || 0) + '</span></div>';
-  h += '</div>';
+  // Summary sidebar with hero
+  h += renderSummary();
 
-  h += '</div>'; // details-grid
+  h += '</div>'; // page-layout
   return h;
 }
 
