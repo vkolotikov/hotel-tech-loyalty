@@ -26,7 +26,7 @@ class SmoobuClient
         // Auto-detect: if API key is present, treat as live regardless of provider setting
         $this->isMock    = empty($this->apiKey) && $provider === 'mock';
         $this->channelId = $this->setting('booking_smoobu_channel_id', config('services.smoobu.channel_id', ''));
-        $this->timeout   = (int) config('services.smoobu.timeout', 8);
+        $this->timeout   = (int) config('services.smoobu.timeout', 30);
     }
 
     public function isMock(): bool { return $this->isMock; }

@@ -286,29 +286,46 @@ class BookingAdminController extends Controller
     public function syncAll(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
         if ($smoobu->isMock()) {
-            return response()->json(['message' => 'PMS is in mock mode — no real data to sync.', 'synced' => 0]);
+            return response()->json(['message' => 'PMS is in mock mode — no real data to sync. Add your Smoobu API key in Settings > Integrations.', 'synced' => 0]);
         }
 
-        $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));
-        $to   = $request->input('to', now()->addMonths(3)->format('Y-m-d'));
+        try {
+            $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));
+            $to   = $request->input('to', now()->addMonths(3)->format('Y-m-d'));
 
-        $page = 1; $synced = 0; $maxPages = 10;
+            $page = 1; $synced = 0; $errors = 0; $maxPages = 10;
 
-        while ($page <= $maxPages) {
-            $response = $smoobu->listReservations(['from' => $from, 'to' => $to, 'page' => $page, 'pageSize' => 100]);
-            $bookings = $response['bookings'] ?? [];
-            if (empty($bookings)) break;
+            while ($page <= $maxPages) {
+                $response = $smoobu->listReservations(['from' => $from, 'to' => $to, 'page' => $page, 'pageSize' => 100]);
+                $bookings = $response['bookings'] ?? [];
+                if (empty($bookings)) break;
 
-            foreach ($bookings as $b) {
-                $service->syncReservation((string) ($b['id'] ?? ''));
-                $synced++;
+                foreach ($bookings as $b) {
+                    try {
+                        $service->syncReservation((string) ($b['id'] ?? ''));
+                        $synced++;
+                    } catch (\Throwable $e) {
+                        $errors++;
+                        \Illuminate\Support\Facades\Log::warning('Sync reservation failed', ['id' => $b['id'] ?? null, 'error' => $e->getMessage()]);
+                    }
+                }
+
+                if ($page >= ($response['page_count'] ?? 1)) break;
+                $page++;
             }
 
-            if ($page >= ($response['page_count'] ?? 1)) break;
-            $page++;
-        }
+            $msg = "Synced {$synced} reservations.";
+            if ($errors) $msg .= " {$errors} failed.";
 
-        return response()->json(['message' => "Synced {$synced} reservations.", 'synced' => $synced]);
+            return response()->json(['message' => $msg, 'synced' => $synced, 'errors' => $errors]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PMS sync failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'message' => 'PMS sync failed: ' . $e->getMessage(),
+                'synced' => 0,
+                'error' => true,
+            ], 200); // 200 so frontend can display the message
+        }
     }
 
     /** GET /v1/admin/bookings/calendar — calendar view with full data. */
