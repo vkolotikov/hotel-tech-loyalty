@@ -158,6 +158,22 @@ class BookingRoomController extends Controller
                 return response()->json(['message' => 'No apartments found in PMS.', 'synced' => 0, 'created' => 0, 'updated' => 0]);
             }
 
+            // Fetch current rates to get real prices (Smoobu apartments don't include prices)
+            $pmsIds = array_map(fn($a) => (string) ($a['id'] ?? ''), $apartments);
+            $pmsIds = array_filter($pmsIds);
+            $ratesByUnit = [];
+            try {
+                $checkIn = now()->format('Y-m-d');
+                $checkOut = now()->addDay()->format('Y-m-d');
+                $ratesResponse = $smoobu->getRates($checkIn, $checkOut, $pmsIds);
+                $ratesData = $ratesResponse['data'] ?? $ratesResponse;
+                foreach ($ratesData as $unitId => $rate) {
+                    $ratesByUnit[(string) $unitId] = (float) ($rate['price_per_night'] ?? $rate['price'] ?? 0);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Rate fetch during sync failed', ['error' => $e->getMessage()]);
+            }
+
             $created = 0;
             $updated = 0;
 
@@ -166,20 +182,25 @@ class BookingRoomController extends Controller
                 if (!$pmsId) continue;
 
                 $rooms = $apt['rooms'] ?? [];
+                $ratePrice = $ratesByUnit[$pmsId] ?? 0;
+
                 $existing = BookingRoom::withoutGlobalScopes()
                     ->where('organization_id', $orgId)
                     ->where('pms_id', $pmsId)
                     ->first();
 
                 if ($existing) {
-                    // Only update PMS-sourced fields, don't overwrite admin customizations
-                    $existing->update([
+                    $updateData = [
                         'name' => $existing->name ?: ($apt['name'] ?? "Unit {$pmsId}"),
                         'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? $existing->max_guests,
                         'bedrooms' => $rooms['bedrooms'] ?? $existing->bedrooms,
-                        'base_price' => $apt['price'] ?? $apt['pricePerNight'] ?? $existing->base_price,
                         'meta' => array_merge($existing->meta ?? [], ['pms_raw' => $apt]),
-                    ]);
+                    ];
+                    // Update price from PMS rates (always sync latest rate)
+                    if ($ratePrice > 0) {
+                        $updateData['base_price'] = $ratePrice;
+                    }
+                    $existing->update($updateData);
                     $updated++;
                 } else {
                     BookingRoom::withoutGlobalScopes()->create([
@@ -190,7 +211,7 @@ class BookingRoomController extends Controller
                         'description' => $apt['description'] ?? '',
                         'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
                         'bedrooms' => $rooms['bedrooms'] ?? 1,
-                        'base_price' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
+                        'base_price' => $ratePrice > 0 ? $ratePrice : 100,
                         'image' => $apt['imageUrl'] ?? $apt['mainImage'] ?? '',
                         'meta' => ['pms_raw' => $apt],
                     ]);
