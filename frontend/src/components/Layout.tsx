@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useSubscription } from '../hooks/useSubscription'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -24,6 +25,8 @@ interface NavItem {
   label: string
   icon: any
   gate: NavGate
+  product?: string   // required SaaS product slug
+  feature?: string   // required SaaS feature key
 }
 
 interface NavGroup {
@@ -36,18 +39,18 @@ const navGroups: NavGroup[] = [
     label: 'Overview',
     items: [
       { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
-      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
-      { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics' },
+      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics', feature: 'ai_insights' },
+      { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
     ],
   },
   {
     label: 'AI Chat',
     items: [
-      { path: '/chat-inbox',      label: 'Inbox',          icon: Inbox,          gate: 'all' },
-      { path: '/chatbot-config',  label: 'Chatbot Config', icon: Bot,            gate: 'admin' },
-      { path: '/knowledge-base',  label: 'Knowledge Base', icon: BookOpen,       gate: 'admin' },
-      { path: '/popup-rules',     label: 'Popup Rules',    icon: Zap,            gate: 'admin' },
-      { path: '/training',        label: 'AI Training',    icon: GraduationCap,  gate: 'admin' },
+      { path: '/chat-inbox',      label: 'Inbox',          icon: Inbox,          gate: 'all',   product: 'chat' },
+      { path: '/chatbot-config',  label: 'Chatbot Config', icon: Bot,            gate: 'admin', product: 'chat' },
+      { path: '/knowledge-base',  label: 'Knowledge Base', icon: BookOpen,       gate: 'admin', product: 'chat' },
+      { path: '/popup-rules',     label: 'Popup Rules',    icon: Zap,            gate: 'admin', product: 'chat' },
+      { path: '/training',        label: 'AI Training',    icon: GraduationCap,  gate: 'admin', product: 'chat' },
     ],
   },
   {
@@ -55,19 +58,19 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/members',  label: 'Members',  icon: Users,     gate: 'all' },
       { path: '/guests',   label: 'Guests',   icon: UserCheck, gate: 'all' },
-      { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin' },
-      { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin' },
-      { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers' },
+      { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin', product: 'loyalty' },
+      { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin', product: 'loyalty' },
+      { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers', product: 'loyalty' },
     ],
   },
   {
     label: 'Bookings',
     items: [
-      { path: '/bookings',             label: 'Bookings',     icon: BedDouble,     gate: 'all' },
-      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all' },
-      { path: '/reservations',         label: 'Reservations', icon: CalendarCheck, gate: 'all' },
-      { path: '/bookings/payments',    label: 'Payments',     icon: CreditCard,    gate: 'all' },
-      { path: '/bookings/submissions', label: 'Submissions',  icon: ListChecks,    gate: 'admin' },
+      { path: '/bookings',             label: 'Bookings',     icon: BedDouble,     gate: 'all',   product: 'booking' },
+      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all',   product: 'booking' },
+      { path: '/reservations',         label: 'Reservations', icon: CalendarCheck, gate: 'all',   product: 'booking' },
+      { path: '/bookings/payments',    label: 'Payments',     icon: CreditCard,    gate: 'all',   product: 'booking' },
+      { path: '/bookings/submissions', label: 'Submissions',  icon: ListChecks,    gate: 'admin', product: 'booking' },
     ],
   },
   {
@@ -75,7 +78,7 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/inquiries',       label: 'Inquiries',       icon: FileText,  gate: 'all' },
       { path: '/corporate',       label: 'Corporate',       icon: Briefcase, gate: 'admin' },
-      { path: '/notifications',   label: 'Campaigns',       icon: Bell,      gate: 'admin' },
+      { path: '/notifications',   label: 'Campaigns',       icon: Bell,      gate: 'admin', feature: 'push_notifications' },
       { path: '/email-templates', label: 'Email Templates', icon: Mail,      gate: 'admin' },
     ],
   },
@@ -120,6 +123,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   const location = useLocation()
   const { user, staff, logout } = useAuthStore()
+  const { hasFeature, hasProduct } = useSubscription()
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
   const { connected, events } = useRealtimeEvents()
   const [showNotifPanel, setShowNotifPanel] = useState(false)
@@ -179,11 +183,16 @@ export function Layout({ children }: { children: ReactNode }) {
     window.location.href = `${APP_BASE}/login`
   }
 
-  // Filter groups to only show items the user can access, hide empty groups
+  // Filter groups: role gate + product/feature gate
   const visibleGroups = navGroups
     .map(group => ({
       ...group,
-      items: group.items.filter(item => canAccess(item.gate, staff)),
+      items: group.items.filter(item => {
+        if (!canAccess(item.gate, staff)) return false
+        if (item.product && !hasProduct(item.product)) return false
+        if (item.feature && !hasFeature(item.feature)) return false
+        return true
+      }),
     }))
     .filter(group => group.items.length > 0)
 
@@ -356,16 +365,11 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 function SubscriptionBanner() {
-  const { data } = useQuery({
-    queryKey: ['subscription-status'],
-    queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
+  const { data, status } = useSubscription()
 
-  if (!data || data.status === 'LOCAL' || data.status === 'ACTIVE') return null
+  if (!data || status === 'LOCAL' || status === 'ACTIVE') return null
 
-  if (data.status === 'TRIALING') {
+  if (status === 'TRIALING') {
     const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
     const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
     return (
@@ -383,7 +387,7 @@ function SubscriptionBanner() {
     )
   }
 
-  if (data.status === 'EXPIRED' || !data.active) {
+  if (status === 'EXPIRED' || !data.active) {
     return (
       <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
         <AlertTriangle size={16} className="text-red-400 shrink-0" />

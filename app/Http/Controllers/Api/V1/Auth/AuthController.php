@@ -476,6 +476,8 @@ class AuthController extends Controller
                 $response = Http::withToken($token)->timeout(5)->get("{$saasApi}/billing/subscriptions");
                 if ($response->successful()) {
                     $subs = $response->json('subscriptions', []);
+                    $features = $response->json('features', []);
+                    $products = $response->json('products', []);
                     foreach ($subs as $sub) {
                         if (in_array($sub['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
                             return response()->json([
@@ -484,16 +486,32 @@ class AuthController extends Controller
                                 'plan'       => $sub['plan'] ?? null,
                                 'trialEnd'   => $sub['trialEnd'] ?? null,
                                 'periodEnd'  => $sub['currentPeriodEnd'] ?? null,
+                                'features'   => $features,
+                                'products'   => $products,
                             ]);
                         }
                     }
-                    return response()->json(['active' => false, 'status' => 'EXPIRED']);
+                    return response()->json(['active' => false, 'status' => 'EXPIRED', 'features' => [], 'products' => []]);
                 }
             } catch (\Exception $e) {
                 // Fail open
             }
         }
 
-        return response()->json(['active' => true, 'status' => 'LOCAL', 'plan' => null]);
+        // Local/dev mode — grant all features
+        return response()->json([
+            'active'   => true,
+            'status'   => 'LOCAL',
+            'plan'     => null,
+            'features' => [
+                'max_team_members' => 'unlimited', 'max_guests' => 'unlimited',
+                'max_properties' => 'unlimited', 'max_loyalty_members' => 'unlimited',
+                'ai_insights' => 'true', 'ai_avatars' => 'true',
+                'custom_branding' => 'true', 'api_access' => 'true',
+                'push_notifications' => 'true', 'mobile_app' => 'true',
+                'nfc_cards' => 'true', 'priority_support' => 'dedicated',
+            ],
+            'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+        ]);
     }
 }

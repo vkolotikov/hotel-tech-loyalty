@@ -8,6 +8,7 @@ import { APP_BASE, api } from './lib/api'
 import { Layout, canAccess } from './components/Layout'
 import type { NavGate } from './components/Layout'
 import { useTheme } from './hooks/useTheme'
+import { useSubscription } from './hooks/useSubscription'
 
 // Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
@@ -81,16 +82,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>
 }
 
-function GatedRoute({ gate, children }: { gate?: NavGate; children: React.ReactNode }) {
+function GatedRoute({ gate, product, feature, children }: { gate?: NavGate; product?: string; feature?: string; children: React.ReactNode }) {
   const { staff } = useAuthStore()
+  const { hasProduct, hasFeature } = useSubscription()
   if (gate && !canAccess(gate, staff)) return <Navigate to="/" replace />
+  if (product && !hasProduct(product)) return <Navigate to="/" replace />
+  if (feature && !hasFeature(feature)) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
-function LazyRoute({ children, gate }: { children: React.ReactNode; gate?: NavGate }) {
+function LazyRoute({ children, gate, product, feature }: { children: React.ReactNode; gate?: NavGate; product?: string; feature?: string }) {
   return (
     <ProtectedRoute>
-      <GatedRoute gate={gate}>
+      <GatedRoute gate={gate} product={product} feature={feature}>
         <Suspense fallback={<PageLoader />}>{children}</Suspense>
       </GatedRoute>
     </ProtectedRoute>
@@ -110,31 +114,31 @@ export default function App() {
           <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
-          <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
-          <Route path="/ai" element={<LazyRoute gate="can_view_analytics"><AiInsights /></LazyRoute>} />
-          <Route path="/chatbot-config" element={<LazyRoute gate="admin"><ChatbotConfig /></LazyRoute>} />
-          <Route path="/knowledge-base" element={<LazyRoute gate="admin"><KnowledgeBase /></LazyRoute>} />
-          <Route path="/widget-builder" element={<LazyRoute gate="admin"><WidgetBuilder /></LazyRoute>} />
-          <Route path="/chat-inbox" element={<LazyRoute gate="all"><ChatInbox /></LazyRoute>} />
-          <Route path="/popup-rules" element={<LazyRoute gate="admin"><PopupRules /></LazyRoute>} />
-          <Route path="/training" element={<LazyRoute gate="admin"><Training /></LazyRoute>} />
-          <Route path="/notifications" element={<LazyRoute gate="admin"><Notifications /></LazyRoute>} />
+          <Route path="/analytics" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><Analytics /></LazyRoute>} />
+          <Route path="/ai" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><AiInsights /></LazyRoute>} />
+          <Route path="/chatbot-config" element={<LazyRoute gate="admin" product="chat"><ChatbotConfig /></LazyRoute>} />
+          <Route path="/knowledge-base" element={<LazyRoute gate="admin" product="chat"><KnowledgeBase /></LazyRoute>} />
+          <Route path="/widget-builder" element={<LazyRoute gate="admin" product="chat"><WidgetBuilder /></LazyRoute>} />
+          <Route path="/chat-inbox" element={<LazyRoute gate="all" product="chat"><ChatInbox /></LazyRoute>} />
+          <Route path="/popup-rules" element={<LazyRoute gate="admin" product="chat"><PopupRules /></LazyRoute>} />
+          <Route path="/training" element={<LazyRoute gate="admin" product="chat"><Training /></LazyRoute>} />
+          <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
-          <Route path="/tiers" element={<LazyRoute gate="admin"><Tiers /></LazyRoute>} />
-          <Route path="/benefits" element={<LazyRoute gate="admin"><Benefits /></LazyRoute>} />
+          <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />
+          <Route path="/benefits" element={<LazyRoute gate="admin" product="loyalty"><Benefits /></LazyRoute>} />
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/guests" element={<LazyRoute><Guests /></LazyRoute>} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
-          <Route path="/reservations" element={<LazyRoute><Reservations /></LazyRoute>} />
+          <Route path="/reservations" element={<LazyRoute product="booking"><Reservations /></LazyRoute>} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
-          <Route path="/bookings" element={<LazyRoute><Bookings /></LazyRoute>} />
-          <Route path="/bookings/calendar" element={<LazyRoute><BookingCalendar /></LazyRoute>} />
-          <Route path="/bookings/payments" element={<LazyRoute><BookingPayments /></LazyRoute>} />
-          <Route path="/bookings/submissions" element={<LazyRoute gate="admin"><BookingSubmissions /></LazyRoute>} />
-          <Route path="/bookings/:id" element={<LazyRoute><BookingDetail /></LazyRoute>} />
+          <Route path="/bookings" element={<LazyRoute product="booking"><Bookings /></LazyRoute>} />
+          <Route path="/bookings/calendar" element={<LazyRoute product="booking"><BookingCalendar /></LazyRoute>} />
+          <Route path="/bookings/payments" element={<LazyRoute product="booking"><BookingPayments /></LazyRoute>} />
+          <Route path="/bookings/submissions" element={<LazyRoute gate="admin" product="booking"><BookingSubmissions /></LazyRoute>} />
+          <Route path="/bookings/:id" element={<LazyRoute product="booking"><BookingDetail /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

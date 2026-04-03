@@ -12,6 +12,7 @@ import {
   Code, Check, Mic, Volume2, BookOpen, Search, HelpCircle, FileText
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSubscription } from '../hooks/useSubscription'
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -97,16 +98,18 @@ interface Tab {
   groups?: string[]
   custom?: boolean
   superAdminOnly?: boolean
+  feature?: string   // required SaaS feature
+  product?: string   // required SaaS product
 }
 
 const TABS: Tab[] = [
   { id: 'general',       label: 'General',        icon: Settings2,  desc: 'Company info & account',              groups: ['general'],      custom: true },
-  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true },
-  { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',             groups: ['points'],       custom: true },
-  { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'] },
-  { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
-  { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true },
-  { id: 'chat_widget',   label: 'Chat Widget',     icon: MessageSquare, desc: 'Website chatbot widget & embed code', custom: true },
+  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true, feature: 'custom_branding' },
+  { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',             groups: ['points'],       custom: true, product: 'loyalty' },
+  { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'], feature: 'push_notifications' },
+  { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true, superAdminOnly: true },
+  { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true, product: 'booking' },
+  { id: 'chat_widget',   label: 'Chat Widget',     icon: MessageSquare, desc: 'Website chatbot widget & embed code', custom: true, product: 'chat' },
   { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
@@ -116,6 +119,7 @@ const TABS: Tab[] = [
 export function Settings() {
   const { user, staff } = useAuthStore()
   const isSuperAdmin = staff?.role === 'super_admin'
+  const { hasFeature, hasProduct } = useSubscription()
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState('general')
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({})
@@ -1973,7 +1977,12 @@ export function Settings() {
       <div className="rounded-2xl p-1.5 border border-white/[0.06]"
         style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
         <div className="flex gap-1 overflow-x-auto">
-          {TABS.filter(tab => !tab.superAdminOnly || isSuperAdmin).map(tab => {
+          {TABS.filter(tab => {
+            if (tab.superAdminOnly && !isSuperAdmin) return false
+            if (tab.feature && !hasFeature(tab.feature)) return false
+            if (tab.product && !hasProduct(tab.product)) return false
+            return true
+          }).map(tab => {
             const active = activeTab === tab.id
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
