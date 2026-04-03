@@ -30,14 +30,18 @@ class BookingPublicController extends Controller
         $minNights = (int) $this->getStringSetting($orgId, 'booking_min_nights', '1');
         $maxNights = (int) $this->getStringSetting($orgId, 'booking_max_nights', '30');
 
+        // Resolve branding: booking-specific overrides → appearance (admin branding) → hardcoded fallback
+        $brandPrimary = $this->getStringSetting($orgId, 'primary_color', '#2d6a4f');
+        $brandLogo    = $this->getStringSetting($orgId, 'company_logo', '');
+
         $style = [
             'theme'         => $this->getStringSetting($orgId, 'booking_widget_theme', 'light'),
-            'primary_color' => $this->getStringSetting($orgId, 'booking_widget_color', '#2d6a4f'),
+            'primary_color' => $this->getStringSetting($orgId, 'booking_widget_color', '') ?: $brandPrimary,
             'border_radius' => (int) $this->getStringSetting($orgId, 'booking_widget_radius', '12'),
             'show_name'     => $this->getStringSetting($orgId, 'booking_widget_show_name', 'true') === 'true',
             'property_name' => $this->getStringSetting($orgId, 'booking_widget_property_name', ''),
-            'show_logo'     => $this->getStringSetting($orgId, 'booking_widget_show_logo', 'false') === 'true',
-            'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', ''),
+            'show_logo'     => $this->getStringSetting($orgId, 'booking_widget_show_logo', 'false') === 'true' || !empty($brandLogo),
+            'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', '') ?: $brandLogo,
         ];
 
         return response()->json([

@@ -34,11 +34,19 @@ Route::get('/book/{token}', function (string $token) {
     if (!$org) {
         abort(404, 'Booking page not found');
     }
+    // Resolve brand color from appearance settings
+    $color = request('color', '');
+    if (!$color) {
+        $color = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $org->id)
+            ->where('key', 'primary_color')
+            ->value('value') ?: '';
+    }
     $apiBase = url('/') . '/api';
     return view('booking-widget', [
         'orgId'  => $token,
         'lang'   => request('lang', 'en'),
-        'color'  => request('color', ''),
+        'color'  => $color,
         'apiBase' => $apiBase,
         'standalone' => true,
     ]);

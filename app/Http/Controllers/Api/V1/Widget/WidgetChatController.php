@@ -43,7 +43,10 @@ class WidgetChatController extends Controller
         return response()->json([
             'company_name'    => $config->company_name,
             'welcome_message' => $config->welcome_message,
-            'primary_color'   => $config->primary_color,
+            'primary_color'   => $config->primary_color ?: (\App\Models\HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $config->organization_id)
+                ->where('key', 'primary_color')
+                ->value('value') ?: '#2d6a4f'),
             'position'        => $config->position,
             'icon_style'      => $config->icon_style,
             'launcher_shape'  => $config->launcher_shape,

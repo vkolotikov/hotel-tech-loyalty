@@ -289,6 +289,19 @@ class BookingAdminController extends Controller
             return response()->json(['message' => 'PMS is in mock mode — no real data to sync. Add your Smoobu API key in Settings > Integrations.', 'synced' => 0]);
         }
 
+        // Auto-sync apartments if booking_units is empty
+        try {
+            $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+            $existingUnits = \App\Models\HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('key', 'booking_units')
+                ->value('value');
+            $decoded = $existingUnits ? json_decode($existingUnits, true) : [];
+            if (empty($decoded)) {
+                $this->syncApartments($smoobu);
+            }
+        } catch (\Throwable) {}
+
         try {
             $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));
             $to   = $request->input('to', now()->addMonths(3)->format('Y-m-d'));
@@ -413,6 +426,60 @@ class BookingAdminController extends Controller
             'last_page'    => $paginated->lastPage(),
             'total'        => $paginated->total(),
         ]);
+    }
+
+    /** POST /v1/admin/bookings/sync-apartments — fetch apartments from Smoobu and save as booking_units. */
+    public function syncApartments(SmoobuClient $smoobu): JsonResponse
+    {
+        try {
+            $response = $smoobu->getApartments();
+            $apartments = $response['apartments'] ?? [];
+
+            if (empty($apartments)) {
+                return response()->json(['message' => 'No apartments found in PMS.', 'count' => 0]);
+            }
+
+            // Transform Smoobu apartments into booking_units config format
+            $units = [];
+            foreach ($apartments as $apt) {
+                $id = (string) ($apt['id'] ?? '');
+                if (!$id) continue;
+
+                $rooms = $apt['rooms'] ?? [];
+                $units[$id] = [
+                    'id'              => $id,
+                    'name'            => $apt['name'] ?? "Unit {$id}",
+                    'slug'            => \Illuminate\Support\Str::slug($apt['name'] ?? "unit-{$id}"),
+                    'max_guests'      => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
+                    'bedrooms'        => $rooms['bedrooms'] ?? 1,
+                    'price_per_night' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
+                    'thumbnail'       => $apt['imageUrl'] ?? $apt['mainImage'] ?? '',
+                    'description'     => $apt['description'] ?? '',
+                ];
+            }
+
+            // Save to hotel_settings
+            $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+            \App\Models\HotelSetting::withoutGlobalScopes()->updateOrCreate(
+                ['key' => 'booking_units', 'organization_id' => $orgId],
+                ['value' => json_encode($units), 'type' => 'json', 'group' => 'booking'],
+            );
+
+            // Clear availability caches
+            \Illuminate\Support\Facades\Cache::flush();
+
+            AuditLog::create([
+                'organization_id' => $orgId,
+                'user_id'         => request()->user()?->id,
+                'action'          => 'booking.sync_apartments',
+                'description'     => 'Synced ' . count($units) . ' apartments from PMS',
+            ]);
+
+            return response()->json(['message' => 'Synced ' . count($units) . ' apartments from PMS.', 'count' => count($units), 'units' => $units]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Apartment sync failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to sync apartments: ' . $e->getMessage(), 'count' => 0], 200);
+        }
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────

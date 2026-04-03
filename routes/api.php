@@ -359,6 +359,7 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/submissions',            [BookingAdminController::class, 'submissions']);
             Route::get('bookings/payments',               [BookingAdminController::class, 'payments']);
             Route::post('bookings/sync',                  [BookingAdminController::class, 'syncAll']);
+            Route::post('bookings/sync-apartments',       [BookingAdminController::class, 'syncApartments']);
             Route::get('bookings',                        [BookingAdminController::class, 'index']);
             Route::get('bookings/{id}',                   [BookingAdminController::class, 'show']);
             Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);

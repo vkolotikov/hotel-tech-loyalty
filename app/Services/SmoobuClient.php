@@ -81,6 +81,31 @@ class SmoobuClient
         return $this->get("/reservations/{$reservationId}/price-elements");
     }
 
+    /**
+     * GET /apartments — fetch all apartments/units from Smoobu.
+     * Returns array of apartments with id, name, rooms details.
+     */
+    public function getApartments(): array
+    {
+        if ($this->isMock) {
+            return $this->mockApartments();
+        }
+
+        return $this->get('/apartments');
+    }
+
+    /**
+     * GET /apartments/{id} — fetch single apartment details.
+     */
+    public function getApartment(string $id): array
+    {
+        if ($this->isMock) {
+            return ['id' => $id, 'name' => 'Mock Unit'];
+        }
+
+        return $this->get("/apartments/{$id}");
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private function setting(string $key, string $default = ''): string
@@ -202,5 +227,16 @@ class SmoobuClient
     private function mockListReservations(array $params): array
     {
         return ['bookings' => [], 'page_count' => 0, 'page' => 1];
+    }
+
+    private function mockApartments(): array
+    {
+        return [
+            'apartments' => [
+                ['id' => 1001, 'name' => 'Deluxe Garden Suite',  'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 1]],
+                ['id' => 1002, 'name' => 'Superior Forest Lodge', 'rooms' => ['maxOccupancy' => 6, 'bedrooms' => 2]],
+                ['id' => 1003, 'name' => 'Premium Lakeside Tent', 'rooms' => ['maxOccupancy' => 2, 'bedrooms' => 1]],
+            ],
+        ];
     }
 }
