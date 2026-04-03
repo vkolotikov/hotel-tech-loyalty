@@ -163,12 +163,12 @@ class KnowledgeBaseController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('knowledge-documents', 'public');
+        $path = \App\Services\MediaService::upload($file, 'knowledge-documents');
 
         $doc = KnowledgeDocument::create([
             'organization_id'   => $request->user()->organization_id,
             'file_name'         => $file->getClientOriginalName(),
-            'file_path'         => '/storage/' . $path,
+            'file_path'         => $path,
             'mime_type'         => $file->getMimeType(),
             'size_bytes'        => $file->getSize(),
             'processing_status' => 'pending',

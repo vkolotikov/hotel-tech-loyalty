@@ -36,7 +36,7 @@ class BookingExtraController extends Controller
         $data['organization_id'] = app('current_organization_id');
 
         if ($request->hasFile('image')) {
-            $data['image'] = '/storage/' . $request->file('image')->storePublicly('booking-extras', 'public');
+            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-extras');
         }
 
         return response()->json(BookingExtra::create($data), 201);
@@ -59,7 +59,7 @@ class BookingExtraController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image'] = '/storage/' . $request->file('image')->storePublicly('booking-extras', 'public');
+            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-extras');
         }
 
         $extra->update($data);

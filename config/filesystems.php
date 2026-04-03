@@ -17,6 +17,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media Upload Disk
+    |--------------------------------------------------------------------------
+    | Disk used for user-uploaded media (images, documents).
+    | Set to 'do' for DigitalOcean Spaces in production.
+    */
+    'media_disk' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -53,6 +62,18 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+        ],
+
+        'do' => [
+            'driver' => 's3',
+            'key' => env('DO_SPACES_KEY'),
+            'secret' => env('DO_SPACES_SECRET'),
+            'region' => env('DO_SPACES_REGION', 'lon1'),
+            'bucket' => env('DO_SPACES_BUCKET'),
+            'endpoint' => env('DO_SPACES_ENDPOINT', 'https://lon1.digitaloceanspaces.com'),
+            'url' => env('DO_SPACES_CDN_URL'),
+            'visibility' => 'public',
             'throw' => false,
         ],
 

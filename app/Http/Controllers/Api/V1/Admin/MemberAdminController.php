@@ -208,8 +208,7 @@ class MemberAdminController extends Controller
 
         // Handle avatar upload
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $userFields['avatar_url'] = '/storage/' . $path;
+            $userFields['avatar_url'] = \App\Services\MediaService::upload($request->file('avatar'), 'avatars');
         }
 
         if (!empty($userFields)) {

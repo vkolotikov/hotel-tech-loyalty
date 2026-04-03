@@ -218,15 +218,11 @@ class SettingsController extends Controller
             'logo' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
-        $path = $request->file('logo')->store('logos', 'public');
-        $url  = '/storage/' . $path;
+        $url = \App\Services\MediaService::upload($request->file('logo'), 'logos');
 
         $setting = HotelSetting::where('key', 'company_logo')->first();
         if ($setting) {
-            $oldPath = str_replace('/storage/', '', $setting->value ?? '');
-            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
-            }
+            \App\Services\MediaService::delete($setting->value);
             $setting->update(['value' => $url]);
         } else {
             HotelSetting::create([

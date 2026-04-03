@@ -51,14 +51,14 @@ class BookingRoomController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $data['image'] = '/storage/' . $request->file('image')->storePublicly('booking-rooms', 'public');
+            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-rooms');
         }
 
         // Handle gallery uploads
         if ($request->hasFile('gallery_files')) {
             $gallery = [];
             foreach ($request->file('gallery_files') as $file) {
-                $gallery[] = '/storage/' . $file->storePublicly('booking-rooms', 'public');
+                $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
             }
             $data['gallery'] = $gallery;
         }
@@ -102,13 +102,13 @@ class BookingRoomController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image'] = '/storage/' . $request->file('image')->storePublicly('booking-rooms', 'public');
+            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-rooms');
         }
 
         if ($request->hasFile('gallery_files')) {
             $gallery = $room->gallery ?? [];
             foreach ($request->file('gallery_files') as $file) {
-                $gallery[] = '/storage/' . $file->storePublicly('booking-rooms', 'public');
+                $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
             }
             $data['gallery'] = $gallery;
         }

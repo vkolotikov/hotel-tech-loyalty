@@ -45,8 +45,7 @@ class OffersAdminController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('offers', 'public');
-            $validated['image_url'] = '/storage/' . $path;
+            $validated['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'offers');
         }
         unset($validated['image']);
 
@@ -63,8 +62,7 @@ class OffersAdminController extends Controller
         $data = $request->only(['title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date', 'usage_limit', 'per_member_limit', 'is_featured', 'is_active', 'image_url']);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('offers', 'public');
-            $data['image_url'] = '/storage/' . $path;
+            $data['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'offers');
         }
 
         $offer->update($data);

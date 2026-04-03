@@ -40,8 +40,7 @@ class PropertyAdminController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('properties', 'public');
-            $validated['image_url'] = '/storage/' . $path;
+            $validated['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'properties');
         }
         unset($validated['image']);
 
@@ -76,8 +75,7 @@ class PropertyAdminController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('properties', 'public');
-            $validated['image_url'] = '/storage/' . $path;
+            $validated['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'properties');
         }
         unset($validated['image']);
 
