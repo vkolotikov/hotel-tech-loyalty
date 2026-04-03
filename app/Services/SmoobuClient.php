@@ -38,11 +38,19 @@ class SmoobuClient
             return $this->mockRates($checkIn, $checkOut, $unitIds);
         }
 
-        return $this->get('/rates', [
-            'start_date'   => $checkIn,
-            'end_date'     => $checkOut,
-            'apartments'   => $unitIds,
-        ]);
+        $params = [
+            'start_date' => $checkIn,
+            'end_date'   => $checkOut,
+        ];
+        // Smoobu expects apartments[] array format
+        if (!empty($unitIds)) {
+            $params['apartments'] = $unitIds;
+        }
+
+        $raw = $this->get('/rates', $params);
+
+        // Normalize Smoobu response: convert per-apartment daily rates into our format
+        return $this->normalizeRates($raw, $checkIn, $checkOut);
     }
 
     public function createReservation(array $data): array
@@ -91,7 +99,23 @@ class SmoobuClient
             return $this->mockApartments();
         }
 
-        return $this->get('/apartments');
+        $raw = $this->get('/apartments');
+
+        // Smoobu may return apartments as object keyed by ID or as an array
+        // Normalize to { "apartments": [ { "id": ..., "name": ... }, ... ] }
+        $apartments = $raw['apartments'] ?? $raw;
+        if (!is_array($apartments)) return ['apartments' => []];
+
+        // If keyed by ID (object), convert to sequential array
+        $normalized = [];
+        foreach ($apartments as $key => $apt) {
+            if (is_array($apt)) {
+                if (!isset($apt['id'])) $apt['id'] = $key;
+                $normalized[] = $apt;
+            }
+        }
+
+        return ['apartments' => $normalized];
     }
 
     /**
@@ -104,6 +128,78 @@ class SmoobuClient
         }
 
         return $this->get("/apartments/{$id}");
+    }
+
+    // ─── Rate Normalization ─────────────────────────────────────────────
+
+    /**
+     * Normalize Smoobu /rates response into our standard format.
+     * Smoobu returns: { "data": { "<aptId>": { "<date>": { "price": 100, "min_length_of_stay": 2, "available": 1 }, ... } } }
+     * We normalize to: { "data": { "<aptId>": { "available": true, "price_per_night": avg, "price": total, "min_stay": N } } }
+     */
+    private function normalizeRates(array $raw, string $checkIn, string $checkOut): array
+    {
+        // If already in our format (mock), pass through
+        if (isset($raw['data']) && !empty($raw['data'])) {
+            $firstVal = reset($raw['data']);
+            if (isset($firstVal['price_per_night'])) {
+                return $raw; // Already normalized
+            }
+        }
+
+        $data = $raw['data'] ?? $raw;
+        $nights = max(1, (int)((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+        $result = [];
+
+        foreach ($data as $aptId => $dailyRates) {
+            if (!is_array($dailyRates)) continue;
+
+            // Check if this is daily rates format (keyed by date)
+            $totalPrice = 0;
+            $available = true;
+            $minStay = 1;
+            $dayCount = 0;
+
+            foreach ($dailyRates as $date => $dayData) {
+                // Skip non-date keys
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                    // Might be pre-normalized format
+                    if ($date === 'available' || $date === 'price_per_night') {
+                        $result[$aptId] = $dailyRates;
+                        continue 2;
+                    }
+                    continue;
+                }
+
+                if (is_array($dayData)) {
+                    $dayPrice = $dayData['price'] ?? 0;
+                    $dayAvailable = ($dayData['available'] ?? 0) == 1;
+                    $dayMinStay = $dayData['min_length_of_stay'] ?? $dayData['min_stay'] ?? 1;
+                } else {
+                    $dayPrice = (float) $dayData;
+                    $dayAvailable = true;
+                    $dayMinStay = 1;
+                }
+
+                $totalPrice += $dayPrice;
+                if (!$dayAvailable) $available = false;
+                $minStay = max($minStay, (int) $dayMinStay);
+                $dayCount++;
+            }
+
+            $avgPrice = $dayCount > 0 ? round($totalPrice / $dayCount, 2) : 0;
+
+            $result[$aptId] = [
+                'apartment_id'    => $aptId,
+                'available'       => $available && $avgPrice > 0,
+                'min_stay'        => $minStay,
+                'price'           => round($totalPrice, 2),
+                'price_per_night' => $avgPrice,
+                'currency'        => 'EUR',
+            ];
+        }
+
+        return ['data' => $result];
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
@@ -150,14 +246,37 @@ class SmoobuClient
 
     // ─── Mock Responses ────────────────────────────────────────────────────
 
+    /**
+     * Get rooms config — reads from booking_rooms table (primary) with legacy JSON fallback.
+     * Returns array keyed by pms_id (or DB id).
+     */
     private function getUnitsConfig(): array
     {
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+
+        // Primary: booking_rooms table
+        $dbRooms = \App\Models\BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($dbRooms->isNotEmpty()) {
+            $result = [];
+            foreach ($dbRooms as $room) {
+                $key = $room->pms_id ?: (string) $room->id;
+                $result[$key] = $room->toArray();
+            }
+            return $result;
+        }
+
+        // Fallback: legacy JSON settings
         $json = $this->setting('booking_units', '');
         if ($json) {
             $decoded = json_decode($json, true);
             if (is_array($decoded) && !empty($decoded)) return $decoded;
         }
-        return config('booking.units', []);
+        return [];
     }
 
     private function mockRates(string $checkIn, string $checkOut, array $unitIds): array
@@ -166,18 +285,18 @@ class SmoobuClient
         $result = [];
 
         foreach ($units as $id => $unit) {
-            if (!empty($unitIds) && !in_array($id, $unitIds)) continue;
+            if (!empty($unitIds) && !in_array((string)$id, array_map('strval', $unitIds)) && !in_array($id, $unitIds)) continue;
 
             $nights   = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
-            $baseRate = $unit['price_per_night'] ?? rand(85, 180);
+            $baseRate = $unit['base_price'] ?? $unit['price_per_night'] ?? 100;
 
             $result[$id] = [
                 'apartment_id'    => $id,
                 'available'       => true,
-                'min_stay'        => 2,
+                'min_stay'        => 1,
                 'price'           => $baseRate * $nights,
                 'price_per_night' => $baseRate,
-                'currency'        => 'EUR',
+                'currency'        => $unit['currency'] ?? 'EUR',
             ];
         }
 
