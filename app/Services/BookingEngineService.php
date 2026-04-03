@@ -220,28 +220,46 @@ class BookingEngineService
             $guestId = $guest?->id;
         }
 
+        // Helper: Smoobu returns "Yes"/"No" strings for paid statuses
+        $toBool = fn($v) => is_string($v) ? strtolower($v) === 'yes' : (bool) $v;
+
+        // Smoobu price-paid is "Yes"/"No" → convert to numeric (full price if paid, 0 if not)
+        $pricePaidRaw = $data['price-paid'] ?? null;
+        $pricePaid = ($pricePaidRaw && $toBool($pricePaidRaw)) ? ($data['price'] ?? 0) : 0;
+
+        // Smoobu list uses 'type' field (reservation/cancellation), not numeric 'status'
+        $bookingState = match ($data['type'] ?? 'reservation') {
+            'cancellation'            => 'cancelled',
+            'modification of booking' => 'confirmed',
+            default                   => 'confirmed',
+        };
+
         return BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => (string) $data['id']],
             [
-                'booking_reference' => $data['reference-id'] ?? null,
-                'booking_type'      => $data['type'] ?? 'reservation',
-                'booking_state'     => $this->mapBookingState($data['status'] ?? null),
-                'apartment_id'      => $data['apartment']['id'] ?? null,
-                'apartment_name'    => $data['apartment']['name'] ?? null,
-                'channel_id'        => $data['channel']['id'] ?? null,
-                'channel_name'      => $data['channel']['name'] ?? null,
-                'guest_id'          => $guestId,
-                'guest_name'        => $data['guest-name'] ?? null,
-                'guest_email'       => $data['email'] ?? null,
-                'guest_phone'       => $data['phone'] ?? null,
-                'adults'            => $data['adults'] ?? null,
-                'children'          => $data['children'] ?? null,
-                'arrival_date'      => $data['arrival'] ?? null,
-                'departure_date'    => $data['departure'] ?? null,
-                'price_total'       => $data['price'] ?? null,
-                'price_paid'        => $data['price-paid'] ?? null,
-                'synced_at'         => now(),
-                'raw_json'          => $data,
+                'booking_reference'  => $data['reference-id'] ?? null,
+                'booking_type'       => $data['type'] ?? 'reservation',
+                'booking_state'      => $bookingState,
+                'apartment_id'       => $data['apartment']['id'] ?? null,
+                'apartment_name'     => $data['apartment']['name'] ?? null,
+                'channel_id'         => $data['channel']['id'] ?? null,
+                'channel_name'       => $data['channel']['name'] ?? null,
+                'guest_id'           => $guestId,
+                'guest_name'         => $data['guest-name'] ?? null,
+                'guest_email'        => $data['email'] ?? null,
+                'guest_phone'        => $data['phone'] ?? null,
+                'adults'             => $data['adults'] ?? null,
+                'children'           => $data['children'] ?? null,
+                'arrival_date'       => $data['arrival'] ?? null,
+                'departure_date'     => $data['departure'] ?? null,
+                'price_total'        => $data['price'] ?? null,
+                'price_paid'         => $pricePaid,
+                'prepayment_amount'  => $data['prepayment'] ?? null,
+                'prepayment_paid'    => $toBool($data['prepayment-paid'] ?? false),
+                'deposit_amount'     => $data['deposit'] ?? null,
+                'deposit_paid'       => $toBool($data['deposit-paid'] ?? false),
+                'synced_at'          => now(),
+                'raw_json'           => $data,
             ]
         );
     }
