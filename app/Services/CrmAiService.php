@@ -569,8 +569,8 @@ PROMPT;
                 'value' => ['type' => 'string', 'description' => 'New value (required)'],
             ], ['key', 'value']),
 
-            $this->tool('get_system_guide', 'Get comprehensive guide on how to use this hotel platform. Covers all modules, best practices, use cases, and step-by-step workflows. Use when user asks "how do I...", "what can I do with...", "best practices for..." etc.', [
-                'topic' => ['type' => 'string', 'description' => 'Specific topic: overview, crm, loyalty, bookings, ai, campaigns, venues, settings, or best_practices (default: overview)'],
+            $this->tool('get_system_guide', 'Get comprehensive guide on how to use this hotel platform. Covers all modules, best practices, use cases, security, integrations, configuration, and FAQ. Use when user asks "how do I...", "what can I do with...", "best practices for...", or any platform guidance questions.', [
+                'topic' => ['type' => 'string', 'description' => 'Topic slug: overview, crm, loyalty, booking-engine, ai-system, analytics, campaigns, venues-events, security, integrations, configuration, use-cases, or "all" for complete docs (default: all)'],
             ], []),
 
             $this->tool('get_system_health', 'Check system health: configured integrations, data counts, sync status, API keys status, recent errors.', [], []),
@@ -1414,172 +1414,12 @@ PROMPT;
 
     private function toolGetSystemGuide(array $in): array
     {
-        $topic = $in['topic'] ?? 'overview';
+        $topic = $in['topic'] ?? 'all';
 
-        $guides = [
-            'overview' => [
-                'title' => 'Hotel Tech Platform — Complete Guide',
-                'sections' => [
-                    'What is this platform?' => 'A unified hotel management system combining CRM (guest profiles, sales pipeline, reservations), Loyalty Program (tiers, points, benefits, offers), Booking Engine (PMS sync, calendar, payments), AI Assistant (chat, insights, automation), Event/Venue management, and Campaign notifications — all in one admin panel.',
-                    'Main modules' => [
-                        'CRM' => 'Guest profiles, inquiries (sales pipeline), reservations, corporate accounts, planner/tasks',
-                        'Loyalty' => 'Member tiers (Bronze→Diamond), points system, special offers, benefits, NFC cards, QR scanning',
-                        'Booking Engine' => 'PMS bookings synced from Smoobu/channels, calendar view, payment tracking, booking submissions',
-                        'AI Chat' => 'Floating assistant that can search data, create records, analyze members, generate reports, detect anomalies',
-                        'AI Insights' => 'Churn prediction, personalized offers, upsell scripts, weekly reports',
-                        'Venues & Events' => 'Venue management, event bookings with capacity and pricing',
-                        'Campaigns' => 'Notification campaigns with audience segmentation',
-                        'Settings' => 'Theme colors, integrations (Smoobu, OpenAI, Anthropic, Google AI), booking engine config, AI model selection',
-                    ],
-                    'Quick start' => '1. Configure Settings (appearance, integrations) → 2. Add Properties → 3. Set up Loyalty Tiers → 4. Import/create Guests → 5. Start managing inquiries and reservations → 6. Use AI assistant for insights and automation',
-                ],
-            ],
-            'crm' => [
-                'title' => 'CRM Module Guide',
-                'sections' => [
-                    'Guest Management' => 'Create guest profiles with contact info, VIP level, preferences. Track total stays, revenue, and activity. Link guests to loyalty members for unified profiles.',
-                    'Sales Pipeline (Inquiries)' => 'Track leads from initial inquiry to confirmation. Statuses: New → Proposal Sent → Negotiating → Confirmed/Lost. Set priorities, assign to team members, track follow-up tasks.',
-                    'Reservations' => 'Manual CRM reservations with check-in/check-out flows. Different from PMS bookings — these are created by your team. Auto-updates guest stats on check-out.',
-                    'Corporate Accounts' => 'Manage B2B clients with negotiated rates, contracts, credit limits, and room night targets.',
-                    'Best practices' => [
-                        'Always link guests to loyalty members when possible for unified tracking',
-                        'Use the AI to capture leads from emails/WhatsApp — paste text and let AI extract details',
-                        'Set follow-up tasks on every open inquiry to prevent leads from going cold',
-                        'Use the planner to organize daily tasks by team member',
-                    ],
-                ],
-            ],
-            'loyalty' => [
-                'title' => 'Loyalty Program Guide',
-                'sections' => [
-                    'Tier System' => 'Bronze (0pts, 1x) → Silver (1000pts, 1.25x) → Gold (5000pts, 1.5x) → Platinum (15000pts, 2x) → Diamond (50000pts, 3x). Higher tiers earn points faster.',
-                    'Points Operations' => 'Earn: stays, purchases, promotions. Redeem: rewards, room upgrades, experiences. Adjust: manual corrections. Bonus: promotional awards. Never delete transactions — use reverse type.',
-                    'Special Offers' => 'Create tier-targeted offers with date ranges. AI can generate personalized offers based on member behavior.',
-                    'Benefits' => 'Define benefits per tier: late checkout, room upgrades, welcome amenities, lounge access, etc.',
-                    'Member Cards' => 'QR codes for mobile identification. NFC cards for physical scanning. Both link to member profiles.',
-                    'Best practices' => [
-                        'Use AI to detect members at churn risk and proactively engage them',
-                        'Create seasonal offers targeting specific tiers to drive engagement',
-                        'Monitor the points ledger for anomalies (unusual large transactions)',
-                        'Use the qualification window (calendar year) to motivate tier progression',
-                    ],
-                ],
-            ],
-            'bookings' => [
-                'title' => 'Booking Engine Guide',
-                'sections' => [
-                    'Two systems' => 'PMS Bookings (BookingMirror): Synced from Smoobu/external channels — these are real-time booking data. CRM Reservations: Manual reservations created by your team for direct bookings.',
-                    'PMS Dashboard' => 'KPIs: total bookings, revenue, confirmed/cancelled, avg stay, balance due. Charts: payment mix, arrival pace, unit performance, channel mix.',
-                    'Booking Calendar' => 'Visual calendar showing all bookings across units. Great for quick overview of occupancy.',
-                    'Payment Tracking' => 'Track paid vs outstanding amounts. Filter by payment status. Monitor unpaid bookings.',
-                    'Booking Submissions' => 'Log of all booking attempts through the public booking engine, including failures.',
-                    'Sync' => 'Click "Sync PMS" to pull latest data from Smoobu. Auto-sync happens on webhook events.',
-                    'Settings > Booking' => 'Configure the public booking widget: rooms/units, extras/add-ons, policies, pricing. Generate embed code for your website.',
-                    'Best practices' => [
-                        'Sync PMS regularly to keep data fresh',
-                        'Monitor balance due KPI to follow up on unpaid bookings',
-                        'Use the AI to forecast occupancy and identify booking trends',
-                        'Check submissions log if guests report booking issues',
-                    ],
-                ],
-            ],
-            'ai' => [
-                'title' => 'AI System Guide',
-                'sections' => [
-                    'AI Chat (floating button)' => 'The bottom-right chat button is your AI assistant. It can: search any data, create/update records, analyze members, generate reports, detect anomalies, forecast occupancy. Just ask in natural language.',
-                    'What AI can do' => [
-                        'CRM: Search guests, create/update profiles, manage inquiries and reservations',
-                        'Loyalty: Search members, award/redeem points, analyze churn risk, suggest personalized offers',
-                        'Bookings: Search PMS bookings, view dashboard, update payment status',
-                        'Reports: Generate weekly performance reports, email them to stakeholders',
-                        'Anomaly detection: Find unusual patterns in points, spending, bookings, cancellations',
-                        'Occupancy forecasting: Predict next 14 days occupancy based on current reservations',
-                        'Auto follow-ups: Analyze stale inquiries and create planner tasks',
-                        'Settings: View and update system settings',
-                        'System guide: Ask "how do I..." questions about any module',
-                    ],
-                    'AI Insights page' => 'Dedicated page for: weekly loyalty reports, individual member analysis (churn risk + offer suggestions + upsell scripts).',
-                    'AI in CRM' => 'Paste email/WhatsApp text → AI extracts guest info and creates inquiry. Also extracts member enrollment and corporate account data.',
-                    'Chatbot Config' => 'Configure the AI personality: name, tone, sales style, reply length, core rules. Choose AI model and provider (OpenAI, Anthropic, Google).',
-                    'Knowledge Base' => 'Add FAQ items and documents for the chatbot to reference. The AI uses this to answer guest questions accurately.',
-                    'Best practices' => [
-                        'Start with simple questions like "How many arrivals today?" to get comfortable',
-                        'Ask AI to "generate a weekly report" every Monday for team meetings',
-                        'Use "detect anomalies" weekly to catch issues early',
-                        'Ask AI to "forecast occupancy" before making pricing decisions',
-                        'Paste raw emails into AI chat and say "extract this lead" — much faster than manual entry',
-                    ],
-                ],
-            ],
-            'campaigns' => [
-                'title' => 'Campaign & Notification Guide',
-                'sections' => [
-                    'Campaigns' => 'Create push notification campaigns targeting specific member segments. Set audience filters by tier, activity, join date.',
-                    'Segments' => 'Define reusable audience segments for targeted campaigns.',
-                    'Best practices' => [
-                        'Segment by tier for personalized messaging',
-                        'Use campaigns to promote seasonal offers',
-                        'Send re-engagement campaigns to inactive members',
-                    ],
-                ],
-            ],
-            'venues' => [
-                'title' => 'Venue & Event Guide',
-                'sections' => [
-                    'Venues' => 'Manage hotel venues (ballroom, meeting rooms, restaurant). Define capacity, pricing, amenities, images.',
-                    'Event Bookings' => 'Create event bookings linked to venues. Track status, guest count, revenue.',
-                    'Best practices' => [
-                        'Keep venue availability updated',
-                        'Link venue bookings to guest profiles for relationship tracking',
-                        'Use the AI to check venue bookings for the week',
-                    ],
-                ],
-            ],
-            'settings' => [
-                'title' => 'Settings Guide',
-                'sections' => [
-                    'Appearance' => 'Theme colors (primary, accent, dark palette). Logo upload. Presets: Default Gold, Ocean Blue, Royal Purple, Forest Green, Sunset Orange, Midnight.',
-                    'AI & System' => 'Select AI models for OpenAI and Anthropic. Configure API keys.',
-                    'Integrations' => 'Smoobu (PMS sync), OpenAI, Anthropic, Google Gemini API keys. Webhook URLs.',
-                    'Booking' => 'Public booking widget config: rooms/units, extras, policies, embed code.',
-                    'Notifications' => 'Push notification settings, email templates.',
-                ],
-            ],
-            'best_practices' => [
-                'title' => 'Best Practices for Hotel Tech Platform',
-                'sections' => [
-                    'Daily routine' => [
-                        '1. Check arrivals today (AI: "How many arrivals today?")',
-                        '2. Review unpaid bookings dashboard',
-                        '3. Check planner tasks for the day',
-                        '4. Review and respond to new inquiries',
-                        '5. Use AI to detect any anomalies',
-                    ],
-                    'Weekly routine' => [
-                        '1. Generate weekly performance report via AI',
-                        '2. Review loyalty member engagement and churn risks',
-                        '3. Run "analyze stale inquiries" to auto-create follow-ups',
-                        '4. Check occupancy forecast for next 2 weeks',
-                        '5. Review and adjust active offers and campaigns',
-                    ],
-                    'Data quality' => [
-                        'Always link guests to loyalty members for complete profiles',
-                        'Keep PMS synced — click "Sync PMS" if data looks stale',
-                        'Use AI data extraction instead of manual entry when possible',
-                        'Set follow-up tasks on every open inquiry',
-                    ],
-                    'Revenue optimization' => [
-                        'Monitor payment mix — follow up on "open" and "pending" payments',
-                        'Use AI occupancy forecast to adjust pricing',
-                        'Create tier-specific offers to drive loyalty engagement',
-                        'Track corporate account room night targets vs actuals',
-                    ],
-                ],
-            ],
-        ];
+        // Use the comprehensive documentation from DocumentationController
+        $text = \App\Http\Controllers\Api\V1\Admin\DocumentationController::getDocumentationText($topic);
 
-        $guide = $guides[$topic] ?? $guides['overview'];
-        return ['success' => true, 'data' => $guide];
+        return ['success' => true, 'data' => ['documentation' => $text]];
     }
 
     private function toolGetSystemHealth(): array

@@ -382,6 +382,10 @@ Route::prefix('v1')->group(function () {
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
             Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
 
+            // ─── Documentation ───────────────────────────────────────────────
+            Route::get('documentation',                   [\App\Http\Controllers\Api\V1\Admin\DocumentationController::class, 'index']);
+            Route::get('documentation/{slug}',            [\App\Http\Controllers\Api\V1\Admin\DocumentationController::class, 'section']);
+
             // ─── Realtime ────────────────────────────────────────────────────
             Route::get('realtime/poll',                    [RealtimeController::class, 'poll']);
         });

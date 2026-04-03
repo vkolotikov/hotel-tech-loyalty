@@ -9,9 +9,20 @@ import {
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, Link2, Phone,
   Bed, Plus, Trash2, Clock, DollarSign, Image, ToggleLeft, Copy, Sun, Moon,
-  Code, Check, Mic, Volume2
+  Code, Check, Mic, Volume2, BookOpen, Search, HelpCircle, FileText
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+/* ─── Helpers ──────────────────────────────────────────────────────────── */
+
+function formatDocContent(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>')
+    .replace(/\n- /g, '<br/>• ')
+    .replace(/\n(\d+)\. /g, '<br/>$1. ')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+}
 
 /* ─── Constants ────────────────────────────────────────────────────────── */
 
@@ -96,6 +107,7 @@ const TABS: Tab[] = [
   { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
   { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true },
   { id: 'chat_widget',   label: 'Chat Widget',     icon: MessageSquare, desc: 'Website chatbot widget & embed code', custom: true },
+  { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
 
@@ -224,6 +236,18 @@ export function Settings() {
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Save failed'),
   })
+
+  /* ── Documentation Queries ───────────────────────────────────────────── */
+
+  const { data: docsData, isLoading: docsLoading } = useQuery({
+    queryKey: ['admin-documentation'],
+    queryFn: () => api.get('/v1/admin/documentation').then(r => r.data),
+    enabled: activeTab === 'documentation',
+  })
+
+  const [docsSearch, setDocsSearch] = useState('')
+  const [activeDocSection, setActiveDocSection] = useState<string | null>(null)
+  const [activeFaqCat, setActiveFaqCat] = useState<string>('All')
 
   /* ── Handlers ────────────────────────────────────────────────────────── */
 
@@ -1617,6 +1641,148 @@ export function Settings() {
     </div>
   )
 
+  /* ─── Tab: Documentation ─────────────────────────────────────────────── */
+
+  const ICON_MAP: Record<string, any> = { Globe, Users, Star, Calendar, Brain, Layers, Bell, Map, Shield, Zap, Settings2 }
+
+  const renderDocumentation = () => {
+    if (docsLoading) return (
+      <div className="space-y-4">{Array(3).fill(0).map((_, i) => (
+        <div key={i} className={cardClass + ' animate-pulse'} style={cardStyle}>
+          <div className="h-5 bg-white/[0.04] rounded w-48 mb-3" /><div className="h-20 bg-white/[0.04] rounded-xl" />
+        </div>
+      ))}</div>
+    )
+
+    const sections: any[] = docsData?.sections ?? []
+    const faq: any[] = docsData?.faq ?? []
+    const faqCategories = ['All', ...Array.from(new Set(faq.map((f: any) => f.category)))]
+
+    // Filter by search
+    const q = docsSearch.toLowerCase()
+    const filteredSections = q ? sections.filter((s: any) =>
+      s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) ||
+      s.articles.some((a: any) => a.title.toLowerCase().includes(q) || a.content.toLowerCase().includes(q))
+    ) : sections
+    const filteredFaq = faq.filter((f: any) =>
+      (activeFaqCat === 'All' || f.category === activeFaqCat) &&
+      (!q || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q))
+    )
+
+    return (
+      <div className="space-y-6">
+        {/* Search bar */}
+        <div className={cardClass} style={cardStyle}>
+          <div className="relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input value={docsSearch} onChange={e => setDocsSearch(e.target.value)}
+              placeholder="Search documentation & FAQ..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" />
+          </div>
+        </div>
+
+        {/* Section cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredSections.map((section: any) => {
+            const IconComp = ICON_MAP[section.icon] || FileText
+            return (
+              <button key={section.slug} onClick={() => setActiveDocSection(activeDocSection === section.slug ? null : section.slug)}
+                className={`text-left rounded-2xl border p-5 transition-all hover:-translate-y-0.5 ${
+                  activeDocSection === section.slug ? 'border-emerald-500/30 bg-emerald-500/[0.04]' : 'border-white/[0.06] hover:border-white/[0.12]'
+                }`} style={{ background: activeDocSection === section.slug ? undefined : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(116,200,149,0.12)' }}>
+                    <IconComp size={16} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-white">{section.title}</h3>
+                    <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{section.description}</p>
+                    <p className="text-[10px] text-gray-600 mt-2">{section.articles.length} articles</p>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Expanded section articles */}
+        {activeDocSection && (() => {
+          const section = sections.find((s: any) => s.slug === activeDocSection)
+          if (!section) return null
+          return (
+            <div className={cardClass} style={cardStyle}>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-bold text-white">{section.title}</h3>
+                <button onClick={() => setActiveDocSection(null)} className="text-xs text-gray-500 hover:text-gray-300">Close</button>
+              </div>
+              <div className="space-y-6">
+                {section.articles.map((article: any, i: number) => (
+                  <div key={i} className="rounded-xl border border-white/[0.04] p-5" style={{ background: 'rgba(15,28,24,0.5)' }}>
+                    <h4 className="text-sm font-bold text-emerald-300 mb-3 flex items-center gap-2">
+                      <FileText size={14} /> {article.title}
+                    </h4>
+                    <div className="text-sm text-gray-400 leading-relaxed whitespace-pre-line"
+                      dangerouslySetInnerHTML={{ __html: formatDocContent(article.content) }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* FAQ Section */}
+        <div className={cardClass} style={cardStyle}>
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <HelpCircle size={18} className="text-emerald-400" /> Frequently Asked Questions
+          </h3>
+
+          {/* Category pills */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {faqCategories.map(cat => (
+              <button key={cat} onClick={() => setActiveFaqCat(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  activeFaqCat === cat ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:text-gray-300'
+                }`}>{cat}</button>
+            ))}
+          </div>
+
+          {/* FAQ items */}
+          <div className="space-y-3">
+            {filteredFaq.map((item: any, i: number) => (
+              <details key={i} className="group rounded-xl border border-white/[0.06] overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors flex items-center gap-3">
+                  <ChevronDown size={14} className="text-gray-500 transition-transform group-open:rotate-180 flex-shrink-0" />
+                  <span className="text-sm font-medium text-white">{item.question}</span>
+                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-gray-600 bg-white/[0.04] px-2 py-0.5 rounded-full flex-shrink-0">{item.category}</span>
+                </summary>
+                <div className="px-5 pb-4 pt-1 border-t border-white/[0.04]">
+                  <p className="text-sm text-gray-400 leading-relaxed">{item.answer}</p>
+                </div>
+              </details>
+            ))}
+            {filteredFaq.length === 0 && (
+              <p className="text-sm text-gray-600 text-center py-8">No FAQ items match your search.</p>
+            )}
+          </div>
+        </div>
+
+        {/* AI Chat tip */}
+        <div className="rounded-2xl border border-emerald-500/15 p-5" style={{ background: 'linear-gradient(135deg, rgba(116,200,149,0.06), rgba(116,200,149,0.02))' }}>
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(116,200,149,0.15)' }}>
+              <Brain size={16} className="text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Need more help?</h4>
+              <p className="text-xs text-gray-400 mt-1">Click the AI Chat button (bottom-right) and ask any question about the platform. The AI assistant has access to all this documentation and can provide personalized guidance for your specific needs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   /* ─── Tab: AI & System (super admin only) ─────────────────────────────── */
 
   const renderAiSystem = () => {
@@ -1754,6 +1920,7 @@ export function Settings() {
       case 'integrations': return renderIntegrations()
       case 'booking': return renderBooking()
       case 'chat_widget': return renderChatWidget()
+      case 'documentation': return renderDocumentation()
       case 'ai_system': return renderAiSystem()
       default: {
         // Generic tab — just render its settings
