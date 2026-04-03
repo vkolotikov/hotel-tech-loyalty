@@ -126,12 +126,30 @@ class SettingsController extends Controller
     public function theme(): JsonResponse
     {
         // Public endpoint — bypass tenant scope but only return appearance settings.
-        // In multi-tenant context, the org is resolved from query param if provided.
-        $query = HotelSetting::withoutGlobalScopes()->where('group', 'appearance');
+        // Resolve org from: tenant context → authenticated user → query param
+        $orgId = null;
 
-        // If org context is available (e.g., from request), scope to it
         if (app()->bound('current_organization_id') && app('current_organization_id')) {
-            $query->where('organization_id', app('current_organization_id'));
+            $orgId = app('current_organization_id');
+        }
+
+        if (!$orgId) {
+            // Try to resolve from authenticated user (Bearer token)
+            $user = auth('sanctum')->user();
+            if ($user) {
+                $staff = \App\Models\Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
+                $orgId = $staff?->organization_id ?? $user->organization_id ?? null;
+            }
+        }
+
+        if (!$orgId) {
+            // Fallback: query param for public widgets
+            $orgId = request()->input('org_id');
+        }
+
+        $query = HotelSetting::withoutGlobalScopes()->where('group', 'appearance');
+        if ($orgId) {
+            $query->where('organization_id', $orgId);
         }
 
         $settings = $query->pluck('value', 'key');
