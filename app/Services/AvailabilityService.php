@@ -27,12 +27,13 @@ class AvailabilityService
             if ($adults + $children > ($unit['max_guests'] ?? 99)) continue;
 
             $results[] = [
-                'unit_id'         => $id,
-                'unit_name'       => $unit['name'] ?? '',
+                'id'              => (string) $id,
+                'name'            => $unit['name'] ?? '',
                 'slug'            => $unit['slug'] ?? '',
                 'max_guests'      => $unit['max_guests'] ?? 0,
                 'bedrooms'        => $unit['bedrooms'] ?? 0,
-                'thumbnail'       => $unit['thumbnail'] ?? '',
+                'image'           => $unit['thumbnail'] ?? $unit['image'] ?? '',
+                'description'     => $unit['description'] ?? '',
                 'available'       => true,
                 'price_per_night' => $rate['price_per_night'] ?? 0,
                 'total_price'     => $rate['price'] ?? 0,

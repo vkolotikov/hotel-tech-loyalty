@@ -285,22 +285,12 @@ class BookingAdminController extends Controller
     /** POST /v1/admin/bookings/sync — bulk sync from PMS. */
     public function syncAll(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
-        if ($smoobu->isMock()) {
-            return response()->json(['message' => 'PMS is in mock mode — no real data to sync. Add your Smoobu API key in Settings > Integrations.', 'synced' => 0]);
-        }
+        // Always sync apartments (works in both mock and live mode)
+        try { $this->syncApartments($smoobu); } catch (\Throwable) {}
 
-        // Auto-sync apartments if booking_units is empty
-        try {
-            $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
-            $existingUnits = \App\Models\HotelSetting::withoutGlobalScopes()
-                ->where('organization_id', $orgId)
-                ->where('key', 'booking_units')
-                ->value('value');
-            $decoded = $existingUnits ? json_decode($existingUnits, true) : [];
-            if (empty($decoded)) {
-                $this->syncApartments($smoobu);
-            }
-        } catch (\Throwable) {}
+        if ($smoobu->isMock()) {
+            return response()->json(['message' => 'PMS is in mock mode — apartments synced from demo data. Add your Smoobu API key in Settings > Integrations for real bookings.', 'synced' => 0]);
+        }
 
         try {
             $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));

@@ -92,7 +92,7 @@ input,select,textarea{font-family:inherit}
 .btn-row .btn{flex:1}
 
 /* Room cards — rich vertical layout */
-.room-card{display:grid;grid-template-columns:280px minmax(0,1fr) 200px;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
+.room-card{display:flex;flex-direction:column;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
 .room-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 .room-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
 .room-hero{height:220px;background:var(--border);position:relative;overflow:hidden}
@@ -116,8 +116,7 @@ input,select,textarea{font-family:inherit}
 .room-total{font-size:11px;color:var(--text-secondary);margin-left:4px}
 .room-select-btn{padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap}
 .room-card.selected .room-select-btn,.room-select-btn:hover{background:var(--primary);color:#fff}
-@media(max-width:900px){.room-card{grid-template-columns:1fr}}
-@media(min-width:901px){.room-hero{grid-row:1/4}.room-body{grid-column:2/4}}
+@media(max-width:600px){.room-hero{height:180px}}
 
 /* Summary sidebar with hero */
 .summary-sidebar{position:sticky;top:16px}
@@ -301,23 +300,30 @@ var $app = document.getElementById('app');
 var STEPS = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
 
 /* Fallback images for known ForRest room names */
+var ASSETS_BASE = API_BASE.replace(/\/api$/, '') + '/assets/images/';
 var FALLBACK_IMAGES = {
-  'deluxe': 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&h=400&fit=crop',
-  'lodge': 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=600&h=400&fit=crop',
-  'tiny': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=600&h=400&fit=crop',
-  'sauna': 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=600&h=400&fit=crop',
-  'suite': 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&h=400&fit=crop',
-  'studio': 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&h=400&fit=crop',
-  'default': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop'
+  'ForRest DeLuxe House': 'ForRest-DeLuxe-House.jpg',
+  'ForRest Lodge': 'ForRest_Lodge.jpg',
+  'ForRest No.5': 'ForRest_No5.jpg',
+  'ForRest Sauna Lodge': 'ForRest_Sauna_Lodge.jpg',
+  'ForRest Tiny House': 'ForRest_Tiny_House.jpg',
+  'Sauna House': 'ForRest_Sauna_house.jpg'
 };
 
 function getRoomImage(unit) {
   if (unit.image) return unit.image;
-  var name = (unit.name || '').toLowerCase();
-  for (var key in FALLBACK_IMAGES) {
-    if (key !== 'default' && name.indexOf(key) >= 0) return FALLBACK_IMAGES[key];
-  }
-  return FALLBACK_IMAGES['default'];
+  var name = unit.name || '';
+  // Exact match first
+  if (FALLBACK_IMAGES[name]) return ASSETS_BASE + FALLBACK_IMAGES[name];
+  // Partial match
+  var lower = name.toLowerCase();
+  if (lower.indexOf('deluxe') >= 0) return ASSETS_BASE + 'ForRest-DeLuxe-House.jpg';
+  if (lower.indexOf('tiny') >= 0) return ASSETS_BASE + 'ForRest_Tiny_House.jpg';
+  if (lower.indexOf('sauna') >= 0 && lower.indexOf('lodge') >= 0) return ASSETS_BASE + 'ForRest_Sauna_Lodge.jpg';
+  if (lower.indexOf('sauna') >= 0) return ASSETS_BASE + 'ForRest_Sauna_house.jpg';
+  if (lower.indexOf('lodge') >= 0) return ASSETS_BASE + 'ForRest_Lodge.jpg';
+  if (lower.indexOf('no.5') >= 0 || lower.indexOf('no5') >= 0) return ASSETS_BASE + 'ForRest_No5.jpg';
+  return ASSETS_BASE + 'ForRest_Lodge.jpg';
 }
 
 function getRoomAmenities(unit) {
@@ -325,17 +331,19 @@ function getRoomAmenities(unit) {
   var desc = (unit.description || '').toLowerCase();
   var all = name + ' ' + desc;
   var amenities = [];
-  if (all.indexOf('kitchen') >= 0 || all.indexOf('cook') >= 0) amenities.push({icon: 'kitchen', label: 'Kitchen'});
-  if (all.indexOf('sauna') >= 0) amenities.push({icon: 'sauna', label: 'Sauna'});
-  if (all.indexOf('jacuzzi') >= 0 || all.indexOf('hot tub') >= 0) amenities.push({icon: 'jacuzzi', label: 'Jacuzzi'});
-  if (all.indexOf('bbq') >= 0 || all.indexOf('grill') >= 0) amenities.push({icon: 'bbq', label: 'BBQ'});
-  if (all.indexOf('wifi') >= 0 || all.indexOf('wi-fi') >= 0) amenities.push({icon: 'wifi', label: 'WiFi'});
-  if (all.indexOf('parking') >= 0) amenities.push({icon: 'parking', label: 'Parking'});
-  if (all.indexOf('terrace') >= 0 || all.indexOf('balcony') >= 0) amenities.push({icon: 'terrace', label: 'Terrace'});
-  if (all.indexOf('garden') >= 0 || all.indexOf('forest') >= 0 || all.indexOf('nature') >= 0) amenities.push({icon: 'nature', label: 'Nature'});
-  // Always add a few defaults if fewer than 3
-  if (amenities.length < 2) amenities.push({icon: 'wifi', label: 'WiFi'});
-  if (amenities.length < 3) amenities.push({icon: 'parking', label: 'Parking'});
+  var has = function(kw) { return all.indexOf(kw) >= 0; };
+  if (has('kitchen') || has('cook') || has('kitchenette')) amenities.push({icon: 'kitchen', label: 'Kitchen'});
+  if (has('sauna')) amenities.push({icon: 'sauna', label: 'Sauna'});
+  if (has('jacuzzi') || has('hot tub')) amenities.push({icon: 'jacuzzi', label: 'Jacuzzi'});
+  if (has('bbq') || has('grill') || has('fireplace')) amenities.push({icon: 'bbq', label: 'BBQ'});
+  if (has('terrace') || has('deck') || has('balcony')) amenities.push({icon: 'terrace', label: 'Terrace'});
+  if (has('garden') || has('forest') || has('nature') || has('forrest')) amenities.push({icon: 'nature', label: 'Nature stay'});
+  if (has('wifi') || has('wi-fi')) amenities.push({icon: 'wifi', label: 'WiFi'});
+  if (has('parking')) amenities.push({icon: 'parking', label: 'Parking'});
+  // Defaults for ForRest-type properties
+  if (!amenities.some(function(a){ return a.label === 'Nature stay'; })) amenities.push({icon: 'nature', label: 'Nature stay'});
+  if (amenities.length < 3) amenities.push({icon: 'wifi', label: 'Free WiFi'});
+  if (amenities.length < 4) amenities.push({icon: 'parking', label: 'Free parking'});
   return amenities;
 }
 

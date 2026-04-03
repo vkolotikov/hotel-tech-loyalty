@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HotelSetting;
 use App\Services\AvailabilityService;
 use App\Services\BookingEngineService;
+use App\Services\SmoobuClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,37 @@ class BookingPublicController extends Controller
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
 
-        $units    = $this->getJsonSetting($orgId, 'booking_units', config('booking.units', []));
+        $units    = $this->getJsonSetting($orgId, 'booking_units', []);
+        // Auto-sync apartments from PMS if no units configured yet
+        if (empty($units)) {
+            try {
+                $smoobu = app(SmoobuClient::class);
+                $response = $smoobu->getApartments();
+                $apartments = $response['apartments'] ?? [];
+                $synced = [];
+                foreach ($apartments as $apt) {
+                    $id = (string) ($apt['id'] ?? '');
+                    if (!$id) continue;
+                    $rooms = $apt['rooms'] ?? [];
+                    $synced[$id] = [
+                        'id' => $id, 'name' => $apt['name'] ?? "Unit {$id}",
+                        'slug' => \Illuminate\Support\Str::slug($apt['name'] ?? "unit-{$id}"),
+                        'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
+                        'bedrooms' => $rooms['bedrooms'] ?? 1,
+                        'price_per_night' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
+                        'thumbnail' => $apt['imageUrl'] ?? $apt['mainImage'] ?? '',
+                        'description' => $apt['description'] ?? '',
+                    ];
+                }
+                if (!empty($synced)) {
+                    HotelSetting::withoutGlobalScopes()->updateOrCreate(
+                        ['key' => 'booking_units', 'organization_id' => $orgId],
+                        ['value' => json_encode($synced), 'type' => 'json', 'group' => 'booking'],
+                    );
+                    $units = $synced;
+                }
+            } catch (\Throwable) {}
+        }
         $extras   = $this->getJsonSetting($orgId, 'booking_extras', config('booking.extras', []));
         $policies = $this->getJsonSetting($orgId, 'booking_policies', config('booking.policies', []));
 

@@ -169,7 +169,7 @@ class SmoobuClient
             if (!empty($unitIds) && !in_array($id, $unitIds)) continue;
 
             $nights   = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
-            $baseRate = rand(85, 180);
+            $baseRate = $unit['price_per_night'] ?? rand(85, 180);
 
             $result[$id] = [
                 'apartment_id'    => $id,
@@ -233,9 +233,12 @@ class SmoobuClient
     {
         return [
             'apartments' => [
-                ['id' => 1001, 'name' => 'Deluxe Garden Suite',  'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 1]],
-                ['id' => 1002, 'name' => 'Superior Forest Lodge', 'rooms' => ['maxOccupancy' => 6, 'bedrooms' => 2]],
-                ['id' => 1003, 'name' => 'Premium Lakeside Tent', 'rooms' => ['maxOccupancy' => 2, 'bedrooms' => 1]],
+                ['id' => 1001, 'name' => 'ForRest DeLuxe House', 'description' => 'A luxurious private house surrounded by forest, featuring a spacious living area, fully equipped kitchen, private sauna, and outdoor jacuzzi with forest views.', 'rooms' => ['maxOccupancy' => 6, 'bedrooms' => 3], 'price' => 176],
+                ['id' => 1002, 'name' => 'ForRest Lodge', 'description' => 'A cozy lodge nestled among the trees, perfect for couples or small families seeking a peaceful nature retreat with modern comforts.', 'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 2], 'price' => 88],
+                ['id' => 1003, 'name' => 'ForRest No.5', 'description' => 'A unique forest dwelling combining rustic charm with contemporary design. Features an open-plan living space and private terrace.', 'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 2], 'price' => 171],
+                ['id' => 1004, 'name' => 'ForRest Sauna Lodge', 'description' => 'An exclusive lodge with a built-in private sauna, wood-burning fireplace, and panoramic forest views from every window.', 'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 2], 'price' => 149],
+                ['id' => 1005, 'name' => 'ForRest Tiny House', 'description' => 'A charming compact house designed for couples, featuring a loft bedroom, kitchenette, and a private deck overlooking the forest canopy.', 'rooms' => ['maxOccupancy' => 2, 'bedrooms' => 1], 'price' => 89],
+                ['id' => 1006, 'name' => 'Sauna House', 'description' => 'A dedicated wellness retreat with a premium sauna, relaxation lounge, outdoor shower, and peaceful garden setting.', 'rooms' => ['maxOccupancy' => 4, 'bedrooms' => 1], 'price' => 113],
             ],
         ];
     }
