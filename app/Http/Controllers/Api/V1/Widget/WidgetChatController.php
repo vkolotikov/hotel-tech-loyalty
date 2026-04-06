@@ -24,22 +24,36 @@ class WidgetChatController extends Controller
     ) {}
 
     /**
-     * GET /v1/widget/{widgetKey}/config
-     * Returns widget configuration for the embeddable widget.
+     * Resolve the widget config and bind the org context so all
+     * downstream scoped model queries work correctly.
      */
-    public function getConfig(string $widgetKey): JsonResponse
+    private function resolveWidget(string $widgetKey): ?ChatWidgetConfig
     {
         $config = ChatWidgetConfig::withoutGlobalScopes()
             ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
+        if ($config) {
+            app()->instance('current_organization_id', $config->organization_id);
+        }
+
+        return $config;
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/config
+     */
+    public function getConfig(string $widgetKey): JsonResponse
+    {
+        $config = $this->resolveWidget($widgetKey);
+
         if (!$config) {
             return response()->json(['error' => 'Widget not found or inactive'], 404);
         }
 
-        $behavior = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
-        $voiceConfig = \App\Models\VoiceAgentConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
+        $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
+        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
 
         return response()->json([
             'company_name'    => $config->company_name,
@@ -66,55 +80,53 @@ class WidgetChatController extends Controller
 
     /**
      * POST /v1/widget/{widgetKey}/init
-     * Initialize a chat session for a visitor.
      */
     public function initSession(Request $request, string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::withoutGlobalScopes()
-            ->where('widget_key', $widgetKey)
-            ->where('is_active', true)
-            ->first();
+        try {
+            $config = $this->resolveWidget($widgetKey);
 
-        if (!$config) {
-            return response()->json(['error' => 'Widget not found'], 404);
+            if (!$config) {
+                return response()->json(['error' => 'Widget not found'], 404);
+            }
+
+            $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
+            $visitorName = $request->input('visitor_name');
+
+            AiConversation::updateOrCreate(
+                ['session_id' => $sessionId],
+                [
+                    'organization_id' => $config->organization_id,
+                    'member_id' => null,
+                    'messages' => [],
+                    'model' => 'gpt-4o',
+                    'is_active' => true,
+                ]
+            );
+
+            ChatConversation::updateOrCreate(
+                ['session_id' => $sessionId],
+                [
+                    'organization_id' => $config->organization_id,
+                    'visitor_name' => $visitorName,
+                    'channel' => 'widget',
+                    'status' => 'active',
+                    'last_message_at' => now(),
+                ]
+            );
+
+            return response()->json([
+                'session_id' => $sessionId,
+                'welcome_message' => $config->welcome_message,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Widget init error: ' . $e->getMessage(), ['file' => $e->getFile() . ':' . $e->getLine()]);
+            return response()->json(['error' => 'Init failed', 'debug' => config('app.debug') ? $e->getMessage() : null], 500);
         }
-
-        $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
-        $visitorName = $request->input('visitor_name');
-
-        // Create AiConversation for AI message history
-        AiConversation::withoutGlobalScopes()->firstOrCreate(
-            ['session_id' => $sessionId],
-            [
-                'organization_id' => $config->organization_id,
-                'member_id' => null,
-                'messages' => [],
-                'model' => 'gpt-4o',
-                'is_active' => true,
-            ]
-        );
-
-        // Create ChatConversation for inbox tracking
-        ChatConversation::withoutGlobalScopes()->firstOrCreate(
-            ['session_id' => $sessionId],
-            [
-                'organization_id' => $config->organization_id,
-                'visitor_name' => $visitorName,
-                'channel' => 'widget',
-                'status' => 'active',
-                'last_message_at' => now(),
-            ]
-        );
-
-        return response()->json([
-            'session_id' => $sessionId,
-            'welcome_message' => $config->welcome_message,
-        ]);
     }
 
     /**
      * POST /v1/widget/{widgetKey}/message
-     * Send a visitor message and get AI response.
      */
     public function sendMessage(Request $request, string $widgetKey): JsonResponse
     {
@@ -123,24 +135,26 @@ class WidgetChatController extends Controller
             'session_id' => 'required|string|max:64',
         ]);
 
-        $config = ChatWidgetConfig::withoutGlobalScopes()
-            ->where('widget_key', $widgetKey)
-            ->where('is_active', true)
-            ->first();
+        $config = $this->resolveWidget($widgetKey);
 
         if (!$config) {
             return response()->json(['error' => 'Widget not found'], 404);
         }
 
         $orgId = $config->organization_id;
-        $behaviorConfig = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
-        $modelConfig = ChatbotModelConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
+        $behaviorConfig = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
+        $modelConfig = ChatbotModelConfig::where('organization_id', $orgId)->first();
 
         // Get knowledge context
-        $knowledgeContext = $this->knowledge->getKnowledgeContext($request->message, $orgId);
+        $knowledgeContext = '';
+        try {
+            $knowledgeContext = $this->knowledge->getKnowledgeContext($request->message, $orgId);
+        } catch (\Throwable $e) {
+            \Log::warning('Widget knowledge lookup failed: ' . $e->getMessage());
+        }
 
         // Load or create conversation
-        $conversation = AiConversation::withoutGlobalScopes()->firstOrCreate(
+        $conversation = AiConversation::firstOrCreate(
             ['session_id' => $request->session_id],
             [
                 'organization_id' => $orgId,
@@ -154,7 +168,6 @@ class WidgetChatController extends Controller
         $messages = $conversation->messages ?? [];
         $messages[] = ['role' => 'user', 'content' => $request->message, 'timestamp' => now()->toIso8601String()];
 
-        // Build system prompt for widget visitor (no member context)
         $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name);
 
         $contextMessages = array_slice(
@@ -162,7 +175,6 @@ class WidgetChatController extends Controller
             -20
         );
 
-        // Call AI provider (supports OpenAI, Anthropic, Google)
         $provider = $modelConfig->provider ?? 'openai';
         $model = $modelConfig->model_name ?? 'gpt-4o';
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
@@ -188,24 +200,28 @@ class WidgetChatController extends Controller
         ]);
 
         // Store in chat_messages for inbox
-        $chatConv = ChatConversation::withoutGlobalScopes()->where('session_id', $request->session_id)->first();
-        if ($chatConv) {
-            ChatMessage::create([
-                'conversation_id' => $chatConv->id,
-                'sender_type' => 'visitor',
-                'content' => $request->message,
-                'created_at' => now(),
-            ]);
-            ChatMessage::create([
-                'conversation_id' => $chatConv->id,
-                'sender_type' => 'ai',
-                'content' => $aiResponse,
-                'created_at' => now(),
-            ]);
-            $chatConv->update([
-                'last_message_at' => now(),
-                'messages_count' => $chatConv->messages_count + 2,
-            ]);
+        try {
+            $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
+            if ($chatConv) {
+                ChatMessage::create([
+                    'conversation_id' => $chatConv->id,
+                    'sender_type' => 'visitor',
+                    'content' => $request->message,
+                    'created_at' => now(),
+                ]);
+                ChatMessage::create([
+                    'conversation_id' => $chatConv->id,
+                    'sender_type' => 'ai',
+                    'content' => $aiResponse,
+                    'created_at' => now(),
+                ]);
+                $chatConv->update([
+                    'last_message_at' => now(),
+                    'messages_count' => $chatConv->messages_count + 2,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Widget inbox save failed: ' . $e->getMessage());
         }
 
         return response()->json([
@@ -216,7 +232,6 @@ class WidgetChatController extends Controller
 
     /**
      * POST /v1/widget/{widgetKey}/lead
-     * Capture lead info from widget visitor (creates an Inquiry).
      */
     public function captureLead(Request $request, string $widgetKey): JsonResponse
     {
@@ -228,10 +243,7 @@ class WidgetChatController extends Controller
             'session_id' => 'nullable|string|max:64',
         ]);
 
-        $config = ChatWidgetConfig::withoutGlobalScopes()
-            ->where('widget_key', $widgetKey)
-            ->where('is_active', true)
-            ->first();
+        $config = $this->resolveWidget($widgetKey);
 
         if (!$config) {
             return response()->json(['error' => 'Widget not found'], 404);
@@ -239,11 +251,9 @@ class WidgetChatController extends Controller
 
         $orgId = $config->organization_id;
 
-        // Find or create a guest record
         $guest = null;
         if (!empty($validated['email'])) {
-            $guest = \App\Models\Guest::withoutGlobalScopes()
-                ->where('organization_id', $orgId)
+            $guest = \App\Models\Guest::where('organization_id', $orgId)
                 ->where('email', $validated['email'])
                 ->first();
         }
@@ -261,7 +271,6 @@ class WidgetChatController extends Controller
             ]);
         }
 
-        // Create an inquiry linked to the guest
         $inquiry = \App\Models\Inquiry::create([
             'organization_id' => $orgId,
             'guest_id'        => $guest->id,
@@ -279,28 +288,21 @@ class WidgetChatController extends Controller
 
     /**
      * GET /v1/widget/{widgetKey}/popup-rules
-     * Return active popup rules for the widget.
      */
     public function getPopupRules(string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::withoutGlobalScopes()
-            ->where('widget_key', $widgetKey)
-            ->where('is_active', true)
-            ->first();
+        $config = $this->resolveWidget($widgetKey);
 
         if (!$config) {
             return response()->json(['rules' => []]);
         }
 
-        $rules = PopupRule::withoutGlobalScopes()
-            ->where('organization_id', $config->organization_id)
+        $rules = PopupRule::where('organization_id', $config->organization_id)
             ->active()
             ->orderByDesc('priority')
             ->get(['id', 'trigger_type', 'trigger_value', 'url_match_type', 'url_match_value', 'visitor_type', 'language_targets', 'message', 'quick_replies', 'priority']);
 
-        // Increment impressions
-        PopupRule::withoutGlobalScopes()
-            ->where('organization_id', $config->organization_id)
+        PopupRule::where('organization_id', $config->organization_id)
             ->active()
             ->increment('impressions_count');
 
@@ -419,21 +421,16 @@ class WidgetChatController extends Controller
 
     /**
      * POST /v1/widget/{widgetKey}/realtime-session
-     * Creates an ephemeral OpenAI Realtime API session for voice-to-voice.
-     * Returns a client_secret that the widget uses to establish WebRTC.
      */
     public function createRealtimeSession(Request $request, string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::withoutGlobalScopes()
-            ->where('widget_key', $widgetKey)
-            ->where('is_active', true)
-            ->first();
+        $config = $this->resolveWidget($widgetKey);
 
         if (!$config) {
             return response()->json(['error' => 'Widget not found'], 404);
         }
 
-        $voiceConfig = \App\Models\VoiceAgentConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
+        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
 
         if (!$voiceConfig || !$voiceConfig->is_active || !$voiceConfig->realtime_enabled) {
             return response()->json(['error' => 'Voice agent not enabled'], 403);
@@ -444,8 +441,7 @@ class WidgetChatController extends Controller
             return response()->json(['error' => 'OpenAI not configured'], 500);
         }
 
-        // Build instructions from behavior config + voice config + knowledge
-        $behavior = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
+        $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
         $instructions = $this->buildVoiceInstructions($config, $behavior, $voiceConfig);
 
         try {
@@ -512,7 +508,6 @@ Help hotel guests and website visitors with questions about the hotel: rooms, am
 PROMPT;
         }
 
-        // Inject knowledge context
         try {
             $knowledgeSummary = $this->knowledge->getKnowledgeContext('hotel information general', $widget->organization_id);
             if ($knowledgeSummary) {
