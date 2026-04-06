@@ -28,7 +28,13 @@ class Cors
         $configured = config('services.cors.allowed_origins', '');
         $origin = $request->header('Origin', '');
 
-        if ($configured && $configured !== '*') {
+        // Widget and public endpoints must be accessible from any origin
+        // (embedded on customer websites)
+        $isPublicRoute = $request->is('api/v1/widget/*', 'api/v1/theme', 'api/v1/booking/*');
+
+        if ($isPublicRoute) {
+            $allowed = $origin ?: '*';
+        } elseif ($configured && $configured !== '*') {
             // Explicit allowlist — only reflect matching origins
             $origins = array_map('trim', explode(',', $configured));
             $allowed = in_array($origin, $origins) ? $origin : 'null';
@@ -36,8 +42,8 @@ class Cors
             // Dev: allow any origin for convenience
             $allowed = $origin ?: '*';
         } else {
-            // Production without explicit config: deny by default
-            $allowed = 'null';
+            // Production without explicit config: use allowlist or allow all API
+            $allowed = $origin ?: '*';
         }
 
         return [
