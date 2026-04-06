@@ -29,7 +29,8 @@ class WidgetChatController extends Controller
      */
     public function getConfig(string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -37,8 +38,8 @@ class WidgetChatController extends Controller
             return response()->json(['error' => 'Widget not found or inactive'], 404);
         }
 
-        $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
-        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
+        $behavior = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
+        $voiceConfig = \App\Models\VoiceAgentConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
 
         return response()->json([
             'company_name'    => $config->company_name,
@@ -69,7 +70,8 @@ class WidgetChatController extends Controller
      */
     public function initSession(Request $request, string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -81,7 +83,7 @@ class WidgetChatController extends Controller
         $visitorName = $request->input('visitor_name');
 
         // Create AiConversation for AI message history
-        AiConversation::firstOrCreate(
+        AiConversation::withoutGlobalScopes()->firstOrCreate(
             ['session_id' => $sessionId],
             [
                 'organization_id' => $config->organization_id,
@@ -93,7 +95,7 @@ class WidgetChatController extends Controller
         );
 
         // Create ChatConversation for inbox tracking
-        ChatConversation::firstOrCreate(
+        ChatConversation::withoutGlobalScopes()->firstOrCreate(
             ['session_id' => $sessionId],
             [
                 'organization_id' => $config->organization_id,
@@ -121,7 +123,8 @@ class WidgetChatController extends Controller
             'session_id' => 'required|string|max:64',
         ]);
 
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -130,14 +133,14 @@ class WidgetChatController extends Controller
         }
 
         $orgId = $config->organization_id;
-        $behaviorConfig = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
-        $modelConfig = ChatbotModelConfig::where('organization_id', $orgId)->first();
+        $behaviorConfig = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
+        $modelConfig = ChatbotModelConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
 
         // Get knowledge context
         $knowledgeContext = $this->knowledge->getKnowledgeContext($request->message, $orgId);
 
         // Load or create conversation
-        $conversation = AiConversation::firstOrCreate(
+        $conversation = AiConversation::withoutGlobalScopes()->firstOrCreate(
             ['session_id' => $request->session_id],
             [
                 'organization_id' => $orgId,
@@ -185,7 +188,7 @@ class WidgetChatController extends Controller
         ]);
 
         // Store in chat_messages for inbox
-        $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
+        $chatConv = ChatConversation::withoutGlobalScopes()->where('session_id', $request->session_id)->first();
         if ($chatConv) {
             ChatMessage::create([
                 'conversation_id' => $chatConv->id,
@@ -225,7 +228,8 @@ class WidgetChatController extends Controller
             'session_id' => 'nullable|string|max:64',
         ]);
 
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -238,7 +242,8 @@ class WidgetChatController extends Controller
         // Find or create a guest record
         $guest = null;
         if (!empty($validated['email'])) {
-            $guest = \App\Models\Guest::where('organization_id', $orgId)
+            $guest = \App\Models\Guest::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
                 ->where('email', $validated['email'])
                 ->first();
         }
@@ -278,7 +283,8 @@ class WidgetChatController extends Controller
      */
     public function getPopupRules(string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -286,13 +292,15 @@ class WidgetChatController extends Controller
             return response()->json(['rules' => []]);
         }
 
-        $rules = PopupRule::where('organization_id', $config->organization_id)
+        $rules = PopupRule::withoutGlobalScopes()
+            ->where('organization_id', $config->organization_id)
             ->active()
             ->orderByDesc('priority')
             ->get(['id', 'trigger_type', 'trigger_value', 'url_match_type', 'url_match_value', 'visitor_type', 'language_targets', 'message', 'quick_replies', 'priority']);
 
         // Increment impressions
-        PopupRule::where('organization_id', $config->organization_id)
+        PopupRule::withoutGlobalScopes()
+            ->where('organization_id', $config->organization_id)
             ->active()
             ->increment('impressions_count');
 
@@ -416,7 +424,8 @@ class WidgetChatController extends Controller
      */
     public function createRealtimeSession(Request $request, string $widgetKey): JsonResponse
     {
-        $config = ChatWidgetConfig::where('widget_key', $widgetKey)
+        $config = ChatWidgetConfig::withoutGlobalScopes()
+            ->where('widget_key', $widgetKey)
             ->where('is_active', true)
             ->first();
 
@@ -424,7 +433,7 @@ class WidgetChatController extends Controller
             return response()->json(['error' => 'Widget not found'], 404);
         }
 
-        $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
+        $voiceConfig = \App\Models\VoiceAgentConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
 
         if (!$voiceConfig || !$voiceConfig->is_active || !$voiceConfig->realtime_enabled) {
             return response()->json(['error' => 'Voice agent not enabled'], 403);
@@ -436,7 +445,7 @@ class WidgetChatController extends Controller
         }
 
         // Build instructions from behavior config + voice config + knowledge
-        $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
+        $behavior = ChatbotBehaviorConfig::withoutGlobalScopes()->where('organization_id', $config->organization_id)->first();
         $instructions = $this->buildVoiceInstructions($config, $behavior, $voiceConfig);
 
         try {
