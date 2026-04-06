@@ -1364,9 +1364,9 @@ export function Settings() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Position</label>
               <select value={wf.position || 'bottom-right'} onChange={e => updateWidget('position', e.target.value)}
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
-                <option value="bottom-right">Bottom Right</option>
-                <option value="bottom-left">Bottom Left</option>
+                className="w-full bg-[#1a1a1a] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" style={{ colorScheme: 'dark' }}>
+                <option value="bottom-right" className="bg-[#1a1a1a] text-white">Bottom Right</option>
+                <option value="bottom-left" className="bg-[#1a1a1a] text-white">Bottom Left</option>
               </select>
             </div>
           </div>
@@ -1445,17 +1445,13 @@ export function Settings() {
             )}
           </div>
 
-          {/* Active + Save */}
-          <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
+          {/* Active toggle */}
+          <div className="flex items-center pt-2 border-t border-white/[0.04]">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={wf.is_active ?? true} onChange={e => updateWidget('is_active', e.target.checked)}
                 className="w-3.5 h-3.5 rounded border-white/[0.12] bg-white/[0.03] text-emerald-500" />
               <span className="text-sm text-white">Widget Active</span>
             </label>
-            <button onClick={() => widgetSaveMutation.mutate(wf)} disabled={widgetSaveMutation.isPending}
-              className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
-              <Save size={13} /> {widgetSaveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
-            </button>
           </div>
         </div>
       </div>
@@ -1507,9 +1503,10 @@ export function Settings() {
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">Font Family</label>
               <select value={wf.font_family || 'Inter'} onChange={e => updateWidget('font_family', e.target.value)}
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1.5 text-xs text-white">
+                className="w-full bg-[#1a1a1a] border border-white/[0.06] rounded-lg px-2 py-1.5 text-xs text-white"
+                style={{ colorScheme: 'dark' }}>
                 {['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montserrat', 'Nunito', 'Playfair Display', 'Georgia', 'system-ui'].map(f => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f} className="bg-[#1a1a1a] text-white">{f}</option>
                 ))}
               </select>
             </div>
@@ -1545,17 +1542,14 @@ export function Settings() {
             </div>
           </div>
 
-          {/* Save */}
-          <div className="flex justify-end pt-2 border-t border-white/[0.04]">
-            <button onClick={() => widgetSaveMutation.mutate(wf)} disabled={widgetSaveMutation.isPending}
-              className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
-              <Save size={13} /> {widgetSaveMutation.isPending ? 'Saving...' : 'Save Style'}
-            </button>
-          </div>
         </div>
       </div>
 
       {/* ── Live Preview ──────────────────────────────────────── */}
+      {/* Load Google Font for preview */}
+      {wf.font_family && !['system-ui', 'Georgia'].includes(wf.font_family) && (
+        <link rel="stylesheet" href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(wf.font_family)}:wght@400;500;600;700&display=swap`} />
+      )}
       <div className={cardClass} style={cardStyle}>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
           <Eye size={15} className="text-emerald-400" /> Live Preview
@@ -1564,16 +1558,21 @@ export function Settings() {
           {/* Chat Window Preview */}
           <div className="flex-1 flex justify-center">
             <div className="w-[360px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl"
-              style={{ borderRadius: `${wf.border_radius ?? 16}px`, fontFamily: wf.font_family || 'Inter' }}>
+              style={{ borderRadius: `${wf.border_radius ?? 16}px`, fontFamily: `'${wf.font_family || 'Inter'}', system-ui, sans-serif` }}>
               {/* Header */}
               <div className="px-4 py-3 flex items-center gap-3" style={{
-                background: (wf.header_style || 'solid') === 'gradient' && wf.header_gradient_end
-                  ? `linear-gradient(135deg, ${wf.primary_color || '#c9a84c'}, ${wf.header_gradient_end})`
+                background: (wf.header_style || 'solid') === 'gradient'
+                  ? `linear-gradient(135deg, ${wf.primary_color || '#c9a84c'}, ${wf.header_gradient_end || (wf.primary_color || '#c9a84c') + '99'})`
                   : (wf.primary_color || '#c9a84c'),
                 color: wf.header_text_color || '#ffffff',
               }}>
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <MessageSquare size={14} />
+                  {(wf.launcher_icon || 'chat') === 'chat' ? <MessageSquare size={14} />
+                    : (wf.launcher_icon === 'message') ? <Mail size={14} />
+                    : (wf.launcher_icon === 'support') ? <HelpCircle size={14} />
+                    : (wf.launcher_icon === 'question') ? <HelpCircle size={14} />
+                    : (wf.launcher_icon === 'sales') ? <DollarSign size={14} />
+                    : <MessageSquare size={14} />}
                 </div>
                 <div>
                   <div className="text-sm font-semibold">{wf.company_name || 'Your Hotel'}</div>
@@ -1664,12 +1663,25 @@ export function Settings() {
               boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
               color: wf.header_text_color || '#fff',
             }}>
-              <MessageSquare size={Math.round((wf.launcher_size || 56) * 0.4)} />
+              {(wf.launcher_icon || 'chat') === 'chat' ? <MessageSquare size={Math.round((wf.launcher_size || 56) * 0.4)} />
+                : (wf.launcher_icon === 'message') ? <Mail size={Math.round((wf.launcher_size || 56) * 0.4)} />
+                : (wf.launcher_icon === 'support') ? <HelpCircle size={Math.round((wf.launcher_size || 56) * 0.4)} />
+                : (wf.launcher_icon === 'question') ? <HelpCircle size={Math.round((wf.launcher_size || 56) * 0.4)} />
+                : (wf.launcher_icon === 'sales') ? <DollarSign size={Math.round((wf.launcher_size || 56) * 0.4)} />
+                : <MessageSquare size={Math.round((wf.launcher_size || 56) * 0.4)} />}
             </div>
             <span className="text-[10px] text-gray-600 capitalize">{wf.launcher_shape || 'circle'} · {wf.launcher_size || 56}px</span>
             <span className="text-[10px] text-gray-600">Position: {wf.position || 'bottom-right'}</span>
           </div>
         </div>
+      </div>
+
+      {/* Single Save Button for all widget settings */}
+      <div className="flex justify-end">
+        <button onClick={() => widgetSaveMutation.mutate(wf)} disabled={widgetSaveMutation.isPending}
+          className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+          <Save size={13} /> {widgetSaveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
+        </button>
       </div>
 
       {/* Embed Code / Integration */}

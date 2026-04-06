@@ -110,6 +110,11 @@
   // ── SVG Icons ──
   var ICONS = {
     chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    message: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+    support: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0z"/></svg>',
+    question: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    sales: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    quote: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
     mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
@@ -165,16 +170,74 @@
 
   function applyColor() {
     var color = getColor();
+    var c = widgetConfig || {};
     var launcher = document.getElementById('htchat-launcher');
-    if (launcher) launcher.style.background = color;
+    if (launcher) {
+      launcher.style.background = color;
+      // Launcher size
+      var sz = (c.launcher_size || 56) + 'px';
+      launcher.style.width = sz;
+      launcher.style.height = sz;
+      // Launcher shape
+      var shape = c.launcher_shape || 'circle';
+      launcher.style.borderRadius = shape === 'circle' ? '50%'
+        : shape === 'pill' ? (c.launcher_size || 56) / 2 + 'px'
+        : shape === 'rounded-square' ? '16px' : '8px';
+      // Launcher icon
+      var iconName = c.launcher_icon || 'chat';
+      if (ICONS[iconName]) {
+        var pulse = launcher.querySelector('.htchat-pulse');
+        launcher.innerHTML = ICONS[iconName] + (pulse ? pulse.outerHTML : '<span class="htchat-pulse"></span>');
+      }
+    }
     var header = document.getElementById('htchat-header');
-    if (header) header.style.background = color;
+    if (header) {
+      if (c.header_style === 'gradient' && c.header_gradient_end) {
+        header.style.background = 'linear-gradient(135deg, ' + color + ', ' + c.header_gradient_end + ')';
+      } else {
+        header.style.background = color;
+      }
+      header.style.color = c.header_text_color || '#ffffff';
+    }
+    var panel = document.getElementById('htchat-panel');
+    if (panel) {
+      panel.style.borderRadius = (c.border_radius ?? 16) + 'px';
+      if (c.chat_bg_color) panel.style.background = c.chat_bg_color;
+    }
+    var msgs = document.getElementById('htchat-messages');
+    if (msgs && c.chat_bg_color) msgs.style.background = c.chat_bg_color;
     var sendBtn = document.getElementById('htchat-send-btn');
     if (sendBtn) sendBtn.style.background = color;
-    var input = document.getElementById('htchat-input');
-    if (input) input.style.color = color;
-    // Suggestion hover
-    document.querySelectorAll('.htchat-suggestion').forEach(function (s) { s.style.borderColor = ''; });
+    var inputArea = document.getElementById('htchat-input-area');
+    if (inputArea && c.chat_bg_color) inputArea.style.background = c.chat_bg_color;
+    // Branding
+    var branding = document.getElementById('htchat-branding');
+    if (branding) branding.style.display = (c.show_branding === false) ? 'none' : '';
+    // Font family
+    if (c.font_family && c.font_family !== 'system-ui') {
+      var fontLink = document.getElementById('htchat-font');
+      if (!fontLink) {
+        fontLink = document.createElement('link');
+        fontLink.id = 'htchat-font';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+      }
+      fontLink.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(c.font_family) + ':wght@400;500;600&display=swap';
+      var root = document.getElementById('htchat-widget');
+      if (root) root.style.fontFamily = "'" + c.font_family + "', system-ui, sans-serif";
+    }
+  }
+
+  function applyBubbleStyles() {
+    var c = widgetConfig || {};
+    document.querySelectorAll('.htchat-msg-bot .htchat-msg-bubble').forEach(function (el) {
+      el.style.background = c.bot_bubble_color || '#f3f4f6';
+      el.style.color = c.bot_bubble_text || '#1f2937';
+    });
+    document.querySelectorAll('.htchat-msg-user .htchat-msg-bubble').forEach(function (el) {
+      el.style.background = c.user_bubble_color || c.primary_color || '#c9a84c';
+      el.style.color = c.user_bubble_text || '#ffffff';
+    });
   }
 
   // ── Panel ──
@@ -258,6 +321,16 @@
     fetch(API + '/config').then(function (r) { return r.json(); }).then(function (data) {
       widgetConfig = data;
       applyColor();
+      applyBubbleStyles();
+      // Re-apply position with config
+      var launcher = document.getElementById('htchat-launcher');
+      if (launcher) applyPosition(launcher);
+      var panel = document.getElementById('htchat-panel');
+      if (panel) {
+        var pos = getPosition();
+        panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
+        panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
+      }
       if (data.company_name) {
         var h3 = document.querySelector('#htchat-header-info h3');
         if (h3) h3.textContent = data.company_name;
@@ -307,10 +380,15 @@
       return;
     }
 
+    var c = widgetConfig || {};
     container.innerHTML = messages.map(function (m) {
-      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' +
-        (m.role === 'user' ? 'background:' + getColor() : '') +
-        '">' + formatText(m.content) + '</div></div>';
+      var bubbleStyle = '';
+      if (m.role === 'user') {
+        bubbleStyle = 'background:' + (c.user_bubble_color || getColor()) + ';color:' + (c.user_bubble_text || '#ffffff');
+      } else {
+        bubbleStyle = 'background:' + (c.bot_bubble_color || '#f3f4f6') + ';color:' + (c.bot_bubble_text || '#1f2937') + ';border:none';
+      }
+      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + formatText(m.content) + '</div></div>';
     }).join('');
 
     if (isLoading) {
