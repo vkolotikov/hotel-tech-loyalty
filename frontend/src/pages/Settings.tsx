@@ -1460,6 +1460,218 @@ export function Settings() {
         </div>
       </div>
 
+      {/* ── Style & Appearance ────────────────────────────────── */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <Palette size={15} className="text-emerald-400" /> Style & Appearance
+        </h3>
+        <div className="space-y-5">
+          {/* Color Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {([
+              { key: 'header_text_color', label: 'Header Text', def: '#ffffff' },
+              { key: 'user_bubble_color', label: 'User Bubble', def: wf.primary_color || '#c9a84c' },
+              { key: 'user_bubble_text', label: 'User Bubble Text', def: '#ffffff' },
+              { key: 'bot_bubble_color', label: 'Bot Bubble', def: '#f3f4f6' },
+              { key: 'bot_bubble_text', label: 'Bot Bubble Text', def: '#1f2937' },
+              { key: 'chat_bg_color', label: 'Chat Background', def: '#ffffff' },
+              { key: 'header_gradient_end', label: 'Header Gradient End', def: '' },
+            ] as { key: string; label: string; def: string }[]).map(c => (
+              <div key={c.key}>
+                <label className="block text-xs text-gray-500 mb-1.5">{c.label}</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={wf[c.key] || c.def || '#000000'}
+                    onChange={e => updateWidget(c.key, e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-white/[0.06] bg-transparent" />
+                  <input type="text" value={wf[c.key] || ''} placeholder={c.def || 'auto'}
+                    onChange={e => updateWidget(c.key, e.target.value)}
+                    className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1.5 text-xs text-white font-mono" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Header Style */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Header Style</label>
+              <div className="flex gap-2">
+                {['solid', 'gradient'].map(s => (
+                  <button key={s} onClick={() => updateWidget('header_style', s)}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs capitalize transition-colors ${
+                      (wf.header_style || 'solid') === s ? 'border-emerald-500/30 bg-emerald-500/10 text-white' : 'border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                    }`}>{s}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Font Family</label>
+              <select value={wf.font_family || 'Inter'} onChange={e => updateWidget('font_family', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1.5 text-xs text-white">
+                {['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montserrat', 'Nunito', 'Playfair Display', 'Georgia', 'system-ui'].map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Launcher Size: {wf.launcher_size || 56}px</label>
+              <input type="range" min="40" max="80" step="2" value={wf.launcher_size || 56}
+                onChange={e => updateWidget('launcher_size', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+            </div>
+          </div>
+
+          {/* Border Radius + Branding */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Border Radius: {wf.border_radius ?? 16}px</label>
+              <input type="range" min="0" max="24" step="1" value={wf.border_radius ?? 16}
+                onChange={e => updateWidget('border_radius', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Lead Capture Delay: {wf.lead_capture_delay ?? 0}s</label>
+              <input type="range" min="0" max="300" step="5" value={wf.lead_capture_delay ?? 0}
+                onChange={e => updateWidget('lead_capture_delay', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+            </div>
+            <div className="flex items-center gap-3 pt-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={wf.show_branding ?? true}
+                  onChange={e => updateWidget('show_branding', e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 bg-white/[0.06] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+              </label>
+              <span className="text-xs text-white">Show Branding</span>
+            </div>
+          </div>
+
+          {/* Save */}
+          <div className="flex justify-end pt-2 border-t border-white/[0.04]">
+            <button onClick={() => widgetSaveMutation.mutate(wf)} disabled={widgetSaveMutation.isPending}
+              className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40'}>
+              <Save size={13} /> {widgetSaveMutation.isPending ? 'Saving...' : 'Save Style'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Live Preview ──────────────────────────────────────── */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <Eye size={15} className="text-emerald-400" /> Live Preview
+        </h3>
+        <div className="flex gap-6 flex-col lg:flex-row">
+          {/* Chat Window Preview */}
+          <div className="flex-1 flex justify-center">
+            <div className="w-[360px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl"
+              style={{ borderRadius: `${wf.border_radius ?? 16}px`, fontFamily: wf.font_family || 'Inter' }}>
+              {/* Header */}
+              <div className="px-4 py-3 flex items-center gap-3" style={{
+                background: (wf.header_style || 'solid') === 'gradient' && wf.header_gradient_end
+                  ? `linear-gradient(135deg, ${wf.primary_color || '#c9a84c'}, ${wf.header_gradient_end})`
+                  : (wf.primary_color || '#c9a84c'),
+                color: wf.header_text_color || '#ffffff',
+              }}>
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <MessageSquare size={14} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">{wf.company_name || 'Your Hotel'}</div>
+                  <div className="text-[10px] opacity-80">Online — typically replies instantly</div>
+                </div>
+              </div>
+
+              {/* Messages Area */}
+              <div className="p-4 space-y-3" style={{ backgroundColor: wf.chat_bg_color || '#ffffff', minHeight: 220 }}>
+                {/* Bot message */}
+                <div className="flex items-end gap-2">
+                  <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: wf.primary_color || '#c9a84c' }}>
+                    <MessageSquare size={10} style={{ color: wf.header_text_color || '#fff' }} />
+                  </div>
+                  <div className="max-w-[75%] px-3 py-2 text-xs rounded-2xl rounded-bl-sm" style={{
+                    backgroundColor: wf.bot_bubble_color || '#f3f4f6',
+                    color: wf.bot_bubble_text || '#1f2937',
+                    borderRadius: `${Math.max(4, (wf.border_radius ?? 16) - 4)}px`,
+                    borderBottomLeftRadius: '4px',
+                  }}>
+                    {wf.welcome_message || 'Hello! How can I help you today?'}
+                  </div>
+                </div>
+
+                {/* User message */}
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] px-3 py-2 text-xs rounded-2xl rounded-br-sm" style={{
+                    backgroundColor: wf.user_bubble_color || wf.primary_color || '#c9a84c',
+                    color: wf.user_bubble_text || '#ffffff',
+                    borderRadius: `${Math.max(4, (wf.border_radius ?? 16) - 4)}px`,
+                    borderBottomRightRadius: '4px',
+                  }}>
+                    I'd like to book a room for next weekend
+                  </div>
+                </div>
+
+                {/* Bot reply */}
+                <div className="flex items-end gap-2">
+                  <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: wf.primary_color || '#c9a84c' }}>
+                    <MessageSquare size={10} style={{ color: wf.header_text_color || '#fff' }} />
+                  </div>
+                  <div className="max-w-[75%] px-3 py-2 text-xs rounded-2xl rounded-bl-sm" style={{
+                    backgroundColor: wf.bot_bubble_color || '#f3f4f6',
+                    color: wf.bot_bubble_text || '#1f2937',
+                    borderRadius: `${Math.max(4, (wf.border_radius ?? 16) - 4)}px`,
+                    borderBottomLeftRadius: '4px',
+                  }}>
+                    I'd be happy to help you with a reservation! What dates and how many guests?
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Area */}
+              <div className="px-3 py-2.5 border-t flex items-center gap-2" style={{
+                backgroundColor: wf.chat_bg_color || '#ffffff',
+                borderColor: 'rgba(0,0,0,0.08)',
+              }}>
+                <div className="flex-1 px-3 py-1.5 rounded-full text-xs" style={{
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  color: 'rgba(0,0,0,0.35)',
+                }}>Type your message...</div>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: wf.primary_color || '#c9a84c' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={wf.header_text_color || '#fff'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+              </div>
+
+              {/* Branding */}
+              {(wf.show_branding ?? true) && (
+                <div className="text-center py-1.5 text-[9px]" style={{
+                  backgroundColor: wf.chat_bg_color || '#ffffff',
+                  color: 'rgba(0,0,0,0.25)',
+                }}>Powered by Hotel Tech</div>
+              )}
+            </div>
+          </div>
+
+          {/* Launcher Preview */}
+          <div className="flex flex-col items-center gap-4 lg:pt-8">
+            <span className="text-xs text-gray-500">Launcher Button</span>
+            <div className="flex items-center justify-center" style={{
+              width: `${wf.launcher_size || 56}px`,
+              height: `${wf.launcher_size || 56}px`,
+              backgroundColor: wf.primary_color || '#c9a84c',
+              borderRadius: (wf.launcher_shape || 'circle') === 'circle' ? '50%'
+                : (wf.launcher_shape === 'pill') ? `${(wf.launcher_size || 56) / 2}px`
+                : (wf.launcher_shape === 'rounded-square') ? '16px'
+                : '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              color: wf.header_text_color || '#fff',
+            }}>
+              <MessageSquare size={Math.round((wf.launcher_size || 56) * 0.4)} />
+            </div>
+            <span className="text-[10px] text-gray-600 capitalize">{wf.launcher_shape || 'circle'} · {wf.launcher_size || 56}px</span>
+            <span className="text-[10px] text-gray-600">Position: {wf.position || 'bottom-right'}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Embed Code / Integration */}
       <div className={cardClass} style={cardStyle}>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">

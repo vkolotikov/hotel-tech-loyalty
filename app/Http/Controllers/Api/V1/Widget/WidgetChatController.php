@@ -55,26 +55,40 @@ class WidgetChatController extends Controller
         $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
         $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
 
+        $primaryColor = $config->primary_color ?: (\App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $config->organization_id)
+            ->where('key', 'primary_color')
+            ->value('value') ?: '#2d6a4f');
+
         return response()->json([
-            'company_name'    => $config->company_name,
-            'welcome_message' => $config->welcome_message,
-            'primary_color'   => $config->primary_color ?: (\App\Models\HotelSetting::withoutGlobalScopes()
-                ->where('organization_id', $config->organization_id)
-                ->where('key', 'primary_color')
-                ->value('value') ?: '#2d6a4f'),
-            'position'        => $config->position,
-            'icon_style'      => $config->icon_style,
-            'launcher_shape'  => $config->launcher_shape,
-            'launcher_icon'   => $config->launcher_icon,
-            'lead_capture'    => [
+            'company_name'       => $config->company_name,
+            'welcome_message'    => $config->welcome_message,
+            'primary_color'      => $primaryColor,
+            'header_text_color'  => $config->header_text_color ?? '#ffffff',
+            'user_bubble_color'  => $config->user_bubble_color ?? $primaryColor,
+            'user_bubble_text'   => $config->user_bubble_text ?? '#ffffff',
+            'bot_bubble_color'   => $config->bot_bubble_color ?? '#f3f4f6',
+            'bot_bubble_text'    => $config->bot_bubble_text ?? '#1f2937',
+            'chat_bg_color'      => $config->chat_bg_color ?? '#ffffff',
+            'font_family'        => $config->font_family ?? 'Inter',
+            'border_radius'      => $config->border_radius ?? 16,
+            'show_branding'      => $config->show_branding ?? true,
+            'header_style'       => $config->header_style ?? 'solid',
+            'header_gradient_end' => $config->header_gradient_end,
+            'launcher_size'      => $config->launcher_size ?? 56,
+            'position'           => $config->position,
+            'icon_style'         => $config->icon_style,
+            'launcher_shape'     => $config->launcher_shape,
+            'launcher_icon'      => $config->launcher_icon,
+            'lead_capture'       => [
                 'enabled' => $config->lead_capture_enabled,
                 'fields'  => $config->lead_capture_fields ?? ['name' => true, 'email' => true, 'phone' => false],
                 'delay'   => $config->lead_capture_delay,
             ],
-            'assistant_name'  => $behavior->assistant_name ?? 'Hotel Assistant',
-            'assistant_avatar' => $behavior->assistant_avatar ?? null,
-            'offline_message' => $config->offline_message,
-            'voice_enabled'   => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
+            'assistant_name'     => $behavior->assistant_name ?? 'Hotel Assistant',
+            'assistant_avatar'   => $behavior->assistant_avatar ?? null,
+            'offline_message'    => $config->offline_message,
+            'voice_enabled'      => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
         ]);
     }
 

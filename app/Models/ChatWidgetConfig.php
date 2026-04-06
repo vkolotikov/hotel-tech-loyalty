@@ -17,6 +17,18 @@ class ChatWidgetConfig extends Model
         'company_name',
         'welcome_message',
         'primary_color',
+        'header_text_color',
+        'user_bubble_color',
+        'user_bubble_text',
+        'bot_bubble_color',
+        'bot_bubble_text',
+        'chat_bg_color',
+        'font_family',
+        'border_radius',
+        'show_branding',
+        'header_style',
+        'header_gradient_end',
+        'launcher_size',
         'position',
         'icon_style',
         'launcher_shape',
@@ -33,6 +45,9 @@ class ChatWidgetConfig extends Model
         'lead_capture_enabled' => 'boolean',
         'lead_capture_delay' => 'integer',
         'is_active' => 'boolean',
+        'show_branding' => 'boolean',
+        'border_radius' => 'integer',
+        'launcher_size' => 'integer',
     ];
 
     public static function getForOrg(int $orgId): self
