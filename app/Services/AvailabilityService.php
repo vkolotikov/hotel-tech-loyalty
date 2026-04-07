@@ -57,10 +57,36 @@ class AvailabilityService
     /** Get rates for a single unit. */
     public function unitRates(string $unitId, string $checkIn, string $checkOut, int $adults = 2): array
     {
-        $rates = $this->smoobu->getRates($checkIn, $checkOut, [$unitId]);
-        $data  = $rates['data'] ?? $rates;
+        try {
+            $rates = $this->smoobu->getRates($checkIn, $checkOut, [$unitId]);
+            $data  = $rates['data'] ?? $rates;
+            $rate  = $data[$unitId] ?? null;
+            if ($rate && ($rate['available'] ?? false)) {
+                return $rate;
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu unitRates failed, falling back to DB base price', [
+                'unit_id' => $unitId, 'error' => $e->getMessage(),
+            ]);
+        }
 
-        return $data[$unitId] ?? [];
+        // Fallback: use DB room base_price (works for DB-only rooms or when Smoobu has no data)
+        $rooms = $this->getRooms();
+        $room  = $rooms[$unitId] ?? null;
+        if (!$room) return [];
+
+        $nights = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+        $base   = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
+        if ($base <= 0) return [];
+
+        return [
+            'apartment_id'    => $unitId,
+            'available'       => true,
+            'min_stay'        => 1,
+            'price'           => round($base * $nights, 2),
+            'price_per_night' => $base,
+            'currency'        => $room['currency'] ?? 'EUR',
+        ];
     }
 
     /** Get cheapest price per night for each date in a range. */

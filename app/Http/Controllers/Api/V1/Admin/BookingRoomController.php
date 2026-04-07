@@ -29,6 +29,14 @@ class BookingRoomController extends Controller
     /** POST /v1/admin/booking-rooms — create room. */
     public function store(Request $request): JsonResponse
     {
+        // Decode JSON-stringified arrays from FormData BEFORE validation
+        foreach (['amenities', 'tags'] as $jsonField) {
+            if ($request->has($jsonField) && is_string($request->input($jsonField))) {
+                $decoded = json_decode($request->input($jsonField), true);
+                if (is_array($decoded)) $request->merge([$jsonField => $decoded]);
+            }
+        }
+
         $data = $request->validate([
             'name'              => 'required|string|max:200',
             'description'       => 'nullable|string|max:2000',
@@ -80,6 +88,14 @@ class BookingRoomController extends Controller
     {
         $room = BookingRoom::findOrFail($id);
 
+        // Decode JSON-stringified arrays from FormData BEFORE validation
+        foreach (['amenities', 'tags'] as $jsonField) {
+            if ($request->has($jsonField) && is_string($request->input($jsonField))) {
+                $decoded = json_decode($request->input($jsonField), true);
+                if (is_array($decoded)) $request->merge([$jsonField => $decoded]);
+            }
+        }
+
         $data = $request->validate([
             'name'              => 'nullable|string|max:200',
             'description'       => 'nullable|string|max:2000',
@@ -111,14 +127,6 @@ class BookingRoomController extends Controller
                 $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
             }
             $data['gallery'] = $gallery;
-        }
-
-        // Handle amenities/tags as JSON strings from FormData
-        foreach (['amenities', 'tags'] as $jsonField) {
-            if ($request->has($jsonField) && is_string($request->input($jsonField))) {
-                $decoded = json_decode($request->input($jsonField), true);
-                if (is_array($decoded)) $data[$jsonField] = $decoded;
-            }
         }
 
         $room->update($data);
