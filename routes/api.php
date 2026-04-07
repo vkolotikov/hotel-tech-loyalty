@@ -180,6 +180,7 @@ Route::prefix('v1')->group(function () {
             Route::post('properties',                          [PropertyAdminController::class, 'store']);
             Route::get('properties/{id}',                      [PropertyAdminController::class, 'show']);
             Route::put('properties/{id}',                      [PropertyAdminController::class, 'update']);
+            Route::delete('properties/{id}',                   [PropertyAdminController::class, 'destroy']);
             Route::get('properties/{id}/outlets',              [PropertyAdminController::class, 'outlets']);
             Route::post('properties/{id}/outlets',             [PropertyAdminController::class, 'storeOutlet']);
             Route::put('properties/{id}/outlets/{outletId}',   [PropertyAdminController::class, 'updateOutlet']);
@@ -301,6 +302,9 @@ Route::prefix('v1')->group(function () {
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update']);
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);
+            Route::get('guests/{guest}/inquiries',        [GuestController::class, 'inquiries']);
+            Route::get('guests/{guest}/reservations',     [GuestController::class, 'reservations']);
+            Route::get('guests/{guest}/activities',       [GuestController::class, 'activities']);
             Route::post('guests/{guest}/activities',      [GuestController::class, 'addActivity']);
             Route::post('guests/{guest}/tags',            [GuestController::class, 'syncTags']);
 

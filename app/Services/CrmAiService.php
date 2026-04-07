@@ -95,12 +95,15 @@ class CrmAiService
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
-                    'guest_name'       => ['type' => 'string', 'description' => 'Full name of the guest'],
+                    'customer_name'    => ['type' => 'string', 'description' => 'Full name of the guest/customer'],
                     'email'            => ['type' => 'string', 'description' => 'Email if found'],
                     'phone'            => ['type' => 'string', 'description' => 'Phone if found'],
                     'company'          => ['type' => 'string', 'description' => 'Company name'],
-                    'nationality'      => ['type' => 'string', 'description' => 'Nationality/country'],
-                    'inquiry_type'     => ['type' => 'string', 'description' => 'Type of inquiry'],
+                    'country'          => ['type' => 'string', 'description' => 'Country of residence'],
+                    'nationality'      => ['type' => 'string', 'description' => 'Nationality if explicitly mentioned'],
+                    'guest_type'       => ['type' => 'string', 'description' => 'Guest type (Individual, Corporate, Group, etc.)'],
+                    'vip_level'        => ['type' => 'string', 'description' => 'VIP level if mentioned (Standard, Silver, Gold, Platinum, Diamond)'],
+                    'inquiry_type'     => ['type' => 'string', 'description' => 'Type of inquiry (Booking, Event, MICE, Quote, etc.)'],
                     'check_in'         => ['type' => 'string', 'description' => 'Check-in date YYYY-MM-DD'],
                     'check_out'        => ['type' => 'string', 'description' => 'Check-out date YYYY-MM-DD'],
                     'num_rooms'        => ['type' => 'integer', 'description' => 'Number of rooms'],
@@ -108,14 +111,14 @@ class CrmAiService
                     'num_children'     => ['type' => 'integer', 'description' => 'Number of children'],
                     'room_type'        => ['type' => 'string', 'description' => 'Requested room type'],
                     'total_value'      => ['type' => 'number', 'description' => 'Estimated value'],
-                    'source'           => ['type' => 'string', 'description' => 'Lead source channel'],
+                    'source'           => ['type' => 'string', 'description' => 'Lead source channel (Email, WhatsApp, Phone, Website, etc.)'],
                     'special_requests' => ['type' => 'string', 'description' => 'Any special requests'],
                     'notes'            => ['type' => 'string', 'description' => 'Summary of the inquiry'],
                     'priority'         => ['type' => 'string', 'enum' => ['Low', 'Medium', 'High']],
                     'event_name'       => ['type' => 'string', 'description' => 'Event name if MICE'],
                     'event_pax'        => ['type' => 'integer', 'description' => 'Event attendees if MICE'],
                 ],
-                'required' => ['guest_name', 'notes'],
+                'required' => ['customer_name', 'notes'],
             ],
         ]];
 
@@ -124,7 +127,15 @@ class CrmAiService
 
         foreach ($res['content'] ?? [] as $block) {
             if (($block['type'] ?? '') === 'tool_use' && $block['name'] === 'save_extracted_inquiry') {
-                return ['success' => true, 'data' => $block['input']];
+                $data = $block['input'];
+                // Backwards-compat: accept old field names if Claude returns them
+                if (isset($data['guest_name']) && empty($data['customer_name'])) {
+                    $data['customer_name'] = $data['guest_name'];
+                }
+                if (empty($data['country']) && !empty($data['nationality'])) {
+                    $data['country'] = $data['nationality'];
+                }
+                return ['success' => true, 'data' => $data];
             }
         }
 
@@ -237,14 +248,21 @@ class CrmAiService
         if ($tools)      $body['tools']       = $tools;
         if ($toolChoice) $body['tool_choice']  = $toolChoice;
 
-        $response = Http::timeout(90)->withHeaders([
-            'x-api-key' => $this->apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
-        ])->post('https://api.anthropic.com/v1/messages', $body);
+        try {
+            $response = Http::timeout(90)->withHeaders([
+                'x-api-key' => $this->apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
+            ])->post('https://api.anthropic.com/v1/messages', $body);
+        } catch (\Throwable $e) {
+            \Log::error('CrmAi HTTP call failed', ['error' => $e->getMessage()]);
+            return ['content' => [['type' => 'text', 'text' => 'AI service unreachable: ' . $e->getMessage()]]];
+        }
 
         if (!$response->successful()) {
-            return ['content' => [['type' => 'text', 'text' => 'API error: ' . $response->status()]]];
+            $bodyPreview = substr($response->body(), 0, 500);
+            \Log::warning('CrmAi non-2xx', ['status' => $response->status(), 'body' => $bodyPreview]);
+            return ['content' => [['type' => 'text', 'text' => 'API error ' . $response->status() . ': ' . $bodyPreview]]];
         }
-        return $response->json();
+        return $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
     }
 
     /* ────────── Helpers ────────── */
@@ -263,7 +281,18 @@ class CrmAiService
 
     private function buildSystemPrompt(): string
     {
-        $settings = CrmSetting::all()->pluck('value', 'key');
+        // Defensive helper: each lookup is wrapped so a single failed query (missing
+        // table during migration, scope error, missing org context) cannot 500 the
+        // entire AI chat — we just substitute an empty value and keep going.
+        $safe = function (callable $fn, $default = null) {
+            try { return $fn(); }
+            catch (\Throwable $e) {
+                \Log::warning('CrmAi buildSystemPrompt sub-query failed', ['error' => $e->getMessage()]);
+                return $default;
+            }
+        };
+
+        $settings = $safe(fn() => CrmSetting::all()->pluck('value', 'key')->toArray(), []);
         $roomTypes  = implode(', ', ($settings['room_types'] ?? []));
         $inqTypes   = implode(', ', ($settings['inquiry_types'] ?? []));
         $inqStatuses= implode(', ', ($settings['inquiry_statuses'] ?? []));
@@ -272,25 +301,25 @@ class CrmAiService
         $currency   = ($settings['currency_symbol'] ?? '€');
         $mealPlans  = implode(', ', ($settings['meal_plans'] ?? []));
 
-        $properties = Property::where('is_active', true)->get(['id', 'name', 'code'])->map(fn($p) => "{$p->name} ({$p->code}, ID:{$p->id})")->implode(', ');
+        $properties = $safe(fn() => Property::where('is_active', true)->get(['id', 'name', 'code'])->map(fn($p) => "{$p->name} ({$p->code}, ID:{$p->id})")->implode(', '), '');
 
-        $guestCount   = Guest::count();
-        $memberCount  = LoyaltyMember::count();
-        $activeInq    = Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->count();
-        $pipelineVal  = (float) Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->sum('total_value');
-        $inHouse      = Reservation::where('status', 'Checked In')->count();
-        $arrivalsToday= Reservation::where('check_in', now()->toDateString())->where('status', 'Confirmed')->count();
+        $guestCount   = $safe(fn() => Guest::count(), 0);
+        $memberCount  = $safe(fn() => LoyaltyMember::count(), 0);
+        $activeInq    = $safe(fn() => Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->count(), 0);
+        $pipelineVal  = $safe(fn() => (float) Inquiry::whereNotIn('status', ['Confirmed', 'Lost'])->sum('total_value'), 0.0);
+        $inHouse      = $safe(fn() => Reservation::where('status', 'Checked In')->count(), 0);
+        $arrivalsToday= $safe(fn() => Reservation::where('check_in', now()->toDateString())->where('status', 'Confirmed')->count(), 0);
         $today        = now()->toDateString();
 
         // Loyalty context
-        $tiers        = LoyaltyTier::where('is_active', true)->orderBy('min_points')->get(['name', 'min_points', 'earn_rate'])->map(fn($t) => "{$t->name} ({$t->min_points}+ pts, {$t->earn_rate}x)")->implode(', ');
-        $activeOffers = SpecialOffer::active()->count();
-        $totalPoints  = LoyaltyMember::sum('current_points');
+        $tiers        = $safe(fn() => LoyaltyTier::where('is_active', true)->orderBy('min_points')->get(['name', 'min_points', 'earn_rate'])->map(fn($t) => "{$t->name} ({$t->min_points}+ pts, {$t->earn_rate}x)")->implode(', '), '');
+        $activeOffers = $safe(fn() => SpecialOffer::active()->count(), 0);
+        $totalPoints  = $safe(fn() => LoyaltyMember::sum('current_points'), 0);
 
         // Booking engine context
-        $pmsCount     = BookingMirror::count();
-        $pmsUpcoming  = BookingMirror::where('arrival_date', '>=', $today)->where('booking_state', '!=', 'cancelled')->count();
-        $pmsBalance   = round((float) BookingMirror::selectRaw('COALESCE(SUM(price_total), 0) - COALESCE(SUM(price_paid), 0) as balance')->value('balance'), 2);
+        $pmsCount     = $safe(fn() => BookingMirror::count(), 0);
+        $pmsUpcoming  = $safe(fn() => BookingMirror::where('arrival_date', '>=', $today)->where('booking_state', '!=', 'cancelled')->count(), 0);
+        $pmsBalance   = $safe(fn() => round((float) BookingMirror::selectRaw('COALESCE(SUM(price_total), 0) - COALESCE(SUM(price_paid), 0) as balance')->value('balance'), 2), 0.0);
 
         return <<<PROMPT
 You are an expert AI assistant for the Hotel Tech platform — a comprehensive hotel management system. You are the central intelligence hub that connects CRM, Loyalty, Booking Engine, Events, and Operations into a unified workflow.

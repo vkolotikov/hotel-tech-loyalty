@@ -74,6 +74,22 @@ export function Properties() {
     onError: () => toast.error('Failed to save property'),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/admin/properties/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-properties'] })
+      toast.success('Property deleted')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to delete property')
+    },
+  })
+
+  const handleDelete = (p: Property) => {
+    if (!confirm(`Delete property "${p.name}"? This cannot be undone.`)) return
+    deleteMutation.mutate(p.id)
+  }
+
   const outletMutation = useMutation({
     mutationFn: (data: any) => api.post(`/v1/admin/properties/${expandedProperty}/outlets`, data),
     onSuccess: () => {
@@ -229,7 +245,8 @@ export function Properties() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-t-secondary">{p.outlets_count} outlets</span>
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(p) }} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(p) }} className="text-t-secondary hover:text-white p-1" title="Edit"><Pencil size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(p) }} className="text-t-secondary hover:text-[#ff375f] p-1" title="Delete" disabled={deleteMutation.isPending}><Trash2 size={14} /></button>
                 </div>
               </div>
 

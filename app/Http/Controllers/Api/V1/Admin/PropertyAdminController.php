@@ -84,6 +84,32 @@ class PropertyAdminController extends Controller
         return response()->json(['message' => 'Property updated', 'property' => $property]);
     }
 
+    public function destroy(int $id): JsonResponse
+    {
+        $property = Property::find($id);
+        if (!$property) {
+            return response()->json(['message' => 'Property not found.'], 404);
+        }
+
+        // Block deletion if dependent records exist — prevents orphaned bookings/outlets.
+        $outletsCount = Outlet::where('property_id', $id)->count();
+        $bookingsCount = 0;
+        try {
+            $bookingsCount = \App\Models\Booking::where('property_id', $id)->count();
+        } catch (\Throwable $e) {
+            // Bookings table may not have property_id in some setups; ignore.
+        }
+
+        if ($outletsCount > 0 || $bookingsCount > 0) {
+            return response()->json([
+                'message' => "Cannot delete property: it has {$outletsCount} outlet(s) and {$bookingsCount} booking(s). Remove or reassign them first.",
+            ], 422);
+        }
+
+        $property->delete();
+        return response()->json(['message' => 'Property deleted']);
+    }
+
     // ─── Outlets ─────────────────────────────────────────────────────────────
 
     public function outlets(int $propertyId): JsonResponse

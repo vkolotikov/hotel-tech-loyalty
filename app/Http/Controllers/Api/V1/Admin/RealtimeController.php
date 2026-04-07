@@ -17,6 +17,16 @@ class RealtimeController extends Controller
      */
     public function poll(Request $request)
     {
+        // init=1 → seed the client with the current max id WITHOUT replaying old events.
+        // Used on first page load when the client has no stored last_id.
+        if ($request->boolean('init')) {
+            $maxId = (int) \App\Models\RealtimeEvent::max('id');
+            return response()->json([
+                'events'  => [],
+                'last_id' => $maxId,
+            ]);
+        }
+
         $lastId = (int) $request->get('last_id', 0);
         $events = $this->events->since($lastId);
 

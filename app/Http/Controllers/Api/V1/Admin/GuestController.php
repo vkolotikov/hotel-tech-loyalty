@@ -77,16 +77,66 @@ class GuestController extends Controller
         return response()->json($guest->fresh(), 201);
     }
 
-    public function show(Guest $guest): JsonResponse
+    public function show(int $id): JsonResponse
     {
-        $guest->load([
-            'inquiries'    => fn($q) => $q->with('property:id,name,code')->latest()->limit(20),
-            'reservations' => fn($q) => $q->with('property:id,name,code')->latest('check_in')->limit(20),
-            'activities'   => fn($q) => $q->latest()->limit(30),
-            'tags',
-            'member.tier',
-        ]);
+        // Explicit lookup so we can return precise errors instead of a generic 404
+        // from route model binding (which respects TenantScope and silently 404s
+        // when the guest exists but belongs to a different organization).
+        $guest = Guest::find($id);
+
+        if (!$guest) {
+            // Diagnose: does the row exist at all (cross-tenant)?
+            $exists = Guest::withoutGlobalScopes()->where('id', $id)->exists();
+            \Log::warning('Guest show 404', [
+                'id' => $id,
+                'exists_cross_tenant' => $exists,
+                'current_org' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+            ]);
+            return response()->json([
+                'message' => $exists
+                    ? 'Guest belongs to a different organization.'
+                    : 'Guest not found.',
+            ], 404);
+        }
+
+        try {
+            $guest->load([
+                'inquiries'    => fn($q) => $q->with('property:id,name,code')->latest()->limit(20),
+                'reservations' => fn($q) => $q->with('property:id,name,code')->latest('check_in')->limit(20),
+                'activities'   => fn($q) => $q->latest()->limit(30),
+                'tags',
+                'member.tier',
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Guest show load failed', ['id' => $id, 'error' => $e->getMessage()]);
+            // Still return the base guest record so the page can render
+        }
+
         return response()->json($guest);
+    }
+
+    public function inquiries(int $id): JsonResponse
+    {
+        $guest = Guest::find($id);
+        if (!$guest) return response()->json(['data' => []]);
+        $rows = $guest->inquiries()->with('property:id,name,code')->latest()->limit(50)->get();
+        return response()->json(['data' => $rows]);
+    }
+
+    public function reservations(int $id): JsonResponse
+    {
+        $guest = Guest::find($id);
+        if (!$guest) return response()->json(['data' => []]);
+        $rows = $guest->reservations()->with('property:id,name,code')->latest('check_in')->limit(50)->get();
+        return response()->json(['data' => $rows]);
+    }
+
+    public function activities(int $id): JsonResponse
+    {
+        $guest = Guest::find($id);
+        if (!$guest) return response()->json(['data' => []]);
+        $rows = $guest->activities()->latest()->limit(100)->get();
+        return response()->json(['data' => $rows]);
     }
 
     public function update(Request $request, Guest $guest): JsonResponse
