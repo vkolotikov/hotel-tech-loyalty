@@ -38,19 +38,56 @@ class SmoobuClient
             return $this->mockRates($checkIn, $checkOut, $unitIds);
         }
 
+        $raw = $this->fetchRawRates($checkIn, $checkOut, $unitIds);
+
+        // Normalize Smoobu response: convert per-apartment daily rates into our format
+        return $this->normalizeRates($raw, $checkIn, $checkOut);
+    }
+
+    /**
+     * Get per-day rates without averaging.
+     * Returns: [ '<unitId>' => [ '<YYYY-MM-DD>' => ['price'=>..., 'available'=>0|1, 'min_length_of_stay'=>...], ... ] ]
+     * Used for calendar pricing where we need cheapest-per-day, not average.
+     */
+    public function getDailyRates(string $start, string $end, array $unitIds = []): array
+    {
+        if ($this->isMock) {
+            return $this->mockDailyRates($start, $end, $unitIds);
+        }
+
+        $raw = $this->fetchRawRates($start, $end, $unitIds);
+        $data = $raw['data'] ?? $raw;
+        $result = [];
+        foreach ($data as $aptId => $dailyRates) {
+            if (!is_array($dailyRates)) continue;
+            $byDate = [];
+            foreach ($dailyRates as $date => $dayData) {
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) continue;
+                if (is_array($dayData)) {
+                    $byDate[$date] = [
+                        'price'     => (float) ($dayData['price'] ?? 0),
+                        'available' => ($dayData['available'] ?? 0) == 1,
+                        'min_stay'  => (int) ($dayData['min_length_of_stay'] ?? $dayData['min_stay'] ?? 1),
+                    ];
+                } else {
+                    $byDate[$date] = ['price' => (float) $dayData, 'available' => true, 'min_stay' => 1];
+                }
+            }
+            $result[(string) $aptId] = $byDate;
+        }
+        return $result;
+    }
+
+    private function fetchRawRates(string $checkIn, string $checkOut, array $unitIds = []): array
+    {
         $params = [
             'start_date' => $checkIn,
             'end_date'   => $checkOut,
         ];
-        // Smoobu expects apartments[] array format
         if (!empty($unitIds)) {
             $params['apartments'] = $unitIds;
         }
-
-        $raw = $this->get('/rates', $params);
-
-        // Normalize Smoobu response: convert per-apartment daily rates into our format
-        return $this->normalizeRates($raw, $checkIn, $checkOut);
+        return $this->get('/rates', $params);
     }
 
     public function createReservation(array $data): array
@@ -277,6 +314,30 @@ class SmoobuClient
             if (is_array($decoded) && !empty($decoded)) return $decoded;
         }
         return [];
+    }
+
+    private function mockDailyRates(string $start, string $end, array $unitIds): array
+    {
+        $units  = $this->getUnitsConfig();
+        $result = [];
+        foreach ($units as $id => $unit) {
+            if (!empty($unitIds) && !in_array((string)$id, array_map('strval', $unitIds)) && !in_array($id, $unitIds)) continue;
+            $base = (float) ($unit['base_price'] ?? $unit['price_per_night'] ?? 100);
+            $byDate = [];
+            $cur = new \DateTime($start);
+            $endDt = new \DateTime($end);
+            while ($cur <= $endDt) {
+                $dateStr = $cur->format('Y-m-d');
+                $dow = (int) $cur->format('N');
+                $price = ($dow >= 5 && $dow <= 6) ? round($base * 1.2, 2) : $base;
+                $seed = crc32($dateStr . $id);
+                $price = max(1.0, $price + ($seed % 21) - 10);
+                $byDate[$dateStr] = ['price' => $price, 'available' => true, 'min_stay' => 1];
+                $cur->modify('+1 day');
+            }
+            $result[(string) $id] = $byDate;
+        }
+        return $result;
     }
 
     private function mockRates(string $checkIn, string $checkOut, array $unitIds): array

@@ -28,6 +28,7 @@
   var isSpeaking = false;
   var ttsEnabled = false;
   var recognition = null;
+  var lastUserLang = (navigator.language || 'en-US');
   var isVoiceCall = false;
   var voicePc = null; // WebRTC PeerConnection
   var voiceDataChannel = null;
@@ -415,7 +416,7 @@
     fetch(API + '/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, message: msg }),
+      body: JSON.stringify({ session_id: sessionId, message: msg, lang: lastUserLang }),
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -441,14 +442,33 @@
     }
   }
 
+  // Detected language for STT/TTS — uses browser locale, can be overridden by widget config
+  var sttLang = (window.HotelChatConfig && window.HotelChatConfig.lang)
+    || (navigator.language || navigator.userLanguage || 'en-US');
+  var silenceTimer = null;
+  var SILENCE_MS = 2500; // auto-finalize after 2.5s of no new speech
+  var manualStop = false;
+
   function startListening() {
     if (!hasSTT || isListening) return;
     recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    // continuous=true so the browser doesn't cut off at first short pause —
+    // we manage end-of-utterance ourselves via a silence timer.
+    recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = sttLang;
+    manualStop = false;
 
     var finalTranscript = '';
+
+    function armSilenceTimer() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(function () {
+        if (recognition && isListening) {
+          try { recognition.stop(); } catch (e) {}
+        }
+      }, SILENCE_MS);
+    }
 
     recognition.onstart = function () {
       isListening = true;
@@ -458,6 +478,7 @@
       if (hint) hint.innerHTML = '<span class="recording-hint"><span class="recording-dot"></span>Listening… tap mic to stop</span>';
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) { inputEl.placeholder = 'Listening…'; inputEl.style.borderColor = '#ef4444'; }
+      armSilenceTimer();
     };
 
     recognition.onresult = function (e) {
@@ -469,31 +490,51 @@
       }
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
-        inputEl.value = finalTranscript || interim;
-        document.getElementById('htchat-send-btn').disabled = !(finalTranscript || interim).trim();
+        inputEl.value = (finalTranscript + ' ' + interim).trim();
+        document.getElementById('htchat-send-btn').disabled = !inputEl.value;
       }
+      // Reset silence countdown on every speech event
+      armSilenceTimer();
     };
 
     recognition.onend = function () {
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       isListening = false;
       recognition = null;
       resetMicUI();
-      if (finalTranscript.trim()) {
-        setTimeout(function () { sendMessage(finalTranscript.trim()); }, 150);
+      var text = finalTranscript.trim();
+      if (text && !manualStop) {
+        // Remember language used so the AI replies in the same language
+        lastUserLang = sttLang;
+        setTimeout(function () { sendMessage(text); }, 150);
+      } else if (text && manualStop) {
+        // User tapped mic to stop — leave text in input but don't auto-send
+        var inputEl = document.getElementById('htchat-input');
+        if (inputEl) inputEl.value = text;
       }
     };
 
     recognition.onerror = function (e) {
-      if (e.error !== 'aborted') console.warn('HotelChat STT error:', e.error);
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+      if (e.error !== 'aborted' && e.error !== 'no-speech') console.warn('HotelChat STT error:', e.error);
       isListening = false;
       recognition = null;
       resetMicUI();
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn('HotelChat STT start failed:', e);
+      isListening = false;
+      recognition = null;
+      resetMicUI();
+    }
   }
 
   function stopListening() {
+    manualStop = true;
+    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
     if (recognition) try { recognition.stop(); } catch (e) {}
   }
 
@@ -538,9 +579,13 @@
       if (idx >= chunks.length) { isSpeaking = false; return; }
       var utt = new SpeechSynthesisUtterance(chunks[idx]);
       utt.rate = 1.05;
+      utt.lang = lastUserLang;
       var voices = speechSynthesis.getVoices();
-      var pref = voices.find(function (v) { return v.name.indexOf('Google') > -1 && v.lang.indexOf('en') === 0; })
-        || voices.find(function (v) { return v.lang.indexOf('en') === 0; });
+      var langPrefix = (lastUserLang || 'en').split('-')[0].toLowerCase();
+      // Prefer exact locale match → language family → Google voice → first
+      var pref = voices.find(function (v) { return v.lang && v.lang.toLowerCase() === lastUserLang.toLowerCase(); })
+        || voices.find(function (v) { return v.lang && v.lang.toLowerCase().indexOf(langPrefix) === 0; })
+        || voices.find(function (v) { return v.name && v.name.indexOf('Google') > -1; });
       if (pref) utt.voice = pref;
       utt.onend = function () { idx++; next(); };
       utt.onerror = function () { idx++; next(); };

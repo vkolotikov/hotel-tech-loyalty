@@ -147,6 +147,7 @@ class WidgetChatController extends Controller
         $request->validate([
             'message'    => 'required|string|max:2000',
             'session_id' => 'required|string|max:64',
+            'lang'       => 'nullable|string|max:16',
         ]);
 
         $config = $this->resolveWidget($widgetKey);
@@ -182,7 +183,7 @@ class WidgetChatController extends Controller
         $messages = $conversation->messages ?? [];
         $messages[] = ['role' => 'user', 'content' => $request->message, 'timestamp' => now()->toIso8601String()];
 
-        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name);
+        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name, $request->input('lang'));
 
         $contextMessages = array_slice(
             array_map(fn($m) => ['role' => $m['role'], 'content' => $m['content']], $messages),
@@ -323,9 +324,26 @@ class WidgetChatController extends Controller
         return response()->json(['rules' => $rules]);
     }
 
-    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName): string
+    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null): string
     {
         $parts = [];
+
+        // Language instruction — match the user's browser/voice locale so replies are in their language.
+        if ($userLang) {
+            $langMap = [
+                'en' => 'English', 'es' => 'Spanish', 'fr' => 'French', 'de' => 'German',
+                'it' => 'Italian', 'pt' => 'Portuguese', 'nl' => 'Dutch', 'pl' => 'Polish',
+                'ru' => 'Russian', 'uk' => 'Ukrainian', 'lv' => 'Latvian', 'lt' => 'Lithuanian',
+                'et' => 'Estonian', 'fi' => 'Finnish', 'sv' => 'Swedish', 'no' => 'Norwegian',
+                'da' => 'Danish', 'cs' => 'Czech', 'sk' => 'Slovak', 'hu' => 'Hungarian',
+                'ro' => 'Romanian', 'bg' => 'Bulgarian', 'el' => 'Greek', 'tr' => 'Turkish',
+                'ar' => 'Arabic', 'he' => 'Hebrew', 'zh' => 'Chinese', 'ja' => 'Japanese',
+                'ko' => 'Korean', 'hi' => 'Hindi',
+            ];
+            $prefix = strtolower(explode('-', $userLang)[0]);
+            $langName = $langMap[$prefix] ?? $userLang;
+            $parts[] = "IMPORTANT: Reply in {$langName}. The user's preferred language is {$userLang}. Always respond in the same language as the user, unless they explicitly switch.";
+        }
 
         if ($config && $config->identity) {
             $parts[] = $config->identity;

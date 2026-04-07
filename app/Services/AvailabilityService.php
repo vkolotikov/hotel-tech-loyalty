@@ -19,14 +19,45 @@ class AvailabilityService
 
         $rooms   = $this->getRooms();
         $unitIds = array_keys($rooms);
+
+        // Daily rates: strict per-night availability check (no overlapping bookings).
+        try {
+            $daily = $this->smoobu->getDailyRates($checkIn, $checkOut, $unitIds);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu daily rates failed', ['error' => $e->getMessage()]);
+            $daily = [];
+        }
+
         $rates   = $this->smoobu->getRates($checkIn, $checkOut, $unitIds);
         $data    = $rates['data'] ?? $rates;
         $results = [];
+
+        // Iterate every night in the range (excluding checkout day)
+        $allDates = [];
+        $cur = new \DateTime($checkIn);
+        $endDt = new \DateTime($checkOut);
+        while ($cur < $endDt) {
+            $allDates[] = $cur->format('Y-m-d');
+            $cur->modify('+1 day');
+        }
 
         foreach ($rooms as $id => $room) {
             $rate = $data[$id] ?? null;
             if (!$rate || !($rate['available'] ?? false)) continue;
             if ($adults + $children > ($room['max_guests'] ?? 99)) continue;
+
+            // Strict per-night check: every night must be available
+            if (!empty($daily[(string) $id])) {
+                $allOk = true;
+                foreach ($allDates as $d) {
+                    $day = $daily[(string) $id][$d] ?? null;
+                    if (!$day || !($day['available'] ?? false) || ($day['price'] ?? 0) <= 0) {
+                        $allOk = false;
+                        break;
+                    }
+                }
+                if (!$allOk) continue;
+            }
 
             $results[] = [
                 'id'              => (string) $id,
@@ -89,54 +120,52 @@ class AvailabilityService
         ];
     }
 
-    /** Get cheapest price per night for each date in a range. */
+    /**
+     * Get cheapest available price per night for each date in a range.
+     * Days where no unit is available are returned as 0 (frontend can mark as unavailable).
+     */
     public function calendarPrices(string $start, string $end): array
     {
         $rooms = $this->getRooms();
         if (empty($rooms)) return [];
 
+        $unitIds = array_keys($rooms);
         $prices  = [];
+
+        try {
+            $daily = $this->smoobu->getDailyRates($start, $end, $unitIds);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Calendar prices fetch failed', ['error' => $e->getMessage()]);
+            $daily = [];
+        }
+
         $current = new \DateTime($start);
         $endDate = new \DateTime($end);
 
-        if ($this->smoobu->isMock()) {
-            while ($current <= $endDate) {
-                $dateStr   = $current->format('Y-m-d');
-                $dayOfWeek = (int) $current->format('N');
-                $cheapest  = PHP_INT_MAX;
+        while ($current <= $endDate) {
+            $dateStr  = $current->format('Y-m-d');
+            $cheapest = PHP_INT_MAX;
 
+            foreach ($unitIds as $unitId) {
+                $day = $daily[(string) $unitId][$dateStr] ?? null;
+                if ($day && ($day['available'] ?? false) && ($day['price'] ?? 0) > 0) {
+                    $cheapest = min($cheapest, (float) $day['price']);
+                }
+            }
+
+            // Fallback to DB base_price if no PMS data for this day at all
+            if ($cheapest === PHP_INT_MAX) {
+                $cheapestDb = PHP_INT_MAX;
                 foreach ($rooms as $room) {
-                    $base  = $room['base_price'] ?? $room['price_per_night'] ?? 100;
-                    $price = ($dayOfWeek >= 5 && $dayOfWeek <= 6) ? (int)($base * 1.2) : (int) $base;
-                    $seed  = crc32($dateStr . ($room['id'] ?? ''));
-                    $price = max(1, $price + ($seed % 21) - 10);
-                    $cheapest = min($cheapest, $price);
+                    $base = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
+                    if ($base > 0) $cheapestDb = min($cheapestDb, $base);
                 }
-
-                $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : $cheapest;
-                $current->modify('+1 day');
+                $prices[$dateStr] = $cheapestDb === PHP_INT_MAX ? 0 : (float) $cheapestDb;
+            } else {
+                $prices[$dateStr] = (float) $cheapest;
             }
-            return $prices;
-        }
 
-        try {
-            $rates = $this->smoobu->getRates($start, $end);
-            $data  = $rates['data'] ?? $rates;
-
-            while ($current <= $endDate) {
-                $dateStr  = $current->format('Y-m-d');
-                $cheapest = PHP_INT_MAX;
-
-                foreach ($data as $unitId => $rate) {
-                    $nightlyRate = $rate['price_per_night'] ?? 0;
-                    if ($nightlyRate > 0) $cheapest = min($cheapest, $nightlyRate);
-                }
-
-                $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : $cheapest;
-                $current->modify('+1 day');
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Calendar prices fetch failed', ['error' => $e->getMessage()]);
+            $current->modify('+1 day');
         }
 
         return $prices;
