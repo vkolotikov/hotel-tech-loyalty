@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BookingExtra;
+use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class BookingExtraController extends Controller
 {
@@ -27,16 +29,27 @@ class BookingExtraController extends Controller
             'price'       => 'nullable|numeric|min:0',
             'price_type'  => 'nullable|string|in:per_stay,per_night,per_person,per_person_night',
             'currency'    => 'nullable|string|max:10',
+            // mimes/max validated explicitly so we get a clear 422 instead of a
+            // silent server-side failure deep inside MediaService.
+            'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon'        => 'nullable|string|max:50',
             'category'    => 'nullable|string|max:50',
             'sort_order'  => 'nullable|integer',
             'is_active'   => 'nullable|boolean',
         ]);
+        // validate() returns the validated payload but we don't want the
+        // UploadedFile leaking into the model array.
+        unset($data['image']);
 
         $data['organization_id'] = app('current_organization_id');
 
         if ($request->hasFile('image')) {
-            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-extras');
+            try {
+                $data['image'] = MediaService::upload($request->file('image'), 'booking-extras');
+            } catch (\Throwable $e) {
+                Log::error('BookingExtra image upload failed', ['error' => $e->getMessage()]);
+                return response()->json(['error' => 'Image upload failed: ' . $e->getMessage()], 500);
+            }
         }
 
         return response()->json(BookingExtra::create($data), 201);
@@ -52,14 +65,21 @@ class BookingExtraController extends Controller
             'price'       => 'nullable|numeric|min:0',
             'price_type'  => 'nullable|string|in:per_stay,per_night,per_person,per_person_night',
             'currency'    => 'nullable|string|max:10',
+            'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon'        => 'nullable|string|max:50',
             'category'    => 'nullable|string|max:50',
             'sort_order'  => 'nullable|integer',
             'is_active'   => 'nullable|boolean',
         ]);
+        unset($data['image']);
 
         if ($request->hasFile('image')) {
-            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-extras');
+            try {
+                $data['image'] = MediaService::upload($request->file('image'), 'booking-extras');
+            } catch (\Throwable $e) {
+                Log::error('BookingExtra image upload failed', ['extra_id' => $id, 'error' => $e->getMessage()]);
+                return response()->json(['error' => 'Image upload failed: ' . $e->getMessage()], 500);
+            }
         }
 
         $extra->update($data);

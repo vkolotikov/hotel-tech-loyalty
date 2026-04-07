@@ -21,10 +21,21 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 })
 
-// Attach Bearer token
+// Attach Bearer token + strip Content-Type on FormData uploads.
+// Axios will only set the multipart boundary when Content-Type is unset; if
+// we leave the default 'application/json' header in place for a FormData
+// body, the server can't parse the multipart parts and file uploads silently
+// fail (this is what was breaking BookingExtras image upload).
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    // Let the browser/axios set the boundary itself.
+    delete (config.headers as Record<string, unknown>)['Content-Type']
+    delete (config.headers as Record<string, unknown>)['content-type']
+  }
+
   return config
 })
 

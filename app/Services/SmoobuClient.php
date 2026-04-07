@@ -9,17 +9,49 @@ use Illuminate\Support\Facades\Log;
 /**
  * HTTP client for Smoobu PMS API.
  * Reads credentials from hotel_settings (per-org) with env fallback.
+ *
+ * IMPORTANT — credentials are loaded LAZILY, not in the constructor.
+ *
+ * Laravel's container resolves typed controller dependencies BEFORE the
+ * controller method body runs. On public widget routes, the org is bound
+ * inside the method body via bindOrg() — i.e. AFTER this service has
+ * already been constructed. If we read settings in __construct, we'd
+ * query hotel_settings WHERE organization_id IS NULL (org not yet
+ * bound), get nothing, and silently fall into mock mode for the entire
+ * request even though a perfectly good API key is sitting in the DB.
+ *
+ * The fix: defer all setting reads to the first method call. By that
+ * point the controller body has already bound the org, so the lookup
+ * succeeds. The first call also memoises the result so subsequent
+ * calls inside the same request are free.
  */
 class SmoobuClient
 {
-    private string $baseUrl;
-    private string $apiKey;
-    private string $channelId;
-    private int $timeout;
-    private bool $isMock;
+    private ?string $baseUrl   = null;
+    private ?string $apiKey    = null;
+    private ?string $channelId = null;
+    private int $timeout       = 30;
+    private ?bool $isMock      = null;
+    private ?int $loadedForOrg = null;
 
     public function __construct()
     {
+        // Intentionally empty — credentials are loaded on first use via boot().
+    }
+
+    /**
+     * Resolve credentials from the current organisation context. Re-runs
+     * if the org context changes mid-request (e.g. across queue jobs)
+     * so we never serve one tenant's bookings against another tenant's
+     * Smoobu key.
+     */
+    private function boot(): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0;
+        if ($this->isMock !== null && $this->loadedForOrg === $orgId) {
+            return;
+        }
+
         $this->baseUrl   = rtrim($this->setting('booking_smoobu_base_url', config('services.smoobu.base_url', 'https://login.smoobu.com/api/')), '/');
         $this->apiKey    = $this->setting('booking_smoobu_api_key', config('services.smoobu.api_key', ''));
         $provider        = $this->setting('booking_smoobu_provider', config('services.smoobu.provider', 'mock'));
@@ -27,13 +59,22 @@ class SmoobuClient
         $this->isMock    = empty($this->apiKey) && $provider === 'mock';
         $this->channelId = $this->setting('booking_smoobu_channel_id', config('services.smoobu.channel_id', ''));
         $this->timeout   = (int) config('services.smoobu.timeout', 30);
+        $this->loadedForOrg = $orgId;
+
+        if ($this->isMock) {
+            Log::info('SmoobuClient running in MOCK mode', [
+                'reason' => empty($this->apiKey) ? 'no_api_key' : 'provider_mock',
+                'org_id' => $orgId,
+            ]);
+        }
     }
 
-    public function isMock(): bool { return $this->isMock; }
-    public function channelId(): string { return $this->channelId; }
+    public function isMock(): bool { $this->boot(); return (bool) $this->isMock; }
+    public function channelId(): string { $this->boot(); return (string) $this->channelId; }
 
     public function getRates(string $checkIn, string $checkOut, array $unitIds = []): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockRates($checkIn, $checkOut, $unitIds);
         }
@@ -51,6 +92,7 @@ class SmoobuClient
      */
     public function getDailyRates(string $start, string $end, array $unitIds = []): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockDailyRates($start, $end, $unitIds);
         }
@@ -116,6 +158,7 @@ class SmoobuClient
 
     public function createReservation(array $data): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockCreateReservation($data);
         }
@@ -125,6 +168,7 @@ class SmoobuClient
 
     public function getReservation(string $reservationId): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockReservation($reservationId);
         }
@@ -134,6 +178,7 @@ class SmoobuClient
 
     public function listReservations(array $params = []): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockListReservations($params);
         }
@@ -143,6 +188,7 @@ class SmoobuClient
 
     public function getPriceElements(string $reservationId): array
     {
+        $this->boot();
         if ($this->isMock) {
             return [];
         }
@@ -156,6 +202,7 @@ class SmoobuClient
      */
     public function getApartments(): array
     {
+        $this->boot();
         if ($this->isMock) {
             return $this->mockApartments();
         }
@@ -184,6 +231,7 @@ class SmoobuClient
      */
     public function getApartment(string $id): array
     {
+        $this->boot();
         if ($this->isMock) {
             return ['id' => $id, 'name' => 'Mock Unit'];
         }
