@@ -217,9 +217,21 @@ class GuestController extends Controller
         if (isset($v['email'])) $v['email_key'] = Guest::normalizeEmailKey($v['email']);
         if (isset($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
-        $guest->update($v);
-        if (isset($v['email'])) {
-            $this->linkService->linkGuestToMember($guest->fresh());
+        // Strip nulls so DB column defaults (guest_type, vip_level,
+        // lifecycle_status, importance, etc.) aren't violated and existing
+        // values aren't wiped by an empty edit form field.
+        $v = array_filter($v, fn($val) => $val !== null);
+
+        try {
+            $guest->update($v);
+        } catch (\Throwable $e) {
+            \Log::error('Guest update failed', ['id' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to update guest: ' . $e->getMessage()], 500);
+        }
+
+        if (!empty($v['email'])) {
+            try { $this->linkService->linkGuestToMember($guest->fresh()); }
+            catch (\Throwable $e) { \Log::warning('Guest member relink failed', ['id' => $id, 'error' => $e->getMessage()]); }
         }
         return response()->json($guest->fresh());
     }
