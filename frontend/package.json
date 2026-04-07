@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:prod": "cp .env.build .env.production.local && tsc -b && vite build --mode production",
+    "build": "tsc -b && vite build && npm run postbuild",
+    "build:prod": "cp .env.build .env.production.local && tsc -b && vite build --mode production && npm run postbuild",
+    "postbuild": "node -e \"const fs=require('fs'),p=require('path');const src='dist',dst='../public/spa';function rm(d){if(fs.existsSync(d))for(const f of fs.readdirSync(d)){const fp=p.join(d,f);if(f==='.htaccess')continue;if(fs.statSync(fp).isDirectory()){rm(fp);fs.rmdirSync(fp);}else fs.unlinkSync(fp);}}function cp(s,d){if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s)){const sp=p.join(s,f),dp=p.join(d,f);if(fs.statSync(sp).isDirectory())cp(sp,dp);else fs.copyFileSync(sp,dp);}}rm(dst);cp(src,dst);console.log('Synced dist -> public/spa');\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
