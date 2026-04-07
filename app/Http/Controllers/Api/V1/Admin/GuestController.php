@@ -72,8 +72,27 @@ class GuestController extends Controller
         if (!empty($v['email'])) $v['email_key'] = Guest::normalizeEmailKey($v['email']);
         if (!empty($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
-        $guest = Guest::create($v);
-        $this->linkService->linkGuestToMember($guest);
+        try {
+            $guest = Guest::create($v);
+        } catch (\Throwable $e) {
+            \Log::error('Guest store failed', [
+                'error'      => $e->getMessage(),
+                'org_bound'  => app()->bound('current_organization_id'),
+                'org_id'     => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                'fields'     => array_keys($v),
+            ]);
+            return response()->json([
+                'message' => 'Failed to create guest: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        try {
+            $this->linkService->linkGuestToMember($guest);
+        } catch (\Throwable $e) {
+            // Linking is best-effort — don't fail guest creation if matching fails.
+            \Log::warning('Guest member linking failed', ['guest_id' => $guest->id, 'error' => $e->getMessage()]);
+        }
+
         return response()->json($guest->fresh(), 201);
     }
 
@@ -139,8 +158,18 @@ class GuestController extends Controller
         return response()->json(['data' => $rows]);
     }
 
-    public function update(Request $request, Guest $guest): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
+        // Explicit lookup so the cross-tenant case returns a clear error rather
+        // than a silent 404 from route model binding under TenantScope.
+        $guest = Guest::find($id);
+        if (!$guest) {
+            $exists = Guest::withoutGlobalScopes()->where('id', $id)->exists();
+            return response()->json([
+                'message' => $exists ? 'Guest belongs to a different organization.' : 'Guest not found.',
+            ], 404);
+        }
+
         $v = $request->validate([
             'salutation'         => 'nullable|string|max:20',
             'first_name'         => 'nullable|string|max:100',
@@ -188,9 +217,22 @@ class GuestController extends Controller
         return response()->json($guest->fresh());
     }
 
-    public function destroy(Guest $guest): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        $guest->delete();
+        $guest = Guest::find($id);
+        if (!$guest) {
+            $exists = Guest::withoutGlobalScopes()->where('id', $id)->exists();
+            return response()->json([
+                'message' => $exists ? 'Guest belongs to a different organization.' : 'Guest not found.',
+            ], 404);
+        }
+
+        try {
+            $guest->delete();
+        } catch (\Throwable $e) {
+            \Log::error('Guest destroy failed', ['id' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to delete guest: ' . $e->getMessage()], 500);
+        }
         return response()->json(['message' => 'Guest deleted']);
     }
 

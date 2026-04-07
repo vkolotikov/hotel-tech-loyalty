@@ -42,64 +42,96 @@ class MemberAdminController extends Controller
             'nfc_uid'  => 'nullable|string|max:100',
         ]);
 
-        $user = User::create([
-            'name'      => $validated['name'],
-            'email'     => $validated['email'],
-            'password'  => Hash::make($validated['password']),
-            'phone'     => $validated['phone'] ?? null,
-            'user_type' => 'member',
-        ]);
-
+        // Resolve tier first so we fail fast with a clear error if no tier exists
+        // for this organization (the Bronze fallback can return null on a fresh
+        // tenant whose loyalty tiers haven't been seeded yet).
         $tier = !empty($validated['tier_id'])
             ? LoyaltyTier::find($validated['tier_id'])
-            : LoyaltyTier::where('name', 'Bronze')->first();
+            : (LoyaltyTier::where('name', 'Bronze')->first()
+                ?? LoyaltyTier::orderBy('min_points')->first());
 
-        $member = LoyaltyMember::create([
-            'user_id'        => $user->id,
-            'tier_id'        => $tier->id,
-            'member_number'  => $this->qrCode->generateMemberNumber(),
-            'qr_code_token'  => \Illuminate\Support\Str::random(64),
-            'referral_code'  => $this->qrCode->generateReferralCode(),
-            'lifetime_points'=> 0,
-            'current_points' => 0,
-            'is_active'      => true,
-            'joined_at'      => now(),
-        ]);
-
-        // Regenerate proper QR token now that the member exists
-        $this->qrCode->generateToken($member);
-
-        // Link NFC card if UID provided
-        if (!empty($validated['nfc_uid'])) {
-            $nfcUid = $validated['nfc_uid'];
-            \App\Models\NfcCard::create([
-                'member_id' => $member->id,
-                'uid'       => $nfcUid,
-                'card_type' => 'NTAG213',
-                'issued_at' => now(),
-                'issued_by' => $request->user()->id,
-                'is_active' => true,
-            ]);
-            $member->update(['qr_code_token' => $nfcUid]);
+        if (!$tier) {
+            return response()->json([
+                'message' => 'No loyalty tiers configured for this organization. Create at least one tier (e.g. Bronze) before enrolling members.',
+            ], 422);
         }
 
-        // Award welcome bonus
-        $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('welcome_bonus_points', 500), 'Welcome bonus — registered by staff', 'bonus');
+        try {
+            $member = \DB::transaction(function () use ($validated, $request, $tier) {
+                $user = User::create([
+                    'name'      => $validated['name'],
+                    'email'     => $validated['email'],
+                    'password'  => Hash::make($validated['password']),
+                    'phone'     => $validated['phone'] ?? null,
+                    'user_type' => 'member',
+                ]);
 
-        // Auto-link existing CRM guests by email
-        $this->linkService->linkMemberToGuests($member);
+                $member = LoyaltyMember::create([
+                    'user_id'        => $user->id,
+                    'tier_id'        => $tier->id,
+                    'member_number'  => $this->qrCode->generateMemberNumber(),
+                    'qr_code_token'  => \Illuminate\Support\Str::random(64),
+                    'referral_code'  => $this->qrCode->generateReferralCode(),
+                    'lifetime_points'=> 0,
+                    'current_points' => 0,
+                    'is_active'      => true,
+                    'joined_at'      => now(),
+                ]);
 
-        $this->realtime->dispatch('member', 'New Member Registered',
-            "{$user->name} joined as {$tier->name}",
-            ['id' => $member->id, 'name' => $user->name, 'tier' => $tier->name]
-        );
+                $this->qrCode->generateToken($member);
 
-        AuditLog::record('member_created', $member,
-            ['name' => $user->name, 'email' => $user->email, 'tier' => $tier->name],
-            [], $request->user(), "Member '{$user->name}' created"
-        );
+                if (!empty($validated['nfc_uid'])) {
+                    $nfcUid = $validated['nfc_uid'];
+                    \App\Models\NfcCard::create([
+                        'member_id' => $member->id,
+                        'uid'       => $nfcUid,
+                        'card_type' => 'NTAG213',
+                        'issued_at' => now(),
+                        'issued_by' => $request->user()->id,
+                        'is_active' => true,
+                    ]);
+                    $member->update(['qr_code_token' => $nfcUid]);
+                }
 
-        AnalyticsService::clearDashboardCache();
+                return $member;
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Member store failed', [
+                'error'     => $e->getMessage(),
+                'org_bound' => app()->bound('current_organization_id'),
+                'org_id'    => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+            ]);
+            return response()->json([
+                'message' => 'Failed to create member: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        // Best-effort post-creation steps — failures here must NOT 500 the request
+        // (the member already exists in the DB and is usable).
+        try {
+            $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('welcome_bonus_points', 500), 'Welcome bonus — registered by staff', 'bonus');
+        } catch (\Throwable $e) {
+            \Log::warning('Welcome bonus award failed', ['member_id' => $member->id, 'error' => $e->getMessage()]);
+        }
+
+        try { $this->linkService->linkMemberToGuests($member); }
+        catch (\Throwable $e) { \Log::warning('linkMemberToGuests failed', ['member_id' => $member->id, 'error' => $e->getMessage()]); }
+
+        try {
+            $this->realtime->dispatch('member', 'New Member Registered',
+                "{$member->user->name} joined as {$tier->name}",
+                ['id' => $member->id, 'name' => $member->user->name, 'tier' => $tier->name]
+            );
+        } catch (\Throwable $e) { \Log::warning('Realtime dispatch failed', ['error' => $e->getMessage()]); }
+
+        try {
+            AuditLog::record('member_created', $member,
+                ['name' => $member->user->name, 'email' => $member->user->email, 'tier' => $tier->name],
+                [], $request->user(), "Member '{$member->user->name}' created"
+            );
+        } catch (\Throwable $e) { \Log::warning('AuditLog::record failed', ['error' => $e->getMessage()]); }
+
+        try { AnalyticsService::clearDashboardCache(); } catch (\Throwable $e) {}
 
         return response()->json([
             'message' => 'Member created successfully',

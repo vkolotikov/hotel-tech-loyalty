@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import toast from 'react-hot-toast';
 import {
   ArrowLeft, User, Mail, Star, Calendar,
   DollarSign, Hotel, MessageSquare, Edit3, Save, X, Tag, StickyNote
@@ -12,12 +13,53 @@ type Tab = 'overview' | 'inquiries' | 'reservations' | 'activities';
 export function GuestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Record<string, any>>({});
 
   const { data: guest, isLoading, error } = useQuery({
     queryKey: ['guest', id],
     queryFn: () => api.get('/v1/admin/guests/' + id).then(r => r.data),
+  });
+
+  // Seed the edit form whenever the guest loads or the user re-enters edit mode.
+  useEffect(() => {
+    if (guest && editing) {
+      const g = (guest as any)?.data ?? guest;
+      setForm({
+        full_name: g.full_name ?? '',
+        first_name: g.first_name ?? '',
+        last_name: g.last_name ?? '',
+        email: g.email ?? '',
+        phone: g.phone ?? '',
+        country: g.country ?? '',
+        city: g.city ?? '',
+        address: g.address ?? '',
+        company: g.company ?? '',
+        guest_type: g.guest_type ?? '',
+        vip_level: g.vip_level ?? '',
+        preferred_room_type: g.preferred_room_type ?? '',
+        preferred_floor: g.preferred_floor ?? '',
+        preferred_language: g.preferred_language ?? '',
+        dietary_preferences: g.dietary_preferences ?? '',
+        lead_source: g.lead_source ?? '',
+        notes: g.notes ?? '',
+      });
+    }
+  }, [guest, editing]);
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: Record<string, any>) => api.put('/v1/admin/guests/' + id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['guest', id] });
+      qc.invalidateQueries({ queryKey: ['guests'] });
+      toast.success('Guest updated');
+      setEditing(false);
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message || 'Failed to save guest');
+    },
   });
 
   const { data: inquiries } = useQuery({
@@ -140,7 +182,16 @@ export function GuestDetail() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && <OverviewTab guest={g} editing={editing} onSave={() => setEditing(false)} />}
+        {activeTab === 'overview' && (
+          <OverviewTab
+            guest={g}
+            editing={editing}
+            form={form}
+            setForm={setForm}
+            saving={saveMutation.isPending}
+            onSave={() => saveMutation.mutate(form)}
+          />
+        )}
         {activeTab === 'inquiries' && <InquiriesTab data={inquiries} />}
         {activeTab === 'reservations' && <ReservationsTab data={reservations} />}
         {activeTab === 'activities' && <ActivitiesTab data={activities} />}
@@ -161,23 +212,57 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function OverviewTab({ guest, editing, onSave }: { guest: any; editing: boolean; onSave: () => void }) {
+function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
+  guest: any;
+  editing: boolean;
+  form: Record<string, any>;
+  setForm: (f: Record<string, any>) => void;
+  saving: boolean;
+  onSave: () => void;
+}) {
   const g = guest;
+  const set = (k: string, v: any) => setForm({ ...form, [k]: v });
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
+      {editing && (
+        <div className="md:col-span-2 bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <User size={16} /> Identity
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Full Name"><input className={inp} value={form.full_name ?? ''} onChange={e => set('full_name', e.target.value)} /></Field>
+            <Field label="Company"><input className={inp} value={form.company ?? ''} onChange={e => set('company', e.target.value)} /></Field>
+            <Field label="First Name"><input className={inp} value={form.first_name ?? ''} onChange={e => set('first_name', e.target.value)} /></Field>
+            <Field label="Last Name"><input className={inp} value={form.last_name ?? ''} onChange={e => set('last_name', e.target.value)} /></Field>
+            <Field label="Guest Type"><input className={inp} value={form.guest_type ?? ''} onChange={e => set('guest_type', e.target.value)} /></Field>
+            <Field label="VIP Level"><input className={inp} value={form.vip_level ?? ''} onChange={e => set('vip_level', e.target.value)} /></Field>
+          </div>
+        </div>
+      )}
+
       {/* Contact Info */}
       <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Mail size={16} /> Contact Information
         </h3>
-        <div className="space-y-3">
-          <InfoRow label="Email" value={g.email} />
-          <InfoRow label="Phone" value={g.phone} />
-          <InfoRow label="Country" value={g.country} />
-          <InfoRow label="City" value={g.city} />
-          <InfoRow label="Address" value={g.address} />
-        </div>
+        {editing ? (
+          <div className="space-y-3">
+            <Field label="Email"><input type="email" className={inp} value={form.email ?? ''} onChange={e => set('email', e.target.value)} /></Field>
+            <Field label="Phone"><input className={inp} value={form.phone ?? ''} onChange={e => set('phone', e.target.value)} /></Field>
+            <Field label="Country"><input className={inp} value={form.country ?? ''} onChange={e => set('country', e.target.value)} /></Field>
+            <Field label="City"><input className={inp} value={form.city ?? ''} onChange={e => set('city', e.target.value)} /></Field>
+            <Field label="Address"><textarea rows={2} className={inp} value={form.address ?? ''} onChange={e => set('address', e.target.value)} /></Field>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <InfoRow label="Email" value={g.email} />
+            <InfoRow label="Phone" value={g.phone} />
+            <InfoRow label="Country" value={g.country} />
+            <InfoRow label="City" value={g.city} />
+            <InfoRow label="Address" value={g.address} />
+          </div>
+        )}
       </div>
 
       {/* Preferences */}
@@ -185,14 +270,23 @@ function OverviewTab({ guest, editing, onSave }: { guest: any; editing: boolean;
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Star size={16} /> Preferences
         </h3>
-        <div className="space-y-3">
-          <InfoRow label="Room Type" value={g.preferred_room_type} />
-          <InfoRow label="Floor" value={g.preferred_floor} />
-          <InfoRow label="Bed Type" value={g.preferred_bed_type} />
-          <InfoRow label="Dietary" value={g.dietary_requirements} />
-          <InfoRow label="Language" value={g.language} />
-          <InfoRow label="Source" value={g.source} />
-        </div>
+        {editing ? (
+          <div className="space-y-3">
+            <Field label="Room Type"><input className={inp} value={form.preferred_room_type ?? ''} onChange={e => set('preferred_room_type', e.target.value)} /></Field>
+            <Field label="Floor"><input className={inp} value={form.preferred_floor ?? ''} onChange={e => set('preferred_floor', e.target.value)} /></Field>
+            <Field label="Language"><input className={inp} value={form.preferred_language ?? ''} onChange={e => set('preferred_language', e.target.value)} /></Field>
+            <Field label="Dietary"><input className={inp} value={form.dietary_preferences ?? ''} onChange={e => set('dietary_preferences', e.target.value)} /></Field>
+            <Field label="Source"><input className={inp} value={form.lead_source ?? ''} onChange={e => set('lead_source', e.target.value)} /></Field>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <InfoRow label="Room Type" value={g.preferred_room_type} />
+            <InfoRow label="Floor" value={g.preferred_floor} />
+            <InfoRow label="Language" value={g.preferred_language} />
+            <InfoRow label="Dietary" value={g.dietary_preferences} />
+            <InfoRow label="Source" value={g.lead_source} />
+          </div>
+        )}
       </div>
 
       {/* Tags */}
@@ -201,9 +295,9 @@ function OverviewTab({ guest, editing, onSave }: { guest: any; editing: boolean;
           <Tag size={16} /> Tags
         </h3>
         <div className="flex flex-wrap gap-2">
-          {(g.tags && g.tags.length > 0) ? g.tags.map((tag: string, i: number) => (
+          {(g.tags && g.tags.length > 0) ? g.tags.map((tag: any, i: number) => (
             <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-sm text-gray-300">
-              {tag}
+              {typeof tag === 'string' ? tag : (tag.name ?? '')}
             </span>
           )) : (
             <span className="text-gray-500 text-sm">No tags</span>
@@ -216,21 +310,37 @@ function OverviewTab({ guest, editing, onSave }: { guest: any; editing: boolean;
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <StickyNote size={16} /> Notes
         </h3>
-        <p className="text-gray-300 text-sm whitespace-pre-wrap">
-          {g.notes || 'No notes yet.'}
-        </p>
+        {editing ? (
+          <textarea rows={5} className={inp} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} />
+        ) : (
+          <p className="text-gray-300 text-sm whitespace-pre-wrap">
+            {g.notes || 'No notes yet.'}
+          </p>
+        )}
       </div>
 
       {editing && (
         <div className="md:col-span-2 flex justify-end">
           <button
             onClick={onSave}
-            className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
           >
-            <Save size={16} /> Save Changes
+            <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+const inp = 'w-full bg-[#0f0f1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500';
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      {children}
     </div>
   );
 }
