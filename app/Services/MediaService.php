@@ -14,10 +14,24 @@ class MediaService
 {
     /**
      * Get the configured media disk name.
+     * Auto-detects DO Spaces when credentials are present, even if MEDIA_DISK is not set.
      */
     public static function disk(): string
     {
-        return config('filesystems.media_disk', 'public');
+        $configured = config('filesystems.media_disk');
+        if ($configured && $configured !== 'public') {
+            return $configured;
+        }
+
+        // Auto-detect DO Spaces: if credentials are configured, prefer it over local disk
+        // (uses config() instead of env() so it works after config:cache)
+        if (config('filesystems.disks.do.key')
+            && config('filesystems.disks.do.secret')
+            && config('filesystems.disks.do.bucket')) {
+            return 'do';
+        }
+
+        return $configured ?: 'public';
     }
 
     /**
