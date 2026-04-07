@@ -112,25 +112,44 @@ class BookingEngineService
         // Try to link or create a CRM guest
         $guestId = $this->linkOrCreateGuest($guest, $orgId);
 
-        // Create reservation in Smoobu
+        // Create reservation in Smoobu. Field names follow the Smoobu Channel
+        // Manager API contract (apartmentId / arrivalDate / departureDate /
+        // channel_id). If the account doesn't have the write API enabled,
+        // Smoobu returns 404 — in that case we still record the booking locally
+        // as pending_pms_sync so the customer flow completes and staff can
+        // reconcile in the dashboard.
+        $pmsResult = null;
+        $pmsError  = null;
         try {
-            $result = $this->smoobu->createReservation([
-                'arrivalApartment' => $payload['unit_id'],
-                'arrival'          => $payload['check_in'],
-                'departure'        => $payload['check_out'],
-                'firstName'        => $guest['first_name'] ?? '',
-                'lastName'         => $guest['last_name'] ?? '',
-                'email'            => $guest['email'] ?? '',
-                'phone'            => $guest['phone'] ?? '',
-                'adults'           => $payload['adults'],
-                'children'         => $payload['children'],
-                'price'            => $payload['gross_total'],
-                'channelId'        => $this->smoobu->channelId(),
+            $pmsResult = $this->smoobu->createReservation([
+                'apartmentId' => $payload['unit_id'],
+                'arrivalDate' => $payload['check_in'],
+                'departureDate' => $payload['check_out'],
+                'channel_id'  => (int) ($this->smoobu->channelId() ?: 0),
+                'firstName'   => $guest['first_name'] ?? '',
+                'lastName'    => $guest['last_name'] ?? '',
+                'email'       => $guest['email'] ?? '',
+                'phone'       => $guest['phone'] ?? '',
+                'adults'      => (int) $payload['adults'],
+                'children'    => (int) $payload['children'],
+                'price'       => (float) $payload['gross_total'],
+                'language'    => 'en',
             ]);
         } catch (\Throwable $e) {
-            $this->logSubmission('failure', 'pms_error', $e->getMessage(), $data, $requestId, $idempotencyKey);
-            throw $e;
+            $pmsError = $e->getMessage();
+            \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
+                'org_id'  => $orgId,
+                'unit_id' => $payload['unit_id'],
+                'error'   => $pmsError,
+            ]);
+            $this->logSubmission('warning', 'pms_error', $pmsError, $data, $requestId, $idempotencyKey);
         }
+
+        $result = $pmsResult ?: [
+            'id'           => 'LOCAL-' . strtoupper(\Illuminate\Support\Str::random(10)),
+            'reference-id' => 'LOC-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)),
+        ];
+        $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
 
         // Consume hold
         $hold->update(['status' => 'consumed']);
@@ -153,8 +172,8 @@ class BookingEngineService
             'arrival_date'      => $payload['check_in'],
             'departure_date'    => $payload['check_out'],
             'price_total'       => $payload['gross_total'],
-            'internal_status'   => 'confirmed',
-            'synced_at'         => now(),
+            'internal_status'   => $internalStatus,
+            'synced_at'         => $pmsResult ? now() : null,
         ]);
 
         $response = [

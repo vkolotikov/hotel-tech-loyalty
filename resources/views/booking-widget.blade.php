@@ -127,8 +127,13 @@ input,select,textarea{font-family:inherit}
 .summary-hero-title{position:absolute;bottom:14px;left:16px;right:16px;color:#fff;font-family:var(--font-display);font-size:1.25rem;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.4)}
 
 /* Extras */
-.extra-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:10px;transition:all .2s;cursor:pointer}
-.extra-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--bg-secondary,#f3f4f6)}
+.extra-card{display:flex;align-items:stretch;gap:0;padding:0;border:2px solid var(--border);border-radius:var(--radius);margin-bottom:14px;transition:all .25s;cursor:pointer;overflow:hidden;background:var(--surface)}
+.extra-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.extra-hero{width:180px;min-height:140px;background:var(--border);position:relative;overflow:hidden;flex-shrink:0}
+.extra-hero img{width:100%;height:100%;object-fit:cover;transition:transform .4s;display:block}
+.extra-card:hover .extra-hero img{transform:scale(1.04)}
+.extra-body{display:flex;align-items:center;gap:14px;padding:14px 16px;flex:1;min-width:0}
+@media(max-width:600px){.extra-card{flex-direction:column}.extra-hero{width:100%;min-height:140px}}
 .extra-card.checked{border-color:var(--primary);background:var(--primary-light)}
 .extra-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
 .extra-card.checked .extra-check{background:var(--primary);border-color:var(--primary)}
@@ -793,13 +798,17 @@ function renderExtras() {
     extras.forEach(function(ex) {
       var checked = !!state.selectedExtras[ex.id];
       h += '<div class="extra-card' + (checked ? ' checked' : '') + '" data-extra-card="' + esc(ex.id) + '">';
-      h += '<div class="extra-check">' + (checked ? svgCheck('#fff') : '') + '</div>';
       var exImg = resolveStorageImage(ex.image);
-      if (exImg) h += '<img class="extra-thumb" src="' + esc(exImg) + '" alt="' + esc(ex.name) + '" onerror="this.style.display=\'none\'">';
+      if (exImg) {
+        h += '<div class="extra-hero"><img src="' + esc(exImg) + '" alt="' + esc(ex.name) + '" onerror="this.parentNode.style.display=\'none\'"></div>';
+      }
+      h += '<div class="extra-body">';
+      h += '<div class="extra-check">' + (checked ? svgCheck('#fff') : '') + '</div>';
       h += '<div class="extra-info"><div class="extra-name">' + esc(ex.name) + '</div>';
       if (ex.description) h += '<div class="extra-desc">' + esc(ex.description) + '</div>';
       h += '</div>';
       h += '<div class="extra-price">' + formatCurrency(ex.price) + '</div>';
+      h += '</div>';
       h += '</div>';
     });
   }
