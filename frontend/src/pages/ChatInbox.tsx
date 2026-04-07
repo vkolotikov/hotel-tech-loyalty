@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import {
   Inbox, Search, Send, UserPlus, CheckCircle, Archive,
   MessageSquare, User, Bot, AlertCircle, X, Flag,
+  MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Edit3, Save,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -18,7 +19,16 @@ export function ChatInbox() {
   const [replyText, setReplyText] = useState('')
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '', notes: '' })
+  const [showContactEdit, setShowContactEdit] = useState(false)
+  const [contactForm, setContactForm] = useState<any>({})
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState<number | null>(null)
+  const [feedbackForm, setFeedbackForm] = useState<{ rating: 'good' | 'bad'; comment: string; corrected_answer: string; apply_to_training: boolean }>({
+    rating: 'good', comment: '', corrected_answer: '', apply_to_training: false,
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const EMOJIS = ['😊', '😀', '😂', '😍', '🙏', '👍', '👏', '🎉', '❤️', '🔥', '✨', '💯', '👋', '🤝', '☺️', '😎', '🙌', '💪', '🌟', '✅']
 
   // Stats
   const { data: stats } = useQuery({
@@ -65,6 +75,29 @@ export function ChatInbox() {
     },
   })
 
+  const updateContact = useMutation({
+    mutationFn: (data: any) => api.put(`/v1/admin/chat-inbox/${selectedId}/contact`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
+      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
+      setShowContactEdit(false)
+      toast.success('Contact details updated')
+    },
+    onError: () => toast.error('Failed to update contact'),
+  })
+
+  const submitFeedback = useMutation({
+    mutationFn: ({ messageId, payload }: { messageId: number; payload: any }) =>
+      api.post(`/v1/admin/chat-inbox/messages/${messageId}/feedback`, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
+      setFeedbackOpen(null)
+      setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false })
+      toast.success('Feedback saved')
+    },
+    onError: () => toast.error('Failed to save feedback'),
+  })
+
   const captureLead = useMutation({
     mutationFn: (data: any) => api.post(`/v1/admin/chat-inbox/${selectedId}/capture-lead`, data),
     onSuccess: () => {
@@ -83,6 +116,21 @@ export function ChatInbox() {
 
   const conv = detail?.conversation
   const messages = detail?.messages || []
+  const siblings = detail?.siblings || []
+
+  // Hydrate contact form when conversation changes
+  useEffect(() => {
+    if (conv) {
+      setContactForm({
+        visitor_name: conv.visitor_name || '',
+        visitor_email: conv.visitor_email || '',
+        visitor_phone: conv.visitor_phone || '',
+        visitor_country: conv.visitor_country || '',
+        visitor_city: conv.visitor_city || '',
+        agent_notes: conv.agent_notes || '',
+      })
+    }
+  }, [conv?.id])
 
   const statusColors: Record<string, string> = {
     active: 'bg-green-500/20 text-green-400',
@@ -195,14 +243,28 @@ export function ChatInbox() {
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[conv.status] || ''}`}>{conv.status}</span>
                   {conv.member?.tier && <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">{conv.member.tier.name}</span>}
                 </div>
-                <div className="text-xs text-t-secondary mt-0.5">
+                <div className="text-xs text-t-secondary mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 items-center">
                   {conv.visitor_email && <span>{conv.visitor_email}</span>}
-                  {conv.visitor_phone && <span> | {conv.visitor_phone}</span>}
-                  <span> | {conv.channel}</span>
-                  {conv.assigned_agent && <span> | Assigned: {conv.assigned_agent.name}</span>}
+                  {conv.visitor_phone && <span>| {conv.visitor_phone}</span>}
+                  <span>| {conv.channel}</span>
+                  {(conv.visitor_country || conv.visitor_city || conv.visitor_ip) && (
+                    <span className="flex items-center gap-1 text-primary-300">
+                      <MapPin size={10} />
+                      {[conv.visitor_city, conv.visitor_country].filter(Boolean).join(', ') || conv.visitor_ip}
+                      {conv.visitor_ip && <span className="text-dark-border2">({conv.visitor_ip})</span>}
+                    </span>
+                  )}
+                  {siblings.length > 0 && (
+                    <span className="text-yellow-400">| {siblings.length} other session{siblings.length !== 1 ? 's' : ''} from this IP</span>
+                  )}
+                  {conv.assigned_agent && <span>| Assigned: {conv.assigned_agent.name}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setShowContactEdit(v => !v)}
+                  className="flex items-center gap-1 text-xs bg-primary-600/20 text-primary-300 px-3 py-1.5 rounded-lg hover:bg-primary-600/30">
+                  <Edit3 size={12} /> {showContactEdit ? 'Hide' : 'Contact'}
+                </button>
                 {!conv.lead_captured && (
                   <button onClick={() => {
                     setLeadForm({ name: conv.visitor_name || '', email: conv.visitor_email || '', phone: conv.visitor_phone || '', notes: '' })
@@ -250,6 +312,34 @@ export function ChatInbox() {
               </div>
             )}
 
+            {/* Contact Edit Panel */}
+            {showContactEdit && (
+              <div className="p-4 border-b border-dark-border bg-primary-900/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Contact details & notes</h3>
+                  <button onClick={() => setShowContactEdit(false)} className="text-t-secondary hover:text-white"><X size={14} /></button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input type="text" value={contactForm.visitor_name || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_name: e.target.value }))}
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Name" />
+                  <input type="email" value={contactForm.visitor_email || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_email: e.target.value }))}
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Email" />
+                  <input type="text" value={contactForm.visitor_phone || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_phone: e.target.value }))}
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Phone" />
+                  <input type="text" value={contactForm.visitor_country || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_country: e.target.value }))}
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Country" />
+                  <input type="text" value={contactForm.visitor_city || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_city: e.target.value }))}
+                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="City" />
+                </div>
+                <textarea value={contactForm.agent_notes || ''} onChange={e => setContactForm((p: any) => ({ ...p, agent_notes: e.target.value }))}
+                  rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Internal notes about this visitor..." />
+                <button onClick={() => updateContact.mutate(contactForm)} disabled={updateContact.isPending}
+                  className="flex items-center gap-1 bg-primary-600 text-white px-4 py-1.5 rounded text-xs hover:bg-primary-700 disabled:opacity-50">
+                  <Save size={12} /> {updateContact.isPending ? 'Saving...' : 'Save contact'}
+                </button>
+              </div>
+            )}
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg: any) => {
@@ -281,6 +371,56 @@ export function ChatInbox() {
                         </span>
                       </div>
                       <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+                      {msg.sender_type === 'ai' && (
+                        <div className="mt-2 pt-2 border-t border-primary-500/20">
+                          {msg.feedback ? (
+                            <div className="flex items-center gap-2 text-[10px] text-t-secondary">
+                              {msg.feedback.rating === 'good' ? <ThumbsUp size={10} className="text-green-400" /> : <ThumbsDown size={10} className="text-red-400" />}
+                              <span>Reviewed</span>
+                              {msg.feedback.applied_to_training && <span className="flex items-center gap-1 text-yellow-400"><GraduationCap size={10} /> trained</span>}
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: msg.feedback.rating, comment: msg.feedback.comment || '', corrected_answer: '', apply_to_training: false }) }} className="ml-auto text-primary-400 hover:underline">Edit</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false }) }} className="text-[10px] text-t-secondary hover:text-green-400 flex items-center gap-1"><ThumbsUp size={10} /> Good</button>
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'bad', comment: '', corrected_answer: '', apply_to_training: true }) }} className="text-[10px] text-t-secondary hover:text-red-400 flex items-center gap-1"><ThumbsDown size={10} /> Bad / Correct it</button>
+                            </div>
+                          )}
+                          {feedbackOpen === msg.id && (
+                            <div className="mt-2 space-y-2 bg-dark-surface/60 p-2 rounded border border-dark-border">
+                              <div className="flex gap-2">
+                                <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'good' }))}
+                                  className={`flex-1 text-[10px] py-1 rounded flex items-center justify-center gap-1 ${feedbackForm.rating === 'good' ? 'bg-green-600/30 text-green-300' : 'bg-dark-surface text-t-secondary'}`}>
+                                  <ThumbsUp size={10} /> Good
+                                </button>
+                                <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'bad' }))}
+                                  className={`flex-1 text-[10px] py-1 rounded flex items-center justify-center gap-1 ${feedbackForm.rating === 'bad' ? 'bg-red-600/30 text-red-300' : 'bg-dark-surface text-t-secondary'}`}>
+                                  <ThumbsDown size={10} /> Bad
+                                </button>
+                              </div>
+                              <textarea value={feedbackForm.comment} onChange={e => setFeedbackForm(p => ({ ...p, comment: e.target.value }))}
+                                rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1 text-white text-xs" placeholder="Comment (optional)" />
+                              {feedbackForm.rating === 'bad' && (
+                                <>
+                                  <textarea value={feedbackForm.corrected_answer} onChange={e => setFeedbackForm(p => ({ ...p, corrected_answer: e.target.value }))}
+                                    rows={3} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1 text-white text-xs" placeholder="What should the AI have said?" />
+                                  <label className="flex items-center gap-2 text-[10px] text-t-secondary">
+                                    <input type="checkbox" checked={feedbackForm.apply_to_training} onChange={e => setFeedbackForm(p => ({ ...p, apply_to_training: e.target.checked }))} />
+                                    <GraduationCap size={10} /> Save corrected answer to AI knowledge base
+                                  </label>
+                                </>
+                              )}
+                              <div className="flex gap-2">
+                                <button onClick={() => submitFeedback.mutate({ messageId: msg.id, payload: feedbackForm })} disabled={submitFeedback.isPending}
+                                  className="flex-1 bg-primary-600 text-white text-[10px] py-1 rounded hover:bg-primary-700 disabled:opacity-50">
+                                  {submitFeedback.isPending ? 'Saving...' : 'Submit feedback'}
+                                </button>
+                                <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-t-secondary hover:text-white">Cancel</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {msg.sender_type === 'agent' && (
                       <div className="w-7 h-7 rounded-full bg-blue-600/30 flex items-center justify-center flex-shrink-0">
@@ -295,8 +435,21 @@ export function ChatInbox() {
 
             {/* Reply Input */}
             {conv.status !== 'archived' && (
-              <div className="p-3 border-t border-dark-border">
-                <div className="flex gap-2">
+              <div className="p-3 border-t border-dark-border relative">
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-3 mb-2 bg-dark-surface border border-dark-border rounded-lg p-2 shadow-xl grid grid-cols-10 gap-1 z-10">
+                    {EMOJIS.map(e => (
+                      <button key={e} type="button" onClick={() => { setReplyText(p => p + e); setShowEmojiPicker(false) }}
+                        className="text-lg hover:bg-dark-surface3 rounded p-1">{e}</button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 items-end">
+                  <button type="button" onClick={() => setShowEmojiPicker(v => !v)}
+                    className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5"
+                    title="Insert emoji">
+                    <Smile size={16} />
+                  </button>
                   <textarea
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
@@ -308,7 +461,7 @@ export function ChatInbox() {
                   <button
                     onClick={() => { if (replyText.trim()) sendReply.mutate(replyText.trim()) }}
                     disabled={!replyText.trim() || sendReply.isPending}
-                    className="bg-primary-600 text-white px-4 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                    className="bg-primary-600 text-white px-4 py-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                   >
                     <Send size={16} />
                   </button>

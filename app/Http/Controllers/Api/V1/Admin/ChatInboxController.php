@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Models\ChatMessageFeedback;
 use App\Models\Guest;
 use App\Models\Inquiry;
+use App\Models\KnowledgeCategory;
+use App\Models\KnowledgeItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChatInboxController extends Controller
 {
@@ -49,6 +53,21 @@ class ChatInboxController extends Controller
 
         $conversations = $query->orderByDesc('last_message_at')->paginate(50);
 
+        // Annotate each conversation with how many other conversations exist
+        // for the same visitor IP — lets the UI show "(N sessions)" so admins
+        // know they're talking to the same person across multiple tabs/devices.
+        $ips = collect($conversations->items())->pluck('visitor_ip')->filter()->unique()->values();
+        if ($ips->isNotEmpty()) {
+            $counts = ChatConversation::where('organization_id', $orgId)
+                ->whereIn('visitor_ip', $ips)
+                ->select('visitor_ip', DB::raw('COUNT(*) as c'))
+                ->groupBy('visitor_ip')
+                ->pluck('c', 'visitor_ip');
+            foreach ($conversations->items() as $c) {
+                $c->ip_session_count = $c->visitor_ip ? (int) ($counts[$c->visitor_ip] ?? 1) : 1;
+            }
+        }
+
         return response()->json($conversations);
     }
 
@@ -66,16 +85,129 @@ class ChatInboxController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        // Attach feedback for each AI message so the UI can show the existing rating.
+        $aiMessageIds = $messages->where('sender_type', 'ai')->pluck('id')->all();
+        $feedback = $aiMessageIds
+            ? ChatMessageFeedback::whereIn('message_id', $aiMessageIds)->get()->keyBy('message_id')
+            : collect();
+        $messages->each(function ($m) use ($feedback) {
+            $m->feedback = $feedback->get($m->id);
+        });
+
         // Mark visitor messages as read
         ChatMessage::where('conversation_id', $id)
             ->where('sender_type', 'visitor')
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
+        // Find sibling conversations from the same IP so admins can jump between them.
+        $siblings = [];
+        if ($conversation->visitor_ip) {
+            $siblings = ChatConversation::where('organization_id', $conversation->organization_id)
+                ->where('visitor_ip', $conversation->visitor_ip)
+                ->where('id', '!=', $id)
+                ->orderByDesc('last_message_at')
+                ->limit(20)
+                ->get(['id', 'visitor_name', 'status', 'last_message_at', 'channel']);
+        }
+
         return response()->json([
             'conversation' => $conversation,
             'messages' => $messages,
+            'siblings' => $siblings,
         ]);
+    }
+
+    /**
+     * Update visitor contact details inline (without creating an inquiry).
+     */
+    public function updateContact(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'visitor_name'    => 'nullable|string|max:120',
+            'visitor_email'   => 'nullable|email|max:180',
+            'visitor_phone'   => 'nullable|string|max:30',
+            'visitor_country' => 'nullable|string|max:100',
+            'visitor_city'    => 'nullable|string|max:100',
+            'agent_notes'     => 'nullable|string|max:5000',
+        ]);
+
+        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
+            ->findOrFail($id);
+
+        $conversation->update($validated);
+
+        return response()->json($conversation->fresh());
+    }
+
+    /**
+     * Submit thumbs up/down feedback on an AI message and optionally save the
+     * correction to the knowledge base so the AI learns from it.
+     */
+    public function submitFeedback(Request $request, int $messageId): JsonResponse
+    {
+        $validated = $request->validate([
+            'rating'              => 'required|in:good,bad',
+            'comment'             => 'nullable|string|max:5000',
+            'apply_to_training'   => 'nullable|boolean',
+            'corrected_answer'    => 'nullable|string|max:10000',
+        ]);
+
+        $orgId = $request->user()->organization_id;
+
+        // Look up the message and ensure it belongs to a conversation in this org.
+        $message = ChatMessage::findOrFail($messageId);
+        $conv = ChatConversation::where('organization_id', $orgId)
+            ->where('id', $message->conversation_id)
+            ->firstOrFail();
+
+        $feedback = ChatMessageFeedback::updateOrCreate(
+            ['message_id' => $messageId, 'user_id' => $request->user()->id],
+            [
+                'organization_id'    => $orgId,
+                'rating'             => $validated['rating'],
+                'comment'            => $validated['comment'] ?? null,
+                'applied_to_training' => false,
+            ]
+        );
+
+        // If they want to teach the AI: find the visitor question that triggered
+        // this AI reply and store it as a knowledge item so future similar
+        // questions get the corrected answer.
+        if (!empty($validated['apply_to_training']) && !empty($validated['corrected_answer'])) {
+            try {
+                // Get the visitor message immediately preceding this AI message.
+                $question = ChatMessage::where('conversation_id', $conv->id)
+                    ->where('sender_type', 'visitor')
+                    ->where('created_at', '<', $message->created_at)
+                    ->orderByDesc('created_at')
+                    ->value('content');
+
+                if ($question) {
+                    $category = KnowledgeCategory::firstOrCreate(
+                        ['organization_id' => $orgId, 'name' => 'AI Corrections'],
+                        ['description' => 'Auto-curated answers from agent feedback', 'priority' => 10, 'sort_order' => 0, 'is_active' => true]
+                    );
+
+                    KnowledgeItem::create([
+                        'organization_id' => $orgId,
+                        'category_id'     => $category->id,
+                        'question'        => $question,
+                        'answer'          => $validated['corrected_answer'],
+                        'keywords'        => [],
+                        'priority'        => 10,
+                        'use_count'       => 0,
+                        'is_active'       => true,
+                    ]);
+
+                    $feedback->update(['applied_to_training' => true]);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Chat feedback training save failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return response()->json($feedback->fresh());
     }
 
     /**

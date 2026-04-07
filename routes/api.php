@@ -252,6 +252,8 @@ Route::prefix('v1')->group(function () {
             Route::put('chat-inbox/{id}/status',              [ChatInboxController::class, 'updateStatus']);
             Route::post('chat-inbox/{id}/messages',           [ChatInboxController::class, 'sendMessage']);
             Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
+            Route::put('chat-inbox/{id}/contact',             [ChatInboxController::class, 'updateContact']);
+            Route::post('chat-inbox/messages/{messageId}/feedback', [ChatInboxController::class, 'submitFeedback']);
 
             // ─── Popup Automation Rules ──────────────────────────────────────
             Route::get('popup-rules',                         [PopupRuleController::class, 'index']);

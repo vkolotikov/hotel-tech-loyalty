@@ -107,6 +107,12 @@ class WidgetChatController extends Controller
             $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
             $visitorName = $request->input('visitor_name');
 
+            // Capture visitor metadata (IP, user agent, page) so the inbox
+            // can dedupe and admins can see who they're talking to.
+            $visitorIp = $request->ip();
+            $userAgent = substr((string) $request->header('User-Agent'), 0, 500);
+            $pageUrl   = $request->input('page_url') ?: $request->header('Referer');
+
             AiConversation::updateOrCreate(
                 ['session_id' => $sessionId],
                 [
@@ -121,11 +127,14 @@ class WidgetChatController extends Controller
             ChatConversation::updateOrCreate(
                 ['session_id' => $sessionId],
                 [
-                    'organization_id' => $config->organization_id,
-                    'visitor_name' => $visitorName,
-                    'channel' => 'widget',
-                    'status' => 'active',
-                    'last_message_at' => now(),
+                    'organization_id'    => $config->organization_id,
+                    'visitor_name'       => $visitorName,
+                    'visitor_ip'         => $visitorIp,
+                    'visitor_user_agent' => $userAgent,
+                    'page_url'           => $pageUrl,
+                    'channel'            => 'widget',
+                    'status'             => 'active',
+                    'last_message_at'    => now(),
                 ]
             );
 
