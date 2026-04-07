@@ -72,6 +72,13 @@ class GuestController extends Controller
         if (!empty($v['email'])) $v['email_key'] = Guest::normalizeEmailKey($v['email']);
         if (!empty($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
+        // Strip nulls so DB column defaults (e.g. guest_type='Individual',
+        // vip_level='Standard') apply instead of Postgres rejecting explicit
+        // nulls against NOT NULL columns. The frontend sends undefined fields
+        // as null, which is fine for nullable columns but breaks the ones that
+        // have a default-but-not-null constraint.
+        $v = array_filter($v, fn($val) => $val !== null);
+
         try {
             $guest = Guest::create($v);
         } catch (\Throwable $e) {
