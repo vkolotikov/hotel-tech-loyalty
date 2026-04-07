@@ -334,8 +334,9 @@ class SettingsController extends Controller
         $key = $this->resolveKey('booking_smoobu_api_key', 'SMOOBU_API_KEY');
         if (!$key) return response()->json(['success' => false, 'message' => 'No API key configured']);
 
-        $base = $this->resolveKey('booking_smoobu_base_url', 'SMOOBU_BASE_URL') ?? 'https://login.smoobu.com/api';
-        $result = $this->curlTest("{$base}/apartment", ["Api-Key: {$key}", "Content-Type: application/json"]);
+        $base = rtrim($this->resolveKey('booking_smoobu_base_url', 'SMOOBU_BASE_URL') ?? 'https://login.smoobu.com/api', '/');
+        // Smoobu's list endpoint is /apartments (plural). /apartment 404s.
+        $result = $this->curlTest("{$base}/apartments", ["Api-Key: {$key}", "Content-Type: application/json"]);
         return response()->json($result);
     }
 

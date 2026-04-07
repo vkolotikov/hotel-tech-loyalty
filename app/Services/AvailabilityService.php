@@ -9,77 +9,121 @@ class AvailabilityService
 {
     public function __construct(private SmoobuClient $smoobu) {}
 
+    /**
+     * Cache key version. Bump this whenever the availability shape or
+     * Smoobu parsing changes so stale cache entries (e.g. from when the
+     * client was running in mock mode) are evicted automatically.
+     */
+    private const CACHE_VERSION = 'v2';
+
     /** Get available units for date range. */
     public function check(string $checkIn, string $checkOut, int $adults = 2, int $children = 0): array
     {
         $orgId    = app()->bound('current_organization_id') ? app('current_organization_id') : 0;
-        $cacheKey = "booking:avail:{$orgId}:{$checkIn}:{$checkOut}:{$adults}:{$children}";
+        $cacheKey = "booking:avail:" . self::CACHE_VERSION . ":{$orgId}:{$checkIn}:{$checkOut}:{$adults}:{$children}";
         $cached   = Cache::get($cacheKey);
         if ($cached) return $cached;
 
         $rooms   = $this->getRooms();
         $unitIds = array_keys($rooms);
+        if (empty($rooms)) return [];
 
-        // Daily rates: strict per-night availability check (no overlapping bookings).
+        // Build the list of nights to verify (checkIn..checkOut-1 inclusive).
+        $nights   = [];
+        $cur      = new \DateTime($checkIn);
+        $endDt    = new \DateTime($checkOut);
+        while ($cur < $endDt) {
+            $nights[] = $cur->format('Y-m-d');
+            $cur->modify('+1 day');
+        }
+        if (empty($nights)) return [];
+
+        // Daily rates are the source of truth for per-night availability.
+        // If this call fails we fall back to the aggregate /rates response,
+        // but we still treat any unit as unavailable when neither source
+        // can confirm every night — never silently let a unit through.
+        $dailyOk = true;
         try {
             $daily = $this->smoobu->getDailyRates($checkIn, $checkOut, $unitIds);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Smoobu daily rates failed', ['error' => $e->getMessage()]);
-            $daily = [];
+            $daily   = [];
+            $dailyOk = false;
         }
 
-        $rates   = $this->smoobu->getRates($checkIn, $checkOut, $unitIds);
+        try {
+            $rates = $this->smoobu->getRates($checkIn, $checkOut, $unitIds);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu rates failed', ['error' => $e->getMessage()]);
+            $rates = ['data' => []];
+        }
         $data    = $rates['data'] ?? $rates;
         $results = [];
 
-        // Iterate every night in the range (excluding checkout day)
-        $allDates = [];
-        $cur = new \DateTime($checkIn);
-        $endDt = new \DateTime($checkOut);
-        while ($cur < $endDt) {
-            $allDates[] = $cur->format('Y-m-d');
-            $cur->modify('+1 day');
-        }
-
         foreach ($rooms as $id => $room) {
-            $rate = $data[$id] ?? null;
-            if (!$rate || !($rate['available'] ?? false)) continue;
+            $key = (string) $id;
             if ($adults + $children > ($room['max_guests'] ?? 99)) continue;
 
-            // Strict per-night check: every night must be available
-            if (!empty($daily[(string) $id])) {
-                $allOk = true;
-                foreach ($allDates as $d) {
-                    $day = $daily[(string) $id][$d] ?? null;
-                    if (!$day || !($day['available'] ?? false) || ($day['price'] ?? 0) <= 0) {
-                        $allOk = false;
+            // Walk every requested night and require a real, available,
+            // priced cell. We prefer per-day data; if it's missing for this
+            // unit, we fall back to the aggregate "available" flag from
+            // normalizeRates (which is itself a strict per-night check).
+            $perDay     = $daily[$key] ?? null;
+            $totalPrice = 0.0;
+            $minStay    = 1;
+            $isAvail    = true;
+
+            if (is_array($perDay) && !empty($perDay)) {
+                foreach ($nights as $d) {
+                    $day = $perDay[$d] ?? null;
+                    if (!$day || !($day['available'] ?? false) || (float) ($day['price'] ?? 0) <= 0) {
+                        $isAvail = false;
                         break;
                     }
+                    $totalPrice += (float) $day['price'];
+                    $minStay     = max($minStay, (int) ($day['min_stay'] ?? 1));
                 }
-                if (!$allOk) continue;
+            } else {
+                // Per-day data missing for this unit — only trust the
+                // aggregate response, and only if the daily call itself
+                // succeeded (otherwise we have zero confirmation).
+                if (!$dailyOk) continue;
+
+                $rate = $data[$key] ?? $data[$id] ?? null;
+                if (!$rate || !($rate['available'] ?? false)) continue;
+                $totalPrice = (float) ($rate['price'] ?? 0);
+                $minStay    = (int) ($rate['min_stay'] ?? 1);
+                if ($totalPrice <= 0) continue;
             }
 
+            if (!$isAvail) continue;
+            if (count($nights) < $minStay) continue;
+
+            $rate = $data[$key] ?? $data[$id] ?? [];
             $results[] = [
-                'id'              => (string) $id,
-                'name'            => $room['name'] ?? '',
-                'slug'            => $room['slug'] ?? '',
-                'max_guests'      => $room['max_guests'] ?? 0,
-                'bedrooms'        => $room['bedrooms'] ?? 0,
-                'bed_type'        => $room['bed_type'] ?? '',
-                'size'            => $room['size'] ?? '',
-                'image'           => $room['image'] ?? '',
-                'gallery'         => $room['gallery'] ?? [],
-                'description'     => $room['description'] ?? '',
+                'id'                => $key,
+                'name'              => $room['name'] ?? '',
+                'slug'              => $room['slug'] ?? '',
+                'max_guests'        => $room['max_guests'] ?? 0,
+                'bedrooms'          => $room['bedrooms'] ?? 0,
+                'bed_type'          => $room['bed_type'] ?? '',
+                'size'              => $room['size'] ?? '',
+                'image'             => $room['image'] ?? '',
+                'gallery'           => $room['gallery'] ?? [],
+                'description'       => $room['description'] ?? '',
                 'short_description' => $room['short_description'] ?? '',
-                'amenities'       => $room['amenities'] ?? [],
-                'tags'            => $room['tags'] ?? [],
-                'available'       => true,
-                'price_per_night' => $rate['price_per_night'] ?? $room['base_price'] ?? 0,
-                'total_price'     => $rate['price'] ?? 0,
-                'currency'        => $rate['currency'] ?? 'EUR',
-                'min_stay'        => $rate['min_stay'] ?? 1,
+                'amenities'         => $room['amenities'] ?? [],
+                'tags'              => $room['tags'] ?? [],
+                'available'         => true,
+                'price_per_night'   => round($totalPrice / count($nights), 2),
+                'total_price'       => round($totalPrice, 2),
+                'currency'          => $rate['currency'] ?? ($room['currency'] ?? 'EUR'),
+                'min_stay'          => $minStay,
             ];
         }
+
+        // Cheapest first — matches Smoobu's own search UX.
+        usort($results, fn($a, $b) => $a['total_price'] <=> $b['total_price']);
 
         Cache::put($cacheKey, $results, 60);
         return $results;

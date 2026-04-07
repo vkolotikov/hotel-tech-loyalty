@@ -57,16 +57,27 @@ class SmoobuClient
 
         $raw = $this->fetchRawRates($start, $end, $unitIds);
         $data = $raw['data'] ?? $raw;
+
+        // Constrain the returned window to the requested night range
+        // (start..end-1 inclusive). The fetch helper already passes the
+        // correct end_date to Smoobu, but Smoobu can return adjacent days
+        // and we never want callers to see them.
+        $startTs = strtotime($start);
+        $endTs   = strtotime($end);
+
         $result = [];
         foreach ($data as $aptId => $dailyRates) {
             if (!is_array($dailyRates)) continue;
             $byDate = [];
             foreach ($dailyRates as $date => $dayData) {
                 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) continue;
+                $ts = strtotime($date);
+                if ($ts < $startTs || $ts >= $endTs) continue;
+
                 if (is_array($dayData)) {
                     $byDate[$date] = [
                         'price'     => (float) ($dayData['price'] ?? 0),
-                        'available' => ($dayData['available'] ?? 0) == 1,
+                        'available' => ((int) ($dayData['available'] ?? 0)) === 1,
                         'min_stay'  => (int) ($dayData['min_length_of_stay'] ?? $dayData['min_stay'] ?? 1),
                     ];
                 } else {
@@ -78,14 +89,27 @@ class SmoobuClient
         return $result;
     }
 
+    /**
+     * Smoobu's /api/rates `end_date` is INCLUSIVE — it represents the last
+     * NIGHT of the stay, not the departure day. A stay of checkIn..checkOut
+     * has nights checkIn..(checkOut - 1), so we must subtract one day before
+     * passing it to Smoobu, otherwise the response leaks the checkout-day
+     * rate into our totals and availability checks.
+     */
     private function fetchRawRates(string $checkIn, string $checkOut, array $unitIds = []): array
     {
+        $lastNight = date('Y-m-d', strtotime($checkOut . ' -1 day'));
+        // Guard against same-day or inverted ranges — clamp to checkIn.
+        if (strtotime($lastNight) < strtotime($checkIn)) {
+            $lastNight = $checkIn;
+        }
+
         $params = [
             'start_date' => $checkIn,
-            'end_date'   => $checkOut,
+            'end_date'   => $lastNight,
         ];
         if (!empty($unitIds)) {
-            $params['apartments'] = $unitIds;
+            $params['apartments'] = array_values($unitIds);
         }
         return $this->get('/rates', $params);
     }
@@ -171,8 +195,15 @@ class SmoobuClient
 
     /**
      * Normalize Smoobu /rates response into our standard format.
+     *
      * Smoobu returns: { "data": { "<aptId>": { "<date>": { "price": 100, "min_length_of_stay": 2, "available": 1 }, ... } } }
      * We normalize to: { "data": { "<aptId>": { "available": true, "price_per_night": avg, "price": total, "min_stay": N } } }
+     *
+     * IMPORTANT: only nights inside the requested window count toward
+     * total/availability/min_stay. Smoobu sometimes returns adjacent dates,
+     * and even our own corrected fetchRawRates passes start..(checkOut - 1),
+     * so we still defensively filter here. A unit is "available" only if
+     * EVERY night is bookable AND priced > 0; one bad night kills the unit.
      */
     private function normalizeRates(array $raw, string $checkIn, string $checkOut): array
     {
@@ -185,52 +216,71 @@ class SmoobuClient
         }
 
         $data = $raw['data'] ?? $raw;
-        $nights = max(1, (int)((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+
+        // Build the strict night window: checkIn..(checkOut - 1).
+        $nights = max(1, (int) round((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+        $window = [];
+        for ($i = 0; $i < $nights; $i++) {
+            $window[date('Y-m-d', strtotime($checkIn . " +{$i} day"))] = true;
+        }
+
         $result = [];
 
         foreach ($data as $aptId => $dailyRates) {
             if (!is_array($dailyRates)) continue;
 
-            // Check if this is daily rates format (keyed by date)
-            $totalPrice = 0;
-            $available = true;
-            $minStay = 1;
-            $dayCount = 0;
+            // Pre-normalized format passthrough.
+            if (isset($dailyRates['available']) || isset($dailyRates['price_per_night'])) {
+                $result[$aptId] = $dailyRates;
+                continue;
+            }
 
-            foreach ($dailyRates as $date => $dayData) {
-                // Skip non-date keys
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-                    // Might be pre-normalized format
-                    if ($date === 'available' || $date === 'price_per_night') {
-                        $result[$aptId] = $dailyRates;
-                        continue 2;
-                    }
-                    continue;
+            $totalPrice = 0.0;
+            $available  = true;
+            $minStay    = 1;
+            $matched    = 0;
+
+            foreach ($window as $date => $_) {
+                $dayData = $dailyRates[$date] ?? null;
+                if ($dayData === null) {
+                    // Smoobu silently omits dates outside its rate calendar
+                    // — treat that as unavailable, never as "free".
+                    $available = false;
+                    break;
                 }
 
                 if (is_array($dayData)) {
-                    $dayPrice = $dayData['price'] ?? 0;
-                    $dayAvailable = ($dayData['available'] ?? 0) == 1;
-                    $dayMinStay = $dayData['min_length_of_stay'] ?? $dayData['min_stay'] ?? 1;
+                    $dayPrice     = (float) ($dayData['price'] ?? 0);
+                    $dayAvailable = ((int) ($dayData['available'] ?? 0)) === 1;
+                    $dayMinStay   = (int) ($dayData['min_length_of_stay'] ?? $dayData['min_stay'] ?? 1);
                 } else {
-                    $dayPrice = (float) $dayData;
+                    $dayPrice     = (float) $dayData;
                     $dayAvailable = true;
-                    $dayMinStay = 1;
+                    $dayMinStay   = 1;
+                }
+
+                if (!$dayAvailable || $dayPrice <= 0) {
+                    $available = false;
+                    break;
                 }
 
                 $totalPrice += $dayPrice;
-                if (!$dayAvailable) $available = false;
-                $minStay = max($minStay, (int) $dayMinStay);
-                $dayCount++;
+                $minStay     = max($minStay, $dayMinStay);
+                $matched++;
             }
 
-            $avgPrice = $dayCount > 0 ? round($totalPrice / $dayCount, 2) : 0;
+            // Reject if the requested stay is shorter than the unit's min_stay.
+            if ($available && $nights < $minStay) {
+                $available = false;
+            }
+
+            $avgPrice = $available && $matched > 0 ? round($totalPrice / $nights, 2) : 0.0;
 
             $result[$aptId] = [
                 'apartment_id'    => $aptId,
                 'available'       => $available && $avgPrice > 0,
                 'min_stay'        => $minStay,
-                'price'           => round($totalPrice, 2),
+                'price'           => $available ? round($totalPrice, 2) : 0.0,
                 'price_per_night' => $avgPrice,
                 'currency'        => 'EUR',
             ];
