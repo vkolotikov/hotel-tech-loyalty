@@ -281,6 +281,17 @@ class LoyaltyService
             return false;
         }
 
+        // No current tier set — assign appropriate tier without comparison
+        if (!$currentTier) {
+            $member->update([
+                'tier_id'             => $appropriateTier->id,
+                'tier_effective_from' => now()->toDateString(),
+                'tier_effective_until'=> now()->addYear()->toDateString(),
+                'tier_review_date'    => now()->addYear()->toDateString(),
+            ]);
+            return true;
+        }
+
         $isUpgrade = $appropriateTier->sort_order > $currentTier->sort_order;
         $isDowngrade = $appropriateTier->sort_order < $currentTier->sort_order;
 

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -42,16 +43,33 @@ class MediaService
     public static function upload(UploadedFile $file, string $folder): string
     {
         $disk = static::disk();
-        $orgId = app('current_organization_id');
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
         $prefix = $orgId ? "org-{$orgId}/{$folder}" : $folder;
-        $path = $file->storePublicly($prefix, $disk);
+
+        try {
+            $path = $file->storePublicly($prefix, $disk);
+        } catch (\Throwable $e) {
+            Log::error('MediaService upload failed', [
+                'disk'   => $disk,
+                'folder' => $folder,
+                'error'  => $e->getMessage(),
+            ]);
+            throw new \RuntimeException("File upload failed ({$disk}): " . $e->getMessage());
+        }
+
+        if (!$path) {
+            Log::error('MediaService upload returned empty path', ['disk' => $disk, 'folder' => $folder]);
+            throw new \RuntimeException("File upload returned empty path on disk '{$disk}'");
+        }
 
         if ($disk === 'public') {
             return '/storage/' . $path;
         }
 
         // Cloud disk — return full URL
-        return Storage::disk($disk)->url($path);
+        $url = Storage::disk($disk)->url($path);
+        Log::info('MediaService uploaded to cloud', ['disk' => $disk, 'path' => $path, 'url' => $url]);
+        return $url;
     }
 
     /**

@@ -254,31 +254,47 @@ class MemberAdminController extends Controller
             'idempotency_key' => 'nullable|string|max:255',
         ]);
 
-        $member = LoyaltyMember::findOrFail($validated['member_id']);
+        $member = LoyaltyMember::with('user', 'tier')->findOrFail($validated['member_id']);
         $points = $validated['points'];
 
-        // Approval workflow: if above threshold, mark as pending
-        $approvalStatus = $this->loyaltyService->requiresApproval($points, $request->user())
-            ? 'pending_approval'
-            : 'auto_approved';
+        try {
+            // Approval workflow: if above threshold, mark as pending
+            $approvalStatus = $this->loyaltyService->requiresApproval($points, $request->user())
+                ? 'pending_approval'
+                : 'auto_approved';
 
-        $transaction = $this->loyaltyService->awardPoints(
-            member:         $member,
-            points:         $points,
-            description:    $validated['description'],
-            type:           $validated['type'] ?? 'earn',
-            staff:          $request->user(),
-            reasonCode:     $validated['reason_code'] ?? null,
-            idempotencyKey: $validated['idempotency_key'] ?? null,
-            approvalStatus: $approvalStatus,
-        );
+            $transaction = $this->loyaltyService->awardPoints(
+                member:         $member,
+                points:         $points,
+                description:    $validated['description'],
+                type:           $validated['type'] ?? 'earn',
+                staff:          $request->user(),
+                reasonCode:     $validated['reason_code'] ?? null,
+                idempotencyKey: $validated['idempotency_key'] ?? null,
+                approvalStatus: $approvalStatus,
+            );
+        } catch (\Throwable $e) {
+            \Log::error('awardPoints failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'message' => 'Failed to award points: ' . $e->getMessage(),
+            ], 500);
+        }
 
-        $this->notificationService->sendPointsEarned($member->fresh(), $points);
+        // Side effects — never break the main action if these fail
+        try {
+            $this->notificationService->sendPointsEarned($member->fresh(), $points);
+        } catch (\Throwable $e) {
+            \Log::warning('sendPointsEarned failed: ' . $e->getMessage());
+        }
 
-        $this->realtime->dispatch('points', 'Points Awarded',
-            "+{$points} pts to {$member->user->name}",
-            ['id' => $member->id, 'name' => $member->user->name, 'points' => $points, 'action' => 'award']
-        );
+        try {
+            $this->realtime->dispatch('points', 'Points Awarded',
+                "+{$points} pts to " . ($member->user->name ?? 'member'),
+                ['id' => $member->id, 'name' => $member->user->name ?? null, 'points' => $points, 'action' => 'award']
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('realtime dispatch failed: ' . $e->getMessage());
+        }
 
         $message = $approvalStatus === 'pending_approval'
             ? 'Points submitted for approval'
@@ -296,7 +312,7 @@ class MemberAdminController extends Controller
             'idempotency_key' => 'nullable|string|max:255',
         ]);
 
-        $member = LoyaltyMember::findOrFail($validated['member_id']);
+        $member = LoyaltyMember::with('user', 'tier')->findOrFail($validated['member_id']);
 
         try {
             $transaction = $this->loyaltyService->redeemPoints(
@@ -308,12 +324,19 @@ class MemberAdminController extends Controller
             );
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            \Log::error('redeemPoints failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['message' => 'Failed to redeem points: ' . $e->getMessage()], 500);
         }
 
-        $this->realtime->dispatch('points', 'Points Redeemed',
-            "-{$validated['points']} pts from {$member->user->name}",
-            ['id' => $member->id, 'name' => $member->user->name, 'points' => $validated['points'], 'action' => 'redeem']
-        );
+        try {
+            $this->realtime->dispatch('points', 'Points Redeemed',
+                "-{$validated['points']} pts from " . ($member->user->name ?? 'member'),
+                ['id' => $member->id, 'name' => $member->user->name ?? null, 'points' => $validated['points'], 'action' => 'redeem']
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('realtime dispatch failed: ' . $e->getMessage());
+        }
 
         return response()->json(['message' => 'Points redeemed', 'transaction' => $transaction]);
     }
