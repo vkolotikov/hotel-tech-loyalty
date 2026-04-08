@@ -10,6 +10,8 @@ use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\ChatWidgetConfig;
 use App\Models\PopupRule;
+use App\Models\Visitor;
+use App\Models\VisitorPageView;
 use App\Services\KnowledgeService;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +24,62 @@ class WidgetChatController extends Controller
         protected OpenAiService $openAi,
         protected KnowledgeService $knowledge,
     ) {}
+
+    /**
+     * Find or create a Visitor record for this request. The fingerprint is a
+     * hash of (org_id|ip|truncated user agent|optional cookie id) so the same
+     * person opening multiple chat sessions or tabs from the same device
+     * collapses into ONE visitor identity. We bump last_seen_at on every call
+     * and increment visit_count when the gap since last activity exceeds
+     * 30 minutes (a "new visit").
+     */
+    private function resolveVisitor(Request $request, int $orgId, ?string $cookieId = null): Visitor
+    {
+        $ip = (string) $request->ip();
+        $ua = substr((string) $request->header('User-Agent'), 0, 500);
+        $fingerprint = hash('sha256', $orgId . '|' . $ip . '|' . substr($ua, 0, 200) . '|' . ($cookieId ?: ''));
+
+        $visitor = Visitor::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('visitor_key', $fingerprint)
+            ->first();
+
+        $now      = now();
+        $pageUrl  = $request->input('page_url') ?: $request->header('Referer');
+        $pageTitle = $request->input('page_title');
+        $referrer = $request->input('referrer') ?: $request->header('Referer');
+
+        if (!$visitor) {
+            $visitor = Visitor::create([
+                'organization_id'    => $orgId,
+                'visitor_key'        => $fingerprint,
+                'visitor_ip'         => $ip,
+                'user_agent'         => $ua,
+                'referrer'           => $referrer,
+                'current_page'       => $pageUrl,
+                'current_page_title' => $pageTitle,
+                'first_seen_at'      => $now,
+                'last_seen_at'       => $now,
+                'visit_count'        => 1,
+            ]);
+        } else {
+            // New visit if there's been a 30+ minute gap
+            $isNewVisit = !$visitor->last_seen_at || $visitor->last_seen_at->lt($now->copy()->subMinutes(30));
+            $visitor->fill([
+                'visitor_ip'         => $ip,
+                'user_agent'         => $ua,
+                'last_seen_at'       => $now,
+                'current_page'       => $pageUrl ?: $visitor->current_page,
+                'current_page_title' => $pageTitle ?: $visitor->current_page_title,
+            ]);
+            if ($isNewVisit) {
+                $visitor->visit_count = (int) $visitor->visit_count + 1;
+            }
+            $visitor->save();
+        }
+
+        return $visitor;
+    }
 
     /**
      * Resolve the widget config and bind the org context so all
@@ -104,12 +162,13 @@ class WidgetChatController extends Controller
                 return response()->json(['error' => 'Widget not found'], 404);
             }
 
-            $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
+            $sessionId   = $request->input('session_id') ?? Str::uuid()->toString();
             $visitorName = $request->input('visitor_name');
+            $cookieId    = $request->input('visitor_cookie');
 
-            // Capture visitor metadata (IP, user agent, page) so the inbox
-            // can dedupe and admins can see who they're talking to.
-            $visitorIp = $request->ip();
+            // Resolve persistent visitor identity (dedupes by fingerprint).
+            $visitor = $this->resolveVisitor($request, (int) $config->organization_id, $cookieId);
+
             $userAgent = substr((string) $request->header('User-Agent'), 0, 500);
             $pageUrl   = $request->input('page_url') ?: $request->header('Referer');
 
@@ -128,8 +187,11 @@ class WidgetChatController extends Controller
                 ['session_id' => $sessionId],
                 [
                     'organization_id'    => $config->organization_id,
-                    'visitor_name'       => $visitorName,
-                    'visitor_ip'         => $visitorIp,
+                    'visitor_id'         => $visitor->id,
+                    'visitor_name'       => $visitorName ?: $visitor->display_name,
+                    'visitor_email'      => $visitor->email,
+                    'visitor_phone'      => $visitor->phone,
+                    'visitor_ip'         => $visitor->visitor_ip,
                     'visitor_user_agent' => $userAgent,
                     'page_url'           => $pageUrl,
                     'channel'            => 'widget',
@@ -139,7 +201,9 @@ class WidgetChatController extends Controller
             );
 
             return response()->json([
-                'session_id' => $sessionId,
+                'session_id'      => $sessionId,
+                'visitor_id'      => $visitor->id,
+                'visitor_key'     => $visitor->visitor_key,
                 'welcome_message' => $config->welcome_message,
             ]);
         } catch (\Throwable $e) {
@@ -223,9 +287,21 @@ class WidgetChatController extends Controller
             'tokens_used' => $conversation->tokens_used + (int) (strlen($aiResponse) / 4),
         ]);
 
+        // Bump visitor heartbeat so they stay "online" while chatting.
+        try {
+            $visitor = $this->resolveVisitor($request, (int) $orgId);
+            $visitor->increment('messages_count');
+        } catch (\Throwable $e) {
+            \Log::warning('Widget visitor heartbeat (sendMessage) failed: ' . $e->getMessage());
+            $visitor = null;
+        }
+
         // Store in chat_messages for inbox
         try {
             $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
+            if ($chatConv && $visitor && !$chatConv->visitor_id) {
+                $chatConv->visitor_id = $visitor->id;
+            }
             if ($chatConv) {
                 ChatMessage::create([
                     'conversation_id' => $chatConv->id,
@@ -285,13 +361,16 @@ class WidgetChatController extends Controller
         if (!$guest) {
             $nameParts = explode(' ', $validated['name'] ?? 'Widget Visitor', 2);
             $guest = \App\Models\Guest::create([
-                'organization_id' => $orgId,
-                'first_name'      => $nameParts[0] ?? '',
-                'last_name'       => $nameParts[1] ?? '',
-                'full_name'       => $validated['name'] ?? 'Widget Visitor',
-                'email'           => $validated['email'] ?? null,
-                'phone'           => $validated['phone'] ?? null,
-                'guest_type'      => 'individual',
+                'organization_id'  => $orgId,
+                'first_name'       => $nameParts[0] ?? '',
+                'last_name'        => $nameParts[1] ?? '',
+                'full_name'        => $validated['name'] ?? 'Widget Visitor',
+                'email'            => $validated['email'] ?? null,
+                'phone'            => $validated['phone'] ?? null,
+                'guest_type'       => 'Individual',
+                'lead_source'      => 'Chat Widget',
+                'lifecycle_status' => 'Lead',
+                'last_activity_at' => now(),
             ]);
         }
 
@@ -304,10 +383,93 @@ class WidgetChatController extends Controller
             'inquiry_type'    => 'general',
         ]);
 
+        // Mark the visitor as a lead and link to the guest so the admin
+        // visitors view shows the lead badge and can jump to the guest record.
+        try {
+            $visitor = $this->resolveVisitor($request, $orgId);
+            $visitor->fill([
+                'is_lead'      => true,
+                'guest_id'     => $guest->id,
+                'display_name' => $validated['name'] ?? $visitor->display_name,
+                'email'        => $validated['email'] ?? $visitor->email,
+                'phone'        => $validated['phone'] ?? $visitor->phone,
+            ])->save();
+
+            // Also link any existing chat conversation for this session.
+            if (!empty($validated['session_id'])) {
+                ChatConversation::where('session_id', $validated['session_id'])
+                    ->update([
+                        'visitor_id'   => $visitor->id,
+                        'lead_captured' => true,
+                        'inquiry_id'   => $inquiry->id,
+                        'visitor_name' => $validated['name'] ?? null,
+                        'visitor_email'=> $validated['email'] ?? null,
+                        'visitor_phone'=> $validated['phone'] ?? null,
+                    ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Widget lead visitor link failed: ' . $e->getMessage());
+        }
+
         return response()->json([
-            'success' => true,
+            'success'    => true,
             'inquiry_id' => $inquiry->id,
+            'guest_id'   => $guest->id,
         ]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/heartbeat — keep visitor "online" status fresh.
+     * Called every ~30s while the page is open.
+     */
+    public function heartbeat(Request $request, string $widgetKey): JsonResponse
+    {
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
+
+        $visitor = $this->resolveVisitor($request, (int) $config->organization_id, $request->input('visitor_cookie'));
+
+        return response()->json([
+            'visitor_id' => $visitor->id,
+            'online'     => true,
+        ]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/page-view — record a page navigation.
+     * Body: { url, title, referrer, duration_seconds (for previous page) }
+     */
+    public function pageView(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'url'              => 'required|string|max:2000',
+            'title'            => 'nullable|string|max:500',
+            'referrer'         => 'nullable|string|max:2000',
+            'duration_seconds' => 'nullable|integer|min:0|max:86400',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
+
+        $visitor = $this->resolveVisitor($request, (int) $config->organization_id, $request->input('visitor_cookie'));
+
+        $pv = VisitorPageView::create([
+            'organization_id'  => $config->organization_id,
+            'visitor_id'       => $visitor->id,
+            'url'              => $request->input('url'),
+            'title'            => $request->input('title'),
+            'referrer'         => $request->input('referrer'),
+            'duration_seconds' => $request->input('duration_seconds'),
+            'viewed_at'        => now(),
+        ]);
+
+        $visitor->increment('page_views_count');
+        $visitor->fill([
+            'current_page'       => $request->input('url'),
+            'current_page_title' => $request->input('title'),
+        ])->save();
+
+        return response()->json(['ok' => true, 'page_view_id' => $pv->id]);
     }
 
     /**

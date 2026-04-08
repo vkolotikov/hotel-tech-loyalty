@@ -26,6 +26,7 @@ const ChatbotConfig = lazy(() => import('./pages/ChatbotConfig').then(m => ({ de
 const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
 const WidgetBuilder = lazy(() => import('./pages/WidgetBuilder').then(m => ({ default: m.WidgetBuilder })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
+const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const PopupRules = lazy(() => import('./pages/PopupRules').then(m => ({ default: m.PopupRules })))
 const Training = lazy(() => import('./pages/Training').then(m => ({ default: m.Training })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
@@ -122,6 +123,7 @@ export default function App() {
           <Route path="/knowledge-base" element={<LazyRoute gate="admin" product="chat"><KnowledgeBase /></LazyRoute>} />
           <Route path="/widget-builder" element={<LazyRoute gate="admin" product="chat"><WidgetBuilder /></LazyRoute>} />
           <Route path="/chat-inbox" element={<LazyRoute gate="all" product="chat"><ChatInbox /></LazyRoute>} />
+          <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
           <Route path="/popup-rules" element={<LazyRoute gate="admin" product="chat"><PopupRules /></LazyRoute>} />
           <Route path="/training" element={<LazyRoute gate="admin" product="chat"><Training /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />

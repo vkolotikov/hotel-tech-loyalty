@@ -75,11 +75,13 @@ Route::prefix('v1')->group(function () {
     });
 
     // ─── Public Chat Widget API ────────────────────────────────────────────────
-    Route::prefix('widget')->middleware('throttle:30,1')->group(function () {
+    Route::prefix('widget')->middleware('throttle:60,1')->group(function () {
         Route::get('{widgetKey}/config',    [WidgetChatController::class, 'getConfig']);
         Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
         Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage']);
         Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead']);
+        Route::post('{widgetKey}/heartbeat',  [WidgetChatController::class, 'heartbeat']);
+        Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
         Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession']);
     });
@@ -254,6 +256,10 @@ Route::prefix('v1')->group(function () {
             Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
             Route::put('chat-inbox/{id}/contact',             [ChatInboxController::class, 'updateContact']);
             Route::post('chat-inbox/messages/{messageId}/feedback', [ChatInboxController::class, 'submitFeedback']);
+
+            // ─── Visitors (chat widget identities, online/offline, page views)
+            Route::get('visitors',        [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'index']);
+            Route::get('visitors/{id}',   [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'show']);
 
             // ─── Popup Automation Rules ──────────────────────────────────────
             Route::get('popup-rules',                         [PopupRuleController::class, 'index']);

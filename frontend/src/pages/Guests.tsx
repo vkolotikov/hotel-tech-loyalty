@@ -14,6 +14,25 @@ const VIP_COLORS: Record<string, string> = {
   Diamond: 'bg-cyan-500/20 text-cyan-400',
 }
 
+const SOURCE_COLORS: Record<string, string> = {
+  'Chat Widget':    'bg-blue-500/20 text-blue-300',
+  'Booking Widget': 'bg-emerald-500/20 text-emerald-300',
+  'Booking Form':   'bg-emerald-500/20 text-emerald-300',
+  'Email':          'bg-indigo-500/20 text-indigo-300',
+  'Manual':         'bg-gray-500/20 text-gray-300',
+  'Manual Entry':   'bg-gray-500/20 text-gray-300',
+  'Referral':       'bg-pink-500/20 text-pink-300',
+  'Walk-in':        'bg-orange-500/20 text-orange-300',
+}
+
+const LIFECYCLE_COLORS: Record<string, string> = {
+  Lead:     'bg-amber-500/20 text-amber-300',
+  Prospect: 'bg-yellow-500/20 text-yellow-300',
+  Customer: 'bg-emerald-500/20 text-emerald-300',
+  Repeat:   'bg-cyan-500/20 text-cyan-300',
+  Inactive: 'bg-gray-500/20 text-gray-400',
+}
+
 const EMPTY_FORM = {
   salutation: '', first_name: '', last_name: '', full_name: '', email: '', phone: '', mobile: '',
   company: '', nationality: '', country: '', guest_type: '', vip_level: 'Standard', lead_source: '', notes: '',
@@ -27,7 +46,7 @@ export function Guests() {
   const [countryFilter, setCountryFilter] = useState('')
   const [guestType, setGuestType] = useState('')
   const [vipLevel, setVipLevel] = useState('')
-  const [lifecycle] = useState('')
+  const [lifecycle, setLifecycle] = useState('')
   const [source, setSource] = useState('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
@@ -85,7 +104,7 @@ export function Guests() {
 
   const guests = data?.data ?? []
   const meta = { total: data?.total ?? 0, current_page: data?.current_page ?? 1, last_page: data?.last_page ?? 1 }
-  const hasFilters = countryFilter || guestType || vipLevel || source
+  const hasFilters = countryFilter || guestType || vipLevel || source || lifecycle
 
   const toggleSort = (col: string) => {
     if (sort === col) setDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -160,7 +179,15 @@ export function Guests() {
               <option value="">All Sources</option>
               {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
             </select>
-            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setSource(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
+            <select value={lifecycle} onChange={e => { setLifecycle(e.target.value); setPage(1) }} className={filterSel}>
+              <option value="">All Lifecycle</option>
+              <option value="Lead">Lead</option>
+              <option value="Prospect">Prospect</option>
+              <option value="Customer">Customer</option>
+              <option value="Repeat">Repeat</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setSource(''); setLifecycle(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
           </div>
         )}
       </div>
@@ -178,6 +205,8 @@ export function Guests() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Nationality</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">VIP Level</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Loyalty</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Source</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Lifecycle</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Guest Type</th>
                 <SortHeader col="total_stays" label="Total Stays" />
                 <SortHeader col="total_revenue" label="Total Revenue" />
@@ -187,8 +216,8 @@ export function Guests() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && guests.length === 0 && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">No guests found</td></tr>}
+              {isLoading && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && guests.length === 0 && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">No guests found</td></tr>}
               {guests.map((g: any) => (
                 <tr key={g.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors cursor-pointer" onClick={() => navigate(`/guests/${g.id}`)}>
                   <td className="px-4 py-3 font-medium text-white">{g.full_name}</td>
@@ -205,6 +234,24 @@ export function Guests() {
                     {g.loyalty_tier ? (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-primary-500/20 text-primary-400">
                         <Link2 size={10} /> {g.loyalty_tier}
+                      </span>
+                    ) : (
+                      <span className="text-[#636366] text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.lead_source ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_COLORS[g.lead_source] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                        {g.lead_source}
+                      </span>
+                    ) : (
+                      <span className="text-[#636366] text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.lifecycle_status ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LIFECYCLE_COLORS[g.lifecycle_status] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                        {g.lifecycle_status}
                       </span>
                     ) : (
                       <span className="text-[#636366] text-xs">—</span>

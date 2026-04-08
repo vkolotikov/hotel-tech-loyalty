@@ -133,6 +133,58 @@
     createLauncher();
     createPanel();
     loadConfig();
+    startVisitorTracking();
+  }
+
+  // ── Visitor tracking ──
+  // Sends heartbeat every 60s so admin sees online/offline status, and a
+  // page-view ping on initial load + each pushState/popstate so the admin
+  // visitor detail panel can show the visitor's navigation path.
+  function getVisitorCookie() {
+    var name = 'htchat_vid=';
+    var parts = document.cookie.split(';');
+    for (var i = 0; i < parts.length; i++) {
+      var c = parts[i].trim();
+      if (c.indexOf(name) === 0) return c.substring(name.length);
+    }
+    var id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    document.cookie = name + id + ';path=/;max-age=' + (60 * 60 * 24 * 365);
+    return id;
+  }
+
+  function trackHeartbeat() {
+    fetch(API + '/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitor_cookie: getVisitorCookie() }),
+    }).catch(function () {});
+  }
+
+  function trackPageView() {
+    fetch(API + '/page-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitor_cookie: getVisitorCookie(),
+        url: location.href,
+        title: document.title,
+        referrer: document.referrer || null,
+      }),
+    }).catch(function () {});
+  }
+
+  function startVisitorTracking() {
+    trackPageView();
+    trackHeartbeat();
+    setInterval(trackHeartbeat, 60000);
+    // Hook SPA navigation
+    var lastUrl = location.href;
+    var checkUrl = function () {
+      if (location.href !== lastUrl) { lastUrl = location.href; trackPageView(); }
+    };
+    window.addEventListener('popstate', checkUrl);
+    var origPush = history.pushState;
+    history.pushState = function () { origPush.apply(this, arguments); setTimeout(checkUrl, 0); };
   }
 
   function injectStyles() {
@@ -347,7 +399,11 @@
 
   function initSession() {
     if (sessionId) return;
-    fetch(API + '/init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    fetch(API + '/init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitor_cookie: getVisitorCookie(), page_url: location.href, page_title: document.title }),
+    })
       .then(function (r) { return r.json(); })
       .then(function (data) { sessionId = data.session_id; })
       .catch(function () {});

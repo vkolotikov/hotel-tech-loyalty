@@ -12,6 +12,7 @@ class ChatConversation extends Model
     protected $fillable = [
         'organization_id',
         'member_id',
+        'visitor_id',
         'visitor_name',
         'visitor_email',
         'visitor_phone',
@@ -58,6 +59,11 @@ class ChatConversation extends Model
     public function inquiry()
     {
         return $this->belongsTo(Inquiry::class);
+    }
+
+    public function visitor()
+    {
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
 
     public function scopeActive($query)

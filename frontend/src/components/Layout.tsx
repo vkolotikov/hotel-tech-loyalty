@@ -10,7 +10,7 @@ import {
   Crown, Award, Building2, UserCheck, FileText,
   CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CalendarDays, ListChecks, CreditCard, Home, Package,
+  BedDouble, CalendarDays, ListChecks, CreditCard, Home, Package, Eye,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -47,6 +47,7 @@ const navGroups: NavGroup[] = [
     label: 'AI Chat',
     items: [
       { path: '/chat-inbox',      label: 'Inbox',          icon: Inbox,          gate: 'all',   product: 'chat' },
+      { path: '/visitors',        label: 'Visitors',       icon: Eye,            gate: 'all',   product: 'chat' },
       { path: '/chatbot-config',  label: 'Chatbot Config', icon: Bot,            gate: 'admin', product: 'chat' },
       { path: '/knowledge-base',  label: 'Knowledge Base', icon: BookOpen,       gate: 'admin', product: 'chat' },
       { path: '/popup-rules',     label: 'Popup Rules',    icon: Zap,            gate: 'admin', product: 'chat' },

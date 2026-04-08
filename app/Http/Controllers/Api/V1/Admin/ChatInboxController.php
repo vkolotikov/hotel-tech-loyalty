@@ -328,13 +328,16 @@ class ChatInboxController extends Controller
         if (!$guest) {
             $nameParts = explode(' ', $validated['name'] ?? $conversation->visitor_name ?? 'Visitor', 2);
             $guest = Guest::create([
-                'organization_id' => $orgId,
-                'first_name' => $nameParts[0] ?? '',
-                'last_name' => $nameParts[1] ?? '',
-                'full_name' => $validated['name'] ?? $conversation->visitor_name ?? 'Visitor',
-                'email' => $validated['email'] ?? $conversation->visitor_email,
-                'phone' => $validated['phone'] ?? $conversation->visitor_phone,
-                'guest_type' => 'individual',
+                'organization_id'  => $orgId,
+                'first_name'       => $nameParts[0] ?? '',
+                'last_name'        => $nameParts[1] ?? '',
+                'full_name'        => $validated['name'] ?? $conversation->visitor_name ?? 'Visitor',
+                'email'            => $validated['email'] ?? $conversation->visitor_email,
+                'phone'            => $validated['phone'] ?? $conversation->visitor_phone,
+                'guest_type'       => 'Individual',
+                'lead_source'      => 'Chat Widget',
+                'lifecycle_status' => 'Lead',
+                'last_activity_at' => now(),
             ]);
         }
 
@@ -354,6 +357,18 @@ class ChatInboxController extends Controller
             'visitor_email' => $validated['email'] ?? $conversation->visitor_email,
             'visitor_phone' => $validated['phone'] ?? $conversation->visitor_phone,
         ]);
+
+        // Promote the visitor identity to lead and link the guest record.
+        if ($conversation->visitor_id) {
+            \App\Models\Visitor::where('id', $conversation->visitor_id)
+                ->update([
+                    'is_lead'      => true,
+                    'guest_id'     => $guest->id,
+                    'display_name' => $guest->full_name,
+                    'email'        => $guest->email,
+                    'phone'        => $guest->phone,
+                ]);
+        }
 
         return response()->json([
             'success' => true,
