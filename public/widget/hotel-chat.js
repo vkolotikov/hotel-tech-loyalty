@@ -105,7 +105,13 @@
     #htchat-voice-overlay .end-call-btn:hover { background: #dc2626; }\
     #htchat-voice-overlay .end-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
     @keyframes htchat-voice-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }\
-    @media (max-width: 480px) { #htchat-panel { width: calc(100vw - 20px); height: calc(100vh - 80px); right: 10px !important; bottom: 70px !important; border-radius: 12px; } }\
+    @media (max-width: 600px) {\
+      #htchat-panel { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
+      #htchat-launcher { bottom: 16px !important; }\
+      #htchat-header { padding-top: max(14px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }\
+      #htchat-input-area { padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }\
+      #htchat-input { font-size: 16px; }\
+    }\
   ';
 
   // ── SVG Icons ──
@@ -263,6 +269,15 @@
     if (sendBtn) sendBtn.style.background = color;
     var inputArea = document.getElementById('htchat-input-area');
     if (inputArea && c.chat_bg_color) inputArea.style.background = c.chat_bg_color;
+    // Apply configurable copy
+    var headerInfo = document.getElementById('htchat-header-info');
+    if (headerInfo) {
+      var ht = c.header_title || 'AI Assistant';
+      var hs = c.header_subtitle || 'Ask me anything';
+      headerInfo.innerHTML = '<h3>' + escapeHtml(ht) + '</h3><p>' + escapeHtml(hs) + '</p>';
+    }
+    var inputEl2 = document.getElementById('htchat-input');
+    if (inputEl2 && c.input_placeholder) inputEl2.placeholder = c.input_placeholder;
     // Branding
     var branding = document.getElementById('htchat-branding');
     if (branding) branding.style.display = (c.show_branding === false) ? 'none' : '';
@@ -415,25 +430,26 @@
     if (!container) return;
 
     if (messages.length === 0) {
-      var welcome = widgetConfig && widgetConfig.welcome_message ? widgetConfig.welcome_message : 'Hi! How can I help you today?';
-      var suggestions = [
-        'What services do you offer?',
-        'I want to check my booking',
-        'Tell me about loyalty rewards',
-      ];
+      var wc = widgetConfig || {};
+      var welcomeTitle = wc.welcome_title || wc.welcome_message || 'Hi! How can I help you today?';
+      var welcomeSub = wc.welcome_subtitle || 'Ask about reservations, loyalty program, hotel services, or anything else.';
+      var showSug = wc.show_suggestions !== false;
+      var defaultSug = ['What services do you offer?', 'I want to check my booking', 'Tell me about loyalty rewards'];
+      var rawSug = Array.isArray(wc.suggestions) && wc.suggestions.length ? wc.suggestions : defaultSug;
+      var suggestions = rawSug.filter(function (s) { return s && String(s).trim(); });
       container.innerHTML = '\
         <div class="htchat-welcome">\
           <div class="htchat-welcome-icon" style="background:' + getColor() + '22;color:' + getColor() + '">' + ICONS.sparkles + '</div>\
-          <h3>' + escapeHtml(welcome) + '</h3>\
-          <p>Ask about reservations, loyalty program, hotel services, or anything else.' +
+          <h3>' + escapeHtml(welcomeTitle) + '</h3>\
+          <p>' + escapeHtml(welcomeSub) +
           (hasSTT ? ' <span style="color:' + getColor() + '">You can also use voice input.</span>' : '') +
-          '</p>\
-          <div class="htchat-suggestions">' +
+          '</p>' +
+          (showSug && suggestions.length ? '<div class="htchat-suggestions">' +
             suggestions.map(function (s) {
               return '<button class="htchat-suggestion" onclick="document.getElementById(\'htchat-input\').value=\'' + escapeHtml(s) + '\';document.getElementById(\'htchat-send-btn\').disabled=false;document.getElementById(\'htchat-send-btn\').click()">' + escapeHtml(s) + '</button>';
             }).join('') +
-          '</div>\
-        </div>';
+          '</div>' : '') +
+        '</div>';
       return;
     }
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
@@ -13,7 +14,13 @@ type ConvStatus = 'all' | 'active' | 'waiting' | 'resolved' | 'archived'
 
 export function ChatInbox() {
   const qc = useQueryClient()
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [searchParams] = useSearchParams()
+  const initialId = searchParams.get('id') ? Number(searchParams.get('id')) : null
+  const [selectedId, setSelectedId] = useState<number | null>(initialId)
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id) setSelectedId(Number(id))
+  }, [searchParams])
   const [statusFilter, setStatusFilter] = useState<ConvStatus>('all')
   const [search, setSearch] = useState('')
   const [replyText, setReplyText] = useState('')

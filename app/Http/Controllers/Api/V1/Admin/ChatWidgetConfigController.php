@@ -27,7 +27,15 @@ class ChatWidgetConfigController extends Controller
     {
         $validated = $request->validate([
             'company_name'         => 'nullable|string|max:180',
+            'header_title'         => 'nullable|string|max:80',
+            'header_subtitle'      => 'nullable|string|max:120',
             'welcome_message'      => 'nullable|string|max:1000',
+            'welcome_title'        => 'nullable|string|max:120',
+            'welcome_subtitle'     => 'nullable|string|max:500',
+            'input_placeholder'    => 'nullable|string|max:120',
+            'show_suggestions'     => 'nullable|boolean',
+            'suggestions'          => 'nullable|array|max:6',
+            'suggestions.*'        => 'nullable|string|max:120',
             'primary_color'        => 'nullable|string|max:7',
             'header_text_color'    => 'nullable|string|max:7',
             'user_bubble_color'    => 'nullable|string|max:7',

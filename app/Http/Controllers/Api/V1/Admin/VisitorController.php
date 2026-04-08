@@ -8,6 +8,7 @@ use App\Models\Visitor;
 use App\Models\VisitorPageView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Persistent visitor identities surfaced from the chat widget.
@@ -102,5 +103,40 @@ class VisitorController extends Controller
             'page_views'    => $pageViews,
             'conversations' => $conversations,
         ]);
+    }
+
+    /**
+     * POST /v1/admin/visitors/{id}/start-chat
+     * Returns the visitor's most recent conversation (or creates a new one)
+     * so an admin can jump straight into chat-inbox and message them.
+     */
+    public function startChat(Request $request, int $id): JsonResponse
+    {
+        $orgId = $request->user()->organization_id;
+        $visitor = Visitor::where('organization_id', $orgId)->findOrFail($id);
+
+        $conv = ChatConversation::where('organization_id', $orgId)
+            ->where('visitor_id', $visitor->id)
+            ->orderByDesc('last_message_at')
+            ->first();
+
+        if (!$conv) {
+            $conv = ChatConversation::create([
+                'organization_id' => $orgId,
+                'visitor_id'      => $visitor->id,
+                'session_id'      => (string) Str::uuid(),
+                'channel'         => 'admin_initiated',
+                'status'          => 'active',
+                'visitor_name'    => $visitor->display_name ?: 'Visitor',
+                'visitor_email'   => $visitor->email,
+                'visitor_phone'   => $visitor->phone,
+                'visitor_ip'      => $visitor->visitor_ip,
+                'messages_count'  => 0,
+                'last_message_at' => now(),
+                'assigned_to'     => $request->user()->id,
+            ]);
+        }
+
+        return response()->json(['conversation_id' => $conv->id]);
     }
 }

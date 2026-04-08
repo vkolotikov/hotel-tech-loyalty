@@ -15,7 +15,14 @@ class ChatWidgetConfig extends Model
         'widget_key',
         'api_key',
         'company_name',
+        'header_title',
+        'header_subtitle',
         'welcome_message',
+        'welcome_title',
+        'welcome_subtitle',
+        'input_placeholder',
+        'show_suggestions',
+        'suggestions',
         'primary_color',
         'header_text_color',
         'user_bubble_color',
@@ -42,6 +49,8 @@ class ChatWidgetConfig extends Model
 
     protected $casts = [
         'lead_capture_fields' => 'array',
+        'suggestions' => 'array',
+        'show_suggestions' => 'boolean',
         'lead_capture_enabled' => 'boolean',
         'lead_capture_delay' => 'integer',
         'is_active' => 'boolean',

@@ -120,7 +120,14 @@ class WidgetChatController extends Controller
 
         return response()->json([
             'company_name'       => $config->company_name,
+            'header_title'       => $config->header_title,
+            'header_subtitle'    => $config->header_subtitle,
             'welcome_message'    => $config->welcome_message,
+            'welcome_title'      => $config->welcome_title,
+            'welcome_subtitle'   => $config->welcome_subtitle,
+            'input_placeholder'  => $config->input_placeholder,
+            'show_suggestions'   => $config->show_suggestions ?? true,
+            'suggestions'        => $config->suggestions,
             'primary_color'      => $primaryColor,
             'header_text_color'  => $config->header_text_color ?? '#ffffff',
             'user_bubble_color'  => $config->user_bubble_color ?? $primaryColor,

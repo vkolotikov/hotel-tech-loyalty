@@ -258,8 +258,9 @@ Route::prefix('v1')->group(function () {
             Route::post('chat-inbox/messages/{messageId}/feedback', [ChatInboxController::class, 'submitFeedback']);
 
             // ─── Visitors (chat widget identities, online/offline, page views)
-            Route::get('visitors',        [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'index']);
-            Route::get('visitors/{id}',   [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'show']);
+            Route::get('visitors',                   [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'index']);
+            Route::get('visitors/{id}',              [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'show']);
+            Route::post('visitors/{id}/start-chat',  [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'startChat']);
 
             // ─── Popup Automation Rules ──────────────────────────────────────
             Route::get('popup-rules',                         [PopupRuleController::class, 'index']);

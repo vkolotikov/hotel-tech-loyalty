@@ -145,6 +145,76 @@ export function WidgetBuilder() {
             </div>
           </div>
 
+          {/* Copy & Text */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Copy &amp; Text</h2>
+            <p className="text-xs text-t-secondary -mt-2">Customize all visible text in the chat widget. Leave blank for sensible defaults.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Header Title</label>
+                <input type="text" value={f.header_title || ''} onChange={e => update('header_title', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="AI Assistant" />
+              </div>
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Header Subtitle</label>
+                <input type="text" value={f.header_subtitle || ''} onChange={e => update('header_subtitle', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Ask me anything" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-t-secondary mb-1">Welcome Heading</label>
+              <input type="text" value={f.welcome_title || ''} onChange={e => update('welcome_title', e.target.value)}
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="Hi! How can I help you today?" />
+            </div>
+            <div>
+              <label className="block text-sm text-t-secondary mb-1">Welcome Description</label>
+              <textarea value={f.welcome_subtitle || ''} onChange={e => update('welcome_subtitle', e.target.value)} rows={2}
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="Ask about reservations, loyalty program, hotel services, or anything else." />
+            </div>
+            <div>
+              <label className="block text-sm text-t-secondary mb-1">Input Placeholder</label>
+              <input type="text" value={f.input_placeholder || ''} onChange={e => update('input_placeholder', e.target.value)}
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="Type a message..." />
+            </div>
+
+            {/* Suggestions */}
+            <div className="border-t border-dark-border pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm text-white font-medium">Suggested Questions</label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={f.show_suggestions ?? true}
+                    onChange={e => update('show_suggestions', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                </label>
+              </div>
+              {(f.show_suggestions ?? true) && (
+                <div className="space-y-2">
+                  <p className="text-xs text-t-secondary">Up to 6 quick-reply buttons shown on the welcome screen. Leave blank to remove a button.</p>
+                  {[0, 1, 2, 3, 4, 5].map(i => {
+                    const list = Array.isArray(f.suggestions) ? f.suggestions : ['What services do you offer?', 'I want to check my booking', 'Tell me about loyalty rewards']
+                    return (
+                      <input key={i} type="text" value={list[i] || ''}
+                        onChange={e => {
+                          const next = [...list]
+                          next[i] = e.target.value
+                          update('suggestions', next.filter((s, idx) => s || idx < list.length))
+                        }}
+                        className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                        placeholder={`Suggestion ${i + 1}`} />
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-semibold text-white">Appearance</h2>
