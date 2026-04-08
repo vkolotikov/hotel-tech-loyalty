@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
             'tenant'             => \App\Http\Middleware\TenantMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
+            'feature'            => \App\Http\Middleware\RequireFeature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

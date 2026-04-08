@@ -86,6 +86,47 @@ class SaasAuthMiddleware
         return $next($request);
     }
 
+    /**
+     * Pull current plan/products/features from the SaaS BootstrapController and
+     * cache them onto the local Organization. Refreshed at most every 5 minutes
+     * so a plan upgrade in saas.hotel-tech.ai propagates within that window.
+     */
+    private function maybeSyncEntitlements(Organization $org, Request $request): void
+    {
+        $stale = !$org->entitlements_synced_at
+            || $org->entitlements_synced_at->lt(now()->subMinutes(5));
+
+        if (!$stale) return;
+
+        $base = rtrim(config('services.saas.api_url', env('SAAS_API_URL', 'https://saas.hotel-tech.ai')), '/');
+        $token = '';
+        $authHeader = $request->header('Authorization', '');
+        if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
+            $token = trim(substr($authHeader, 7));
+        }
+        if (!$token) return;
+
+        try {
+            $resp = \Illuminate\Support\Facades\Http::timeout(3)
+                ->withToken($token)
+                ->get($base . '/api/tools/bootstrap');
+
+            if (!$resp->successful()) return;
+
+            $data = $resp->json();
+            $sub = $data['subscription'] ?? null;
+
+            $org->plan_slug             = $sub['plan']['slug'] ?? null;
+            $org->subscription_status   = $sub['status'] ?? null;
+            $org->entitled_products     = $data['entitled_product_slugs'] ?? [];
+            $org->plan_features         = (array) ($data['features'] ?? []);
+            $org->entitlements_synced_at = now();
+            $org->save();
+        } catch (\Throwable $e) {
+            \Log::debug('SaasAuthMiddleware: entitlement sync failed: ' . $e->getMessage());
+        }
+    }
+
     private function verifyJwt(string $token): array
     {
         $secret = config('services.saas.jwt_secret', '');
@@ -158,6 +199,11 @@ class SaasAuthMiddleware
             if ($isNew) {
                 app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
             }
+
+            // Refresh cached SaaS entitlements (plan, products, features) if stale.
+            // We do this best-effort and never block the request on a transient SaaS
+            // outage — if the call fails the previous cached values keep working.
+            $this->maybeSyncEntitlements($org, $request);
         }
 
         // Find or create local staff user (bypass tenant scopes — no context yet)
