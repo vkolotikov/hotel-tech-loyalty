@@ -1808,17 +1808,20 @@ export function Settings() {
               <label className="block text-xs text-gray-500 mb-1">Realtime Model</label>
               <select value={vf.realtime_model || 'gpt-4o-realtime-preview'} onChange={e => updateVoice('realtime_model', e.target.value)}
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
-                <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview</option>
-                <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview</option>
+                <option value="gpt-4o-realtime-preview" className="bg-[#1a1a1a] text-white">gpt-4o-realtime-preview (latest)</option>
+                <option value="gpt-4o-realtime-preview-2024-12-17" className="bg-[#1a1a1a] text-white">gpt-4o-realtime-preview-2024-12-17</option>
+                <option value="gpt-4o-realtime-preview-2024-10-01" className="bg-[#1a1a1a] text-white">gpt-4o-realtime-preview-2024-10-01</option>
+                <option value="gpt-4o-mini-realtime-preview" className="bg-[#1a1a1a] text-white">gpt-4o-mini-realtime-preview (cheap)</option>
+                <option value="gpt-4o-mini-realtime-preview-2024-12-17" className="bg-[#1a1a1a] text-white">gpt-4o-mini-realtime-preview-2024-12-17</option>
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">TTS Model</label>
               <select value={vf.tts_model || 'gpt-4o-mini-tts'} onChange={e => updateVoice('tts_model', e.target.value)}
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
-                <option value="gpt-4o-mini-tts">gpt-4o-mini-tts</option>
-                <option value="tts-1">tts-1</option>
-                <option value="tts-1-hd">tts-1-hd</option>
+                <option value="gpt-4o-mini-tts" className="bg-[#1a1a1a] text-white">gpt-4o-mini-tts</option>
+                <option value="tts-1" className="bg-[#1a1a1a] text-white">tts-1</option>
+                <option value="tts-1-hd" className="bg-[#1a1a1a] text-white">tts-1-hd (high quality)</option>
               </select>
             </div>
           </div>
@@ -1834,19 +1837,26 @@ export function Settings() {
           {/* Language */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">Language</label>
-            <select value={vf.language || 'en'} onChange={e => updateVoice('language', e.target.value)}
+            <select value={vf.language || 'auto'} onChange={e => updateVoice('language', e.target.value)}
               className="w-48 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white">
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="it">Italian</option>
-              <option value="pt">Portuguese</option>
-              <option value="ru">Russian</option>
-              <option value="ar">Arabic</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
+              <option value="auto" className="bg-[#1a1a1a] text-white">Auto-detect</option>
+              <option value="en" className="bg-[#1a1a1a] text-white">English</option>
+              <option value="es" className="bg-[#1a1a1a] text-white">Spanish</option>
+              <option value="fr" className="bg-[#1a1a1a] text-white">French</option>
+              <option value="de" className="bg-[#1a1a1a] text-white">German</option>
+              <option value="it" className="bg-[#1a1a1a] text-white">Italian</option>
+              <option value="pt" className="bg-[#1a1a1a] text-white">Portuguese</option>
+              <option value="ru" className="bg-[#1a1a1a] text-white">Russian</option>
+              <option value="ar" className="bg-[#1a1a1a] text-white">Arabic</option>
+              <option value="zh" className="bg-[#1a1a1a] text-white">Chinese</option>
+              <option value="ja" className="bg-[#1a1a1a] text-white">Japanese</option>
+              <option value="ko" className="bg-[#1a1a1a] text-white">Korean</option>
+              <option value="nl" className="bg-[#1a1a1a] text-white">Dutch</option>
+              <option value="pl" className="bg-[#1a1a1a] text-white">Polish</option>
+              <option value="tr" className="bg-[#1a1a1a] text-white">Turkish</option>
+              <option value="uk" className="bg-[#1a1a1a] text-white">Ukrainian</option>
             </select>
+            <p className="mt-1 text-xs text-gray-500">Set explicit language for best transcription accuracy. Auto-detect mixes languages and is less reliable.</p>
           </div>
 
           {/* Voice Instructions */}

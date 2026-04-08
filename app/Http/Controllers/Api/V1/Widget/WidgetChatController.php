@@ -49,12 +49,17 @@ class WidgetChatController extends Controller
         $pageTitle = $request->input('page_title');
         $referrer = $request->input('referrer') ?: $request->header('Referer');
 
+        // Geolocate the IP (cached for 24h to keep us under free-tier limits).
+        $geo = $this->geolocateIp($ip);
+
         if (!$visitor) {
             $visitor = Visitor::create([
                 'organization_id'    => $orgId,
                 'visitor_key'        => $fingerprint,
                 'visitor_ip'         => $ip,
                 'user_agent'         => $ua,
+                'country'            => $geo['country'] ?? null,
+                'city'               => $geo['city'] ?? null,
                 'referrer'           => $referrer,
                 'current_page'       => $pageUrl,
                 'current_page_title' => $pageTitle,
@@ -72,6 +77,13 @@ class WidgetChatController extends Controller
                 'current_page'       => $pageUrl ?: $visitor->current_page,
                 'current_page_title' => $pageTitle ?: $visitor->current_page_title,
             ]);
+            // Backfill geo if missing
+            if (empty($visitor->country) && !empty($geo['country'])) {
+                $visitor->country = $geo['country'];
+            }
+            if (empty($visitor->city) && !empty($geo['city'])) {
+                $visitor->city = $geo['city'];
+            }
             if ($isNewVisit) {
                 $visitor->visit_count = (int) $visitor->visit_count + 1;
             }
@@ -79,6 +91,33 @@ class WidgetChatController extends Controller
         }
 
         return $visitor;
+    }
+
+    /**
+     * Look up country/city for an IP using ip-api.com (free, no key, 45 req/min).
+     * Results cached for 24h per IP. Skips private/local addresses.
+     */
+    private function geolocateIp(string $ip): array
+    {
+        if (!$ip || $ip === '127.0.0.1' || $ip === '::1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
+            return [];
+        }
+
+        return \Cache::remember('geoip:' . $ip, now()->addHours(24), function () use ($ip) {
+            try {
+                $resp = \Illuminate\Support\Facades\Http::timeout(3)
+                    ->get("http://ip-api.com/json/{$ip}", ['fields' => 'status,country,city,regionName']);
+                if ($resp->successful() && ($resp->json('status') === 'success')) {
+                    return [
+                        'country' => $resp->json('country'),
+                        'city'    => $resp->json('city') ?: $resp->json('regionName'),
+                    ];
+                }
+            } catch (\Throwable $e) {
+                \Log::debug('GeoIP lookup failed: ' . $e->getMessage());
+            }
+            return [];
+        });
     }
 
     /**
@@ -655,15 +694,41 @@ class WidgetChatController extends Controller
         $instructions = $this->buildVoiceInstructions($config, $behavior, $voiceConfig);
 
         try {
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-            ])->post('https://api.openai.com/v1/realtime/sessions', [
+            // Map our language code to a Whisper-compatible ISO-639-1 code so the
+            // realtime model transcribes (and replies in) the right language.
+            // Setting "auto" / null lets Whisper detect — but explicit is more reliable.
+            $lang = $voiceConfig->language && $voiceConfig->language !== 'auto'
+                ? $voiceConfig->language
+                : null;
+
+            $sessionPayload = [
                 'model' => $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview',
                 'voice' => $voiceConfig->voice ?? 'alloy',
                 'instructions' => $instructions,
-                'input_audio_transcription' => ['model' => 'gpt-4o-transcribe'],
-                'temperature' => $voiceConfig->temperature ?? 0.8,
-            ]);
+                // Whisper transcription with explicit language so the model doesn't
+                // mis-detect (was switching languages mid-conversation).
+                'input_audio_transcription' => array_filter([
+                    'model'    => 'whisper-1',
+                    'language' => $lang,
+                ]),
+                'temperature' => max(0.6, (float) ($voiceConfig->temperature ?? 0.8)),
+                // Server-side voice activity detection — tuned to wait longer
+                // before responding so the AI doesn't cut the user off mid-question.
+                'turn_detection' => [
+                    'type'                => 'server_vad',
+                    // Higher threshold = needs more confident speech to start (less false starts)
+                    'threshold'           => 0.65,
+                    // ms of audio to keep before speech started
+                    'prefix_padding_ms'   => 300,
+                    // ms of silence required to consider the user done speaking
+                    // (default is 500 — too eager; 900ms gives normal pauses room)
+                    'silence_duration_ms' => 900,
+                ],
+            ];
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->post('https://api.openai.com/v1/realtime/sessions', $sessionPayload);
 
             if ($response->failed()) {
                 return response()->json([
