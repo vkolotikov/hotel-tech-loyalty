@@ -6,8 +6,9 @@ import {
   Inbox, Search, Send, UserPlus, CheckCircle, Archive,
   MessageSquare, User, Bot, AlertCircle, X, Flag,
   MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Edit3, Save,
-  PauseCircle, PlayCircle,
+  PauseCircle, PlayCircle, ArrowRightLeft, Zap, Paperclip, Download, FileText,
 } from 'lucide-react'
+import { API_URL } from '../lib/api'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -30,11 +31,56 @@ export function ChatInbox() {
   const [showContactEdit, setShowContactEdit] = useState(false)
   const [contactForm, setContactForm] = useState<any>({})
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showCannedMenu, setShowCannedMenu] = useState(false)
+  const [showTransferMenu, setShowTransferMenu] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState<number | null>(null)
   const [feedbackForm, setFeedbackForm] = useState<{ rating: 'good' | 'bad'; comment: string; corrected_answer: string; apply_to_training: boolean }>({
     rating: 'good', comment: '', corrected_answer: '', apply_to_training: false,
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastTypingPingRef = useRef<number>(0)
+  // Tracks the highest unread total we've seen so we only beep when it grows.
+  // Persisted across mounts via a module-level ref so navigating away & back
+  // doesn't replay the sound for already-known messages.
+  const lastUnreadRef = useRef<number>(-1)
+
+  // Tiny WebAudio "ding" — no asset file needed. Plays a short two-tone beep
+  // when the unread count increases (a new visitor message arrived).
+  const playDing = () => {
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!Ctx) return
+      const ac = new Ctx()
+      const playTone = (freq: number, start: number, dur: number) => {
+        const o = ac.createOscillator()
+        const g = ac.createGain()
+        o.frequency.value = freq
+        o.type = 'sine'
+        o.connect(g); g.connect(ac.destination)
+        g.gain.setValueAtTime(0.0001, ac.currentTime + start)
+        g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + start + 0.01)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + start + dur)
+        o.start(ac.currentTime + start)
+        o.stop(ac.currentTime + start + dur + 0.02)
+      }
+      playTone(880, 0, 0.12)
+      playTone(1175, 0.13, 0.16)
+      setTimeout(() => ac.close(), 600)
+    } catch {}
+  }
+
+  // Throttled "agent typing" ping — fires at most once per 2s while the
+  // agent is composing in the reply box. The server holds a 5s window so the
+  // visitor's widget keeps showing typing dots between pings, then clears
+  // naturally when the reply lands.
+  const pingAgentTyping = () => {
+    if (!selectedId) return
+    const now = Date.now()
+    if (now - lastTypingPingRef.current < 2000) return
+    lastTypingPingRef.current = now
+    api.post(`/v1/admin/chat-inbox/${selectedId}/typing`, { typing: true }).catch(() => {})
+  }
 
   const EMOJIS = ['😊', '😀', '😂', '😍', '🙏', '👍', '👏', '🎉', '❤️', '🔥', '✨', '💯', '👋', '🤝', '☺️', '😎', '🙌', '💪', '🌟', '✅']
 
@@ -42,8 +88,22 @@ export function ChatInbox() {
   const { data: stats } = useQuery({
     queryKey: ['chat-inbox-stats'],
     queryFn: () => api.get('/v1/admin/chat-inbox/stats').then(r => r.data),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   })
+
+  // Beep whenever the unread count goes up. First load (lastUnreadRef = -1)
+  // is treated as a baseline so we don't ding for pre-existing unreads.
+  useEffect(() => {
+    const cur = stats?.unread_messages ?? 0
+    if (lastUnreadRef.current === -1) {
+      lastUnreadRef.current = cur
+      return
+    }
+    if (cur > lastUnreadRef.current) {
+      playDing()
+    }
+    lastUnreadRef.current = cur
+  }, [stats?.unread_messages])
 
   // Conversation list
   const { data: convData, isLoading } = useQuery({
@@ -72,6 +132,37 @@ export function ChatInbox() {
     },
     onError: () => toast.error('Failed to send message'),
   })
+
+  const uploadAttachment = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return api.post(`/v1/admin/chat-inbox/${selectedId}/upload`, fd)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
+      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
+      toast.success('File sent')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+  })
+
+  const downloadTranscript = (format: 'text' | 'html') => {
+    if (!selectedId) return
+    const url = `${API_URL}/api/v1/admin/chat-inbox/${selectedId}/transcript?format=${format}`
+    const token = localStorage.getItem('auth_token') || ''
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.blob() : Promise.reject(r))
+      .then(blob => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `chat-${selectedId}.${format === 'html' ? 'html' : 'txt'}`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      })
+      .catch(() => toast.error('Failed to download transcript'))
+  }
 
   const updateStatus = useMutation({
     mutationFn: (status: string) => api.put(`/v1/admin/chat-inbox/${selectedId}/status`, { status }),
@@ -115,6 +206,32 @@ export function ChatInbox() {
       toast.success('Feedback saved')
     },
     onError: () => toast.error('Failed to save feedback'),
+  })
+
+  // Canned responses (org-scoped quick-reply snippets) and team agent list
+  // for the transfer dropdown.
+  const { data: cannedData } = useQuery({
+    queryKey: ['chat-canned'],
+    queryFn: () => api.get('/v1/admin/chat-inbox-canned').then(r => r.data),
+    staleTime: 60000,
+  })
+  const cannedResponses: { label: string; text: string }[] = cannedData?.canned_responses || []
+
+  const { data: agentList } = useQuery({
+    queryKey: ['chat-agents'],
+    queryFn: () => api.get('/v1/admin/chat-inbox-agents').then(r => r.data),
+    staleTime: 60000,
+  })
+
+  const transferConv = useMutation({
+    mutationFn: (userId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { user_id: userId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
+      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
+      setShowTransferMenu(false)
+      toast.success('Conversation transferred')
+    },
+    onError: () => toast.error('Failed to transfer'),
   })
 
   const captureLead = useMutation({
@@ -304,6 +421,37 @@ export function ChatInbox() {
                     <UserPlus size={12} /> Capture Lead
                   </button>
                 )}
+                <div className="relative">
+                  <button onClick={() => setShowTransferMenu(v => !v)}
+                    className="flex items-center gap-1 text-xs bg-purple-600/20 text-purple-400 px-3 py-1.5 rounded-lg hover:bg-purple-600/30">
+                    <ArrowRightLeft size={12} /> Transfer
+                  </button>
+                  {showTransferMenu && (
+                    <div className="absolute right-0 top-full mt-1 z-20 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[200px] max-h-72 overflow-y-auto">
+                      {(agentList || []).length === 0 && (
+                        <div className="p-3 text-xs text-t-secondary">No agents available</div>
+                      )}
+                      {(agentList || []).map((a: any) => (
+                        <button key={a.id} onClick={() => transferConv.mutate(a.id)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs text-white hover:bg-dark-surface2 border-b border-dark-border last:border-b-0">
+                          <div className="w-6 h-6 rounded-full bg-purple-600/30 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                            {a.name?.charAt(0) || '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate">{a.name}</div>
+                            <div className="text-[10px] text-t-secondary truncate">{a.email}</div>
+                          </div>
+                          {conv.assigned_to === a.id && <span className="text-[10px] text-primary-400">current</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => downloadTranscript('text')}
+                  title="Download transcript (.txt)"
+                  className="flex items-center gap-1 text-xs bg-dark-surface3 text-t-secondary hover:text-white px-3 py-1.5 rounded-lg">
+                  <Download size={12} /> Transcript
+                </button>
                 {conv.status !== 'resolved' && (
                   <button onClick={() => updateStatus.mutate('resolved')}
                     className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-lg hover:bg-blue-600/30">
@@ -402,6 +550,21 @@ export function ChatInbox() {
                         </span>
                       </div>
                       <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+                      {msg.attachment_url && (
+                        <div className="mt-2">
+                          {msg.attachment_type === 'image' ? (
+                            <a href={API_URL + msg.attachment_url} target="_blank" rel="noopener noreferrer">
+                              <img src={API_URL + msg.attachment_url} alt={msg.content || 'attachment'}
+                                className="max-w-[200px] max-h-[200px] rounded-lg border border-dark-border" />
+                            </a>
+                          ) : (
+                            <a href={API_URL + msg.attachment_url} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 bg-dark-surface px-3 py-2 rounded border border-dark-border text-xs text-primary-400 hover:text-primary-300">
+                              <FileText size={14} /> {msg.content || 'Download file'}
+                            </a>
+                          )}
+                        </div>
+                      )}
                       {msg.sender_type === 'ai' && (
                         <div className="mt-2 pt-2 border-t border-primary-500/20">
                           {msg.feedback ? (
@@ -461,6 +624,16 @@ export function ChatInbox() {
                   </div>
                 )
               })}
+              {detail?.visitor_typing && (
+                <div className="flex justify-start mb-2">
+                  <div className="bg-dark-surface border border-dark-border rounded-2xl px-4 py-2 flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '120ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '240ms' }} />
+                    <span className="text-[10px] text-t-muted ml-1">visitor typing…</span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -481,9 +654,42 @@ export function ChatInbox() {
                     title="Insert emoji">
                     <Smile size={16} />
                   </button>
+                  <input ref={fileInputRef} type="file" className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) uploadAttachment.mutate(file)
+                    }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadAttachment.isPending}
+                    className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5 disabled:opacity-50"
+                    title="Attach file or image">
+                    <Paperclip size={16} />
+                  </button>
+                  <div className="relative">
+                    <button type="button" onClick={() => setShowCannedMenu(v => !v)}
+                      className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5"
+                      title="Insert canned response">
+                      <Zap size={16} />
+                    </button>
+                    {showCannedMenu && (
+                      <div className="absolute bottom-full left-0 mb-2 z-20 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[260px] max-h-72 overflow-y-auto">
+                        {cannedResponses.length === 0 && (
+                          <div className="p-3 text-xs text-t-secondary">No canned responses yet. Add some in Chatbot Setup.</div>
+                        )}
+                        {cannedResponses.map((c, i) => (
+                          <button key={i} onClick={() => { setReplyText(p => p ? p + ' ' + c.text : c.text); setShowCannedMenu(false) }}
+                            className="block w-full text-left px-3 py-2 text-xs text-white hover:bg-dark-surface2 border-b border-dark-border last:border-b-0">
+                            <div className="font-medium">{c.label}</div>
+                            <div className="text-[10px] text-t-secondary truncate">{c.text}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <textarea
                     value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
+                    onChange={e => { setReplyText(e.target.value); pingAgentTyping() }}
                     onKeyDown={handleKeyDown}
                     rows={2}
                     className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm resize-none"

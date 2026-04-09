@@ -49,6 +49,14 @@ class ChatWidgetConfig extends Model
         'lead_capture_delay',
         'offline_message',
         'is_active',
+        'business_hours',
+        'timezone',
+        'gdpr_consent_required',
+        'gdpr_consent_text',
+        'inbox_sound_enabled',
+        'rating_prompt_enabled',
+        'rating_prompt_text',
+        'canned_responses',
     ];
 
     protected $casts = [
@@ -61,6 +69,11 @@ class ChatWidgetConfig extends Model
         'show_branding' => 'boolean',
         'border_radius' => 'integer',
         'launcher_size' => 'integer',
+        'business_hours' => 'array',
+        'canned_responses' => 'array',
+        'gdpr_consent_required' => 'boolean',
+        'inbox_sound_enabled' => 'boolean',
+        'rating_prompt_enabled' => 'boolean',
     ];
 
     public static function getForOrg(int $orgId): self

@@ -43,6 +43,27 @@ export function KnowledgeBase() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-items'] }); toast.success('Deleted') },
   })
 
+  // Asks the AI for suggested search keywords for the current question/answer
+  // and merges them into the item's keyword list (dedupes against existing).
+  const suggestKeywords = useMutation({
+    mutationFn: (payload: { question: string; answer: string }) =>
+      api.post('/v1/admin/chatbot-config/suggest-keywords', payload).then(r => r.data),
+    onSuccess: (data: any) => {
+      const fresh: string[] = Array.isArray(data?.keywords) ? data.keywords : []
+      if (fresh.length === 0) { toast('No keywords suggested'); return }
+      setItemForm(prev => {
+        const seen = new Set(prev.keywords.map(k => k.toLowerCase()))
+        const merged = [...prev.keywords]
+        for (const k of fresh) {
+          if (!seen.has(k.toLowerCase())) { merged.push(k); seen.add(k.toLowerCase()) }
+        }
+        return { ...prev, keywords: merged }
+      })
+      toast.success(`Added ${fresh.length} suggested keywords`)
+    },
+    onError: () => toast.error('AI suggestion failed'),
+  })
+
   // ─── Categories ───
   const [showCatForm, setShowCatForm] = useState(false)
   const [editCatId, setEditCatId] = useState<number | null>(null)
@@ -385,6 +406,14 @@ export function KnowledgeBase() {
                 <div className="flex gap-2">
                   <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add keyword..." />
                   <button onClick={addKeyword} className="bg-dark-surface4 text-white px-3 py-2 rounded-lg text-sm hover:bg-dark-border2"><Plus size={14} /></button>
+                  <button
+                    type="button"
+                    disabled={!itemForm.question.trim() || suggestKeywords.isPending}
+                    onClick={() => suggestKeywords.mutate({ question: itemForm.question, answer: itemForm.answer })}
+                    className="flex items-center gap-1 bg-primary-600/20 text-primary-400 px-3 py-2 rounded-lg text-xs hover:bg-primary-600/30 disabled:opacity-50"
+                    title="Let AI suggest keywords from question + answer">
+                    <Sparkles size={14} /> {suggestKeywords.isPending ? '...' : 'AI'}
+                  </button>
                 </div>
               </div>
 

@@ -164,6 +164,47 @@ export function Layout({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   })
 
+  // Sidebar unread badge for chat inbox: total unread visitor messages across
+  // all open conversations. Polled every 15s.
+  const { data: chatStats } = useQuery({
+    queryKey: ['chat-inbox-stats-sidebar'],
+    queryFn: () => api.get('/v1/admin/chat-inbox/stats').then(r => r.data),
+    refetchInterval: 15000,
+    staleTime: 10000,
+  })
+  const chatUnread: number = chatStats?.unread_messages || 0
+
+  // Favicon dot — flip the favicon to a "has unread" version when count > 0.
+  // Uses canvas to draw a red dot on the existing favicon so we don't need
+  // a second image file shipped in /public.
+  useEffect(() => {
+    const link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']")
+    if (!link) return
+    if (!(link as any)._origHref) (link as any)._origHref = link.href
+    const orig = (link as any)._origHref as string
+    if (chatUnread <= 0) {
+      link.href = orig
+      return
+    }
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 32; canvas.height = 32
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(img, 0, 0, 32, 32)
+      ctx.beginPath()
+      ctx.arc(24, 8, 7, 0, Math.PI * 2)
+      ctx.fillStyle = '#ef4444'
+      ctx.fill()
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke()
+      try { link.href = canvas.toDataURL('image/png') } catch {}
+    }
+    img.onerror = () => {}
+    img.src = orig
+  }, [chatUnread])
+
   const logoUrl = (() => {
     const groups = settingsData?.settings
     if (!groups || typeof groups !== 'object') return null
@@ -237,13 +278,14 @@ export function Layout({ children }: { children: ReactNode }) {
                 {/* Group items */}
                 {isOpen && items.map(({ path, label: itemLabel, icon: Icon }) => {
                   const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
+                  const badge = path === '/chat-inbox' && chatUnread > 0 ? chatUnread : 0
                   return (
                     <Link
                       key={path}
                       to={path}
                       title={collapsed ? itemLabel : undefined}
                       className={clsx(
-                        'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium',
+                        'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                         collapsed ? 'justify-center px-0' : 'px-3',
                         active
                           ? 'bg-primary-600/20 text-primary-400'
@@ -251,7 +293,16 @@ export function Layout({ children }: { children: ReactNode }) {
                       )}
                     >
                       <Icon size={17} className="flex-shrink-0" />
-                      {!collapsed && <span className="truncate">{itemLabel}</span>}
+                      {!collapsed && <span className="truncate flex-1">{itemLabel}</span>}
+                      {badge > 0 && (
+                        collapsed ? (
+                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                        ) : (
+                          <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
+                            {badge > 99 ? '99+' : badge}
+                          </span>
+                        )
+                      )}
                     </Link>
                   )
                 })}

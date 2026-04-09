@@ -111,10 +111,13 @@ class ChatInboxController extends Controller
                 ->get(['id', 'visitor_name', 'status', 'last_message_at', 'channel']);
         }
 
+        $visitorTyping = $conversation->visitor_typing_until && $conversation->visitor_typing_until->isFuture();
+
         return response()->json([
-            'conversation' => $conversation,
-            'messages' => $messages,
-            'siblings' => $siblings,
+            'conversation'   => $conversation,
+            'messages'       => $messages,
+            'siblings'       => $siblings,
+            'visitor_typing' => (bool) $visitorTyping,
         ]);
     }
 
@@ -247,7 +250,14 @@ class ChatInboxController extends Controller
         $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
             ->findOrFail($id);
 
-        $conversation->update(['status' => $request->status]);
+        $updates = ['status' => $request->status];
+        // When the agent marks a conversation resolved, flag that we want a
+        // rating from the visitor — the next poll surfaces a rating prompt
+        // in the widget. Idempotent: only flips false→true.
+        if ($request->status === 'resolved' && !$conversation->rating_requested) {
+            $updates['rating_requested'] = true;
+        }
+        $conversation->update($updates);
 
         ChatMessage::create([
             'conversation_id' => $id,
@@ -272,7 +282,16 @@ class ChatInboxController extends Controller
         $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
             ->findOrFail($id);
 
-        $conversation->update(['ai_enabled' => $request->boolean('ai_enabled')]);
+        $aiEnabled = $request->boolean('ai_enabled');
+        $updates = ['ai_enabled' => $aiEnabled];
+        // When AI takes back over, clear the active human agent identity so
+        // the visitor's widget stops showing "Sarah is helping you" and goes
+        // back to the bot avatar.
+        if ($aiEnabled) {
+            $updates['active_agent_name'] = null;
+            $updates['active_agent_avatar'] = null;
+        }
+        $conversation->update($updates);
 
         ChatMessage::create([
             'conversation_id' => $id,
@@ -294,24 +313,254 @@ class ChatInboxController extends Controller
     {
         $request->validate(['content' => 'required|string|max:5000']);
 
-        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
+        $user = $request->user();
+        $conversation = ChatConversation::where('organization_id', $user->organization_id)
             ->findOrFail($id);
 
         $message = ChatMessage::create([
             'conversation_id' => $id,
             'sender_type' => 'agent',
-            'sender_user_id' => $request->user()->id,
+            'sender_user_id' => $user->id,
             'content' => $request->content,
             'created_at' => now(),
         ]);
 
+        // Snapshot the agent's display name + avatar onto the conversation so
+        // the visitor's widget can render "Sarah is helping you" on the next
+        // poll. We do it here (rather than reading users on every poll) so
+        // the widget gets a stable identity even if assignment changes later.
+        $avatar = $user->chat_avatar_url ?? null;
         $conversation->update([
-            'last_message_at' => now(),
-            'messages_count' => $conversation->messages_count + 1,
-            'assigned_to' => $conversation->assigned_to ?? $request->user()->id,
+            'last_message_at'      => now(),
+            'messages_count'       => $conversation->messages_count + 1,
+            'assigned_to'          => $conversation->assigned_to ?? $user->id,
+            'active_agent_name'    => $user->name,
+            'active_agent_avatar'  => $avatar,
+            'agent_typing_until'   => null, // clear typing as the message lands
         ]);
 
         return response()->json($message->load('senderUser:id,name'));
+    }
+
+    /**
+     * POST /v1/admin/chat-inbox/{id}/upload — agent uploads an attachment.
+     * Stores the file under storage/app/public/chat-attachments/ and creates
+     * a chat_message row tagged as the agent sender. The visitor's widget
+     * picks it up on the next poll cycle and renders a thumbnail / link.
+     */
+    public function uploadAttachment(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt',
+        ]);
+
+        $user = $request->user();
+        $conversation = ChatConversation::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $file = $request->file('file');
+        $path = $file->storePublicly('chat-attachments', 'public');
+        $url  = '/storage/' . $path;
+        $type = str_starts_with((string) $file->getMimeType(), 'image/') ? 'image' : 'file';
+
+        $msg = ChatMessage::create([
+            'conversation_id' => $id,
+            'sender_type'     => 'agent',
+            'sender_user_id'  => $user->id,
+            'content'         => $file->getClientOriginalName(),
+            'attachment_url'  => $url,
+            'attachment_type' => $type,
+            'attachment_size' => $file->getSize(),
+            'created_at'      => now(),
+        ]);
+
+        $conversation->update([
+            'last_message_at'     => now(),
+            'messages_count'      => $conversation->messages_count + 1,
+            'assigned_to'         => $conversation->assigned_to ?? $user->id,
+            'active_agent_name'   => $user->name,
+            'active_agent_avatar' => $user->chat_avatar_url ?? null,
+            'agent_typing_until'  => null,
+        ]);
+
+        return response()->json($msg->load('senderUser:id,name'));
+    }
+
+    /**
+     * GET /v1/admin/chat-inbox/{id}/transcript — download a plain-text or
+     * HTML transcript of the conversation. Useful for emailing a copy to a
+     * lead or attaching to a CRM ticket. Format defaults to text; pass
+     * ?format=html for an HTML version.
+     */
+    public function transcript(Request $request, int $id)
+    {
+        $user = $request->user();
+        $conversation = ChatConversation::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $messages = ChatMessage::where('conversation_id', $id)
+            ->orderBy('id')
+            ->get();
+
+        $format = $request->input('format', 'text');
+        $visitor = $conversation->visitor_name ?: 'Visitor';
+        $filenameBase = 'chat-' . $conversation->id . '-' . now()->format('Ymd-His');
+
+        if ($format === 'html') {
+            $rows = '';
+            foreach ($messages as $m) {
+                $who = match ($m->sender_type) {
+                    'visitor' => htmlspecialchars($visitor),
+                    'agent'   => htmlspecialchars($conversation->active_agent_name ?: 'Agent'),
+                    'ai'      => 'AI Assistant',
+                    'system'  => 'System',
+                    default   => ucfirst($m->sender_type),
+                };
+                $when = optional($m->created_at)->format('Y-m-d H:i');
+                $body = nl2br(htmlspecialchars((string) $m->content));
+                if ($m->attachment_url) {
+                    $body .= '<br><a href="' . htmlspecialchars($m->attachment_url) . '">[attachment: ' . htmlspecialchars($m->attachment_type ?: 'file') . ']</a>';
+                }
+                $rows .= "<tr><td style=\"padding:6px;color:#888;font-size:12px;white-space:nowrap;vertical-align:top\">{$when}</td><td style=\"padding:6px;font-weight:600;white-space:nowrap;vertical-align:top\">{$who}</td><td style=\"padding:6px\">{$body}</td></tr>";
+            }
+            $html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Chat Transcript #{$conversation->id}</title></head><body style=\"font-family:Arial,sans-serif;background:#fff;color:#222\"><h2>Chat Transcript #{$conversation->id}</h2><p>Visitor: " . htmlspecialchars($visitor) . "<br>Started: " . optional($conversation->created_at)->format('Y-m-d H:i') . "</p><table style=\"border-collapse:collapse;width:100%\">{$rows}</table></body></html>";
+            return response($html, 200, [
+                'Content-Type'        => 'text/html; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filenameBase . '.html"',
+            ]);
+        }
+
+        $lines = [];
+        $lines[] = "Chat Transcript #{$conversation->id}";
+        $lines[] = "Visitor: {$visitor}";
+        $lines[] = "Started: " . optional($conversation->created_at)->format('Y-m-d H:i');
+        $lines[] = str_repeat('-', 60);
+        foreach ($messages as $m) {
+            $who = match ($m->sender_type) {
+                'visitor' => $visitor,
+                'agent'   => $conversation->active_agent_name ?: 'Agent',
+                'ai'      => 'AI',
+                'system'  => 'System',
+                default   => ucfirst($m->sender_type),
+            };
+            $when = optional($m->created_at)->format('Y-m-d H:i');
+            $line = "[{$when}] {$who}: " . trim((string) $m->content);
+            if ($m->attachment_url) {
+                $line .= " <attachment: {$m->attachment_url}>";
+            }
+            $lines[] = $line;
+        }
+
+        return response(implode("\n", $lines), 200, [
+            'Content-Type'        => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filenameBase . '.txt"',
+        ]);
+    }
+
+    /**
+     * GET/PUT canned responses for the org. Stored on chat_widget_configs as
+     * a JSON array of {label, text} so agents can insert pre-written replies
+     * with one click. Org-scoped, not per-user.
+     */
+    public function getCannedResponses(Request $request): JsonResponse
+    {
+        $config = \App\Models\ChatWidgetConfig::where('organization_id', $request->user()->organization_id)->first();
+        return response()->json(['canned_responses' => $config?->canned_responses ?? []]);
+    }
+
+    public function updateCannedResponses(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'canned_responses'           => 'required|array|max:50',
+            'canned_responses.*.label'   => 'required|string|max:80',
+            'canned_responses.*.text'    => 'required|string|max:2000',
+        ]);
+
+        $orgId = $request->user()->organization_id;
+        $config = \App\Models\ChatWidgetConfig::where('organization_id', $orgId)->first();
+        if (!$config) {
+            $config = \App\Models\ChatWidgetConfig::create([
+                'organization_id' => $orgId,
+                'widget_key'      => \Illuminate\Support\Str::uuid()->toString(),
+                'api_key'         => \Illuminate\Support\Str::random(48),
+                'is_active'       => true,
+            ]);
+        }
+        $config->update(['canned_responses' => $validated['canned_responses']]);
+
+        return response()->json(['canned_responses' => $config->canned_responses]);
+    }
+
+    /**
+     * GET assignable agents — returns users in the org who can take chat
+     * conversations. Used by the transfer dropdown in the inbox.
+     */
+    public function listAgents(Request $request): JsonResponse
+    {
+        $orgId = $request->user()->organization_id;
+        $agents = \App\Models\User::where('organization_id', $orgId)
+            ->where('user_type', 'staff')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'chat_avatar_url']);
+        return response()->json($agents);
+    }
+
+    /**
+     * Mark the agent as typing on this conversation. Sets a 5-second window so
+     * the visitor's widget poll can render typing dots while the agent is
+     * composing in the inbox. Frontend should call this on input changes
+     * (debounced) and also when sending so the indicator clears naturally as
+     * the message arrives.
+     */
+    public function setAgentTyping(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['typing' => 'nullable|boolean']);
+
+        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
+            ->findOrFail($id);
+
+        $isTyping = $request->boolean('typing', true);
+        $conversation->agent_typing_until = $isTyping ? now()->addSeconds(5) : null;
+        $conversation->save();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Quick poll for the inbox: returns any new messages on a conversation
+     * since `since_id`, plus current visitor typing state. Lets the inbox
+     * UI surface visitor replies in near-real-time without a websocket.
+     */
+    public function pollMessages(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['since_id' => 'nullable|integer|min:0']);
+
+        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
+            ->findOrFail($id);
+
+        $sinceId = (int) $request->input('since_id', 0);
+
+        $messages = ChatMessage::where('conversation_id', $id)
+            ->where('id', '>', $sinceId)
+            ->with('senderUser:id,name')
+            ->orderBy('id')
+            ->get();
+
+        // Mark visitor messages as read since the agent is actively viewing.
+        if ($messages->count() > 0) {
+            ChatMessage::where('conversation_id', $id)
+                ->where('id', '>', $sinceId)
+                ->where('sender_type', 'visitor')
+                ->update(['is_read' => true]);
+        }
+
+        $visitorTyping = $conversation->visitor_typing_until && $conversation->visitor_typing_until->isFuture();
+
+        return response()->json([
+            'messages'       => $messages,
+            'visitor_typing' => (bool) $visitorTyping,
+            'status'         => $conversation->status,
+        ]);
     }
 
     /**
@@ -321,11 +570,21 @@ class ChatInboxController extends Controller
     {
         $orgId = $request->user()->organization_id;
 
+        // Total unread visitor messages across all open conversations — this
+        // drives the red badge in the sidebar nav and the favicon dot.
+        $unreadMessages = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
+            ->where('chat_conversations.organization_id', $orgId)
+            ->whereIn('chat_conversations.status', ['active', 'waiting'])
+            ->where('chat_messages.sender_type', 'visitor')
+            ->where('chat_messages.is_read', false)
+            ->count();
+
         return response()->json([
             'active' => ChatConversation::where('organization_id', $orgId)->where('status', 'active')->count(),
             'waiting' => ChatConversation::where('organization_id', $orgId)->where('status', 'waiting')->count(),
             'unassigned' => ChatConversation::where('organization_id', $orgId)->whereIn('status', ['active', 'waiting'])->whereNull('assigned_to')->count(),
             'resolved_today' => ChatConversation::where('organization_id', $orgId)->where('status', 'resolved')->where('updated_at', '>=', today())->count(),
+            'unread_messages' => $unreadMessages,
         ]);
     }
 

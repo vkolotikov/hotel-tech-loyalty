@@ -196,7 +196,47 @@ class WidgetChatController extends Controller
             'agent_status'       => $config->agent_status ?? 'online',
             'offline_message'    => $config->offline_message,
             'voice_enabled'      => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
+            'is_open'            => $this->isWithinBusinessHours($config),
+            'business_hours'     => $config->business_hours,
+            'gdpr_consent_required' => (bool) $config->gdpr_consent_required,
+            'gdpr_consent_text'  => $config->gdpr_consent_text,
         ]);
+    }
+
+    /**
+     * Decide whether the widget is currently within configured business
+     * hours. The `business_hours` JSON looks like:
+     *   { "mon": [{"open":"09:00","close":"17:00"}], "tue": [...], ... }
+     * Empty array for a day = closed all day. Missing config = always open
+     * (back-compat — existing widgets without hours configured stay open).
+     */
+    private function isWithinBusinessHours(ChatWidgetConfig $config): bool
+    {
+        $hours = $config->business_hours;
+        if (empty($hours) || !is_array($hours)) return true;
+
+        try {
+            $tz = $config->timezone ?: config('app.timezone', 'UTC');
+            $now = now($tz);
+        } catch (\Throwable $e) {
+            $now = now();
+        }
+
+        $dayKey = strtolower($now->format('D')); // mon, tue, ...
+        $dayKey = substr($dayKey, 0, 3);
+        $windows = $hours[$dayKey] ?? null;
+        if ($windows === null) return true; // not configured for today = open
+        if (!is_array($windows) || count($windows) === 0) return false; // explicitly closed
+
+        $cur = $now->format('H:i');
+        foreach ($windows as $w) {
+            $open  = $w['open']  ?? null;
+            $close = $w['close'] ?? null;
+            if ($open && $close && $cur >= $open && $cur <= $close) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -379,6 +419,7 @@ class WidgetChatController extends Controller
         }
 
         // Store in chat_messages for inbox
+        $aiMessageId = null;
         try {
             $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
             if ($chatConv && $visitor && !$chatConv->visitor_id) {
@@ -391,12 +432,13 @@ class WidgetChatController extends Controller
                     'content' => $request->message,
                     'created_at' => now(),
                 ]);
-                ChatMessage::create([
+                $aiMsg = ChatMessage::create([
                     'conversation_id' => $chatConv->id,
                     'sender_type' => 'ai',
                     'content' => $aiResponse,
                     'created_at' => now(),
                 ]);
+                $aiMessageId = $aiMsg->id;
                 $chatConv->update([
                     'last_message_at' => now(),
                     'messages_count' => $chatConv->messages_count + 2,
@@ -407,8 +449,9 @@ class WidgetChatController extends Controller
         }
 
         return response()->json([
-            'response' => $aiResponse,
-            'session_id' => $request->session_id,
+            'response'      => $aiResponse,
+            'session_id'    => $request->session_id,
+            'ai_message_id' => $aiMessageId,
         ]);
     }
 
@@ -516,6 +559,204 @@ class WidgetChatController extends Controller
         return response()->json([
             'visitor_id' => $visitor->id,
             'online'     => true,
+        ]);
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/poll
+     *
+     * Long-poll-style endpoint the embedded widget hits every few seconds while
+     * the chat panel is open. Returns any agent/ai/system messages with id
+     * greater than `since_id`, plus the current "agent typing" indicator and
+     * the active human agent's name/avatar (when a human has taken over).
+     * This is what makes agent inbox replies actually appear in the visitor's
+     * widget — without it, the AI pause/resume feature is half-broken because
+     * the visitor never sees the human's reply.
+     */
+    public function poll(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string|max:64',
+            'since_id'   => 'nullable|integer|min:0',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $conv = ChatConversation::where('session_id', $request->session_id)
+            ->where('organization_id', $config->organization_id)
+            ->first();
+
+        if (!$conv) {
+            return response()->json([
+                'messages'     => [],
+                'agent_typing' => false,
+                'active_agent' => null,
+                'ai_paused'    => false,
+            ]);
+        }
+
+        $sinceId = (int) $request->input('since_id', 0);
+
+        // Only deliver messages that did NOT originate from the visitor — the
+        // visitor already has their own messages locally, so echoing them back
+        // would cause duplicates. Agent + AI + system messages are what we
+        // need to push down.
+        $messages = ChatMessage::where('conversation_id', $conv->id)
+            ->where('id', '>', $sinceId)
+            ->whereIn('sender_type', ['agent', 'ai', 'system'])
+            ->orderBy('id')
+            ->get(['id', 'sender_type', 'content', 'attachment_url', 'attachment_type', 'created_at'])
+            ->map(fn ($m) => [
+                'id'              => $m->id,
+                'sender_type'     => $m->sender_type,
+                'content'         => $m->content,
+                'attachment_url'  => $m->attachment_url,
+                'attachment_type' => $m->attachment_type,
+                'created_at'      => optional($m->created_at)->toIso8601String(),
+            ]);
+
+        // Mark delivered agent messages as read so the inbox stops showing
+        // them as "unread" once the visitor's widget has actually fetched them.
+        if ($messages->count() > 0) {
+            ChatMessage::where('conversation_id', $conv->id)
+                ->where('id', '>', $sinceId)
+                ->where('sender_type', 'agent')
+                ->update(['is_read' => true]);
+        }
+
+        $agentTyping = $conv->agent_typing_until && $conv->agent_typing_until->isFuture();
+
+        return response()->json([
+            'messages'     => $messages,
+            'agent_typing' => (bool) $agentTyping,
+            'active_agent' => $conv->active_agent_name ? [
+                'name'   => $conv->active_agent_name,
+                'avatar' => $conv->active_agent_avatar,
+            ] : null,
+            'ai_paused'    => $conv->ai_enabled === false,
+            'status'       => $conv->status,
+            'prompt_rating' => $conv->rating_requested && !$conv->rating,
+        ]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/rate — visitor submits a 1-5 rating + comment.
+     */
+    public function rateConversation(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string|max:64',
+            'rating'     => 'required|integer|between:1,5',
+            'comment'    => 'nullable|string|max:1000',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
+
+        $conv = ChatConversation::where('session_id', $request->session_id)
+            ->where('organization_id', $config->organization_id)
+            ->first();
+        if (!$conv) return response()->json(['error' => 'Conversation not found'], 404);
+
+        $conv->update([
+            'rating'           => $request->rating,
+            'rating_comment'   => $request->comment,
+            'rating_requested' => false,
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/typing
+     *
+     * Visitor is typing — set a short window (~5s) so the agent inbox can show
+     * a typing indicator. Idempotent: clients call this every keystroke.
+     */
+    public function visitorTyping(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string|max:64',
+            'typing'     => 'nullable|boolean',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $conv = ChatConversation::where('session_id', $request->session_id)
+            ->where('organization_id', $config->organization_id)
+            ->first();
+
+        if (!$conv) {
+            return response()->json(['ok' => false], 404);
+        }
+
+        $isTyping = $request->boolean('typing', true);
+        $conv->visitor_typing_until = $isTyping ? now()->addSeconds(5) : null;
+        $conv->save();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/upload
+     *
+     * Visitor uploads an image/file as part of the conversation. We persist
+     * the file under storage/app/public/chat-attachments/ and create a
+     * chat_message row tagged with the attachment metadata so the agent
+     * inbox can render a thumbnail/link inline. Allowed types are limited
+     * to common image/document mime types and the size cap is 8MB to keep
+     * abuse contained.
+     */
+    public function uploadAttachment(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string|max:64',
+            'file'       => 'required|file|max:8192|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
+
+        $conv = ChatConversation::where('session_id', $request->session_id)
+            ->where('organization_id', $config->organization_id)
+            ->first();
+
+        if (!$conv) {
+            return response()->json(['error' => 'Conversation not found'], 404);
+        }
+
+        $file = $request->file('file');
+        $path = $file->storePublicly('chat-attachments', 'public');
+        $url  = '/storage/' . $path;
+        $type = str_starts_with((string) $file->getMimeType(), 'image/') ? 'image' : 'file';
+
+        $msg = ChatMessage::create([
+            'conversation_id'  => $conv->id,
+            'sender_type'      => 'visitor',
+            'content'          => $file->getClientOriginalName(),
+            'attachment_url'   => $url,
+            'attachment_type'  => $type,
+            'attachment_size'  => $file->getSize(),
+            'created_at'       => now(),
+        ]);
+
+        $conv->update([
+            'last_message_at' => now(),
+            'messages_count'  => $conv->messages_count + 1,
+            'status'          => $conv->status === 'resolved' ? 'waiting' : $conv->status,
+        ]);
+
+        return response()->json([
+            'ok'              => true,
+            'message_id'      => $msg->id,
+            'attachment_url'  => $url,
+            'attachment_type' => $type,
         ]);
     }
 

@@ -75,15 +75,22 @@ Route::prefix('v1')->group(function () {
     });
 
     // ─── Public Chat Widget API ────────────────────────────────────────────────
-    Route::prefix('widget')->middleware('throttle:60,1')->group(function () {
+    // Outer throttle is generous (200/min) because polling alone is ~17/min per
+    // open chat. Per-endpoint inner throttles cap the costly OpenAI / write
+    // calls to keep abuse contained without breaking normal use.
+    Route::prefix('widget')->middleware('throttle:200,1')->group(function () {
         Route::get('{widgetKey}/config',    [WidgetChatController::class, 'getConfig']);
         Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
-        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage']);
-        Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead']);
+        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage'])->middleware('throttle:30,1');
+        Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead'])->middleware('throttle:5,1');
         Route::post('{widgetKey}/heartbeat',  [WidgetChatController::class, 'heartbeat']);
+        Route::get('{widgetKey}/poll',        [WidgetChatController::class, 'poll']);
+        Route::post('{widgetKey}/typing',     [WidgetChatController::class, 'visitorTyping']);
+        Route::post('{widgetKey}/rate',       [WidgetChatController::class, 'rateConversation'])->middleware('throttle:5,1');
+        Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1');
         Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
-        Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession']);
+        Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession'])->middleware('throttle:5,1');
     });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
@@ -241,6 +248,8 @@ Route::prefix('v1')->group(function () {
             Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);
             Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
             Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
+            Route::post('chatbot-config/test-chat',           [ChatbotConfigController::class, 'testChat']);
+            Route::post('chatbot-config/suggest-keywords',    [ChatbotConfigController::class, 'suggestKeywords']);
 
             // ─── Chat Widget Configuration ───────────────────────────────────
             Route::get('widget-config',                       [ChatWidgetConfigController::class, 'show']);
@@ -259,6 +268,13 @@ Route::prefix('v1')->group(function () {
             Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
             Route::put('chat-inbox/{id}/contact',             [ChatInboxController::class, 'updateContact']);
             Route::post('chat-inbox/messages/{messageId}/feedback', [ChatInboxController::class, 'submitFeedback']);
+            Route::post('chat-inbox/{id}/typing',             [ChatInboxController::class, 'setAgentTyping']);
+            Route::get('chat-inbox/{id}/poll',                [ChatInboxController::class, 'pollMessages']);
+            Route::get('chat-inbox-canned',                   [ChatInboxController::class, 'getCannedResponses']);
+            Route::put('chat-inbox-canned',                   [ChatInboxController::class, 'updateCannedResponses']);
+            Route::get('chat-inbox-agents',                   [ChatInboxController::class, 'listAgents']);
+            Route::post('chat-inbox/{id}/upload',             [ChatInboxController::class, 'uploadAttachment']);
+            Route::get('chat-inbox/{id}/transcript',          [ChatInboxController::class, 'transcript']);
 
             // ─── Visitors (chat widget identities, online/offline, page views)
             Route::get('visitors',                   [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'index']);

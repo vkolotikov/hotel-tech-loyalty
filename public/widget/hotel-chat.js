@@ -15,6 +15,40 @@
   var sessionId = null;
   var messages = [];
   var widgetConfig = null;
+  // Tracks the highest chat_messages.id we've already rendered, so the poll
+  // endpoint only sends us new agent/system replies. Lives across the panel
+  // open/close lifecycle so reopening doesn't replay everything.
+  var lastMessageId = 0;
+  var pollTimer = null;
+  var POLL_INTERVAL_MS = 3500;
+  var activeAgent = null; // {name, avatar} when a human takes over
+  var agentTyping = false;
+  var lastTypingPingAt = 0;
+  var ratingPrompted = false;
+  var ratingSubmitted = false;
+  // Localized fallback strings for widget chrome. The admin can still override
+  // every label via widget config (input_placeholder, welcome_title, etc.) —
+  // these only apply when the override is empty. Detected from browser locale.
+  var I18N = {
+    en: { placeholder: 'Type a message…', hint: 'Press Enter to send', welcome: 'Hi! How can I help you today?', subtitle: 'Ask about reservations, loyalty program, hotel services, or anything else.', consentTitle: 'Privacy Consent', consentBtn: 'I agree, start chat', consentText: 'By chatting with us you agree to our privacy policy and the storage of your messages.', branding: 'Powered by Hotel AI', offline: "We're currently offline. Leave a message and we'll get back to you.", uploadFailed: 'Upload failed', tooLarge: 'File too large (max 8MB)', somethingWrong: 'Sorry, something went wrong. Please try again.', notified: 'A team member has been notified and will reply shortly.', ratingHow: 'How was this conversation?', thanksRating: 'Thanks for your feedback!' },
+    es: { placeholder: 'Escribe un mensaje…', hint: 'Pulsa Enter para enviar', welcome: '¡Hola! ¿En qué puedo ayudarte?', subtitle: 'Pregunta sobre reservas, programa de fidelidad o servicios del hotel.', consentTitle: 'Consentimiento', consentBtn: 'Acepto, iniciar chat', consentText: 'Al chatear con nosotros aceptas nuestra política de privacidad y el almacenamiento de tus mensajes.', branding: 'Con tecnología Hotel AI', offline: 'Actualmente estamos offline. Deja un mensaje y te responderemos.', uploadFailed: 'Error al subir', tooLarge: 'Archivo demasiado grande (máx 8MB)', somethingWrong: 'Lo siento, algo salió mal. Inténtalo de nuevo.', notified: 'Un miembro del equipo ha sido notificado y responderá en breve.', ratingHow: '¿Cómo fue esta conversación?', thanksRating: '¡Gracias por tus comentarios!' },
+    fr: { placeholder: 'Tapez un message…', hint: 'Appuyez sur Entrée pour envoyer', welcome: 'Bonjour ! Comment puis-je vous aider ?', subtitle: 'Posez vos questions sur les réservations, le programme de fidélité ou les services.', consentTitle: 'Consentement', consentBtn: "J'accepte, démarrer le chat", consentText: 'En discutant avec nous, vous acceptez notre politique de confidentialité et le stockage de vos messages.', branding: 'Propulsé par Hotel AI', offline: 'Nous sommes actuellement hors ligne. Laissez un message et nous vous répondrons.', uploadFailed: 'Échec de l\'envoi', tooLarge: 'Fichier trop volumineux (max 8 Mo)', somethingWrong: 'Désolé, une erreur est survenue. Veuillez réessayer.', notified: 'Un membre de l\'équipe a été notifié et répondra bientôt.', ratingHow: 'Comment s\'est passée cette conversation ?', thanksRating: 'Merci pour vos commentaires !' },
+    de: { placeholder: 'Nachricht schreiben…', hint: 'Eingabetaste zum Senden', welcome: 'Hallo! Wie kann ich helfen?', subtitle: 'Fragen Sie zu Reservierungen, Treueprogramm oder Hotelservices.', consentTitle: 'Datenschutz', consentBtn: 'Einverstanden, Chat starten', consentText: 'Durch das Chatten mit uns stimmen Sie unserer Datenschutzerklärung und der Speicherung Ihrer Nachrichten zu.', branding: 'Bereitgestellt von Hotel AI', offline: 'Wir sind gerade offline. Hinterlassen Sie eine Nachricht und wir melden uns.', uploadFailed: 'Upload fehlgeschlagen', tooLarge: 'Datei zu groß (max. 8 MB)', somethingWrong: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.', notified: 'Ein Teammitglied wurde benachrichtigt und antwortet in Kürze.', ratingHow: 'Wie war diese Unterhaltung?', thanksRating: 'Danke für Ihr Feedback!' },
+    it: { placeholder: 'Scrivi un messaggio…', hint: 'Premi Invio per inviare', welcome: 'Ciao! Come posso aiutarti?', subtitle: 'Chiedi informazioni su prenotazioni, programma fedeltà o servizi.', consentTitle: 'Privacy', consentBtn: 'Accetto, inizia chat', consentText: 'Chattando con noi accetti la nostra privacy policy e la conservazione dei messaggi.', branding: 'Realizzato con Hotel AI', offline: 'Al momento siamo offline. Lascia un messaggio e ti risponderemo.', uploadFailed: 'Caricamento fallito', tooLarge: 'File troppo grande (max 8 MB)', somethingWrong: 'Qualcosa è andato storto. Riprova.', notified: 'Un membro del team è stato avvisato e risponderà a breve.', ratingHow: "Com'è andata questa conversazione?", thanksRating: 'Grazie per il tuo feedback!' },
+    pt: { placeholder: 'Escreva uma mensagem…', hint: 'Pressione Enter para enviar', welcome: 'Olá! Como posso ajudar?', subtitle: 'Pergunte sobre reservas, programa de fidelidade ou serviços do hotel.', consentTitle: 'Privacidade', consentBtn: 'Concordo, iniciar chat', consentText: 'Ao conversar conosco você aceita nossa política de privacidade e o armazenamento das suas mensagens.', branding: 'Desenvolvido por Hotel AI', offline: 'Estamos offline no momento. Deixe uma mensagem e retornaremos.', uploadFailed: 'Falha no upload', tooLarge: 'Arquivo muito grande (máx 8MB)', somethingWrong: 'Algo deu errado. Tente novamente.', notified: 'Um membro da equipe foi notificado e responderá em breve.', ratingHow: 'Como foi esta conversa?', thanksRating: 'Obrigado pelo feedback!' },
+    ru: { placeholder: 'Введите сообщение…', hint: 'Нажмите Enter для отправки', welcome: 'Здравствуйте! Чем могу помочь?', subtitle: 'Спрашивайте о бронировании, программе лояльности или услугах отеля.', consentTitle: 'Согласие', consentBtn: 'Согласен, начать чат', consentText: 'Общаясь с нами, вы соглашаетесь с нашей политикой конфиденциальности и хранением ваших сообщений.', branding: 'Работает на Hotel AI', offline: 'Сейчас мы офлайн. Оставьте сообщение, и мы ответим.', uploadFailed: 'Ошибка загрузки', tooLarge: 'Файл слишком большой (макс 8 МБ)', somethingWrong: 'Что-то пошло не так. Попробуйте ещё раз.', notified: 'Сотрудник был уведомлён и скоро ответит.', ratingHow: 'Как прошёл разговор?', thanksRating: 'Спасибо за отзыв!' }
+  };
+  function detectLang() {
+    var l = (window.HotelChatConfig && window.HotelChatConfig.lang) || navigator.language || 'en';
+    l = String(l).toLowerCase().slice(0, 2);
+    return I18N[l] ? l : 'en';
+  }
+  var T = I18N[detectLang()];
+  // GDPR consent: when widgetConfig.gdpr_consent_required is true, the visitor
+  // must tick a consent box once before any message is sent. Persisted in
+  // localStorage so they don't have to re-consent on every page load.
+  var gdprAccepted = false;
+  try { gdprAccepted = localStorage.getItem('htchat_gdpr_ok') === '1'; } catch (e) {}
 
   // ── Feature detection ──
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -295,7 +329,7 @@
     // Configurable input hint
     var hintEl = document.getElementById('htchat-input-hint');
     if (hintEl && !isListening) {
-      hintEl.innerHTML = '<span>' + escapeHtml(c.input_hint_text || 'Press Enter to send') + '</span>';
+      hintEl.innerHTML = '<span>' + escapeHtml(c.input_hint_text || T.hint) + '</span>';
     }
     // Branding
     var branding = document.getElementById('htchat-branding');
@@ -304,7 +338,7 @@
         branding.style.display = 'none';
       } else {
         branding.style.display = '';
-        branding.innerHTML = escapeHtml(c.branding_text || 'Powered by Hotel AI');
+        branding.innerHTML = escapeHtml(c.branding_text || T.branding);
       }
     }
     // Font family
@@ -362,12 +396,14 @@
       <div id="htchat-input-area">\
         <div id="htchat-input-row">\
           ' + (hasSTT ? '<button id="htchat-mic-btn" title="Voice input">' + ICONS.mic + '</button>' : '') + '\
-          <textarea id="htchat-input" placeholder="Type a message…" rows="1"></textarea>\
+          <button id="htchat-attach-btn" title="Attach file" style="width:38px;height:38px;border-radius:10px;border:none;cursor:pointer;background:#f3f4f6;color:#6b7280;display:flex;align-items:center;justify-content:center;flex-shrink:0">📎</button>\
+          <input id="htchat-file-input" type="file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none" />\
+          <textarea id="htchat-input" placeholder="' + T.placeholder + '" rows="1"></textarea>\
           <button id="htchat-send-btn" disabled>' + ICONS.send + '</button>\
         </div>\
-        <div id="htchat-input-hint"><span>Press Enter to send</span></div>\
+        <div id="htchat-input-hint"><span>' + T.hint + '</span></div>\
       </div>\
-      <div id="htchat-branding" style="text-align:center;font-size:10px;padding:6px 0;color:#9ca3af;border-top:1px solid rgba(0,0,0,0.05)">Powered by Hotel AI</div>\
+      <div id="htchat-branding" style="text-align:center;font-size:10px;padding:6px 0;color:#9ca3af;border-top:1px solid rgba(0,0,0,0.05)">' + T.branding + '</div>\
     ';
 
     document.body.appendChild(panel);
@@ -382,10 +418,21 @@
     });
     inputEl.addEventListener('input', function () {
       document.getElementById('htchat-send-btn').disabled = !inputEl.value.trim() || isLoading;
+      sendVisitorTyping();
     });
 
     if (hasSTT) {
       document.getElementById('htchat-mic-btn').onclick = toggleListening;
+    }
+    var attachBtn = document.getElementById('htchat-attach-btn');
+    var fileInput = document.getElementById('htchat-file-input');
+    if (attachBtn && fileInput) {
+      attachBtn.onclick = function () { fileInput.click(); };
+      fileInput.onchange = function () {
+        var f = fileInput.files && fileInput.files[0];
+        if (f) uploadFile(f);
+        fileInput.value = '';
+      };
     }
     if (hasTTS) {
       document.getElementById('htchat-tts-btn').onclick = toggleTTS;
@@ -404,11 +451,143 @@
       launcher.style.display = 'none';
       if (!sessionId) initSession();
       setTimeout(function () { document.getElementById('htchat-input').focus(); }, 100);
+      startPolling();
     } else {
       panel.classList.add('hidden');
       launcher.style.display = 'flex';
       stopSpeaking();
+      stopPolling();
     }
+  }
+
+  // ── Polling for agent/system replies ──
+  // The visitor's widget has no other way to find out that an agent has typed
+  // a reply from the inbox (we don't ship websockets). Poll on a short interval
+  // while the panel is open and append any new messages whose id we haven't
+  // seen yet. Idempotent thanks to lastMessageId.
+  function startPolling() {
+    if (pollTimer) return;
+    var run = function () {
+      if (!sessionId) return;
+      fetch(API + '/poll?session_id=' + encodeURIComponent(sessionId) + '&since_id=' + lastMessageId)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data || !Array.isArray(data.messages)) return;
+          var changed = false;
+          data.messages.forEach(function (m) {
+            if (m.id > lastMessageId) lastMessageId = m.id;
+            // Skip ai messages we already appended locally from sendMessage's
+            // own response — but if a different tab/session generated them
+            // (or AI was triggered server-side), accept them.
+            if (m.sender_type === 'ai' || m.sender_type === 'agent') {
+              messages.push({
+                role: 'assistant',
+                content: m.content,
+                sender_type: m.sender_type,
+                attachment_url: m.attachment_url || null,
+                attachment_type: m.attachment_type || null,
+              });
+              changed = true;
+            } else if (m.sender_type === 'system') {
+              messages.push({ role: 'system', content: m.content });
+              changed = true;
+            }
+          });
+          var prevAgent = activeAgent;
+          if (data.active_agent) {
+            activeAgent = data.active_agent;
+          } else {
+            activeAgent = null;
+          }
+          var prevTyping = agentTyping;
+          agentTyping = !!data.agent_typing;
+          // Reflect the live agent identity in the panel header so the
+          // visitor sees a real name instead of "Hotel Assistant" once a
+          // human takes over.
+          var agentChanged = JSON.stringify(prevAgent) !== JSON.stringify(activeAgent);
+          if (agentChanged) updateHeaderForAgent();
+          // Rating prompt — once the conversation is resolved by an agent,
+          // surface a star rating CTA inside the message stream. Only show
+          // it once per session.
+          if (data.prompt_rating && !ratingPrompted && !ratingSubmitted) {
+            ratingPrompted = true;
+            messages.push({ role: 'system', kind: 'rating', content: '' });
+            changed = true;
+          }
+          if (changed || prevTyping !== agentTyping) {
+            renderMessages();
+          }
+        })
+        .catch(function () {});
+    };
+    // Run immediately so the first agent reply lands fast, then on interval.
+    run();
+    pollTimer = setInterval(run, POLL_INTERVAL_MS);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  // Swap the panel header's name + avatar to reflect the active human agent
+  // (or revert to the configured assistant when no human is taking over).
+  function updateHeaderForAgent() {
+    var info = document.getElementById('htchat-header-info');
+    if (!info) return;
+    var h3 = info.querySelector('h3');
+    var sub = info.querySelector('p');
+    if (activeAgent && activeAgent.name) {
+      if (h3) h3.textContent = activeAgent.name;
+      if (sub) sub.textContent = 'Live agent';
+    } else if (widgetConfig) {
+      if (h3) h3.textContent = widgetConfig.company_name || widgetConfig.assistant_name || 'Assistant';
+      if (sub) sub.textContent = (widgetConfig.agent_status === 'online') ? 'Online' : (widgetConfig.header_subtitle || '');
+    }
+    // Avatar swap (only if the agent has a real avatar URL).
+    var avatarBox = document.getElementById('htchat-header-avatar');
+    if (avatarBox) {
+      if (activeAgent && activeAgent.avatar) {
+        avatarBox.innerHTML = '<img src="' + activeAgent.avatar + '" alt="" style="width:100%;height:100%;border-radius:10px;object-fit:cover" />';
+      } else if (widgetConfig && widgetConfig.assistant_avatar) {
+        avatarBox.innerHTML = '<img src="' + widgetConfig.assistant_avatar + '" alt="" style="width:100%;height:100%;border-radius:10px;object-fit:cover" />';
+      }
+    }
+  }
+
+  function submitRating(rating) {
+    if (!sessionId || ratingSubmitted) return;
+    ratingSubmitted = true;
+    fetch(API + '/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, rating: rating }),
+    }).catch(function () {});
+    // Replace the rating prompt with a thanks bubble.
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].kind === 'rating') {
+        messages[i] = { role: 'system', content: T.thanksRating };
+        break;
+      }
+    }
+    renderMessages();
+  }
+
+  // Throttled "I am typing" ping. We don't want to hit the server on every
+  // keystroke, so this only fires at most once per ~2 seconds. The server
+  // sets a 5s window so it stays "warm" between pings.
+  function sendVisitorTyping() {
+    if (!sessionId) return;
+    var now = Date.now();
+    if (now - lastTypingPingAt < 2000) return;
+    lastTypingPingAt = now;
+    fetch(API + '/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, typing: true }),
+    }).catch(function () {});
   }
 
   // ── Config ──
@@ -431,6 +610,17 @@
         if (h3) h3.textContent = data.company_name;
       }
       if (data.welcome_message) renderMessages();
+      // If we're outside business hours, prepend a sticky offline notice and
+      // dim the launcher pulse so visitors know nobody's listening live.
+      if (data.is_open === false) {
+        var offline = data.offline_message || T.offline;
+        if (messages.length === 0 || messages[0].kind !== 'offline') {
+          messages.unshift({ role: 'system', kind: 'offline', content: offline });
+        }
+        var pulse = document.querySelector('#htchat-launcher .htchat-pulse');
+        if (pulse) pulse.style.background = '#9ca3af';
+        renderMessages();
+      }
       // Show voice call button if enabled
       if (data.voice_enabled) {
         var vcBtn = document.getElementById('htchat-voice-call-btn');
@@ -456,10 +646,30 @@
     var container = document.getElementById('htchat-messages');
     if (!container) return;
 
+    // GDPR consent gate — block the chat UI behind a consent checkbox until
+    // the visitor explicitly accepts. We render this anywhere in the lifecycle
+    // (with or without prior messages) so re-opening the panel still gates.
+    if (widgetConfig && widgetConfig.gdpr_consent_required && !gdprAccepted) {
+      var consentText = widgetConfig.gdpr_consent_text || T.consentText;
+      container.innerHTML = '<div class="htchat-welcome">' +
+        '<div class="htchat-welcome-icon" style="background:' + getColor() + '22;color:' + getColor() + '">' + ICONS.sparkles + '</div>' +
+        '<h3>' + escapeHtml(T.consentTitle) + '</h3>' +
+        '<p style="font-size:12px;line-height:1.5">' + escapeHtml(consentText) + '</p>' +
+        '<button id="htchat-consent-btn" style="margin-top:10px;background:' + getColor() + ';color:white;border:none;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">' + escapeHtml(T.consentBtn) + '</button>' +
+        '</div>';
+      var btn = document.getElementById('htchat-consent-btn');
+      if (btn) btn.onclick = function () {
+        gdprAccepted = true;
+        try { localStorage.setItem('htchat_gdpr_ok', '1'); } catch (e) {}
+        renderMessages();
+      };
+      return;
+    }
+
     if (messages.length === 0) {
       var wc = widgetConfig || {};
-      var welcomeTitle = wc.welcome_title || wc.welcome_message || 'Hi! How can I help you today?';
-      var welcomeSub = wc.welcome_subtitle || 'Ask about reservations, loyalty program, hotel services, or anything else.';
+      var welcomeTitle = wc.welcome_title || wc.welcome_message || T.welcome;
+      var welcomeSub = wc.welcome_subtitle || T.subtitle;
       var showSug = wc.show_suggestions !== false;
       var defaultSug = ['What services do you offer?', 'I want to check my booking', 'Tell me about loyalty rewards'];
       var rawSug = Array.isArray(wc.suggestions) && wc.suggestions.length ? wc.suggestions : defaultSug;
@@ -481,17 +691,45 @@
     }
 
     var c = widgetConfig || {};
-    container.innerHTML = messages.map(function (m) {
+    container.innerHTML = messages.map(function (m, idx) {
+      // Special "rating" system bubble — interactive 5-star prompt.
+      if (m.role === 'system' && m.kind === 'rating') {
+        var stars = '';
+        for (var i = 1; i <= 5; i++) {
+          stars += '<button data-rating="' + i + '" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0 2px;color:#f59e0b">★</button>';
+        }
+        return '<div class="htchat-msg assistant"><div class="htchat-msg-bubble" style="background:' + (c.bot_bubble_color || '#f3f4f6') + ';color:' + (c.bot_bubble_text || '#1f2937') + '">' +
+          '<div style="font-size:12px;margin-bottom:6px">' + escapeHtml(T.ratingHow) + '</div>' +
+          '<div data-rating-stars="' + idx + '">' + stars + '</div>' +
+          '</div></div>';
+      }
       var bubbleStyle = '';
       if (m.role === 'user') {
         bubbleStyle = 'background:' + (c.user_bubble_color || getColor()) + ';color:' + (c.user_bubble_text || '#ffffff');
       } else {
         bubbleStyle = 'background:' + (c.bot_bubble_color || '#f3f4f6') + ';color:' + (c.bot_bubble_text || '#1f2937') + ';border:none';
       }
-      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + formatText(m.content) + '</div></div>';
+      var attachmentHtml = '';
+      if (m.attachment_url) {
+        var url = (m.attachment_url.indexOf('http') === 0) ? m.attachment_url : (API.replace(/\/api\/v1\/widget\/[^/]+$/, '') + m.attachment_url);
+        if (m.attachment_type === 'image') {
+          attachmentHtml = '<div style="margin-top:6px"><a href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" style="max-width:200px;max-height:200px;border-radius:8px;display:block" /></a></div>';
+        } else {
+          attachmentHtml = '<div style="margin-top:6px"><a href="' + url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;font-size:12px">📎 ' + escapeHtml(m.content || 'Download file') + '</a></div>';
+        }
+      }
+      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + (m.attachment_url && m.attachment_type === 'image' ? '' : formatText(m.content)) + attachmentHtml + '</div></div>';
     }).join('');
 
-    if (isLoading) {
+    // Wire star clicks to submitRating.
+    container.querySelectorAll('[data-rating-stars] button').forEach(function (btn) {
+      btn.onclick = function () {
+        var r = parseInt(btn.getAttribute('data-rating'), 10);
+        if (r) submitRating(r);
+      };
+    });
+
+    if (isLoading || agentTyping) {
       container.innerHTML += '<div class="htchat-msg assistant"><div class="htchat-msg-bubble"><div class="htchat-typing">' +
         '<span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span>' +
         '</div></div></div>';
@@ -504,6 +742,10 @@
     var inputEl = document.getElementById('htchat-input');
     var msg = text || (inputEl && inputEl.value.trim());
     if (!msg || isLoading) return;
+    if (widgetConfig && widgetConfig.gdpr_consent_required && !gdprAccepted) {
+      renderMessages();
+      return;
+    }
 
     stopSpeaking();
     messages.push({ role: 'user', content: msg });
@@ -522,20 +764,69 @@
         // Server may pause AI auto-reply when an agent has taken over the
         // conversation from the inbox. Show a friendly system note instead.
         if (data && data.ai_paused) {
-          messages.push({ role: 'system', content: 'A team member has been notified and will reply shortly.' });
+          messages.push({ role: 'system', content: T.notified });
           isLoading = false;
           renderMessages();
           return;
         }
         var reply = data.response || data.message || 'Sorry, I could not process that.';
         messages.push({ role: 'assistant', content: reply });
+        // Advance the poll cursor past the AI message we just rendered
+        // locally so the next poll doesn't deliver it again as a duplicate.
+        if (data.ai_message_id && data.ai_message_id > lastMessageId) {
+          lastMessageId = data.ai_message_id;
+        }
         isLoading = false;
         renderMessages();
         if (ttsEnabled) speak(reply);
       })
       .catch(function () {
-        messages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
+        messages.push({ role: 'assistant', content: T.somethingWrong });
         isLoading = false;
+        renderMessages();
+      });
+  }
+
+  // ── File upload ──
+  // Visitor attaches an image or document. We POST it to /upload, then push
+  // the resulting message into the local stream so the bubble appears
+  // immediately. Polling will then pick up any agent reply that follows.
+  function uploadFile(file) {
+    if (!file || !sessionId) return;
+    if (widgetConfig && widgetConfig.gdpr_consent_required && !gdprAccepted) {
+      renderMessages();
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      messages.push({ role: 'system', content: T.tooLarge });
+      renderMessages();
+      return;
+    }
+    var fd = new FormData();
+    fd.append('session_id', sessionId);
+    fd.append('file', file);
+    isLoading = true;
+    renderMessages();
+    fetch(API + '/upload', { method: 'POST', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        isLoading = false;
+        if (data && data.attachment_url) {
+          messages.push({
+            role: 'user',
+            content: file.name,
+            attachment_url: data.attachment_url,
+            attachment_type: data.attachment_type,
+          });
+          if (data.message_id && data.message_id > lastMessageId) lastMessageId = data.message_id;
+        } else {
+          messages.push({ role: 'system', content: T.uploadFailed });
+        }
+        renderMessages();
+      })
+      .catch(function () {
+        isLoading = false;
+        messages.push({ role: 'system', content: T.uploadFailed });
         renderMessages();
       });
   }
@@ -650,9 +941,9 @@
     var btn = document.getElementById('htchat-mic-btn');
     if (btn) { btn.className = ''; btn.innerHTML = ICONS.mic; }
     var hint = document.getElementById('htchat-input-hint');
-    if (hint) hint.innerHTML = '<span>' + escapeHtml(c.input_hint_text || 'Press Enter to send') + '</span>';
+    if (hint) hint.innerHTML = '<span>' + escapeHtml(c.input_hint_text || T.hint) + '</span>';
     var inputEl = document.getElementById('htchat-input');
-    if (inputEl) { inputEl.placeholder = c.input_placeholder || 'Type a message…'; inputEl.style.borderColor = ''; }
+    if (inputEl) { inputEl.placeholder = c.input_placeholder || T.placeholder; inputEl.style.borderColor = ''; }
   }
 
   // ── Voice: TTS ──

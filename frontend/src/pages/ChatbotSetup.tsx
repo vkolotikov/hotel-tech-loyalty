@@ -1,18 +1,20 @@
 import { useState, lazy, Suspense } from 'react'
-import { Bot, BookOpen, Zap, GraduationCap } from 'lucide-react'
+import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion } from 'lucide-react'
 
 const ChatbotConfig = lazy(() => import('./ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
 const KnowledgeBase = lazy(() => import('./KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
 const PopupRules    = lazy(() => import('./PopupRules').then(m => ({ default: m.PopupRules })))
 const Training      = lazy(() => import('./Training').then(m => ({ default: m.Training })))
+const TestAi        = lazy(() => import('./ChatbotTestAi').then(m => ({ default: m.ChatbotTestAi })))
 
-type Tab = 'config' | 'knowledge' | 'popups' | 'training'
+type Tab = 'config' | 'knowledge' | 'popups' | 'training' | 'test'
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'config',    label: 'Behavior & Model', icon: Bot },
   { key: 'knowledge', label: 'Knowledge Base',   icon: BookOpen },
   { key: 'popups',    label: 'Popup Rules',      icon: Zap },
   { key: 'training',  label: 'AI Training',      icon: GraduationCap },
+  { key: 'test',      label: 'Test the AI',      icon: MessageCircleQuestion },
 ]
 
 // Persist last tab so the page restores its previous view across navigations.
@@ -54,6 +56,7 @@ export function ChatbotSetup() {
         {tab === 'knowledge' && <KnowledgeBase />}
         {tab === 'popups'    && <PopupRules />}
         {tab === 'training'  && <Training />}
+        {tab === 'test'      && <TestAi />}
       </Suspense>
     </div>
   )

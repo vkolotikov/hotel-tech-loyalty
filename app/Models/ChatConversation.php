@@ -33,6 +33,11 @@ class ChatConversation extends Model
         'session_id',
         'messages_count',
         'last_message_at',
+        'visitor_typing_until',
+        'agent_typing_until',
+        'active_agent_name',
+        'active_agent_avatar',
+        'rating_requested',
     ];
 
     protected $casts = [
@@ -41,6 +46,9 @@ class ChatConversation extends Model
         'messages_count' => 'integer',
         'rating' => 'integer',
         'last_message_at' => 'datetime',
+        'visitor_typing_until' => 'datetime',
+        'agent_typing_until' => 'datetime',
+        'rating_requested' => 'boolean',
     ];
 
     public function messages()

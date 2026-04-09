@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Schedule;
 // accumulate.
 Schedule::command('guests:sweep-lifecycle')->dailyAt('03:15');
 
+// Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
+// clean and "active" / "waiting" stats reflect reality.
+Schedule::command('chat:reap')->hourly();
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes

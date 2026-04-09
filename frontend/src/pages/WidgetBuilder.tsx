@@ -364,6 +364,129 @@ export function WidgetBuilder() {
             )}
           </div>
 
+          {/* Business Hours */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Business Hours</h2>
+            <p className="text-xs text-t-secondary -mt-2">When closed, the widget shows your offline message instead of the welcome bubble. Leave a day blank to mark it as closed.</p>
+
+            <div>
+              <label className="block text-sm text-t-secondary mb-1">Timezone</label>
+              <input type="text" value={f.timezone || ''} onChange={e => update('timezone', e.target.value)}
+                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm font-mono"
+                placeholder="Europe/London" />
+              <p className="text-[10px] text-t-secondary mt-1">IANA timezone string (e.g. Europe/London, America/New_York). Leave blank to use server timezone.</p>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { key: 'mon', label: 'Monday' },
+                { key: 'tue', label: 'Tuesday' },
+                { key: 'wed', label: 'Wednesday' },
+                { key: 'thu', label: 'Thursday' },
+                { key: 'fri', label: 'Friday' },
+                { key: 'sat', label: 'Saturday' },
+                { key: 'sun', label: 'Sunday' },
+              ].map(day => {
+                const hours = (f.business_hours || {}) as Record<string, Array<{ open: string; close: string }>>
+                const slots = hours[day.key] || []
+                const slot = slots[0] || { open: '', close: '' }
+                const isOpen = !!(slot.open && slot.close)
+                return (
+                  <div key={day.key} className="flex items-center gap-3">
+                    <label className="w-24 text-sm text-white">{day.label}</label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={isOpen}
+                        onChange={e => {
+                          const next = { ...hours }
+                          if (e.target.checked) {
+                            next[day.key] = [{ open: '09:00', close: '17:00' }]
+                          } else {
+                            delete next[day.key]
+                          }
+                          update('business_hours', next)
+                        }}
+                        className="sr-only peer" />
+                      <div className="w-9 h-5 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                    </label>
+                    {isOpen ? (
+                      <>
+                        <input type="time" value={slot.open}
+                          onChange={e => {
+                            const next = { ...hours }
+                            next[day.key] = [{ open: e.target.value, close: slot.close }]
+                            update('business_hours', next)
+                          }}
+                          className="bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-white text-sm font-mono" />
+                        <span className="text-t-secondary text-sm">→</span>
+                        <input type="time" value={slot.close}
+                          onChange={e => {
+                            const next = { ...hours }
+                            next[day.key] = [{ open: slot.open, close: e.target.value }]
+                            update('business_hours', next)
+                          }}
+                          className="bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-white text-sm font-mono" />
+                      </>
+                    ) : (
+                      <span className="text-xs text-t-secondary italic">Closed</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Rating Prompt */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Rating Prompt</h2>
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={f.rating_prompt_enabled ?? true}
+                  onChange={e => update('rating_prompt_enabled', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+              </label>
+              <span className="text-sm text-white">Ask visitors to rate the conversation when it's resolved</span>
+            </div>
+            {(f.rating_prompt_enabled ?? true) && (
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Prompt Text</label>
+                <input type="text" value={f.rating_prompt_text || ''} onChange={e => update('rating_prompt_text', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="How would you rate this conversation?" />
+              </div>
+            )}
+          </div>
+
+          {/* GDPR & Notifications */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Privacy &amp; Notifications</h2>
+
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={f.gdpr_consent_required ?? false}
+                  onChange={e => update('gdpr_consent_required', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+              </label>
+              <span className="text-sm text-white">Require GDPR consent before chatting</span>
+            </div>
+            {(f.gdpr_consent_required ?? false) && (
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Consent Text</label>
+                <textarea value={f.gdpr_consent_text || ''} onChange={e => update('gdpr_consent_text', e.target.value)} rows={2}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="By chatting with us you agree to our privacy policy and the storage of your messages." />
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-2 border-t border-dark-border">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={f.inbox_sound_enabled ?? true}
+                  onChange={e => update('inbox_sound_enabled', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-dark-surface4 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+              </label>
+              <span className="text-sm text-white">Play notification sound in agent inbox on new visitor messages</span>
+            </div>
+          </div>
+
           {/* Installation */}
           {config?.id && (
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">

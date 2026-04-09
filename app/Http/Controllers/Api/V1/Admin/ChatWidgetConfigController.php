@@ -62,6 +62,13 @@ class ChatWidgetConfigController extends Controller
             'lead_capture_delay'   => 'nullable|integer|min:0|max:300',
             'offline_message'      => 'nullable|string|max:500',
             'is_active'            => 'nullable|boolean',
+            'business_hours'       => 'nullable|array',
+            'timezone'             => 'nullable|string|max:64',
+            'gdpr_consent_required'=> 'nullable|boolean',
+            'gdpr_consent_text'    => 'nullable|string|max:500',
+            'inbox_sound_enabled'  => 'nullable|boolean',
+            'rating_prompt_enabled'=> 'nullable|boolean',
+            'rating_prompt_text'   => 'nullable|string|max:200',
         ]);
 
         try {

@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
+use App\Services\KnowledgeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ChatbotConfigController extends Controller
 {
+    public function __construct(protected KnowledgeService $knowledge) {}
+
     public function getBehavior(Request $request): JsonResponse
     {
         $orgId = $request->user()->organization_id;
@@ -74,5 +77,113 @@ class ChatbotConfigController extends Controller
         );
 
         return response()->json($config);
+    }
+
+    /**
+     * Try the AI live with the org's current behavior + model + KB so admins
+     * can verify their config without going through the public widget. Reuses
+     * the same prompt-building approach the widget uses.
+     */
+    public function testChat(Request $request): JsonResponse
+    {
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array|max:20',
+        ]);
+
+        $orgId = $request->user()->organization_id;
+        $behavior = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
+        $model = ChatbotModelConfig::where('organization_id', $orgId)->first();
+
+        $kbContext = '';
+        try {
+            $kbContext = $this->knowledge->getKnowledgeContext($request->message, $orgId);
+        } catch (\Throwable $e) {
+            \Log::warning('Test chat KB lookup failed: ' . $e->getMessage());
+        }
+
+        $companyName = (string) (\App\Models\Organization::find($orgId)->name ?? '');
+        $systemPrompt = $this->buildTestSystemPrompt($behavior, $kbContext, $companyName);
+
+        $history = $request->input('history', []);
+        $history[] = ['role' => 'user', 'content' => $request->message];
+
+        $provider = $model->provider ?? 'openai';
+        $modelName = $model->model_name ?? 'gpt-4o';
+        $temperature = (float) ($model->temperature ?? 0.7);
+        $maxTokens = (int) ($model->max_tokens ?? 500);
+
+        try {
+            $allMessages = array_merge([['role' => 'system', 'content' => $systemPrompt]], $history);
+            // Test panel is OpenAI-only for now to keep this controller small —
+            // multi-provider testing would duplicate WidgetChatController code.
+            $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
+                'model'       => $modelName,
+                'messages'    => $allMessages,
+                'max_tokens'  => $maxTokens,
+                'temperature' => $temperature,
+            ]);
+            $reply = $response->choices[0]->message->content ?? '';
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'AI call failed: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json([
+            'reply'           => $reply,
+            'kb_context_used' => $kbContext !== '',
+            'system_prompt'   => $systemPrompt, // surfaced for debugging
+        ]);
+    }
+
+    private function buildTestSystemPrompt(?ChatbotBehaviorConfig $config, string $kb, string $companyName): string
+    {
+        $parts = [];
+        if ($config && $config->identity) {
+            $parts[] = $config->identity;
+        } else {
+            $name = $config->assistant_name ?? 'Hotel Assistant';
+            $parts[] = "You are {$name}, a helpful hotel concierge AI assistant" . ($companyName ? " for {$companyName}" : '') . ".";
+        }
+        if ($config && $config->goal) $parts[] = "Your goal: {$config->goal}";
+        if ($config && !empty($config->core_rules)) {
+            $parts[] = "Rules:";
+            foreach ($config->core_rules as $r) $parts[] = "- {$r}";
+        }
+        if ($config && $config->custom_instructions) $parts[] = $config->custom_instructions;
+        if ($kb) $parts[] = "\n{$kb}";
+        return implode("\n", $parts);
+    }
+
+    /**
+     * Use the AI to suggest 5-10 search keywords for a given KB question/answer
+     * so admins don't have to come up with them by hand.
+     */
+    public function suggestKeywords(Request $request): JsonResponse
+    {
+        $request->validate([
+            'question' => 'required|string|max:2000',
+            'answer'   => 'nullable|string|max:5000',
+        ]);
+
+        $prompt = "Given this knowledge base entry, return ONLY a JSON array of 5-10 short search keywords (lowercase, single words or 2-word phrases) that visitors might use to find this info. No explanation, just the JSON array.\n\nQuestion: {$request->question}\nAnswer: " . ($request->answer ?? '');
+
+        try {
+            $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
+                'model'       => 'gpt-4o-mini',
+                'messages'    => [['role' => 'user', 'content' => $prompt]],
+                'max_tokens'  => 200,
+                'temperature' => 0.3,
+            ]);
+            $raw = trim($response->choices[0]->message->content ?? '[]');
+            // Strip markdown fences if the model added them.
+            $raw = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', $raw);
+            $keywords = json_decode($raw, true);
+            if (!is_array($keywords)) $keywords = [];
+            $keywords = array_values(array_filter(array_map('strtolower', array_map('trim', $keywords))));
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Keyword suggestion failed: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json(['keywords' => $keywords]);
     }
 }
