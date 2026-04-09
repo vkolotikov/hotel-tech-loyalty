@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ScanEvent extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'property_id', 'staff_id', 'scan_type',
+        'organization_id', 'member_id', 'property_id', 'staff_id', 'scan_type',
         'token_value', 'result', 'action_taken', 'transaction_id',
         'device_id', 'ip_address',
     ];

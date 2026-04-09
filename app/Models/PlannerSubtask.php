@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlannerSubtask extends Model
 {
+    use BelongsToOrganization;
+
     public $timestamps = false;
 
-    protected $fillable = ['task_id', 'title', 'is_done', 'created_at'];
+    protected $fillable = ['organization_id', 'task_id', 'title', 'is_done', 'created_at'];
 
     protected $casts = [
         'is_done'    => 'boolean',

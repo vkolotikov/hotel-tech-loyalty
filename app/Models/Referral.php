@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class Referral extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'referrer_id', 'referee_id', 'status',
+        'organization_id', 'referrer_id', 'referee_id', 'status',
         'referrer_points_awarded', 'referee_points_awarded',
         'qualified_at', 'rewarded_at',
     ];

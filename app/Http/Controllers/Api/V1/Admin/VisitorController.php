@@ -24,11 +24,10 @@ class VisitorController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
         $threshold = now()->subSeconds(self::ONLINE_THRESHOLD_SECONDS);
 
-        $query = Visitor::where('organization_id', $orgId)
-            ->with('guest:id,full_name,email,phone,lifecycle_status,lead_source');
+        // Tenant scope is applied automatically by BelongsToOrganization trait.
+        $query = Visitor::with('guest:id,full_name,email,phone,lifecycle_status,lead_source');
 
         $status = $request->get('status', 'all');
         if ($status === 'online') {
@@ -55,12 +54,20 @@ class VisitorController extends Controller
 
         $visitors = $query->orderByDesc('last_seen_at')->paginate(50);
 
+        // Single aggregated query for stats — replaces 4 separate COUNT queries.
+        $statsRow = Visitor::selectRaw(
+            'COUNT(*) AS total,
+             SUM(CASE WHEN last_seen_at >= ? THEN 1 ELSE 0 END) AS online,
+             SUM(CASE WHEN last_seen_at IS NULL OR last_seen_at < ? THEN 1 ELSE 0 END) AS offline,
+             SUM(CASE WHEN is_lead = true THEN 1 ELSE 0 END) AS leads',
+            [$threshold, $threshold]
+        )->first();
+
         $stats = [
-            'online'  => Visitor::where('organization_id', $orgId)->where('last_seen_at', '>=', $threshold)->count(),
-            'offline' => Visitor::where('organization_id', $orgId)
-                ->where(fn($q) => $q->whereNull('last_seen_at')->orWhere('last_seen_at', '<', $threshold))->count(),
-            'leads'   => Visitor::where('organization_id', $orgId)->where('is_lead', true)->count(),
-            'total'   => Visitor::where('organization_id', $orgId)->count(),
+            'online'  => (int) ($statsRow->online ?? 0),
+            'offline' => (int) ($statsRow->offline ?? 0),
+            'leads'   => (int) ($statsRow->leads ?? 0),
+            'total'   => (int) ($statsRow->total ?? 0),
         ];
 
         return response()->json([
@@ -81,11 +88,8 @@ class VisitorController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-
-        $visitor = Visitor::where('organization_id', $orgId)
-            ->with('guest')
-            ->findOrFail($id);
+        // Tenant scope is applied automatically by BelongsToOrganization trait.
+        $visitor = Visitor::with('guest')->findOrFail($id);
 
         $pageViews = VisitorPageView::where('visitor_id', $id)
             ->orderByDesc('viewed_at')
@@ -112,17 +116,15 @@ class VisitorController extends Controller
      */
     public function startChat(Request $request, int $id): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-        $visitor = Visitor::where('organization_id', $orgId)->findOrFail($id);
+        // Tenant scope is applied automatically by BelongsToOrganization trait.
+        $visitor = Visitor::findOrFail($id);
 
-        $conv = ChatConversation::where('organization_id', $orgId)
-            ->where('visitor_id', $visitor->id)
+        $conv = ChatConversation::where('visitor_id', $visitor->id)
             ->orderByDesc('last_message_at')
             ->first();
 
         if (!$conv) {
             $conv = ChatConversation::create([
-                'organization_id' => $orgId,
                 'visitor_id'      => $visitor->id,
                 'session_id'      => (string) Str::uuid(),
                 'channel'         => 'admin_initiated',
@@ -148,8 +150,8 @@ class VisitorController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
-        $visitor = Visitor::where('organization_id', $orgId)->findOrFail($id);
+        // Tenant scope is applied automatically by BelongsToOrganization trait.
+        $visitor = Visitor::findOrFail($id);
 
         \DB::transaction(function () use ($visitor) {
             VisitorPageView::where('visitor_id', $visitor->id)->delete();

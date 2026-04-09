@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MemberIdentity extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
-        'member_id', 'type', 'identifier', 'provider',
+        'organization_id', 'member_id', 'type', 'identifier', 'provider',
         'is_verified', 'is_primary', 'verified_at',
     ];
 
