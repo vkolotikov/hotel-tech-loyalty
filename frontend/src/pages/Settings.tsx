@@ -209,6 +209,21 @@ export function Settings() {
     },
   })
 
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const widgetAvatarUpload = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return api.post('/v1/admin/widget-config/upload-avatar', fd).then(r => r.data)
+    },
+    onSuccess: (data: any) => {
+      updateWidget('assistant_avatar_url', data.assistant_avatar_url)
+      qc.invalidateQueries({ queryKey: ['widget-config'] })
+      toast.success('Avatar uploaded')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+  })
+
   const [embedTab, setEmbedTab] = useState<'script' | 'iframe' | 'api'>('script')
   const [copied, setCopied] = useState(false)
   const copyCode = (text?: string) => {
@@ -1452,6 +1467,145 @@ export function Settings() {
                 className="w-3.5 h-3.5 rounded border-white/[0.12] bg-white/[0.03] text-emerald-500" />
               <span className="text-sm text-white">Widget Active</span>
             </label>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Copy & Text ─────────────────────────────────────────── */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+          <FileText size={15} className="text-emerald-400" /> Copy & Text
+        </h3>
+        <p className="text-[11px] text-gray-500 mb-4">All visible text in the widget. Leave blank for sensible defaults.</p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Header Title</label>
+              <input type="text" value={wf.header_title || ''} onChange={e => updateWidget('header_title', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="AI Assistant" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Header Subtitle</label>
+              <input type="text" value={wf.header_subtitle || ''} onChange={e => updateWidget('header_subtitle', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Ask me anything" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Welcome Heading</label>
+            <input type="text" value={wf.welcome_title || ''} onChange={e => updateWidget('welcome_title', e.target.value)}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Hi! How can I help you today?" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Welcome Description</label>
+            <textarea value={wf.welcome_subtitle || ''} onChange={e => updateWidget('welcome_subtitle', e.target.value)} rows={2}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white"
+              placeholder="Ask about reservations, loyalty program, hotel services, or anything else." />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Input Placeholder</label>
+              <input type="text" value={wf.input_placeholder || ''} onChange={e => updateWidget('input_placeholder', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Type a message..." />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Input Hint Text</label>
+              <input type="text" value={wf.input_hint_text || ''} onChange={e => updateWidget('input_hint_text', e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Press Enter to send" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Branding Footer Text</label>
+            <input type="text" value={wf.branding_text || ''} onChange={e => updateWidget('branding_text', e.target.value)}
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white" placeholder="Powered by Hotel AI" />
+          </div>
+
+          {/* Assistant Avatar Upload */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Assistant Avatar</label>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl border border-white/[0.08] bg-white/[0.03] flex items-center justify-center overflow-hidden shrink-0">
+                {wf.assistant_avatar_url ? (
+                  <img src={resolveImage(wf.assistant_avatar_url) || wf.assistant_avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <MessageSquare size={20} className="text-gray-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={widgetAvatarUpload.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-50">
+                    <Upload size={12} /> {widgetAvatarUpload.isPending ? 'Uploading...' : 'Upload Image'}
+                  </button>
+                  {wf.assistant_avatar_url && (
+                    <button type="button" onClick={() => updateWidget('assistant_avatar_url', '')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white">
+                      <Trash2 size={12} /> Remove
+                    </button>
+                  )}
+                </div>
+                <input type="url" value={wf.assistant_avatar_url || ''} onChange={e => updateWidget('assistant_avatar_url', e.target.value)}
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1 text-[11px] text-white font-mono"
+                  placeholder="…or paste image URL" />
+              </div>
+            </div>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) widgetAvatarUpload.mutate(file)
+                e.target.value = ''
+              }} />
+            <p className="text-[10px] text-gray-600 mt-1.5">Square PNG/JPG, ~120×120px, max 2MB.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Agent Status</label>
+            <div className="flex gap-2">
+              {[
+                { v: 'online',  label: 'Online',  color: '#10b981' },
+                { v: 'away',    label: 'Away',    color: '#f59e0b' },
+                { v: 'offline', label: 'Offline', color: '#6b7280' },
+              ].map(s => (
+                <button key={s.v} type="button" onClick={() => updateWidget('agent_status', s.v)}
+                  className={`flex-1 py-1.5 px-3 rounded-lg border text-xs flex items-center justify-center gap-2 transition-colors ${
+                    (wf.agent_status || 'online') === s.v ? 'border-emerald-500/30 bg-emerald-500/10 text-white' : 'border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                  }`}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Suggested Questions */}
+          <div className="border-t border-white/[0.04] pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs text-white font-medium">Suggested Questions (welcome screen buttons)</label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={wf.show_suggestions ?? true}
+                  onChange={e => updateWidget('show_suggestions', e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 bg-white/[0.06] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+              </label>
+            </div>
+            {(wf.show_suggestions ?? true) && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-gray-600">Up to 6 quick-reply buttons. Leave blank to remove.</p>
+                {[0, 1, 2, 3, 4, 5].map(i => {
+                  const list: string[] = Array.isArray(wf.suggestions) ? wf.suggestions : []
+                  return (
+                    <input key={i} type="text" value={list[i] || ''}
+                      onChange={e => {
+                        const next = [...list]
+                        next[i] = e.target.value
+                        // Trim trailing blanks so we send a clean array
+                        while (next.length && !next[next.length - 1]) next.pop()
+                        updateWidget('suggestions', next)
+                      }}
+                      className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-white"
+                      placeholder={`Suggestion ${i + 1}`} />
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
