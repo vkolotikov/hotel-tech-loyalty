@@ -4,20 +4,27 @@ import { api, resolveImage } from '../lib/api'
 import {
   Save, RefreshCw, Upload, Trash2, Copy, Check, Code, MessageSquare,
   Palette, Type, Mic, Volume2, Clock, Shield, UserCheck, Megaphone,
-  Send, Phone, X,
+  Send, Phone, X, MessageCircle, Headphones, HelpCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-type SubTab = 'brand' | 'copy' | 'style' | 'behavior' | 'voice' | 'install'
+type SubTab = 'appearance' | 'copy' | 'behavior' | 'voice' | 'install'
 
 const SUB_TABS: { key: SubTab; label: string; icon: any }[] = [
-  { key: 'brand',    label: 'Brand',       icon: Palette },
-  { key: 'copy',     label: 'Copy & Avatar', icon: Type },
-  { key: 'style',    label: 'Style',       icon: MessageSquare },
-  { key: 'behavior', label: 'Behavior',    icon: UserCheck },
-  { key: 'voice',    label: 'Voice Agent', icon: Mic },
-  { key: 'install',  label: 'Install',     icon: Code },
+  { key: 'appearance', label: 'Appearance',  icon: Palette },
+  { key: 'copy',       label: 'Copy & Avatar', icon: Type },
+  { key: 'behavior',   label: 'Behavior',    icon: UserCheck },
+  { key: 'voice',      label: 'Voice Agent', icon: Mic },
+  { key: 'install',    label: 'Install',     icon: Code },
 ]
+
+const LAUNCHER_ICON_MAP: Record<string, any> = {
+  chat:     MessageSquare,
+  message:  MessageCircle,
+  support:  Headphones,
+  question: HelpCircle,
+  sales:    Megaphone,
+}
 
 const COLOR_PRESETS = ['#c9a84c', '#2d6a4f', '#1d4ed8', '#7c3aed', '#dc2626', '#0891b2', '#ea580c', '#16a34a', '#4f46e5', '#be185d']
 const FONT_OPTIONS = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montserrat', 'Nunito', 'Playfair Display', 'Georgia', 'system-ui']
@@ -36,8 +43,9 @@ const btnSec = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-dar
 export function ChatbotWidget() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<SubTab>(() => {
-    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) as SubTab | null
-    return saved && SUB_TABS.some(t => t.key === saved) ? saved : 'brand'
+    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) as string | null
+    if (saved === 'brand' || saved === 'style') return 'appearance'
+    return (saved && SUB_TABS.some(t => t.key === saved)) ? (saved as SubTab) : 'appearance'
   })
   const switchTab = (next: SubTab) => {
     setTab(next)
@@ -141,10 +149,11 @@ export function ChatbotWidget() {
 
   // ─── Sub-tab content ─────────────────────────────────────────────────────
 
-  const renderBrand = () => (
+  const renderAppearance = () => (
     <div className="space-y-4">
+      {/* Identity */}
       <div className={card}>
-        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Brand & Identity</h3>
+        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Identity</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={label}>Company Name</label>
@@ -201,6 +210,7 @@ export function ChatbotWidget() {
         </div>
       </div>
 
+      {/* Launcher button */}
       <div className={card}>
         <h3 className={cardTitle}><MessageSquare size={14} className="text-primary-500" /> Launcher Button</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,12 +228,19 @@ export function ChatbotWidget() {
           <div>
             <label className={label}>Icon</label>
             <div className="flex gap-2">
-              {LAUNCHER_ICONS.map(i => (
-                <button key={i} onClick={() => update('launcher_icon', i)}
-                  className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
-                    (f.launcher_icon || 'chat') === i ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
-                  }`}>{i}</button>
-              ))}
+              {LAUNCHER_ICONS.map(i => {
+                const IconCmp = LAUNCHER_ICON_MAP[i] || MessageSquare
+                const active = (f.launcher_icon || 'chat') === i
+                return (
+                  <button key={i} type="button" onClick={() => update('launcher_icon', i)}
+                    title={i}
+                    className={`flex-1 py-2 rounded-lg border flex items-center justify-center ${
+                      active ? 'border-primary-500 bg-primary-500/10 text-primary-500' : 'border-dark-border text-t-secondary hover:text-white'
+                    }`}>
+                    <IconCmp size={16} />
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -231,7 +248,77 @@ export function ChatbotWidget() {
           <label className={label}>Launcher Size: {f.launcher_size || 56}px</label>
           <input type="range" min={40} max={80} step={2} value={f.launcher_size || 56}
             onChange={e => update('launcher_size', parseInt(e.target.value))}
-            className="w-full h-1.5 bg-dark-bg rounded-lg appearance-none cursor-pointer accent-primary-500" />
+            className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500" />
+        </div>
+      </div>
+
+      {/* Chat colors */}
+      <div className={card}>
+        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Chat Colors</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {([
+            { key: 'header_text_color', label: 'Header Text', def: '#ffffff' },
+            { key: 'user_bubble_color', label: 'User Bubble', def: f.primary_color || '#c9a84c' },
+            { key: 'user_bubble_text', label: 'User Bubble Text', def: '#ffffff' },
+            { key: 'bot_bubble_color', label: 'Bot Bubble', def: '#f3f4f6' },
+            { key: 'bot_bubble_text', label: 'Bot Bubble Text', def: '#1f2937' },
+            { key: 'chat_bg_color', label: 'Chat Background', def: '#ffffff' },
+          ] as { key: string; label: string; def: string }[]).map(c => (
+            <div key={c.key}>
+              <label className={label}>{c.label}</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={f[c.key] || c.def || '#000000'} onChange={e => update(c.key, e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border border-dark-border bg-transparent" />
+                <input type="text" value={f[c.key] || ''} placeholder={c.def || 'auto'} onChange={e => update(c.key, e.target.value)}
+                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Typography & layout */}
+      <div className={card}>
+        <h3 className={cardTitle}><Type size={14} className="text-primary-500" /> Typography & Layout</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={label}>Font Family</label>
+            <select value={f.font_family || 'Inter'} onChange={e => update('font_family', e.target.value)} className={input}>
+              {FONT_OPTIONS.map(font => <option key={font} value={font}>{font}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={label}>Border Radius: {f.border_radius ?? 16}px</label>
+            <input type="range" min={0} max={24} step={1} value={f.border_radius ?? 16}
+              onChange={e => update('border_radius', parseInt(e.target.value))}
+              className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500 mt-3" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={label}>Header Style</label>
+            <div className="flex gap-2">
+              {['solid', 'gradient'].map(s => (
+                <button key={s} onClick={() => update('header_style', s)}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
+                    (f.header_style || 'solid') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
+                  }`}>{s}</button>
+              ))}
+            </div>
+          </div>
+          {(f.header_style || 'solid') === 'gradient' && (
+            <div>
+              <label className={label}>Header Gradient End Color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={f.header_gradient_end || f.primary_color || '#c9a84c'}
+                  onChange={e => update('header_gradient_end', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border border-dark-border" />
+                <input type="text" value={f.header_gradient_end || ''} onChange={e => update('header_gradient_end', e.target.value)}
+                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono"
+                  placeholder="#7c3aed" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -349,78 +436,6 @@ export function ChatbotWidget() {
             })}
           </div>
         )}
-      </div>
-    </div>
-  )
-
-  const renderStyle = () => (
-    <div className="space-y-4">
-      <div className={card}>
-        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Bubble & Background Colors</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {([
-            { key: 'header_text_color', label: 'Header Text', def: '#ffffff' },
-            { key: 'user_bubble_color', label: 'User Bubble', def: f.primary_color || '#c9a84c' },
-            { key: 'user_bubble_text', label: 'User Bubble Text', def: '#ffffff' },
-            { key: 'bot_bubble_color', label: 'Bot Bubble', def: '#f3f4f6' },
-            { key: 'bot_bubble_text', label: 'Bot Bubble Text', def: '#1f2937' },
-            { key: 'chat_bg_color', label: 'Chat Background', def: '#ffffff' },
-          ] as { key: string; label: string; def: string }[]).map(c => (
-            <div key={c.key}>
-              <label className={label}>{c.label}</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={f[c.key] || c.def || '#000000'} onChange={e => update(c.key, e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer border border-dark-border bg-transparent" />
-                <input type="text" value={f[c.key] || ''} placeholder={c.def || 'auto'} onChange={e => update(c.key, e.target.value)}
-                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className={card}>
-        <h3 className={cardTitle}><Type size={14} className="text-primary-500" /> Typography & Layout</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Font Family</label>
-            <select value={f.font_family || 'Inter'} onChange={e => update('font_family', e.target.value)} className={input}>
-              {FONT_OPTIONS.map(font => <option key={font} value={font}>{font}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={label}>Border Radius: {f.border_radius ?? 16}px</label>
-            <input type="range" min={0} max={24} step={1} value={f.border_radius ?? 16}
-              onChange={e => update('border_radius', parseInt(e.target.value))}
-              className="w-full h-1.5 bg-dark-bg rounded-lg appearance-none cursor-pointer accent-primary-500 mt-3" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Header Style</label>
-            <div className="flex gap-2">
-              {['solid', 'gradient'].map(s => (
-                <button key={s} onClick={() => update('header_style', s)}
-                  className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
-                    (f.header_style || 'solid') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
-                  }`}>{s}</button>
-              ))}
-            </div>
-          </div>
-          {(f.header_style || 'solid') === 'gradient' && (
-            <div>
-              <label className={label}>Header Gradient End Color</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={f.header_gradient_end || f.primary_color || '#c9a84c'}
-                  onChange={e => update('header_gradient_end', e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer border border-dark-border" />
-                <input type="text" value={f.header_gradient_end || ''} onChange={e => update('header_gradient_end', e.target.value)}
-                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono"
-                  placeholder="#7c3aed" />
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )
@@ -711,12 +726,11 @@ export function ChatbotWidget() {
       <div className={showPreview ? 'grid grid-cols-1 xl:grid-cols-12 gap-5' : ''}>
         {/* Form column */}
         <div className={showPreview ? 'xl:col-span-7 space-y-5 min-w-0' : 'space-y-5'}>
-          {tab === 'brand'    && renderBrand()}
-          {tab === 'copy'     && renderCopy()}
-          {tab === 'style'    && renderStyle()}
-          {tab === 'behavior' && renderBehavior()}
-          {tab === 'voice'    && renderVoice()}
-          {tab === 'install'  && renderInstall()}
+          {tab === 'appearance' && renderAppearance()}
+          {tab === 'copy'       && renderCopy()}
+          {tab === 'behavior'   && renderBehavior()}
+          {tab === 'voice'      && renderVoice()}
+          {tab === 'install'    && renderInstall()}
 
           {/* Sticky save bar — only for widget config tabs (voice has its own save) */}
           {tab !== 'voice' && tab !== 'install' && (
@@ -764,12 +778,15 @@ function WidgetPreview({ cfg }: { cfg: any }) {
   const position      = cfg.position || 'bottom-right'
   const isLeft        = position === 'bottom-left'
 
-  const launcherSize  = cfg.launcher_size || 56
-  const launcherShape = cfg.launcher_shape || 'circle'
+  const launcherSize   = cfg.launcher_size || 56
+  const launcherShape  = cfg.launcher_shape || 'circle'
+  const launcherWidth  = launcherShape === 'pill' ? Math.round(launcherSize * 1.7) : launcherSize
+  const launcherHeight = launcherSize
   const launcherRadius = launcherShape === 'circle' ? '50%'
     : launcherShape === 'pill' ? '999px'
     : launcherShape === 'rounded-square' ? '16px'
     : '6px'
+  const LauncherIcon = LAUNCHER_ICON_MAP[cfg.launcher_icon || 'chat'] || MessageSquare
 
   const status = cfg.agent_status || 'online'
   const statusColor = status === 'online' ? '#10b981' : status === 'away' ? '#f59e0b' : '#6b7280'
@@ -820,8 +837,8 @@ function WidgetPreview({ cfg }: { cfg: any }) {
             style={{
               [isLeft ? 'left' : 'right']: 18,
               bottom: 18,
-              width: launcherSize,
-              height: launcherSize,
+              width: launcherWidth,
+              height: launcherHeight,
               borderRadius: launcherRadius,
               background: headerBg,
               color: headerText,
@@ -830,7 +847,7 @@ function WidgetPreview({ cfg }: { cfg: any }) {
             } as any}
             aria-label="Open chat"
           >
-            <MessageSquare size={Math.round(launcherSize * 0.42)} />
+            <LauncherIcon size={Math.round(launcherSize * 0.42)} />
           </button>
         )}
 
