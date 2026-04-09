@@ -273,6 +273,9 @@ export function Layout({ children }: { children: ReactNode }) {
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
 
+        {/* Plan badge */}
+        <SidebarPlanBadge collapsed={collapsed} />
+
         {/* User + logout */}
         <div className="border-t border-dark-border p-3">
           {!collapsed && (
@@ -367,39 +370,134 @@ export function Layout({ children }: { children: ReactNode }) {
   )
 }
 
+function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
+  const { data, status } = useSubscription()
+
+  if (!data || status === 'LOCAL') return null
+
+  const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
+  const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
+  const planName = data.plan?.name ?? 'Free'
+
+  if (collapsed) {
+    return (
+      <div className="border-t border-dark-border px-2 py-2 flex justify-center" title={`${planName} plan${status === 'TRIALING' && daysLeft !== null ? ` — ${daysLeft}d trial` : ''}`}>
+        <div className={clsx(
+          'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold',
+          status === 'TRIALING' ? 'bg-primary-500/20 text-primary-300' : status === 'ACTIVE' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+        )}>
+          {planName.charAt(0)}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="border-t border-dark-border px-3 py-2.5">
+      <a
+        href="https://saas.hotel-tech.ai/admin/subscription"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block px-2.5 py-2 rounded-lg bg-dark-surface2 hover:bg-dark-surface3 transition-colors group"
+      >
+        <div className="flex items-center justify-between gap-2 mb-0.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Sparkles size={11} className={clsx('shrink-0',
+              status === 'TRIALING' ? 'text-primary-400' :
+              status === 'ACTIVE' ? 'text-green-400' :
+              'text-red-400'
+            )} />
+            <span className="text-[11px] font-semibold text-white truncate">{planName} plan</span>
+          </div>
+          <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0',
+            status === 'TRIALING' ? 'bg-primary-500/20 text-primary-300' :
+            status === 'ACTIVE' ? 'bg-green-500/20 text-green-300' :
+            'bg-red-500/20 text-red-300'
+          )}>
+            {status === 'TRIALING' ? 'Trial' : status === 'ACTIVE' ? 'Active' : 'Expired'}
+          </span>
+        </div>
+        {status === 'TRIALING' && daysLeft !== null && (
+          <p className="text-[10px] text-t-secondary">{daysLeft} day{daysLeft === 1 ? '' : 's'} left &middot; <span className="text-primary-400 group-hover:text-primary-300">Upgrade &rarr;</span></p>
+        )}
+        {status === 'ACTIVE' && data.periodEnd && (
+          <p className="text-[10px] text-t-secondary">Renews {new Date(data.periodEnd).toLocaleDateString()}</p>
+        )}
+        {(status === 'EXPIRED' || !data.active) && (
+          <p className="text-[10px] text-red-400">Renew to restore access</p>
+        )}
+      </a>
+    </div>
+  )
+}
+
 function SubscriptionBanner() {
   const { data, status } = useSubscription()
 
-  if (!data || status === 'LOCAL' || status === 'ACTIVE') return null
+  if (!data || status === 'LOCAL') return null
+
+  const billingUrl = 'https://saas.hotel-tech.ai/admin/subscription'
 
   if (status === 'TRIALING') {
     const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
     const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
+    const urgent = daysLeft !== null && daysLeft <= 2
     return (
-      <div className="mb-4 bg-primary-500/10 border border-primary-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
-        <Clock size={16} className="text-primary-400 shrink-0" />
-        <span className="text-sm text-primary-300">
-          <strong>Trial</strong> {daysLeft !== null ? ' \u2014 ' + daysLeft + ' days remaining' : ''}.
-          {data.plan?.name ? ' Plan: ' + data.plan.name + '.' : ''}
-          {' '}Visit{' '}
-          <a href="https://saas.hotel-tech.ai/admin/subscription" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary-200">
-            Billing
-          </a>{' '}to subscribe.
-        </span>
+      <div className={clsx(
+        'mb-4 rounded-lg px-4 py-3 flex items-center gap-3',
+        urgent ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-primary-500/10 border border-primary-500/20'
+      )}>
+        <Clock size={18} className={clsx('shrink-0', urgent ? 'text-orange-400' : 'text-primary-400')} />
+        <div className="flex-1 text-sm">
+          <strong className={urgent ? 'text-orange-300' : 'text-primary-300'}>
+            Free trial &mdash; {daysLeft !== null ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'active'}
+          </strong>
+          {data.plan?.name && (
+            <span className="text-t-secondary"> on the <strong className="text-white">{data.plan.name}</strong> plan</span>
+          )}
+          {trialEnd && (
+            <span className="text-t-secondary"> &middot; ends {trialEnd.toLocaleDateString()}</span>
+          )}
+        </div>
+        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+           className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-colors shrink-0">
+          Add payment method
+        </a>
+      </div>
+    )
+  }
+
+  if (status === 'ACTIVE') {
+    const periodEnd = data.periodEnd ? new Date(data.periodEnd) : null
+    return (
+      <div className="mb-4 bg-green-500/5 border border-green-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
+        <Sparkles size={16} className="text-green-400 shrink-0" />
+        <div className="flex-1 text-sm">
+          <strong className="text-green-300">{data.plan?.name ?? 'Active'} plan</strong>
+          {periodEnd && (
+            <span className="text-t-secondary"> &middot; renews {periodEnd.toLocaleDateString()}</span>
+          )}
+        </div>
+        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+           className="text-xs font-medium text-t-secondary hover:text-white transition-colors shrink-0">
+          Manage billing &rarr;
+        </a>
       </div>
     )
   }
 
   if (status === 'EXPIRED' || !data.active) {
     return (
-      <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
-        <AlertTriangle size={16} className="text-red-400 shrink-0" />
-        <span className="text-sm text-red-300">
-          <strong>Subscription expired.</strong> Some features may be limited.{' '}
-          <a href="https://saas.hotel-tech.ai/admin/subscription" target="_blank" rel="noopener noreferrer" className="underline hover:text-red-200">
-            Renew now
-          </a>
-        </span>
+      <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 flex items-center gap-3">
+        <AlertTriangle size={18} className="text-red-400 shrink-0" />
+        <div className="flex-1 text-sm">
+          <strong className="text-red-300">Subscription inactive.</strong>
+          <span className="text-t-secondary"> Most features are limited until you renew.</span>
+        </div>
+        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+           className="text-xs font-medium px-3 py-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0">
+          Renew now
+        </a>
       </div>
     )
   }
