@@ -24,7 +24,6 @@ const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m
 const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
 const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ default: m.ChatbotSetup })))
-const WidgetBuilder = lazy(() => import('./pages/WidgetBuilder').then(m => ({ default: m.WidgetBuilder })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
@@ -122,8 +121,8 @@ export default function App() {
           <Route path="/knowledge-base" element={<Navigate to="/chatbot-setup" replace />} />
           <Route path="/popup-rules" element={<Navigate to="/chatbot-setup" replace />} />
           <Route path="/training" element={<Navigate to="/chatbot-setup" replace />} />
+          <Route path="/widget-builder" element={<Navigate to="/chatbot-setup" replace />} />
           {/* Direct routes still mounted for the embedded tab loader to import. */}
-          <Route path="/widget-builder" element={<LazyRoute gate="admin" product="chat"><WidgetBuilder /></LazyRoute>} />
           <Route path="/chat-inbox" element={<LazyRoute gate="all" product="chat"><ChatInbox /></LazyRoute>} />
           <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
