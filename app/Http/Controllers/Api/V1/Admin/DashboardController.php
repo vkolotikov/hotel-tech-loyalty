@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatConversation;
+use App\Models\ChatMessage;
 use App\Models\Guest;
 use App\Models\Inquiry;
 use App\Models\Reservation;
@@ -198,4 +200,46 @@ class DashboardController extends Controller
         return response()->json($inquiryTasks);
     }
 
+    /**
+     * Bundled dashboard summary for the mobile staff app.
+     *
+     * Replaces 9 parallel HTTP requests (kpis, arrivals, departures, chat stats,
+     * tasks, inquiries, activity, week comp, booking trends) with a single
+     * roundtrip. On flaky carrier signal that's the difference between a
+     * dashboard that loads in one tap vs. one that partially fails and shows
+     * blank cards.
+     *
+     * Each of the 9 underlying methods stays exposed individually so the web
+     * admin SPA — which already paginates these views independently — keeps
+     * working unchanged.
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $orgId = $request->user()->organization_id;
+
+        // Inline chat stats — keeps the bundle in one query block instead of
+        // resolving ChatInboxController via the container just for one method.
+        $chatStats = [
+            'active'         => ChatConversation::where('organization_id', $orgId)->where('status', 'active')->count(),
+            'waiting'        => ChatConversation::where('organization_id', $orgId)->where('status', 'waiting')->count(),
+            'unassigned'     => ChatConversation::where('organization_id', $orgId)
+                                    ->whereIn('status', ['active', 'waiting'])
+                                    ->whereNull('assigned_to')->count(),
+            'resolved_today' => ChatConversation::where('organization_id', $orgId)
+                                    ->where('status', 'resolved')
+                                    ->where('updated_at', '>=', today())->count(),
+        ];
+
+        return response()->json([
+            'kpis'            => $this->kpis()->getData(true),
+            'arrivals'        => $this->arrivalsToday()->getData(true),
+            'departures'      => $this->departuresToday()->getData(true),
+            'chat_stats'      => $chatStats,
+            'tasks'           => $this->tasksDue()->getData(true),
+            'inquiry_stats'   => $this->inquiriesByStatus()->getData(true),
+            'activity'        => $this->recentActivity()->getData(true),
+            'week_comparison' => $this->weekComparison()->getData(true),
+            'booking_trends'  => $this->bookingTrends($request)->getData(true),
+        ]);
+    }
 }

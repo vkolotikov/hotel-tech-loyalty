@@ -132,6 +132,7 @@ Route::prefix('v1')->group(function () {
             Route::get('setup/status',       [SetupController::class, 'status']);
             Route::post('setup/initialize',  [SetupController::class, 'initialize']);
 
+            Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);
             Route::get('dashboard/points-chart',   [DashboardController::class, 'pointsChart']);
             Route::get('dashboard/member-growth',  [DashboardController::class, 'memberGrowth']);
