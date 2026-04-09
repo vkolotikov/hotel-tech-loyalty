@@ -77,7 +77,7 @@ class DocumentationController extends Controller
                     ],
                     [
                         'title' => 'Core Modules',
-                        'content' => "**CRM & Guest Management** — Centralized guest profiles, sales pipeline (inquiries), reservations, corporate accounts, and daily task planner.\n\n**Loyalty Program** — Tiered membership system (Bronze → Diamond) with points earning/redemption, special offers, benefits, QR/NFC member cards, and mobile app for members.\n\n**Booking Engine** — PMS integration via Smoobu, calendar view, payment tracking, public booking widget for your website, and booking submission logs.\n\n**AI Assistant** — Two AI systems: (1) Admin AI Chat powered by Anthropic Claude for CRM operations, data analysis, and platform guidance. (2) Website Chatbot powered by OpenAI for guest-facing conversations.\n\n**Venues & Events** — Venue management with capacity/pricing, event bookings linked to guest profiles.\n\n**Campaigns & Notifications** — Push notification campaigns with audience segmentation by tier, activity, and demographics.\n\n**Analytics & Reporting** — 10+ analytics views covering points, revenue, member growth, engagement, booking metrics, and AI-powered forecasting.",
+                        'content' => "**CRM & Guest Management** — Centralized guest profiles, sales pipeline (inquiries), reservations, corporate accounts, daily task planner, and audit log.\n\n**Loyalty Program** — Tiered membership system (Bronze → Diamond) with points earning/redemption, special offers, benefits, QR/NFC member cards, member duplicate detection + merge tooling, and a mobile app for members.\n\n**Booking Engine** — PMS integration via Smoobu, calendar view, payment tracking, room/extras catalog, public booking widget for your website, and booking submission logs.\n\n**Live Chat & Website Chatbot** — Embeddable chat widget for the customer's website, persistent visitor identity tracking (online/offline + page-view journey), live agent inbox with canned replies + file attachments, AI chatbot config, knowledge base, popup automation rules, and an OpenAI fine-tuning trainer.\n\n**AI Assistant** — Two separate AI systems: (1) Admin AI Chat powered by Anthropic Claude for CRM operations, data analysis, voice mode, and platform guidance. (2) Website Chatbot powered by OpenAI for guest-facing conversations on the customer site.\n\n**Venues & Events** — Venue management with capacity/pricing, event bookings linked to guest profiles.\n\n**Campaigns & Notifications** — Push notification campaigns + email templates with audience segmentation by tier, activity, and demographics.\n\n**Analytics & Reporting** — 10+ analytics views covering points, revenue, member growth, engagement, booking metrics, audit history, and AI-powered forecasting.",
                     ],
                     [
                         'title' => 'Getting Started',
@@ -134,6 +134,50 @@ class DocumentationController extends Controller
                     [
                         'title' => 'Member Cards (QR & NFC)',
                         'content' => "Members can be identified via:\n\n**QR Codes** — Generated automatically for each member. Scan from the Scan page using the device camera.\n\n**NFC Cards** — Physical cards linked to member profiles. Issue cards from the NFC management page, then tap to scan.\n\n**Mobile App** — Members can view their QR code, points balance, tier status, and available offers in the mobile app (React Native / Expo).",
+                    ],
+                    [
+                        'title' => 'Member Duplicates & Merge',
+                        'content' => "Over time the same person can end up with multiple member records — collected via different channels (web form, mobile app, manual entry, chatbot lead capture). The Duplicates page surfaces likely matches and lets staff merge them safely.\n\n**How matching works:**\n- Email match (case-insensitive)\n- Normalized phone match (digits-only)\n- Fuzzy name + DOB match\n- Each candidate pair gets a confidence score\n\n**Merge workflow:**\n1. Open Members → Duplicates\n2. Click \"Review & Merge\" on a pair\n3. Side-by-side preview of both profiles + merge target\n4. Choose which fields to keep from each side\n5. Confirm — points ledger entries, bookings, inquiries, loyalty history all reattach to the surviving record. The losing record is soft-deleted with an audit log entry.\n\n**Best practice:** Run the duplicates check weekly. Always merge into the older record (more history) unless the newer one has materially better data.",
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'live-chat',
+                'title' => 'Live Chat & Visitor Tracking',
+                'icon' => 'MessageCircle',
+                'description' => 'Embeddable website chat widget, persistent visitor identity tracking, live agent inbox, canned replies, popup rules, knowledge base, and AI fine-tuning.',
+                'articles' => [
+                    [
+                        'title' => 'Chat Widget on Customer Website',
+                        'content' => "The chat widget is a single-script embed that customers paste into their website to get an AI chatbot + live agent escalation in one place.\n\n**Setup:**\n1. Settings > Chat Widget — configure appearance (colors, position, launcher shape, icon), welcome message, and lead capture fields.\n2. Copy the embed snippet and paste it into the customer website's HTML before `</body>`.\n3. The widget loads asynchronously and authenticates via a per-organization widget key.\n\n**Important:** All asset URLs (avatar, brand logo) returned to the widget are absolute. The widget runs on the customer's domain, so relative paths would 404 against their site instead of the loyalty backend.\n\n**Voice mode:** Optional voice-to-voice agent powered by OpenAI Realtime API. Toggle in Settings > Chat Widget > Voice Agent.",
+                    ],
+                    [
+                        'title' => 'Live Visitors',
+                        'content' => "The Live Visitors page (sidebar > Visitors) shows everyone currently on the customer's website with persistent identity tracking.\n\n**Identity model:** Each browser gets a `visitor_id` cookie on first chat-widget load. The visitor record persists across sessions and IP changes — you see the same person across visits, devices, and networks.\n\n**Each visitor record stores:**\n- Display name (chatbot name capture or auto-generated)\n- Online/offline state (90s heartbeat threshold)\n- Email/phone (when captured by chatbot)\n- IP, country, city (geo-IP)\n- Current page + page-view history (last 200)\n- Visit count, page-view count, message count\n- Linked guest profile + lead status\n\n**Filters:** Online / Offline / All / Leads-only. Search by name, email, phone, IP, current page.\n\n**Actions:**\n- Click any row to see the full page-journey timeline + linked chat conversations\n- Start Chat — opens (or creates) a conversation in chat-inbox so you can message the visitor directly\n- Delete — hard-removes the visitor + their page views + conversations. Use this to scrub bot/test/spam visitors so the live list stays focused on real people.\n\n**Refresh:** Auto-polls every 10s.",
+                    ],
+                    [
+                        'title' => 'Chat Inbox (Live Agent Console)',
+                        'content' => "The Chat Inbox is your two-pane live conversation console: list on the left, message thread on the right.\n\n**Features:**\n- Filters: status (active/waiting/closed), assigned-to-me, lead-captured, channel\n- Visitor dedup: cascading identity key (visitor_id → email → phone → IP) collapses repeat sessions from the same person into one row, even across IP changes\n- Session count badge on each row (how many distinct conversations this visitor has had)\n- File attachments (drag-drop or paste)\n- Canned replies (managed in the Canned Replies page) — quick-insert pre-written responses\n- Conversation transcript export\n- Assign conversation to an agent\n- Convert any chat into an inquiry (auto-fills guest profile from captured chat data)\n\n**AI vs human:** When a conversation is unassigned, the AI chatbot replies. Once an agent assigns themselves, the AI stops auto-replying and the human takes over.",
+                    ],
+                    [
+                        'title' => 'Knowledge Base',
+                        'content' => "The chatbot answers customer questions using a knowledge base scoped to the organization.\n\n**Three content types:**\n1. **FAQ items** — Question/answer pairs organized in categories. Each item has a priority and use-count metric.\n2. **Categories** — Grouping for FAQ items (e.g. Rooms, Booking, Amenities, Cancellation Policy).\n3. **Documents** — Upload PDF/DOCX/TXT files. The system extracts text and chunks it for semantic context injection.\n\n**How it's used:** On every chatbot turn, the KnowledgeService runs an ILIKE search over questions, answers, keywords, and document chunks. The top results are injected into the system prompt as context before the LLM call.\n\n**Best practice:** Keep FAQ items short and specific. Long documents should be broken up. Mark frequently-used answers as high priority so they win ranking ties.",
+                    ],
+                    [
+                        'title' => 'Chatbot Config & Behavior',
+                        'content' => "Two configuration scopes per organization:\n\n**Behavior Config (AI Chat > Chatbot Config > Behavior tab):**\n- Assistant name + avatar\n- Identity/persona (\"You are Anna, the friendly concierge for...\")\n- Goal (booking, lead capture, support, info)\n- Sales style (consultative, soft-sell, hard-sell, info-only)\n- Tone (friendly, formal, playful, professional)\n- Reply length (short / medium / long)\n- Language (en/de/es/fr/it/...)\n- Core rules — array of \"always do this, never do that\" rules injected into the system prompt\n- Escalation policy — when to hand off to a human\n- Fallback message — shown when the AI can't answer\n- Custom instructions\n\n**Model Config (Model Settings tab):**\n- Provider (openai / anthropic / google)\n- Model name\n- Temperature, top_p, max_tokens\n- Frequency + presence penalties\n- Stop sequences\n\n**Chatbot Setup wizard:** A guided multi-step setup for new orgs that walks through avatar upload, behavior, knowledge base seeding, and embed code.",
+                    ],
+                    [
+                        'title' => 'Popup Automation Rules',
+                        'content' => "Popup rules let you proactively engage visitors based on their behavior. Each rule is a trigger + message + audience filter.\n\n**Trigger types:**\n- Time on page (e.g. show after 30s)\n- Scroll depth (e.g. show after 50%)\n- Exit intent (mouse leaves toward browser chrome)\n- Specific URL match (only on /pricing)\n- Returning visitor\n\n**Example uses:**\n- \"Need help choosing a room?\" after 30s on rooms page\n- \"Wait! Get 10% off if you book now\" on exit intent on the booking page\n- \"Welcome back! Your last quote is still valid.\" for returning visitors\n\n**Best practice:** Don't fire more than one popup per session. Test on a staging URL before going live.",
+                    ],
+                    [
+                        'title' => 'Training (Fine-Tuning)',
+                        'content' => "The Training page lets you fine-tune an OpenAI model on the organization's own conversation history and FAQ data, producing a model that responds in the hotel's voice and knows its specifics out of the box.\n\n**Workflow:**\n1. Select source conversations (graded high-quality only) and FAQ items\n2. The system generates a JSONL training file in the OpenAI fine-tune format\n3. Upload to OpenAI and start a fine-tune job\n4. Monitor job status (queued → running → succeeded/failed)\n5. On success, the new model ID is saved and can be selected in Chatbot Config > Model Settings\n\n**Cost:** Fine-tuning is billed per token by OpenAI. Start with a small dataset (50-200 examples).\n\n**When to use:** Only after you've exhausted prompt engineering + knowledge base. Fine-tuning is for tone/style, not for facts (use the knowledge base for facts).",
+                    ],
+                    [
+                        'title' => 'Canned Replies',
+                        'content' => "Canned replies are pre-written messages agents can insert into the chat thread with one click. Stored per organization.\n\n**Each canned reply has:**\n- Title (what the agent searches for)\n- Body (the actual message, supports placeholders like `{guest_name}`)\n- Category tag\n\n**Use in Chat Inbox:** Type `/` in the message box to open the canned-reply picker, or click the ⚡ icon.\n\n**Best practice:** Build a library covering greetings, common policy answers, booking confirmations, and escalation hand-offs. Update them when policies change.",
                     ],
                 ],
             ],
@@ -215,6 +259,10 @@ class DocumentationController extends Controller
                         'title' => 'Campaign Best Practices',
                         'content' => "- **Personalize by tier:** High-tier members expect exclusive messaging\n- **Seasonal offers:** Create campaigns around holidays and peak seasons\n- **Re-engagement:** Target members inactive for 90+ days with special incentives\n- **New member welcome:** Automated campaign for newly enrolled members\n- **Points expiry reminders:** Alert members before their points expire",
                     ],
+                    [
+                        'title' => 'Email Templates',
+                        'content' => "The Email Templates page stores reusable transactional + marketing email templates per organization.\n\n**Each template has:**\n- Name + category (transactional, marketing, system)\n- Subject line (supports placeholders)\n- HTML body + plain-text fallback\n- Available placeholders: `{guest_name}`, `{member_number}`, `{points_balance}`, `{tier}`, `{booking_ref}`, `{check_in}`, `{check_out}`, `{property_name}`, `{hotel_name}`\n\n**System templates** (used internally by the platform):\n- Booking confirmation\n- Booking cancellation\n- Reservation reminder (T-3 days)\n- Welcome to loyalty program\n- Tier upgrade congratulations\n- Points expiry warning\n- Inquiry follow-up\n\n**Best practice:** Always test a template by sending to yourself before assigning it to a campaign or system event. Keep marketing templates short — under 200 words.",
+                    ],
                 ],
             ],
             [
@@ -254,6 +302,10 @@ class DocumentationController extends Controller
                     [
                         'title' => 'Data Security',
                         'content' => "- All API communication over HTTPS\n- Sensitive data (API keys, passwords) stored encrypted\n- API keys in settings are masked in the UI (reveal on click)\n- Points ledger is append-only (no deletions, only reversals)\n- File uploads validated for type and size\n- SQL injection prevention via Eloquent ORM and parameterized queries\n- XSS prevention via React's built-in escaping\n- CORS configured for allowed origins only",
+                    ],
+                    [
+                        'title' => 'Audit Log',
+                        'content' => "The Audit Log page records significant administrative actions for compliance and post-incident review.\n\n**What's logged:**\n- Member create / update / delete / merge\n- Points award / redeem / reverse / adjust (the points ledger is the source of truth, but the audit log captures *who* did it from which IP)\n- Settings updates (which key, old value → new value)\n- Inquiry / reservation status changes\n- User logins (success + failure)\n- Visitor deletions\n- Bulk operations\n\n**Each entry stores:**\n- Actor (user ID + name)\n- Action verb\n- Target (model + ID)\n- Before/after diff (where applicable)\n- IP + user-agent\n- Timestamp\n\n**Filters:** by user, action type, model, date range. Free-text search across diffs.\n\n**Retention:** Audit log entries are never auto-purged. Use the Audit Log page to investigate disputes (\"who awarded those 5000 points to member X?\").",
                     ],
                 ],
             ],
@@ -426,6 +478,46 @@ class DocumentationController extends Controller
                 'category' => 'Integrations',
                 'question' => 'How do I test if an integration is working?',
                 'answer' => 'Go to Settings > AI & System (or Integrations) and click "Test Connection" next to each integration. It will verify the API key is valid and the service is reachable. Results show success/failure with a message.',
+            ],
+            [
+                'category' => 'Live Chat',
+                'question' => 'Why does the same visitor appear multiple times in the Chat Inbox?',
+                'answer' => 'They shouldn\'t. The inbox dedupes by a cascading identity key: visitor_id (cookie) → email → phone → IP. If you\'re still seeing duplicates, the visitors don\'t share any of those identifiers — usually because they cleared cookies AND have not given an email/phone yet. Use the Visitors page to spot bots/test traffic and delete them.',
+            ],
+            [
+                'category' => 'Live Chat',
+                'question' => 'My chatbot avatar shows broken on the customer website. What\'s wrong?',
+                'answer' => 'The widget runs on the customer\'s domain, so any asset URL it receives must be absolute. Re-upload the avatar in Chatbot Config — the widget endpoint now wraps avatar URLs through absolutizeUrl() so they always point at the loyalty backend regardless of where the widget is embedded.',
+            ],
+            [
+                'category' => 'Live Chat',
+                'question' => 'How do I take over a conversation from the AI?',
+                'answer' => 'Open the conversation in Chat Inbox and click "Assign to me" (or assign another agent). Once assigned, the AI auto-reply pauses and the human agent owns the thread. Re-unassign to hand back to the bot.',
+            ],
+            [
+                'category' => 'Live Chat',
+                'question' => 'Can I delete bot/test/spam visitors from the Visitors page?',
+                'answer' => 'Yes. Hover any visitor row and click the trash icon, or use the Delete button in the visitor detail header. This hard-deletes the visitor + their page views + their chat conversations. Use it freely to keep the live list focused on real people.',
+            ],
+            [
+                'category' => 'Loyalty',
+                'question' => 'Two member records look like the same person. How do I merge them?',
+                'answer' => 'Go to Members > Duplicates. The system surfaces likely matches by email, phone, or fuzzy name + DOB. Click "Review & Merge", pick which fields to keep, and confirm. Points history, bookings, inquiries all reattach to the surviving record. The losing record is soft-deleted with an audit log entry.',
+            ],
+            [
+                'category' => 'AI',
+                'question' => 'When should I fine-tune vs add to the knowledge base?',
+                'answer' => 'Knowledge base = facts (room rates, cancellation policy, amenities, dates). Fine-tuning = tone and style (how the brand sounds). 90% of cases are knowledge base. Only fine-tune after you\'ve exhausted prompt engineering and you specifically need the model to mimic a voice that prompts can\'t capture.',
+            ],
+            [
+                'category' => 'Errors',
+                'question' => 'I got "An unexpected error occurred" with no detail. How do I see the real error?',
+                'answer' => 'Authenticated staff users see the real exception class, message, and file:line in API error responses (anonymous callers get the sanitized message). Open the browser DevTools Network tab, click the failing request, and look at the Response body. Every 500 is also logged to laravel.log with full URL/user/org/trace context.',
+            ],
+            [
+                'category' => 'Errors',
+                'question' => 'Where do I check what changed and who changed it?',
+                'answer' => 'The Audit Log page records all significant admin actions: member CRUD, points operations, settings changes, status changes, login attempts. Filter by user, action type, or date range. Use it to investigate disputes ("who awarded these points?", "when was this setting changed?").',
             ],
         ];
     }

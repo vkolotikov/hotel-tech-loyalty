@@ -356,6 +356,7 @@ Capabilities — grouped by module:
 - Search members, view full profiles with points history and tier progress
 - Award/redeem points, view tiers and offers
 - Analyze individual member churn risk, generate personalized offers, create upsell scripts
+- Member duplicates: the Members > Duplicates page surfaces likely-duplicate records by email/phone/fuzzy-name and supports staff-driven merge with field-level field selection. Points history, bookings, inquiries reattach to the surviving record.
 
 **Booking Engine (PMS):**
 - Search PMS bookings synced from Smoobu/external channels (separate from CRM reservations)
@@ -366,6 +367,16 @@ Capabilities — grouped by module:
 **Planning & Events:**
 - View/create planner tasks, view venue/event bookings
 
+**Live Chat & Website Chatbot (separate from this admin AI):**
+- Embeddable chat widget the customer pastes into their own website (single script tag, per-org widget key, absolute asset URLs because it runs on the customer's domain)
+- Live Visitors page: persistent visitor identity (visitor_id cookie) with online/offline state, page-view journey, geo-IP, lead capture, start-chat, and delete-visitor (for scrubbing bots/test/spam)
+- Chat Inbox: two-pane live agent console. Dedup is cascading: visitor_id → email → phone → IP. AI replies while unassigned; once an agent self-assigns the AI pauses and the human takes over.
+- Knowledge Base: FAQ items + categories + uploaded documents, ILIKE-searched and injected into the chatbot system prompt as context every turn
+- Chatbot Behavior + Model Config (separate from this admin AI's config)
+- Popup Rules: trigger-based proactive engagement (time-on-page, scroll depth, exit intent, URL match)
+- Canned Replies: agent quick-insert library
+- Training: OpenAI fine-tune jobs from graded conversations + FAQ data
+
 **Analytics & AI:**
 - Generate weekly performance reports (with optional email delivery)
 - Detect anomalies: unusual transactions, inactive VIPs, revenue outliers, cancellation spikes
@@ -375,10 +386,16 @@ Capabilities — grouped by module:
 **System Administration:**
 - View and update hotel settings (appearance, integrations, booking config, AI settings)
 - Check system health (API keys, data counts, sync status)
+- Audit Log: every significant admin action is recorded (member CRUD, points ops, settings changes, status changes, logins, visitor deletions) with actor + IP + before/after diff. Use this for dispute investigation.
+- Email Templates: reusable transactional + marketing templates with placeholder support, used by campaigns and system events (booking confirm, tier upgrade, points expiry, etc.)
 
 **System Guide:**
 - Explain how any module works, provide best practices, suggest workflows
 - When user asks "how do I..." or "what should I do about..." — use get_system_guide tool
+
+**Important — two AI systems on this platform:**
+1. *You* (this admin assistant) — Anthropic Claude, for hotel staff. You see all CRM/loyalty/booking data and can take actions via tools.
+2. *Website chatbot* — OpenAI, configured under AI Chat > Chatbot Config, embedded in the customer's website via the chat widget. Different config, different knowledge base, different model. Don't conflate the two when answering questions.
 
 Rules:
 - Always use tools to fetch real data — never fabricate IDs, names, or numbers.
@@ -599,7 +616,7 @@ PROMPT;
             ], ['key', 'value']),
 
             $this->tool('get_system_guide', 'Get comprehensive guide on how to use this hotel platform. Covers all modules, best practices, use cases, security, integrations, configuration, and FAQ. Use when user asks "how do I...", "what can I do with...", "best practices for...", or any platform guidance questions.', [
-                'topic' => ['type' => 'string', 'description' => 'Topic slug: overview, crm, loyalty, booking-engine, ai-system, analytics, campaigns, venues-events, security, integrations, configuration, use-cases, or "all" for complete docs (default: all)'],
+                'topic' => ['type' => 'string', 'description' => 'Topic slug: overview, crm, loyalty, live-chat, booking-engine, ai-system, analytics, campaigns, venues-events, security, integrations, configuration, use-cases, or "all" for complete docs (default: all)'],
             ], []),
 
             $this->tool('get_system_health', 'Check system health: configured integrations, data counts, sync status, API keys status, recent errors.', [], []),
