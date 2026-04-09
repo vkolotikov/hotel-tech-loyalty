@@ -88,6 +88,28 @@ class Guest extends Model
         return $this->hasMany(GuestCustomValue::class);
     }
 
+    /**
+     * Auto-Bronze: every guest with an email is also a loyalty member from
+     * day one. Fires after Guest::create from any path — booking widget,
+     * chatbot capture, manual entry, importer, BookingEngineService — so
+     * the admin only ever needs to look at "Members" to see all contacts.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Guest $guest) {
+            if ($guest->member_id) return;
+            if (empty($guest->email)) return;
+
+            try {
+                app(\App\Services\GuestMemberLinkService::class)->ensureMemberForGuest($guest);
+            } catch (\Throwable $e) {
+                \Log::warning('Guest auto-Bronze membership failed', [
+                    'guest_id' => $guest->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
+
     public static function normalizeEmailKey(?string $email): ?string
     {
         if (!$email) return null;

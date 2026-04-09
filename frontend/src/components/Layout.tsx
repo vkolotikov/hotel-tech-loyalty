@@ -7,10 +7,10 @@ import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen, Inbox, Zap, GraduationCap,
-  Crown, Award, Building2, UserCheck, FileText,
-  CalendarCheck, Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
+  Crown, Award, Building2, FileText,
+  Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CalendarDays, ListChecks, CreditCard, Home, Package, Eye,
+  BedDouble, CalendarDays, CreditCard, Home, Package, Eye,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -55,25 +55,22 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Guests & Loyalty',
+    label: 'Members & Loyalty',
     items: [
       { path: '/members',  label: 'Members',  icon: Users,     gate: 'all' },
-      { path: '/guests',   label: 'Guests',   icon: UserCheck, gate: 'all' },
       { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin', product: 'loyalty' },
       { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin', product: 'loyalty' },
       { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers', product: 'loyalty' },
     ],
   },
   {
-    label: 'Bookings',
+    label: 'Reservations',
     items: [
-      { path: '/bookings',             label: 'Bookings',     icon: BedDouble,     gate: 'all',   product: 'booking' },
+      { path: '/bookings',             label: 'Reservations', icon: BedDouble,     gate: 'all',   product: 'booking' },
+      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all',   product: 'booking' },
       { path: '/booking-rooms',        label: 'Rooms',        icon: Home,          gate: 'admin', product: 'booking' },
       { path: '/booking-extras',       label: 'Extras',       icon: Package,       gate: 'admin', product: 'booking' },
-      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all',   product: 'booking' },
-      { path: '/reservations',         label: 'Reservations', icon: CalendarCheck, gate: 'all',   product: 'booking' },
       { path: '/bookings/payments',    label: 'Payments',     icon: CreditCard,    gate: 'all',   product: 'booking' },
-      { path: '/bookings/submissions', label: 'Submissions',  icon: ListChecks,    gate: 'admin', product: 'booking' },
     ],
   },
   {

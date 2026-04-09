@@ -94,7 +94,9 @@ class GuestController extends Controller
         }
 
         try {
-            $this->linkService->linkGuestToMember($guest);
+            // Ensure this guest also has a Bronze membership — every contact
+            // is a member from the moment they enter the system.
+            $this->linkService->ensureMemberForGuest($guest);
         } catch (\Throwable $e) {
             // Linking is best-effort — don't fail guest creation if matching fails.
             \Log::warning('Guest member linking failed', ['guest_id' => $guest->id, 'error' => $e->getMessage()]);

@@ -297,6 +297,10 @@ export function Bookings() {
           <h1 className="text-3xl font-bold text-white tracking-tight">Reservations</h1>
           <p className="text-sm text-gray-500 mt-1">PMS reservations synced from your booking channels</p>
         </div>
+        <div className="flex items-center gap-3">
+          <Link to="/bookings/submissions" className="text-xs text-gray-500 hover:text-gray-300 transition-colors underline-offset-4 hover:underline">
+            Submission log
+          </Link>
         <button onClick={handleSync} disabled={syncing}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:scale-[1.02]"
           style={{
@@ -306,6 +310,7 @@ export function Bookings() {
           <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
           {syncing ? 'Syncing...' : 'Sync PMS'}
         </button>
+        </div>
       </div>
 
       {/* Period tabs + unit filter */}

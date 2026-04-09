@@ -141,13 +141,25 @@ class MemberAdminController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = LoyaltyMember::with(['user:id,name,email,phone,avatar_url', 'tier:id,name,color_hex'])
+        // Eager-load the linked CRM guest (if any) so the unified Members
+        // table can render lead_source / lifecycle / company without a
+        // second round-trip. Members and Guests are now one list — every
+        // contact in the system shows up here.
+        $query = LoyaltyMember::with([
+                'user:id,name,email,phone,avatar_url',
+                'tier:id,name,color_hex',
+                'guests' => fn($q) => $q->select('id', 'member_id', 'lead_source', 'lifecycle_status', 'company', 'phone', 'mobile', 'last_activity_at')
+                    ->latest('id')
+                    ->limit(1),
+            ])
             ->when($request->search, function ($q, $search) {
                 $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%"))
                   ->orWhere('member_number', 'like', "%{$search}%");
             })
             ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
+            ->when($request->lead_source, fn($q, $src) => $q->whereHas('guests', fn($g) => $g->where('lead_source', $src)))
+            ->when($request->lifecycle, fn($q, $ls) => $q->whereHas('guests', fn($g) => $g->where('lifecycle_status', $ls)))
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')));
 
         return response()->json(

@@ -35,10 +35,8 @@ const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.S
 const Benefits = lazy(() => import('./pages/Benefits').then(m => ({ default: m.Benefits })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Tiers = lazy(() => import('./pages/Tiers').then(m => ({ default: m.Tiers })))
-const Guests = lazy(() => import('./pages/Guests').then(m => ({ default: m.Guests })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
-const Reservations = lazy(() => import('./pages/Reservations').then(m => ({ default: m.Reservations })))
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
@@ -131,10 +129,12 @@ export default function App() {
           <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />
           <Route path="/benefits" element={<LazyRoute gate="admin" product="loyalty"><Benefits /></LazyRoute>} />
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
-          <Route path="/guests" element={<LazyRoute><Guests /></LazyRoute>} />
+          {/* Guests + CRM Reservations consolidated — redirect list pages
+              to the unified ones, but keep deep-link detail routes alive. */}
+          <Route path="/guests" element={<Navigate to="/members" replace />} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
-          <Route path="/reservations" element={<LazyRoute product="booking"><Reservations /></LazyRoute>} />
+          <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
@@ -143,6 +143,7 @@ export default function App() {
           <Route path="/booking-extras" element={<LazyRoute gate="admin" product="booking"><BookingExtras /></LazyRoute>} />
           <Route path="/bookings/calendar" element={<LazyRoute product="booking"><BookingCalendar /></LazyRoute>} />
           <Route path="/bookings/payments" element={<LazyRoute product="booking"><BookingPayments /></LazyRoute>} />
+          {/* Submissions log still routable from inside Bookings page header. */}
           <Route path="/bookings/submissions" element={<LazyRoute gate="admin" product="booking"><BookingSubmissions /></LazyRoute>} />
           <Route path="/bookings/:id" element={<LazyRoute product="booking"><BookingDetail /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />

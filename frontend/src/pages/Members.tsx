@@ -114,10 +114,10 @@ export function Members() {
             <thead>
               <tr className="text-left text-t-secondary border-b border-dark-border">
                 <th className="pb-3 font-medium">Member</th>
-                <th className="pb-3 font-medium">Number</th>
+                <th className="pb-3 font-medium">Phone</th>
+                <th className="pb-3 font-medium">Source</th>
                 <th className="pb-3 font-medium">Tier</th>
                 <th className="pb-3 font-medium">Points</th>
-                <th className="pb-3 font-medium">Lifetime</th>
                 <th className="pb-3 font-medium">Joined</th>
                 <th className="pb-3 font-medium">Status</th>
                 <th className="pb-3"></th>
@@ -135,7 +135,7 @@ export function Members() {
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-[#636366]">
-                    No members found. {search && 'Try a different search term.'}
+                    No members yet. {search && 'Try a different search term.'}
                   </td>
                 </tr>
               ) : (
@@ -160,10 +160,16 @@ export function Members() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 font-mono text-xs text-[#a0a0a0]">{m.member_number}</td>
+                    <td className="py-3 text-xs text-[#a0a0a0]">{m.user?.phone || m.guests?.[0]?.phone || m.guests?.[0]?.mobile || '—'}</td>
+                    <td className="py-3 text-xs">
+                      {m.guests?.[0]?.lead_source ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
+                          {m.guests[0].lead_source}
+                        </span>
+                      ) : <span className="text-[#636366]">—</span>}
+                    </td>
                     <td className="py-3"><TierBadge tier={m.tier?.name} color={m.tier?.color_hex} /></td>
                     <td className="py-3 font-semibold text-white">{m.current_points?.toLocaleString()}</td>
-                    <td className="py-3 text-[#a0a0a0]">{m.lifetime_points?.toLocaleString()}</td>
                     <td className="py-3 text-t-secondary text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
                     <td className="py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
