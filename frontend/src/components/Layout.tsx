@@ -6,7 +6,7 @@ import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
-  Bell, Settings, LogOut, Hotel, Scan, Bot, BookOpen, Inbox, Zap, GraduationCap,
+  Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox,
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
@@ -46,12 +46,9 @@ const navGroups: NavGroup[] = [
   {
     label: 'AI Chat',
     items: [
-      { path: '/chat-inbox',      label: 'Inbox',          icon: Inbox,          gate: 'all',   product: 'chat' },
-      { path: '/visitors',        label: 'Visitors',       icon: Eye,            gate: 'all',   product: 'chat' },
-      { path: '/chatbot-config',  label: 'Chatbot Config', icon: Bot,            gate: 'admin', product: 'chat' },
-      { path: '/knowledge-base',  label: 'Knowledge Base', icon: BookOpen,       gate: 'admin', product: 'chat' },
-      { path: '/popup-rules',     label: 'Popup Rules',    icon: Zap,            gate: 'admin', product: 'chat' },
-      { path: '/training',        label: 'AI Training',    icon: GraduationCap,  gate: 'admin', product: 'chat' },
+      { path: '/chat-inbox',     label: 'Inbox',         icon: Inbox, gate: 'all',   product: 'chat' },
+      { path: '/visitors',       label: 'Visitors',      icon: Eye,   gate: 'all',   product: 'chat' },
+      { path: '/chatbot-setup',  label: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat' },
     ],
   },
   {

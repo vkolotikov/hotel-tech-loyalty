@@ -23,6 +23,16 @@ export function GuestDetail() {
     queryFn: () => api.get('/v1/admin/guests/' + id).then(r => r.data),
   });
 
+  // Now that every guest is auto-linked to a loyalty member, MemberDetail is the
+  // canonical person view. Redirect there whenever the link exists; this page
+  // only stays reachable for the rare orphan that has no member yet.
+  useEffect(() => {
+    const g: any = (guest as any)?.data ?? guest;
+    if (g?.member_id) {
+      navigate(`/members/${g.member_id}`, { replace: true });
+    }
+  }, [guest, navigate]);
+
   // Seed the edit form whenever the guest loads or the user re-enters edit mode.
   useEffect(() => {
     if (guest && editing) {

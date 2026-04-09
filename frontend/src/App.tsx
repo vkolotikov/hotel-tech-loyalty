@@ -22,13 +22,10 @@ const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
 const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
 const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
-const ChatbotConfig = lazy(() => import('./pages/ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
-const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
+const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ default: m.ChatbotSetup })))
 const WidgetBuilder = lazy(() => import('./pages/WidgetBuilder').then(m => ({ default: m.WidgetBuilder })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
-const PopupRules = lazy(() => import('./pages/PopupRules').then(m => ({ default: m.PopupRules })))
-const Training = lazy(() => import('./pages/Training').then(m => ({ default: m.Training })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
@@ -117,13 +114,16 @@ export default function App() {
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><AiInsights /></LazyRoute>} />
-          <Route path="/chatbot-config" element={<LazyRoute gate="admin" product="chat"><ChatbotConfig /></LazyRoute>} />
-          <Route path="/knowledge-base" element={<LazyRoute gate="admin" product="chat"><KnowledgeBase /></LazyRoute>} />
+          <Route path="/chatbot-setup" element={<LazyRoute gate="admin" product="chat"><ChatbotSetup /></LazyRoute>} />
+          {/* Legacy chatbot routes — folded into the unified Chatbot Setup tabs. */}
+          <Route path="/chatbot-config" element={<Navigate to="/chatbot-setup" replace />} />
+          <Route path="/knowledge-base" element={<Navigate to="/chatbot-setup" replace />} />
+          <Route path="/popup-rules" element={<Navigate to="/chatbot-setup" replace />} />
+          <Route path="/training" element={<Navigate to="/chatbot-setup" replace />} />
+          {/* Direct routes still mounted for the embedded tab loader to import. */}
           <Route path="/widget-builder" element={<LazyRoute gate="admin" product="chat"><WidgetBuilder /></LazyRoute>} />
           <Route path="/chat-inbox" element={<LazyRoute gate="all" product="chat"><ChatInbox /></LazyRoute>} />
           <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
-          <Route path="/popup-rules" element={<LazyRoute gate="admin" product="chat"><PopupRules /></LazyRoute>} />
-          <Route path="/training" element={<LazyRoute gate="admin" product="chat"><Training /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />

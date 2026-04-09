@@ -5,8 +5,18 @@ import { api, resolveImage } from '../lib/api'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Sparkles, Pencil, Save, X, Camera, Hotel, FileText, Crown } from 'lucide-react'
+import { ArrowLeft, Sparkles, Pencil, Save, X, Camera, Hotel, FileText, Crown, MapPin, Tag, Activity, StickyNote } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+
+const LIFECYCLE_COLORS: Record<string, string> = {
+  'Prospect': 'bg-gray-500/20 text-gray-300',
+  'Lead': 'bg-gray-500/20 text-gray-300',
+  'First-Time Guest': 'bg-blue-500/20 text-blue-300',
+  'Returning Guest': 'bg-emerald-500/20 text-emerald-300',
+  'VIP': 'bg-amber-500/20 text-amber-300',
+  'Corporate': 'bg-purple-500/20 text-purple-300',
+  'Inactive': 'bg-red-500/20 text-red-300',
+}
 
 export function MemberDetail() {
   const { id } = useParams<{ id: string }>()
@@ -236,14 +246,30 @@ export function MemberDetail() {
           {/* Linked CRM Guest Profile */}
           {data?.linked_guest && (
             <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
-              <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2">
+              <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2 flex-wrap">
                 <Crown size={16} className="text-primary-400" />
                 <h2 className="font-semibold text-white">Linked CRM Guest</h2>
+                {data.linked_guest.lifecycle_status && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LIFECYCLE_COLORS[data.linked_guest.lifecycle_status] ?? 'bg-gray-500/20 text-gray-300'}`}>
+                    {data.linked_guest.lifecycle_status}
+                  </span>
+                )}
                 {data.linked_guest.vip_level && data.linked_guest.vip_level !== 'Standard' && (
-                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-400">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-400">
                     VIP: {data.linked_guest.vip_level}
                   </span>
                 )}
+                {data.linked_guest.lead_source && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-500/20 text-indigo-300">
+                    {data.linked_guest.lead_source}
+                  </span>
+                )}
+                <button
+                  onClick={() => navigate(`/guests/${data.linked_guest.id}`)}
+                  className="ml-auto text-xs text-primary-400 hover:text-primary-300"
+                >
+                  Open full guest →
+                </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -259,6 +285,84 @@ export function MemberDetail() {
                     </div>
                   ))}
                 </div>
+
+                {/* CRM Profile details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs pt-2 border-t border-dark-border">
+                  {data.linked_guest.company && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Company</span><span className="text-white">{data.linked_guest.company}{data.linked_guest.position_title ? ` · ${data.linked_guest.position_title}` : ''}</span></div>
+                  )}
+                  {data.linked_guest.guest_type && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Guest type</span><span className="text-white">{data.linked_guest.guest_type}</span></div>
+                  )}
+                  {data.linked_guest.owner_name && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Owner</span><span className="text-white">{data.linked_guest.owner_name}</span></div>
+                  )}
+                  {data.linked_guest.importance && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Importance</span><span className="text-white">{data.linked_guest.importance}</span></div>
+                  )}
+                  {(data.linked_guest.country || data.linked_guest.city) && (
+                    <div className="flex justify-between"><span className="text-t-secondary flex items-center gap-1"><MapPin size={11}/>Location</span><span className="text-white">{[data.linked_guest.city, data.linked_guest.country].filter(Boolean).join(', ')}</span></div>
+                  )}
+                  {data.linked_guest.address && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Address</span><span className="text-white truncate ml-2">{data.linked_guest.address}</span></div>
+                  )}
+                  {data.linked_guest.preferred_room_type && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Pref. room</span><span className="text-white">{data.linked_guest.preferred_room_type}</span></div>
+                  )}
+                  {data.linked_guest.preferred_floor && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Pref. floor</span><span className="text-white">{data.linked_guest.preferred_floor}</span></div>
+                  )}
+                  {data.linked_guest.preferred_language && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Pref. language</span><span className="text-white">{data.linked_guest.preferred_language}</span></div>
+                  )}
+                  {data.linked_guest.dietary_preferences && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Dietary</span><span className="text-white truncate ml-2">{data.linked_guest.dietary_preferences}</span></div>
+                  )}
+                  {data.linked_guest.last_activity_at && (
+                    <div className="flex justify-between"><span className="text-t-secondary">Last activity</span><span className="text-white">{new Date(data.linked_guest.last_activity_at).toLocaleDateString()}</span></div>
+                  )}
+                  {data.linked_guest.first_stay_date && (
+                    <div className="flex justify-between"><span className="text-t-secondary">First stay</span><span className="text-white">{new Date(data.linked_guest.first_stay_date).toLocaleDateString()}</span></div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {(data.linked_guest.tags?.length ?? 0) > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Tag size={12} className="text-[#636366]" />
+                    {data.linked_guest.tags.map((t: any) => (
+                      <span key={t.id} className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary-500/15 text-primary-300">{t.name}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Notes */}
+                {data.linked_guest.notes && (
+                  <div className="bg-dark-surface2 rounded-lg px-3 py-2">
+                    <p className="text-[11px] font-medium text-[#636366] mb-1 flex items-center gap-1"><StickyNote size={11}/> Notes</p>
+                    <p className="text-xs text-[#a0a0a0] whitespace-pre-wrap">{data.linked_guest.notes}</p>
+                  </div>
+                )}
+
+                {/* Recent Activities */}
+                {(data.linked_guest.activities?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
+                      <Activity size={13} /> Recent Activity
+                    </h3>
+                    <div className="space-y-1.5">
+                      {data.linked_guest.activities.slice(0, 5).map((a: any) => (
+                        <div key={a.id} className="flex items-start justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-white font-medium">{a.activity_type || a.type || 'Activity'}</span>
+                            {a.description && <p className="text-[#636366] mt-0.5 truncate">{a.description}</p>}
+                          </div>
+                          <span className="text-[#636366] ml-2 whitespace-nowrap">{new Date(a.created_at).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reservations */}
                 {(data.linked_guest.reservations?.length ?? 0) > 0 && (

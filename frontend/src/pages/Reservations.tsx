@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import { Search, ChevronLeft, ChevronRight, Plus, Download, Filter, LogIn, LogOut } from 'lucide-react'
+import { BookingSubmissions } from './BookingSubmissions'
 
 const STATUS_COLORS: Record<string, string> = {
   Confirmed: 'bg-blue-500/20 text-blue-400',
@@ -29,9 +30,12 @@ const EMPTY_FORM = {
   special_requests: '', notes: '',
 }
 
+type View = 'reservations' | 'submissions'
+
 export function Reservations() {
   const qc = useQueryClient()
   const settings = useSettings()
+  const [view, setView] = useState<View>('reservations')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [propertyId, setPropertyId] = useState('')
@@ -134,18 +138,36 @@ export function Reservations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
+          <p className="text-sm text-t-secondary mt-0.5">{view === 'reservations' ? `${meta.total ?? 0} total` : 'Booking widget submissions log'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-            <Download size={14} /> Export
-          </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-            <Plus size={15} /> Add Reservation
-          </button>
-        </div>
+        {view === 'reservations' && (
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+              <Download size={14} /> Export
+            </button>
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
+              <Plus size={15} /> Add Reservation
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* View tabs */}
+      <div className="flex gap-1 border-b border-dark-border">
+        {([
+          { key: 'reservations' as const, label: 'Reservations' },
+          { key: 'submissions' as const, label: 'Submissions' },
+        ]).map(t => (
+          <button key={t.key} onClick={() => setView(t.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${view === t.key ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'submissions' && <BookingSubmissions embedded />}
+
+      {view === 'reservations' && <>
       {/* Quick filters */}
       <div className="flex gap-2">
         {[
@@ -289,6 +311,8 @@ export function Reservations() {
           </div>
         </div>
       )}
+
+      </>}
 
       {/* Create Modal */}
       {showCreate && (

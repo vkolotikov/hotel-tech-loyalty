@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react'
 
-export function BookingSubmissions() {
+export function BookingSubmissions({ embedded = false }: { embedded?: boolean } = {}) {
   const [search, setSearch] = useState('')
   const [outcome, setOutcome] = useState('')
   const [page, setPage] = useState(1)
@@ -24,12 +24,14 @@ export function BookingSubmissions() {
 
   return (
     <div className="space-y-7">
-      <div>
-        <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-          style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Submissions</div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Booking Submissions</h1>
-        <p className="text-sm text-gray-500 mt-1">Log of all booking attempts — successful and failed</p>
-      </div>
+      {!embedded && (
+        <div>
+          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
+            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Submissions</div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Booking Submissions</h1>
+          <p className="text-sm text-gray-500 mt-1">Log of all booking attempts — successful and failed</p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="rounded-2xl p-4 border border-white/[0.06]"
