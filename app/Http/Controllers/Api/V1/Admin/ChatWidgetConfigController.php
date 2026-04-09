@@ -114,6 +114,42 @@ class ChatWidgetConfigController extends Controller
         }
     }
 
+    /**
+     * Upload an assistant avatar image. Stored in storage/app/public/chat-avatars/
+     * and returns the relative URL so the frontend can write it into
+     * `assistant_avatar_url` and persist via the normal update endpoint.
+     */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|image|max:2048|mimes:jpg,jpeg,png,gif,webp',
+        ]);
+
+        try {
+            $orgId = $request->user()->organization_id;
+            $path  = $request->file('file')->storePublicly('chat-avatars', 'public');
+            $url   = '/storage/' . $path;
+
+            // Persist immediately so the new avatar takes effect without a
+            // separate save click — matches how logo upload works elsewhere.
+            $config = ChatWidgetConfig::where('organization_id', $orgId)->first();
+            if (!$config) {
+                $config = ChatWidgetConfig::create([
+                    'organization_id'      => $orgId,
+                    'widget_key'           => Str::uuid()->toString(),
+                    'api_key'              => Str::random(48),
+                    'assistant_avatar_url' => $url,
+                ]);
+            } else {
+                $config->update(['assistant_avatar_url' => $url]);
+            }
+
+            return response()->json(['assistant_avatar_url' => $url]);
+        } catch (Throwable $e) {
+            return $this->debugError($e);
+        }
+    }
+
     public function embedCode(Request $request): JsonResponse
     {
         try {

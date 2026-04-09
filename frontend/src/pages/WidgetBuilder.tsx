@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, API_URL } from '../lib/api'
 import {
   MessageSquare, Save, Copy, RefreshCw, Check, Eye, Code, Globe, Braces,
-  MessageCircle, HelpCircle, Quote, Headphones, ShoppingBag,
+  MessageCircle, HelpCircle, Quote, Headphones, ShoppingBag, Upload, X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -51,6 +51,27 @@ export function WidgetBuilder() {
 
   const [form, setForm] = useState<any>(null)
   const f = form ?? config ?? {}
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const uploadAvatar = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return api.post('/v1/admin/widget-config/upload-avatar', fd).then(r => r.data)
+    },
+    onSuccess: (data: any) => {
+      update('assistant_avatar_url', data.assistant_avatar_url)
+      qc.invalidateQueries({ queryKey: ['widget-config'] })
+      toast.success('Avatar uploaded')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+  })
+
+  const resolveAvatarUrl = (url?: string) => {
+    if (!url) return ''
+    if (url.startsWith('http')) return url
+    return API_URL + url
+  }
 
   const update = (key: string, value: any) => {
     setForm((prev: any) => ({ ...(prev ?? config ?? {}), [key]: value }))
@@ -194,11 +215,41 @@ export function WidgetBuilder() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Assistant Avatar URL</label>
-                <input type="url" value={f.assistant_avatar_url || ''} onChange={e => update('assistant_avatar_url', e.target.value)}
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="https://example.com/avatar.png" />
-                <p className="text-[10px] text-t-secondary mt-1">Square PNG/JPG, ~120×120px. Used in the chat header and on AI replies.</p>
+                <label className="block text-sm text-t-secondary mb-1">Assistant Avatar</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-lg border border-dark-border bg-dark-surface flex items-center justify-center overflow-hidden shrink-0">
+                    {f.assistant_avatar_url ? (
+                      <img src={resolveAvatarUrl(f.assistant_avatar_url)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <MessageSquare size={20} className="text-t-secondary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => avatarInputRef.current?.click()}
+                        disabled={uploadAvatar.isPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50">
+                        <Upload size={12} /> {uploadAvatar.isPending ? 'Uploading...' : 'Upload'}
+                      </button>
+                      {f.assistant_avatar_url && (
+                        <button type="button" onClick={() => update('assistant_avatar_url', '')}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-dark-surface border border-dark-border text-t-secondary rounded-lg hover:text-white">
+                          <X size={12} /> Remove
+                        </button>
+                      )}
+                    </div>
+                    <input type="url" value={f.assistant_avatar_url || ''} onChange={e => update('assistant_avatar_url', e.target.value)}
+                      className="w-full bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-white text-[11px] font-mono"
+                      placeholder="…or paste image URL" />
+                  </div>
+                </div>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadAvatar.mutate(file)
+                    e.target.value = ''
+                  }} />
+                <p className="text-[10px] text-t-secondary mt-1.5">Square PNG/JPG, ~120×120px, max 2MB. Shown in the chat header and on AI replies.</p>
               </div>
               <div>
                 <label className="block text-sm text-t-secondary mb-1">Branding Footer Text</label>

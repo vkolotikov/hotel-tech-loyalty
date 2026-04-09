@@ -255,6 +255,7 @@ Route::prefix('v1')->group(function () {
             Route::get('widget-config',                       [ChatWidgetConfigController::class, 'show']);
             Route::put('widget-config',                       [ChatWidgetConfigController::class, 'update']);
             Route::post('widget-config/regenerate-key',       [ChatWidgetConfigController::class, 'regenerateKey']);
+            Route::post('widget-config/upload-avatar',        [ChatWidgetConfigController::class, 'uploadAvatar']);
             Route::get('widget-config/embed-code',            [ChatWidgetConfigController::class, 'embedCode']);
 
             // ─── Chat Inbox ──────────────────────────────────────────────────

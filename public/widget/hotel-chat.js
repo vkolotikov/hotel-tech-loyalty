@@ -83,7 +83,7 @@
     #htchat-header-avatar svg { width: 18px; height: 18px; fill: white; }\
     #htchat-header-info h3 { font-size: 14px; font-weight: 600; }\
     #htchat-header-info p { font-size: 11px; opacity: 0.8; }\
-    #htchat-header-actions { display: flex; gap: 4px; }\
+    #htchat-header-actions { display: flex; gap: 6px; align-items: center; }\
     #htchat-header-actions button { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }\
     #htchat-header-actions button:hover { background: rgba(255,255,255,0.25); }\
     #htchat-header-actions button.active { background: rgba(255,255,255,0.3); }\
@@ -124,10 +124,13 @@
     .htchat-typing span:nth-child(2) { animation-delay: 0.2s; }\
     .htchat-typing span:nth-child(3) { animation-delay: 0.4s; }\
     @keyframes htchat-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }\
-    #htchat-voice-call-btn { background: #22c55e; color: white; border: none; width: 38px; height: 38px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }\
-    #htchat-voice-call-btn:hover { background: #16a34a; }\
-    #htchat-voice-call-btn.active { background: #ef4444; animation: htchat-pulse-mic 1.5s ease-in-out infinite; }\
-    #htchat-voice-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
+    #htchat-header-actions #htchat-voice-call-btn { background: #22c55e; color: white; border: none; width: 52px; height: 52px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; box-shadow: 0 4px 14px rgba(34,197,94,0.45), 0 0 0 2px rgba(255,255,255,0.15) inset; position: relative; }\
+    #htchat-header-actions #htchat-voice-call-btn:hover { background: #16a34a; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(34,197,94,0.55), 0 0 0 2px rgba(255,255,255,0.2) inset; }\
+    #htchat-header-actions #htchat-voice-call-btn::after { content: ""; position: absolute; inset: -4px; border-radius: 16px; border: 2px solid rgba(34,197,94,0.45); animation: htchat-call-ring 2s ease-in-out infinite; pointer-events: none; }\
+    #htchat-header-actions #htchat-voice-call-btn.active { background: #ef4444; animation: htchat-pulse-mic 1.5s ease-in-out infinite; box-shadow: 0 4px 14px rgba(239,68,68,0.55), 0 0 0 2px rgba(255,255,255,0.15) inset; }\
+    #htchat-header-actions #htchat-voice-call-btn.active::after { border-color: rgba(239,68,68,0.5); }\
+    #htchat-header-actions #htchat-voice-call-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; }\
+    @keyframes htchat-call-ring { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.25); opacity: 0; } }\
     #htchat-voice-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 10; border-radius: 16px; }\
     #htchat-voice-overlay .voice-wave { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }\
     #htchat-voice-overlay .voice-wave::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); animation: htchat-voice-ring 2s ease-in-out infinite; }\
