@@ -27,7 +27,11 @@ class ReapStaleChatConversations extends Command
         $dryRun = (bool) $this->option('dry-run');
         $cutoff = now()->subHours($hours);
 
-        $stale = ChatConversation::whereIn('status', ['active', 'waiting'])
+        // Bypass the TenantScope explicitly — this command runs in console
+        // context where no tenant is bound, so the global scope would
+        // otherwise short-circuit to `1=0` and reap nothing across orgs.
+        $stale = ChatConversation::withoutGlobalScopes()
+            ->whereIn('status', ['active', 'waiting'])
             ->where(function ($q) use ($cutoff) {
                 $q->where('last_message_at', '<', $cutoff)
                   ->orWhereNull('last_message_at');
