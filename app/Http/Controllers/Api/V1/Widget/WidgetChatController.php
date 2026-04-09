@@ -190,7 +190,12 @@ class WidgetChatController extends Controller
                 'delay'   => $config->lead_capture_delay,
             ],
             'assistant_name'     => $behavior->assistant_name ?? 'Hotel Assistant',
-            'assistant_avatar'   => $config->assistant_avatar_url ?: ($behavior->assistant_avatar ?? null),
+            // Avatar must be an absolute URL — the widget runs on the
+            // customer's website, so a relative `/storage/...` path would
+            // resolve against THEIR domain and 404. Prepend our app URL.
+            'assistant_avatar'   => $this->absolutizeUrl(
+                $config->assistant_avatar_url ?: ($behavior->assistant_avatar ?? null)
+            ),
             'branding_text'      => $config->branding_text,
             'input_hint_text'    => $config->input_hint_text,
             'agent_status'       => $config->agent_status ?? 'online',
@@ -201,6 +206,19 @@ class WidgetChatController extends Controller
             'gdpr_consent_required' => (bool) $config->gdpr_consent_required,
             'gdpr_consent_text'  => $config->gdpr_consent_text,
         ]);
+    }
+
+    /**
+     * Turn a stored relative path like `/storage/chat-avatars/foo.jpg` into
+     * an absolute URL using the app's configured base URL. The widget is
+     * embedded on the CUSTOMER's website, not ours, so relative paths break.
+     */
+    private function absolutizeUrl(?string $url): ?string
+    {
+        if (!$url) return null;
+        if (preg_match('#^https?://#i', $url)) return $url;
+        $base = rtrim(config('app.url') ?: url('/'), '/');
+        return $base . '/' . ltrim($url, '/');
     }
 
     /**

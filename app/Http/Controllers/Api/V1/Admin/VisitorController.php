@@ -139,4 +139,27 @@ class VisitorController extends Controller
 
         return response()->json(['conversation_id' => $conv->id]);
     }
+
+    /**
+     * DELETE /v1/admin/visitors/{id}
+     * Hard-delete a visitor and everything tied to them: page views, chat
+     * conversations + messages. Used to scrub bot/test/spam visitors from
+     * the inbox so admins can keep the live list focused on real people.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $orgId = $request->user()->organization_id;
+        $visitor = Visitor::where('organization_id', $orgId)->findOrFail($id);
+
+        \DB::transaction(function () use ($visitor) {
+            VisitorPageView::where('visitor_id', $visitor->id)->delete();
+            // Conversations cascade-delete their messages via the FK on
+            // chat_messages.conversation_id, so deleting the conversation row
+            // is enough.
+            ChatConversation::where('visitor_id', $visitor->id)->delete();
+            $visitor->delete();
+        });
+
+        return response()->json(['message' => 'Visitor removed.']);
+    }
 }

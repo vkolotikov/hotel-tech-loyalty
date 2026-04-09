@@ -51,19 +51,28 @@ class ChatInboxController extends Controller
             });
         }
 
-        // Group by visitor: collapse multiple sessions from the same IP into a
-        // single row (the most recent one). Returning visitors are otherwise
-        // listed N times — one row per (re)opened widget — which makes the
-        // inbox look noisy and hides truly unique conversations.
+        // Group by visitor: collapse multiple sessions from the same person
+        // into a single row (the most recent one). The dedup key prefers, in
+        // order: visitor_id (persistent identity cookie), visitor_email,
+        // visitor_phone, visitor_ip, then conversation id as a last resort.
+        // This catches returning visitors even when their IP changed (mobile
+        // network, new wifi) as long as the persistent visitor cookie or any
+        // captured contact survived.
         if ($request->boolean('group_by_visitor')) {
             $rows = (clone $query)
                 ->reorder()
                 ->orderByDesc('last_message_at')
-                ->get(['id', 'visitor_ip']);
+                ->get(['id', 'visitor_id', 'visitor_email', 'visitor_phone', 'visitor_ip']);
             $seen = [];
             $keepIds = [];
             foreach ($rows as $r) {
-                $key = $r->visitor_ip ?: ('id_' . $r->id);
+                $key = $r->visitor_id
+                    ? ('vid_' . $r->visitor_id)
+                    : ($r->visitor_email
+                        ? ('email_' . strtolower(trim($r->visitor_email)))
+                        : ($r->visitor_phone
+                            ? ('phone_' . preg_replace('/\D+/', '', $r->visitor_phone))
+                            : ($r->visitor_ip ?: ('id_' . $r->id))));
                 if (isset($seen[$key])) continue;
                 $seen[$key] = true;
                 $keepIds[] = $r->id;
@@ -73,18 +82,37 @@ class ChatInboxController extends Controller
 
         $conversations = $query->orderByDesc('last_message_at')->paginate(50);
 
-        // Annotate each conversation with how many other conversations exist
-        // for the same visitor IP — lets the UI show "(N sessions)" so admins
-        // know they're talking to the same person across multiple tabs/devices.
-        $ips = collect($conversations->items())->pluck('visitor_ip')->filter()->unique()->values();
-        if ($ips->isNotEmpty()) {
-            $counts = ChatConversation::where('organization_id', $orgId)
+        // Annotate each conversation with the total number of conversations
+        // belonging to the same visitor, so the UI can show "(N sessions)".
+        // We resolve "same visitor" by visitor_id when present, otherwise
+        // visitor_ip — matching the dedup logic above.
+        $items = collect($conversations->items());
+        $visitorIds = $items->pluck('visitor_id')->filter()->unique()->values();
+        $visitorIdCounts = $visitorIds->isNotEmpty()
+            ? ChatConversation::where('organization_id', $orgId)
+                ->whereIn('visitor_id', $visitorIds)
+                ->select('visitor_id', DB::raw('COUNT(*) as c'))
+                ->groupBy('visitor_id')
+                ->pluck('c', 'visitor_id')
+            : collect();
+
+        $ips = $items->whereNull('visitor_id')->pluck('visitor_ip')->filter()->unique()->values();
+        $ipCounts = $ips->isNotEmpty()
+            ? ChatConversation::where('organization_id', $orgId)
+                ->whereNull('visitor_id')
                 ->whereIn('visitor_ip', $ips)
                 ->select('visitor_ip', DB::raw('COUNT(*) as c'))
                 ->groupBy('visitor_ip')
-                ->pluck('c', 'visitor_ip');
-            foreach ($conversations->items() as $c) {
-                $c->ip_session_count = $c->visitor_ip ? (int) ($counts[$c->visitor_ip] ?? 1) : 1;
+                ->pluck('c', 'visitor_ip')
+            : collect();
+
+        foreach ($conversations->items() as $c) {
+            if ($c->visitor_id) {
+                $c->ip_session_count = (int) ($visitorIdCounts[$c->visitor_id] ?? 1);
+            } elseif ($c->visitor_ip) {
+                $c->ip_session_count = (int) ($ipCounts[$c->visitor_ip] ?? 1);
+            } else {
+                $c->ip_session_count = 1;
             }
         }
 

@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import {
   Eye, Search, Globe, Clock, MessageSquare, MessageCircle,
   User, Flag, ExternalLink, Activity, Users, Wifi, WifiOff,
-  Mail, Phone, Star, ArrowUpRight, RefreshCw,
+  Mail, Phone, Star, ArrowUpRight, RefreshCw, Trash2,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -14,6 +14,7 @@ type StatusFilter = 'online' | 'offline' | 'all'
 
 export function Visitors() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState<StatusFilter>('online')
   const [leadOnly, setLeadOnly] = useState(false)
   const [search, setSearch] = useState('')
@@ -48,6 +49,21 @@ export function Visitors() {
     },
     onError: () => toast.error('Failed to open chat'),
   })
+
+  const deleteVisitor = useMutation({
+    mutationFn: (visitorId: number) => api.delete(`/v1/admin/visitors/${visitorId}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success('Visitor removed')
+      setSelectedId(null)
+      queryClient.invalidateQueries({ queryKey: ['visitors'] })
+    },
+    onError: () => toast.error('Failed to remove visitor'),
+  })
+
+  const handleDelete = (id: number, name: string) => {
+    if (!confirm(`Permanently delete "${name}" and all their page views and chat conversations? This cannot be undone.`)) return
+    deleteVisitor.mutate(id)
+  }
 
   const selectedVisitor = useMemo(() => detail?.visitor, [detail])
 
@@ -140,10 +156,13 @@ export function Visitors() {
               </div>
             )}
             {visitors.map((v: any) => (
-              <button
+              <div
                 key={v.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedId(v.id)}
-                className={`w-full text-left p-4 border-b border-dark-border/50 hover:bg-dark-surface2 transition ${
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedId(v.id) }}
+                className={`group w-full text-left p-4 border-b border-dark-border/50 hover:bg-dark-surface2 transition cursor-pointer relative ${
                   selectedId === v.id ? 'bg-primary-500/5 border-l-2 border-l-primary-500' : ''
                 }`}
               >
@@ -186,7 +205,15 @@ export function Visitors() {
                     </div>
                   </div>
                 </div>
-              </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(v.id, v.display_name || v.email || v.visitor_ip || 'Anonymous') }}
+                  title="Delete visitor"
+                  className="absolute top-2 right-2 p-1.5 rounded-md text-gray-600 hover:text-red-400 hover:bg-red-600/10 opacity-0 group-hover:opacity-100 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -259,6 +286,14 @@ export function Visitors() {
                     >
                       <MessageCircle className="w-4 h-4" />
                       {startChat.isPending ? 'Opening...' : 'Start Chat'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(selectedVisitor.id, selectedVisitor.display_name || selectedVisitor.email || selectedVisitor.visitor_ip || 'Anonymous Visitor')}
+                      disabled={deleteVisitor.isPending}
+                      title="Delete visitor"
+                      className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/30 px-3 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

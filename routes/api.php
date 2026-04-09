@@ -281,6 +281,7 @@ Route::prefix('v1')->group(function () {
             Route::get('visitors',                   [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'index']);
             Route::get('visitors/{id}',              [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'show']);
             Route::post('visitors/{id}/start-chat',  [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'startChat']);
+            Route::delete('visitors/{id}',           [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'destroy']);
 
             // ─── Popup Automation Rules ──────────────────────────────────────
             Route::get('popup-rules',                         [PopupRuleController::class, 'index']);
