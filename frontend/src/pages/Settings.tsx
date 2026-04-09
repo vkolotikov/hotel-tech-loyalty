@@ -49,44 +49,141 @@ const SECRET_KEYS = [
   'google_maps_api_key', 'custom_webhook_secret',
 ]
 
-const PRESETS: Record<string, Record<string, string>> = {
+interface ThemePreset {
+  description: string
+  colors: Record<string, string>
+}
+
+const PRESETS: Record<string, ThemePreset> = {
   'Gold Luxury': {
-    primary_color: '#c9a84c', secondary_color: '#1e1e1e', accent_color: '#32d74b',
-    background_color: '#0d0d0d', surface_color: '#161616', text_color: '#ffffff',
-    text_secondary_color: '#8e8e93', border_color: '#2c2c2c',
-    error_color: '#ff375f', warning_color: '#ffd60a', info_color: '#0a84ff',
+    description: 'Warm gold on charcoal — classic five-star feel',
+    colors: {
+      primary_color: '#c9a84c', secondary_color: '#1e1e1e', accent_color: '#32d74b',
+      background_color: '#0d0d0d', surface_color: '#161616', text_color: '#ffffff',
+      text_secondary_color: '#8e8e93', border_color: '#2c2c2c',
+      error_color: '#ff375f', warning_color: '#ffd60a', info_color: '#0a84ff',
+    },
   },
   'Royal Blue': {
-    primary_color: '#3b82f6', secondary_color: '#1e293b', accent_color: '#22c55e',
-    background_color: '#0f172a', surface_color: '#1e293b', text_color: '#f8fafc',
-    text_secondary_color: '#94a3b8', border_color: '#334155',
-    error_color: '#ef4444', warning_color: '#eab308', info_color: '#06b6d4',
+    description: 'Deep navy + crisp blue — corporate & trustworthy',
+    colors: {
+      primary_color: '#3b82f6', secondary_color: '#1e293b', accent_color: '#22c55e',
+      background_color: '#0f172a', surface_color: '#1e293b', text_color: '#f8fafc',
+      text_secondary_color: '#94a3b8', border_color: '#334155',
+      error_color: '#ef4444', warning_color: '#eab308', info_color: '#06b6d4',
+    },
   },
   'Emerald Resort': {
-    primary_color: '#10b981', secondary_color: '#1a2332', accent_color: '#f59e0b',
-    background_color: '#0c1117', surface_color: '#141e29', text_color: '#f0fdf4',
-    text_secondary_color: '#86efac', border_color: '#1e3a2f',
-    error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#38bdf8',
+    description: 'Lush green & amber — wellness retreats and spas',
+    colors: {
+      primary_color: '#10b981', secondary_color: '#1a2332', accent_color: '#f59e0b',
+      background_color: '#0c1117', surface_color: '#141e29', text_color: '#f0fdf4',
+      text_secondary_color: '#86efac', border_color: '#1e3a2f',
+      error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#38bdf8',
+    },
   },
   'Rose Boutique': {
-    primary_color: '#e11d48', secondary_color: '#1c1017', accent_color: '#fb923c',
-    background_color: '#0f0708', surface_color: '#1c1017', text_color: '#fff1f2',
-    text_secondary_color: '#fda4af', border_color: '#3b1524',
-    error_color: '#dc2626', warning_color: '#facc15', info_color: '#60a5fa',
+    description: 'Warm rose & peach — boutique and lifestyle hotels',
+    colors: {
+      primary_color: '#e11d48', secondary_color: '#1c1017', accent_color: '#fb923c',
+      background_color: '#0f0708', surface_color: '#1c1017', text_color: '#fff1f2',
+      text_secondary_color: '#fda4af', border_color: '#3b1524',
+      error_color: '#dc2626', warning_color: '#facc15', info_color: '#60a5fa',
+    },
   },
   'Ocean Breeze': {
-    primary_color: '#06b6d4', secondary_color: '#0f2937', accent_color: '#a78bfa',
-    background_color: '#0a1a24', surface_color: '#0f2937', text_color: '#ecfeff',
-    text_secondary_color: '#67e8f9', border_color: '#164e63',
-    error_color: '#fb7185', warning_color: '#fde047', info_color: '#818cf8',
+    description: 'Cyan & violet — coastal resorts and beach clubs',
+    colors: {
+      primary_color: '#06b6d4', secondary_color: '#0f2937', accent_color: '#a78bfa',
+      background_color: '#0a1a24', surface_color: '#0f2937', text_color: '#ecfeff',
+      text_secondary_color: '#67e8f9', border_color: '#164e63',
+      error_color: '#fb7185', warning_color: '#fde047', info_color: '#818cf8',
+    },
   },
   'Midnight Purple': {
-    primary_color: '#8b5cf6', secondary_color: '#1a1625', accent_color: '#f472b6',
-    background_color: '#0e0b16', surface_color: '#1a1625', text_color: '#f5f3ff',
-    text_secondary_color: '#a78bfa', border_color: '#2e1f4d',
-    error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#22d3ee',
+    description: 'Violet & pink — nightlife venues and city hotels',
+    colors: {
+      primary_color: '#8b5cf6', secondary_color: '#1a1625', accent_color: '#f472b6',
+      background_color: '#0e0b16', surface_color: '#1a1625', text_color: '#f5f3ff',
+      text_secondary_color: '#a78bfa', border_color: '#2e1f4d',
+      error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#22d3ee',
+    },
+  },
+  'Sunset Coral': {
+    description: 'Coral & amber — Mediterranean & desert resorts',
+    colors: {
+      primary_color: '#f97316', secondary_color: '#1f1410', accent_color: '#fbbf24',
+      background_color: '#120906', surface_color: '#1f1410', text_color: '#fff7ed',
+      text_secondary_color: '#fdba74', border_color: '#3b1f12',
+      error_color: '#ef4444', warning_color: '#facc15', info_color: '#38bdf8',
+    },
+  },
+  'Forest Spa': {
+    description: 'Pine & sage — mountain lodges and eco retreats',
+    colors: {
+      primary_color: '#16a34a', secondary_color: '#0f1a14', accent_color: '#84cc16',
+      background_color: '#08120c', surface_color: '#0f1a14', text_color: '#f0fdf4',
+      text_secondary_color: '#86efac', border_color: '#1a2e22',
+      error_color: '#dc2626', warning_color: '#eab308', info_color: '#0ea5e9',
+    },
+  },
+  'Champagne': {
+    description: 'Soft champagne & cream — refined and minimal',
+    colors: {
+      primary_color: '#d4af37', secondary_color: '#1c1814', accent_color: '#e5c494',
+      background_color: '#100e0a', surface_color: '#1c1814', text_color: '#fdf6e3',
+      text_secondary_color: '#c4a476', border_color: '#2e2820',
+      error_color: '#e25555', warning_color: '#f5b400', info_color: '#5ec4e8',
+    },
+  },
+  'Slate Modern': {
+    description: 'Cool slate & cyan — modern minimalist business hotels',
+    colors: {
+      primary_color: '#64748b', secondary_color: '#0f172a', accent_color: '#06b6d4',
+      background_color: '#020617', surface_color: '#0f172a', text_color: '#f1f5f9',
+      text_secondary_color: '#94a3b8', border_color: '#1e293b',
+      error_color: '#f43f5e', warning_color: '#facc15', info_color: '#0ea5e9',
+    },
+  },
+  'Tropical Mint': {
+    description: 'Mint & teal — Caribbean resorts and beach properties',
+    colors: {
+      primary_color: '#14b8a6', secondary_color: '#0a1f1d', accent_color: '#fde047',
+      background_color: '#04110f', surface_color: '#0a1f1d', text_color: '#f0fdfa',
+      text_secondary_color: '#5eead4', border_color: '#13332e',
+      error_color: '#fb7185', warning_color: '#facc15', info_color: '#38bdf8',
+    },
+  },
+  'Burgundy Wine': {
+    description: 'Rich burgundy & gold — vineyard estates and wine country',
+    colors: {
+      primary_color: '#9f1239', secondary_color: '#1a0a0f', accent_color: '#d4af37',
+      background_color: '#0e0608', surface_color: '#1a0a0f', text_color: '#fff1f2',
+      text_secondary_color: '#e8aab6', border_color: '#3b1220',
+      error_color: '#dc2626', warning_color: '#eab308', info_color: '#60a5fa',
+    },
+  },
+  'Sky Minimal': {
+    description: 'Sky blue & soft gray — light, airy and modern',
+    colors: {
+      primary_color: '#0ea5e9', secondary_color: '#0f1a23', accent_color: '#a78bfa',
+      background_color: '#050b12', surface_color: '#0f1a23', text_color: '#f0f9ff',
+      text_secondary_color: '#7dd3fc', border_color: '#1e3a52',
+      error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#22d3ee',
+    },
+  },
+  'Obsidian': {
+    description: 'Pure black & electric blue — bold and dramatic',
+    colors: {
+      primary_color: '#3b82f6', secondary_color: '#0a0a0a', accent_color: '#22d3ee',
+      background_color: '#000000', surface_color: '#0a0a0a', text_color: '#fafafa',
+      text_secondary_color: '#737373', border_color: '#1a1a1a',
+      error_color: '#ef4444', warning_color: '#eab308', info_color: '#06b6d4',
+    },
   },
 }
+
+const DEFAULT_PRESET = 'Gold Luxury'
 
 /* ─── Tab Config ────────────────────────────────────────────────────────── */
 
@@ -217,10 +314,20 @@ export function Settings() {
   const applyPreset = (name: string) => {
     const p = PRESETS[name]
     if (!p) return
-    setEditedSettings(prev => ({ ...prev, ...p }))
+    setEditedSettings(prev => ({ ...prev, ...p.colors }))
     // Auto-save preset immediately
-    const settings = Object.entries(p).map(([key, value]) => ({ key, value }))
+    const settings = Object.entries(p.colors).map(([key, value]) => ({ key, value }))
     saveMutation.mutate(settings)
+  }
+
+  // Detect which preset (if any) matches the current colors
+  const detectActivePreset = (): string | null => {
+    const current: Record<string, string> = {}
+    for (const k of COLOR_KEYS) current[k] = (getVal(k) || '').toLowerCase()
+    for (const [name, p] of Object.entries(PRESETS)) {
+      if (COLOR_KEYS.every(k => current[k] === p.colors[k]?.toLowerCase())) return name
+    }
+    return null
   }
 
   const toggleReveal = (key: string) => {
@@ -431,6 +538,7 @@ export function Settings() {
   /* ─── Tab: Branding ──────────────────────────────────────────────────── */
 
   const renderBranding = () => {
+    const activePreset = detectActivePreset()
     const previewPrimary = getVal('primary_color') || '#c9a84c'
     const previewBg = getVal('background_color') || '#0d0d0d'
     const previewSurface = getVal('surface_color') || '#161616'
@@ -483,23 +591,57 @@ export function Settings() {
 
         {/* Theme Presets */}
         <div className={cardClass} style={cardStyle}>
-          <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-            <Palette size={15} className="text-emerald-400" /> Theme Presets
-          </h3>
-          <p className="text-xs text-gray-500 mb-4">Quick-start with a preset, then customize individual colors below.</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(PRESETS).map(([name, colors]) => (
-              <button key={name} onClick={() => applyPreset(name)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/[0.06] hover:border-emerald-500/30 transition-all hover:-translate-y-px group"
-                style={{ background: 'rgba(15,28,24,0.6)' }}>
-                <div className="flex -space-x-1">
-                  {[colors.primary_color, colors.background_color, colors.accent_color].map((c, i) => (
-                    <div key={i} className="w-4 h-4 rounded-full border border-black/30" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
-                <span className="text-xs text-gray-400 group-hover:text-white transition-colors">{name}</span>
-              </button>
-            ))}
+          <div className="flex items-start justify-between mb-1">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Palette size={15} className="text-emerald-400" /> Theme Presets
+              {activePreset && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                  {activePreset} active
+                </span>
+              )}
+            </h3>
+            <button onClick={() => applyPreset(DEFAULT_PRESET)}
+              className="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
+              <RotateCcw size={11} /> Reset to default
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">Pick a curated palette tailored to your hotel style — applies instantly.</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Object.entries(PRESETS).map(([name, preset]) => {
+              const isActive = activePreset === name
+              const c = preset.colors
+              return (
+                <button key={name} onClick={() => applyPreset(name)}
+                  className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px group ${
+                    isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
+                  }`}
+                  style={{ background: c.surface_color }}>
+                  {/* Color band preview */}
+                  <div className="h-12 flex">
+                    <div className="flex-1" style={{ backgroundColor: c.primary_color }} />
+                    <div className="flex-1" style={{ backgroundColor: c.accent_color }} />
+                    <div className="flex-1" style={{ backgroundColor: c.secondary_color }} />
+                    <div className="flex-1" style={{ backgroundColor: c.background_color }} />
+                    <div className="flex-1" style={{ backgroundColor: c.info_color }} />
+                  </div>
+                  {/* Sample content */}
+                  <div className="p-3" style={{ backgroundColor: c.background_color }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold" style={{ color: c.text_color }}>{name}</span>
+                      {isActive && <CheckCircle size={12} style={{ color: c.primary_color }} />}
+                    </div>
+                    <p className="text-[10px] leading-snug line-clamp-2" style={{ color: c.text_secondary_color }}>
+                      {preset.description}
+                    </p>
+                    <div className="flex items-center gap-1 mt-2">
+                      {[c.primary_color, c.accent_color, c.error_color, c.warning_color, c.info_color].map((col, i) => (
+                        <div key={i} className="w-3 h-3 rounded-full border" style={{ backgroundColor: col, borderColor: c.border_color }} />
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -1576,14 +1718,12 @@ export function Settings() {
   /* ─── Main Layout ────────────────────────────────────────────────────── */
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Configuration</div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your platform configuration, integrations, and branding</p>
+          <h1 className="text-2xl font-bold text-white">Settings</h1>
+          <p className="text-sm text-t-secondary mt-0.5">Manage your platform configuration, integrations, and branding</p>
         </div>
         {hasChanges && (
           <div className="flex items-center gap-2">
@@ -1601,33 +1741,25 @@ export function Settings() {
         )}
       </div>
 
-      {/* Top Tab Navigation */}
-      <div className="rounded-2xl p-1.5 border border-white/[0.06]"
-        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
-        <div className="flex gap-1 overflow-x-auto">
-          {TABS.filter(tab => {
-            if (tab.superAdminOnly && !isSuperAdmin) return false
-            if (tab.feature && !hasFeature(tab.feature)) return false
-            if (tab.product && !hasProduct(tab.product)) return false
-            return true
-          }).map(tab => {
-            const active = activeTab === tab.id
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                  active ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
-                }`}
-                style={active ? {
-                  background: 'linear-gradient(135deg, rgba(116,200,149,0.15), rgba(116,200,149,0.05))',
-                  border: '1px solid rgba(116,200,149,0.2)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                } : { border: '1px solid transparent' }}>
-                <tab.icon size={15} className={active ? 'text-emerald-400' : ''} />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Top Tab Navigation — underline style, matches ChatbotSetup */}
+      <div className="flex gap-1 border-b border-dark-border overflow-x-auto">
+        {TABS.filter(tab => {
+          if (tab.superAdminOnly && !isSuperAdmin) return false
+          if (tab.feature && !hasFeature(tab.feature)) return false
+          if (tab.product && !hasProduct(tab.product)) return false
+          return true
+        }).map(tab => {
+          const Icon = tab.icon
+          const active = activeTab === tab.id
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                active ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'
+              }`}>
+              <Icon size={14} /> {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Content */}
