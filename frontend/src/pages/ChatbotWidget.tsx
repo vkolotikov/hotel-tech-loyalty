@@ -4,6 +4,7 @@ import { api, resolveImage } from '../lib/api'
 import {
   Save, RefreshCw, Upload, Trash2, Copy, Check, Code, MessageSquare,
   Palette, Type, Mic, Volume2, Clock, Shield, UserCheck, Megaphone,
+  Send, Phone, X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -687,6 +688,8 @@ export function ChatbotWidget() {
   )
 
   // ─── Layout ──────────────────────────────────────────────────────────────
+  const showPreview = tab !== 'install'
+
   return (
     <div className="space-y-5">
       {/* Sub-tab nav */}
@@ -705,23 +708,255 @@ export function ChatbotWidget() {
         })}
       </div>
 
-      {tab === 'brand'    && renderBrand()}
-      {tab === 'copy'     && renderCopy()}
-      {tab === 'style'    && renderStyle()}
-      {tab === 'behavior' && renderBehavior()}
-      {tab === 'voice'    && renderVoice()}
-      {tab === 'install'  && renderInstall()}
+      <div className={showPreview ? 'grid grid-cols-1 xl:grid-cols-12 gap-5' : ''}>
+        {/* Form column */}
+        <div className={showPreview ? 'xl:col-span-7 space-y-5 min-w-0' : 'space-y-5'}>
+          {tab === 'brand'    && renderBrand()}
+          {tab === 'copy'     && renderCopy()}
+          {tab === 'style'    && renderStyle()}
+          {tab === 'behavior' && renderBehavior()}
+          {tab === 'voice'    && renderVoice()}
+          {tab === 'install'  && renderInstall()}
 
-      {/* Sticky save bar — only for widget config tabs (voice has its own save) */}
-      {tab !== 'voice' && tab !== 'install' && (
-        <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
-          <span className="text-xs text-t-secondary">{dirty ? 'Unsaved changes' : 'All changes saved'}</span>
-          <button onClick={() => saveMutation.mutate(f)} disabled={!dirty || saveMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
-            <Save size={14} /> {saveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
-          </button>
+          {/* Sticky save bar — only for widget config tabs (voice has its own save) */}
+          {tab !== 'voice' && tab !== 'install' && (
+            <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
+              <span className="text-xs text-t-secondary">{dirty ? 'Unsaved changes' : 'All changes saved'}</span>
+              <button onClick={() => saveMutation.mutate(f)} disabled={!dirty || saveMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save size={14} /> {saveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Live preview column */}
+        {showPreview && (
+          <div className="xl:col-span-5">
+            <div className="xl:sticky xl:top-4">
+              <WidgetPreview cfg={f} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Live Widget Preview ─────────────────────────────────────────────────── */
+
+function WidgetPreview({ cfg }: { cfg: any }) {
+  const [open, setOpen] = useState(true)
+
+  const primary       = cfg.primary_color || '#c9a84c'
+  const headerStyle   = cfg.header_style || 'solid'
+  const headerBg      = headerStyle === 'gradient'
+    ? `linear-gradient(135deg, ${primary} 0%, ${cfg.header_gradient_end || primary} 100%)`
+    : primary
+  const headerText    = cfg.header_text_color || '#ffffff'
+  const userBubble    = cfg.user_bubble_color || primary
+  const userBubbleTxt = cfg.user_bubble_text || '#ffffff'
+  const botBubble     = cfg.bot_bubble_color || '#f3f4f6'
+  const botBubbleTxt  = cfg.bot_bubble_text || '#1f2937'
+  const chatBg        = cfg.chat_bg_color || '#ffffff'
+  const radius        = cfg.border_radius ?? 16
+  const font          = cfg.font_family || 'Inter'
+  const position      = cfg.position || 'bottom-right'
+  const isLeft        = position === 'bottom-left'
+
+  const launcherSize  = cfg.launcher_size || 56
+  const launcherShape = cfg.launcher_shape || 'circle'
+  const launcherRadius = launcherShape === 'circle' ? '50%'
+    : launcherShape === 'pill' ? '999px'
+    : launcherShape === 'rounded-square' ? '16px'
+    : '6px'
+
+  const status = cfg.agent_status || 'online'
+  const statusColor = status === 'online' ? '#10b981' : status === 'away' ? '#f59e0b' : '#6b7280'
+
+  const headerTitle    = cfg.header_title || cfg.company_name || 'AI Assistant'
+  const headerSubtitle = cfg.header_subtitle || 'Ask me anything'
+  const welcomeTitle   = cfg.welcome_title || 'Hi! How can I help you today?'
+  const welcomeSub     = cfg.welcome_subtitle || 'Ask about reservations, loyalty program, hotel services, or anything else.'
+  const placeholder    = cfg.input_placeholder || 'Type a message...'
+  const showBranding   = cfg.show_branding ?? true
+  const brandingText   = cfg.branding_text || 'Powered by Hotel AI'
+  const showSugg       = cfg.show_suggestions ?? true
+  const suggestions: string[] = (Array.isArray(cfg.suggestions) ? cfg.suggestions : []).filter(Boolean)
+  const avatarUrl      = cfg.assistant_avatar_url ? (resolveImage(cfg.assistant_avatar_url) || cfg.assistant_avatar_url) : ''
+
+  return (
+    <div className={card}>
+      <div className="flex items-center justify-between">
+        <h3 className={cardTitle}><MessageSquare size={14} className="text-primary-500" /> Live Preview</h3>
+        <button onClick={() => setOpen(o => !o)} className={btnSec}>
+          {open ? 'Show launcher' : 'Open chat'}
+        </button>
+      </div>
+      <p className="text-[11px] text-t-secondary -mt-2">Reflects unsaved changes. Not a live chat — for layout only.</p>
+
+      {/* Browser-window mock */}
+      <div
+        className="relative rounded-xl overflow-hidden border border-dark-border shadow-inner"
+        style={{
+          background: 'repeating-linear-gradient(45deg, #18181b, #18181b 10px, #1f1f23 10px, #1f1f23 20px)',
+          height: 520,
+          fontFamily: `'${font}', system-ui, sans-serif`,
+        }}
+      >
+        {/* Fake browser chrome */}
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0f0f10] border-b border-dark-border">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+          <span className="ml-3 text-[10px] text-[#636366] truncate">your-hotel.com</span>
+        </div>
+
+        {/* Launcher (when closed) */}
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="absolute flex items-center justify-center shadow-lg transition-transform hover:scale-105"
+            style={{
+              [isLeft ? 'left' : 'right']: 18,
+              bottom: 18,
+              width: launcherSize,
+              height: launcherSize,
+              borderRadius: launcherRadius,
+              background: headerBg,
+              color: headerText,
+              border: 'none',
+              cursor: 'pointer',
+            } as any}
+            aria-label="Open chat"
+          >
+            <MessageSquare size={Math.round(launcherSize * 0.42)} />
+          </button>
+        )}
+
+        {/* Chat panel (when open) */}
+        {open && (
+          <div
+            className="absolute flex flex-col overflow-hidden shadow-2xl"
+            style={{
+              [isLeft ? 'left' : 'right']: 18,
+              bottom: 18,
+              width: 320,
+              maxWidth: 'calc(100% - 36px)',
+              height: 440,
+              background: chatBg,
+              borderRadius: radius,
+              color: botBubbleTxt,
+            } as any}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-2.5 px-3.5 py-3 shrink-0" style={{ background: headerBg, color: headerText }}>
+              <div className="relative shrink-0">
+                <div
+                  className="rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.2)' }}
+                >
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    : <MessageSquare size={18} />}
+                </div>
+                <span
+                  className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                  style={{ background: statusColor, borderColor: headerBg.includes('gradient') ? primary : headerBg }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold truncate" style={{ color: headerText }}>{headerTitle}</div>
+                <div className="text-[11px] truncate" style={{ color: headerText, opacity: 0.85 }}>{headerSubtitle}</div>
+              </div>
+              <button className="shrink-0 rounded-full flex items-center justify-center"
+                style={{ width: 32, height: 32, background: '#22c55e', color: '#fff' }}
+                title="Voice call">
+                <Phone size={14} />
+              </button>
+              <button className="shrink-0 opacity-80 hover:opacity-100" style={{ color: headerText }} onClick={() => setOpen(false)} title="Close">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5" style={{ background: chatBg }}>
+              {/* Welcome bot bubble */}
+              <div className="flex">
+                <div
+                  className="px-3 py-2 text-[12px] leading-snug max-w-[85%]"
+                  style={{ background: botBubble, color: botBubbleTxt, borderRadius: Math.max(radius - 4, 6), borderBottomLeftRadius: 4 }}
+                >
+                  <div className="font-semibold mb-0.5">{welcomeTitle}</div>
+                  <div className="opacity-80">{welcomeSub}</div>
+                </div>
+              </div>
+
+              {/* Suggestion chips */}
+              {showSugg && suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {suggestions.slice(0, 6).map((s, i) => (
+                    <button key={i}
+                      className="text-[11px] px-2.5 py-1 border"
+                      style={{
+                        borderRadius: Math.max(radius - 6, 4),
+                        borderColor: primary,
+                        color: primary,
+                        background: 'transparent',
+                      }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Sample user bubble */}
+              <div className="flex justify-end pt-1">
+                <div
+                  className="px-3 py-2 text-[12px] max-w-[80%]"
+                  style={{ background: userBubble, color: userBubbleTxt, borderRadius: Math.max(radius - 4, 6), borderBottomRightRadius: 4 }}
+                >
+                  Do you have rooms available this weekend?
+                </div>
+              </div>
+
+              {/* Sample bot reply */}
+              <div className="flex">
+                <div
+                  className="px-3 py-2 text-[12px] max-w-[85%]"
+                  style={{ background: botBubble, color: botBubbleTxt, borderRadius: Math.max(radius - 4, 6), borderBottomLeftRadius: 4 }}
+                >
+                  Yes — we have several rooms available. Would you like me to check availability for specific dates?
+                </div>
+              </div>
+            </div>
+
+            {/* Input */}
+            <div className="border-t shrink-0 px-3 py-2.5" style={{ borderColor: 'rgba(0,0,0,0.08)', background: chatBg }}>
+              <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                style={{ background: 'rgba(0,0,0,0.04)', borderRadius: Math.max(radius - 6, 6) }}>
+                <input
+                  className="flex-1 bg-transparent outline-none text-[12px]"
+                  style={{ color: botBubbleTxt }}
+                  placeholder={placeholder}
+                  readOnly
+                />
+                <button
+                  className="shrink-0 rounded-full flex items-center justify-center"
+                  style={{ width: 26, height: 26, background: primary, color: userBubbleTxt }}
+                >
+                  <Send size={12} />
+                </button>
+              </div>
+              {showBranding && (
+                <div className="text-center mt-1.5 text-[10px]" style={{ color: '#9ca3af' }}>
+                  {brandingText}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
