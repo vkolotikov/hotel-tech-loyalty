@@ -395,62 +395,59 @@ class LoyaltyService
 
     /**
      * Get the appropriate tier for a given points total.
+     *
+     * Reads from the per-org cached active-tier collection and filters in PHP
+     * so the points hot-path doesn't re-query loyalty_tiers on every scan/award.
      */
     public function getTierForPoints(int $lifetimePoints): ?LoyaltyTier
     {
-        return LoyaltyTier::where('is_active', true)
-            ->where('invitation_only', false)
-            ->where('min_points', '<=', $lifetimePoints)
-            ->where(function ($q) use ($lifetimePoints) {
-                $q->whereNull('max_points')
-                  ->orWhere('max_points', '>=', $lifetimePoints);
-            })
-            ->orderByDesc('min_points')
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(fn (LoyaltyTier $t) => $t->min_points <= $lifetimePoints
+                && ($t->max_points === null || $t->max_points >= $lifetimePoints))
+            ->sortByDesc('min_points')
             ->first();
     }
 
     private function getTierByNights(int $nights): ?LoyaltyTier
     {
-        return LoyaltyTier::where('is_active', true)
-            ->where('invitation_only', false)
-            ->whereNotNull('min_nights')
-            ->where('min_nights', '<=', $nights)
-            ->orderByDesc('min_nights')
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(fn (LoyaltyTier $t) => $t->min_nights !== null && $t->min_nights <= $nights)
+            ->sortByDesc('min_nights')
             ->first();
     }
 
     private function getTierByStays(int $stays): ?LoyaltyTier
     {
-        return LoyaltyTier::where('is_active', true)
-            ->where('invitation_only', false)
-            ->whereNotNull('min_stays')
-            ->where('min_stays', '<=', $stays)
-            ->orderByDesc('min_stays')
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(fn (LoyaltyTier $t) => $t->min_stays !== null && $t->min_stays <= $stays)
+            ->sortByDesc('min_stays')
             ->first();
     }
 
     private function getTierBySpend(float $spend): ?LoyaltyTier
     {
-        return LoyaltyTier::where('is_active', true)
-            ->where('invitation_only', false)
-            ->whereNotNull('min_spend')
-            ->where('min_spend', '<=', $spend)
-            ->orderByDesc('min_spend')
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(fn (LoyaltyTier $t) => $t->min_spend !== null && $t->min_spend <= $spend)
+            ->sortByDesc('min_spend')
             ->first();
     }
 
     private function getTierHybrid(LoyaltyMember $member): ?LoyaltyTier
     {
         // Hybrid: qualify by ANY of the thresholds (most generous)
-        return LoyaltyTier::where('is_active', true)
-            ->where('invitation_only', false)
-            ->where(function ($q) use ($member) {
-                $q->where('min_points', '<=', $member->lifetime_points)
-                  ->orWhere(fn($q2) => $q2->whereNotNull('min_nights')->where('min_nights', '<=', $member->qualifying_nights))
-                  ->orWhere(fn($q2) => $q2->whereNotNull('min_stays')->where('min_stays', '<=', $member->qualifying_stays))
-                  ->orWhere(fn($q2) => $q2->whereNotNull('min_spend')->where('min_spend', '<=', $member->qualifying_spend));
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(function (LoyaltyTier $t) use ($member) {
+                return $t->min_points <= $member->lifetime_points
+                    || ($t->min_nights !== null && $t->min_nights <= $member->qualifying_nights)
+                    || ($t->min_stays  !== null && $t->min_stays  <= $member->qualifying_stays)
+                    || ($t->min_spend  !== null && $t->min_spend  <= $member->qualifying_spend);
             })
-            ->orderByDesc('sort_order')
+            ->sortByDesc('sort_order')
             ->first();
     }
 

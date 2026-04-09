@@ -169,6 +169,10 @@ class MemberAdminController extends Controller
 
     public function show(int $id): JsonResponse
     {
+        // Stats are computed via withCount/withSum so they reflect ALL bookings,
+        // not just the limited 10 we eager-load for display. Previously
+        // total_bookings/total_spent were capped at 10 because they were
+        // counted/summed against the already-limited collection.
         $member = LoyaltyMember::with([
             'user', 'tier',
             'pointsTransactions' => fn($q) => $q->latest()->limit(20),
@@ -180,11 +184,14 @@ class MemberAdminController extends Controller
                 'inquiries'    => fn($r) => $r->with('property:id,name,code')->latest()->limit(10),
                 'activities'   => fn($r) => $r->latest()->limit(10),
             ]),
-        ])->findOrFail($id);
+        ])
+            ->withCount('bookings')
+            ->withSum('bookings as bookings_total_amount', 'total_amount')
+            ->findOrFail($id);
 
         $stats = [
-            'total_bookings' => $member->bookings->count(),
-            'total_spent'    => $member->bookings->sum('total_amount'),
+            'total_bookings' => (int) $member->bookings_count,
+            'total_spent'    => (float) ($member->bookings_total_amount ?? 0),
         ];
 
         // Aggregate CRM guest data for linked guests
