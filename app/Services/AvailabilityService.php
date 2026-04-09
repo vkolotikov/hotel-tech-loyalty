@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\BookingMirror;
 use App\Models\BookingRoom;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AvailabilityService
 {
@@ -14,7 +16,7 @@ class AvailabilityService
      * Smoobu parsing changes so stale cache entries (e.g. from when the
      * client was running in mock mode) are evicted automatically.
      */
-    private const CACHE_VERSION = 'v2';
+    private const CACHE_VERSION = 'v3';
 
     /** Get available units for date range. */
     public function check(string $checkIn, string $checkOut, int $adults = 2, int $children = 0): array
@@ -84,20 +86,31 @@ class AvailabilityService
                     $minStay     = max($minStay, (int) ($day['min_stay'] ?? 1));
                 }
             } else {
-                // Per-day data missing for this unit — only trust the
-                // aggregate response, and only if the daily call itself
-                // succeeded (otherwise we have zero confirmation).
-                if (!$dailyOk) continue;
-
+                // Per-day data missing for this unit. Try the aggregate
+                // response first; if Smoobu still has nothing for this unit,
+                // fall back to the room's DB base_price so manual rooms and
+                // PMS-less setups still surface a real price.
                 $rate = $data[$key] ?? $data[$id] ?? null;
-                if (!$rate || !($rate['available'] ?? false)) continue;
-                $totalPrice = (float) ($rate['price'] ?? 0);
-                $minStay    = (int) ($rate['min_stay'] ?? 1);
-                if ($totalPrice <= 0) continue;
+                if ($rate && ($rate['available'] ?? false) && (float) ($rate['price'] ?? 0) > 0) {
+                    $totalPrice = (float) $rate['price'];
+                    $minStay    = (int) ($rate['min_stay'] ?? 1);
+                } else {
+                    $base = (float) ($room['base_price'] ?? 0);
+                    if ($base <= 0) continue;
+                    $totalPrice = $base * count($nights);
+                    $minStay    = 1;
+                }
             }
 
             if (!$isAvail) continue;
             if (count($nights) < $minStay) continue;
+
+            // Inventory gate: how many of this room are already booked across
+            // any overlapping non-cancelled mirror records? When the count
+            // reaches the room's inventory_count, the unit is sold out.
+            $inventory = max(1, (int) ($room['inventory_count'] ?? 1));
+            $booked    = $this->bookedCountForRoom($key, $checkIn, $checkOut, $orgId);
+            if ($booked >= $inventory) continue;
 
             $rate = $data[$key] ?? $data[$id] ?? [];
             $results[] = [
@@ -132,6 +145,18 @@ class AvailabilityService
     /** Get rates for a single unit. */
     public function unitRates(string $unitId, string $checkIn, string $checkOut, int $adults = 2): array
     {
+        // Inventory gate first — if every unit of this room is already booked
+        // for the requested window, no quote should ever be generated.
+        $orgId   = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $rooms   = $this->getRooms();
+        $roomCfg = $rooms[$unitId] ?? null;
+        if ($roomCfg) {
+            $inventory = max(1, (int) ($roomCfg['inventory_count'] ?? 1));
+            if ($this->bookedCountForRoom($unitId, $checkIn, $checkOut, $orgId) >= $inventory) {
+                return [];
+            }
+        }
+
         try {
             $rates = $this->smoobu->getRates($checkIn, $checkOut, [$unitId]);
             $data  = $rates['data'] ?? $rates;
@@ -146,8 +171,7 @@ class AvailabilityService
         }
 
         // Fallback: use DB room base_price (works for DB-only rooms or when Smoobu has no data)
-        $rooms = $this->getRooms();
-        $room  = $rooms[$unitId] ?? null;
+        $room = $roomCfg;
         if (!$room) return [];
 
         $nights = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
@@ -190,29 +214,49 @@ class AvailabilityService
             $dateStr  = $current->format('Y-m-d');
             $cheapest = PHP_INT_MAX;
 
-            foreach ($unitIds as $unitId) {
-                $day = $daily[(string) $unitId][$dateStr] ?? null;
+            // For each room: prefer the Smoobu daily price; if missing, fall
+            // back to that room's DB base_price. This ensures the calendar
+            // dropdown matches the same per-room logic the quote uses.
+            foreach ($rooms as $unitId => $room) {
+                $key = (string) $unitId;
+                $day = $daily[$key][$dateStr] ?? null;
                 if ($day && ($day['available'] ?? false) && ($day['price'] ?? 0) > 0) {
                     $cheapest = min($cheapest, (float) $day['price']);
+                    continue;
+                }
+
+                $base = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
+                if ($base > 0) {
+                    $cheapest = min($cheapest, $base);
                 }
             }
 
-            // Fallback to DB base_price if no PMS data for this day at all
-            if ($cheapest === PHP_INT_MAX) {
-                $cheapestDb = PHP_INT_MAX;
-                foreach ($rooms as $room) {
-                    $base = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
-                    if ($base > 0) $cheapestDb = min($cheapestDb, $base);
-                }
-                $prices[$dateStr] = $cheapestDb === PHP_INT_MAX ? 0 : (float) $cheapestDb;
-            } else {
-                $prices[$dateStr] = (float) $cheapest;
-            }
-
+            $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : (float) $cheapest;
             $current->modify('+1 day');
         }
 
         return $prices;
+    }
+
+    /**
+     * Count overlapping non-cancelled bookings for a given apartment within
+     * the requested date window. Two stays overlap when arrival < requested
+     * checkout AND departure > requested checkin (departure day is checkout
+     * morning, so back-to-back stays do NOT overlap).
+     */
+    private function bookedCountForRoom(string $apartmentId, string $checkIn, string $checkOut, ?int $orgId): int
+    {
+        return BookingMirror::withoutGlobalScopes()
+            ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
+            ->where('apartment_id', $apartmentId)
+            ->whereNotIn('booking_state', ['cancelled'])
+            ->where(function ($q) {
+                $q->whereNull('internal_status')
+                  ->orWhereNotIn('internal_status', ['cancelled']);
+            })
+            ->where('arrival_date', '<', $checkOut)
+            ->where('departure_date', '>', $checkIn)
+            ->count();
     }
 
     /**

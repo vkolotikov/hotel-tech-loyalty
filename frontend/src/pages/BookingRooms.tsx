@@ -20,6 +20,7 @@ interface Room {
   bedrooms: number
   bed_type: string | null
   base_price: number
+  inventory_count: number
   currency: string
   image: string | null
   gallery: string[]
@@ -232,6 +233,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
   const [bedrooms, setBedrooms] = useState(room?.bedrooms || 1)
   const [bedType, setBedType] = useState(room?.bed_type || '')
   const [basePrice, setBasePrice] = useState(room?.base_price || 0)
+  const [inventoryCount, setInventoryCount] = useState(room?.inventory_count || 1)
   const [size, setSize] = useState(room?.size || '')
   const [amenities, setAmenities] = useState<string[]>(room?.amenities || [])
   const [tags, setTags] = useState<string[]>(room?.tags || [])
@@ -269,6 +271,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
     fd.append('bedrooms', String(bedrooms))
     fd.append('bed_type', bedType)
     fd.append('base_price', String(basePrice))
+    fd.append('inventory_count', String(inventoryCount))
     fd.append('size', size)
     fd.append('amenities', JSON.stringify(amenities))
     fd.append('tags', JSON.stringify(tags))
@@ -327,6 +330,13 @@ function RoomForm({ room, onClose, onSave, saving }: {
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">Full Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Detailed room description shown in the booking widget..." className={inputCls + ' resize-none'} />
+          </div>
+
+          {/* Inventory */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Inventory (units of this room)</label>
+            <input type="number" value={inventoryCount} onChange={e => setInventoryCount(Math.max(1, Number(e.target.value)))} min={1} max={9999} className={inputCls} />
+            <p className="text-[11px] text-gray-600 mt-1">How many physical units of this room exist. The widget will block new bookings once all units are reserved for the selected dates.</p>
           </div>
 
           {/* Specs */}

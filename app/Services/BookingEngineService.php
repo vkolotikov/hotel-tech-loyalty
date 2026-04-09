@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\BookingHold;
 use App\Models\BookingIdempotencyKey;
 use App\Models\BookingMirror;
+use App\Models\BookingPriceElement;
 use App\Models\BookingSubmission;
 use App\Models\Guest;
 use Illuminate\Support\Str;
@@ -155,7 +156,7 @@ class BookingEngineService
         $hold->update(['status' => 'consumed']);
 
         // Create mirror record
-        BookingMirror::create([
+        $mirror = BookingMirror::create([
             'reservation_id'    => (string) ($result['id'] ?? ''),
             'booking_reference' => $result['reference-id'] ?? null,
             'booking_type'      => 'reservation',
@@ -175,6 +176,12 @@ class BookingEngineService
             'internal_status'   => $internalStatus,
             'synced_at'         => $pmsResult ? now() : null,
         ]);
+
+        // Persist line-item breakdown so admin booking detail can show the
+        // accommodation row plus every extra the guest selected. Without this
+        // the BookingDetail price-elements panel stays empty for direct
+        // bookings made through the website widget.
+        $this->persistPriceElements($mirror, $payload, $orgId);
 
         $response = [
             'success'           => true,
@@ -349,6 +356,81 @@ class BookingEngineService
         ]);
 
         return $guest->id;
+    }
+
+    /**
+     * Write a BookingPriceElement row for the room and one per selected extra
+     * so the admin booking detail page can render the full price breakdown.
+     */
+    private function persistPriceElements(BookingMirror $mirror, array $payload, ?int $orgId): void
+    {
+        $reservationId = (string) ($mirror->reservation_id ?? '');
+        $currency      = $payload['currency'] ?? 'EUR';
+        $nights        = max(1, (int) ($payload['nights'] ?? 1));
+        $sortOrder     = 0;
+
+        // Room (accommodation) line — quantity is nights so admin sees
+        // "€120.00 × 3" rather than a flat lump sum.
+        $perNight = (float) ($payload['price_per_night']
+            ?? (($payload['room_total'] ?? 0) / max(1, $nights)));
+
+        BookingPriceElement::create([
+            'organization_id'  => $orgId,
+            'booking_mirror_id'=> $mirror->id,
+            'reservation_id'   => $reservationId,
+            'element_type'     => 'accommodation',
+            'name'             => $payload['unit_name'] ?? 'Accommodation',
+            'amount'           => round($perNight, 2),
+            'quantity'         => $nights,
+            'currency_code'    => $currency,
+            'sort_order'       => $sortOrder++,
+        ]);
+
+        // Extras: re-resolve names + per-unit amounts from the saved settings
+        // so the admin sees the same labels the customer picked.
+        $extras    = $payload['extras'] ?? [];
+        if (empty($extras)) return;
+
+        $adults    = (int) ($payload['adults'] ?? 1);
+        $allExtras = collect($this->loadExtrasConfig());
+
+        foreach ($extras as $item) {
+            $extraId = $item['id'] ?? null;
+            $qty     = max(1, (int) ($item['quantity'] ?? 1));
+            $def     = $allExtras->firstWhere('id', $extraId);
+            if (!$def) continue;
+
+            $unitPrice = (float) ($def['price'] ?? 0);
+            if (($def['type'] ?? 'per_stay') === 'per_guest') {
+                $unitPrice *= max(1, $adults);
+            }
+
+            BookingPriceElement::create([
+                'organization_id'  => $orgId,
+                'booking_mirror_id'=> $mirror->id,
+                'reservation_id'   => $reservationId,
+                'element_type'     => 'extra',
+                'name'             => $def['name'] ?? ($def['label'] ?? 'Extra'),
+                'amount'           => round($unitPrice, 2),
+                'quantity'         => $qty,
+                'currency_code'    => $currency,
+                'sort_order'       => $sortOrder++,
+            ]);
+        }
+    }
+
+    private function loadExtrasConfig(): array
+    {
+        $json = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
+            ->where('key', 'booking_extras')
+            ->value('value');
+
+        if ($json) {
+            $decoded = json_decode($json, true);
+            if (is_array($decoded)) return $decoded;
+        }
+        return config('booking.extras', []);
     }
 
     private function calcExtras(array $extras, int $adults): float

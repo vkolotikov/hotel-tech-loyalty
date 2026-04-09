@@ -11,7 +11,7 @@ class BookingRoom extends Model
 
     protected $fillable = [
         'organization_id', 'pms_id', 'name', 'slug', 'description', 'short_description',
-        'max_guests', 'bedrooms', 'bed_type', 'base_price', 'currency',
+        'max_guests', 'bedrooms', 'bed_type', 'base_price', 'inventory_count', 'currency',
         'image', 'gallery', 'amenities', 'tags', 'size',
         'sort_order', 'is_active', 'meta',
     ];
@@ -23,6 +23,7 @@ class BookingRoom extends Model
         'meta'      => 'array',
         'is_active' => 'boolean',
         'base_price' => 'decimal:2',
+        'inventory_count' => 'integer',
     ];
 
     public function extras()
