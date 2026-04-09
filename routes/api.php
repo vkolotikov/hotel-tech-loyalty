@@ -254,6 +254,7 @@ Route::prefix('v1')->group(function () {
             Route::get('chat-inbox/{id}',                     [ChatInboxController::class, 'show']);
             Route::put('chat-inbox/{id}/assign',              [ChatInboxController::class, 'assign']);
             Route::put('chat-inbox/{id}/status',              [ChatInboxController::class, 'updateStatus']);
+            Route::put('chat-inbox/{id}/ai-toggle',           [ChatInboxController::class, 'toggleAi']);
             Route::post('chat-inbox/{id}/messages',           [ChatInboxController::class, 'sendMessage']);
             Route::post('chat-inbox/{id}/capture-lead',       [ChatInboxController::class, 'captureLead']);
             Route::put('chat-inbox/{id}/contact',             [ChatInboxController::class, 'updateContact']);
@@ -291,6 +292,8 @@ Route::prefix('v1')->group(function () {
             Route::post('knowledge/documents',                [KnowledgeBaseController::class, 'uploadDocument']);
             Route::delete('knowledge/documents/{id}',         [KnowledgeBaseController::class, 'destroyDocument']);
             Route::post('knowledge/documents/{id}/reprocess', [KnowledgeBaseController::class, 'reprocessDocument']);
+            Route::post('knowledge/extract-faqs',             [KnowledgeBaseController::class, 'extractFaqs']);
+            Route::post('knowledge/bulk-import-faqs',         [KnowledgeBaseController::class, 'bulkImportFaqs']);
 
             // ─── Voice Agent ─────────────────────────────────────────────────
             Route::get('voice-agent/config',                    [VoiceAgentController::class, 'show']);

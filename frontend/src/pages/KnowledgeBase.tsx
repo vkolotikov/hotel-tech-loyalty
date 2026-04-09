@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { BookOpen, Plus, Pencil, Trash2, Upload, FileText, FolderOpen, Search, X, Save, RotateCcw } from 'lucide-react'
+import { BookOpen, Plus, Pencil, Trash2, Upload, FileText, FolderOpen, Search, X, Save, RotateCcw, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type Tab = 'items' | 'categories' | 'documents'
@@ -96,6 +96,42 @@ export function KnowledgeBase() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Reprocessing started') },
   })
 
+  // ─── AI FAQ Generator ───
+  const [showAiGen, setShowAiGen] = useState(false)
+  const [aiSourceText, setAiSourceText] = useState('')
+  const [aiCategoryId, setAiCategoryId] = useState<number | null>(null)
+  const [aiPreview, setAiPreview] = useState<Array<{ question: string; answer: string; keywords: string[]; selected: boolean }>>([])
+
+  const extractFaqs = useMutation({
+    mutationFn: () => api.post('/v1/admin/knowledge/extract-faqs', { source_text: aiSourceText }).then(r => r.data),
+    onSuccess: (data) => {
+      const items = (data.items || []).map((it: any) => ({ ...it, keywords: it.keywords || [], selected: true }))
+      setAiPreview(items)
+      if (items.length === 0) toast.error(data.message || 'AI returned no items')
+      else toast.success(`Extracted ${items.length} draft FAQ items — review and import`)
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Extraction failed'),
+  })
+
+  const importFaqs = useMutation({
+    mutationFn: () => {
+      const picked = aiPreview.filter(i => i.selected).map(({ selected, ...rest }) => rest)
+      return api.post('/v1/admin/knowledge/bulk-import-faqs', {
+        category_id: aiCategoryId,
+        items: picked,
+      })
+    },
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ['knowledge-items'] })
+      qc.invalidateQueries({ queryKey: ['knowledge-categories'] })
+      toast.success(`Imported ${r.data?.created_count ?? 0} FAQ items`)
+      setAiPreview([])
+      setAiSourceText('')
+      setShowAiGen(false)
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Import failed'),
+  })
+
   const addKeyword = () => {
     if (!newKeyword.trim()) return
     setItemForm(prev => ({ ...prev, keywords: [...prev.keywords, newKeyword.trim()] }))
@@ -184,12 +220,121 @@ export function KnowledgeBase() {
               {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <button
+              onClick={() => setShowAiGen(v => !v)}
+              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
+            >
+              <Sparkles size={16} /> AI Generate
+            </button>
+            <button
               onClick={() => { setShowItemForm(true); setEditItemId(null); setItemForm(emptyItem) }}
               className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
               <Plus size={16} /> Add FAQ
             </button>
           </div>
+
+          {/* AI FAQ Generator panel */}
+          {showAiGen && (
+            <div className="bg-purple-900/10 border border-purple-500/30 rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={18} className="text-purple-400" />
+                  <h3 className="text-white font-semibold">AI FAQ Generator</h3>
+                </div>
+                <button onClick={() => { setShowAiGen(false); setAiPreview([]); setAiSourceText('') }} className="text-t-secondary hover:text-white"><X size={18} /></button>
+              </div>
+              <p className="text-xs text-t-secondary -mt-2">
+                Paste any source material — hotel description, brochure copy, policy doc, fact sheet — and the AI will draft FAQ Q&amp;A pairs for you. Review the result, untick anything you don't want, then import.
+              </p>
+
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Source text</label>
+                <textarea
+                  value={aiSourceText}
+                  onChange={e => setAiSourceText(e.target.value)}
+                  rows={8}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Paste hotel info, policies, services, room descriptions, etc..."
+                />
+                <div className="text-[10px] text-t-secondary mt-1">{aiSourceText.length} characters · max 20,000</div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-t-secondary mb-1">Save into category</label>
+                  <select
+                    value={aiCategoryId ?? ''}
+                    onChange={e => setAiCategoryId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  >
+                    <option value="">Auto-create "AI Generated"</option>
+                    {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => extractFaqs.mutate()}
+                    disabled={extractFaqs.isPending || aiSourceText.trim().length < 50}
+                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+                  >
+                    <Sparkles size={14} /> {extractFaqs.isPending ? 'Generating...' : 'Generate FAQ Drafts'}
+                  </button>
+                </div>
+              </div>
+
+              {aiPreview.length > 0 && (
+                <div className="space-y-2 border-t border-dark-border pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">Preview ({aiPreview.filter(i => i.selected).length}/{aiPreview.length} selected)</h4>
+                    <div className="flex gap-2">
+                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: true })))} className="text-xs text-t-secondary hover:text-white">Select all</button>
+                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: false })))} className="text-xs text-t-secondary hover:text-white">Select none</button>
+                    </div>
+                  </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {aiPreview.map((it, i) => (
+                      <div key={i} className={`bg-dark-surface border rounded-lg p-3 ${it.selected ? 'border-purple-500/40' : 'border-dark-border opacity-50'}`}>
+                        <div className="flex items-start gap-3">
+                          <input type="checkbox" checked={it.selected} onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, selected: e.target.checked } : x))} className="mt-1" />
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="text"
+                              value={it.question}
+                              onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, question: e.target.value } : x))}
+                              className="w-full bg-transparent text-white text-sm font-medium border-b border-transparent focus:border-purple-500 focus:outline-none mb-1"
+                            />
+                            <textarea
+                              value={it.answer}
+                              onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, answer: e.target.value } : x))}
+                              rows={2}
+                              className="w-full bg-transparent text-t-secondary text-xs border-b border-transparent focus:border-purple-500 focus:outline-none resize-none"
+                            />
+                            {it.keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {it.keywords.map((kw, ki) => (
+                                  <span key={ki} className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">{kw}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={() => setAiPreview([])} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Discard</button>
+                    <button
+                      onClick={() => importFaqs.mutate()}
+                      disabled={importFaqs.isPending || aiPreview.filter(i => i.selected).length === 0}
+                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+                    >
+                      <Save size={14} /> {importFaqs.isPending ? 'Importing...' : `Import ${aiPreview.filter(i => i.selected).length} items`}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Item Form */}
           {showItemForm && (

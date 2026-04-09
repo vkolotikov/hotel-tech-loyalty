@@ -274,13 +274,39 @@
     if (headerInfo) {
       var ht = c.header_title || 'AI Assistant';
       var hs = c.header_subtitle || 'Ask me anything';
-      headerInfo.innerHTML = '<h3>' + escapeHtml(ht) + '</h3><p>' + escapeHtml(hs) + '</p>';
+      var statusVal = (c.agent_status || 'online');
+      var statusColor = statusVal === 'online' ? '#10b981' : statusVal === 'away' ? '#f59e0b' : '#9ca3af';
+      var statusLabel = statusVal === 'online' ? 'Online' : statusVal === 'away' ? 'Away' : 'Offline';
+      headerInfo.innerHTML = '<h3>' + escapeHtml(ht) + '</h3>' +
+        '<p><span class="htchat-status-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor + ';margin-right:5px;vertical-align:middle"></span>' +
+        escapeHtml(hs || statusLabel) + '</p>';
+    }
+    // Configurable assistant avatar in header
+    var headerAvatar = document.getElementById('htchat-header-avatar');
+    if (headerAvatar) {
+      if (c.assistant_avatar) {
+        headerAvatar.innerHTML = '<img src="' + escapeHtml(c.assistant_avatar) + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover" />';
+      } else {
+        headerAvatar.innerHTML = ICONS.sparkles;
+      }
     }
     var inputEl2 = document.getElementById('htchat-input');
     if (inputEl2 && c.input_placeholder) inputEl2.placeholder = c.input_placeholder;
+    // Configurable input hint
+    var hintEl = document.getElementById('htchat-input-hint');
+    if (hintEl && !isListening) {
+      hintEl.innerHTML = '<span>' + escapeHtml(c.input_hint_text || 'Press Enter to send') + '</span>';
+    }
     // Branding
     var branding = document.getElementById('htchat-branding');
-    if (branding) branding.style.display = (c.show_branding === false) ? 'none' : '';
+    if (branding) {
+      if (c.show_branding === false) {
+        branding.style.display = 'none';
+      } else {
+        branding.style.display = '';
+        branding.innerHTML = escapeHtml(c.branding_text || 'Powered by Hotel AI');
+      }
+    }
     // Font family
     if (c.font_family && c.font_family !== 'system-ui') {
       var fontLink = document.getElementById('htchat-font');
@@ -341,6 +367,7 @@
         </div>\
         <div id="htchat-input-hint"><span>Press Enter to send</span></div>\
       </div>\
+      <div id="htchat-branding" style="text-align:center;font-size:10px;padding:6px 0;color:#9ca3af;border-top:1px solid rgba(0,0,0,0.05)">Powered by Hotel AI</div>\
     ';
 
     document.body.appendChild(panel);
@@ -492,6 +519,14 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        // Server may pause AI auto-reply when an agent has taken over the
+        // conversation from the inbox. Show a friendly system note instead.
+        if (data && data.ai_paused) {
+          messages.push({ role: 'system', content: 'A team member has been notified and will reply shortly.' });
+          isLoading = false;
+          renderMessages();
+          return;
+        }
         var reply = data.response || data.message || 'Sorry, I could not process that.';
         messages.push({ role: 'assistant', content: reply });
         isLoading = false;
@@ -611,12 +646,13 @@
   }
 
   function resetMicUI() {
+    var c = widgetConfig || {};
     var btn = document.getElementById('htchat-mic-btn');
     if (btn) { btn.className = ''; btn.innerHTML = ICONS.mic; }
     var hint = document.getElementById('htchat-input-hint');
-    if (hint) hint.innerHTML = '<span>Press Enter to send</span>';
+    if (hint) hint.innerHTML = '<span>' + escapeHtml(c.input_hint_text || 'Press Enter to send') + '</span>';
     var inputEl = document.getElementById('htchat-input');
-    if (inputEl) { inputEl.placeholder = 'Type a message…'; inputEl.style.borderColor = ''; }
+    if (inputEl) { inputEl.placeholder = c.input_placeholder || 'Type a message…'; inputEl.style.borderColor = ''; }
   }
 
   // ── Voice: TTS ──

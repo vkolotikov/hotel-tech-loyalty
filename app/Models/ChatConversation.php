@@ -23,6 +23,7 @@ class ChatConversation extends Model
         'page_url',
         'channel',
         'status',
+        'ai_enabled',
         'assigned_to',
         'rating',
         'rating_comment',
@@ -36,6 +37,7 @@ class ChatConversation extends Model
 
     protected $casts = [
         'lead_captured' => 'boolean',
+        'ai_enabled' => 'boolean',
         'messages_count' => 'integer',
         'rating' => 'integer',
         'last_message_at' => 'datetime',

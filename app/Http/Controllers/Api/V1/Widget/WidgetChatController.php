@@ -190,7 +190,10 @@ class WidgetChatController extends Controller
                 'delay'   => $config->lead_capture_delay,
             ],
             'assistant_name'     => $behavior->assistant_name ?? 'Hotel Assistant',
-            'assistant_avatar'   => $behavior->assistant_avatar ?? null,
+            'assistant_avatar'   => $config->assistant_avatar_url ?: ($behavior->assistant_avatar ?? null),
+            'branding_text'      => $config->branding_text,
+            'input_hint_text'    => $config->input_hint_text,
+            'agent_status'       => $config->agent_status ?? 'online',
             'offline_message'    => $config->offline_message,
             'voice_enabled'      => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
         ]);
@@ -278,6 +281,39 @@ class WidgetChatController extends Controller
         $orgId = $config->organization_id;
         $behaviorConfig = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
         $modelConfig = ChatbotModelConfig::where('organization_id', $orgId)->first();
+
+        // If an agent has muted the AI on this conversation, just record the
+        // visitor message and return — a human will reply from the inbox.
+        $existingChatConv = ChatConversation::where('session_id', $request->session_id)
+            ->where('organization_id', $orgId)
+            ->first();
+        if ($existingChatConv && $existingChatConv->ai_enabled === false) {
+            try {
+                $visitor = $this->resolveVisitor($request, (int) $orgId);
+                $visitor->increment('messages_count');
+                if (!$existingChatConv->visitor_id) {
+                    $existingChatConv->visitor_id = $visitor->id;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Widget visitor heartbeat (ai-disabled) failed: ' . $e->getMessage());
+            }
+            ChatMessage::create([
+                'conversation_id' => $existingChatConv->id,
+                'sender_type' => 'visitor',
+                'content' => $request->message,
+                'created_at' => now(),
+            ]);
+            $existingChatConv->update([
+                'last_message_at' => now(),
+                'messages_count'  => $existingChatConv->messages_count + 1,
+                'status'          => 'waiting',
+            ]);
+            return response()->json([
+                'response'   => null,
+                'ai_paused'  => true,
+                'session_id' => $request->session_id,
+            ]);
+        }
 
         // Get knowledge context
         $knowledgeContext = '';

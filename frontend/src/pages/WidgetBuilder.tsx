@@ -177,11 +177,55 @@ export function WidgetBuilder() {
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="Ask about reservations, loyalty program, hotel services, or anything else." />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Input Placeholder</label>
+                <input type="text" value={f.input_placeholder || ''} onChange={e => update('input_placeholder', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Type a message..." />
+              </div>
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Input Hint Text</label>
+                <input type="text" value={f.input_hint_text || ''} onChange={e => update('input_hint_text', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Press Enter to send" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Assistant Avatar URL</label>
+                <input type="url" value={f.assistant_avatar_url || ''} onChange={e => update('assistant_avatar_url', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="https://example.com/avatar.png" />
+                <p className="text-[10px] text-t-secondary mt-1">Square PNG/JPG, ~120×120px. Used in the chat header and on AI replies.</p>
+              </div>
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Branding Footer Text</label>
+                <input type="text" value={f.branding_text || ''} onChange={e => update('branding_text', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Powered by Hotel AI" />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Input Placeholder</label>
-              <input type="text" value={f.input_placeholder || ''} onChange={e => update('input_placeholder', e.target.value)}
-                className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="Type a message..." />
+              <label className="block text-sm text-t-secondary mb-1">Agent Status</label>
+              <div className="flex gap-2">
+                {[
+                  { v: 'online',  label: 'Online',  color: '#10b981' },
+                  { v: 'away',    label: 'Away',    color: '#f59e0b' },
+                  { v: 'offline', label: 'Offline', color: '#6b7280' },
+                ].map(s => (
+                  <button key={s.v} type="button" onClick={() => update('agent_status', s.v)}
+                    className={`flex-1 py-2 px-3 rounded-lg border text-sm flex items-center justify-center gap-2 transition-colors ${
+                      (f.agent_status || 'online') === s.v ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
+                    }`}>
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-t-secondary mt-1">Shown to visitors as a status dot in the chat header.</p>
             </div>
 
             {/* Suggestions */}

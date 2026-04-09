@@ -261,6 +261,33 @@ class ChatInboxController extends Controller
     }
 
     /**
+     * Toggle whether the AI auto-replies on this conversation. When an
+     * agent disables it, the widget keeps accepting visitor messages but
+     * skips the AI call so the human can take over.
+     */
+    public function toggleAi(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['ai_enabled' => 'required|boolean']);
+
+        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
+            ->findOrFail($id);
+
+        $conversation->update(['ai_enabled' => $request->boolean('ai_enabled')]);
+
+        ChatMessage::create([
+            'conversation_id' => $id,
+            'sender_type'     => 'system',
+            'sender_user_id'  => $request->user()->id,
+            'content'         => $request->boolean('ai_enabled')
+                ? 'AI auto-reply re-enabled by agent'
+                : 'AI auto-reply paused by agent',
+            'created_at'      => now(),
+        ]);
+
+        return response()->json($conversation);
+    }
+
+    /**
      * Send a message as agent.
      */
     public function sendMessage(Request $request, int $id): JsonResponse

@@ -195,6 +195,79 @@ class KnowledgeBaseController extends Controller
         return response()->json(['message' => 'Deleted']);
     }
 
+    /**
+     * AI-extract a draft list of FAQ items from a free-form blob of source
+     * text. The admin reviews the result on the frontend, edits if needed,
+     * then calls bulkImportFaqs to actually persist.
+     */
+    public function extractFaqs(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'source_text' => 'required|string|min:50|max:20000',
+            'max_items'   => 'nullable|integer|min:1|max:30',
+        ]);
+
+        $items = $this->knowledgeService->generateFaqsFromText(
+            $validated['source_text'],
+            $validated['max_items'] ?? 12
+        );
+
+        if (empty($items)) {
+            return response()->json([
+                'items'   => [],
+                'message' => 'AI returned no items. Check the OpenAI key or try a longer source text.',
+            ], 200);
+        }
+
+        return response()->json(['items' => $items]);
+    }
+
+    /**
+     * Persist a reviewed batch of FAQ items into the knowledge base.
+     */
+    public function bulkImportFaqs(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'category_id'        => 'nullable|exists:knowledge_categories,id',
+            'items'              => 'required|array|min:1|max:50',
+            'items.*.question'   => 'required|string|max:500',
+            'items.*.answer'     => 'required|string|max:5000',
+            'items.*.keywords'   => 'nullable|array',
+            'items.*.keywords.*' => 'string|max:50',
+        ]);
+
+        $orgId = $request->user()->organization_id;
+
+        // Make sure a default "AI Generated" category exists if no category was picked.
+        $categoryId = $validated['category_id'] ?? null;
+        if (!$categoryId) {
+            $category = KnowledgeCategory::firstOrCreate(
+                ['organization_id' => $orgId, 'name' => 'AI Generated'],
+                ['description' => 'FAQ items auto-extracted from source text', 'priority' => 5, 'sort_order' => 0, 'is_active' => true]
+            );
+            $categoryId = $category->id;
+        }
+
+        $created = [];
+        foreach ($validated['items'] as $row) {
+            $created[] = KnowledgeItem::create([
+                'organization_id' => $orgId,
+                'category_id'     => $categoryId,
+                'question'        => $row['question'],
+                'answer'          => $row['answer'],
+                'keywords'        => $row['keywords'] ?? [],
+                'priority'        => 0,
+                'use_count'       => 0,
+                'is_active'       => true,
+            ]);
+        }
+
+        return response()->json([
+            'created_count' => count($created),
+            'items'         => $created,
+        ], 201);
+    }
+
     public function reprocessDocument(Request $request, int $id): JsonResponse
     {
         $doc = KnowledgeDocument::where('organization_id', $request->user()->organization_id)

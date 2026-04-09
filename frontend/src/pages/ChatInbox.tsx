@@ -6,6 +6,7 @@ import {
   Inbox, Search, Send, UserPlus, CheckCircle, Archive,
   MessageSquare, User, Bot, AlertCircle, X, Flag,
   MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Edit3, Save,
+  PauseCircle, PlayCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -80,6 +81,17 @@ export function ChatInbox() {
       qc.invalidateQueries({ queryKey: ['chat-inbox-stats'] })
       toast.success('Status updated')
     },
+  })
+
+  const toggleAi = useMutation({
+    mutationFn: (ai_enabled: boolean) =>
+      api.put(`/v1/admin/chat-inbox/${selectedId}/ai-toggle`, { ai_enabled }),
+    onSuccess: (_d, ai_enabled) => {
+      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
+      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
+      toast.success(ai_enabled ? 'AI auto-reply re-enabled' : 'AI paused — you are taking over')
+    },
+    onError: () => toast.error('Failed to toggle AI'),
   })
 
   const updateContact = useMutation({
@@ -268,6 +280,18 @@ export function ChatInbox() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleAi.mutate(!(conv.ai_enabled ?? true))}
+                  disabled={toggleAi.isPending}
+                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg ${
+                    (conv.ai_enabled ?? true)
+                      ? 'bg-primary-600/20 text-primary-300 hover:bg-primary-600/30'
+                      : 'bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30'
+                  }`}
+                  title={(conv.ai_enabled ?? true) ? 'Click to pause AI auto-replies and take over' : 'Click to re-enable AI auto-replies'}
+                >
+                  {(conv.ai_enabled ?? true) ? <><PauseCircle size={12} /> Pause AI</> : <><PlayCircle size={12} /> Resume AI</>}
+                </button>
                 <button onClick={() => setShowContactEdit(v => !v)}
                   className="flex items-center gap-1 text-xs bg-primary-600/20 text-primary-300 px-3 py-1.5 rounded-lg hover:bg-primary-600/30">
                   <Edit3 size={12} /> {showContactEdit ? 'Hide' : 'Contact'}

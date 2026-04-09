@@ -160,6 +160,86 @@ class KnowledgeService
         return $text;
     }
 
+    /**
+     * Use the AI to read a free-form blob of source text (e.g. a hotel
+     * description, policy doc, fact sheet) and extract a clean list of
+     * Q&A pairs the admin can preview before importing into the KB.
+     *
+     * Returns a list of arrays: [['question' => ..., 'answer' => ..., 'keywords' => [...]]
+     */
+    public function generateFaqsFromText(string $sourceText, int $maxItems = 12): array
+    {
+        $sourceText = trim($sourceText);
+        if ($sourceText === '') {
+            return [];
+        }
+
+        $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!$apiKey) {
+            Log::warning('FAQ extraction skipped: no OPENAI_API_KEY configured');
+            return [];
+        }
+
+        $prompt = "You are creating an FAQ knowledge base for a hotel chatbot. " .
+            "Read the source material below and produce up to {$maxItems} concise, factual " .
+            "question/answer pairs covering the most useful things a guest would ask. " .
+            "Use the guest's natural phrasing for questions. Keep answers under 60 words. " .
+            "Do not invent facts that aren't in the source. Return JSON only.\n\n" .
+            "SOURCE:\n" . mb_substr($sourceText, 0, 12000);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout(60)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema.'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                    'response_format' => [
+                        'type' => 'json_schema',
+                        'json_schema' => [
+                            'name' => 'faq_extraction',
+                            'strict' => true,
+                            'schema' => [
+                                'type' => 'object',
+                                'additionalProperties' => false,
+                                'required' => ['items'],
+                                'properties' => [
+                                    'items' => [
+                                        'type' => 'array',
+                                        'items' => [
+                                            'type' => 'object',
+                                            'additionalProperties' => false,
+                                            'required' => ['question', 'answer', 'keywords'],
+                                            'properties' => [
+                                                'question' => ['type' => 'string'],
+                                                'answer'   => ['type' => 'string'],
+                                                'keywords' => ['type' => 'array', 'items' => ['type' => 'string']],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'temperature' => 0.3,
+                ]);
+
+            if (!$response->successful()) {
+                Log::warning('FAQ extraction OpenAI call failed', ['status' => $response->status(), 'body' => $response->body()]);
+                return [];
+            }
+
+            $content = $response->json('choices.0.message.content');
+            $parsed = json_decode($content, true);
+            return is_array($parsed['items'] ?? null) ? $parsed['items'] : [];
+        } catch (\Throwable $e) {
+            Log::error('FAQ extraction crashed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     private function chunkText(string $text, int $chunkSize = 1000): array
     {
         $words = explode(' ', $text);
