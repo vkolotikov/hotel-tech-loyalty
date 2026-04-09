@@ -183,6 +183,29 @@ class BookingEngineService
         // bookings made through the website widget.
         $this->persistPriceElements($mirror, $payload, $orgId);
 
+        // Lifecycle: a confirmed widget booking is real engagement. If the
+        // departure date has already passed (rare for widget but possible
+        // for back-dated entries) count it as a completed stay; otherwise
+        // just bump activity so the guest doesn't drift toward Inactive.
+        if ($guestId) {
+            $g = Guest::withoutGlobalScopes()->find($guestId);
+            if ($g) {
+                $lifecycle = app(GuestLifecycleService::class);
+                if (strtotime($payload['check_out']) < strtotime('today')) {
+                    $lifecycle->recordStay(
+                        $g,
+                        $payload['check_in'],
+                        $payload['check_out'],
+                        null,
+                        (float) $payload['gross_total'],
+                    );
+                    $mirror->update(['lifecycle_counted_at' => now()]);
+                } else {
+                    $lifecycle->recordActivity($g);
+                }
+            }
+        }
+
         $response = [
             'success'           => true,
             'booking_reference' => $result['reference-id'] ?? null,
@@ -288,7 +311,7 @@ class BookingEngineService
             $internalStatus = 'confirmed';
         }
 
-        return BookingMirror::updateOrCreate(
+        $mirror = BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => (string) $data['id']],
             [
                 'booking_reference'  => $data['reference-id'] ?? null,
@@ -325,6 +348,29 @@ class BookingEngineService
                 'raw_json'           => $data,
             ]
         );
+
+        // Count toward guest lifecycle the first time this mirror reaches
+        // a checked-out state. lifecycle_counted_at acts as the idempotency
+        // flag so re-syncing the same Smoobu reservation never double-counts.
+        if (
+            $guestId
+            && $internalStatus === 'checked-out'
+            && !$mirror->lifecycle_counted_at
+        ) {
+            $g = Guest::withoutGlobalScopes()->find($guestId);
+            if ($g) {
+                app(GuestLifecycleService::class)->recordStay(
+                    $g,
+                    $arrivalDate,
+                    $departureDate,
+                    null,
+                    (float) $priceTotal,
+                );
+                $mirror->update(['lifecycle_counted_at' => now()]);
+            }
+        }
+
+        return $mirror;
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
@@ -487,6 +533,47 @@ class BookingEngineService
             'payment_method'    => $data['payment_method'] ?? null,
             'payload_json'      => $data,
         ]);
+
+        // Hand off failed widget submissions to the unified Inquiries
+        // pipeline so staff can manually rescue the booking. We need at
+        // least an email to do anything useful with it.
+        if ($outcome === 'failure' && !empty($guest['email'])) {
+            $this->createInquiryFromFailedSubmission($guest, $payload, $failCode, $failMsg);
+        }
+    }
+
+    private function createInquiryFromFailedSubmission(array $guest, array $payload, ?string $failCode, ?string $failMsg): void
+    {
+        try {
+            $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+            if (!$orgId) return;
+
+            // Reuse linkOrCreateGuest so the failed-submission flow goes
+            // through the same auto-Bronze + lifecycle hooks as a successful
+            // booking — the customer ends up in Members regardless.
+            $guestId = $this->linkOrCreateGuest($guest, $orgId);
+            if (!$guestId) return;
+
+            \App\Models\Inquiry::create([
+                'organization_id' => $orgId,
+                'guest_id'        => $guestId,
+                'inquiry_type'    => 'Room Reservation',
+                'source'          => 'booking_widget_failed',
+                'status'          => 'New',
+                'priority'        => 'High',
+                'check_in'        => $payload['check_in'] ?? null,
+                'check_out'       => $payload['check_out'] ?? null,
+                'num_adults'      => $payload['adults'] ?? null,
+                'num_children'    => $payload['children'] ?? null,
+                'room_type_requested' => $payload['unit_name'] ?? null,
+                'total_value'     => $payload['gross_total'] ?? null,
+                'notes'           => "Booking widget failed: {$failCode} — {$failMsg}",
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to create rescue inquiry from booking failure', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function mapBookingState($status): string

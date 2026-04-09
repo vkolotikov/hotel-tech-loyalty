@@ -23,7 +23,7 @@ class BookingMirror extends Model
         'deposit_amount', 'deposit_paid',
         'notice', 'assistant_notice', 'guest_app_url',
         'payment_method', 'payment_status', 'internal_status', 'invoice_state',
-        'source_created_at', 'source_updated_at', 'synced_at', 'raw_json',
+        'source_created_at', 'source_updated_at', 'synced_at', 'lifecycle_counted_at', 'raw_json',
     ];
 
     protected $casts = [
@@ -38,6 +38,7 @@ class BookingMirror extends Model
         'source_created_at' => 'datetime',
         'source_updated_at' => 'datetime',
         'synced_at'         => 'datetime',
+        'lifecycle_counted_at' => 'datetime',
         'raw_json'          => 'array',
     ];
 

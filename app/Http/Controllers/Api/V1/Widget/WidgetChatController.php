@@ -415,8 +415,10 @@ class WidgetChatController extends Controller
                 'phone'            => $validated['phone'] ?? null,
                 'guest_type'       => 'Individual',
                 'lead_source'      => 'Chat Widget',
-                'lifecycle_status' => 'Lead',
                 'last_activity_at' => now(),
+                // lifecycle_status is set to 'Prospect' by the Guest::created
+                // hook (GuestLifecycleService::initialize) so it stays in sync
+                // with the canonical lifecycle vocabulary.
             ]);
         }
 

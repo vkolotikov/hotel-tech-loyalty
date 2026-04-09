@@ -188,15 +188,16 @@ export function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          title="Total Members"
-          value={kpis?.total_members?.toLocaleString() ?? '—'}
+          title="Engaged Members"
+          value={kpis?.engaged_members?.toLocaleString() ?? '—'}
           icon={<Users size={20} />}
           color="bg-blue-500"
           change={newMembersChange}
+          subtitle={kpis ? `${(kpis.total_members ?? 0).toLocaleString()} total · ${(kpis.passive_contacts ?? 0).toLocaleString()} passive` : undefined}
         />
         <StatCard
-          title="Total Guests"
-          value={kpis?.total_guests?.toLocaleString() ?? '—'}
+          title="Active in 30 days"
+          value={kpis?.engaged_members_30d?.toLocaleString() ?? '—'}
           icon={<UserCheck size={20} />}
           color="bg-cyan-500"
         />

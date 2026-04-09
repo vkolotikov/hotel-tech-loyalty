@@ -2,6 +2,12 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+// Daily lifecycle sweep — anyone with 90+ days of no activity flips to
+// Inactive so the Members list stays meaningful as auto-Bronze guests
+// accumulate.
+Schedule::command('guests:sweep-lifecycle')->dailyAt('03:15');
 
 /*
 |--------------------------------------------------------------------------

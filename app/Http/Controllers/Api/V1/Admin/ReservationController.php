@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
+use App\Services\GuestLifecycleService;
 use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class ReservationController extends Controller
 {
     public function __construct(
         protected RealtimeEventService $realtime,
+        protected GuestLifecycleService $lifecycle,
     ) {}
     public function index(Request $request): JsonResponse
     {
@@ -151,15 +153,14 @@ class ReservationController extends Controller
 
         DB::transaction(function () use ($reservation, $v, $isCheckingOut) {
             $reservation->update($v);
-            if ($isCheckingOut) {
-                $guest = $reservation->guest;
-                if ($guest) {
-                    $guest->increment('total_stays');
-                    $guest->increment('total_nights', $reservation->num_nights ?? 0);
-                    $guest->increment('total_revenue', $reservation->total_amount ?? 0);
-                    $guest->update(['last_stay_date' => $reservation->check_out, 'last_activity_at' => now()]);
-                    if (!$guest->first_stay_date) $guest->update(['first_stay_date' => $reservation->check_in]);
-                }
+            if ($isCheckingOut && ($guest = $reservation->guest)) {
+                $this->lifecycle->recordStay(
+                    $guest,
+                    $reservation->check_in,
+                    $reservation->check_out,
+                    $reservation->num_nights ?? null,
+                    (float) ($reservation->total_amount ?? 0),
+                );
             }
         });
 
@@ -189,13 +190,14 @@ class ReservationController extends Controller
     {
         DB::transaction(function () use ($reservation) {
             $reservation->update(['status' => 'Checked Out', 'checked_out_at' => now()]);
-            $guest = $reservation->guest;
-            if ($guest) {
-                $guest->increment('total_stays');
-                $guest->increment('total_nights', $reservation->num_nights ?? 0);
-                $guest->increment('total_revenue', $reservation->total_amount ?? 0);
-                $guest->update(['last_stay_date' => $reservation->check_out, 'last_activity_at' => now()]);
-                if (!$guest->first_stay_date) $guest->update(['first_stay_date' => $reservation->check_in]);
+            if ($guest = $reservation->guest) {
+                $this->lifecycle->recordStay(
+                    $guest,
+                    $reservation->check_in,
+                    $reservation->check_out,
+                    $reservation->num_nights ?? null,
+                    (float) ($reservation->total_amount ?? 0),
+                );
             }
         });
 

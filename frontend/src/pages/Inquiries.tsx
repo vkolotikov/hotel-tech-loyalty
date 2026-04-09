@@ -19,6 +19,16 @@ const PRIORITY_COLORS: Record<string, string> = {
   Low: 'text-t-secondary', Medium: 'text-blue-400', High: 'text-red-400',
 }
 
+// System-generated sources (written by the chatbot widget and the
+// booking widget failure handler) get coloured pills so staff can spot
+// them at a glance against the manual-entry sources.
+const SOURCE_BADGES: Record<string, { label: string; cls: string }> = {
+  chatbot:                 { label: 'Chatbot',         cls: 'bg-purple-500/15 text-purple-300' },
+  booking_widget:          { label: 'Booking Widget',  cls: 'bg-cyan-500/15 text-cyan-300' },
+  booking_widget_failed:   { label: 'Failed Booking',  cls: 'bg-red-500/15 text-red-300' },
+}
+const SYSTEM_SOURCES = Object.keys(SOURCE_BADGES)
+
 const MICE_TYPES = ['Event/MICE', 'Conference', 'Wedding']
 
 const EMPTY_FORM = {
@@ -117,7 +127,7 @@ export function Inquiries() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Inquiries</h1>
+          <h1 className="text-2xl font-bold text-white">Leads &amp; Inquiries</h1>
           <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2">
@@ -169,6 +179,7 @@ export function Inquiries() {
             </select>
             <select value={source} onChange={e => { setSource(e.target.value); setPage(1) }} className={filterSel}>
               <option value="">All Sources</option>
+              {SYSTEM_SOURCES.map(s => <option key={s} value={s}>{SOURCE_BADGES[s].label}</option>)}
               {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={taskDue} onChange={e => { setTaskDue(e.target.value); setPage(1) }} className={filterSel}>
@@ -195,6 +206,7 @@ export function Inquiries() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Property</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Source</th>
                 <SortHeader col="check_in" label="Check-in" />
                 <SortHeader col="check_out" label="Check-out" />
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Nights</th>
@@ -208,8 +220,8 @@ export function Inquiries() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={13} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
+              {isLoading && <tr><td colSpan={14} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && inquiries.length === 0 && <tr><td colSpan={14} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                 const nights = inq.check_in && inq.check_out
@@ -223,6 +235,15 @@ export function Inquiries() {
                     </td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.property?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.inquiry_type ?? '—'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {inq.source ? (
+                        SOURCE_BADGES[inq.source] ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
+                        ) : (
+                          <span className="text-xs text-[#a0a0a0]">{inq.source}</span>
+                        )
+                      ) : <span className="text-xs text-[#636366]">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.check_in ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.check_out ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{nights ?? '—'}</td>

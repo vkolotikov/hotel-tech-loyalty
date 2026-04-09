@@ -97,6 +97,16 @@ class Guest extends Model
     protected static function booted(): void
     {
         static::created(function (Guest $guest) {
+            // Default lifecycle to Prospect so the Members list can
+            // distinguish form-fill leads from real customers.
+            try {
+                app(\App\Services\GuestLifecycleService::class)->initialize($guest);
+            } catch (\Throwable $e) {
+                \Log::warning('Guest lifecycle init failed', [
+                    'guest_id' => $guest->id, 'error' => $e->getMessage(),
+                ]);
+            }
+
             if ($guest->member_id) return;
             if (empty($guest->email)) return;
 

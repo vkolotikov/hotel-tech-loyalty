@@ -21,9 +21,10 @@ interface StatCardProps {
   change?: number
   icon: ReactNode
   color?: string
+  subtitle?: string
 }
 
-export function StatCard({ title, value, change, icon, color = 'bg-primary-500' }: StatCardProps) {
+export function StatCard({ title, value, change, icon, color = 'bg-primary-500', subtitle }: StatCardProps) {
   return (
     <Card>
       <div className="flex items-center justify-between">
@@ -34,6 +35,9 @@ export function StatCard({ title, value, change, icon, color = 'bg-primary-500' 
             <p className={clsx('text-sm mt-1', change >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]')}>
               {change >= 0 ? '↑' : '↓'} {Math.abs(change)}% vs last month
             </p>
+          )}
+          {subtitle && (
+            <p className="text-xs text-[#636366] mt-1">{subtitle}</p>
           )}
         </div>
         <div className={clsx('p-3 rounded-xl text-white', color)}>

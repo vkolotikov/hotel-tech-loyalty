@@ -147,20 +147,37 @@ class AnalyticsService
                 ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
                 ->first();
 
-            // Batch member counts in one query
+            // Batch member counts in one query.
+            //
+            // "engaged" here means a member who has actually done something:
+            // earned/holds points OR is linked to a Guest with at least one
+            // recorded stay. Everyone else is a "passive_contact" — typically
+            // an auto-Bronze record created from a single form fill. The
+            // split keeps the dashboard from being misled by the flood of
+            // form-fill members the auto-Bronze hook produces.
             $memberStats = LoyaltyMember::selectRaw("COUNT(*) as total")
                 ->selectRaw("SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active")
-                ->selectRaw("SUM(CASE WHEN is_active = true AND last_activity_at >= ? THEN 1 ELSE 0 END) as engaged", [$now->copy()->subDays(30)])
+                ->selectRaw("SUM(CASE WHEN is_active = true AND last_activity_at >= ? THEN 1 ELSE 0 END) as engaged_30d", [$now->copy()->subDays(30)])
+                ->selectRaw("SUM(CASE WHEN
+                        lifetime_points > 0
+                        OR current_points > 0
+                        OR EXISTS (SELECT 1 FROM guests WHERE guests.member_id = loyalty_members.id AND COALESCE(guests.total_stays, 0) > 0)
+                    THEN 1 ELSE 0 END) as engaged_total")
                 ->selectRaw("SUM(CASE WHEN joined_at >= ? THEN 1 ELSE 0 END) as new_month", [$monthStart])
                 ->selectRaw("SUM(CASE WHEN joined_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as new_last_month", [$lastMonthStart, $lastMonthEnd])
                 ->selectRaw("SUM(CASE WHEN joined_at >= ? THEN 1 ELSE 0 END) as new_today", [$todayStart])
                 ->selectRaw("AVG(CASE WHEN is_active = true THEN current_points END) as avg_points")
                 ->first();
 
+            $total      = (int) $memberStats->total;
+            $engagedAll = (int) ($memberStats->engaged_total ?? 0);
+
             return [
-                'total_members'              => (int) $memberStats->total,
+                'total_members'              => $total,
                 'active_members'             => (int) $memberStats->active,
-                'engaged_members_30d'        => (int) $memberStats->engaged,
+                'engaged_members'            => $engagedAll,
+                'passive_contacts'           => max(0, $total - $engagedAll),
+                'engaged_members_30d'        => (int) ($memberStats->engaged_30d ?? 0),
                 'new_members_this_month'     => (int) $memberStats->new_month,
                 'new_members_last_month'     => (int) $memberStats->new_last_month,
                 'points_issued_this_month'   => (int) ($monthPoints->issued ?? 0),
