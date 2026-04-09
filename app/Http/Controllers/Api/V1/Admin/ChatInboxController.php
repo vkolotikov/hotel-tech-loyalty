@@ -51,6 +51,26 @@ class ChatInboxController extends Controller
             });
         }
 
+        // Group by visitor: collapse multiple sessions from the same IP into a
+        // single row (the most recent one). Returning visitors are otherwise
+        // listed N times — one row per (re)opened widget — which makes the
+        // inbox look noisy and hides truly unique conversations.
+        if ($request->boolean('group_by_visitor')) {
+            $rows = (clone $query)
+                ->reorder()
+                ->orderByDesc('last_message_at')
+                ->get(['id', 'visitor_ip']);
+            $seen = [];
+            $keepIds = [];
+            foreach ($rows as $r) {
+                $key = $r->visitor_ip ?: ('id_' . $r->id);
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
+                $keepIds[] = $r->id;
+            }
+            $query->whereIn('id', $keepIds);
+        }
+
         $conversations = $query->orderByDesc('last_message_at')->paginate(50);
 
         // Annotate each conversation with how many other conversations exist

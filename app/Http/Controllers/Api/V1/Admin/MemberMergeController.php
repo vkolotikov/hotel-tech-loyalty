@@ -20,7 +20,7 @@ class MemberMergeController extends Controller
     {
         $limit = (int) $request->get('limit', 50);
         return response()->json([
-            'pairs' => $this->merger->findDuplicates($limit),
+            'pairs' => $this->merger->findDuplicates($limit, $request->user()?->organization_id),
         ]);
     }
 

@@ -25,6 +25,11 @@ export function ChatInbox() {
   }, [searchParams])
   const [statusFilter, setStatusFilter] = useState<ConvStatus>('all')
   const [search, setSearch] = useState('')
+  // Persist the "group by visitor" toggle so admins don't have to re-enable it
+  // every time. Default ON — most users want one row per visitor, not per session.
+  const [groupByVisitor, setGroupByVisitor] = useState<boolean>(() => {
+    try { return localStorage.getItem('chat-inbox-group-by-visitor') !== '0' } catch { return true }
+  })
   const [replyText, setReplyText] = useState('')
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '', notes: '' })
@@ -107,9 +112,13 @@ export function ChatInbox() {
 
   // Conversation list
   const { data: convData, isLoading } = useQuery({
-    queryKey: ['chat-inbox', statusFilter, search],
+    queryKey: ['chat-inbox', statusFilter, search, groupByVisitor],
     queryFn: () => api.get('/v1/admin/chat-inbox', {
-      params: { status: statusFilter !== 'all' ? statusFilter : undefined, search: search || undefined },
+      params: {
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        search: search || undefined,
+        group_by_visitor: groupByVisitor ? 1 : undefined,
+      },
     }).then(r => r.data),
     refetchInterval: 10000,
   })
@@ -329,6 +338,23 @@ export function ChatInbox() {
                   }`}>{s}</button>
               ))}
             </div>
+            <label className="flex items-center justify-between gap-2 text-[11px] text-t-secondary cursor-pointer select-none">
+              <span className="flex items-center gap-1.5">
+                <User size={11} /> Group by visitor
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !groupByVisitor
+                  setGroupByVisitor(next)
+                  try { localStorage.setItem('chat-inbox-group-by-visitor', next ? '1' : '0') } catch {}
+                }}
+                className={`relative w-7 h-4 rounded-full transition-colors ${groupByVisitor ? 'bg-primary-600' : 'bg-dark-surface3'}`}
+                title="Collapse multiple sessions from the same visitor IP into one row"
+              >
+                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+              </button>
+            </label>
           </div>
 
           {/* List */}
@@ -360,6 +386,14 @@ export function ChatInbox() {
                   {c.assigned_agent && <span className="text-[10px] text-t-secondary">@ {c.assigned_agent.name}</span>}
                   {c.unread_count > 0 && (
                     <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{c.unread_count}</span>
+                  )}
+                  {c.ip_session_count > 1 && (
+                    <span
+                      className="bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] px-1.5 py-0.5 rounded-full"
+                      title={`${c.ip_session_count} sessions from this visitor`}
+                    >
+                      {c.ip_session_count}× sessions
+                    </span>
                   )}
                   {c.lead_captured && <Flag size={10} className="text-green-400" />}
                 </div>

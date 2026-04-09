@@ -166,12 +166,23 @@ class MemberMergeService
      * matched on shared email (case-insensitive), shared phone, or shared
      * NFC uid. Returns at most $limit suggestion pairs sorted by strength.
      */
-    public function findDuplicates(int $limit = 50): array
+    public function findDuplicates(int $limit = 50, ?int $organizationId = null): array
     {
         // Suggestions are organization-scoped. Pulls into PHP for simplicity —
         // member counts in a single tenant are small enough that this is fine.
+        // IMPORTANT: this uses raw DB::table so the TenantScope global scope on
+        // LoyaltyMember does NOT apply automatically. We must filter by org id
+        // ourselves — otherwise admins would see (and try to merge) members
+        // from other tenants and the merge endpoint would 404 because
+        // LoyaltyMember::findOrFail respects the scope.
+        $organizationId ??= auth()->user()?->organization_id;
+        if (!$organizationId) {
+            return [];
+        }
+
         $rows = DB::table('loyalty_members as m')
             ->join('users as u', 'u.id', '=', 'm.user_id')
+            ->where('m.organization_id', $organizationId)
             ->select(
                 'm.id', 'm.organization_id', 'm.member_number', 'm.lifetime_points',
                 'm.current_points', 'm.created_at', 'm.last_activity_at',
