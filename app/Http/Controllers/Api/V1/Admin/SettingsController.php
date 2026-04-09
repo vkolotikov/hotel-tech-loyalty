@@ -151,9 +151,21 @@ class SettingsController extends Controller
         if ($orgId) {
             $query->where('organization_id', $orgId);
         }
+        $theme = $query->pluck('value', 'key');
 
-        $settings = $query->pluck('value', 'key');
-        return response()->json(['theme' => $settings]);
+        // Mobile apps consume keys from a separate group so they can be themed
+        // independently of the web admin SPA. Both groups are returned here so
+        // the same /v1/theme endpoint serves web + mobile.
+        $mobileQuery = HotelSetting::withoutGlobalScopes()->where('group', 'mobile_app');
+        if ($orgId) {
+            $mobileQuery->where('organization_id', $orgId);
+        }
+        $mobileTheme = $mobileQuery->pluck('value', 'key');
+
+        return response()->json([
+            'theme'        => $theme,
+            'mobile_theme' => $mobileTheme,
+        ]);
     }
 
     public function update(Request $request): JsonResponse

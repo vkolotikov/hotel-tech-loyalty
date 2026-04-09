@@ -206,6 +206,7 @@ const TABS: Tab[] = [
   { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'], feature: 'push_notifications' },
   { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true, superAdminOnly: true },
   { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true, product: 'booking' },
+  { id: 'mobile_app',    label: 'Mobile App',      icon: Smartphone, desc: 'Loyalty mobile app appearance & preview', groups: ['mobile_app'], custom: true, product: 'loyalty' },
   { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
@@ -693,10 +694,372 @@ export function Settings() {
     )
   }
 
+  /* ─── Tab: Mobile App ────────────────────────────────────────────────── */
+
+  const renderMobileApp = () => {
+    const m = (k: string, fallback: string) => getVal(`mobile_${k}`) || fallback
+    const primary    = m('primary_color',        '#c9a84c')
+    const bg         = m('background_color',     '#0d0d0d')
+    const surface    = m('surface_color',        '#161616')
+    const surface2   = m('secondary_color',      '#1e1e1e')
+    const text       = m('text_color',           '#ffffff')
+    const text2      = m('text_secondary_color', '#8e8e93')
+    const border     = m('border_color',         '#2c2c2c')
+    const success    = m('success_color',        '#32d74b')
+    const errorCol   = m('error_color',          '#ff375f')
+    const warning    = m('warning_color',        '#ffd60a')
+    const info       = m('info_color',           '#0a84ff')
+    const cardStyleVal = getVal('mobile_card_style') || 'gradient'
+    const radius       = parseInt(getVal('mobile_radius') || '16')
+
+    const applyMobilePreset = (preset: Record<string, string>) => {
+      const updates: Record<string, string> = {}
+      for (const [k, v] of Object.entries(preset)) updates[`mobile_${k}`] = v
+      setEditedSettings(prev => ({ ...prev, ...updates }))
+      const settings = Object.entries(updates).map(([key, value]) => ({ key, value }))
+      saveMutation.mutate(settings)
+    }
+
+    const MOBILE_PRESETS: { name: string; description: string; colors: Record<string, string> }[] = [
+      { name: 'Gold Classic', description: 'Default — warm gold on near-black', colors: {
+        primary_color: '#c9a84c', background_color: '#0d0d0d', surface_color: '#161616', secondary_color: '#1e1e1e',
+        text_color: '#ffffff', text_secondary_color: '#8e8e93', border_color: '#2c2c2c',
+        success_color: '#32d74b', error_color: '#ff375f', warning_color: '#ffd60a', info_color: '#0a84ff' } },
+      { name: 'Royal Sapphire', description: 'Deep navy with crisp blue accents', colors: {
+        primary_color: '#3b82f6', background_color: '#0a0f1e', surface_color: '#111827', secondary_color: '#1f2937',
+        text_color: '#f8fafc', text_secondary_color: '#94a3b8', border_color: '#1f2a3a',
+        success_color: '#22c55e', error_color: '#ef4444', warning_color: '#eab308', info_color: '#06b6d4' } },
+      { name: 'Emerald Spa', description: 'Calming green for wellness brands', colors: {
+        primary_color: '#10b981', background_color: '#06120c', surface_color: '#0f1f17', secondary_color: '#162a1f',
+        text_color: '#f0fdf4', text_secondary_color: '#86efac', border_color: '#1e3a2f',
+        success_color: '#22c55e', error_color: '#f43f5e', warning_color: '#fbbf24', info_color: '#38bdf8' } },
+      { name: 'Rose Boutique', description: 'Warm rose for boutique hotels', colors: {
+        primary_color: '#e11d48', background_color: '#0f0708', surface_color: '#1c1017', secondary_color: '#2a1620',
+        text_color: '#fff1f2', text_secondary_color: '#fda4af', border_color: '#3b1524',
+        success_color: '#10b981', error_color: '#dc2626', warning_color: '#facc15', info_color: '#60a5fa' } },
+      { name: 'Ocean Resort', description: 'Cyan & violet for coastal properties', colors: {
+        primary_color: '#06b6d4', background_color: '#04141c', surface_color: '#0f2937', secondary_color: '#163847',
+        text_color: '#ecfeff', text_secondary_color: '#67e8f9', border_color: '#164e63',
+        success_color: '#22c55e', error_color: '#fb7185', warning_color: '#fde047', info_color: '#818cf8' } },
+      { name: 'Champagne Lux', description: 'Refined champagne on warm dark', colors: {
+        primary_color: '#d4af37', background_color: '#100e0a', surface_color: '#1c1814', secondary_color: '#2a2418',
+        text_color: '#fdf6e3', text_secondary_color: '#c4a476', border_color: '#2e2820',
+        success_color: '#22c55e', error_color: '#e25555', warning_color: '#f5b400', info_color: '#5ec4e8' } },
+    ]
+
+    // Detect active mobile preset
+    const activeMobilePreset = (() => {
+      const cur: Record<string, string> = {
+        primary_color: primary, background_color: bg, surface_color: surface, secondary_color: surface2,
+        text_color: text, text_secondary_color: text2, border_color: border,
+        success_color: success, error_color: errorCol, warning_color: warning, info_color: info,
+      }
+      for (const p of MOBILE_PRESETS) {
+        if (Object.keys(p.colors).every(k => cur[k]?.toLowerCase() === p.colors[k]?.toLowerCase())) return p.name
+      }
+      return null
+    })()
+
+    return (
+      <div className="space-y-6">
+        {/* Intro */}
+        <div className={cardClass} style={cardStyle}>
+          <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+            <Smartphone size={15} className="text-emerald-400" /> Loyalty Mobile App Theme
+          </h3>
+          <p className="text-xs text-gray-500">
+            These colors apply to the <strong className="text-gray-300">Loyalty Member app</strong> and the <strong className="text-gray-300">Loyalty Staff app</strong>.
+            Configured separately from the web admin theme — apps fetch the latest colors on launch, no rebuild required.
+          </p>
+        </div>
+
+        {/* Layout: presets + settings on left, live phone preview on right */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column — controls */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Mobile Presets */}
+            <div className={cardClass} style={cardStyle}>
+              <div className="flex items-start justify-between mb-1">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Palette size={15} className="text-emerald-400" /> Mobile Presets
+                  {activeMobilePreset && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                      {activeMobilePreset} active
+                    </span>
+                  )}
+                </h3>
+                <button onClick={() => applyMobilePreset(MOBILE_PRESETS[0].colors)}
+                  className="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
+                  <RotateCcw size={11} /> Reset
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Tap to apply — saves instantly and updates the preview.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {MOBILE_PRESETS.map(preset => {
+                  const c = preset.colors
+                  const isActive = activeMobilePreset === preset.name
+                  return (
+                    <button key={preset.name} onClick={() => applyMobilePreset(c)}
+                      className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px ${
+                        isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
+                      }`}
+                      style={{ background: c.surface_color }}>
+                      <div className="h-10 flex">
+                        <div className="flex-1" style={{ backgroundColor: c.primary_color }} />
+                        <div className="flex-1" style={{ backgroundColor: c.background_color }} />
+                        <div className="flex-1" style={{ backgroundColor: c.success_color }} />
+                        <div className="flex-1" style={{ backgroundColor: c.info_color }} />
+                      </div>
+                      <div className="p-2.5" style={{ backgroundColor: c.background_color }}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[11px] font-bold" style={{ color: c.text_color }}>{preset.name}</span>
+                          {isActive && <CheckCircle size={11} style={{ color: c.primary_color }} />}
+                        </div>
+                        <p className="text-[9px] leading-snug line-clamp-2" style={{ color: c.text_secondary_color }}>
+                          {preset.description}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Loyalty Card Style + Radius */}
+            <div className={cardClass} style={cardStyle}>
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <CreditCard size={15} className="text-emerald-400" /> Card Style
+              </h3>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {(['gradient', 'solid', 'glass'] as const).map(style => (
+                  <button key={style} onClick={() => handleChange('mobile_card_style', style)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
+                      cardStyleVal === style
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                        : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                    }`}>
+                    {style}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-gray-400">Corner Radius</label>
+                  <span className="text-xs font-mono text-emerald-400">{radius}px</span>
+                </div>
+                <input type="range" min="0" max="32" value={radius}
+                  onChange={e => handleChange('mobile_radius', e.target.value)}
+                  className="w-full accent-emerald-500" />
+              </div>
+            </div>
+
+            {/* Color settings */}
+            <div className={cardClass} style={cardStyle}>
+              <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                <Palette size={15} className="text-emerald-400" /> Mobile Colors
+              </h3>
+              <p className="text-xs text-gray-500 mb-2">Fine-tune individual colors. Changes save when you click Save.</p>
+              {groupSettings('mobile_app').filter(s => s.key.startsWith('mobile_') && s.key !== 'mobile_card_style' && s.key !== 'mobile_radius').map(renderSettingRow)}
+            </div>
+          </div>
+
+          {/* Right column — Live phone preview */}
+          <div className="lg:col-span-1">
+            <div className={cardClass + ' lg:sticky lg:top-4'} style={cardStyle}>
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <Eye size={15} className="text-emerald-400" /> Live Preview
+              </h3>
+              {/* Phone frame */}
+              <div className="mx-auto" style={{ maxWidth: 280 }}>
+                <div className="rounded-[36px] p-2 border-4 border-gray-800 shadow-2xl"
+                  style={{ background: '#000' }}>
+                  <div className="rounded-[28px] overflow-hidden" style={{ background: bg, height: 540 }}>
+                    {/* Status bar */}
+                    <div className="px-5 pt-2 pb-1 flex items-center justify-between text-[10px]" style={{ color: text }}>
+                      <span>9:41</span>
+                      <span>•••</span>
+                    </div>
+                    {/* Header */}
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ backgroundColor: surface, borderBottom: `1px solid ${border}` }}>
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs"
+                        style={{ backgroundColor: primary, color: bg }}>H</div>
+                      <span className="text-xs font-bold" style={{ color: text }}>Hotel Loyalty</span>
+                    </div>
+                    {/* Loyalty card hero */}
+                    <div className="px-4 pt-4">
+                      <div
+                        className="p-4 relative overflow-hidden"
+                        style={{
+                          borderRadius: radius,
+                          background:
+                            cardStyleVal === 'gradient'
+                              ? `linear-gradient(135deg, ${primary} 0%, ${primary}99 60%, ${surface2} 100%)`
+                              : cardStyleVal === 'glass'
+                                ? `${primary}25`
+                                : primary,
+                          border: cardStyleVal === 'glass' ? `1px solid ${primary}50` : 'none',
+                          backdropFilter: cardStyleVal === 'glass' ? 'blur(8px)' : undefined,
+                        }}>
+                        <p className="text-[9px] uppercase tracking-wider opacity-80" style={{ color: cardStyleVal === 'glass' ? text : bg }}>Gold Member</p>
+                        <p className="text-[11px] mt-0.5" style={{ color: cardStyleVal === 'glass' ? text : bg }}>Sarah Johnson</p>
+                        <div className="flex items-end justify-between mt-3">
+                          <div>
+                            <p className="text-[9px] opacity-70" style={{ color: cardStyleVal === 'glass' ? text2 : bg }}>Points</p>
+                            <p className="text-xl font-bold" style={{ color: cardStyleVal === 'glass' ? text : bg }}>2,485</p>
+                          </div>
+                          <CreditCard size={20} style={{ color: cardStyleVal === 'glass' ? text : bg, opacity: 0.7 }} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Stats row */}
+                    <div className="px-4 mt-3 grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'Visits', value: '12', color: success },
+                        { label: 'Tier', value: 'Gold', color: warning },
+                        { label: 'Offers', value: '4', color: info },
+                      ].map(stat => (
+                        <div key={stat.label} className="p-2 text-center"
+                          style={{ borderRadius: radius * 0.6, backgroundColor: surface2, border: `1px solid ${border}` }}>
+                          <p className="text-sm font-bold" style={{ color: stat.color }}>{stat.value}</p>
+                          <p className="text-[8px] uppercase" style={{ color: text2 }}>{stat.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* List item */}
+                    <div className="px-4 mt-3">
+                      <div className="p-2.5 flex items-center gap-2" style={{ borderRadius: radius * 0.7, backgroundColor: surface2, border: `1px solid ${border}` }}>
+                        <div className="w-8 h-8 flex items-center justify-center" style={{ borderRadius: radius * 0.5, backgroundColor: primary + '25' }}>
+                          <Star size={14} style={{ color: primary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-semibold truncate" style={{ color: text }}>15% off Spa Treatment</p>
+                          <p className="text-[8px]" style={{ color: text2 }}>Expires in 7 days</p>
+                        </div>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5" style={{ color: errorCol, backgroundColor: errorCol + '20', borderRadius: radius * 0.3 }}>NEW</span>
+                      </div>
+                    </div>
+                    {/* Bottom button */}
+                    <div className="px-4 mt-3">
+                      <div className="py-2.5 text-center text-[10px] font-bold"
+                        style={{ borderRadius: radius * 0.7, backgroundColor: primary, color: bg }}>
+                        Redeem Now
+                      </div>
+                    </div>
+                    {/* Tab bar */}
+                    <div className="absolute bottom-0 left-0 right-0 px-4 py-2 flex items-center justify-around"
+                      style={{ borderTop: `1px solid ${border}`, backgroundColor: surface }}>
+                      {[
+                        { Icon: Star, active: true },
+                        { Icon: CreditCard, active: false },
+                        { Icon: Bell, active: false },
+                        { Icon: Settings2, active: false },
+                      ].map(({ Icon, active }, i) => (
+                        <Icon key={i} size={16} style={{ color: active ? primary : text2 }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-center text-gray-600 mt-2">Live preview — updates as you tweak colors</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   /* ─── Tab: Loyalty ───────────────────────────────────────────────────── */
 
-  const renderLoyalty = () => (
+  const renderLoyalty = () => {
+    const tiers = tiersData?.tiers ?? []
+    const totalMembers = tiers.reduce((sum: number, t: any) => sum + (t.member_count || 0), 0)
+    const welcomeBonus = parseInt(getVal('welcome_bonus_points') || '0')
+    const pointsPerDollar = parseInt(getVal('points_per_dollar') || '0')
+    const referrerBonus = parseInt(getVal('referrer_bonus_points') || '0')
+    const minRedeem = parseInt(getVal('min_redeem_points') || '0')
+    const expiryMonths = parseInt(getVal('points_expiry_months') || '0')
+
+    return (
     <div className="space-y-6">
+      {/* Loyalty Overview */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <Star size={15} className="text-emerald-400" /> Loyalty Program Overview
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          {[
+            { label: 'Active Members', value: totalMembers.toLocaleString(),       sub: 'across all tiers',     color: '#74c895' },
+            { label: 'Welcome Bonus',  value: welcomeBonus.toLocaleString() + ' pts', sub: 'awarded on signup',  color: '#fbbf24' },
+            { label: 'Earn Rate',      value: pointsPerDollar + ' pts/$',          sub: 'base earning rate',     color: '#60a5fa' },
+            { label: 'Min Redeem',     value: minRedeem.toLocaleString() + ' pts', sub: 'redemption threshold', color: '#a78bfa' },
+          ].map(stat => (
+            <div key={stat.label} className="rounded-xl p-3 border border-white/[0.04]"
+              style={{ background: 'rgba(15,28,24,0.5)' }}>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{stat.label}</p>
+              <p className="text-xl font-bold mt-0.5" style={{ color: stat.color }}>{stat.value}</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">{stat.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tier distribution bar */}
+        {tiers.length > 0 && totalMembers > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">Tier Distribution</p>
+            <div className="h-3 rounded-full overflow-hidden flex border border-white/[0.06]" style={{ background: 'rgba(15,28,24,0.5)' }}>
+              {tiers.map((tier: any) => {
+                const pct = totalMembers > 0 ? (tier.member_count / totalMembers) * 100 : 0
+                if (pct === 0) return null
+                return (
+                  <div key={tier.id} title={`${tier.name}: ${tier.member_count} (${pct.toFixed(1)}%)`}
+                    style={{ width: `${pct}%`, backgroundColor: tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8' }} />
+                )
+              })}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+              {tiers.map((tier: any) => {
+                const pct = totalMembers > 0 ? (tier.member_count / totalMembers) * 100 : 0
+                return (
+                  <div key={tier.id} className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8' }} />
+                    <span className="text-[11px] text-gray-400">
+                      <strong className="text-white">{tier.name}</strong> {tier.member_count} <span className="text-gray-600">({pct.toFixed(0)}%)</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick health indicators */}
+        <div className="mt-5 pt-4 border-t border-white/[0.04] flex flex-wrap gap-2">
+          {referrerBonus > 0 && (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+              <CheckCircle size={10} className="inline -mt-px mr-1" />
+              Referral program live ({referrerBonus} pts)
+            </span>
+          )}
+          {expiryMonths > 0 ? (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/15">
+              <Clock size={10} className="inline -mt-px mr-1" />
+              Points expire after {expiryMonths} months
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+              <CheckCircle size={10} className="inline -mt-px mr-1" />
+              Points never expire
+            </span>
+          )}
+          {tiers.length > 0 && (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">
+              <Layers size={10} className="inline -mt-px mr-1" />
+              {tiers.length} tier{tiers.length === 1 ? '' : 's'} configured
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Points settings */}
       {groupSettings('points').length > 0 && (
         <div className={cardClass} style={cardStyle}>
@@ -751,7 +1114,8 @@ export function Settings() {
         )}
       </div>
     </div>
-  )
+    )
+  }
 
   /* ─── Tab: Integrations ──────────────────────────────────────────────── */
 
@@ -1694,6 +2058,7 @@ export function Settings() {
       case 'loyalty': return renderLoyalty()
       case 'integrations': return renderIntegrations()
       case 'booking': return renderBooking()
+      case 'mobile_app': return renderMobileApp()
       case 'documentation': return renderDocumentation()
       case 'ai_system': return renderAiSystem()
       default: {
