@@ -18,6 +18,7 @@ import { Setup } from './pages/Setup'
 // Lazy-loaded pages
 const Members = lazy(() => import('./pages/Members').then(m => ({ default: m.Members })))
 const MemberDetail = lazy(() => import('./pages/MemberDetail').then(m => ({ default: m.MemberDetail })))
+const MemberDuplicates = lazy(() => import('./pages/MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
 const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
 const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
 const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
@@ -110,6 +111,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
           <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />
+          <Route path="/members/duplicates" element={<LazyRoute gate="admin"><MemberDuplicates /></LazyRoute>} />
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><Analytics /></LazyRoute>} />

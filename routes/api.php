@@ -148,6 +148,8 @@ Route::prefix('v1')->group(function () {
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
             Route::get('members/export',          [MemberAdminController::class, 'export']);
+            Route::get('members/duplicates',      [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'suggestions']);
+            Route::post('members/merge',          [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'merge']);
             Route::post('members',                [MemberAdminController::class, 'store']);
             Route::get('members/{id}',            [MemberAdminController::class, 'show']);
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);

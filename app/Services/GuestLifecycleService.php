@@ -111,6 +111,30 @@ class GuestLifecycleService
     }
 
     /**
+     * Backfill: walk every guest system-wide and reassess their lifecycle
+     * from current totals. Used as a one-shot cleanup for rows that pre-date
+     * the auto-lifecycle logic or that hold stale "Lead"/null values.
+     * Returns the number of guests whose status actually changed.
+     */
+    public function reassessAll(): int
+    {
+        $changed = 0;
+        Guest::withoutGlobalScopes()
+            ->whereNotIn('lifecycle_status', self::MANUAL_STATES)
+            ->orWhereNull('lifecycle_status')
+            ->chunkById(500, function ($guests) use (&$changed) {
+                foreach ($guests as $guest) {
+                    $before = $guest->lifecycle_status;
+                    $this->reassess($guest);
+                    if ($guest->fresh()->lifecycle_status !== $before) {
+                        $changed++;
+                    }
+                }
+            });
+        return $changed;
+    }
+
+    /**
      * Sweep all guests in the current scope and mark anyone with no
      * activity in the last DORMANT_AFTER_DAYS as Inactive. Run from
      * a scheduled console command.

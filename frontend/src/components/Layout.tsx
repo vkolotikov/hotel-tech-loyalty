@@ -6,7 +6,7 @@ import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
-  Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox,
+  Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight,
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
@@ -54,7 +54,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'Members & Loyalty',
     items: [
-      { path: '/members',  label: 'Members',  icon: Users,     gate: 'all' },
+      { path: '/members',            label: 'Members',    icon: Users,     gate: 'all' },
+      { path: '/members/duplicates', label: 'Duplicates', icon: ArrowLeftRight, gate: 'admin' },
       { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin', product: 'loyalty' },
       { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin', product: 'loyalty' },
       { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers', product: 'loyalty' },

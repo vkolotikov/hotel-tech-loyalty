@@ -264,12 +264,6 @@ export function MemberDetail() {
                     {data.linked_guest.lead_source}
                   </span>
                 )}
-                <button
-                  onClick={() => navigate(`/guests/${data.linked_guest.id}`)}
-                  className="ml-auto text-xs text-primary-400 hover:text-primary-300"
-                >
-                  Open full guest →
-                </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

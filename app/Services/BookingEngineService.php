@@ -554,7 +554,7 @@ class BookingEngineService
             $guestId = $this->linkOrCreateGuest($guest, $orgId);
             if (!$guestId) return;
 
-            \App\Models\Inquiry::create([
+            $inquiry = \App\Models\Inquiry::create([
                 'organization_id' => $orgId,
                 'guest_id'        => $guestId,
                 'inquiry_type'    => 'Room Reservation',
@@ -569,6 +569,27 @@ class BookingEngineService
                 'total_value'     => $payload['gross_total'] ?? null,
                 'notes'           => "Booking widget failed: {$failCode} — {$failMsg}",
             ]);
+
+            // Surface a realtime toast so staff know to follow up before the
+            // would-be guest goes cold. Hooks the existing realtime poll bus
+            // that already drives arrival / inquiry notifications.
+            try {
+                $guestName = trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')) ?: ($guest['email'] ?? 'Unknown');
+                $unit      = $payload['unit_name'] ?? null;
+                $dates     = ($payload['check_in'] ?? null) && ($payload['check_out'] ?? null)
+                    ? " ({$payload['check_in']} → {$payload['check_out']})"
+                    : '';
+                app(\App\Services\RealtimeEventService::class)->dispatch(
+                    'inquiry',
+                    'Booking widget failed — follow up',
+                    "{$guestName}" . ($unit ? " · {$unit}" : '') . $dates,
+                    ['inquiry_id' => $inquiry->id, 'reason' => $failCode]
+                );
+            } catch (\Throwable $notifyError) {
+                \Illuminate\Support\Facades\Log::warning('Realtime dispatch failed for rescue inquiry', [
+                    'error' => $notifyError->getMessage(),
+                ]);
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Failed to create rescue inquiry from booking failure', [
                 'error' => $e->getMessage(),
