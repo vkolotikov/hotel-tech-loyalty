@@ -320,9 +320,10 @@ class LoyaltyService
 
         // Determine assessment window
         $windowEnd = now()->toDateString();
+        $joinedAt = $member->joined_at ?: $member->created_at ?: now();
         $windowStart = match ($currentTier->qualification_window ?? 'rolling_12') {
             'calendar_year'    => now()->startOfYear()->toDateString(),
-            'anniversary_year' => $member->joined_at->copy()->addYears(now()->diffInYears($member->joined_at))->toDateString(),
+            'anniversary_year' => $joinedAt->copy()->addYears(now()->diffInYears($joinedAt))->toDateString(),
             default            => now()->subYear()->toDateString(),
         };
 
@@ -354,7 +355,7 @@ class LoyaltyService
             $isUpgrade ? 'tier_upgraded' : 'tier_downgraded',
             $member,
             ['tier' => $appropriateTier->name],
-            ['tier' => LoyaltyTier::find($oldTierId)->name]
+            ['tier' => optional(LoyaltyTier::find($oldTierId))->name]
         );
 
         DomainEvent::record('TierEvaluated', $member, [

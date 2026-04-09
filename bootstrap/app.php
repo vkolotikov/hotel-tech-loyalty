@@ -31,18 +31,59 @@ return Application::configure(basePath: dirname(__DIR__))
                     return response()->json(['error' => 'Unauthenticated', 'message' => 'Authentication required.'], 401);
                 }
 
+                // Render Laravel's special exceptions with their proper status codes
+                // and payloads instead of mashing them all into a generic 500.
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    return response()->json([
+                        'error'   => 'Validation failed',
+                        'message' => $e->getMessage(),
+                        'errors'  => $e->errors(),
+                    ], $e->status);
+                }
+                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                    return response()->json(['error' => 'Not found', 'message' => 'Resource not found.'], 404);
+                }
+                if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                    return response()->json(['error' => 'Forbidden', 'message' => $e->getMessage() ?: 'Forbidden.'], 403);
+                }
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    return response()->json([
+                        'error'   => 'HTTP error',
+                        'message' => $e->getMessage() ?: 'Request failed.',
+                    ], $e->getStatusCode());
+                }
+
                 $debug = config('app.debug');
                 $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
 
-                // Never expose stack traces in API responses — use logs instead.
-                // In debug mode, include the error message and file location.
+                // Always log 500s with full context so we can debug prod issues.
+                if ($status >= 500) {
+                    \Log::error('Unhandled API exception', [
+                        'url'        => $request->fullUrl(),
+                        'method'     => $request->method(),
+                        'user_id'    => optional($request->user())->id,
+                        'org_id'     => optional($request->user())->organization_id,
+                        'exception'  => class_basename($e),
+                        'message'    => $e->getMessage(),
+                        'file'       => $e->getFile() . ':' . $e->getLine(),
+                        'trace'      => collect($e->getTrace())->take(10)->map(fn ($t) => ($t['file'] ?? '?') . ':' . ($t['line'] ?? '?') . ' ' . ($t['function'] ?? '?'))->all(),
+                    ]);
+                }
+
+                // Authenticated staff users see the real error message even in
+                // production — they're trusted operators, and a generic
+                // "An unexpected error occurred" makes prod issues impossible
+                // to triage from the browser. Anonymous callers still get the
+                // sanitized message.
+                $isStaff = $request->user() && ($request->user()->user_type ?? null) === 'staff';
+                $exposeMessage = $debug || $isStaff;
+
                 $response = [
-                    'error'   => $debug ? $e->getMessage() : 'Server error',
-                    'message' => $debug ? $e->getMessage() : 'An unexpected error occurred.',
+                    'error'   => $exposeMessage ? class_basename($e) : 'Server error',
+                    'message' => $exposeMessage ? $e->getMessage() : 'An unexpected error occurred.',
                 ];
 
-                if ($debug) {
-                    $response['exception'] = class_basename($e);
+                if ($exposeMessage) {
                     $response['file'] = $e->getFile() . ':' . $e->getLine();
                 }
 
