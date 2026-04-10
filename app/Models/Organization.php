@@ -11,7 +11,8 @@ class Organization extends Model
         'name', 'slug', 'saas_org_id', 'widget_token', 'legal_name', 'tax_id', 'email', 'phone',
         'address', 'country', 'currency', 'timezone', 'logo_url',
         'website', 'settings', 'is_active',
-        'plan_slug', 'subscription_status', 'entitled_products', 'plan_features', 'entitlements_synced_at',
+        'plan_slug', 'subscription_status', 'trial_end', 'period_end',
+        'entitled_products', 'plan_features', 'entitlements_synced_at',
     ];
 
     protected static function booted(): void
@@ -29,6 +30,8 @@ class Organization extends Model
         'is_active'             => 'boolean',
         'entitled_products'     => 'array',
         'plan_features'         => 'array',
+        'trial_end'             => 'datetime',
+        'period_end'            => 'datetime',
         'entitlements_synced_at'=> 'datetime',
     ];
 

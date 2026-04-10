@@ -118,6 +118,8 @@ class SaasAuthMiddleware
 
             $org->plan_slug             = $sub['plan']['slug'] ?? null;
             $org->subscription_status   = $sub['status'] ?? null;
+            $org->trial_end             = $sub['trialEnd'] ?? null;
+            $org->period_end            = $sub['currentPeriodEnd'] ?? null;
             $org->entitled_products     = $data['entitled_product_slugs'] ?? [];
             $org->plan_features         = (array) ($data['features'] ?? []);
             $org->entitlements_synced_at = now();

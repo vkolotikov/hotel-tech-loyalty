@@ -498,6 +498,23 @@ class AuthController extends Controller
             }
         }
 
+        // Try cached org entitlements (from SaasAuthMiddleware sync) before falling back to LOCAL
+        $org = $request->user()?->organization_id
+            ? \App\Models\Organization::find($request->user()->organization_id)
+            : null;
+
+        if ($org && $org->plan_slug && $org->subscription_status) {
+            return response()->json([
+                'active'   => $org->hasActiveSubscription(),
+                'status'   => $org->subscription_status,
+                'plan'     => ['name' => ucfirst($org->plan_slug), 'slug' => $org->plan_slug],
+                'trialEnd' => $org->trial_end?->toIso8601String(),
+                'periodEnd'=> $org->period_end?->toIso8601String(),
+                'features' => $org->plan_features ?: [],
+                'products' => $org->entitled_products ?: [],
+            ]);
+        }
+
         // Local/dev mode — grant all features
         return response()->json([
             'active'   => true,
