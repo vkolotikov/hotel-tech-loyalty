@@ -1,24 +1,21 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import {
-  ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Copy, Trash2,
+  ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText,
-  ChevronDown, Edit, ArrowRight, Clock, User, Flag, Tag, X,
-  ListChecks, AlertCircle,
+  ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
+  ListChecks, AlertCircle, Flag, Tag,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
-
 function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
-
 function getMonday(d: Date): Date {
   const date = new Date(d); const day = date.getDay()
-  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1))
-  return date
+  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1)); return date
 }
 function weekDatesFrom(start: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
@@ -31,34 +28,203 @@ function monthGrid(year: number, month: number): (Date | null)[][] {
   if (week.length) { while (week.length < 7) week.push(null); weeks.push(week) }
   return weeks
 }
-function friendlyDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+function fmtTime(t: string | null) { return t ? t.slice(0, 5) : '' }
+function fmtShort(t: string | null) {
+  if (!t) return ''
+  const [h, m] = t.slice(0, 5).split(':').map(Number)
+  const suffix = h >= 12 ? 'pm' : 'am'
+  return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + suffix
 }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 const PRIORITY_COLOR: Record<string, string> = { Low: '#6b7280', Normal: '#3b82f6', High: '#ef4444' }
 const GROUP_COLORS: Record<string, string> = {
-  Housekeeping: 'bg-emerald-500/15 text-emerald-400', 'Front Desk': 'bg-blue-500/15 text-blue-400', 'Front Office': 'bg-blue-500/15 text-blue-400',
-  Maintenance: 'bg-amber-500/15 text-amber-400', 'F&B': 'bg-purple-500/15 text-purple-400',
-  Management: 'bg-red-500/15 text-red-400', Sales: 'bg-cyan-500/15 text-cyan-400', Events: 'bg-pink-500/15 text-pink-400',
+  Housekeeping: 'bg-emerald-500/15 text-emerald-400', 'Front Desk': 'bg-blue-500/15 text-blue-400',
+  'Front Office': 'bg-blue-500/15 text-blue-400', Maintenance: 'bg-amber-500/15 text-amber-400',
+  'F&B': 'bg-purple-500/15 text-purple-400', Management: 'bg-red-500/15 text-red-400',
+  Sales: 'bg-cyan-500/15 text-cyan-400', Events: 'bg-pink-500/15 text-pink-400',
 }
 const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 8, fontSize: 12 }
 
-const input = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
+const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
 const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500'
 
-type Tab = 'day' | 'week' | 'month' | 'stats'
-type TaskForm = { employee_name: string; title: string; task_date: string; start_time: string; end_time: string; priority: string; task_group: string; task_category: string; duration_minutes: string; description: string; status: string }
-const EMPTY_FORM: TaskForm = { employee_name: '', title: '', task_date: '', start_time: '', end_time: '', priority: 'Normal', task_group: '', task_category: '', duration_minutes: '', description: '', status: '' }
+type Tab = 'day' | 'schedule' | 'month' | 'stats'
+type TaskForm = {
+  employee_name: string; title: string; task_date: string; start_time: string; end_time: string
+  priority: string; task_group: string; task_category: string; duration_minutes: string
+  description: string; status: string
+}
+const EMPTY_FORM: TaskForm = {
+  employee_name: '', title: '', task_date: '', start_time: '', end_time: '',
+  priority: 'Normal', task_group: '', task_category: '', duration_minutes: '',
+  description: '', status: '',
+}
 
-/* ─── main component ───────────────────────────────────────────────── */
+/* ─── progress bar ──────────────────────────────────────────────── */
+const ProgressBar = memo(({ done, total }: { done: number; total: number }) => {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-dark-border rounded-full overflow-hidden">
+        <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-gray-500 min-w-[32px] text-right">{pct}%</span>
+    </div>
+  )
+})
+
+/* ─── subtask row ────────────────────────────────────────────────── */
+const SubtaskRow = memo(({ sub, onToggle, onDelete }: { sub: any; onToggle: () => void; onDelete: () => void }) => (
+  <div className="flex items-center gap-2.5 group py-1 px-2 rounded-lg hover:bg-dark-surface2/50 transition-colors">
+    <button onClick={onToggle} className="flex-shrink-0 p-0.5">
+      {sub.is_done
+        ? <CheckCircle2 size={18} className="text-green-400" />
+        : <Circle size={18} className="text-gray-600 hover:text-gray-400" />}
+    </button>
+    <span className={'flex-1 text-sm ' + (sub.is_done ? 'line-through text-gray-600' : 'text-gray-300')}>{sub.title}</span>
+    <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-600 hover:text-red-400 transition-all">
+      <Trash2 size={14} />
+    </button>
+  </div>
+))
+
+/* ─── subtask input (standalone to avoid remount) ────────────────── */
+function SubtaskInput({ taskId, onAdd }: { taskId: number; onAdd: (taskId: number, title: string) => void }) {
+  const [value, setValue] = useState('')
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (value.trim()) { onAdd(taskId, value.trim()); setValue('') }
+  }
+  return (
+    <form className="flex gap-2 mt-2" onSubmit={handleSubmit}>
+      <input value={value} onChange={e => setValue(e.target.value)} placeholder="Add a subtask..."
+        className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30" />
+      <button type="submit" disabled={!value.trim()} className="px-3 py-2 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium">
+        Add
+      </button>
+    </form>
+  )
+}
+
+/* ─── task row (day view) — extracted outside to prevent re-mount ── */
+const TaskRow = memo(({
+  task, isExpanded, onToggleExpand, onToggleComplete, onEdit, onMove, onCopy, onDelete,
+  onToggleSubtask, onDeleteSubtask, onAddSubtask,
+}: {
+  task: any; isExpanded: boolean
+  onToggleExpand: () => void; onToggleComplete: () => void
+  onEdit: () => void; onMove: () => void; onCopy: () => void; onDelete: () => void
+  onToggleSubtask: (id: number) => void; onDeleteSubtask: (id: number) => void
+  onAddSubtask: (taskId: number, title: string) => void
+}) => {
+  const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
+  const subTotal = task.subtasks?.length ?? 0
+
+  return (
+    <div className={'rounded-xl border transition-all duration-200 ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
+      <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={onToggleExpand}>
+        <button onClick={e => { e.stopPropagation(); onToggleComplete() }} className="flex-shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
+          {task.completed
+            ? <CheckCircle2 size={22} className="text-green-400" />
+            : <Circle size={22} className="text-gray-600 hover:text-gray-400" />}
+        </button>
+        <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLOR[task.priority] ?? '#6b7280' }} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
+            {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 flex-shrink-0" />}
+          </div>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {task.employee_name && <span className="flex items-center gap-1 text-xs text-gray-500"><User size={11} />{task.employee_name}</span>}
+            {task.start_time && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Clock size={11} />{fmtTime(task.start_time)}{task.end_time && ` — ${fmtTime(task.end_time)}`}
+              </span>
+            )}
+            {task.task_group && <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${GROUP_COLORS[task.task_group] ?? 'bg-gray-500/15 text-gray-400'}`}>{task.task_group}</span>}
+            {task.task_category && <span className="flex items-center gap-1 text-xs text-gray-600"><Tag size={10} />{task.task_category}</span>}
+            {task.duration_minutes && <span className="text-xs text-gray-600">{task.duration_minutes}m</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {subTotal > 0 && (
+            <span className={'flex items-center gap-1 text-xs px-2 py-1 rounded-lg ' + (subDone === subTotal ? 'bg-green-500/10 text-green-400' : 'bg-dark-surface2 text-gray-500')}>
+              <ListChecks size={13} /> {subDone}/{subTotal}
+            </span>
+          )}
+          <button onClick={e => { e.stopPropagation(); onEdit() }} className="p-2 rounded-lg text-gray-600 hover:text-primary-400 hover:bg-dark-surface2 transition-colors" title="Edit">
+            <Edit size={16} />
+          </button>
+          <ChevronDown size={16} className={'text-gray-600 transition-transform duration-200 ' + (isExpanded ? 'rotate-180' : '')} />
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-dark-border/50 pt-3">
+          {task.description && <p className="text-sm text-gray-400 leading-relaxed bg-dark-surface2/50 rounded-lg p-3">{task.description}</p>}
+          {task.status && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="font-medium">Status:</span>
+              <span className="px-2 py-0.5 rounded-full bg-dark-surface2 text-gray-400">{task.status}</span>
+            </div>
+          )}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Subtasks</h4>
+            <div className="space-y-1.5">
+              {task.subtasks?.map((sub: any) => (
+                <SubtaskRow key={sub.id} sub={sub} onToggle={() => onToggleSubtask(sub.id)} onDelete={() => onDeleteSubtask(sub.id)} />
+              ))}
+              <SubtaskInput taskId={task.id} onAdd={onAddSubtask} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-2 border-t border-dark-border/30">
+            <button onClick={onMove} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"><ArrowRight size={14} /> Move</button>
+            <button onClick={onCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"><Copy size={14} /> Duplicate</button>
+            <div className="flex-1" />
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"><Trash2 size={14} /> Delete</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+})
+
+/* ─── quick-add component ────────────────────────────────────────── */
+function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, date: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (open && ref.current) ref.current.focus() }, [open])
+
+  if (!open) return (
+    <button onClick={() => { setOpen(true); setTitle('') }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
+      <Plus size={14} /> Add task
+    </button>
+  )
+
+  return (
+    <form className="flex gap-1.5 p-1.5" onSubmit={e => { e.preventDefault(); if (title.trim()) { onCreate(title.trim(), date); setTitle(''); setOpen(false) } }}>
+      <input ref={ref} value={title} onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
+        placeholder="Task title..."
+        className="flex-1 bg-dark-surface2 border border-primary-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
+      <button type="submit" disabled={!title.trim()} className="px-2.5 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium disabled:opacity-40 hover:bg-primary-500 transition-colors">Add</button>
+      <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg text-gray-600 hover:text-white transition-colors"><X size={14} /></button>
+    </form>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  MAIN PLANNER COMPONENT                                           */
+/* ═══════════════════════════════════════════════════════════════════ */
 
 export function Planner() {
   const qc = useQueryClient()
   const settings = useSettings()
-  const [tab, setTab] = useState<Tab>('day')
+  const [tab, setTab] = useState<Tab>('schedule')
   const [currentDate, setCurrentDate] = useState(() => fmtDate(new Date()))
   const [weekStart, setWeekStart] = useState(() => fmtDate(getMonday(new Date())))
   const [monthYear, setMonthYear] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
@@ -68,26 +234,17 @@ export function Planner() {
   const [editTask, setEditTask] = useState<any>(null)
   const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
-  const [newSubtasks, setNewSubtasks] = useState<Record<number, string>>({})
-  const [quickAdd, setQuickAdd] = useState<string | null>(null) // date string for quick-add
-  const [quickTitle, setQuickTitle] = useState('')
-  const quickRef = useRef<HTMLInputElement>(null)
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
 
   const today = fmtDate(new Date())
-  const getNewSubtask = (id: number) => newSubtasks[id] ?? ''
-  const setNewSubtask = (id: number, v: string) => setNewSubtasks(p => ({ ...p, [id]: v }))
-
-  // Focus quick-add input when it opens
-  useEffect(() => { if (quickAdd && quickRef.current) quickRef.current.focus() }, [quickAdd])
 
   /* ─── queries ─────────────────────────────────────────────────── */
   const queryParams: any = { employee: employee || undefined, task_group: groupFilter || undefined }
   if (tab === 'day') queryParams.date = currentDate
-  else if (tab === 'week') queryParams.week_start = weekStart
+  else if (tab === 'schedule') queryParams.week_start = weekStart
   else if (tab === 'month') {
     queryParams.from = `${monthYear.year}-${String(monthYear.month + 1).padStart(2, '0')}-01`
     const ld = new Date(monthYear.year, monthYear.month + 1, 0).getDate()
@@ -95,7 +252,7 @@ export function Planner() {
   }
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'week' ? weekStart : monthYear, employee, groupFilter],
+    queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'schedule' ? weekStart : monthYear, employee, groupFilter],
     queryFn: () => api.get('/v1/admin/planner/tasks', { params: queryParams }).then(r => r.data),
     enabled: tab !== 'stats',
   })
@@ -116,7 +273,7 @@ export function Planner() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setShowModal(false); setForm({ ...EMPTY_FORM }); toast.success('Task created') },
+    onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }); toast.success('Task created') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -128,35 +285,36 @@ export function Planner() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, completed }: any) => api.put('/v1/admin/planner/tasks/' + id, { completed: !completed }),
-    onSuccess: () => { invalidate(); toast.success('Status updated') },
+    onSuccess: () => { invalidate(); toast.success('Updated') },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete('/v1/admin/planner/tasks/' + id),
-    onSuccess: () => { invalidate(); setExpandedTask(null); toast.success('Task deleted') },
+    onSuccess: () => { invalidate(); setExpandedTask(null); toast.success('Deleted') },
   })
 
   const copyMutation = useMutation({
     mutationFn: ({ id, task_date, employee_name }: any) => api.post('/v1/admin/planner/tasks/' + id + '/copy', { task_date, employee_name }),
-    onSuccess: () => { invalidate(); setCopyTarget(null); toast.success('Task copied') },
+    onSuccess: () => { invalidate(); setCopyTarget(null); toast.success('Duplicated') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
   const moveMutation = useMutation({
     mutationFn: ({ id, task_date, employee_name }: any) => api.patch('/v1/admin/planner/tasks/' + id + '/move', { task_date, employee_name }),
-    onSuccess: () => { invalidate(); setMoveTarget(null); toast.success('Task moved') },
+    onSuccess: () => { invalidate(); setMoveTarget(null); toast.success('Moved') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
   const quickCreateMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setQuickAdd(null); setQuickTitle(''); toast.success('Task added') },
+    onSuccess: () => { invalidate(); toast.success('Task added') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
   const addSubtaskMutation = useMutation({
     mutationFn: ({ taskId, title }: any) => api.post('/v1/admin/planner/tasks/' + taskId + '/subtasks', { title }),
-    onSuccess: (_d, v) => { invalidate(); setNewSubtask(v.taskId, '') },
+    onSuccess: () => invalidate(),
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -175,23 +333,36 @@ export function Planner() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['planner-day-note'] }),
   })
 
+  /* ─── callbacks (stable refs) ──────────────────────────────────── */
+  const handleAddSubtask = useCallback((taskId: number, title: string) => {
+    addSubtaskMutation.mutate({ taskId, title })
+  }, [])
+
   /* ─── navigation ──────────────────────────────────────────────── */
   const navigate = (dir: number) => {
     if (tab === 'day') { const d = new Date(currentDate); d.setDate(d.getDate() + dir); setCurrentDate(fmtDate(d)) }
-    else if (tab === 'week') { const d = new Date(weekStart); d.setDate(d.getDate() + dir * 7); setWeekStart(fmtDate(d)) }
+    else if (tab === 'schedule') { const d = new Date(weekStart); d.setDate(d.getDate() + dir * 7); setWeekStart(fmtDate(d)) }
     else { setMonthYear(p => { let m = p.month + dir, y = p.year; if (m < 0) { m = 11; y-- } if (m > 11) { m = 0; y++ } return { year: y, month: m } }) }
   }
   const goToday = () => { const n = new Date(); setCurrentDate(fmtDate(n)); setWeekStart(fmtDate(getMonday(n))); setMonthYear({ year: n.getFullYear(), month: n.getMonth() }) }
 
-  const openCreate = (date: string) => { setEditTask(null); setForm({ ...EMPTY_FORM, task_date: date }); setShowModal(true) }
+  const openCreate = (date: string, emp?: string) => {
+    setEditTask(null)
+    setForm({ ...EMPTY_FORM, task_date: date, employee_name: emp ?? '' })
+    setShowModal(true)
+  }
+
   const openEdit = (task: any) => {
     setEditTask(task)
     setForm({
-      employee_name: task.employee_name ?? '', title: task.title ?? '', task_date: (task.task_date ?? '').slice(0, 10),
-      start_time: task.start_time ? task.start_time.slice(0, 5) : '', end_time: task.end_time ? task.end_time.slice(0, 5) : '',
-      priority: task.priority ?? 'Normal', task_group: task.task_group ?? '', task_category: task.task_category ?? '',
-      duration_minutes: task.duration_minutes ? String(task.duration_minutes) : '', description: task.description ?? '',
-      status: task.status ?? '',
+      employee_name: task.employee_name ?? '', title: task.title ?? '',
+      task_date: (task.task_date ?? '').slice(0, 10),
+      start_time: task.start_time ? task.start_time.slice(0, 5) : '',
+      end_time: task.end_time ? task.end_time.slice(0, 5) : '',
+      priority: task.priority ?? 'Normal', task_group: task.task_group ?? '',
+      task_category: task.task_category ?? '',
+      duration_minutes: task.duration_minutes ? String(task.duration_minutes) : '',
+      description: task.description ?? '', status: task.status ?? '',
     })
     setShowModal(true)
   }
@@ -202,234 +373,48 @@ export function Planner() {
     if (!body.end_time) body.end_time = null
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
-    if (!body.employee_name) body.employee_name = null
-    if (!body.task_group) body.task_group = null
-    if (!body.task_category) body.task_category = null
-    if (!body.status) body.status = null
-    if (!body.description) body.description = null
+    ;['employee_name', 'task_group', 'task_category', 'status', 'description'].forEach(k => { if (!body[k]) body[k] = null })
     if (editTask) updateMutation.mutate({ id: editTask.id, ...body })
     else createMutation.mutate(body)
   }
 
-  const handleQuickAdd = () => {
-    if (!quickTitle.trim() || !quickAdd) return
-    quickCreateMutation.mutate({ title: quickTitle.trim(), task_date: quickAdd, priority: 'Normal' })
-  }
+  const handleQuickCreate = useCallback((title: string, date: string) => {
+    quickCreateMutation.mutate({ title, task_date: date, priority: 'Normal' })
+  }, [])
 
   /* ─── derived data ────────────────────────────────────────────── */
   const weekDates = weekDatesFrom(new Date(weekStart))
   const monthWeeks = monthGrid(monthYear.year, monthYear.month)
 
+  // Collect unique employees from tasks for the schedule view
+  const scheduleEmployees: string[] = (() => {
+    const fromTasks = [...new Set(tasks.map((t: any) => t.employee_name).filter(Boolean))]
+    const fromSettings = settings.employees ?? []
+    const merged = [...new Set([...fromSettings, ...fromTasks])] as string[]
+    if (employee) return merged.filter(e => e === employee)
+    return merged.length > 0 ? merged : ['Unassigned']
+  })()
+
   const subtitle = tab === 'day'
     ? new Date(currentDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-    : tab === 'week' ? `${friendlyDate(weekStart)} — ${friendlyDate(fmtDate(weekDates[6]))}`
+    : tab === 'schedule'
+    ? `Week ${new Date(weekStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(fmtDate(weekDates[6]) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
     : tab === 'month' ? `${MONTHS[monthYear.month]} ${monthYear.year}` : 'Statistics'
 
-
-  /* ─── progress bar ────────────────────────────────────────────── */
-  const ProgressBar = ({ done, total }: { done: number; total: number }) => {
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-dark-border rounded-full overflow-hidden">
-          <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-        </div>
-        <span className="text-xs text-gray-500 min-w-[36px] text-right">{pct}%</span>
-      </div>
-    )
-  }
-
-  /* ─── task row (day view) ─────────────────────────────────────── */
-  const TaskRow = ({ task, dateStr }: { task: any; dateStr: string }) => {
-    const isExpanded = expandedTask === task.id
-    const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
-    const subTotal = task.subtasks?.length ?? 0
-
-    return (
-      <div className={'rounded-xl border transition-all duration-200 ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
-        {/* Main row */}
-        <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpandedTask(isExpanded ? null : task.id)}>
-          {/* Complete toggle */}
-          <button onClick={e => { e.stopPropagation(); toggleMutation.mutate({ id: task.id, completed: task.completed }) }}
-            className="flex-shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
-            {task.completed
-              ? <CheckCircle2 size={22} className="text-green-400" />
-              : <Circle size={22} className="text-gray-600 hover:text-gray-400" />}
-          </button>
-
-          {/* Priority indicator */}
-          <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLOR[task.priority] ?? '#6b7280' }} />
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
-              {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 flex-shrink-0" />}
-            </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {task.employee_name && <span className="flex items-center gap-1 text-xs text-gray-500"><User size={11} />{task.employee_name}</span>}
-              {task.start_time && (
-                <span className="flex items-center gap-1 text-xs text-gray-500">
-                  <Clock size={11} />
-                  {task.start_time.slice(0, 5)}
-                  {task.end_time && ` — ${task.end_time.slice(0, 5)}`}
-                </span>
-              )}
-              {task.task_group && (
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${GROUP_COLORS[task.task_group] ?? 'bg-gray-500/15 text-gray-400'}`}>
-                  {task.task_group}
-                </span>
-              )}
-              {task.task_category && (
-                <span className="flex items-center gap-1 text-xs text-gray-600"><Tag size={10} />{task.task_category}</span>
-              )}
-              {task.duration_minutes && (
-                <span className="text-xs text-gray-600">{task.duration_minutes}m</span>
-              )}
-            </div>
-          </div>
-
-          {/* Right side: subtask count + actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {subTotal > 0 && (
-              <span className={'flex items-center gap-1 text-xs px-2 py-1 rounded-lg ' + (subDone === subTotal ? 'bg-green-500/10 text-green-400' : 'bg-dark-surface2 text-gray-500')}>
-                <ListChecks size={13} /> {subDone}/{subTotal}
-              </span>
-            )}
-            <button onClick={e => { e.stopPropagation(); openEdit(task) }} className="p-2 rounded-lg text-gray-600 hover:text-primary-400 hover:bg-dark-surface2 transition-colors" title="Edit">
-              <Edit size={16} />
-            </button>
-            <ChevronDown size={16} className={'text-gray-600 transition-transform duration-200 ' + (isExpanded ? 'rotate-180' : '')} />
-          </div>
-        </div>
-
-        {/* Expanded panel */}
-        {isExpanded && (
-          <div className="px-4 pb-4 space-y-3 border-t border-dark-border/50 pt-3">
-            {/* Description */}
-            {task.description && (
-              <p className="text-sm text-gray-400 leading-relaxed bg-dark-surface2/50 rounded-lg p-3">{task.description}</p>
-            )}
-
-            {/* Status info */}
-            {task.status && (
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="font-medium">Status:</span>
-                <span className="px-2 py-0.5 rounded-full bg-dark-surface2 text-gray-400">{task.status}</span>
-              </div>
-            )}
-
-            {/* Subtasks */}
-            <div>
-              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Subtasks</h4>
-              <div className="space-y-1.5">
-                {task.subtasks?.map((sub: any) => (
-                  <div key={sub.id} className="flex items-center gap-2.5 group py-1 px-2 rounded-lg hover:bg-dark-surface2/50 transition-colors">
-                    <button onClick={() => toggleSubtaskMutation.mutate(sub.id)} className="flex-shrink-0 p-0.5">
-                      {sub.is_done
-                        ? <CheckCircle2 size={18} className="text-green-400" />
-                        : <Circle size={18} className="text-gray-600 hover:text-gray-400" />}
-                    </button>
-                    <span className={'flex-1 text-sm ' + (sub.is_done ? 'line-through text-gray-600' : 'text-gray-300')}>{sub.title}</span>
-                    <button onClick={() => deleteSubtaskMutation.mutate(sub.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-600 hover:text-red-400 transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-                <form className="flex gap-2 mt-2" onSubmit={e => { e.preventDefault(); const v = getNewSubtask(task.id).trim(); if (v) addSubtaskMutation.mutate({ taskId: task.id, title: v }) }}>
-                  <input
-                    value={getNewSubtask(task.id)}
-                    onChange={e => setNewSubtask(task.id, e.target.value)}
-                    placeholder="Add a subtask..."
-                    className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30"
-                  />
-                  <button type="submit" disabled={!getNewSubtask(task.id).trim()} className="px-3 py-2 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium">
-                    Add
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Action bar */}
-            <div className="flex items-center gap-2 pt-2 border-t border-dark-border/30">
-              <button onClick={() => setMoveTarget({ taskId: task.id, date: dateStr })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">
-                <ArrowRight size={14} /> Move
-              </button>
-              <button onClick={() => setCopyTarget({ taskId: task.id, date: dateStr })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
-                <Copy size={14} /> Duplicate
-              </button>
-              <div className="flex-1" />
-              <button onClick={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task.id) }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                <Trash2 size={14} /> Delete
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  /* ─── week card (compact) ─────────────────────────────────────── */
-  const WeekCard = ({ task, dateStr }: { task: any; dateStr: string }) => (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-dark-surface2/50 hover:bg-dark-surface2 transition-colors group">
-      <button onClick={e => { e.stopPropagation(); toggleMutation.mutate({ id: task.id, completed: task.completed }) }} className="flex-shrink-0">
-        {task.completed
-          ? <CheckCircle2 size={16} className="text-green-400" />
-          : <Circle size={16} className="text-gray-600 hover:text-gray-400 transition-colors" />}
-      </button>
-      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setCurrentDate(dateStr); setTab('day'); setExpandedTask(task.id) }}>
-        <span className={'text-xs font-medium leading-tight block truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
-        <div className="flex items-center gap-1 mt-0.5">
-          {task.start_time && <span className="text-[10px] text-gray-600">{task.start_time.slice(0, 5)}</span>}
-          {task.employee_name && <span className="text-[10px] text-gray-600 truncate">{task.employee_name}</span>}
-        </div>
-      </div>
-      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-        <button onClick={() => openEdit(task)} className="p-1 rounded text-gray-600 hover:text-primary-400"><Edit size={12} /></button>
-        <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(task.id) }} className="p-1 rounded text-gray-600 hover:text-red-400"><Trash2 size={12} /></button>
-      </div>
-    </div>
-  )
-
-  /* ─── quick-add inline ────────────────────────────────────────── */
-  const QuickAddRow = ({ date }: { date: string }) => {
-    if (quickAdd !== date) {
-      return (
-        <button onClick={() => { setQuickAdd(date); setQuickTitle('') }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
-          <Plus size={14} /> Add task
-        </button>
-      )
-    }
-    return (
-      <form className="flex gap-1.5 p-1.5" onSubmit={e => { e.preventDefault(); handleQuickAdd() }}>
-        <input ref={quickRef} value={quickTitle} onChange={e => setQuickTitle(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Escape') { setQuickAdd(null); setQuickTitle('') } }}
-          placeholder="Task title..." className="flex-1 bg-dark-surface2 border border-primary-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
-        <button type="submit" disabled={!quickTitle.trim() || quickCreateMutation.isPending} className="px-2.5 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium disabled:opacity-40 hover:bg-primary-500 transition-colors">
-          {quickCreateMutation.isPending ? '...' : 'Add'}
-        </button>
-        <button type="button" onClick={() => { setQuickAdd(null); setQuickTitle('') }} className="p-1.5 rounded-lg text-gray-600 hover:text-white transition-colors">
-          <X size={14} />
-        </button>
-      </form>
-    )
-  }
-
-  /* ─── render ──────────────────────────────────────────────────── */
+  /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-white">Planner</h1>
+          <h1 className="text-xl font-semibold text-white">Work Schedule</h1>
           <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View tabs */}
           <div className="flex rounded-xl border border-dark-border overflow-hidden bg-dark-surface">
             {([
               ['day', CalendarDays, 'Day'],
-              ['week', Calendar, 'Week'],
+              ['schedule', Calendar, 'Schedule'],
               ['month', CalendarRange, 'Month'],
               ['stats', BarChart2, 'Stats'],
             ] as const).map(([t, Icon, label]) => (
@@ -438,21 +423,23 @@ export function Planner() {
               </button>
             ))}
           </div>
-
           {tab !== 'stats' && <>
             <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel}>
               <option value="">All Team</option>
-              {settings.employees.map(e => <option key={e}>{e}</option>)}
+              {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
             </select>
             <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className={filterSel}>
               <option value="">All Groups</option>
-              {settings.planner_groups.map(g => <option key={g}>{g}</option>)}
+              {settings.planner_groups.map((g: string) => <option key={g}>{g}</option>)}
             </select>
             <div className="flex items-center gap-1">
               <button onClick={() => navigate(-1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronLeft size={16} /></button>
               <button onClick={goToday} className="px-3 py-2 rounded-lg border border-dark-border text-sm text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all font-medium">Today</button>
               <button onClick={() => navigate(1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronRight size={16} /></button>
             </div>
+            <button onClick={() => openCreate(tab === 'day' ? currentDate : today)} className="flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors">
+              <Plus size={16} /> Add
+            </button>
           </>}
         </div>
       </div>
@@ -460,9 +447,8 @@ export function Planner() {
       {/* ═══ DAY VIEW ═══ */}
       {tab === 'day' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Main task list */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Summary bar */}
+            {/* Summary */}
             <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-4">
@@ -470,100 +456,86 @@ export function Planner() {
                   <span className="text-xs text-green-400">{tasks.filter((t: any) => t.completed).length} completed</span>
                   <span className="text-xs text-gray-500">{tasks.filter((t: any) => !t.completed).length} remaining</span>
                 </div>
-                <button onClick={() => openCreate(currentDate)} className="flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors">
-                  <Plus size={16} /> New Task
-                </button>
               </div>
               <ProgressBar done={tasks.filter((t: any) => t.completed).length} total={tasks.length} />
             </div>
 
-            {/* Task list */}
+            {/* Tasks */}
             <div className="space-y-2">
               {tasks.length === 0 && (
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-12 text-center">
                   <CalendarDays size={40} className="mx-auto text-gray-700 mb-3" />
                   <p className="text-gray-500 text-sm">No tasks for this day</p>
-                  <button onClick={() => openCreate(currentDate)} className="mt-3 text-sm text-primary-400 hover:text-primary-300 font-medium">
-                    Create your first task
-                  </button>
+                  <button onClick={() => openCreate(currentDate)} className="mt-3 text-sm text-primary-400 hover:text-primary-300 font-medium">Create your first task</button>
                 </div>
               )}
-              {/* High priority first, then by time */}
-              {[...tasks]
-                .sort((a: any, b: any) => {
-                  if (a.completed !== b.completed) return a.completed ? 1 : -1
-                  const pOrder: Record<string, number> = { High: 0, Normal: 1, Low: 2 }
-                  if ((pOrder[a.priority] ?? 1) !== (pOrder[b.priority] ?? 1)) return (pOrder[a.priority] ?? 1) - (pOrder[b.priority] ?? 1)
-                  return (a.start_time ?? 'zz').localeCompare(b.start_time ?? 'zz')
-                })
-                .map((task: any) => (
-                  <TaskRow key={task.id} task={task} dateStr={currentDate} />
-                ))}
+              {[...tasks].sort((a: any, b: any) => {
+                if (a.completed !== b.completed) return a.completed ? 1 : -1
+                const po: Record<string, number> = { High: 0, Normal: 1, Low: 2 }
+                if ((po[a.priority] ?? 1) !== (po[b.priority] ?? 1)) return (po[a.priority] ?? 1) - (po[b.priority] ?? 1)
+                return (a.start_time ?? 'zz').localeCompare(b.start_time ?? 'zz')
+              }).map((task: any) => (
+                <TaskRow key={task.id} task={task}
+                  isExpanded={expandedTask === task.id}
+                  onToggleExpand={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
+                  onToggleComplete={() => toggleMutation.mutate({ id: task.id, completed: task.completed })}
+                  onEdit={() => openEdit(task)}
+                  onMove={() => setMoveTarget({ taskId: task.id, date: currentDate })}
+                  onCopy={() => setCopyTarget({ taskId: task.id, date: currentDate })}
+                  onDelete={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task.id) }}
+                  onToggleSubtask={(id) => toggleSubtaskMutation.mutate(id)}
+                  onDeleteSubtask={(id) => deleteSubtaskMutation.mutate(id)}
+                  onAddSubtask={handleAddSubtask}
+                />
+              ))}
             </div>
-
-            {/* Quick add */}
-            <QuickAddRow date={currentDate} />
+            <QuickAdd date={currentDate} onCreate={handleQuickCreate} />
           </div>
 
-          {/* Right sidebar */}
+          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Day Note */}
             <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-primary-400" />
                 <span className="text-sm font-semibold text-white">Day Notes</span>
               </div>
-              <textarea
-                key={currentDate}
-                defaultValue={dayNote?.note_text ?? ''}
+              <textarea key={currentDate} defaultValue={dayNote?.note_text ?? ''}
                 onBlur={e => upsertNoteMutation.mutate({ note_date: currentDate, note_text: e.target.value })}
-                rows={4}
-                placeholder="Write notes, reminders, or instructions for this day..."
-                className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none leading-relaxed"
-              />
+                rows={4} placeholder="Write notes for this day..."
+                className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none leading-relaxed" />
             </div>
 
-            {/* Day overview */}
             <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Day Overview</h3>
+              <h3 className="text-sm font-semibold text-white mb-3">Overview</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Total</span>
-                  <span className="text-sm font-semibold text-white">{tasks.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Completed</span>
-                  <span className="text-sm font-semibold text-green-400">{tasks.filter((t: any) => t.completed).length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">High Priority</span>
-                  <span className="text-sm font-semibold text-red-400">{tasks.filter((t: any) => t.priority === 'High' && !t.completed).length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">With subtasks</span>
-                  <span className="text-sm font-semibold text-gray-400">{tasks.filter((t: any) => t.subtasks?.length > 0).length}</span>
-                </div>
+                {[
+                  ['Total', tasks.length, 'text-white'],
+                  ['Completed', tasks.filter((t: any) => t.completed).length, 'text-green-400'],
+                  ['High Priority', tasks.filter((t: any) => t.priority === 'High' && !t.completed).length, 'text-red-400'],
+                  ['With subtasks', tasks.filter((t: any) => t.subtasks?.length > 0).length, 'text-gray-400'],
+                ].map(([label, val, cls]) => (
+                  <div key={label as string} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{label}</span>
+                    <span className={'text-sm font-semibold ' + cls}>{val as number}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Team breakdown if no employee filter */}
             {!employee && tasks.length > 0 && (
               <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-white mb-3">Team Breakdown</h3>
+                <h3 className="text-sm font-semibold text-white mb-3">Team</h3>
                 <div className="space-y-2">
                   {Object.entries(tasks.reduce((acc: any, t: any) => {
-                    const name = t.employee_name || 'Unassigned'
-                    if (!acc[name]) acc[name] = { total: 0, done: 0 }
-                    acc[name].total++
-                    if (t.completed) acc[name].done++
-                    return acc
-                  }, {} as Record<string, { total: number; done: number }>)).map(([name, data]: [string, any]) => (
+                    const n = t.employee_name || 'Unassigned'; if (!acc[n]) acc[n] = { total: 0, done: 0 }
+                    acc[n].total++; if (t.completed) acc[n].done++; return acc
+                  }, {} as Record<string, { total: number; done: number }>)).map(([name, d]: [string, any]) => (
                     <div key={name}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-gray-400 truncate">{name}</span>
-                        <span className="text-[10px] text-gray-600">{data.done}/{data.total}</span>
+                        <span className="text-[10px] text-gray-600">{d.done}/{d.total}</span>
                       </div>
-                      <ProgressBar done={data.done} total={data.total} />
+                      <ProgressBar done={d.done} total={d.total} />
                     </div>
                   ))}
                 </div>
@@ -573,70 +545,157 @@ export function Planner() {
         </div>
       )}
 
-      {/* ═══ WEEK VIEW ═══ */}
-      {tab === 'week' && (
-        <>
-          {/* Today note */}
+      {/* ═══ SCHEDULE VIEW (Connecteam-style) ═══ */}
+      {tab === 'schedule' && (
+        <div className="space-y-4">
+          {/* Day Note */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <FileText size={14} className="text-primary-400" />
               <span className="text-sm font-medium text-white">Today's Note</span>
             </div>
-            <textarea
-              key={`week-note-${weekStart}`}
-              defaultValue={dayNote?.note_text ?? ''}
+            <textarea key={`note-${weekStart}`} defaultValue={dayNote?.note_text ?? ''}
               onBlur={e => upsertNoteMutation.mutate({ note_date: today, note_text: e.target.value })}
-              rows={2}
-              placeholder="Add notes for today..."
-              className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none"
-            />
+              rows={2} placeholder="Add notes for today..."
+              className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none" />
           </div>
 
-          {/* Week grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {weekDates.map((date, i) => {
-              const dateStr = fmtDate(date)
-              const dayTasks = tasks.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
-              const isToday = dateStr === today
-              const done = dayTasks.filter((t: any) => t.completed).length
-
-              return (
-                <div key={dateStr} className={'bg-dark-surface border rounded-xl overflow-hidden flex flex-col transition-colors ' + (isToday ? 'border-primary-500/50 ring-1 ring-primary-500/20' : 'border-dark-border')}>
-                  {/* Day header — clickable to switch to day view */}
-                  <div
-                    onClick={() => { setCurrentDate(dateStr); setTab('day') }}
-                    className={'px-3 py-2.5 border-b cursor-pointer transition-colors ' + (isToday ? 'border-primary-500/30 bg-primary-500/5 hover:bg-primary-500/10' : 'border-dark-border bg-dark-surface2/50 hover:bg-dark-surface2')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className={'text-[10px] font-bold uppercase tracking-wider ' + (isToday ? 'text-primary-400' : 'text-gray-600')}>{DAYS[i]}</div>
-                        <div className={'text-lg font-bold ' + (isToday ? 'text-primary-300' : 'text-white')}>{date.getDate()}</div>
-                      </div>
-                      {dayTasks.length > 0 && (
-                        <div className="text-right">
-                          <div className={'text-xs font-semibold ' + (done === dayTasks.length ? 'text-green-400' : 'text-gray-500')}>{done}/{dayTasks.length}</div>
-                        </div>
+          {/* Schedule Grid: employee rows × day columns */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+            {/* Header row */}
+            <div className="grid border-b border-dark-border" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+              <div className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
+                <User size={14} className="mr-2" /> View by employee
+              </div>
+              {weekDates.map((date, i) => {
+                const dateStr = fmtDate(date)
+                const isToday = dateStr === today
+                return (
+                  <div key={dateStr} className={'px-3 py-3 text-center border-l border-dark-border ' + (isToday ? 'bg-primary-500/5' : '')}>
+                    <div className={'text-xs font-semibold ' + (isToday ? 'text-primary-400' : 'text-gray-500')}>{DAYS[i]}</div>
+                    <div className={'text-sm font-bold mt-0.5 ' + (isToday ? 'text-primary-300' : 'text-white')}>
+                      {isToday ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-500 text-white">{date.getDate()}</span>
+                      ) : (
+                        <span>{date.getMonth() + 1}/{date.getDate()}</span>
                       )}
                     </div>
-                    {dayTasks.length > 0 && (
-                      <div className="mt-1.5"><ProgressBar done={done} total={dayTasks.length} /></div>
-                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Employee rows */}
+            {scheduleEmployees.map((emp) => {
+              const empTasks = tasks.filter((t: any) => (t.employee_name || 'Unassigned') === emp)
+              return (
+                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                  {/* Employee name cell */}
+                  <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 flex-shrink-0">
+                      {emp.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-white truncate">{emp}</span>
                   </div>
 
-                  {/* Tasks */}
-                  <div className="p-1.5 space-y-1 flex-1 min-h-[120px] max-h-[320px] overflow-y-auto">
-                    {dayTasks.map((task: any) => <WeekCard key={task.id} task={task} dateStr={dateStr} />)}
-                  </div>
+                  {/* Day cells */}
+                  {weekDates.map((date) => {
+                    const dateStr = fmtDate(date)
+                    const isToday = dateStr === today
+                    const cellTasks = empTasks.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
 
-                  {/* Quick add */}
-                  <div className="border-t border-dark-border/30">
-                    <QuickAddRow date={dateStr} />
-                  </div>
+                    return (
+                      <div key={dateStr} className={'px-2 py-2 border-l border-dark-border/30 min-h-[72px] ' + (isToday ? 'bg-primary-500/5' : '')}>
+                        {cellTasks.length === 0 ? (
+                          <button onClick={() => openCreate(dateStr, emp)}
+                            className="w-full h-full min-h-[56px] rounded-lg border border-dashed border-dark-border/30 hover:border-primary-500/40 flex items-center justify-center text-gray-700 hover:text-gray-500 transition-all group">
+                            <Plus size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ) : (
+                          <div className="space-y-1">
+                            {cellTasks.map((task: any) => (
+                              <button key={task.id} onClick={() => openEdit(task)}
+                                className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/40 ' +
+                                  (task.completed ? 'bg-green-500/10 hover:bg-green-500/15' : 'bg-primary-500/10 hover:bg-primary-500/15')}>
+                                {(task.start_time || task.end_time) && (
+                                  <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-primary-400')}>
+                                    {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
+                                  </div>
+                                )}
+                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>
+                                  {task.title}
+                                </div>
+                                {task.subtasks?.length > 0 && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <ListChecks size={10} className="text-gray-600" />
+                                    <span className={'text-[10px] ' + (task.subtasks.every((s: any) => s.is_done) ? 'text-green-400' : 'text-gray-600')}>
+                                      {task.subtasks.filter((s: any) => s.is_done).length}/{task.subtasks.length}
+                                    </span>
+                                  </div>
+                                )}
+                                {task.priority === 'High' && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                    <span className="text-[10px] text-red-400">High</span>
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                            <button onClick={() => openCreate(dateStr, emp)}
+                              className="w-full flex items-center justify-center py-1 rounded text-gray-700 hover:text-gray-500 transition-colors">
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )
             })}
+
+            {/* Add unassigned row */}
+            {!employee && (() => {
+              const unassigned = tasks.filter((t: any) => !t.employee_name)
+              if (unassigned.length === 0 && scheduleEmployees.length > 0) return null
+              return (
+                <div className="grid border-b border-dark-border/50" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                  <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
+                    <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
+                    <span className="text-sm font-medium text-gray-500 italic">Unassigned</span>
+                  </div>
+                  {weekDates.map((date) => {
+                    const dateStr = fmtDate(date)
+                    const isToday = dateStr === today
+                    const cellTasks = unassigned.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
+                    return (
+                      <div key={dateStr} className={'px-2 py-2 border-l border-dark-border/30 min-h-[72px] ' + (isToday ? 'bg-primary-500/5' : '')}>
+                        {cellTasks.length === 0 ? (
+                          <button onClick={() => openCreate(dateStr)}
+                            className="w-full h-full min-h-[56px] rounded-lg border border-dashed border-dark-border/20 hover:border-primary-500/40 flex items-center justify-center text-gray-700 hover:text-gray-500 transition-all group">
+                            <Plus size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ) : (
+                          <div className="space-y-1">
+                            {cellTasks.map((task: any) => (
+                              <button key={task.id} onClick={() => openEdit(task)}
+                                className="w-full text-left p-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/15 transition-all hover:ring-1 hover:ring-gray-500/40">
+                                {(task.start_time || task.end_time) && (
+                                  <div className="text-xs font-semibold text-gray-400">{fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}</div>
+                                )}
+                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
-        </>
+        </div>
       )}
 
       {/* ═══ MONTH VIEW ═══ */}
@@ -682,74 +741,54 @@ export function Planner() {
       {tab === 'stats' && (
         <div className="space-y-5">
           <div className="flex gap-3 items-end flex-wrap">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">From</label>
-              <input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">To</label>
-              <input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} />
-            </div>
+            <div><label className="block text-xs text-gray-400 mb-1">From</label><input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} /></div>
+            <div><label className="block text-xs text-gray-400 mb-1">To</label><input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} /></div>
           </div>
-
           {stats && (() => {
-            const totalTasks = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
-            const completedTasks = stats.by_employee.reduce((s: number, e: any) => s + e.completed, 0)
-            const rate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-            return (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">Total Tasks</p>
-                    <p className="text-3xl font-bold text-white mt-2">{totalTasks}</p>
+            const total = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
+            const done = stats.by_employee.reduce((s: number, e: any) => s + e.completed, 0)
+            const rate = total > 0 ? Math.round((done / total) * 100) : 0
+            return (<>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[['Total Tasks', total, 'text-white'], ['Completed', done, 'text-green-400'], ['Pending', total - done, 'text-amber-400'], ['Rate', rate + '%', 'text-primary-400']].map(([l, v, c]) => (
+                  <div key={l as string} className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                    <p className="text-xs text-gray-500 font-medium">{l}</p>
+                    <p className={'text-3xl font-bold mt-2 ' + c}>{v}</p>
+                    {l === 'Rate' && <div className="mt-2"><ProgressBar done={done} total={total} /></div>}
                   </div>
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">Completed</p>
-                    <p className="text-3xl font-bold text-green-400 mt-2">{completedTasks}</p>
-                  </div>
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">Pending</p>
-                    <p className="text-3xl font-bold text-amber-400 mt-2">{totalTasks - completedTasks}</p>
-                  </div>
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">Completion Rate</p>
-                    <p className="text-3xl font-bold text-primary-400 mt-2">{rate}%</p>
-                    <div className="mt-2"><ProgressBar done={completedTasks} total={totalTasks} /></div>
-                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <h2 className="text-sm font-semibold text-white mb-4">By Employee</h2>
+                  {stats.by_employee.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={stats.by_employee} layout="vertical">
+                        <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                        <YAxis dataKey="employee_name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" stackId="a" />
+                        <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Remaining" stackId="a" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <h2 className="text-sm font-semibold text-white mb-4">By Employee</h2>
-                    {stats.by_employee.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={stats.by_employee} layout="vertical">
-                          <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                          <YAxis dataKey="employee_name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} />
-                          <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" stackId="a" />
-                          <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Remaining" stackId="a" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
-                  </div>
-                  <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <h2 className="text-sm font-semibold text-white mb-4">By Group</h2>
-                    {stats.by_group.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={stats.by_group}>
-                          <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#6b7280' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} />
-                          <Bar dataKey="total" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Total" />
-                          <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
-                  </div>
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <h2 className="text-sm font-semibold text-white mb-4">By Group</h2>
+                  {stats.by_group.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={stats.by_group}>
+                        <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#6b7280' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Bar dataKey="total" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Total" />
+                        <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
                 </div>
-              </>
-            )
+              </div>
+            </>)
           })()}
         </div>
       )}
@@ -760,22 +799,13 @@ export function Planner() {
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-4">Duplicate Task</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); copyMutation.mutate({ id: copyTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') ?? '' }) }} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Target Date</label>
-                <input required type="date" name="task_date" defaultValue={copyTarget.date} className={input} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Assign To (optional)</label>
-                <select name="employee_name" className={input}>
-                  <option value="">Keep original</option>
-                  {settings.employees.map(e => <option key={e}>{e}</option>)}
-                </select>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Target Date</label><input required type="date" name="task_date" defaultValue={copyTarget.date} className={inp} /></div>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Assign To</label>
+                <select name="employee_name" className={inp}><option value="">Keep original</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setCopyTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
-                <button type="submit" disabled={copyMutation.isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
-                  {copyMutation.isPending ? 'Duplicating...' : 'Duplicate'}
-                </button>
+                <button type="submit" disabled={copyMutation.isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{copyMutation.isPending ? 'Duplicating...' : 'Duplicate'}</button>
               </div>
             </form>
           </div>
@@ -788,22 +818,13 @@ export function Planner() {
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-4">Move Task</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); moveMutation.mutate({ id: moveTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') || undefined }) }} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">New Date</label>
-                <input required type="date" name="task_date" defaultValue={moveTarget.date} className={input} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Reassign (optional)</label>
-                <select name="employee_name" className={input}>
-                  <option value="">Keep current</option>
-                  {settings.employees.map(e => <option key={e}>{e}</option>)}
-                </select>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">New Date</label><input required type="date" name="task_date" defaultValue={moveTarget.date} className={inp} /></div>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Reassign</label>
+                <select name="employee_name" className={inp}><option value="">Keep current</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setMoveTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
-                <button type="submit" disabled={moveMutation.isPending} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
-                  {moveMutation.isPending ? 'Moving...' : 'Move'}
-                </button>
+                <button type="submit" disabled={moveMutation.isPending} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{moveMutation.isPending ? 'Moving...' : 'Move'}</button>
               </div>
             </form>
           </div>
@@ -815,99 +836,74 @@ export function Planner() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-white">
-                {editTask ? 'Edit Task' : 'New Task'}
-              </h2>
-              <button onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-dark-surface2 transition-colors">
-                <X size={18} />
-              </button>
+              <h2 className="text-lg font-semibold text-white">{editTask ? 'Edit Task' : 'New Task'}</h2>
+              <button onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-dark-surface2 transition-colors"><X size={18} /></button>
             </div>
-
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="space-y-4">
-              {/* Title */}
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Title *</label>
-                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What needs to be done?" className={input} autoFocus />
+                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What needs to be done?" className={inp} autoFocus />
               </div>
-
-              {/* Employee + Priority */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><User size={12} /> Assign To</label>
-                  <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))} className={input}>
+                  <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))} className={inp}>
                     <option value="">Unassigned</option>
-                    {settings.employees.map(emp => <option key={emp}>{emp}</option>)}
+                    {settings.employees.map((emp: string) => <option key={emp}>{emp}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Flag size={12} /> Priority</label>
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={input}>
+                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
                     {['Low', 'Normal', 'High'].map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
               </div>
-
-              {/* Date + Time */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Calendar size={12} /> Date</label>
-                  <input type="date" value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))} className={input} required />
+                  <input type="date" value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))} className={inp} required />
                 </div>
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Clock size={12} /> Start</label>
-                  <input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} className={input} />
+                  <input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} className={inp} />
                 </div>
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Clock size={12} /> End</label>
-                  <input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={input} />
+                  <input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inp} />
                 </div>
               </div>
-
-              {/* Group + Category + Duration */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Tag size={12} /> Group</label>
-                  <select value={form.task_group} onChange={e => setForm(f => ({ ...f, task_group: e.target.value }))} className={input}>
+                  <select value={form.task_group} onChange={e => setForm(f => ({ ...f, task_group: e.target.value }))} className={inp}>
                     <option value="">None</option>
-                    {settings.planner_groups.map(g => <option key={g}>{g}</option>)}
+                    {settings.planner_groups.map((g: string) => <option key={g}>{g}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-1.5 block">Category</label>
-                  <input value={form.task_category} onChange={e => setForm(f => ({ ...f, task_category: e.target.value }))} placeholder="e.g. Check-in" className={input} />
+                  <input value={form.task_category} onChange={e => setForm(f => ({ ...f, task_category: e.target.value }))} placeholder="e.g. Check-in" className={inp} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-1.5 block">Duration (min)</label>
-                  <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))} placeholder="30" className={input} />
+                  <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))} placeholder="30" className={inp} />
                 </div>
               </div>
-
-              {/* Status (edit only) */}
               {editTask && (
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-1.5 block">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={input}>
-                    <option value="">None</option>
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="done">Done</option>
+                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
+                    <option value="">None</option><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="blocked">Blocked</option><option value="done">Done</option>
                   </select>
                 </div>
               )}
-
-              {/* Description */}
               <div>
                 <label className="text-xs font-medium text-gray-400 mb-1.5 block">Description</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details, instructions, or notes..."
-                  className={input + ' resize-none'} />
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details..." className={inp + ' resize-none'} />
               </div>
-
-              {/* Actions */}
               <div className="flex justify-end gap-3 pt-2 border-t border-dark-border/50">
-                <button type="button" onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">
-                  Cancel
-                </button>
+                <button type="button" onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending || updateMutation.isPending}
                   className="px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
                   {(createMutation.isPending || updateMutation.isPending) ? 'Saving...' : editTask ? 'Update Task' : 'Create Task'}
