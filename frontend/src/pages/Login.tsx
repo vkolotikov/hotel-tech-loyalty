@@ -9,6 +9,7 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
 type View = 'intro' | 'login' | 'trial' | 'verify'
+type BillingInterval = 'monthly' | 'yearly'
 
 interface PlanData {
   id: string
@@ -22,6 +23,56 @@ interface PlanData {
   planProducts?: { product: { name: string } }[]
   planFeatures?: { feature: { name: string; key: string }; value: string }[]
 }
+
+const PLAN_BULLETS: Record<string, string[]> = {
+  starter: [
+    'Guest CRM — up to 500 profiles',
+    'Basic loyalty program (1 tier)',
+    'Email support',
+    'Single property',
+    'Basic analytics dashboard',
+    'Manual booking management',
+  ],
+  growth: [
+    'Guest CRM — unlimited profiles',
+    'Full loyalty program (up to 5 tiers)',
+    'Booking engine with online payments',
+    'AI-powered chatbot for your website',
+    'Multi-property support (up to 3)',
+    'Advanced analytics & AI insights',
+    'Priority email & chat support',
+    'NFC member cards',
+  ],
+  enterprise: [
+    'Everything in Growth, plus:',
+    'Unlimited properties',
+    'Custom loyalty tiers & rules',
+    'Dedicated account manager',
+    'API access & custom integrations',
+    'White-label branding',
+    'SLA guarantee (99.9% uptime)',
+    'Staff training & onboarding',
+  ],
+}
+
+/** Hardcoded fallback when SaaS API is unavailable */
+const FALLBACK_PLANS: PlanData[] = [
+  {
+    id: 'starter', name: 'Starter', slug: 'starter',
+    description: 'Perfect for small hotels getting started with guest management.',
+    monthlyAmount: 2900, yearlyAmount: 29000, currency: 'eur', trialDays: 7,
+  },
+  {
+    id: 'growth', name: 'Growth', slug: 'growth',
+    description: 'For growing hotels that need loyalty, bookings, and AI.',
+    monthlyAmount: 7900, yearlyAmount: 79000, currency: 'eur', trialDays: 14,
+  },
+  {
+    id: 'enterprise', name: 'Enterprise', slug: 'enterprise',
+    description: 'Full-featured solution for hotel groups and chains.',
+    monthlyAmount: 19900, yearlyAmount: 199000, currency: 'eur', trialDays: 14,
+  },
+]
 
 const FEATURES = [
   { icon: Users, title: 'Guest CRM', desc: 'Full guest profiles, tags, segmentation & activity tracking' },
@@ -38,8 +89,9 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [hotelName, setHotelName] = useState('')
-  const [selectedPlan, setSelectedPlan] = useState('starter')
-  const [plans, setPlans] = useState<PlanData[]>([])
+  const [selectedPlan, setSelectedPlan] = useState('growth')
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
+  const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -70,10 +122,10 @@ export function Login() {
     }
   }, [searchParams, setAuth, navigate])
 
-  // Fetch plans on mount
+  // Fetch plans on mount — use fallback if API fails
   useEffect(() => {
     api.get('/v1/plans').then(({ data }) => {
-      if (data.plans) setPlans(data.plans)
+      if (data.plans?.length) setPlans(data.plans)
     }).catch(() => {})
   }, [])
 
@@ -182,6 +234,7 @@ export function Login() {
         password,
         hotel_name: hotelName,
         plan: selectedPlan,
+        billing_interval: billingInterval,
       })
       setAuth(data.token, data.user, data.staff)
       navigate('/')
@@ -203,6 +256,20 @@ export function Login() {
     return symbol + amount.toLocaleString()
   }
 
+  const getPlanPrice = (plan: PlanData) => {
+    if (billingInterval === 'yearly') {
+      return formatPrice(Math.round(plan.yearlyAmount / 12), plan.currency)
+    }
+    return formatPrice(plan.monthlyAmount, plan.currency)
+  }
+
+  const getYearlySaving = (plan: PlanData) => {
+    const monthlyTotal = plan.monthlyAmount * 12
+    const yearlyTotal = plan.yearlyAmount
+    if (yearlyTotal >= monthlyTotal) return 0
+    return Math.round(((monthlyTotal - yearlyTotal) / monthlyTotal) * 100)
+  }
+
   // ─── Intro View ─────────────────────────────────────────────────────────────
   if (view === 'intro') {
     return (
@@ -212,11 +279,11 @@ export function Login() {
             <Hotel size={40} className="text-white" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-3">
-            Hotel Loyalty Platform
+            Hotel Management System
           </h1>
           <p className="text-lg text-gray-400 text-center max-w-xl mb-10">
-            The all-in-one guest experience platform. CRM, loyalty program,
-            booking engine, and AI insights &mdash; built for modern hotels.
+            The all-in-one hotel management platform. CRM, loyalty program,
+            booking engine, AI chatbot &amp; analytics &mdash; built for modern hotels.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-16">
@@ -244,53 +311,74 @@ export function Login() {
             ))}
           </div>
 
-          {plans.length > 0 && (
-            <div className="mt-16 w-full max-w-4xl">
-              <h2 className="text-xl font-bold text-white text-center mb-2">Plans &amp; Pricing</h2>
-              <p className="text-gray-500 text-center text-sm mb-8">All plans include a free trial. No credit card required.</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {plans.map((plan) => {
-                  const isPopular = plan.slug === 'growth'
-                  return (
-                    <div key={plan.id} className={'rounded-xl border p-6 relative ' + (isPopular ? 'border-primary-500/50 bg-primary-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]')}>
-                      {isPopular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-500 text-black text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
-                          Most Popular
-                        </div>
-                      )}
-                      <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                      <div className="mt-2 mb-1">
-                        <span className="text-3xl font-bold text-white">{formatPrice(plan.monthlyAmount, plan.currency)}</span>
-                        <span className="text-gray-500 text-sm">/month + VAT</span>
-                      </div>
-                      <p className="text-gray-500 text-xs mb-4">{plan.trialDays}-day free trial</p>
-                      <p className="text-gray-400 text-xs leading-relaxed mb-4">{plan.description}</p>
-                      {plan.planProducts && plan.planProducts.length > 0 && (
-                        <div className="space-y-1.5 mb-5">
-                          {plan.planProducts.map((pp: any, i: number) => (
-                            <div key={i} className="flex items-center gap-2 text-xs">
-                              <Check size={12} className="text-green-400 shrink-0" />
-                              <span className="text-gray-300">{pp.product?.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <button
-                        onClick={() => { setSelectedPlan(plan.slug); setView('trial') }}
-                        className={'w-full py-2.5 rounded-lg font-medium text-sm transition-colors ' + (isPopular ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10')}
-                      >
-                        Start {plan.trialDays}-Day Trial
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+          <div className="mt-16 w-full max-w-5xl">
+            <h2 className="text-xl font-bold text-white text-center mb-2">Plans &amp; Pricing</h2>
+            <p className="text-gray-500 text-center text-sm mb-6">All plans include a free trial. No credit card required.</p>
+
+            {/* Billing toggle */}
+            <div className="flex items-center justify-center gap-3 mb-8">
+              <span className={'text-sm font-medium ' + (billingInterval === 'monthly' ? 'text-white' : 'text-gray-500')}>Monthly</span>
+              <button
+                onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
+                className={'relative w-12 h-6 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-primary-600' : 'bg-white/10')}
+              >
+                <div className={'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-6' : 'translate-x-0.5')} />
+              </button>
+              <span className={'text-sm font-medium ' + (billingInterval === 'yearly' ? 'text-white' : 'text-gray-500')}>
+                Yearly
+                <span className="ml-1.5 text-xs text-green-400 font-semibold">Save up to 17%</span>
+              </span>
             </div>
-          )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {plans.map((plan) => {
+                const isPopular = plan.slug === 'growth'
+                const bullets = PLAN_BULLETS[plan.slug] || []
+                const saving = getYearlySaving(plan)
+                return (
+                  <div key={plan.id} className={'rounded-xl border p-6 relative flex flex-col ' + (isPopular ? 'border-primary-500/50 bg-primary-500/[0.04] ring-1 ring-primary-500/20' : 'border-white/[0.06] bg-white/[0.02]')}>
+                    {isPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-500 text-black text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                        Most Popular
+                      </div>
+                    )}
+                    <h3 className="text-white font-bold text-lg">{plan.name}</h3>
+                    <div className="mt-2 mb-1">
+                      <span className="text-3xl font-bold text-white">{getPlanPrice(plan)}</span>
+                      <span className="text-gray-500 text-sm">/mo{billingInterval === 'yearly' ? ' (billed yearly)' : ''} + VAT</span>
+                    </div>
+                    {billingInterval === 'yearly' && saving > 0 && (
+                      <p className="text-green-400 text-xs font-medium mb-1">Save {saving}% vs monthly</p>
+                    )}
+                    <p className="text-gray-500 text-xs mb-3">{plan.trialDays}-day free trial</p>
+                    <p className="text-gray-400 text-xs leading-relaxed mb-4">{plan.description}</p>
+
+                    {bullets.length > 0 && (
+                      <div className="space-y-2 mb-5 flex-1">
+                        {bullets.map((bullet, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs">
+                            <Check size={12} className="text-green-400 shrink-0 mt-0.5" />
+                            <span className="text-gray-300">{bullet}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => { setSelectedPlan(plan.slug); setView('trial') }}
+                      className={'w-full py-2.5 rounded-lg font-medium text-sm transition-colors mt-auto ' + (isPopular ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10')}
+                    >
+                      Start {plan.trialDays}-Day Trial
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         <div className="text-center py-6 text-gray-600 text-xs">
-          Powered by <span className="text-gray-400">HotelTech</span> &middot; saas.hotel-tech.ai
+          Powered by <span className="text-gray-400">HotelTech</span> &middot; hotel-tech.ai
         </div>
       </div>
     )
@@ -383,7 +471,7 @@ export function Login() {
               <Hotel size={32} className="text-white" />
             </div>
           </button>
-          <h1 className="text-2xl font-bold text-white">Hotel Loyalty</h1>
+          <h1 className="text-2xl font-bold text-white">Hotel Management System</h1>
           <p className="text-gray-500 mt-1">
             {view === 'login' ? 'Admin Dashboard' : 'Start Your Free Trial'}
           </p>
@@ -478,24 +566,35 @@ export function Login() {
                 </div>
               </div>
 
-              {plans.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Select Plan</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {plans.map((p) => (
-                      <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
-                        className={'rounded-lg border p-2.5 text-center transition-all ' +
-                          (selectedPlan === p.slug
-                            ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30'
-                            : 'border-white/[0.08] bg-[#1e1e24] hover:border-white/20')}>
-                        <div className="text-xs font-semibold text-white">{p.name}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">{formatPrice(p.monthlyAmount, p.currency)}/mo</div>
-                        <div className="text-[10px] text-primary-400 mt-0.5">{p.trialDays}d trial</div>
-                      </button>
-                    ))}
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Select Plan</label>
+                {/* Billing toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-gray-500')}>Monthly</span>
+                  <button type="button"
+                    onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
+                    className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-primary-600' : 'bg-white/10')}
+                  >
+                    <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+                  </button>
+                  <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-gray-500')}>
+                    Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
+                  </span>
                 </div>
-              )}
+                <div className="grid grid-cols-3 gap-2">
+                  {plans.map((p) => (
+                    <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
+                      className={'rounded-lg border p-2.5 text-center transition-all ' +
+                        (selectedPlan === p.slug
+                          ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30'
+                          : 'border-white/[0.08] bg-[#1e1e24] hover:border-white/20')}>
+                      <div className="text-xs font-semibold text-white">{p.name}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{getPlanPrice(p)}/mo</div>
+                      <div className="text-[10px] text-primary-400 mt-0.5">{p.trialDays}d trial</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button type="submit" disabled={loading}
                 className="w-full bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
