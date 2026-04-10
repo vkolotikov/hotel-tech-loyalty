@@ -315,7 +315,7 @@ export function BookingDetail() {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">Paid (€)</label>
-                <input type="number" step="0.01" min="0" defaultValue={b.price_paid || 0}
+                <input key={`paid-${b.price_paid}`} type="number" step="0.01" min="0" defaultValue={b.price_paid || 0}
                   onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v !== (b.price_paid || 0)) updateStatus.mutate({ price_paid: v }) }}
                   className={selectClass} />
               </div>

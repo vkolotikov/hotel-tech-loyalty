@@ -501,7 +501,7 @@ export function Bookings() {
           </select>
           <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass}>
             <option value="">All Payments</option>
-            <option value="paid">Paid</option><option value="pending">Pending</option>
+            <option value="open">Open</option><option value="paid">Paid</option><option value="pending">Pending</option>
             <option value="invoice_waiting">Invoice Waiting</option><option value="channel_managed">Channel Managed</option>
           </select>
         </div>

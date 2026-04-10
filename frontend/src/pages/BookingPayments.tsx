@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 const PAY_PILL: Record<string, string> = {
   paid:            'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
@@ -18,10 +18,20 @@ function payLabel(s: string) {
 
 export function BookingPayments() {
   const [paymentStatus, setPaymentStatus] = useState('')
+  const [search, setSearch] = useState('')
+  const [unitId, setUnitId] = useState('')
   const [page, setPage] = useState(1)
+
+  const { data: unitsData } = useQuery({
+    queryKey: ['booking-rooms'],
+    queryFn: () => api.get('/v1/admin/booking-rooms').then(r => r.data),
+  })
+  const units: { id: number; apartment_id: number; name: string }[] = unitsData?.data ?? []
 
   const params: any = { page }
   if (paymentStatus) params.payment_status = paymentStatus
+  if (search) params.search = search
+  if (unitId) params.unit_id = unitId
 
   const { data, isLoading } = useQuery({
     queryKey: ['booking-payments', params],
@@ -42,9 +52,23 @@ export function BookingPayments() {
         <p className="text-sm text-gray-500 mt-1">Payment status and balance tracking for all bookings</p>
       </div>
 
-      {/* Filter */}
-      <div className="rounded-2xl p-4 border border-white/[0.06]"
+      {/* Filters */}
+      <div className="rounded-2xl p-4 border border-white/[0.06] flex flex-wrap items-center gap-3"
         style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search guest, unit, channel…"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            className={`${selectClass} pl-9 w-full`}
+          />
+        </div>
+        <select value={unitId} onChange={e => { setUnitId(e.target.value); setPage(1) }} className={selectClass}>
+          <option value="">All Units</option>
+          {units.map(u => <option key={u.id} value={u.apartment_id}>{u.name}</option>)}
+        </select>
         <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass}>
           <option value="">All Payment States</option>
           <option value="open">Open (Balance Due)</option><option value="paid">Paid</option>

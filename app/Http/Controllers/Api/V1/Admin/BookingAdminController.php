@@ -50,17 +50,23 @@ class BookingAdminController extends Controller
                 'total' => round($group->sum('price_total'), 2),
             ])->values();
 
-        // Arrivals timeline (bar chart — next 14 days)
+        // Arrivals timeline (bar chart — next 14 days) — single GROUP BY query
+        $arrivalStart = now()->toDateString();
+        $arrivalEnd   = now()->addDays(13)->toDateString();
+        $arrivalQuery = BookingMirror::selectRaw('arrival_date, COUNT(*) as cnt')
+            ->whereBetween('arrival_date', [$arrivalStart, $arrivalEnd])
+            ->where('booking_state', '!=', 'cancelled')
+            ->groupBy('arrival_date');
+        if ($unitId) $arrivalQuery->where('apartment_id', $unitId);
+        $arrivalCounts = $arrivalQuery->pluck('cnt', 'arrival_date');
+
         $arrivalDays = [];
         for ($i = 0; $i < 14; $i++) {
             $date = now()->addDays($i)->toDateString();
-            $dayBookings = BookingMirror::where('arrival_date', $date)
-                ->where('booking_state', '!=', 'cancelled');
-            if ($unitId) $dayBookings = $dayBookings->where('apartment_id', $unitId);
             $arrivalDays[] = [
                 'date'  => $date,
                 'label' => now()->addDays($i)->format('D j'),
-                'count' => $dayBookings->count(),
+                'count' => (int) ($arrivalCounts[$date] ?? 0),
             ];
         }
 
@@ -400,6 +406,18 @@ class BookingAdminController extends Controller
             } else {
                 $query->where('payment_status', $status);
             }
+        }
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('guest_name', 'ilike', "%{$search}%")
+                  ->orWhere('apartment_name', 'ilike', "%{$search}%")
+                  ->orWhere('channel_name', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($unitId = $request->input('unit_id')) {
+            $query->where('apartment_id', $unitId);
         }
 
         $paginated = $query->paginate(25);
