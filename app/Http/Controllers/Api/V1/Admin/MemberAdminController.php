@@ -153,9 +153,9 @@ class MemberAdminController extends Controller
                     ->limit(1),
             ])
             ->when($request->search, function ($q, $search) {
-                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('member_number', 'like', "%{$search}%");
+                $q->whereHas('user', fn($u) => $u->where('name', 'ILIKE', "%{$search}%")
+                    ->orWhere('email', 'ILIKE', "%{$search}%"))
+                  ->orWhere('member_number', 'ILIKE', "%{$search}%");
             })
             ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
             ->when($request->lead_source, fn($q, $src) => $q->whereHas('guests', fn($g) => $g->where('lead_source', $src)))
@@ -443,9 +443,9 @@ class MemberAdminController extends Controller
     {
         $query = LoyaltyMember::with(['user:id,name,email,phone', 'tier:id,name'])
             ->when($request->search, function ($q, $search) {
-                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('member_number', 'like', "%{$search}%");
+                $q->whereHas('user', fn($u) => $u->where('name', 'ILIKE', "%{$search}%")
+                    ->orWhere('email', 'ILIKE', "%{$search}%"))
+                  ->orWhere('member_number', 'ILIKE', "%{$search}%");
             })
             ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')))

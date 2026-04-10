@@ -9,17 +9,10 @@ import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 
-const TIERS = [
-  { id: 1, name: 'Bronze' },
-  { id: 2, name: 'Silver' },
-  { id: 3, name: 'Gold' },
-  { id: 4, name: 'Platinum' },
-  { id: 5, name: 'Diamond' },
-]
-
 export function Members() {
   const [search, setSearch] = useState('')
   const [tierId, setTierId] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [createTab, setCreateTab] = useState<'form' | 'ai'>('form')
@@ -30,9 +23,15 @@ export function Members() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
+  const { data: tiersData } = useQuery({
+    queryKey: ['admin-tiers'],
+    queryFn: () => api.get('/v1/admin/tiers').then(r => r.data),
+  })
+  const tiers: { id: number; name: string }[] = tiersData?.tiers ?? []
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-members', search, tierId, page],
-    queryFn: () => api.get('/v1/admin/members', { params: { search, tier_id: tierId || undefined, page } }).then(r => r.data),
+    queryKey: ['admin-members', search, tierId, statusFilter, page],
+    queryFn: () => api.get('/v1/admin/members', { params: { search, tier_id: tierId || undefined, is_active: statusFilter !== '' ? statusFilter : undefined, page } }).then(r => r.data),
   })
 
   const createMutation = useMutation({
@@ -104,7 +103,16 @@ export function Members() {
             className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">All Tiers</option>
-            {TIERS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Status</option>
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
           </select>
         </div>
 
@@ -259,8 +267,8 @@ export function Members() {
                       <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Starting Tier <span className="font-normal text-[#636366]">(optional, default Bronze)</span></label>
                       <select value={form.tier_id} onChange={e => setForm(f => ({ ...f, tier_id: e.target.value }))}
                         className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <option value="">Bronze (default)</option>
-                        {TIERS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        <option value="">Default tier</option>
+                        {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </div>
                   </div>
@@ -329,10 +337,10 @@ export function Members() {
                       ))}
                       <div>
                         <label className="block text-xs text-[#a0a0a0] mb-1">Starting Tier</label>
-                        <select value={TIERS.find(t => t.name === captureResult.tier)?.id ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, tier_id: e.target.value, tier: TIERS.find(t => t.id === Number(e.target.value))?.name ?? '' }))}
+                        <select value={tiers.find(t => t.name === captureResult.tier)?.id ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, tier_id: e.target.value, tier: tiers.find(t => t.id === Number(e.target.value))?.name ?? '' }))}
                           className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                          <option value="">Bronze (default)</option>
-                          {TIERS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          <option value="">Default tier</option>
+                          {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       </div>
                     </div>
@@ -355,7 +363,7 @@ export function Members() {
                                 email: r.email,
                                 password: r.password,
                                 phone: r.phone || undefined,
-                                tier_id: r.tier_id || TIERS.find(t => t.name === r.tier)?.id || undefined,
+                                tier_id: r.tier_id || tiers.find(t => t.name === r.tier)?.id || undefined,
                               })
                               qc.invalidateQueries({ queryKey: ['admin-members'] })
                               toast.success(`Member created for ${r.name}`)

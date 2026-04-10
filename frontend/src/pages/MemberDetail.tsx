@@ -61,9 +61,7 @@ export function MemberDetail() {
             formData.append(key, String(value))
           }
         })
-        return api.post(`/v1/admin/members/${id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        return api.post(`/v1/admin/members/${id}`, formData)
       }
       return api.put(`/v1/admin/members/${id}`, payload)
     },

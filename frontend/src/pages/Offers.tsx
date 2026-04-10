@@ -145,14 +145,10 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
 
       if (offer) {
         formData.append('_method', 'PUT')
-        await api.post(`/v1/admin/offers/${offer.id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        await api.post(`/v1/admin/offers/${offer.id}`, formData)
         toast.success('Offer updated')
       } else {
-        await api.post('/v1/admin/offers', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        await api.post('/v1/admin/offers', formData)
         toast.success('Offer created')
       }
       qc.invalidateQueries({ queryKey: ['admin-offers'] })
