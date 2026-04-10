@@ -19,6 +19,8 @@ const CATEGORIES = [
   { value: 'campaign', label: 'Campaign' },
   { value: 'transactional', label: 'Transactional' },
   { value: 'welcome', label: 'Welcome' },
+  { value: 'birthday', label: 'Birthday' },
+  { value: 're-engagement', label: 'Re-engagement' },
 ]
 
 const DEFAULT_TEMPLATE = `<!DOCTYPE html>
@@ -66,6 +68,81 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
   </div>
 </body>
 </html>`
+
+const WELCOME_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: #1c1c1e; padding: 32px 40px; text-align: center; }
+    .header h1 { color: #c9a84c; margin: 0; font-size: 22px; letter-spacing: 2px; }
+    .body { padding: 40px; }
+    .body h2 { color: #1c1c1e; margin: 0 0 16px; font-size: 20px; }
+    .body p { color: #4a4a4a; line-height: 1.6; margin: 0 0 16px; font-size: 15px; }
+    .cta { display: inline-block; background: #c9a84c; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; }
+    .footer { background: #f4f4f7; padding: 24px 40px; text-align: center; }
+    .footer p { color: #9ca3af; font-size: 12px; margin: 0; line-height: 1.5; }
+    .welcome-badge { background: linear-gradient(135deg, #c9a84c, #e8c96a); color: #fff; display: inline-block; padding: 8px 24px; border-radius: 20px; font-weight: 700; font-size: 14px; letter-spacing: 1px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>{{hotel_name}}</h1>
+    </div>
+    <div class="body">
+      <p style="text-align: center;"><span class="welcome-badge">WELCOME</span></p>
+      <h2>Hello {{first_name}},</h2>
+      <p>Welcome to our loyalty program! We are thrilled to have you as a {{tier_name}} member.</p>
+      <p>Your member number is <strong>#{{member_number}}</strong>. Use your referral code <strong>{{referral_code}}</strong> to invite friends and earn bonus points!</p>
+      <p style="text-align: center; margin-top: 32px;">
+        <a href="#" class="cta">Explore Your Benefits</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{current_year}} {{hotel_name}}. All rights reserved.</p>
+      <p>Member #{{member_number}} &middot; {{tier_name}} Tier</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+const MINIMAL_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .wrapper { max-width: 560px; margin: 0 auto; padding: 48px 24px; }
+    .wrapper h2 { color: #111; margin: 0 0 20px; font-size: 22px; font-weight: 600; }
+    .wrapper p { color: #555; line-height: 1.7; margin: 0 0 16px; font-size: 15px; }
+    .cta { display: inline-block; background: #111; color: #fff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .divider { border: none; border-top: 1px solid #eee; margin: 32px 0; }
+    .footer { color: #aaa; font-size: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h2>Hi {{first_name}},</h2>
+    <p>Your message goes here. Keep it short and personal.</p>
+    <p style="margin-top: 28px;">
+      <a href="#" class="cta">Take Action</a>
+    </p>
+    <hr class="divider">
+    <p class="footer">{{hotel_name}} &middot; Member #{{member_number}}</p>
+  </div>
+</body>
+</html>`
+
+const PRESETS: { label: string; value: string; subject: string; category: string }[] = [
+  { label: 'Points & Rewards', value: DEFAULT_TEMPLATE, subject: '{{first_name}}, check your rewards!', category: 'campaign' },
+  { label: 'Welcome Email', value: WELCOME_TEMPLATE, subject: 'Welcome to {{hotel_name}}, {{first_name}}!', category: 'welcome' },
+  { label: 'Minimal / Clean', value: MINIMAL_TEMPLATE, subject: '', category: 'campaign' },
+]
 
 export function EmailTemplates() {
   const qc = useQueryClient()
@@ -287,6 +364,28 @@ export function EmailTemplates() {
                     className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
+
+                {!editing && (
+                  <div>
+                    <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Start from Preset</label>
+                    <div className="flex gap-2">
+                      {PRESETS.map(p => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, html_body: p.value, subject: p.subject || f.subject, category: p.category }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            form.html_body === p.value
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

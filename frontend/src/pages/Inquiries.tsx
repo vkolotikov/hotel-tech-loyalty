@@ -320,10 +320,7 @@ export function Inquiries() {
               createMutation.mutate(body)
             }} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Guest ID *</label>
-                  <input required value={form.guest_id} onChange={e => setForm(f => ({ ...f, guest_id: e.target.value }))} type="number" className={inp} />
-                </div>
+                <GuestPicker value={form.guest_id} onChange={v => setForm(f => ({ ...f, guest_id: v }))} className={inp} />
                 <div>
                   <label className="block text-xs text-[#a0a0a0] mb-1">Property *</label>
                   <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))} className={inp} required>
@@ -588,6 +585,60 @@ export function Inquiries() {
               </div>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GuestPicker({ value, onChange, className }: { value: string; onChange: (v: string) => void; className: string }) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const { data } = useQuery({
+    queryKey: ['guest-picker', search],
+    queryFn: () => api.get('/v1/admin/guests', { params: { search, per_page: 8 } }).then(r => r.data),
+    enabled: search.length >= 2,
+  })
+  const guests: any[] = data?.data ?? []
+
+  const { data: selected } = useQuery({
+    queryKey: ['guest-selected', value],
+    queryFn: () => api.get(`/v1/admin/guests/${value}`).then(r => r.data),
+    enabled: !!value,
+  })
+
+  return (
+    <div className="relative">
+      <label className="block text-xs text-[#a0a0a0] mb-1">Guest *</label>
+      {value && selected ? (
+        <div className="flex items-center gap-2">
+          <span className={`${className} flex-1 truncate`}>{selected.full_name}{selected.email ? ` (${selected.email})` : ''}</span>
+          <button type="button" onClick={() => { onChange(''); setSearch('') }} className="text-xs text-[#636366] hover:text-white px-2 py-1">Clear</button>
+        </div>
+      ) : (
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setOpen(true) }}
+          onFocus={() => search.length >= 2 && setOpen(true)}
+          placeholder="Search guest name or email..."
+          className={className}
+        />
+      )}
+      {open && guests.length > 0 && !value && (
+        <div className="absolute z-10 mt-1 w-full bg-dark-surface border border-dark-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {guests.map((g: any) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => { onChange(String(g.id)); setOpen(false); setSearch('') }}
+              className="w-full text-left px-3 py-2 text-sm text-white hover:bg-dark-surface2 transition-colors"
+            >
+              <span className="font-medium">{g.full_name}</span>
+              {g.email && <span className="text-xs text-[#636366] ml-2">{g.email}</span>}
+            </button>
+          ))}
         </div>
       )}
     </div>

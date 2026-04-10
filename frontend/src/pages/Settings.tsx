@@ -258,7 +258,7 @@ export function Settings() {
     mutationFn: (file: File) => {
       const fd = new FormData()
       fd.append('logo', file)
-      return api.post('/v1/admin/settings/logo', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      return api.post('/v1/admin/settings/logo', fd)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-settings'] })

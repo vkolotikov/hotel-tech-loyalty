@@ -23,7 +23,6 @@ interface EmailTemplate {
   subject: string
 }
 
-const SEGMENT_TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']
 const CHANNELS = [
   { value: 'push', label: 'Push Only' },
   { value: 'email', label: 'Email Only' },
@@ -46,6 +45,12 @@ export function Notifications() {
     email_template_id: '',
     email_subject: '',
   })
+
+  const { data: tiersData } = useQuery({
+    queryKey: ['admin-tiers'],
+    queryFn: () => api.get('/v1/admin/tiers').then(r => r.data),
+  })
+  const tiers: { id: number; name: string }[] = tiersData?.tiers ?? []
 
   const { data, isLoading } = useQuery({
     queryKey: ['campaigns'],
@@ -252,18 +257,18 @@ export function Notifications() {
               <div>
                 <label className="block text-sm font-semibold text-[#a0a0a0] mb-2">Target Tiers (leave empty for all)</label>
                 <div className="flex flex-wrap gap-2">
-                  {SEGMENT_TIERS.map(tier => (
+                  {tiers.map(tier => (
                     <button
-                      key={tier}
+                      key={tier.id}
                       type="button"
-                      onClick={() => toggleTier(tier)}
+                      onClick={() => toggleTier(tier.name)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                        form.tier_filter.includes(tier)
+                        form.tier_filter.includes(tier.name)
                           ? 'bg-primary-600 text-white border-primary-600'
                           : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
                       }`}
                     >
-                      {tier}
+                      {tier.name}
                     </button>
                   ))}
                 </div>
