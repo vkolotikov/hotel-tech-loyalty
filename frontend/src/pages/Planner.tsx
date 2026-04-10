@@ -82,7 +82,9 @@ export function Planner() {
   const [createDate, setCreateDate] = useState('')
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
-  const [newSubtask, setNewSubtask] = useState('')
+  const [newSubtasks, setNewSubtasks] = useState<Record<number, string>>({})
+  const getNewSubtask = (taskId: number) => newSubtasks[taskId] ?? ''
+  const setNewSubtask = (taskId: number, val: string) => setNewSubtasks(prev => ({ ...prev, [taskId]: val }))
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [editTask, setEditTask] = useState<any>(null)
@@ -160,7 +162,7 @@ export function Planner() {
 
   const addSubtaskMutation = useMutation({
     mutationFn: ({ taskId, title }: any) => api.post('/v1/admin/planner/tasks/' + taskId + '/subtasks', { title }),
-    onSuccess: () => { invalidate(); setNewSubtask('') },
+    onSuccess: (_data, vars) => { invalidate(); setNewSubtask(vars.taskId, '') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -247,12 +249,12 @@ export function Planner() {
     const isExpanded = expandedTask === task.id
 
     return (
-      <div className={'rounded-lg bg-dark-surface2 border-l-2 ' + (PRIORITY_COLORS[task.priority] ?? 'border-l-gray-600') + (compact ? ' p-1.5 text-[10px]' : ' p-2.5 text-xs')}>
-        <div className="flex items-start gap-1.5">
-          <button onClick={() => toggleMutation.mutate({ id: task.id, completed: task.completed })} className="flex-shrink-0 mt-0.5">
+      <div className={'rounded-lg bg-dark-surface2 border-l-2 ' + (PRIORITY_COLORS[task.priority] ?? 'border-l-gray-600') + (compact ? ' p-1.5 text-[10px]' : ' p-3 text-xs')}>
+        <div className="flex items-start gap-2">
+          <button onClick={() => toggleMutation.mutate({ id: task.id, completed: task.completed })} className="flex-shrink-0 mt-0.5 p-0.5 rounded hover:bg-dark-surface transition-colors">
             {task.completed
-              ? <CheckCircle2 size={compact ? 11 : 13} className="text-green-400" />
-              : <Circle size={compact ? 11 : 13} className="text-gray-600 hover:text-gray-400" />}
+              ? <CheckCircle2 size={compact ? 14 : 18} className="text-green-400" />
+              : <Circle size={compact ? 14 : 18} className="text-gray-500 hover:text-gray-300" />}
           </button>
           <div className="flex-1 min-w-0">
             <div className={'font-medium leading-tight ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</div>
@@ -274,28 +276,28 @@ export function Planner() {
             )}
           </div>
           {!compact && (
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => setExpandedTask(isExpanded ? null : task.id)} className={'p-1 rounded hover:bg-dark-surface transition-colors ' + (isExpanded ? 'text-primary-400' : 'text-gray-600 hover:text-gray-400')} title="Details">
-                <ChevronDown size={11} className={'transition-transform ' + (isExpanded ? 'rotate-180' : '')} />
+            <div className="flex items-center gap-1">
+              <button onClick={() => setExpandedTask(isExpanded ? null : task.id)} className={'p-1.5 rounded hover:bg-dark-surface transition-colors ' + (isExpanded ? 'text-primary-400' : 'text-gray-500 hover:text-gray-300')} title="Details">
+                <ChevronDown size={15} className={'transition-transform ' + (isExpanded ? 'rotate-180' : '')} />
               </button>
-              <button onClick={() => openEdit(task)} className="p-1 rounded text-gray-600 hover:text-primary-400 hover:bg-dark-surface transition-colors" title="Edit">
-                <Edit size={10} />
+              <button onClick={() => openEdit(task)} className="p-1.5 rounded text-gray-500 hover:text-primary-400 hover:bg-dark-surface transition-colors" title="Edit">
+                <Edit size={14} />
               </button>
-              <button onClick={() => setMoveTarget({ taskId: task.id, date: dateStr })} className="p-1 rounded text-gray-600 hover:text-amber-400 hover:bg-dark-surface transition-colors" title="Move">
-                <ArrowRight size={10} />
+              <button onClick={() => setMoveTarget({ taskId: task.id, date: dateStr })} className="p-1.5 rounded text-gray-500 hover:text-amber-400 hover:bg-dark-surface transition-colors" title="Move">
+                <ArrowRight size={14} />
               </button>
-              <button onClick={() => setCopyTarget({ taskId: task.id, date: dateStr })} className="p-1 rounded text-gray-600 hover:text-blue-400 hover:bg-dark-surface transition-colors" title="Copy">
-                <Copy size={10} />
+              <button onClick={() => setCopyTarget({ taskId: task.id, date: dateStr })} className="p-1.5 rounded text-gray-500 hover:text-blue-400 hover:bg-dark-surface transition-colors" title="Copy">
+                <Copy size={14} />
               </button>
-              <button onClick={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task.id) }} className="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-dark-surface transition-colors" title="Delete">
-                <Trash2 size={10} />
+              <button onClick={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task.id) }} className="p-1.5 rounded text-gray-500 hover:text-red-400 hover:bg-dark-surface transition-colors" title="Delete">
+                <Trash2 size={14} />
               </button>
             </div>
           )}
           {compact && (
             <div className="flex gap-0.5">
-              <button onClick={() => openEdit(task)} className="text-gray-600 hover:text-primary-400 p-0.5" title="Edit"><Edit size={9} /></button>
-              <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(task.id) }} className="text-gray-600 hover:text-red-400 p-0.5" title="Delete"><Trash2 size={9} /></button>
+              <button onClick={() => openEdit(task)} className="text-gray-500 hover:text-primary-400 p-1" title="Edit"><Edit size={13} /></button>
+              <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(task.id) }} className="text-gray-500 hover:text-red-400 p-1" title="Delete"><Trash2 size={13} /></button>
             </div>
           )}
         </div>
@@ -308,30 +310,30 @@ export function Planner() {
             )}
 
             {/* Subtasks */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {task.subtasks?.map((sub: any) => (
-                <div key={sub.id} className="flex items-center gap-1.5 group">
-                  <button onClick={() => toggleSubtaskMutation.mutate(sub.id)}>
+                <div key={sub.id} className="flex items-center gap-2 group">
+                  <button onClick={() => toggleSubtaskMutation.mutate(sub.id)} className="flex-shrink-0 p-0.5 rounded hover:bg-dark-surface transition-colors">
                     {sub.is_done
-                      ? <CheckCircle2 size={11} className="text-green-400" />
-                      : <Circle size={11} className="text-gray-600 hover:text-gray-400" />}
+                      ? <CheckCircle2 size={15} className="text-green-400" />
+                      : <Circle size={15} className="text-gray-500 hover:text-gray-300" />}
                   </button>
                   <span className={'flex-1 text-xs ' + (sub.is_done ? 'line-through text-gray-600' : 'text-gray-300')}>{sub.title}</span>
-                  <button onClick={() => deleteSubtaskMutation.mutate(sub.id)} className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-opacity">
-                    <Trash2 size={9} />
+                  <button onClick={() => deleteSubtaskMutation.mutate(sub.id)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition-opacity">
+                    <Trash2 size={12} />
                   </button>
                 </div>
               ))}
-              <div className="flex gap-1 mt-1">
+              <div className="flex gap-1.5 mt-1.5">
                 <input
-                  value={newSubtask}
-                  onChange={e => setNewSubtask(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && newSubtask.trim()) { addSubtaskMutation.mutate({ taskId: task.id, title: newSubtask.trim() }); e.preventDefault() } }}
+                  value={getNewSubtask(task.id)}
+                  onChange={e => setNewSubtask(task.id, e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && getNewSubtask(task.id).trim()) { addSubtaskMutation.mutate({ taskId: task.id, title: getNewSubtask(task.id).trim() }); e.preventDefault() } }}
                   placeholder="Add subtask..."
-                  className="flex-1 bg-dark-surface border border-dark-border rounded px-2 py-1 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-primary-500"
+                  className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30"
                 />
-                <button onClick={() => newSubtask.trim() && addSubtaskMutation.mutate({ taskId: task.id, title: newSubtask.trim() })} className="text-gray-600 hover:text-white px-1">
-                  <Plus size={11} />
+                <button onClick={() => getNewSubtask(task.id).trim() && addSubtaskMutation.mutate({ taskId: task.id, title: getNewSubtask(task.id).trim() })} className="text-gray-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-dark-surface transition-colors">
+                  <Plus size={14} />
                 </button>
               </div>
             </div>
