@@ -52,31 +52,26 @@ class ChatInboxController extends Controller
         }
 
         // Group by visitor: collapse multiple sessions from the same person
-        // into a single row (the most recent one). The dedup key prefers, in
-        // order: visitor_id (persistent identity cookie), visitor_email,
-        // visitor_phone, visitor_ip, then conversation id as a last resort.
-        // This catches returning visitors even when their IP changed (mobile
-        // network, new wifi) as long as the persistent visitor cookie or any
-        // captured contact survived.
+        // into a single row (the most recent one). Uses PostgreSQL DISTINCT ON
+        // to pick the latest conversation per dedup key in a single query.
+        // Dedup key cascade: visitor_id → email → phone → ip → conversation id.
         if ($request->boolean('group_by_visitor')) {
-            $rows = (clone $query)
-                ->reorder()
-                ->orderByDesc('last_message_at')
-                ->get(['id', 'visitor_id', 'visitor_email', 'visitor_phone', 'visitor_ip']);
-            $seen = [];
-            $keepIds = [];
-            foreach ($rows as $r) {
-                $key = $r->visitor_id
-                    ? ('vid_' . $r->visitor_id)
-                    : ($r->visitor_email
-                        ? ('email_' . strtolower(trim($r->visitor_email)))
-                        : ($r->visitor_phone
-                            ? ('phone_' . preg_replace('/\D+/', '', $r->visitor_phone))
-                            : ($r->visitor_ip ?: ('id_' . $r->id))));
-                if (isset($seen[$key])) continue;
-                $seen[$key] = true;
-                $keepIds[] = $r->id;
-            }
+            $dedupKey = <<<'SQL'
+                COALESCE(
+                    NULLIF(visitor_id::text, ''),
+                    NULLIF(LOWER(TRIM(visitor_email)), ''),
+                    NULLIF(REGEXP_REPLACE(visitor_phone, '\D', '', 'g'), ''),
+                    NULLIF(visitor_ip, ''),
+                    id::text
+                )
+            SQL;
+
+            $keepIds = DB::table('chat_conversations')
+                ->where('organization_id', $orgId)
+                ->selectRaw("DISTINCT ON ({$dedupKey}) id")
+                ->orderByRaw("{$dedupKey}, last_message_at DESC")
+                ->pluck('id');
+
             $query->whereIn('id', $keepIds);
         }
 

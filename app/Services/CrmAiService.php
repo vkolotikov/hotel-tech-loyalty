@@ -238,21 +238,42 @@ class CrmAiService
         if ($tools)      $body['tools']       = $tools;
         if ($toolChoice) $body['tool_choice']  = $toolChoice;
 
-        try {
-            $response = Http::timeout(90)->withHeaders([
-                'x-api-key' => $this->apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
-            ])->post('https://api.anthropic.com/v1/messages', $body);
-        } catch (\Throwable $e) {
-            \Log::error('CrmAi HTTP call failed', ['error' => $e->getMessage()]);
-            return ['content' => [['type' => 'text', 'text' => 'AI service unreachable: ' . $e->getMessage()]]];
+        $maxAttempts = 3;
+        $lastError   = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $response = Http::timeout(90)->withHeaders([
+                    'x-api-key' => $this->apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
+                ])->post('https://api.anthropic.com/v1/messages', $body);
+            } catch (\Throwable $e) {
+                \Log::warning('CrmAi HTTP attempt failed', ['attempt' => $attempt, 'error' => $e->getMessage()]);
+                $lastError = 'AI service unreachable: ' . $e->getMessage();
+                if ($attempt < $maxAttempts) { usleep($attempt * 500_000); continue; }
+                return ['content' => [['type' => 'text', 'text' => $lastError]]];
+            }
+
+            if ($response->successful()) {
+                return $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
+            }
+
+            $status = $response->status();
+            // Retry on 429 (rate-limit), 500 (server error), 529 (overloaded)
+            if (in_array($status, [429, 500, 529]) && $attempt < $maxAttempts) {
+                $delay = $status === 429
+                    ? (int) ($response->header('retry-after') ?: $attempt * 2)
+                    : $attempt;
+                \Log::warning('CrmAi retryable error', ['attempt' => $attempt, 'status' => $status, 'delay' => $delay]);
+                sleep($delay);
+                continue;
+            }
+
+            $bodyPreview = substr($response->body(), 0, 500);
+            \Log::warning('CrmAi non-2xx', ['status' => $status, 'body' => $bodyPreview]);
+            return ['content' => [['type' => 'text', 'text' => 'API error ' . $status . ': ' . $bodyPreview]]];
         }
 
-        if (!$response->successful()) {
-            $bodyPreview = substr($response->body(), 0, 500);
-            \Log::warning('CrmAi non-2xx', ['status' => $response->status(), 'body' => $bodyPreview]);
-            return ['content' => [['type' => 'text', 'text' => 'API error ' . $response->status() . ': ' . $bodyPreview]]];
-        }
-        return $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
+        return ['content' => [['type' => 'text', 'text' => $lastError ?? 'AI call failed after retries.']]];
     }
 
     /* ────────── Helpers ────────── */
