@@ -90,6 +90,7 @@ Route::prefix('v1')->group(function () {
         Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1');
         Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
+        Route::post('{widgetKey}/popup-impression', [WidgetChatController::class, 'popupImpression'])->middleware('throttle:30,1');
         Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession'])->middleware('throttle:5,1');
     });
 

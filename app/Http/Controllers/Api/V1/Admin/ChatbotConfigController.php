@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 
 class ChatbotConfigController extends Controller
 {
+    use \App\Traits\DispatchesAiChat;
+
     public function __construct(protected KnowledgeService $knowledge) {}
 
     public function getBehavior(Request $request): JsonResponse
@@ -114,16 +116,7 @@ class ChatbotConfigController extends Controller
         $maxTokens = (int) ($model->max_tokens ?? 500);
 
         try {
-            $allMessages = array_merge([['role' => 'system', 'content' => $systemPrompt]], $history);
-            // Test panel is OpenAI-only for now to keep this controller small —
-            // multi-provider testing would duplicate WidgetChatController code.
-            $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
-                'model'       => $modelName,
-                'messages'    => $allMessages,
-                'max_tokens'  => $maxTokens,
-                'temperature' => $temperature,
-            ]);
-            $reply = $response->choices[0]->message->content ?? '';
+            $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens);
         } catch (\Throwable $e) {
             return response()->json(['error' => 'AI call failed: ' . $e->getMessage()], 500);
         }
@@ -145,6 +138,15 @@ class ChatbotConfigController extends Controller
             $parts[] = "You are {$name}, a helpful hotel concierge AI assistant" . ($companyName ? " for {$companyName}" : '') . ".";
         }
         if ($config && $config->goal) $parts[] = "Your goal: {$config->goal}";
+        $salesMap = [
+            'consultative' => 'Ask questions to understand the visitor\'s needs before making recommendations.',
+            'aggressive'   => 'Proactively suggest offers, upsells, and booking opportunities.',
+            'passive'      => 'Only suggest products or services when the visitor explicitly asks.',
+            'educational'  => 'Focus on informing and educating the visitor, letting them decide.',
+        ];
+        if ($config && !empty($config->sales_style) && isset($salesMap[$config->sales_style])) {
+            $parts[] = $salesMap[$config->sales_style];
+        }
         if ($config && !empty($config->core_rules)) {
             $parts[] = "Rules:";
             foreach ($config->core_rules as $r) $parts[] = "- {$r}";

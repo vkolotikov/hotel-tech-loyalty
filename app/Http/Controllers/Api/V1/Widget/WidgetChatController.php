@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
 
 class WidgetChatController extends Controller
 {
+    use \App\Traits\DispatchesAiChat;
+
     public function __construct(
         protected OpenAiService $openAi,
         protected KnowledgeService $knowledge,
@@ -409,11 +411,7 @@ class WidgetChatController extends Controller
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
 
         try {
-            $aiResponse = match ($provider) {
-                'anthropic' => $this->callAnthropic($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
-                'google'    => $this->callGoogle($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
-                default     => $this->callOpenAi($systemPrompt, $contextMessages, $model, $temperature, $maxTokens),
-            };
+            $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens);
         } catch (\Throwable $e) {
             \Log::error("Widget chat error [{$provider}/{$model}]: " . $e->getMessage());
             $aiResponse = $behaviorConfig->fallback_message
@@ -831,11 +829,27 @@ class WidgetChatController extends Controller
             ->orderByDesc('priority')
             ->get(['id', 'trigger_type', 'trigger_value', 'url_match_type', 'url_match_value', 'visitor_type', 'language_targets', 'message', 'quick_replies', 'priority']);
 
+        return response()->json(['rules' => $rules]);
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/popup-impression
+     *
+     * Called by the widget when a specific popup rule is actually shown to the
+     * visitor. Only increments the single rule that fired, not all active rules.
+     */
+    public function popupImpression(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate(['rule_id' => 'required|integer']);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
+
         PopupRule::where('organization_id', $config->organization_id)
-            ->active()
+            ->where('id', $request->rule_id)
             ->increment('impressions_count');
 
-        return response()->json(['rules' => $rules]);
+        return response()->json(['ok' => true]);
     }
 
     private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null): string
@@ -886,6 +900,16 @@ class WidgetChatController extends Controller
             $parts[] = $toneMap[$config->tone] ?? $toneMap['professional'];
             $parts[] = $lengthMap[$config->reply_length] ?? $lengthMap['moderate'];
 
+            $salesMap = [
+                'consultative' => 'Ask questions to understand the visitor\'s needs before making recommendations.',
+                'aggressive'   => 'Proactively suggest offers, upsells, and booking opportunities.',
+                'passive'      => 'Only suggest products or services when the visitor explicitly asks.',
+                'educational'  => 'Focus on informing and educating the visitor, letting them decide.',
+            ];
+            if (!empty($config->sales_style) && isset($salesMap[$config->sales_style])) {
+                $parts[] = $salesMap[$config->sales_style];
+            }
+
             if (!empty($config->core_rules)) {
                 $parts[] = "Rules you MUST follow:";
                 foreach ($config->core_rules as $rule) {
@@ -911,58 +935,6 @@ class WidgetChatController extends Controller
         }
 
         return implode("\n", $parts);
-    }
-
-    private function callOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens): string
-    {
-        $allMessages = array_merge([['role' => 'system', 'content' => $system]], $messages);
-        $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
-            'model' => $model, 'messages' => $allMessages,
-            'max_tokens' => $maxTokens, 'temperature' => $temp,
-        ]);
-        return $response->choices[0]->message->content ?? '';
-    }
-
-    private function callAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens): string
-    {
-        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
-        if (!$apiKey) throw new \RuntimeException('Anthropic API key not configured');
-
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'x-api-key' => $apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
-        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
-            'model' => $model, 'max_tokens' => $maxTokens,
-            'temperature' => min($temp, 1.0), 'system' => $system, 'messages' => $messages,
-        ]);
-
-        if ($response->failed()) throw new \RuntimeException('Anthropic API error: ' . $response->body());
-        return $response->json()['content'][0]['text'] ?? '';
-    }
-
-    private function callGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens): string
-    {
-        $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
-        if (!$apiKey) throw new \RuntimeException('Google Gemini API key not configured');
-
-        $contents = [];
-        foreach ($messages as $msg) {
-            $contents[] = [
-                'role' => $msg['role'] === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => $msg['content']]],
-            ];
-        }
-
-        $response = \Illuminate\Support\Facades\Http::timeout(60)->post(
-            "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
-            [
-                'system_instruction' => ['parts' => [['text' => $system]]],
-                'contents' => $contents,
-                'generationConfig' => ['temperature' => $temp, 'maxOutputTokens' => $maxTokens],
-            ]
-        );
-
-        if ($response->failed()) throw new \RuntimeException('Gemini API error: ' . $response->body());
-        return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
     }
 
     /**

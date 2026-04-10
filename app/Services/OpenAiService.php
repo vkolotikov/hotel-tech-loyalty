@@ -6,11 +6,12 @@ use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\LoyaltyMember;
 use OpenAI\Laravel\Facades\OpenAI;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class OpenAiService
 {
+    use \App\Traits\DispatchesAiChat;
+
     protected string $model;
 
     public function __construct()
@@ -39,11 +40,7 @@ class OpenAiService
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
 
         try {
-            return match ($provider) {
-                'anthropic' => $this->callAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens),
-                'google'    => $this->callGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens),
-                default     => $this->callOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens, $modelConfig),
-            };
+            return $this->callProvider($provider, $systemPrompt, $messages, $model, $temperature, $maxTokens);
         } catch (\Throwable $e) {
             Log::error("AI chat error [{$provider}/{$model}]: " . $e->getMessage());
 
@@ -53,126 +50,6 @@ class OpenAiService
 
             return "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
         }
-    }
-
-    /**
-     * Call via OpenAI SDK (GPT models + o-series).
-     */
-    private function callOpenAi(
-        string $systemPrompt,
-        array $messages,
-        string $model,
-        float $temperature,
-        int $maxTokens,
-        ?ChatbotModelConfig $modelConfig = null,
-    ): string {
-        $allMessages = array_merge(
-            [['role' => 'system', 'content' => $systemPrompt]],
-            $messages
-        );
-
-        $params = [
-            'model'       => $model,
-            'messages'    => $allMessages,
-            'max_tokens'  => $maxTokens,
-            'temperature' => $temperature,
-        ];
-
-        if ($modelConfig && $modelConfig->top_p < 1.0) {
-            $params['top_p'] = (float) $modelConfig->top_p;
-        }
-        if ($modelConfig && $modelConfig->frequency_penalty > 0) {
-            $params['frequency_penalty'] = (float) $modelConfig->frequency_penalty;
-        }
-        if ($modelConfig && $modelConfig->presence_penalty > 0) {
-            $params['presence_penalty'] = (float) $modelConfig->presence_penalty;
-        }
-
-        $response = OpenAI::chat()->create($params);
-        $reply = $response->choices[0]->message->content;
-
-        return $reply ?: '';
-    }
-
-    /**
-     * Call Anthropic Messages API directly via HTTP.
-     */
-    private function callAnthropic(
-        string $systemPrompt,
-        array $messages,
-        string $model,
-        float $temperature,
-        int $maxTokens,
-    ): string {
-        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
-
-        if (!$apiKey) {
-            throw new \RuntimeException('Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env');
-        }
-
-        $response = Http::withHeaders([
-            'x-api-key'         => $apiKey,
-            'anthropic-version' => '2023-06-01',
-            'content-type'      => 'application/json',
-        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
-            'model'      => $model,
-            'max_tokens' => $maxTokens,
-            'temperature' => min($temperature, 1.0), // Anthropic max temp is 1.0
-            'system'     => $systemPrompt,
-            'messages'   => $messages,
-        ]);
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Anthropic API error: ' . $response->body());
-        }
-
-        $data = $response->json();
-        return $data['content'][0]['text'] ?? '';
-    }
-
-    /**
-     * Call Google Gemini API directly via HTTP.
-     */
-    private function callGoogle(
-        string $systemPrompt,
-        array $messages,
-        string $model,
-        float $temperature,
-        int $maxTokens,
-    ): string {
-        $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
-
-        if (!$apiKey) {
-            throw new \RuntimeException('Google Gemini API key not configured. Set GOOGLE_GEMINI_API_KEY in .env');
-        }
-
-        // Convert messages to Gemini format
-        $contents = [];
-        foreach ($messages as $msg) {
-            $contents[] = [
-                'role'  => $msg['role'] === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => $msg['content']]],
-            ];
-        }
-
-        $response = Http::timeout(60)->post(
-            "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
-            [
-                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-                'contents'           => $contents,
-                'generationConfig'   => [
-                    'temperature'     => $temperature,
-                    'maxOutputTokens' => $maxTokens,
-                ],
-            ]
-        );
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Gemini API error: ' . $response->body());
-        }
-
-        $data = $response->json();
-        return $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
     }
 
     /**
@@ -365,6 +242,17 @@ Review: {$text}";
         // Tone and style
         $parts[] = $toneMap[$config->tone] ?? $toneMap['professional'];
         $parts[] = $lengthMap[$config->reply_length] ?? $lengthMap['moderate'];
+
+        // Sales style
+        $salesMap = [
+            'consultative' => 'Ask questions to understand the guest\'s needs before making recommendations.',
+            'aggressive'   => 'Proactively suggest offers, upsells, and booking opportunities.',
+            'passive'      => 'Only suggest products or services when the guest explicitly asks.',
+            'educational'  => 'Focus on informing and educating the guest, letting them decide.',
+        ];
+        if (!empty($config->sales_style) && isset($salesMap[$config->sales_style])) {
+            $parts[] = $salesMap[$config->sales_style];
+        }
 
         // Language
         if ($config->language && $config->language !== 'en') {
