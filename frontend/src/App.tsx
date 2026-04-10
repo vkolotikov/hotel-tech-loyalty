@@ -37,6 +37,7 @@ const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
+const Billing = lazy(() => import('./pages/Billing').then(m => ({ default: m.Billing })))
 const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.AuditLog })))
 const Bookings = lazy(() => import('./pages/Bookings').then(m => ({ default: m.Bookings })))
 const BookingDetail = lazy(() => import('./pages/BookingDetail').then(m => ({ default: m.BookingDetail })))
@@ -147,6 +148,7 @@ export default function App() {
           {/* Submissions log still routable from inside Bookings page header. */}
           <Route path="/bookings/submissions" element={<LazyRoute gate="admin" product="booking"><BookingSubmissions /></LazyRoute>} />
           <Route path="/bookings/:id" element={<LazyRoute product="booking"><BookingDetail /></LazyRoute>} />
+          <Route path="/billing" element={<LazyRoute gate="admin"><Billing /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -92,6 +92,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'System',
     items: [
+      { path: '/billing',   label: 'Billing',   icon: CreditCard, gate: 'admin' },
       { path: '/audit-log', label: 'Audit Log', icon: ScrollText, gate: 'admin' },
       { path: '/settings',  label: 'Settings',  icon: Settings,   gate: 'admin' },
     ],
