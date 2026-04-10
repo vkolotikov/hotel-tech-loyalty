@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CreditCard, Check, ArrowRight,
-  ExternalLink, AlertTriangle, Crown,
+  AlertTriangle, Crown, Loader2,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { useSubscription } from '../hooks/useSubscription'
 
@@ -53,8 +54,11 @@ type BillingInterval = 'monthly' | 'yearly'
 
 export function Billing() {
   const { data: sub, status } = useSubscription()
+  const queryClient = useQueryClient()
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   // Fetch live plans
   const { data: plansData } = useQuery({
@@ -67,6 +71,61 @@ export function Billing() {
   useEffect(() => {
     if (plansData?.plans?.length) setPlans(plansData.plans)
   }, [plansData])
+
+  // Check URL for checkout result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === '1') {
+      toast.success('Payment successful! Your subscription is now active.')
+      queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (params.get('canceled') === '1') {
+      toast('Checkout was canceled. No charges were made.')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [queryClient])
+
+  const handleCheckout = async (planSlug: string) => {
+    setCheckoutLoading(planSlug)
+    try {
+      const { data } = await api.post('/v1/auth/billing/checkout', {
+        plan_slug: planSlug,
+        interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
+      })
+
+      if (data.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutUrl
+        return
+      }
+
+      if (data.success) {
+        toast.success('Subscription activated!')
+        queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Checkout failed. Please try again.'
+      toast.error(msg)
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const { data } = await api.post('/v1/auth/billing/portal')
+      if (data.portalUrl) {
+        window.location.href = data.portalUrl
+        return
+      }
+      toast.error('Billing portal is not available')
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Could not open billing portal')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   const formatPrice = (cents: number, currency: string) => {
     const symbol = currency === 'eur' ? '\u20AC' : '$'
@@ -89,8 +148,6 @@ export function Billing() {
   const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
   const currentSlug = sub?.plan?.slug ?? null
   const isLocal = status === 'LOCAL'
-
-  const saasUrl = 'https://saas.hotel-tech.ai/admin/subscription'
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -148,7 +205,7 @@ export function Billing() {
             </div>
 
             {/* Trial progress bar */}
-            {status === 'TRIALING' && trialEnd && sub?.trialEnd && (
+            {status === 'TRIALING' && trialEnd && (
               <div>
                 <div className="flex justify-between text-[10px] text-t-secondary mb-1">
                   <span>Trial started</span>
@@ -166,17 +223,25 @@ export function Billing() {
             {/* Quick actions */}
             <div className="flex gap-3 pt-1">
               {(status === 'TRIALING' || status === 'EXPIRED') && (
-                <a href={saasUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors">
-                  <CreditCard size={14} />
+                <button
+                  onClick={() => handleCheckout(currentSlug || 'growth')}
+                  disabled={!!checkoutLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                   {status === 'TRIALING' ? 'Add Payment Method' : 'Reactivate Subscription'}
-                </a>
+                </button>
               )}
-              <a href={saasUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-dark-surface2 hover:bg-dark-surface3 text-white text-sm font-medium rounded-lg border border-dark-border transition-colors">
-                <ExternalLink size={14} />
-                Manage on SaaS Portal
-              </a>
+              {status === 'ACTIVE' && (
+                <button
+                  onClick={handlePortal}
+                  disabled={portalLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-dark-surface2 hover:bg-dark-surface3 text-white text-sm font-medium rounded-lg border border-dark-border transition-colors disabled:opacity-50"
+                >
+                  {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                  Manage Billing
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -223,6 +288,7 @@ export function Billing() {
             const isPopular = plan.slug === 'growth'
             const bullets = PLAN_BULLETS[plan.slug] || []
             const saving = getYearlySaving(plan)
+            const isLoading = checkoutLoading === plan.slug
 
             return (
               <div key={plan.id} className={
@@ -268,20 +334,25 @@ export function Billing() {
                     Your current plan
                   </div>
                 ) : (
-                  <a
-                    href={saasUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => handleCheckout(plan.slug)}
+                    disabled={!!checkoutLoading}
                     className={
-                      'w-full py-2 rounded-lg text-center text-xs font-medium transition-colors mt-auto inline-flex items-center justify-center gap-1.5 ' +
+                      'w-full py-2 rounded-lg text-center text-xs font-medium transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50 ' +
                       (isPopular
                         ? 'bg-primary-600 hover:bg-primary-500 text-white'
                         : 'bg-dark-surface3 hover:bg-dark-surface2 text-white border border-dark-border')
                     }
                   >
-                    {currentSlug ? 'Switch Plan' : 'Get Started'}
-                    <ArrowRight size={12} />
-                  </a>
+                    {isLoading ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <>
+                        {currentSlug ? 'Switch Plan' : 'Get Started'}
+                        <ArrowRight size={12} />
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             )

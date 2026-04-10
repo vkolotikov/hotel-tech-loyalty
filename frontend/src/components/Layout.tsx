@@ -441,10 +441,8 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="border-t border-dark-border px-3 py-2.5">
-      <a
-        href="https://saas.hotel-tech.ai/admin/subscription"
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        to="/billing"
         className="block px-2.5 py-2 rounded-lg bg-dark-surface2 hover:bg-dark-surface3 transition-colors group"
       >
         <div className="flex items-center justify-between gap-2 mb-0.5">
@@ -473,7 +471,7 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
         {(status === 'EXPIRED' || !data.active) && (
           <p className="text-[10px] text-red-400">Renew to restore access</p>
         )}
-      </a>
+      </Link>
     </div>
   )
 }
@@ -483,7 +481,7 @@ function SubscriptionBanner() {
 
   if (!data || status === 'LOCAL') return null
 
-  const billingUrl = 'https://saas.hotel-tech.ai/admin/subscription'
+  const billingUrl = '/billing'
 
   if (status === 'TRIALING') {
     const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
@@ -506,10 +504,10 @@ function SubscriptionBanner() {
             <span className="text-t-secondary"> &middot; ends {trialEnd.toLocaleDateString()}</span>
           )}
         </div>
-        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+        <Link to={billingUrl}
            className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-colors shrink-0">
           Add payment method
-        </a>
+        </Link>
       </div>
     )
   }
@@ -525,10 +523,10 @@ function SubscriptionBanner() {
             <span className="text-t-secondary"> &middot; renews {periodEnd.toLocaleDateString()}</span>
           )}
         </div>
-        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+        <Link to={billingUrl}
            className="text-xs font-medium text-t-secondary hover:text-white transition-colors shrink-0">
           Manage billing &rarr;
-        </a>
+        </Link>
       </div>
     )
   }
@@ -541,10 +539,10 @@ function SubscriptionBanner() {
           <strong className="text-red-300">Subscription inactive.</strong>
           <span className="text-t-secondary"> Most features are limited until you renew.</span>
         </div>
-        <a href={billingUrl} target="_blank" rel="noopener noreferrer"
+        <Link to={billingUrl}
            className="text-xs font-medium px-3 py-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0">
           Renew now
-        </a>
+        </Link>
       </div>
     )
   }

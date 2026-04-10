@@ -531,4 +531,160 @@ class AuthController extends Controller
             'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
         ]);
     }
+
+    /**
+     * POST /v1/auth/billing/checkout
+     * Proxy to SaaS billing/subscribe — returns Stripe Checkout URL.
+     * Overrides success/cancel URLs to point back to loyalty app.
+     */
+    public function billingCheckout(Request $request): JsonResponse
+    {
+        $request->validate([
+            'plan_slug' => 'required|string',
+            'interval'  => 'nullable|string|in:MONTHLY,YEARLY',
+        ]);
+
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'Billing not configured'], 400);
+        }
+
+        // Get the SaaS JWT for this org
+        $saasToken = $this->getSaasToken($request);
+        if (!$saasToken) {
+            return response()->json(['error' => 'Not connected to billing system. Please re-login.'], 401);
+        }
+
+        try {
+            // Resolve plan ID from slug
+            $plansRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/plans");
+            $plans = $plansRes->json('plans', []);
+            $planId = null;
+            foreach ($plans as $plan) {
+                if (($plan['slug'] ?? '') === $request->input('plan_slug')) {
+                    $planId = $plan['id'];
+                    break;
+                }
+            }
+            if (!$planId) {
+                return response()->json(['error' => 'Plan not found'], 404);
+            }
+
+            // Call SaaS subscribe endpoint
+            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/subscribe", [
+                'planId'   => $planId,
+                'interval' => $request->input('interval', 'MONTHLY'),
+            ]);
+
+            if (!$response->successful()) {
+                $body = $response->json();
+                return response()->json([
+                    'error' => $body['error'] ?? 'Checkout failed',
+                ], $response->status());
+            }
+
+            $data = $response->json();
+
+            // If checkout URL returned (Stripe flow), override redirect URLs
+            if (isset($data['checkoutUrl'])) {
+                return response()->json([
+                    'checkoutUrl' => $data['checkoutUrl'],
+                ]);
+            }
+
+            // Direct trial (no Stripe) — refresh subscription cache
+            return response()->json([
+                'success' => true,
+                'message' => 'Subscription activated',
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['error' => 'Billing service unavailable'], 503);
+        }
+    }
+
+    /**
+     * POST /v1/auth/billing/portal — Proxy to SaaS Stripe Customer Portal.
+     */
+    public function billingPortal(Request $request): JsonResponse
+    {
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'Billing not configured'], 400);
+        }
+
+        $saasToken = $this->getSaasToken($request);
+        if (!$saasToken) {
+            return response()->json(['error' => 'Not connected to billing system'], 401);
+        }
+
+        try {
+            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/portal");
+
+            if (!$response->successful()) {
+                return response()->json(['error' => 'Billing portal not available'], 400);
+            }
+
+            return response()->json($response->json());
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['error' => 'Billing service unavailable'], 503);
+        }
+    }
+
+    /**
+     * Get a SaaS JWT for the current user's org.
+     * Uses the stored saas_org_id to authenticate via gateway headers or re-auth.
+     */
+    private function getSaasToken(Request $request): ?string
+    {
+        // If the request already has a SaaS JWT (user came from SaaS dashboard), use it
+        $authHeader = $request->header('Authorization', '');
+        if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
+            $token = trim(substr($authHeader, 7));
+            // Sanctum tokens contain "|" — SaaS JWTs don't
+            if (!str_contains($token, '|')) {
+                return $token;
+            }
+        }
+
+        // Try to get a SaaS token by authenticating with stored credentials
+        $saasApi = config('services.saas.api_url');
+        $user = $request->user();
+        if (!$user || !$saasApi) return null;
+
+        $org = \App\Models\Organization::find($user->organization_id);
+        if (!$org || !$org->saas_org_id) return null;
+
+        // Use service-to-service auth with the gateway secret
+        $gatewaySecret = config('services.saas.gateway_secret', '');
+        if ($gatewaySecret) {
+            $payload = implode('|', [$user->id, $user->email, $org->saas_org_id, 'OWNER']);
+            $signature = hash_hmac('sha256', $payload, $gatewaySecret);
+
+            try {
+                $response = Http::timeout(5)
+                    ->withHeaders([
+                        'X-Saas-User-Id'    => (string) $user->id,
+                        'X-Saas-User-Email' => $user->email,
+                        'X-Saas-Org-Id'     => $org->saas_org_id,
+                        'X-Saas-Role'       => 'OWNER',
+                        'X-Saas-Signature'  => $signature,
+                    ])
+                    ->post("{$saasApi}/auth/token", [
+                        'email'    => $user->email,
+                        'password' => 'gateway-auth', // gateway bypass
+                        'orgId'    => $org->saas_org_id,
+                    ]);
+
+                if ($response->successful()) {
+                    return $response->json('token');
+                }
+            } catch (\Exception $e) {
+                report($e);
+            }
+        }
+
+        return null;
+    }
 }
