@@ -1050,7 +1050,7 @@
       })
       .then(function (data) {
         if (!data.client_secret) throw new Error('No client secret');
-        return connectWebRTC(data.client_secret, data.voice);
+        return connectWebRTC(data.client_secret, data.voice, data.language_name || 'English');
       })
       .catch(function (err) {
         console.error('HotelChat voice error:', err);
@@ -1059,7 +1059,7 @@
       });
   }
 
-  function connectWebRTC(ephemeralKey, voice) {
+  function connectWebRTC(ephemeralKey, voice, languageName) {
     // 2. Create PeerConnection
     voicePc = new RTCPeerConnection();
 
@@ -1082,12 +1082,16 @@
         isVoiceCall = true;
         updateVoiceCallUI(true);
         updateVoiceOverlayStatus('Listening…');
-        // Send initial response.create to tell the model to greet
+        // Greet the caller in the configured language. The instructions
+        // field on response.create overrides session instructions for
+        // this turn, so we re-pin the language here too — otherwise the
+        // model picks one (frequently Spanish) for the greeting.
+        var lang = languageName || 'English';
         voiceDataChannel.send(JSON.stringify({
           type: 'response.create',
           response: {
             modalities: ['text', 'audio'],
-            instructions: 'Greet the caller warmly and ask how you can help.',
+            instructions: 'Greet the caller warmly in ' + lang + ' and ask how you can help. You MUST speak ' + lang + ' for the entire conversation.',
           },
         }));
       };

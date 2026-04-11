@@ -1035,19 +1035,14 @@ class WidgetChatController extends Controller
                     'language' => $lang,
                 ]),
                 'temperature' => max(0.6, (float) ($voiceConfig->temperature ?? 0.8)),
-                // Server-side voice activity detection — tuned VERY patient so
-                // the AI doesn't cut callers off mid-thought. Defaults are
-                // aggressive (500ms silence) which feels rude on phone calls.
+                // Use semantic VAD — the model decides if the caller is
+                // actually done speaking instead of relying on a fixed
+                // silence-duration timer. eagerness=low makes it the most
+                // patient available, waiting through mid-sentence pauses
+                // ("hello,... can you tell me...") instead of jumping in.
                 'turn_detection' => [
-                    'type'                => 'server_vad',
-                    // Higher threshold = needs more confident speech to start (fewer false starts)
-                    'threshold'           => 0.55,
-                    // ms of audio to keep before speech started
-                    'prefix_padding_ms'   => 500,
-                    // ms of silence required to consider the user done speaking.
-                    // 1500ms gives natural pauses (mid-sentence "uh", thinking)
-                    // room without the AI jumping in.
-                    'silence_duration_ms' => 1500,
+                    'type'      => 'semantic_vad',
+                    'eagerness' => 'low',
                 ],
             ];
 
@@ -1077,6 +1072,8 @@ class WidgetChatController extends Controller
                 'expires_at' => $data['client_secret']['expires_at'] ?? null,
                 'session_id' => $data['id'] ?? null,
                 'voice' => $voiceConfig->voice,
+                'language' => $lang ?: 'en',
+                'language_name' => $langName,
             ]);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
