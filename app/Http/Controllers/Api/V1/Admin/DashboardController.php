@@ -156,10 +156,12 @@ class DashboardController extends Controller
             ->limit(10)
             ->get()
             ->map(fn($i) => [
-                'id'         => 'i-' . $i->id,
-                'type'       => 'inquiry',
-                'message'    => "New {$i->inquiry_type} inquiry from {$i->guest?->full_name}",
-                'created_at' => $i->created_at,
+                'id'          => 'i-' . $i->id,
+                'type'        => 'inquiry',
+                'message'     => "New {$i->inquiry_type} inquiry from {$i->guest?->full_name}",
+                'description' => "New {$i->inquiry_type} inquiry from {$i->guest?->full_name}",
+                'created_at'  => $i->created_at,
+                'time_ago'    => $i->created_at?->diffForHumans(),
             ]);
 
         $reservations = Reservation::with('guest:id,full_name')
@@ -167,10 +169,12 @@ class DashboardController extends Controller
             ->limit(10)
             ->get()
             ->map(fn($r) => [
-                'id'         => 'r-' . $r->id,
-                'type'       => 'reservation',
-                'message'    => "Reservation {$r->confirmation_no} for {$r->guest?->full_name} ({$r->status})",
-                'created_at' => $r->created_at,
+                'id'          => 'r-' . $r->id,
+                'type'        => 'booking',
+                'message'     => "Reservation {$r->confirmation_no} for {$r->guest?->full_name} ({$r->status})",
+                'description' => "Reservation {$r->confirmation_no} for {$r->guest?->full_name} ({$r->status})",
+                'created_at'  => $r->created_at,
+                'time_ago'    => $r->created_at?->diffForHumans(),
             ]);
 
         $merged = $inquiries->concat($reservations)->sortByDesc('created_at')->take(15)->values();

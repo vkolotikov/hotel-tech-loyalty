@@ -24,7 +24,12 @@ class ChatInboxController extends Controller
         $orgId = $request->user()->organization_id;
 
         $query = ChatConversation::where('organization_id', $orgId)
-            ->with(['assignedAgent:id,name,email', 'member.user:id,name,email', 'member.tier:id,name'])
+            ->with([
+                'assignedAgent:id,name,email',
+                'member.user:id,name,email',
+                'member.tier:id,name',
+                'messages' => fn($q) => $q->latest()->limit(1),
+            ])
             ->withCount(['messages as unread_count' => fn($q) => $q->where('is_read', false)->where('sender_type', 'visitor')]);
 
         // Filter by status
@@ -109,6 +114,9 @@ class ChatInboxController extends Controller
             } else {
                 $c->ip_session_count = 1;
             }
+            $latest = $c->messages->first();
+            $c->last_message = $latest?->content;
+            unset($c->messages);
         }
 
         return response()->json($conversations);
