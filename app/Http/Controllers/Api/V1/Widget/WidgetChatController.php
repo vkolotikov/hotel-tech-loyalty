@@ -1016,10 +1016,18 @@ class WidgetChatController extends Controller
                 ? $voiceConfig->language
                 : null;
 
+            // Pin the response language. The realtime model defaults to
+            // whatever the model "feels" otherwise (often Spanish), so we
+            // both inject a hard rule into the instructions AND pass the
+            // ISO code to whisper for input transcription.
+            $langName = $this->languageCodeToName($lang ?: 'en');
+            $instructions = "IMPORTANT: Always speak and respond in {$langName}. Never switch languages unless the caller explicitly asks you to.\n\n" . $instructions;
+
             $sessionPayload = [
                 'model' => $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview',
                 'voice' => $voiceConfig->voice ?? 'alloy',
                 'instructions' => $instructions,
+                'modalities' => ['audio', 'text'],
                 // Whisper transcription with explicit language so the model doesn't
                 // mis-detect (was switching languages mid-conversation).
                 'input_audio_transcription' => array_filter([
@@ -1027,17 +1035,19 @@ class WidgetChatController extends Controller
                     'language' => $lang,
                 ]),
                 'temperature' => max(0.6, (float) ($voiceConfig->temperature ?? 0.8)),
-                // Server-side voice activity detection — tuned to wait longer
-                // before responding so the AI doesn't cut the user off mid-question.
+                // Server-side voice activity detection — tuned VERY patient so
+                // the AI doesn't cut callers off mid-thought. Defaults are
+                // aggressive (500ms silence) which feels rude on phone calls.
                 'turn_detection' => [
                     'type'                => 'server_vad',
-                    // Higher threshold = needs more confident speech to start (less false starts)
-                    'threshold'           => 0.65,
+                    // Higher threshold = needs more confident speech to start (fewer false starts)
+                    'threshold'           => 0.55,
                     // ms of audio to keep before speech started
-                    'prefix_padding_ms'   => 300,
-                    // ms of silence required to consider the user done speaking
-                    // (default is 500 — too eager; 900ms gives normal pauses room)
-                    'silence_duration_ms' => 900,
+                    'prefix_padding_ms'   => 500,
+                    // ms of silence required to consider the user done speaking.
+                    // 1500ms gives natural pauses (mid-sentence "uh", thinking)
+                    // room without the AI jumping in.
+                    'silence_duration_ms' => 1500,
                 ],
             ];
 
@@ -1071,6 +1081,17 @@ class WidgetChatController extends Controller
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function languageCodeToName(string $code): string
+    {
+        $map = [
+            'en' => 'English', 'es' => 'Spanish', 'fr' => 'French', 'de' => 'German',
+            'it' => 'Italian', 'pt' => 'Portuguese', 'nl' => 'Dutch', 'ru' => 'Russian',
+            'pl' => 'Polish', 'tr' => 'Turkish', 'ar' => 'Arabic', 'zh' => 'Chinese',
+            'ja' => 'Japanese', 'ko' => 'Korean', 'hi' => 'Hindi', 'uk' => 'Ukrainian',
+        ];
+        return $map[strtolower($code)] ?? 'English';
     }
 
     private function buildVoiceInstructions(

@@ -899,15 +899,15 @@
     };
 
     recognition.onresult = function (e) {
-      // Bulletproof pattern: rebuild the displayed string from scratch
-      // each event by walking ALL results in the current buffer. No
-      // accumulation across events, so re-emitted final chunks (a known
-      // Chrome quirk in continuous mode) cannot duplicate text.
-      var combined = '';
-      for (var i = 0; i < e.results.length; i++) {
-        combined += e.results[i][0].transcript;
-      }
-      combined = combined.replace(/\s+/g, ' ').trim();
+      // Mobile Chrome's continuous mode pushes a NEW result entry on every
+      // tick that contains a CUMULATIVE snapshot of the whole utterance so
+      // far — concatenating all results gives "hellohellohello can you...".
+      // The latest result alone is the authoritative current transcript,
+      // so we just take the last entry. For multi-utterance continuous
+      // sessions, onend bundles up the final value before sendMessage.
+      var last = e.results[e.results.length - 1];
+      if (!last || !last[0]) return;
+      var combined = String(last[0].transcript || '').replace(/\s+/g, ' ').trim();
       finalTranscript = combined;
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
