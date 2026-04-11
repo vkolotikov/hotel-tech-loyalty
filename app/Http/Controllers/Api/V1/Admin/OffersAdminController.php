@@ -55,6 +55,12 @@ class OffersAdminController extends Controller
         return response()->json(['message' => 'Offer created', 'offer' => $offer], 201);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $offer = SpecialOffer::with('createdBy:id,name')->findOrFail($id);
+        return response()->json($offer);
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         $offer = SpecialOffer::findOrFail($id);

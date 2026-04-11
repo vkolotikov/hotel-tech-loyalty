@@ -174,9 +174,10 @@ Route::prefix('v1')->group(function () {
 
             Route::get('offers',                  [OffersAdminController::class, 'index']);
             Route::post('offers',                 [OffersAdminController::class, 'store']);
+            Route::post('offers/generate-ai',     [OffersAdminController::class, 'generateAiOffer']);
+            Route::get('offers/{id}',             [OffersAdminController::class, 'show']);
             Route::put('offers/{id}',             [OffersAdminController::class, 'update']);
             Route::delete('offers/{id}',          [OffersAdminController::class, 'destroy']);
-            Route::post('offers/generate-ai',     [OffersAdminController::class, 'generateAiOffer']);
 
             // Benefits & fulfillment
             Route::get('benefits',                             [BenefitAdminController::class, 'index']);
