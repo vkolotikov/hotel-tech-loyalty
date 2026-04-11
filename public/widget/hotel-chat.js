@@ -877,11 +877,6 @@
     manualStop = false;
 
     var finalTranscript = '';
-    // Track which result indices we've already locked in as final, so a
-    // browser that re-emits the same final result across multiple events
-    // (Chrome occasionally does this in continuous mode) doesn't append
-    // the same words twice.
-    var finalizedIdx = {};
 
     function armSilenceTimer() {
       if (silenceTimer) clearTimeout(silenceTimer);
@@ -904,26 +899,20 @@
     };
 
     recognition.onresult = function (e) {
-      // Walk every result in the buffer, but only fold a finalized result
-      // into finalTranscript ONCE — gated by finalizedIdx. This survives
-      // both Chrome's resultIndex quirks (sometimes it doesn't advance)
-      // and any re-emission of an already-final result.
-      var interim = '';
+      // Bulletproof pattern: rebuild the displayed string from scratch
+      // each event by walking ALL results in the current buffer. No
+      // accumulation across events, so re-emitted final chunks (a known
+      // Chrome quirk in continuous mode) cannot duplicate text.
+      var combined = '';
       for (var i = 0; i < e.results.length; i++) {
-        var t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) {
-          if (!finalizedIdx[i]) {
-            finalizedIdx[i] = true;
-            finalTranscript += t;
-          }
-        } else {
-          interim += t;
-        }
+        combined += e.results[i][0].transcript;
       }
+      combined = combined.replace(/\s+/g, ' ').trim();
+      finalTranscript = combined;
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
-        inputEl.value = (finalTranscript + interim).trim();
-        document.getElementById('htchat-send-btn').disabled = !inputEl.value;
+        inputEl.value = combined;
+        document.getElementById('htchat-send-btn').disabled = !combined;
       }
       armSilenceTimer();
     };
@@ -1047,7 +1036,16 @@
     // 1. Get ephemeral token from our backend
     fetch(API + '/realtime-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
       .then(function (r) {
-        if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Failed'); });
+        if (!r.ok) {
+          return r.text().then(function (raw) {
+            var msg = 'HTTP ' + r.status;
+            try {
+              var d = JSON.parse(raw);
+              msg = d.message || d.error || msg;
+            } catch (e) { if (raw) msg = msg + ': ' + raw.substring(0, 200); }
+            throw new Error(msg);
+          });
+        }
         return r.json();
       })
       .then(function (data) {

@@ -47,9 +47,14 @@ return Application::configure(basePath: dirname(__DIR__))
                     return response()->json(['error' => 'Forbidden', 'message' => $e->getMessage() ?: 'Forbidden.'], 403);
                 }
                 if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    // Use the actual exception message as `error` so clients
+                    // (e.g. the chat widget) which only display `d.error` see
+                    // a meaningful reason instead of a generic "HTTP error"
+                    // label that hides the real cause (rate limits, etc.).
+                    $msg = $e->getMessage() ?: 'Request failed.';
                     return response()->json([
-                        'error'   => 'HTTP error',
-                        'message' => $e->getMessage() ?: 'Request failed.',
+                        'error'   => $msg,
+                        'message' => $msg,
                     ], $e->getStatusCode());
                 }
 
