@@ -107,10 +107,15 @@ class ChatWidgetConfig extends Model
     {
         $key = $this->widget_key;
         $apiBase = rtrim($baseUrl, '/') . '/api/v1/widget/' . $key;
+        // Append the widget JS file's mtime as a cache-buster so each deploy
+        // forces customer browsers to fetch the new version instead of
+        // running an indefinitely-cached old build.
+        $mtime = @filemtime(public_path('widget/hotel-chat.js')) ?: time();
+        $src = $baseUrl . '/widget/hotel-chat.js?v=' . $mtime;
 
         return <<<HTML
 <script>
-(function(){var w=window,d=document;w.HotelChat={key:"{$key}",api:"{$apiBase}"};var s=d.createElement("script");s.src="{$baseUrl}/widget/hotel-chat.js";s.async=true;d.head.appendChild(s)})();
+(function(){var w=window,d=document;w.HotelChat={key:"{$key}",api:"{$apiBase}"};var s=d.createElement("script");s.src="{$src}";s.async=true;d.head.appendChild(s)})();
 </script>
 HTML;
     }

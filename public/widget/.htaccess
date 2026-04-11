@@ -1,0 +1,7 @@
+# Embeddable widget JS — keep customer browsers honest about updates.
+# A short max-age plus must-revalidate means each pageload will at most
+# do an If-Modified-Since round-trip; deploys take effect within minutes
+# instead of being frozen by aggressive default caches.
+<FilesMatch "\.js$">
+    Header set Cache-Control "public, max-age=300, must-revalidate"
+</FilesMatch>

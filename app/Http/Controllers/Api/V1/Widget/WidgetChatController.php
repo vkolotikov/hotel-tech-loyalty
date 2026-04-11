@@ -1048,13 +1048,15 @@ class WidgetChatController extends Controller
             ])->post('https://api.openai.com/v1/realtime/sessions', $sessionPayload);
 
             if ($response->failed()) {
+                $body = $response->json();
+                $upstreamMsg = $body['error']['message'] ?? substr((string) $response->body(), 0, 300);
                 \Log::error('OpenAI realtime session failed', [
                     'status' => $response->status(),
                     'body'   => substr((string) $response->body(), 0, 500),
                 ]);
                 return response()->json([
-                    'error' => 'Failed to create realtime session',
-                    'details' => $response->json() ?: $response->body(),
+                    'error'   => 'OpenAI ' . $response->status() . ': ' . $upstreamMsg,
+                    'details' => $body ?: $response->body(),
                 ], 502);
             }
 

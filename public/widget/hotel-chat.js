@@ -877,6 +877,11 @@
     manualStop = false;
 
     var finalTranscript = '';
+    // Track which result indices we've already locked in as final, so a
+    // browser that re-emits the same final result across multiple events
+    // (Chrome occasionally does this in continuous mode) doesn't append
+    // the same words twice.
+    var finalizedIdx = {};
 
     function armSilenceTimer() {
       if (silenceTimer) clearTimeout(silenceTimer);
@@ -899,15 +904,21 @@
     };
 
     recognition.onresult = function (e) {
-      // Only process NEW results from this event (resultIndex onwards).
-      // In continuous mode, e.results contains all results since start —
-      // iterating from 0 and concatenating each time produces duplicate
-      // text as finalized chunks get re-appended on every event.
+      // Walk every result in the buffer, but only fold a finalized result
+      // into finalTranscript ONCE — gated by finalizedIdx. This survives
+      // both Chrome's resultIndex quirks (sometimes it doesn't advance)
+      // and any re-emission of an already-final result.
       var interim = '';
-      for (var i = e.resultIndex; i < e.results.length; i++) {
+      for (var i = 0; i < e.results.length; i++) {
         var t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalTranscript += t;
-        else interim += t;
+        if (e.results[i].isFinal) {
+          if (!finalizedIdx[i]) {
+            finalizedIdx[i] = true;
+            finalTranscript += t;
+          }
+        } else {
+          interim += t;
+        }
       }
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
