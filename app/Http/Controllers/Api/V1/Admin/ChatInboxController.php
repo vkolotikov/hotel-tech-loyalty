@@ -120,8 +120,25 @@ class ChatInboxController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
-            ->with(['assignedAgent:id,name,email', 'member.user:id,name,email', 'member.tier:id,name'])
+            ->with([
+                'assignedAgent:id,name,email',
+                'member.user:id,name,email',
+                'member.tier:id,name',
+                'visitor:id,country,city,visit_count,page_views_count,first_seen_at,last_seen_at,referrer,is_lead',
+            ])
             ->findOrFail($id);
+
+        // Attach the last handful of pages the visitor viewed so the mobile/admin
+        // chat screens can show the journey without a second request.
+        if ($conversation->visitor_id) {
+            $conversation->setRelation(
+                'visitor_page_views',
+                \App\Models\VisitorPageView::where('visitor_id', $conversation->visitor_id)
+                    ->orderByDesc('id')
+                    ->limit(10)
+                    ->get(['id', 'url', 'title', 'viewed_at'])
+            );
+        }
 
         $messages = ChatMessage::where('conversation_id', $id)
             ->with('senderUser:id,name')
