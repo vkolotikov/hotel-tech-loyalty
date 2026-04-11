@@ -36,12 +36,22 @@ trait DispatchesAiChat
     private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens): string
     {
         $allMessages = array_merge([['role' => 'system', 'content' => $system]], $messages);
+
+        // Reasoning models (o1/o3/o4) and GPT-5 family require `max_completion_tokens`
+        // instead of `max_tokens`, and only accept the default temperature (1).
+        $isNewFamily = (bool) preg_match('/^(o1|o3|o4|gpt-5)/i', $model);
+
         $params = [
-            'model'       => $model,
-            'messages'    => $allMessages,
-            'max_tokens'  => $maxTokens,
-            'temperature' => $temp,
+            'model'    => $model,
+            'messages' => $allMessages,
         ];
+
+        if ($isNewFamily) {
+            $params['max_completion_tokens'] = $maxTokens;
+        } else {
+            $params['max_tokens']  = $maxTokens;
+            $params['temperature'] = $temp;
+        }
 
         return $this->withRetry(function () use ($params) {
             $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create($params);
