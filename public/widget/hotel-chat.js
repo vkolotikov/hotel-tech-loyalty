@@ -12,7 +12,15 @@
   if (!cfg.key || !cfg.api) { console.warn('HotelChat: missing key or api'); return; }
 
   var API = cfg.api;
+  // Restore prior session so a page refresh / re-open rehydrates the chat
+  // history instead of showing a blank panel. Keyed by widget api so two
+  // widgets on one domain don't stomp on each other.
+  var STORAGE_KEY = 'htchat_session_' + (cfg.key || 'default');
   var sessionId = null;
+  try {
+    var stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) sessionId = stored;
+  } catch (e) {}
   var messages = [];
   var widgetConfig = null;
   // Tracks the highest chat_messages.id we've already rendered, so the poll
@@ -390,7 +398,6 @@
           <div id="htchat-header-info"><h3>AI Assistant</h3><p>Ask me anything</p></div>\
         </div>\
         <div id="htchat-header-actions">\
-          ' + (hasTTS ? '<button id="htchat-tts-btn" title="Toggle voice responses">' + ICONS.volumeOff + '</button>' : '') + '\
           <button id="htchat-voice-call-btn" title="Voice call" style="display:none">' + ICONS.phone + '</button>\
           <button id="htchat-close-btn">' + ICONS.close + '</button>\
         </div>\
@@ -399,8 +406,6 @@
       <div id="htchat-input-area">\
         <div id="htchat-input-row">\
           ' + (hasSTT ? '<button id="htchat-mic-btn" title="Voice input">' + ICONS.mic + '</button>' : '') + '\
-          <button id="htchat-attach-btn" title="Attach file" style="width:38px;height:38px;border-radius:10px;border:none;cursor:pointer;background:#f3f4f6;color:#6b7280;display:flex;align-items:center;justify-content:center;flex-shrink:0">📎</button>\
-          <input id="htchat-file-input" type="file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none" />\
           <textarea id="htchat-input" placeholder="' + T.placeholder + '" rows="1"></textarea>\
           <button id="htchat-send-btn" disabled>' + ICONS.send + '</button>\
         </div>\
@@ -427,19 +432,6 @@
     if (hasSTT) {
       document.getElementById('htchat-mic-btn').onclick = toggleListening;
     }
-    var attachBtn = document.getElementById('htchat-attach-btn');
-    var fileInput = document.getElementById('htchat-file-input');
-    if (attachBtn && fileInput) {
-      attachBtn.onclick = function () { fileInput.click(); };
-      fileInput.onchange = function () {
-        var f = fileInput.files && fileInput.files[0];
-        if (f) uploadFile(f);
-        fileInput.value = '';
-      };
-    }
-    if (hasTTS) {
-      document.getElementById('htchat-tts-btn').onclick = toggleTTS;
-    }
     document.getElementById('htchat-voice-call-btn').onclick = toggleVoiceCall;
 
     renderMessages();
@@ -452,7 +444,7 @@
     if (isOpen) {
       panel.classList.remove('hidden');
       launcher.style.display = 'none';
-      if (!sessionId) initSession();
+      initSession();
       setTimeout(function () { document.getElementById('htchat-input').focus(); }, 100);
       startPolling();
     } else {
@@ -633,14 +625,38 @@
   }
 
   function initSession() {
-    if (sessionId) return;
     fetch(API + '/init', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitor_cookie: getVisitorCookie(), page_url: location.href, page_title: document.title }),
+      body: JSON.stringify({
+        session_id: sessionId || null,
+        visitor_cookie: getVisitorCookie(),
+        page_url: location.href,
+        page_title: document.title,
+      }),
     })
       .then(function (r) { return r.json(); })
-      .then(function (data) { sessionId = data.session_id; })
+      .then(function (data) {
+        if (!data || !data.session_id) return;
+        sessionId = data.session_id;
+        try { localStorage.setItem(STORAGE_KEY, sessionId); } catch (e) {}
+        // Rehydrate existing conversation history so refreshing the page
+        // or re-opening the panel keeps the full thread visible.
+        if (Array.isArray(data.messages) && data.messages.length > 0) {
+          messages = data.messages.map(function (m) {
+            if (m.id && m.id > lastMessageId) lastMessageId = m.id;
+            return {
+              role: m.sender_type === 'visitor' ? 'user'
+                  : (m.sender_type === 'agent' || m.sender_type === 'ai') ? 'assistant'
+                  : 'system',
+              content: m.content || '',
+              attachment_url: m.attachment_url || null,
+              attachment_type: m.attachment_type || null,
+            };
+          });
+          renderMessages();
+        }
+      })
       .catch(function () {});
   }
 
@@ -883,18 +899,21 @@
     };
 
     recognition.onresult = function (e) {
-      finalTranscript = '';
+      // Only process NEW results from this event (resultIndex onwards).
+      // In continuous mode, e.results contains all results since start —
+      // iterating from 0 and concatenating each time produces duplicate
+      // text as finalized chunks get re-appended on every event.
       var interim = '';
-      for (var i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
-        else interim += e.results[i][0].transcript;
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalTranscript += t;
+        else interim += t;
       }
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
-        inputEl.value = (finalTranscript + ' ' + interim).trim();
+        inputEl.value = (finalTranscript + interim).trim();
         document.getElementById('htchat-send-btn').disabled = !inputEl.value;
       }
-      // Reset silence countdown on every speech event
       armSilenceTimer();
     };
 

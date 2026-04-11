@@ -39,7 +39,12 @@ class WidgetChatController extends Controller
     {
         $ip = (string) $request->ip();
         $ua = substr((string) $request->header('User-Agent'), 0, 500);
-        $fingerprint = hash('sha256', $orgId . '|' . $ip . '|' . substr($ua, 0, 200) . '|' . ($cookieId ?: ''));
+        // Fingerprint deliberately EXCLUDES the widget cookie — if a visitor
+        // clears cookies or opens a private tab, the cookieId changes but
+        // IP + UA usually don't, and we want those sessions to collapse to
+        // the same Visitor row so the inbox shows a returning visit rather
+        // than a fresh face. Matches the inbox's cascading dedup intent.
+        $fingerprint = hash('sha256', $orgId . '|' . $ip . '|' . substr($ua, 0, 200));
 
         $visitor = Visitor::withoutGlobalScopes()
             ->where('organization_id', $orgId)
@@ -105,21 +110,33 @@ class WidgetChatController extends Controller
             return [];
         }
 
-        return \Cache::remember('geoip:' . $ip, now()->addHours(24), function () use ($ip) {
-            try {
-                $resp = \Illuminate\Support\Facades\Http::timeout(3)
-                    ->get("http://ip-api.com/json/{$ip}", ['fields' => 'status,country,city,regionName']);
-                if ($resp->successful() && ($resp->json('status') === 'success')) {
-                    return [
-                        'country' => $resp->json('country'),
-                        'city'    => $resp->json('city') ?: $resp->json('regionName'),
-                    ];
+        // Use a versioned key so prior bad cache entries (which stored partial
+        // results without city) don't stick around. Only cache successful
+        // lookups — empty results should be retried next time, not frozen
+        // for 24h.
+        $cacheKey = 'geoip_v2:' . $ip;
+        $cached = \Cache::get($cacheKey);
+        if (is_array($cached) && !empty($cached)) {
+            return $cached;
+        }
+
+        try {
+            $resp = \Illuminate\Support\Facades\Http::timeout(3)
+                ->get("http://ip-api.com/json/{$ip}?fields=status,country,city,regionName");
+            if ($resp->successful() && ($resp->json('status') === 'success')) {
+                $geo = [
+                    'country' => $resp->json('country'),
+                    'city'    => $resp->json('city') ?: $resp->json('regionName'),
+                ];
+                if (!empty($geo['country']) || !empty($geo['city'])) {
+                    \Cache::put($cacheKey, $geo, now()->addHours(24));
+                    return $geo;
                 }
-            } catch (\Throwable $e) {
-                \Log::debug('GeoIP lookup failed: ' . $e->getMessage());
             }
-            return [];
-        });
+        } catch (\Throwable $e) {
+            \Log::debug('GeoIP lookup failed: ' . $e->getMessage());
+        }
+        return [];
     }
 
     /**
@@ -271,12 +288,22 @@ class WidgetChatController extends Controller
                 return response()->json(['error' => 'Widget not found'], 404);
             }
 
-            $sessionId   = $request->input('session_id') ?? Str::uuid()->toString();
+            $requestedSessionId = $request->input('session_id');
             $visitorName = $request->input('visitor_name');
             $cookieId    = $request->input('visitor_cookie');
 
             // Resolve persistent visitor identity (dedupes by fingerprint).
             $visitor = $this->resolveVisitor($request, (int) $config->organization_id, $cookieId);
+
+            // If the widget sent an existing session_id, verify it actually
+            // belongs to this org so we don't resume someone else's thread.
+            $existingConv = null;
+            if ($requestedSessionId) {
+                $existingConv = ChatConversation::where('session_id', $requestedSessionId)
+                    ->where('organization_id', $config->organization_id)
+                    ->first();
+            }
+            $sessionId = $existingConv ? $existingConv->session_id : Str::uuid()->toString();
 
             $userAgent = substr((string) $request->header('User-Agent'), 0, 500);
             $pageUrl   = $request->input('page_url') ?: $request->header('Referer');
@@ -309,11 +336,30 @@ class WidgetChatController extends Controller
                 ]
             );
 
+            // When resuming, return prior messages so the widget can
+            // rehydrate the thread instead of showing an empty panel.
+            $history = [];
+            if ($existingConv) {
+                $history = ChatMessage::where('conversation_id', $existingConv->id)
+                    ->orderBy('id')
+                    ->limit(200)
+                    ->get(['id', 'sender_type', 'content', 'attachment_url', 'attachment_type', 'created_at'])
+                    ->map(fn ($m) => [
+                        'id'              => $m->id,
+                        'sender_type'     => $m->sender_type,
+                        'content'         => $m->content,
+                        'attachment_url'  => $m->attachment_url,
+                        'attachment_type' => $m->attachment_type,
+                        'created_at'      => optional($m->created_at)->toIso8601String(),
+                    ])->toArray();
+            }
+
             return response()->json([
                 'session_id'      => $sessionId,
                 'visitor_id'      => $visitor->id,
                 'visitor_key'     => $visitor->visitor_key,
                 'welcome_message' => $config->welcome_message,
+                'messages'        => $history,
             ]);
         } catch (\Throwable $e) {
             \Log::error('Widget init error: ' . $e->getMessage(), ['file' => $e->getFile() . ':' . $e->getLine()]);
@@ -997,12 +1043,18 @@ class WidgetChatController extends Controller
 
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
+                'OpenAI-Beta'   => 'realtime=v1',
+                'Content-Type'  => 'application/json',
             ])->post('https://api.openai.com/v1/realtime/sessions', $sessionPayload);
 
             if ($response->failed()) {
+                \Log::error('OpenAI realtime session failed', [
+                    'status' => $response->status(),
+                    'body'   => substr((string) $response->body(), 0, 500),
+                ]);
                 return response()->json([
                     'error' => 'Failed to create realtime session',
-                    'details' => $response->json(),
+                    'details' => $response->json() ?: $response->body(),
                 ], 502);
             }
 
