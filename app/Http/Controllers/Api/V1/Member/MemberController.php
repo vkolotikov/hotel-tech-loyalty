@@ -59,7 +59,7 @@ class MemberController extends Controller
         $member = $request->user()->loyaltyMember()->with('tier')->firstOrFail();
 
         // Issue a secure rotating QR token (5 min expiry, single use)
-        $secureToken = QrToken::issue($member, expiresInMinutes: 5);
+        $secureToken = QrToken::issue($member, ttlMinutes: 5, maxUses: 1);
 
         $qrImage = null;
         try {
@@ -93,7 +93,7 @@ class MemberController extends Controller
             ->where('expires_at', '>', now())
             ->update(['is_revoked' => true]);
 
-        $secureToken = QrToken::issue($member, expiresInMinutes: 5);
+        $secureToken = QrToken::issue($member, ttlMinutes: 5, maxUses: 1);
 
         $qrImage = null;
         try {
