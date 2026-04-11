@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Bot, Save, Plus, X, Sliders } from 'lucide-react'
+import { Bot, Save, Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const SALES_STYLES = [
@@ -22,6 +22,25 @@ const REPLY_LENGTHS = [
   { value: 'concise', label: 'Concise', desc: '1-2 sentences' },
   { value: 'moderate', label: 'Moderate', desc: '2-4 sentences' },
   { value: 'detailed', label: 'Detailed', desc: 'Thorough responses' },
+]
+
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'nl', label: 'Dutch' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'pl', label: 'Polish' },
+  { value: 'tr', label: 'Turkish' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'uk', label: 'Ukrainian' },
 ]
 
 const PROVIDERS = [
@@ -48,13 +67,9 @@ const PROVIDERS = [
   ]},
 ]
 
-type Tab = 'behavior' | 'model'
-
 export function ChatbotConfig() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<Tab>('behavior')
 
-  // ─── Behavior Config ───
   const { data: behavior, isLoading: loadingBehavior } = useQuery({
     queryKey: ['chatbot-behavior'],
     queryFn: () => api.get('/v1/admin/chatbot-config/behavior').then(r => r.data),
@@ -62,21 +77,8 @@ export function ChatbotConfig() {
 
   const [behaviorForm, setBehaviorForm] = useState<any>(null)
   const [newRule, setNewRule] = useState('')
-
-  // Sync form when data loads
   const bForm = behaviorForm ?? behavior ?? {}
 
-  const saveBehavior = useMutation({
-    mutationFn: (data: any) => api.put('/v1/admin/chatbot-config/behavior', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chatbot-behavior'] })
-      toast.success('Behavior config saved')
-      setBehaviorForm(null)
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
-  })
-
-  // ─── Model Config ───
   const { data: modelData, isLoading: loadingModel } = useQuery({
     queryKey: ['chatbot-model'],
     queryFn: () => api.get('/v1/admin/chatbot-config/model').then(r => r.data),
@@ -85,15 +87,35 @@ export function ChatbotConfig() {
   const [modelForm, setModelForm] = useState<any>(null)
   const mForm = modelForm ?? modelData ?? {}
 
+  const saveBehavior = useMutation({
+    mutationFn: (data: any) => api.put('/v1/admin/chatbot-config/behavior', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chatbot-behavior'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
+  })
+
   const saveModel = useMutation({
     mutationFn: (data: any) => api.put('/v1/admin/chatbot-config/model', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chatbot-model'] })
-      toast.success('Model config saved')
-      setModelForm(null)
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
   })
+
+  const handleSaveAll = async () => {
+    try {
+      await Promise.all([
+        saveBehavior.mutateAsync(bForm),
+        saveModel.mutateAsync(mForm),
+      ])
+      toast.success('Configuration saved')
+      setBehaviorForm(null)
+      setModelForm(null)
+    } catch {
+      // individual onError handlers already toasted
+    }
+  }
 
   const updateBehavior = (key: string, value: any) => {
     setBehaviorForm((prev: any) => ({ ...(prev ?? behavior ?? {}), [key]: value }))
@@ -116,8 +138,8 @@ export function ChatbotConfig() {
   }
 
   const selectedProvider = PROVIDERS.find(p => p.value === (mForm.provider || 'openai'))
-
   const isLoading = loadingBehavior || loadingModel
+  const isSaving = saveBehavior.isPending || saveModel.isPending
 
   return (
     <div className="space-y-6">
@@ -130,30 +152,42 @@ export function ChatbotConfig() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-dark-surface border border-dark-border rounded-lg p-1 w-fit">
-        {[
-          { key: 'behavior' as Tab, label: 'AI Behavior', icon: Bot },
-          { key: 'model' as Tab, label: 'Model Settings', icon: Sliders },
-        ].map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
-            }`}
-          >
-            <t.icon size={16} />
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {isLoading ? (
         <div className="text-center text-t-secondary py-12">Loading configuration...</div>
-      ) : tab === 'behavior' ? (
-        /* ═══ BEHAVIOR TAB ═══ */
+      ) : (
         <div className="space-y-6">
+          {/* AI Model */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">AI Model</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Provider</label>
+                <select
+                  value={mForm.provider || 'openai'}
+                  onChange={e => {
+                    updateModel('provider', e.target.value)
+                    const prov = PROVIDERS.find(p => p.value === e.target.value)
+                    if (prov) updateModel('model_name', prov.models[0].value)
+                  }}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                >
+                  {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-t-secondary mb-1">Model</label>
+                <select
+                  value={mForm.model_name || 'gpt-4o'}
+                  onChange={e => updateModel('model_name', e.target.value)}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                >
+                  {(selectedProvider?.models || []).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Identity Section */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-semibold text-white">Assistant Identity</h2>
@@ -171,13 +205,13 @@ export function ChatbotConfig() {
               </div>
               <div>
                 <label className="block text-sm text-t-secondary mb-1">Language</label>
-                <input
-                  type="text"
+                <select
                   value={bForm.language || 'en'}
                   onChange={e => updateBehavior('language', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="en"
-                />
+                >
+                  {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                </select>
               </div>
             </div>
 
@@ -186,7 +220,7 @@ export function ChatbotConfig() {
               <textarea
                 value={bForm.identity || ''}
                 onChange={e => updateBehavior('identity', e.target.value)}
-                rows={3}
+                rows={5}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="You are a luxury hotel concierge AI assistant with deep knowledge of hospitality..."
               />
@@ -197,7 +231,7 @@ export function ChatbotConfig() {
               <textarea
                 value={bForm.goal || ''}
                 onChange={e => updateBehavior('goal', e.target.value)}
-                rows={2}
+                rows={5}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="Help guests with loyalty program questions, recommend experiences, and increase engagement..."
               />
@@ -325,7 +359,7 @@ export function ChatbotConfig() {
               <textarea
                 value={bForm.custom_instructions || ''}
                 onChange={e => updateBehavior('custom_instructions', e.target.value)}
-                rows={3}
+                rows={6}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 placeholder="Additional instructions for the AI assistant..."
               />
@@ -335,138 +369,12 @@ export function ChatbotConfig() {
           {/* Save Button */}
           <div className="flex justify-end">
             <button
-              onClick={() => saveBehavior.mutate(bForm)}
-              disabled={saveBehavior.isPending}
+              onClick={handleSaveAll}
+              disabled={isSaving}
               className="flex items-center gap-2 bg-primary-600 text-white px-6 py-2.5 rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
             >
               <Save size={16} />
-              {saveBehavior.isPending ? 'Saving...' : 'Save Behavior Config'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* ═══ MODEL TAB ═══ */
-        <div className="space-y-6">
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">AI Model Configuration</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-t-secondary mb-1">Provider</label>
-                <select
-                  value={mForm.provider || 'openai'}
-                  onChange={e => {
-                    updateModel('provider', e.target.value)
-                    const prov = PROVIDERS.find(p => p.value === e.target.value)
-                    if (prov) updateModel('model_name', prov.models[0].value)
-                  }}
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                >
-                  {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-t-secondary mb-1">Model</label>
-                <select
-                  value={mForm.model_name || 'gpt-4o'}
-                  onChange={e => updateModel('model_name', e.target.value)}
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                >
-                  {(selectedProvider?.models || []).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-white">Parameters</h2>
-
-            {/* Temperature */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-t-secondary">Temperature</span>
-                <span className="text-white font-mono">{mForm.temperature ?? 0.7}</span>
-              </div>
-              <input
-                type="range" min="0" max="2" step="0.05"
-                value={mForm.temperature ?? 0.7}
-                onChange={e => updateModel('temperature', parseFloat(e.target.value))}
-                className="w-full accent-primary-500"
-              />
-              <div className="flex justify-between text-xs text-dark-border2">
-                <span>Precise</span><span>Creative</span>
-              </div>
-            </div>
-
-            {/* Top P */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-t-secondary">Top P</span>
-                <span className="text-white font-mono">{mForm.top_p ?? 1.0}</span>
-              </div>
-              <input
-                type="range" min="0" max="1" step="0.05"
-                value={mForm.top_p ?? 1.0}
-                onChange={e => updateModel('top_p', parseFloat(e.target.value))}
-                className="w-full accent-primary-500"
-              />
-            </div>
-
-            {/* Max Tokens */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-t-secondary">Max Tokens</span>
-                <span className="text-white font-mono">{mForm.max_tokens ?? 500}</span>
-              </div>
-              <input
-                type="range" min="50" max="4096" step="50"
-                value={mForm.max_tokens ?? 500}
-                onChange={e => updateModel('max_tokens', parseInt(e.target.value))}
-                className="w-full accent-primary-500"
-              />
-              <div className="flex justify-between text-xs text-dark-border2">
-                <span>50</span><span>4096</span>
-              </div>
-            </div>
-
-            {/* Frequency Penalty */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-t-secondary">Frequency Penalty</span>
-                <span className="text-white font-mono">{mForm.frequency_penalty ?? 0}</span>
-              </div>
-              <input
-                type="range" min="0" max="2" step="0.1"
-                value={mForm.frequency_penalty ?? 0}
-                onChange={e => updateModel('frequency_penalty', parseFloat(e.target.value))}
-                className="w-full accent-primary-500"
-              />
-            </div>
-
-            {/* Presence Penalty */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-t-secondary">Presence Penalty</span>
-                <span className="text-white font-mono">{mForm.presence_penalty ?? 0}</span>
-              </div>
-              <input
-                type="range" min="0" max="2" step="0.1"
-                value={mForm.presence_penalty ?? 0}
-                onChange={e => updateModel('presence_penalty', parseFloat(e.target.value))}
-                className="w-full accent-primary-500"
-              />
-            </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => saveModel.mutate(mForm)}
-              disabled={saveModel.isPending}
-              className="flex items-center gap-2 bg-primary-600 text-white px-6 py-2.5 rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
-            >
-              <Save size={16} />
-              {saveModel.isPending ? 'Saving...' : 'Save Model Config'}
+              {isSaving ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>
         </div>
