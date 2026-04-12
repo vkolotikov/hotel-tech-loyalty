@@ -418,9 +418,9 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
-  const { data, status } = useSubscription()
+  const { data, status, isLoading } = useSubscription()
 
-  if (!data || status === 'LOCAL') return null
+  if (!data || status === 'LOCAL' || status === 'LOADING' || isLoading) return null
 
   const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
   const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
@@ -477,9 +477,9 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
 }
 
 function SubscriptionBanner() {
-  const { data, status } = useSubscription()
+  const { data, status, isLoading } = useSubscription()
 
-  if (!data || status === 'LOCAL') return null
+  if (!data || status === 'LOCAL' || status === 'LOADING' || isLoading) return null
 
   const billingUrl = '/billing'
 
@@ -531,17 +531,33 @@ function SubscriptionBanner() {
     )
   }
 
-  if (status === 'EXPIRED' || !data.active) {
+  if (status === 'EXPIRED') {
     return (
       <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 flex items-center gap-3">
         <AlertTriangle size={18} className="text-red-400 shrink-0" />
         <div className="flex-1 text-sm">
-          <strong className="text-red-300">Subscription inactive.</strong>
-          <span className="text-t-secondary"> Most features are limited until you renew.</span>
+          <strong className="text-red-300">Trial expired.</strong>
+          <span className="text-t-secondary"> Upgrade to a paid plan to continue using all features.</span>
         </div>
         <Link to={billingUrl}
            className="text-xs font-medium px-3 py-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0">
-          Renew now
+          Upgrade now
+        </Link>
+      </div>
+    )
+  }
+
+  if (status === 'NO_PLAN' || !data.active) {
+    return (
+      <div className="mb-4 bg-primary-500/10 border border-primary-500/20 rounded-lg px-4 py-3 flex items-center gap-3">
+        <Sparkles size={18} className="text-primary-400 shrink-0" />
+        <div className="flex-1 text-sm">
+          <strong className="text-primary-300">No active plan.</strong>
+          <span className="text-t-secondary"> Choose a plan to unlock all features.</span>
+        </div>
+        <Link to={billingUrl}
+           className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-colors shrink-0">
+          Choose plan
         </Link>
       </div>
     )

@@ -425,8 +425,24 @@ class AuthController extends Controller
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
         }
 
-        // Step 4: Sync subscription entitlements from SaaS → local org
-        // This ensures subscription() returns real plan data instead of LOCAL mode.
+        // Step 4: Provision trial entitlements on the local org.
+        //
+        // Two paths:
+        //   a) SaaS registration succeeded → sync from SaaS bootstrap (authoritative)
+        //   b) SaaS unreachable / not configured → create a local trial directly
+        //
+        // Either way, the org MUST end up with subscription_status + plan data
+        // so that subscription() and CheckSubscription work correctly.
+        $planSlug = $validated['plan'] ?? 'starter';
+        $trialDays = match ($planSlug) {
+            'starter'    => 7,
+            'growth'     => 14,
+            'enterprise' => 14,
+            default      => 7,
+        };
+        $trialSynced = false;
+
+        // Path A: Sync from SaaS if registration succeeded
         if ($saasToken && $saasApi && $org) {
             try {
                 $bootstrap = Http::withToken($saasToken)->timeout(5)
@@ -436,19 +452,32 @@ class AuthController extends Controller
                     $bsData = $bootstrap->json();
                     $sub = $bsData['subscription'] ?? null;
                     if ($sub) {
-                        $org->plan_slug           = $sub['plan']['slug'] ?? null;
-                        $org->subscription_status = $sub['status'] ?? null;
-                        $org->trial_end           = $sub['trialEnd'] ?? null;
-                        $org->period_end          = $sub['currentPeriodEnd'] ?? null;
+                        $org->plan_slug           = $sub['plan']['slug'] ?? $planSlug;
+                        $org->subscription_status = $sub['status'] ?? 'TRIALING';
+                        $org->trial_end           = $sub['trialEnd'] ?? now()->addDays($trialDays);
+                        $org->period_end          = $sub['currentPeriodEnd'] ?? now()->addDays($trialDays);
                     }
                     $org->entitled_products     = $bsData['entitled_product_slugs'] ?? [];
                     $org->plan_features         = (array) ($bsData['features'] ?? []);
                     $org->entitlements_synced_at = now();
                     $org->save();
+                    $trialSynced = true;
                 }
             } catch (\Exception $e) {
                 report($e);
             }
+        }
+
+        // Path B: Local trial fallback — SaaS unreachable or sync failed
+        if (!$trialSynced && $org) {
+            $org->plan_slug           = $planSlug;
+            $org->subscription_status = 'TRIALING';
+            $org->trial_end           = now()->addDays($trialDays);
+            $org->period_end          = now()->addDays($trialDays);
+            $org->entitled_products   = ['crm', 'chat', 'loyalty', 'booking'];
+            $org->plan_features       = $this->getTrialFeatures($planSlug);
+            $org->entitlements_synced_at = now();
+            $org->save();
         }
 
         $sanctumToken = $localUser->createToken('admin')->plainTextToken;
@@ -460,7 +489,7 @@ class AuthController extends Controller
             'user'       => $localUser->fresh(),
             'staff'      => $staff,
             'org_id'     => $saasOrgId ?? $org->id,
-            'message'    => 'Trial started! You have ' . ($org->trial_end ? (int) now()->diffInDays($org->trial_end) : 14) . ' days to explore.',
+            'message'    => 'Trial started! You have ' . $trialDays . ' days to explore.',
         ], 201);
     }
 
@@ -674,6 +703,68 @@ class AuthController extends Controller
             report($e);
             return response()->json(['error' => 'Billing service unavailable'], 503);
         }
+    }
+
+    /**
+     * Feature set for each plan tier (used when SaaS is unreachable).
+     * These mirror the plans defined in the SaaS product catalog.
+     */
+    private function getTrialFeatures(string $planSlug): array
+    {
+        return match ($planSlug) {
+            'starter' => [
+                'max_team_members'     => '3',
+                'max_guests'           => '500',
+                'max_properties'       => '1',
+                'max_loyalty_members'  => '200',
+                'ai_insights'          => 'false',
+                'ai_avatars'           => 'false',
+                'custom_branding'      => 'false',
+                'api_access'           => 'false',
+                'push_notifications'   => 'true',
+                'mobile_app'           => 'true',
+                'nfc_cards'            => 'false',
+                'priority_support'     => 'email',
+            ],
+            'growth' => [
+                'max_team_members'     => '10',
+                'max_guests'           => 'unlimited',
+                'max_properties'       => '3',
+                'max_loyalty_members'  => 'unlimited',
+                'ai_insights'          => 'true',
+                'ai_avatars'           => 'false',
+                'custom_branding'      => 'true',
+                'api_access'           => 'false',
+                'push_notifications'   => 'true',
+                'mobile_app'           => 'true',
+                'nfc_cards'            => 'true',
+                'priority_support'     => 'chat',
+            ],
+            'enterprise' => [
+                'max_team_members'     => 'unlimited',
+                'max_guests'           => 'unlimited',
+                'max_properties'       => 'unlimited',
+                'max_loyalty_members'  => 'unlimited',
+                'ai_insights'          => 'true',
+                'ai_avatars'           => 'true',
+                'custom_branding'      => 'true',
+                'api_access'           => 'true',
+                'push_notifications'   => 'true',
+                'mobile_app'           => 'true',
+                'nfc_cards'            => 'true',
+                'priority_support'     => 'dedicated',
+            ],
+            default => [
+                'max_team_members'     => '3',
+                'max_guests'           => '500',
+                'max_properties'       => '1',
+                'max_loyalty_members'  => '200',
+                'ai_insights'          => 'false',
+                'custom_branding'      => 'false',
+                'push_notifications'   => 'true',
+                'mobile_app'           => 'true',
+            ],
+        };
     }
 
     /**
