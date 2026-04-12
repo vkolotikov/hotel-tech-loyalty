@@ -16,6 +16,14 @@ class CheckSubscription
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Super admin bypass — full access without subscription
+        $user = $request->user();
+        if ($user && method_exists($user, 'staff') && $user->staff?->isSuperAdmin()) {
+            $request->attributes->set('subscription_status', 'ACTIVE');
+            $request->attributes->set('subscription_plan', 'enterprise');
+            return $next($request);
+        }
+
         // Path 1: SaaS JWT-authenticated request — check live from SaaS API
         $saasOrgId = $request->attributes->get('saas_org_id');
         if ($saasOrgId) {

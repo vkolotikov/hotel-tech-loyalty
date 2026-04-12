@@ -503,6 +503,27 @@ class AuthController extends Controller
      */
     public function subscription(Request $request): JsonResponse
     {
+        // Super admin gets full access — no subscription needed
+        $user = $request->user();
+        if ($user && $user->staff?->isSuperAdmin()) {
+            return response()->json([
+                'active'   => true,
+                'status'   => 'ACTIVE',
+                'plan'     => ['name' => 'Enterprise', 'slug' => 'enterprise'],
+                'trialEnd' => null,
+                'periodEnd'=> null,
+                'features' => [
+                    'max_team_members' => 'unlimited', 'max_guests' => 'unlimited',
+                    'max_properties' => 'unlimited', 'max_loyalty_members' => 'unlimited',
+                    'ai_insights' => 'true', 'ai_avatars' => 'true',
+                    'custom_branding' => 'true', 'api_access' => 'true',
+                    'push_notifications' => 'true', 'mobile_app' => 'true',
+                    'nfc_cards' => 'true', 'priority_support' => 'dedicated',
+                ],
+                'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+            ]);
+        }
+
         // 1. Live SaaS query (only when user has a SaaS JWT — set by SaasAuthMiddleware)
         $saasOrgId = $request->attributes->get('saas_org_id');
         if ($saasOrgId) {
