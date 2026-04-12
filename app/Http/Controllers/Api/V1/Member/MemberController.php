@@ -53,6 +53,29 @@ class MemberController extends Controller
         ]);
     }
 
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $user = $request->user();
+
+        // Delete old avatar if it exists
+        if ($user->avatar_url) {
+            $oldPath = str_replace('/storage/', '', $user->avatar_url);
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('avatar')->storePublicly('avatars', 'public');
+        $user->update(['avatar_url' => '/storage/' . $path]);
+
+        return response()->json([
+            'message'    => 'Avatar updated',
+            'avatar_url' => '/storage/' . $path,
+        ]);
+    }
+
     public function card(Request $request): JsonResponse
     {
         $member = $request->user()->loyaltyMember()->with('tier')->firstOrFail();

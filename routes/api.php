@@ -118,6 +118,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('member')->group(function () {
             Route::get('profile',           [MemberController::class, 'profile']);
             Route::put('profile',           [MemberController::class, 'updateProfile']);
+            Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::get('card',              [MemberController::class, 'card']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
