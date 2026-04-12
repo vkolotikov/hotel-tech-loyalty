@@ -9,7 +9,7 @@ import {
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight,
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
-  AlertTriangle, Clock, ChevronLeft, ChevronRight, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -409,7 +409,6 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
-          <SubscriptionBanner />
           {children}
         </main>
       </div>
@@ -476,92 +475,3 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-function SubscriptionBanner() {
-  const { data, status, isLoading } = useSubscription()
-
-  if (!data || status === 'LOCAL' || status === 'LOADING' || isLoading) return null
-
-  const billingUrl = '/billing'
-
-  if (status === 'TRIALING') {
-    const trialEnd = data.trialEnd ? new Date(data.trialEnd) : null
-    const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
-    const urgent = daysLeft !== null && daysLeft <= 2
-    return (
-      <div className={clsx(
-        'mb-4 rounded-lg px-4 py-3 flex items-center gap-3',
-        urgent ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-primary-500/10 border border-primary-500/20'
-      )}>
-        <Clock size={18} className={clsx('shrink-0', urgent ? 'text-orange-400' : 'text-primary-400')} />
-        <div className="flex-1 text-sm">
-          <strong className={urgent ? 'text-orange-300' : 'text-primary-300'}>
-            Free trial &mdash; {daysLeft !== null ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'active'}
-          </strong>
-          {data.plan?.name && (
-            <span className="text-t-secondary"> on the <strong className="text-white">{data.plan.name}</strong> plan</span>
-          )}
-          {trialEnd && (
-            <span className="text-t-secondary"> &middot; ends {trialEnd.toLocaleDateString()}</span>
-          )}
-        </div>
-        <Link to={billingUrl}
-           className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-colors shrink-0">
-          Add payment method
-        </Link>
-      </div>
-    )
-  }
-
-  if (status === 'ACTIVE') {
-    const periodEnd = data.periodEnd ? new Date(data.periodEnd) : null
-    return (
-      <div className="mb-4 bg-green-500/5 border border-green-500/20 rounded-lg px-4 py-2.5 flex items-center gap-3">
-        <Sparkles size={16} className="text-green-400 shrink-0" />
-        <div className="flex-1 text-sm">
-          <strong className="text-green-300">{data.plan?.name ?? 'Active'} plan</strong>
-          {periodEnd && (
-            <span className="text-t-secondary"> &middot; renews {periodEnd.toLocaleDateString()}</span>
-          )}
-        </div>
-        <Link to={billingUrl}
-           className="text-xs font-medium text-t-secondary hover:text-white transition-colors shrink-0">
-          Manage billing &rarr;
-        </Link>
-      </div>
-    )
-  }
-
-  if (status === 'EXPIRED') {
-    return (
-      <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 flex items-center gap-3">
-        <AlertTriangle size={18} className="text-red-400 shrink-0" />
-        <div className="flex-1 text-sm">
-          <strong className="text-red-300">Trial expired.</strong>
-          <span className="text-t-secondary"> Upgrade to a paid plan to continue using all features.</span>
-        </div>
-        <Link to={billingUrl}
-           className="text-xs font-medium px-3 py-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0">
-          Upgrade now
-        </Link>
-      </div>
-    )
-  }
-
-  if (status === 'NO_PLAN' || !data.active) {
-    return (
-      <div className="mb-4 bg-primary-500/10 border border-primary-500/20 rounded-lg px-4 py-3 flex items-center gap-3">
-        <Sparkles size={18} className="text-primary-400 shrink-0" />
-        <div className="flex-1 text-sm">
-          <strong className="text-primary-300">No active plan.</strong>
-          <span className="text-t-secondary"> Choose a plan to unlock all features.</span>
-        </div>
-        <Link to={billingUrl}
-           className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-colors shrink-0">
-          Choose plan
-        </Link>
-      </div>
-    )
-  }
-
-  return null
-}

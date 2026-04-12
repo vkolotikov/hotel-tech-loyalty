@@ -25,6 +25,7 @@ const REPLY_LENGTHS = [
 ]
 
 const LANGUAGES = [
+  { value: 'auto', label: 'Auto-detect (match customer language)' },
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Spanish' },
   { value: 'fr', label: 'French' },
@@ -48,16 +49,19 @@ const PROVIDERS = [
     { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
     { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
     { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
+    { value: 'gpt-5.3', label: 'GPT-5.3' },
+    { value: 'gpt-5.3-mini', label: 'GPT-5.3 Mini' },
+    { value: 'o3', label: 'o3 (reasoning)' },
+    { value: 'o4-mini', label: 'o4-mini (reasoning, fast)' },
     { value: 'gpt-4.1', label: 'GPT-4.1' },
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
     { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'o3-mini', label: 'o3-mini (reasoning)' },
   ]},
   { value: 'anthropic', label: 'Anthropic', models: [
-    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (most capable)' },
-    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (most capable)' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fastest)' },
   ]},
   { value: 'google', label: 'Google', models: [

@@ -95,7 +95,10 @@ class KnowledgeService
         try {
             $doc->update(['processing_status' => 'processing']);
 
-            $fullPath = storage_path('app/public/' . ltrim($doc->file_path, '/storage/'));
+            $relativePath = str_starts_with($doc->file_path, '/storage/')
+                ? substr($doc->file_path, 9)
+                : $doc->file_path;
+            $fullPath = storage_path('app/public/' . $relativePath);
             if (!file_exists($fullPath)) {
                 $doc->update(['processing_status' => 'failed']);
                 return;

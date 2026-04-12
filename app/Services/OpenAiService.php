@@ -255,7 +255,9 @@ Review: {$text}";
         }
 
         // Language
-        if ($config->language && $config->language !== 'en') {
+        if ($config->language === 'auto') {
+            $parts[] = "Detect the customer's language from their message and always respond in the same language. If unsure, default to English.";
+        } elseif ($config->language && $config->language !== 'en') {
             $parts[] = "Respond in language: {$config->language}.";
         }
 

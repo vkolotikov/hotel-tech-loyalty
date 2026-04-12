@@ -164,6 +164,41 @@ export function Billing() {
         </div>
       </div>
 
+      {/* Trial countdown banner */}
+      {status === 'TRIALING' && daysLeft !== null && (
+        <div className={
+          'rounded-xl border p-5 flex items-center gap-4 ' +
+          (daysLeft <= 2 ? 'border-orange-500/30 bg-orange-500/5' : 'border-primary-500/20 bg-primary-500/5')
+        }>
+          <div className={
+            'w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 ' +
+            (daysLeft <= 2 ? 'bg-orange-500/15' : 'bg-primary-500/15')
+          }>
+            <span className={'text-xl font-bold leading-none ' + (daysLeft <= 2 ? 'text-orange-400' : 'text-primary-400')}>{daysLeft}</span>
+            <span className={'text-[9px] uppercase font-semibold tracking-wider ' + (daysLeft <= 2 ? 'text-orange-400/70' : 'text-primary-400/70')}>
+              {daysLeft === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={'text-sm font-semibold ' + (daysLeft <= 2 ? 'text-orange-300' : 'text-primary-300')}>
+              {daysLeft === 0 ? 'Your trial expires today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in your free trial`}
+            </p>
+            <p className="text-xs text-t-secondary mt-0.5">
+              {sub?.plan?.name && <>On the <strong className="text-white">{sub.plan.name}</strong> plan &middot; </>}
+              {trialEnd && <>Expires {trialEnd.toLocaleDateString()}</>}
+            </p>
+          </div>
+          <button
+            onClick={() => handleCheckout(currentSlug || 'growth')}
+            disabled={!!checkoutLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
+          >
+            {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+            Upgrade now
+          </button>
+        </div>
+      )}
+
       {/* Current Plan Card */}
       <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
         <h2 className="text-sm font-semibold text-t-secondary uppercase tracking-wider mb-4">Current Plan</h2>
