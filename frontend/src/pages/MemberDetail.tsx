@@ -417,6 +417,9 @@ export function MemberDetail() {
 
         {/* Right Column */}
         <div className="space-y-4">
+          {/* Member QR Code */}
+          <MemberQrCard memberId={id!} memberNumber={member?.member_number} />
+
           {/* Award Points */}
           {(isAdmin || staff?.can_award_points) && <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
             <h3 className="font-semibold text-white mb-4">Award Points</h3>
@@ -614,6 +617,41 @@ export function MemberDetail() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function MemberQrCard({ memberId, memberNumber }: { memberId: string; memberNumber?: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['member-qr', memberId],
+    queryFn: () => api.get(`/v1/admin/members/${memberId}/qr`).then(r => r.data),
+    enabled: !!memberId,
+  })
+
+  return (
+    <div className="bg-dark-surface rounded-xl border border-dark-border p-5 flex flex-col items-center">
+      <h3 className="font-semibold text-white mb-3">Member QR Code</h3>
+      {isLoading ? (
+        <div className="w-40 h-40 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-400 border-t-transparent" />
+        </div>
+      ) : data?.qr_image ? (
+        <img src={data.qr_image} alt="Member QR" className="w-40 h-40 rounded-lg bg-white p-2" />
+      ) : (
+        <div className="w-40 h-40 bg-dark-surface2 rounded-lg flex items-center justify-center">
+          <span className="text-t-secondary text-xs">QR unavailable</span>
+        </div>
+      )}
+      <p className="text-xs text-t-secondary mt-2 font-mono tracking-wider">{memberNumber ?? data?.member_number}</p>
+      {data?.qr_image && (
+        <a
+          href={data.qr_image}
+          download={`member-qr-${memberNumber ?? memberId}.png`}
+          className="mt-2 text-xs text-primary-400 hover:underline"
+        >
+          Download QR
+        </a>
+      )}
     </div>
   )
 }

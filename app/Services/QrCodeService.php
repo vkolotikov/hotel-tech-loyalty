@@ -29,7 +29,22 @@ class QrCodeService
     }
 
     /**
-     * Generate a QR code image as base64 PNG.
+     * Generate a static QR code image for a member number (base64 PNG).
+     * This QR is permanent and encodes the member number for staff scanning.
+     */
+    public function generateStaticQr(string $memberNumber): string
+    {
+        $payload = json_encode([
+            'type'          => 'hotel_loyalty',
+            'member_number' => $memberNumber,
+            'version'       => 2,
+        ]);
+
+        return $this->buildQrPng($payload);
+    }
+
+    /**
+     * Generate a QR code image as base64 PNG (legacy rotating tokens).
      */
     public function generateQrImage(string $token): string
     {
@@ -40,10 +55,15 @@ class QrCodeService
             'timestamp' => now()->timestamp,
         ]);
 
+        return $this->buildQrPng($payload);
+    }
+
+    private function buildQrPng(string $data): string
+    {
         $result = Builder::create()
             ->writer(new PngWriter())
             ->writerOptions([])
-            ->data($payload)
+            ->data($data)
             ->encoding(new Encoding('UTF-8'))
             ->errorCorrectionLevel(ErrorCorrectionLevel::High)
             ->size(300)

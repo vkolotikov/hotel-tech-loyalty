@@ -112,7 +112,6 @@ Route::prefix('v1')->group(function () {
             Route::get('profile',           [MemberController::class, 'profile']);
             Route::put('profile',           [MemberController::class, 'updateProfile']);
             Route::get('card',              [MemberController::class, 'card']);
-            Route::post('card/refresh-qr',  [MemberController::class, 'refreshQr']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             Route::get('offers',            [OfferController::class, 'index']);
@@ -165,6 +164,7 @@ Route::prefix('v1')->group(function () {
             Route::get('members/{id}',            [MemberAdminController::class, 'show']);
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);
             Route::get('members/{id}/ai-insights',[MemberAdminController::class, 'aiInsights']);
+            Route::get('members/{id}/qr',         [MemberController::class, 'memberQr']);
             Route::post('points/award',           [MemberAdminController::class, 'awardPoints']);
             Route::post('points/redeem',          [MemberAdminController::class, 'redeemPoints']);
             Route::post('points/reverse',         [MemberAdminController::class, 'reverseTransaction']);

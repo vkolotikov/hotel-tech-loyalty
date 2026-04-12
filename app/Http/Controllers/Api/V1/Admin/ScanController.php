@@ -22,6 +22,12 @@ class ScanController extends Controller
     {
         $validated = $request->validate(['token' => 'required|string']);
 
+        // Check if the scanned data is a v2 static QR (JSON with member_number)
+        $decoded = json_decode($validated['token'], true);
+        if (is_array($decoded) && ($decoded['member_number'] ?? null)) {
+            return $this->scanByMemberNumber($decoded['member_number'], $request);
+        }
+
         // Try secure QR token first, fall back to legacy qr_code_token
         $qrToken = QrToken::where('token', $validated['token'])->first();
         $scanResult = 'success';
@@ -181,6 +187,47 @@ class ScanController extends Controller
         ], [], $request->user());
 
         return response()->json(['message' => 'NFC card linked', 'card' => $card], 201);
+    }
+
+    /**
+     * Look up a member by member_number (static QR v2 format).
+     */
+    private function scanByMemberNumber(string $memberNumber, Request $request): JsonResponse
+    {
+        $member = LoyaltyMember::where('member_number', $memberNumber)
+            ->where('is_active', true)
+            ->with(['user', 'tier', 'bookings' => fn($q) => $q->latest()->limit(3)])
+            ->first();
+
+        if (!$member) {
+            ScanEvent::create([
+                'scan_type'   => 'qr',
+                'token_value' => $memberNumber,
+                'result'      => 'member_not_found',
+                'staff_id'    => $request->user()->id,
+                'device_id'   => $request->header('X-Device-Id'),
+                'ip_address'  => $request->ip(),
+            ]);
+            return response()->json(['message' => 'Member not found'], 404);
+        }
+
+        $member->update(['last_activity_at' => now()]);
+
+        ScanEvent::create([
+            'member_id'   => $member->id,
+            'scan_type'   => 'qr',
+            'token_value' => $memberNumber,
+            'result'      => 'success',
+            'action_taken'=> 'verify',
+            'staff_id'    => $request->user()->id,
+            'property_id' => $request->user()->property_id ?? null,
+            'device_id'   => $request->header('X-Device-Id'),
+            'ip_address'  => $request->ip(),
+        ]);
+
+        AuditLog::record('qr_scanned', $member, [], [], $request->user());
+
+        return $this->buildScanResponse($member, $request->user());
     }
 
     private function buildScanResponse(LoyaltyMember $member, $staff): JsonResponse

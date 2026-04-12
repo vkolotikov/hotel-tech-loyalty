@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
-use App\Models\QrToken;
 use App\Services\LoyaltyService;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
@@ -58,20 +57,17 @@ class MemberController extends Controller
     {
         $member = $request->user()->loyaltyMember()->with('tier')->firstOrFail();
 
-        // Issue a secure rotating QR token (5 min expiry, single use)
-        $secureToken = QrToken::issue($member, ttlMinutes: 5, maxUses: 1);
-
+        // Static QR encodes the member_number — permanent, scannable by staff.
+        // Member number is unique per org and safe to encode (not a secret).
         $qrImage = null;
         try {
-            $qrImage = 'data:image/png;base64,' . $this->qrService->generateQrImage($secureToken->token);
+            $qrImage = 'data:image/png;base64,' . $this->qrService->generateStaticQr($member->member_number);
         } catch (\Throwable $e) {
             // GD extension may not be available — skip image
         }
 
         return response()->json([
             'member_number' => $member->member_number,
-            'qr_token'      => $secureToken->token,
-            'qr_expires_at' => $secureToken->expires_at,
             'qr_image'      => $qrImage,
             'nfc_uid'       => $member->nfc_uid,
             'tier'          => $member->tier,
@@ -79,32 +75,22 @@ class MemberController extends Controller
         ]);
     }
 
-    public function refreshQr(Request $request): JsonResponse
+    /**
+     * Generate a QR code image for a member by ID (admin use).
+     */
+    public function memberQr(Request $request, int $memberId): JsonResponse
     {
-        $member = $request->user()->loyaltyMember;
-
-        if (!$member) {
-            return response()->json(['message' => 'No loyalty membership found'], 404);
-        }
-
-        // Revoke any existing active tokens and issue fresh one
-        QrToken::where('member_id', $member->id)
-            ->where('is_revoked', false)
-            ->where('expires_at', '>', now())
-            ->update(['is_revoked' => true]);
-
-        $secureToken = QrToken::issue($member, ttlMinutes: 5, maxUses: 1);
+        $member = \App\Models\LoyaltyMember::findOrFail($memberId);
 
         $qrImage = null;
         try {
-            $qrImage = 'data:image/png;base64,' . $this->qrService->generateQrImage($secureToken->token);
+            $qrImage = 'data:image/png;base64,' . $this->qrService->generateStaticQr($member->member_number);
         } catch (\Throwable $e) {
-            // GD extension may not be available
+            return response()->json(['message' => 'Could not generate QR image'], 500);
         }
 
         return response()->json([
-            'qr_token'      => $secureToken->token,
-            'qr_expires_at' => $secureToken->expires_at,
+            'member_number' => $member->member_number,
             'qr_image'      => $qrImage,
         ]);
     }
