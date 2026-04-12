@@ -236,6 +236,7 @@ class WidgetChatController extends Controller
                 ->where('organization_id', $config->organization_id)
                 ->where('is_active', true)
                 ->exists(),
+            'organization_id'    => $config->organization_id,
         ]);
     }
 

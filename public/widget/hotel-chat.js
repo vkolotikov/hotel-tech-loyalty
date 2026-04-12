@@ -1354,9 +1354,9 @@
     var wc = widgetConfig || {};
     var baseUrl = wc.booking_widget_url || '';
     if (!baseUrl) {
-      // Try the same-origin booking page
+      // Fallback: use the loyalty platform's booking widget page with org context
       var origin = API.replace(/\/api\/v1\/widget\/[^/]+$/, '');
-      if (origin) baseUrl = origin + '/booking';
+      if (origin) baseUrl = origin + '/booking-widget?org=' + encodeURIComponent(wc.organization_id || '');
     }
     if (!baseUrl) return '';
 

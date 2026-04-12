@@ -65,12 +65,21 @@ class BookingContextService
         $rooms = $this->getRoomCatalog($orgId);
         if (empty($rooms)) return '';
 
+        $baseUrl = rtrim(config('app.url'), '/');
+
         $lines = ["## Available Rooms & Suites"];
         foreach ($rooms as $room) {
             $amenities = !empty($room['amenities']) ? implode(', ', array_slice($room['amenities'], 0, 6)) : '';
             $lines[] = "- **{$room['name']}** (ID: {$room['id']}): {$room['short_description']}";
             $lines[] = "  Guests: up to {$room['max_guests']} | Bedrooms: {$room['bedrooms']} | Bed: {$room['bed_type']} | Size: {$room['size']}";
             $lines[] = "  From {$room['currency']} {$room['base_price']}/night" . ($amenities ? " | Amenities: {$amenities}" : '');
+            if (!empty($room['image'])) {
+                $imageUrl = $room['image'];
+                if (strpos($imageUrl, 'http') !== 0) {
+                    $imageUrl = $baseUrl . (str_starts_with($imageUrl, '/') ? '' : '/') . $imageUrl;
+                }
+                $lines[] = "  Image: {$imageUrl}";
+            }
         }
 
         return implode("\n", $lines);

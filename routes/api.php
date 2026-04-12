@@ -83,7 +83,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('widget')->middleware('throttle:200,1')->group(function () {
         Route::get('{widgetKey}/config',    [WidgetChatController::class, 'getConfig']);
         Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
-        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage'])->middleware('throttle:30,1');
+        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage'])->middleware('throttle:60,1');
         Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead'])->middleware('throttle:5,1');
         Route::post('{widgetKey}/heartbeat',  [WidgetChatController::class, 'heartbeat']);
         Route::get('{widgetKey}/poll',        [WidgetChatController::class, 'poll']);
