@@ -339,6 +339,7 @@ class AuthController extends Controller
         $saasOrgId = null;
 
         // Step 1: Register on SaaS platform (if configured)
+        // SaaS register auto-provisions a trial subscription for the requested plan.
         if ($saasApi) {
             try {
                 $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
@@ -346,6 +347,7 @@ class AuthController extends Controller
                     'email'    => $validated['email'],
                     'password' => $validated['password'],
                     'orgName'  => $validated['hotel_name'],
+                    'planSlug' => $validated['plan'] ?? 'starter',
                 ]);
 
                 if ($regResponse->successful()) {
@@ -356,33 +358,6 @@ class AuthController extends Controller
                     $body = $regResponse->json();
                     $msg = $body['error'] ?? $body['message'] ?? 'unknown';
                     report(new \RuntimeException("SaaS register [{$regResponse->status()}]: {$msg}"));
-                }
-            } catch (\Exception $e) {
-                report($e);
-            }
-        }
-
-        // Step 2: Subscribe to trial plan (non-fatal)
-        if ($saasToken && $saasApi) {
-            try {
-                $plansRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/plans");
-                $plans = $plansRes->json('plans', []);
-                $targetSlug = $validated['plan'] ?? 'starter';
-                $planId = null;
-                foreach ($plans as $plan) {
-                    if (($plan['slug'] ?? '') === $targetSlug) {
-                        $planId = $plan['id'];
-                        break;
-                    }
-                }
-                if (!$planId && count($plans) > 0) {
-                    $planId = $plans[0]['id'];
-                }
-                if ($planId) {
-                    Http::withToken($saasToken)->timeout(5)->post("{$saasApi}/billing/subscribe", [
-                        'planId'   => $planId,
-                        'interval' => 'MONTHLY',
-                    ]);
                 }
             } catch (\Exception $e) {
                 report($e);
@@ -450,6 +425,32 @@ class AuthController extends Controller
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
         }
 
+        // Step 4: Sync subscription entitlements from SaaS → local org
+        // This ensures subscription() returns real plan data instead of LOCAL mode.
+        if ($saasToken && $saasApi && $org) {
+            try {
+                $bootstrap = Http::withToken($saasToken)->timeout(5)
+                    ->get("{$saasApi}/tools/bootstrap");
+
+                if ($bootstrap->successful()) {
+                    $bsData = $bootstrap->json();
+                    $sub = $bsData['subscription'] ?? null;
+                    if ($sub) {
+                        $org->plan_slug           = $sub['plan']['slug'] ?? null;
+                        $org->subscription_status = $sub['status'] ?? null;
+                        $org->trial_end           = $sub['trialEnd'] ?? null;
+                        $org->period_end          = $sub['currentPeriodEnd'] ?? null;
+                    }
+                    $org->entitled_products     = $bsData['entitled_product_slugs'] ?? [];
+                    $org->plan_features         = (array) ($bsData['features'] ?? []);
+                    $org->entitlements_synced_at = now();
+                    $org->save();
+                }
+            } catch (\Exception $e) {
+                report($e);
+            }
+        }
+
         $sanctumToken = $localUser->createToken('admin')->plainTextToken;
         $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
 
@@ -459,17 +460,23 @@ class AuthController extends Controller
             'user'       => $localUser->fresh(),
             'staff'      => $staff,
             'org_id'     => $saasOrgId ?? $org->id,
-            'message'    => 'Trial started! You have 14 days to explore all features.',
+            'message'    => 'Trial started! You have ' . ($org->trial_end ? (int) now()->diffInDays($org->trial_end) : 14) . ' days to explore.',
         ], 201);
     }
 
     /**
      * GET /v1/auth/subscription — Return current subscription status.
+     *
+     * Resolution order:
+     *   1. Live SaaS API (if user arrived via SaaS JWT)
+     *   2. Cached entitlements on the local Organization (synced at trial or by SaasAuthMiddleware)
+     *   3. Expired/no-plan response (NOT unlimited LOCAL mode)
      */
     public function subscription(Request $request): JsonResponse
     {
-        $orgId = $request->attributes->get('saas_org_id');
-        if ($orgId) {
+        // 1. Live SaaS query (only when user has a SaaS JWT — set by SaasAuthMiddleware)
+        $saasOrgId = $request->attributes->get('saas_org_id');
+        if ($saasOrgId) {
             $saasApi = config('services.saas.api_url');
             $token = $request->bearerToken();
             try {
@@ -494,20 +501,29 @@ class AuthController extends Controller
                     return response()->json(['active' => false, 'status' => 'EXPIRED', 'features' => [], 'products' => []]);
                 }
             } catch (\Exception $e) {
-                // Fail open
+                // SaaS API unreachable — fall through to cached data
             }
         }
 
-        // Try cached org entitlements (from SaasAuthMiddleware sync) before falling back to LOCAL
+        // 2. Cached org entitlements (synced at trial creation or by SaasAuthMiddleware)
         $org = $request->user()?->organization_id
             ? \App\Models\Organization::find($request->user()->organization_id)
             : null;
 
-        if ($org && $org->plan_slug && $org->subscription_status) {
+        if ($org && $org->subscription_status) {
+            // Check if trial has expired since last sync
+            $status = $org->subscription_status;
+            if ($status === 'TRIALING' && $org->trial_end && $org->trial_end->isPast()) {
+                $status = 'EXPIRED';
+                $org->update(['subscription_status' => 'EXPIRED']);
+            }
+
             return response()->json([
-                'active'   => $org->hasActiveSubscription(),
-                'status'   => $org->subscription_status,
-                'plan'     => ['name' => ucfirst($org->plan_slug), 'slug' => $org->plan_slug],
+                'active'   => in_array($status, ['ACTIVE', 'TRIALING'], true),
+                'status'   => $status,
+                'plan'     => $org->plan_slug
+                    ? ['name' => ucfirst($org->plan_slug), 'slug' => $org->plan_slug]
+                    : null,
                 'trialEnd' => $org->trial_end?->toIso8601String(),
                 'periodEnd'=> $org->period_end?->toIso8601String(),
                 'features' => $org->plan_features ?: [],
@@ -515,20 +531,33 @@ class AuthController extends Controller
             ]);
         }
 
-        // Local/dev mode — grant all features
+        // 3. No subscription data at all — SaaS not configured AND no cached data
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            // Truly local dev with no SaaS — grant all features for development
+            return response()->json([
+                'active'   => true,
+                'status'   => 'LOCAL',
+                'plan'     => null,
+                'features' => [
+                    'max_team_members' => 'unlimited', 'max_guests' => 'unlimited',
+                    'max_properties' => 'unlimited', 'max_loyalty_members' => 'unlimited',
+                    'ai_insights' => 'true', 'ai_avatars' => 'true',
+                    'custom_branding' => 'true', 'api_access' => 'true',
+                    'push_notifications' => 'true', 'mobile_app' => 'true',
+                    'nfc_cards' => 'true', 'priority_support' => 'dedicated',
+                ],
+                'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+            ]);
+        }
+
+        // SaaS is configured but org has no subscription — user needs to pick a plan
         return response()->json([
-            'active'   => true,
-            'status'   => 'LOCAL',
+            'active'   => false,
+            'status'   => 'NO_PLAN',
             'plan'     => null,
-            'features' => [
-                'max_team_members' => 'unlimited', 'max_guests' => 'unlimited',
-                'max_properties' => 'unlimited', 'max_loyalty_members' => 'unlimited',
-                'ai_insights' => 'true', 'ai_avatars' => 'true',
-                'custom_branding' => 'true', 'api_access' => 'true',
-                'push_notifications' => 'true', 'mobile_app' => 'true',
-                'nfc_cards' => 'true', 'priority_support' => 'dedicated',
-            ],
-            'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+            'features' => [],
+            'products' => [],
         ]);
     }
 
@@ -570,8 +599,21 @@ class AuthController extends Controller
                 return response()->json(['error' => 'Plan not found'], 404);
             }
 
-            // Call SaaS subscribe endpoint
-            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/subscribe", [
+            // Check if org already has an active subscription (upgrade/change-plan flow)
+            $subsRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/subscriptions");
+            $hasActive = false;
+            if ($subsRes->successful()) {
+                foreach ($subsRes->json('subscriptions', []) as $sub) {
+                    if (in_array($sub['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
+                        $hasActive = true;
+                        break;
+                    }
+                }
+            }
+
+            // Use change-plan if already subscribed, otherwise subscribe
+            $endpoint = $hasActive ? "{$saasApi}/billing/change-plan" : "{$saasApi}/billing/subscribe";
+            $response = Http::withToken($saasToken)->timeout(10)->post($endpoint, [
                 'planId'   => $planId,
                 'interval' => $request->input('interval', 'MONTHLY'),
             ]);
@@ -592,7 +634,9 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Direct trial (no Stripe) — refresh subscription cache
+            // Direct trial/change (no Stripe) — refresh local entitlement cache
+            $this->syncEntitlementsFromSaas($request, $saasToken);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Subscription activated',
@@ -633,8 +677,41 @@ class AuthController extends Controller
     }
 
     /**
+     * Sync entitlements from SaaS bootstrap endpoint onto the local Organization.
+     */
+    private function syncEntitlementsFromSaas(Request $request, string $saasToken): void
+    {
+        $saasApi = config('services.saas.api_url');
+        $user = $request->user();
+        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
+        if (!$org || !$saasApi) return;
+
+        try {
+            $bootstrap = Http::withToken($saasToken)->timeout(5)
+                ->get("{$saasApi}/tools/bootstrap");
+
+            if ($bootstrap->successful()) {
+                $data = $bootstrap->json();
+                $sub = $data['subscription'] ?? null;
+                if ($sub) {
+                    $org->plan_slug           = $sub['plan']['slug'] ?? null;
+                    $org->subscription_status = $sub['status'] ?? null;
+                    $org->trial_end           = $sub['trialEnd'] ?? null;
+                    $org->period_end          = $sub['currentPeriodEnd'] ?? null;
+                }
+                $org->entitled_products     = $data['entitled_product_slugs'] ?? [];
+                $org->plan_features         = (array) ($data['features'] ?? []);
+                $org->entitlements_synced_at = now();
+                $org->save();
+            }
+        } catch (\Exception $e) {
+            report($e);
+        }
+    }
+
+    /**
      * Get a SaaS JWT for the current user's org.
-     * Uses the stored saas_org_id to authenticate via gateway headers or re-auth.
+     * Tries: (1) existing SaaS JWT on the request, (2) service-to-service token endpoint.
      */
     private function getSaasToken(Request $request): ?string
     {
@@ -648,7 +725,7 @@ class AuthController extends Controller
             }
         }
 
-        // Try to get a SaaS token by authenticating with stored credentials
+        // Service-to-service: request a short-lived JWT from SaaS using the shared secret
         $saasApi = config('services.saas.api_url');
         $user = $request->user();
         if (!$user || !$saasApi) return null;
@@ -656,33 +733,25 @@ class AuthController extends Controller
         $org = \App\Models\Organization::find($user->organization_id);
         if (!$org || !$org->saas_org_id) return null;
 
-        // Use service-to-service auth with the gateway secret
-        $gatewaySecret = config('services.saas.gateway_secret', '');
-        if ($gatewaySecret) {
-            $payload = implode('|', [$user->id, $user->email, $org->saas_org_id, 'OWNER']);
-            $signature = hash_hmac('sha256', $payload, $gatewaySecret);
+        $jwtSecret = config('services.saas.jwt_secret', '');
+        if (!$jwtSecret) return null;
 
-            try {
-                $response = Http::timeout(5)
-                    ->withHeaders([
-                        'X-Saas-User-Id'    => (string) $user->id,
-                        'X-Saas-User-Email' => $user->email,
-                        'X-Saas-Org-Id'     => $org->saas_org_id,
-                        'X-Saas-Role'       => 'OWNER',
-                        'X-Saas-Signature'  => $signature,
-                    ])
-                    ->post("{$saasApi}/auth/token", [
-                        'email'    => $user->email,
-                        'password' => 'gateway-auth', // gateway bypass
-                        'orgId'    => $org->saas_org_id,
-                    ]);
+        $payload = implode('|', [$user->email, $org->saas_org_id]);
+        $signature = hash_hmac('sha256', $payload, $jwtSecret);
 
-                if ($response->successful()) {
-                    return $response->json('token');
-                }
-            } catch (\Exception $e) {
-                report($e);
+        try {
+            $response = Http::timeout(5)
+                ->withHeaders(['X-Service-Signature' => $signature])
+                ->post("{$saasApi}/auth/service-token", [
+                    'email' => $user->email,
+                    'orgId' => $org->saas_org_id,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json('token');
             }
+        } catch (\Exception $e) {
+            report($e);
         }
 
         return null;

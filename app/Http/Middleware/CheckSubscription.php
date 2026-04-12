@@ -16,35 +16,70 @@ class CheckSubscription
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Only enforce for SaaS-authenticated requests (not local Sanctum-only users)
-        $orgId = $request->attributes->get('saas_org_id');
-        if (!$orgId) {
-            // Not a SaaS-authenticated request — skip check (backward compat for dev)
+        // Path 1: SaaS JWT-authenticated request — check live from SaaS API
+        $saasOrgId = $request->attributes->get('saas_org_id');
+        if ($saasOrgId) {
+            $cacheKey = "subscription_status:{$saasOrgId}";
+            $status = Cache::get($cacheKey);
+
+            if ($status === null) {
+                $status = $this->fetchSubscriptionStatus($saasOrgId, $request);
+                Cache::put($cacheKey, $status, now()->addMinutes(5));
+            }
+
+            if (!in_array($status['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
+                return response()->json([
+                    'error' => 'subscription_required',
+                    'message' => 'Your subscription has expired. Please renew to continue using the platform.',
+                    'subscription' => $status,
+                ], 403);
+            }
+
+            $request->attributes->set('subscription_status', $status['status']);
+            $request->attributes->set('subscription_plan', $status['plan'] ?? null);
+            $request->attributes->set('subscription_trial_end', $status['trialEnd'] ?? null);
+
             return $next($request);
         }
 
-        $cacheKey = "subscription_status:{$orgId}";
-        $status = Cache::get($cacheKey);
+        // Path 2: Sanctum-only auth (trial users) — check cached org entitlements
+        $user = $request->user();
+        if ($user?->organization_id) {
+            $org = \App\Models\Organization::find($user->organization_id);
+            if ($org && $org->subscription_status) {
+                // Check trial expiry
+                if ($org->subscription_status === 'TRIALING' && $org->trial_end && $org->trial_end->isPast()) {
+                    $org->update(['subscription_status' => 'EXPIRED']);
+                    return response()->json([
+                        'error' => 'subscription_required',
+                        'message' => 'Your trial has expired. Please upgrade to continue.',
+                    ], 403);
+                }
 
-        if ($status === null) {
-            $status = $this->fetchSubscriptionStatus($orgId, $request);
-            Cache::put($cacheKey, $status, now()->addMinutes(5));
+                if (in_array($org->subscription_status, ['ACTIVE', 'TRIALING'], true)) {
+                    $request->attributes->set('subscription_status', $org->subscription_status);
+                    $request->attributes->set('subscription_plan', $org->plan_slug);
+                    return $next($request);
+                }
+
+                return response()->json([
+                    'error' => 'subscription_required',
+                    'message' => 'Your subscription has expired. Please renew to continue using the platform.',
+                ], 403);
+            }
         }
 
-        if (!in_array($status['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
-            return response()->json([
-                'error' => 'subscription_required',
-                'message' => 'Your subscription has expired. Please renew to continue using the platform.',
-                'subscription' => $status,
-            ], 403);
+        // Path 3: No SaaS config at all (pure local dev) — allow through
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return $next($request);
         }
 
-        // Attach subscription info for downstream use
-        $request->attributes->set('subscription_status', $status['status']);
-        $request->attributes->set('subscription_plan', $status['plan'] ?? null);
-        $request->attributes->set('subscription_trial_end', $status['trialEnd'] ?? null);
-
-        return $next($request);
+        // SaaS configured but no subscription data — block access
+        return response()->json([
+            'error' => 'subscription_required',
+            'message' => 'No active subscription found. Please select a plan.',
+        ], 403);
     }
 
     private function fetchSubscriptionStatus(string $orgId, Request $request): array

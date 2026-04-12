@@ -104,8 +104,13 @@ export function Billing() {
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       }
     } catch (err: any) {
+      const status = err.response?.status
       const msg = err.response?.data?.error || 'Checkout failed. Please try again.'
-      toast.error(msg)
+      if (status === 401) {
+        toast.error('Billing service connection failed. Please contact support or try logging in again.')
+      } else {
+        toast.error(msg)
+      }
     } finally {
       setCheckoutLoading(null)
     }
@@ -148,6 +153,7 @@ export function Billing() {
   const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
   const currentSlug = sub?.plan?.slug ?? null
   const isLocal = status === 'LOCAL'
+  const isNoPlan = status === 'NO_PLAN' || status === 'LOADING'
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -168,6 +174,14 @@ export function Billing() {
             <div>
               <p className="text-sm font-medium text-yellow-300">Local / Development Mode</p>
               <p className="text-xs text-t-secondary mt-0.5">All features are unlocked. Subscription data is not available in this environment.</p>
+            </div>
+          </div>
+        ) : isNoPlan ? (
+          <div className="flex items-center gap-3 p-4 bg-primary-500/5 border border-primary-500/20 rounded-lg">
+            <Crown size={20} className="text-primary-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-primary-300">No Active Plan</p>
+              <p className="text-xs text-t-secondary mt-0.5">Choose a plan below to get started with your hotel management platform.</p>
             </div>
           </div>
         ) : (

@@ -28,21 +28,29 @@ export function useSubscription() {
     retry: false,
   })
 
-  const features = data?.features ?? ALL_FEATURES
-  const products = data?.products ?? ALL_PRODUCTS
-  const status = data?.status ?? 'LOCAL'
+  // Only grant all features in LOCAL dev mode (no SaaS configured).
+  // While loading or for any real status, use the actual plan data.
+  const isLocal = data?.status === 'LOCAL'
+  const features = isLocal ? ALL_FEATURES : (data?.features ?? {})
+  const products = isLocal ? ALL_PRODUCTS : (data?.products ?? [])
+  const status = data?.status ?? (isLoading ? 'LOADING' : 'NO_PLAN')
 
   const hasFeature = (key: string): boolean => {
+    // While loading, assume features are available to prevent flash of locked UI
+    if (isLoading) return true
+    if (isLocal) return true
     const v = features[key]
     if (!v) return false
     if (v === 'true' || v === 'unlimited') return true
     if (v === 'false') return false
-    // numeric limit — treat as enabled if > 0
     const n = Number(v)
     return !isNaN(n) && n > 0
   }
 
-  const hasProduct = (slug: string): boolean => products.includes(slug)
+  const hasProduct = (slug: string): boolean => {
+    if (isLoading || isLocal) return true
+    return products.includes(slug)
+  }
 
   return { data, isLoading, status, features, products, hasFeature, hasProduct }
 }

@@ -39,13 +39,18 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 globally
+// Handle 401 globally — but don't redirect for billing/subscription endpoints
+// (those return 401 when the SaaS token can't be obtained, not when the user session is invalid)
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
-      window.location.href = `${APP_BASE}/login`
+      const url = error.config?.url || ''
+      const isBillingCall = url.includes('/billing/') || url.includes('/subscription')
+      if (!isBillingCall) {
+        localStorage.removeItem('auth_token')
+        window.location.href = `${APP_BASE}/login`
+      }
     }
     return Promise.reject(error)
   }
