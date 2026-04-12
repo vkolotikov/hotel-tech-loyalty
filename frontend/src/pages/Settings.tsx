@@ -712,6 +712,8 @@ export function Settings() {
     const info       = m('info_color',           '#0a84ff')
     const cardStyleVal = getVal('mobile_card_style') || 'gradient'
     const radius       = parseInt(getVal('mobile_radius') || '16')
+    const buttonStyle  = getVal('mobile_button_style') || 'filled'
+    const accentIntensity = getVal('mobile_accent_intensity') || 'vibrant'
 
     const applyMobilePreset = (preset: Record<string, string>) => {
       const updates: Record<string, string> = {}
@@ -746,6 +748,30 @@ export function Settings() {
         primary_color: '#d4af37', background_color: '#100e0a', surface_color: '#1c1814', secondary_color: '#2a2418',
         text_color: '#fdf6e3', text_secondary_color: '#c4a476', border_color: '#2e2820',
         success_color: '#22c55e', error_color: '#e25555', warning_color: '#f5b400', info_color: '#5ec4e8' } },
+      { name: 'Midnight Violet', description: 'Deep purple luxury for premium brands', colors: {
+        primary_color: '#8b5cf6', background_color: '#0c0a14', surface_color: '#15112a', secondary_color: '#1e1836',
+        text_color: '#f5f3ff', text_secondary_color: '#a78bfa', border_color: '#2e2654',
+        success_color: '#34d399', error_color: '#f87171', warning_color: '#fbbf24', info_color: '#38bdf8' } },
+      { name: 'Tropical Sunset', description: 'Warm coral & amber for island resorts', colors: {
+        primary_color: '#f97316', background_color: '#120a06', surface_color: '#1e1410', secondary_color: '#2a1e18',
+        text_color: '#fff7ed', text_secondary_color: '#fdba74', border_color: '#3d2a1e',
+        success_color: '#4ade80', error_color: '#ef4444', warning_color: '#fde047', info_color: '#67e8f9' } },
+      { name: 'Alpine Lodge', description: 'Earthy tones for mountain retreats', colors: {
+        primary_color: '#78716c', background_color: '#0e0d0b', surface_color: '#1c1a17', secondary_color: '#292521',
+        text_color: '#fafaf9', text_secondary_color: '#a8a29e', border_color: '#33302c',
+        success_color: '#86efac', error_color: '#fca5a5', warning_color: '#fcd34d', info_color: '#93c5fd' } },
+      { name: 'Urban Loft', description: 'Sleek monochrome for city hotels', colors: {
+        primary_color: '#f5f5f5', background_color: '#09090b', surface_color: '#141416', secondary_color: '#1e1e22',
+        text_color: '#fafafa', text_secondary_color: '#71717a', border_color: '#27272a',
+        success_color: '#22c55e', error_color: '#ef4444', warning_color: '#eab308', info_color: '#3b82f6' } },
+      { name: 'Desert Oasis', description: 'Terracotta & sand for desert properties', colors: {
+        primary_color: '#c2410c', background_color: '#0f0a07', surface_color: '#1a140e', secondary_color: '#261e16',
+        text_color: '#fef3c7', text_secondary_color: '#d6a56a', border_color: '#3b2e20',
+        success_color: '#4ade80', error_color: '#fb923c', warning_color: '#fde68a', info_color: '#7dd3fc' } },
+      { name: 'Nordic Ice', description: 'Cool minimalist for Scandinavian brands', colors: {
+        primary_color: '#0ea5e9', background_color: '#070c10', surface_color: '#0e1620', secondary_color: '#162032',
+        text_color: '#f0f9ff', text_secondary_color: '#7dd3fc', border_color: '#1e3048',
+        success_color: '#34d399', error_color: '#fb7185', warning_color: '#fde047', info_color: '#a78bfa' } },
     ]
 
     // Detect active mobile preset
@@ -795,28 +821,28 @@ export function Settings() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mb-4">Tap to apply — saves instantly and updates the preview.</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {MOBILE_PRESETS.map(preset => {
                   const c = preset.colors
                   const isActive = activeMobilePreset === preset.name
                   return (
                     <button key={preset.name} onClick={() => applyMobilePreset(c)}
-                      className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px ${
+                      className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px hover:shadow-lg ${
                         isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
                       }`}
                       style={{ background: c.surface_color }}>
-                      <div className="h-10 flex">
+                      <div className="h-8 flex">
                         <div className="flex-1" style={{ backgroundColor: c.primary_color }} />
                         <div className="flex-1" style={{ backgroundColor: c.background_color }} />
                         <div className="flex-1" style={{ backgroundColor: c.success_color }} />
                         <div className="flex-1" style={{ backgroundColor: c.info_color }} />
                       </div>
-                      <div className="p-2.5" style={{ backgroundColor: c.background_color }}>
+                      <div className="p-2" style={{ backgroundColor: c.background_color }}>
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[11px] font-bold" style={{ color: c.text_color }}>{preset.name}</span>
-                          {isActive && <CheckCircle size={11} style={{ color: c.primary_color }} />}
+                          <span className="text-[10px] font-bold" style={{ color: c.text_color }}>{preset.name}</span>
+                          {isActive && <CheckCircle size={10} style={{ color: c.primary_color }} />}
                         </div>
-                        <p className="text-[9px] leading-snug line-clamp-2" style={{ color: c.text_secondary_color }}>
+                        <p className="text-[8px] leading-snug line-clamp-1" style={{ color: c.text_secondary_color }}>
                           {preset.description}
                         </p>
                       </div>
@@ -851,6 +877,40 @@ export function Settings() {
                 <input type="range" min="0" max="32" value={radius}
                   onChange={e => handleChange('mobile_radius', e.target.value)}
                   className="w-full accent-emerald-500" />
+              </div>
+
+              {/* Button Style */}
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <label className="text-xs text-gray-400 mb-2 block">Button Style</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['filled', 'outline', 'soft'] as const).map(style => (
+                    <button key={style} onClick={() => handleChange('mobile_button_style', style)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
+                        buttonStyle === style
+                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                          : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                      }`}>
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accent Intensity */}
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <label className="text-xs text-gray-400 mb-2 block">Accent Intensity</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['subtle', 'vibrant', 'bold'] as const).map(intensity => (
+                    <button key={intensity} onClick={() => handleChange('mobile_accent_intensity', intensity)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
+                        accentIntensity === intensity
+                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                          : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                      }`}>
+                      {intensity}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -942,7 +1002,12 @@ export function Settings() {
                     {/* Bottom button */}
                     <div className="px-4 mt-3">
                       <div className="py-2.5 text-center text-[10px] font-bold"
-                        style={{ borderRadius: radius * 0.7, backgroundColor: primary, color: bg }}>
+                        style={{
+                          borderRadius: radius * 0.7,
+                          backgroundColor: buttonStyle === 'filled' ? primary : buttonStyle === 'soft' ? primary + '20' : 'transparent',
+                          color: buttonStyle === 'filled' ? bg : primary,
+                          border: buttonStyle === 'outline' ? `2px solid ${primary}` : 'none',
+                        }}>
                         Redeem Now
                       </div>
                     </div>
