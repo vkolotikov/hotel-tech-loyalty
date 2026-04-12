@@ -12,7 +12,7 @@ class Staff extends Model
     protected $fillable = [
         'organization_id', 'user_id', 'role', 'hotel_name', 'department',
         'can_award_points', 'can_redeem_points', 'can_manage_offers',
-        'can_view_analytics', 'is_active', 'last_login_at',
+        'can_view_analytics', 'is_active', 'expo_push_token', 'last_login_at',
     ];
 
     protected $hidden = ['organization_id', 'created_at', 'updated_at'];

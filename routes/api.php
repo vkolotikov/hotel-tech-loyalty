@@ -56,8 +56,10 @@ Route::prefix('v1')->group(function () {
         Route::post('register',    [AuthController::class, 'register']);
         Route::post('login',       [AuthController::class, 'login']);
         Route::post('trial',       [AuthController::class, 'startTrial']);
-        Route::post('send-code',   [AuthController::class, 'sendVerificationCode']);
-        Route::post('verify-code', [AuthController::class, 'verifyCode']);
+        Route::post('send-code',        [AuthController::class, 'sendVerificationCode']);
+        Route::post('verify-code',      [AuthController::class, 'verifyCode']);
+        Route::post('forgot-password',  [AuthController::class, 'forgotPassword']);
+        Route::post('reset-password',   [AuthController::class, 'resetPassword']);
     });
 
     // Public: fetch available plans from SaaS
@@ -156,6 +158,7 @@ Route::prefix('v1')->group(function () {
             Route::post('scan/qr',                [ScanController::class, 'scanQr']);
             Route::post('scan/nfc',               [ScanController::class, 'scanNfc']);
             Route::post('nfc-cards',              [ScanController::class, 'linkNfcCard']);
+            Route::post('push-token',             [ScanController::class, 'updateStaffPushToken']);
 
             Route::get('tiers',                   [TierController::class, 'index']);
             Route::post('tiers',                  [TierController::class, 'store']);

@@ -687,4 +687,61 @@ class AuthController extends Controller
 
         return null;
     }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            // Don't reveal whether the email exists
+            return response()->json(['message' => 'If an account exists with that email, a reset code has been sent.']);
+        }
+
+        // Expire any previous codes for this email
+        EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('verified_at')
+            ->delete();
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        EmailVerificationCode::create([
+            'email'      => $validated['email'],
+            'code'       => $code,
+            'expires_at' => now()->addMinutes(15),
+        ]);
+
+        Mail::to($validated['email'])->send(new \App\Mail\PasswordResetCodeMail($code));
+
+        return response()->json(['message' => 'If an account exists with that email, a reset code has been sent.']);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email'    => 'required|email',
+            'code'     => 'required|string|size:6',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = EmailVerificationCode::where('email', $validated['email'])
+            ->where('code', $validated['code'])
+            ->whereNull('verified_at')
+            ->latest()
+            ->first();
+
+        if (!$record || $record->isExpired()) {
+            return response()->json(['message' => 'Invalid or expired reset code.'], 422);
+        }
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'Invalid or expired reset code.'], 422);
+        }
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+        $record->update(['verified_at' => now()]);
+
+        return response()->json(['message' => 'Password has been reset successfully.']);
+    }
 }

@@ -321,6 +321,11 @@ class MemberAdminController extends Controller
 
     public function awardPoints(Request $request): JsonResponse
     {
+        $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();
+        if ($staff && !$staff->can_award_points) {
+            return response()->json(['message' => 'You do not have permission to award points.'], 403);
+        }
+
         $validated = $request->validate([
             'member_id'       => 'required|exists:loyalty_members,id',
             'points'          => 'required|integer|min:1|max:100000',
@@ -381,6 +386,11 @@ class MemberAdminController extends Controller
 
     public function redeemPoints(Request $request): JsonResponse
     {
+        $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();
+        if ($staff && !$staff->can_redeem_points) {
+            return response()->json(['message' => 'You do not have permission to redeem points.'], 403);
+        }
+
         $validated = $request->validate([
             'member_id'       => 'required|exists:loyalty_members,id',
             'points'          => 'required|integer|min:1',

@@ -281,4 +281,14 @@ class ScanController extends Controller
             'ai_upsell_suggestion' => $upsell,
         ]);
     }
+
+    public function updateStaffPushToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['expo_push_token' => 'required|string']);
+        $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();
+        if ($staff) {
+            $staff->update(['expo_push_token' => $validated['expo_push_token']]);
+        }
+        return response()->json(['message' => 'Push token updated']);
+    }
 }
