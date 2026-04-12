@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Widget;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
+use App\Models\BookingRoom;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\ChatbotBehaviorConfig;
@@ -12,6 +13,8 @@ use App\Models\ChatWidgetConfig;
 use App\Models\PopupRule;
 use App\Models\Visitor;
 use App\Models\VisitorPageView;
+use App\Services\AvailabilityService;
+use App\Services\BookingContextService;
 use App\Services\KnowledgeService;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +28,7 @@ class WidgetChatController extends Controller
     public function __construct(
         protected OpenAiService $openAi,
         protected KnowledgeService $knowledge,
+        protected BookingContextService $bookingContext,
     ) {}
 
     /**
@@ -224,6 +228,14 @@ class WidgetChatController extends Controller
             'business_hours'     => $config->business_hours,
             'gdpr_consent_required' => (bool) $config->gdpr_consent_required,
             'gdpr_consent_text'  => $config->gdpr_consent_text,
+            'booking_widget_url' => \App\Models\HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $config->organization_id)
+                ->where('key', 'booking_widget_url')
+                ->value('value') ?: '',
+            'has_booking_rooms'  => BookingRoom::withoutGlobalScopes()
+                ->where('organization_id', $config->organization_id)
+                ->where('is_active', true)
+                ->exists(),
         ]);
     }
 
@@ -429,6 +441,35 @@ class WidgetChatController extends Controller
             \Log::warning('Widget knowledge lookup failed: ' . $e->getMessage());
         }
 
+        // Get booking context — room catalog + live availability when booking intent detected.
+        // Only inject when the visitor is actually asking about rooms/booking to save tokens.
+        $bookingContextStr = '';
+        try {
+            $bookingIntent = $this->bookingContext->detectBookingIntent($request->message);
+            if ($bookingIntent['has_intent']) {
+                $rooms = $this->bookingContext->getRoomCatalog($orgId);
+                if (!empty($rooms)) {
+                    $bookingContextStr = $this->bookingContext->buildRoomCatalogPrompt($orgId);
+
+                    // If dates detected, fetch live availability
+                    if ($bookingIntent['check_in'] && $bookingIntent['check_out']) {
+                        $available = $this->bookingContext->checkAvailability(
+                            $orgId,
+                            $bookingIntent['check_in'],
+                            $bookingIntent['check_out'],
+                            $bookingIntent['adults'] ?? 2,
+                            $bookingIntent['children'] ?? 0,
+                        );
+                        $bookingContextStr .= "\n" . $this->bookingContext->buildAvailabilityPrompt(
+                            $available, $bookingIntent['check_in'], $bookingIntent['check_out']
+                        );
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Widget booking context failed: ' . $e->getMessage());
+        }
+
         // Load or create conversation
         $conversation = AiConversation::firstOrCreate(
             ['session_id' => $request->session_id],
@@ -444,7 +485,17 @@ class WidgetChatController extends Controller
         $messages = $conversation->messages ?? [];
         $messages[] = ['role' => 'user', 'content' => $request->message, 'timestamp' => now()->toIso8601String()];
 
-        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name, $request->input('lang'));
+        // Resolve booking widget URL for room card links
+        $bookingWidgetUrl = '';
+        try {
+            $bookingSetting = \App\Models\HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('key', 'booking_widget_url')
+                ->value('value');
+            $bookingWidgetUrl = $bookingSetting ?: '';
+        } catch (\Throwable) {}
+
+        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name, $request->input('lang'), $bookingContextStr, $bookingWidgetUrl);
 
         $contextMessages = array_slice(
             array_map(fn($m) => ['role' => $m['role'], 'content' => $m['content']], $messages),
@@ -898,7 +949,7 @@ class WidgetChatController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null): string
+    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null, string $bookingContext = '', string $bookingWidgetUrl = ''): string
     {
         $parts = [];
 
@@ -978,6 +1029,33 @@ class WidgetChatController extends Controller
         if ($knowledgeContext) {
             $parts[] = "\n{$knowledgeContext}";
             $parts[] = "Use the knowledge base above to answer questions when relevant.";
+        }
+
+        // Booking context — room catalog + availability
+        if ($bookingContext) {
+            $parts[] = "\n{$bookingContext}";
+            $parts[] = "\n## Room Sales Instructions";
+            $parts[] = "One of your primary goals is to help visitors find and book rooms. When discussing rooms:";
+            $parts[] = "- Recommend specific rooms based on the visitor's needs (group size, budget, preferences).";
+            $parts[] = "- Always mention key selling points: amenities, size, bed type, and price.";
+            $parts[] = "- When you recommend a room, output a ROOM CARD block so the widget can render a rich visual card.";
+            $parts[] = "- Ask for check-in/check-out dates and number of guests if not provided.";
+            $parts[] = "- If live availability data is shown above, use it for accurate pricing. Otherwise use the base prices as starting points and note that final pricing depends on dates.";
+            $parts[] = "";
+            $parts[] = "## Room Card Format";
+            $parts[] = "When recommending rooms, include one or more room card blocks in your response using this EXACT format:";
+            $parts[] = "[ROOM_CARD]{\"id\":\"ROOM_ID\",\"name\":\"Room Name\",\"description\":\"Brief appeal\",\"price\":123.45,\"currency\":\"EUR\",\"per_night\":true,\"image\":\"IMAGE_URL\",\"amenities\":[\"WiFi\",\"AC\"],\"max_guests\":4,\"check_in\":\"2026-04-15\",\"check_out\":\"2026-04-18\"}[/ROOM_CARD]";
+            $parts[] = "Rules for room cards:";
+            $parts[] = "- Use the room's actual ID from the catalog above.";
+            $parts[] = "- The description should be a short, persuasive 1-sentence pitch.";
+            $parts[] = "- Include the image URL from the room catalog if available.";
+            $parts[] = "- Set per_night to true if showing per-night price, false if showing total price.";
+            $parts[] = "- If you have specific dates from the visitor, include check_in and check_out.";
+            $parts[] = "- You can include multiple ROOM_CARD blocks in one response.";
+            $parts[] = "- Always add a brief text recommendation around/before the cards — don't just output raw cards.";
+            if ($bookingWidgetUrl) {
+                $parts[] = "- The booking widget URL is: {$bookingWidgetUrl}";
+            }
         }
 
         return implode("\n", $parts);
@@ -1134,5 +1212,116 @@ PROMPT;
         }
 
         return $base;
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/rooms — public room catalog for the chat widget.
+     * Returns all active rooms with images, amenities, and base pricing.
+     */
+    public function getRooms(string $widgetKey): JsonResponse
+    {
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $rooms = $this->bookingContext->getRoomCatalog($config->organization_id);
+
+        // Absolutize image URLs
+        $rooms = array_map(function ($room) {
+            $room['image'] = $this->absolutizeUrl($room['image'] ?? null);
+            $room['gallery'] = array_map(fn($img) => $this->absolutizeUrl($img), $room['gallery'] ?? []);
+            return $room;
+        }, $rooms);
+
+        // Get booking widget URL for Book Now links
+        $bookingWidgetUrl = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $config->organization_id)
+            ->where('key', 'booking_widget_url')
+            ->value('value') ?: '';
+
+        return response()->json([
+            'rooms'              => $rooms,
+            'currency'           => $rooms[0]['currency'] ?? 'EUR',
+            'booking_widget_url' => $bookingWidgetUrl,
+        ]);
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/availability — live availability check.
+     * Query: check_in, check_out, adults (optional), children (optional)
+     */
+    public function checkAvailability(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'check_in'  => 'required|date|after_or_equal:today',
+            'check_out' => 'required|date|after:check_in',
+            'adults'    => 'nullable|integer|min:1|max:20',
+            'children'  => 'nullable|integer|min:0|max:10',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $orgId = $config->organization_id;
+        $available = $this->bookingContext->checkAvailability(
+            $orgId,
+            $request->input('check_in'),
+            $request->input('check_out'),
+            (int) $request->input('adults', 2),
+            (int) $request->input('children', 0),
+        );
+
+        // Absolutize image URLs
+        $available = array_map(function ($room) {
+            $room['image'] = $this->absolutizeUrl($room['image'] ?? null);
+            $room['gallery'] = array_map(fn($img) => $this->absolutizeUrl($img), $room['gallery'] ?? []);
+            return $room;
+        }, $available);
+
+        $bookingWidgetUrl = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'booking_widget_url')
+            ->value('value') ?: '';
+
+        return response()->json([
+            'available'          => $available,
+            'check_in'           => $request->input('check_in'),
+            'check_out'          => $request->input('check_out'),
+            'booking_widget_url' => $bookingWidgetUrl,
+        ]);
+    }
+
+    /**
+     * GET /v1/widget/{widgetKey}/calendar-prices — date-range pricing for in-chat calendar.
+     * Query: start, end
+     */
+    public function widgetCalendarPrices(Request $request, string $widgetKey): JsonResponse
+    {
+        $request->validate([
+            'start' => 'required|date',
+            'end'   => 'required|date|after:start',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        app()->instance('current_organization_id', $config->organization_id);
+        $avail = app(AvailabilityService::class);
+        $prices = $avail->calendarPrices($request->input('start'), $request->input('end'));
+
+        $currency = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $config->organization_id)
+            ->where('key', 'booking_currency')
+            ->value('value') ?: 'EUR';
+
+        return response()->json([
+            'prices'   => $prices,
+            'currency' => $currency,
+        ]);
     }
 }

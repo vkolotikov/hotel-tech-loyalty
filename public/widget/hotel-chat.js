@@ -127,6 +127,21 @@
     #htchat-input-hint { font-size: 10px; color: #9ca3af; margin-top: 4px; padding: 0 4px; display: flex; justify-content: space-between; }\
     #htchat-input-hint .recording-hint { color: #ef4444; display: flex; align-items: center; gap: 4px; }\
     #htchat-input-hint .recording-dot { width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: htchat-pulse-mic 1s ease-in-out infinite; }\
+    .htchat-room-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }\
+    .htchat-room-card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }\
+    .htchat-room-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-1px); }\
+    .htchat-room-card-img { width: 100%; height: 140px; object-fit: cover; display: block; }\
+    .htchat-room-card-body { padding: 12px 14px; }\
+    .htchat-room-card-name { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }\
+    .htchat-room-card-desc { font-size: 12px; color: #6b7280; line-height: 1.4; margin-bottom: 8px; }\
+    .htchat-room-card-amenities { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }\
+    .htchat-room-card-amenity { font-size: 10px; color: #4b5563; background: #f3f4f6; border-radius: 6px; padding: 3px 7px; }\
+    .htchat-room-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }\
+    .htchat-room-card-price { font-size: 16px; font-weight: 800; color: #1f2937; }\
+    .htchat-room-card-price small { font-size: 11px; font-weight: 400; color: #6b7280; }\
+    .htchat-room-card-info { font-size: 10px; color: #9ca3af; }\
+    .htchat-room-card-book { padding: 8px 18px; border-radius: 10px; border: none; color: white; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }\
+    .htchat-room-card-book:hover { opacity: 0.85; }\
     .htchat-typing { display: flex; gap: 4px; padding: 4px 0; }\
     .htchat-typing span { width: 6px; height: 6px; border-radius: 50%; animation: htchat-bounce 1.4s ease-in-out infinite; }\
     .htchat-typing span:nth-child(2) { animation-delay: 0.2s; }\
@@ -748,6 +763,15 @@
       };
     });
 
+    // Wire room card clicks to open booking URL.
+    container.querySelectorAll('.htchat-room-card[data-book-url]').forEach(function (card) {
+      var url = card.getAttribute('data-book-url');
+      card.style.cursor = 'pointer';
+      card.onclick = function () { window.open(url, '_blank'); };
+      var btn = card.querySelector('.htchat-room-card-book');
+      if (btn) btn.onclick = function (e) { e.stopPropagation(); window.open(url, '_blank'); };
+    });
+
     if (isLoading || agentTyping) {
       container.innerHTML += '<div class="htchat-msg assistant"><div class="htchat-msg-bubble"><div class="htchat-typing">' +
         '<span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span>' +
@@ -1233,10 +1257,117 @@
   }
 
   function formatText(text) {
-    return escapeHtml(text)
+    if (!text) return '';
+
+    // Extract [ROOM_CARD]...[/ROOM_CARD] blocks before escaping HTML
+    var cards = [];
+    var cardRegex = /\[ROOM_CARD\]([\s\S]*?)\[\/ROOM_CARD\]/g;
+    var match;
+    while ((match = cardRegex.exec(text)) !== null) {
+      try {
+        var cardData = JSON.parse(match[1].trim());
+        cards.push(cardData);
+      } catch (e) {
+        // Malformed JSON — skip this card
+      }
+    }
+    // Remove card blocks from text
+    var cleanText = text.replace(cardRegex, '').trim();
+
+    // Format the remaining text
+    var html = escapeHtml(cleanText)
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
       .replace(/\n/g, '<br>');
+
+    // Render room cards
+    if (cards.length > 0) {
+      html += '<div class="htchat-room-cards">';
+      cards.forEach(function (card) {
+        html += renderRoomCard(card);
+      });
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  function renderRoomCard(card) {
+    var color = getColor();
+    var bookUrl = buildBookingUrl(card);
+    var imgHtml = '';
+    var imageUrl = card.image || '';
+
+    // Absolutize relative image URLs
+    if (imageUrl && imageUrl.indexOf('http') !== 0 && imageUrl.indexOf('data:') !== 0) {
+      var base = API.replace(/\/api\/v1\/widget\/[^/]+$/, '');
+      imageUrl = base + (imageUrl.indexOf('/') === 0 ? '' : '/') + imageUrl;
+    }
+
+    if (imageUrl) {
+      imgHtml = '<img class="htchat-room-card-img" src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(card.name || '') + '" onerror="this.style.display=\'none\'" />';
+    }
+
+    var amenitiesHtml = '';
+    if (card.amenities && card.amenities.length) {
+      amenitiesHtml = '<div class="htchat-room-card-amenities">';
+      card.amenities.slice(0, 5).forEach(function (a) {
+        amenitiesHtml += '<span class="htchat-room-card-amenity">' + escapeHtml(a) + '</span>';
+      });
+      amenitiesHtml += '</div>';
+    }
+
+    var priceLabel = '';
+    if (card.price) {
+      var curr = card.currency || 'EUR';
+      priceLabel = curr + ' ' + Number(card.price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      if (card.per_night !== false) priceLabel += ' <small>/night</small>';
+      else priceLabel += ' <small>total</small>';
+    }
+
+    var infoHtml = '';
+    if (card.max_guests) {
+      infoHtml = '<div class="htchat-room-card-info">Up to ' + card.max_guests + ' guests</div>';
+    }
+
+    var safeUrl = bookUrl ? escapeHtml(bookUrl) : '';
+
+    return '<div class="htchat-room-card"' + (safeUrl ? ' data-book-url="' + safeUrl + '"' : '') + '>' +
+      imgHtml +
+      '<div class="htchat-room-card-body">' +
+        '<div class="htchat-room-card-name">' + escapeHtml(card.name || 'Room') + '</div>' +
+        (card.description ? '<div class="htchat-room-card-desc">' + escapeHtml(card.description) + '</div>' : '') +
+        amenitiesHtml +
+        '<div class="htchat-room-card-footer">' +
+          '<div>' +
+            (priceLabel ? '<div class="htchat-room-card-price">' + priceLabel + '</div>' : '') +
+            infoHtml +
+          '</div>' +
+          (safeUrl ? '<button class="htchat-room-card-book" style="background:' + color + '">Book Now</button>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function buildBookingUrl(card) {
+    // Build a URL to the booking widget with pre-filled params
+    var wc = widgetConfig || {};
+    var baseUrl = wc.booking_widget_url || '';
+    if (!baseUrl) {
+      // Try the same-origin booking page
+      var origin = API.replace(/\/api\/v1\/widget\/[^/]+$/, '');
+      if (origin) baseUrl = origin + '/booking';
+    }
+    if (!baseUrl) return '';
+
+    var params = [];
+    if (card.id) params.push('room=' + encodeURIComponent(card.id));
+    if (card.check_in) params.push('check_in=' + encodeURIComponent(card.check_in));
+    if (card.check_out) params.push('check_out=' + encodeURIComponent(card.check_out));
+    if (card.max_guests) params.push('adults=' + encodeURIComponent(card.max_guests > 2 ? 2 : card.max_guests));
+
+    var sep = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+    return baseUrl + (params.length ? sep + params.join('&') : '');
   }
 
   // ── Boot ──

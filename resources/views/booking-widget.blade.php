@@ -1228,14 +1228,49 @@ apiGet('config').then(function(data) {
   state.loading = false;
   applyStyle(data);
 
-  // Sensible default dates
+  // Read URL params for pre-fill (from chat widget "Book Now" links)
+  var urlParams = {};
+  try {
+    var sp = new URLSearchParams(window.location.search);
+    sp.forEach(function(v, k) { urlParams[k] = v; });
+  } catch(e) {}
+
+  // Sensible default dates (overridden by URL params if present)
   var d = new Date();
   d.setDate(d.getDate() + 1);
-  state.checkIn = d.toISOString().slice(0, 10);
+  state.checkIn = urlParams.check_in || d.toISOString().slice(0, 10);
   d.setDate(d.getDate() + 2);
-  state.checkOut = d.toISOString().slice(0, 10);
+  state.checkOut = urlParams.check_out || d.toISOString().slice(0, 10);
+
+  if (urlParams.adults) state.adults = Math.max(1, Math.min(20, parseInt(urlParams.adults) || 2));
+  if (urlParams.children) state.children = Math.max(0, Math.min(10, parseInt(urlParams.children) || 0));
 
   render();
+
+  // If a room is pre-selected via URL, auto-search and jump to step 2
+  if (urlParams.room && state.checkIn && state.checkOut) {
+    state.searching = true;
+    render();
+    apiGet('availability', { check_in: state.checkIn, check_out: state.checkOut, adults: state.adults, children: state.children })
+      .then(function(avail) {
+        state.searching = false;
+        state.available = avail.available || avail.data || [];
+        // Pre-select the matching room
+        var targetId = urlParams.room;
+        var matched = state.available.find(function(u) { return String(u.id) === String(targetId); });
+        if (matched) {
+          state.selectedUnit = matched;
+          state.step = 3; // Jump to extras step
+        } else if (state.available.length) {
+          state.step = 2; // Show available rooms
+        }
+        render();
+      })
+      .catch(function() {
+        state.searching = false;
+        render();
+      });
+  }
 }).catch(function() {
   state.loading = false;
   state.error = 'Unable to load booking configuration. Please refresh the page.';

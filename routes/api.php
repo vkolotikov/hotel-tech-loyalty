@@ -92,6 +92,11 @@ Route::prefix('v1')->group(function () {
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
         Route::post('{widgetKey}/popup-impression', [WidgetChatController::class, 'popupImpression'])->middleware('throttle:30,1');
         Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession'])->middleware('throttle:30,1');
+
+        // Booking integration — public room catalog + availability for chat widget
+        Route::get('{widgetKey}/rooms',           [WidgetChatController::class, 'getRooms']);
+        Route::get('{widgetKey}/availability',    [WidgetChatController::class, 'checkAvailability'])->middleware('throttle:30,1');
+        Route::get('{widgetKey}/calendar-prices', [WidgetChatController::class, 'widgetCalendarPrices'])->middleware('throttle:30,1');
     });
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
