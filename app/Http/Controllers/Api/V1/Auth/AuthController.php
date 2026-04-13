@@ -534,7 +534,8 @@ class AuthController extends Controller
             ? \App\Models\Organization::find($request->user()->organization_id)
             : null;
         $saasApi = config('services.saas.api_url');
-        $billingAvailable = $saasApi && $orgForBilling && $orgForBilling->saas_org_id;
+        // Billing is available when SaaS API is configured — ensureSaasOrg() handles auto-registration
+        $billingAvailable = (bool) $saasApi;
 
         // 1. Live SaaS query (only when user has a SaaS JWT — set by SaasAuthMiddleware)
         $saasOrgId = $request->attributes->get('saas_org_id');
@@ -638,10 +639,10 @@ class AuthController extends Controller
             return response()->json(['error' => 'Billing not configured'], 400);
         }
 
-        // Get the SaaS JWT for this org
-        $saasToken = $this->getSaasToken($request);
+        // Get or create SaaS connection for this org (auto-registers if needed)
+        $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Not connected to billing system. Please re-login.'], 401);
+            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
         }
 
         try {
@@ -722,9 +723,9 @@ class AuthController extends Controller
             return response()->json(['error' => 'Billing not configured'], 400);
         }
 
-        $saasToken = $this->getSaasToken($request);
+        $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Not connected to billing system. Please re-login.'], 401);
+            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
         }
 
         try {
@@ -765,9 +766,9 @@ class AuthController extends Controller
             return response()->json(['error' => 'Billing not configured'], 400);
         }
 
-        $saasToken = $this->getSaasToken($request);
+        $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Not connected to billing system'], 401);
+            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
         }
 
         try {
@@ -922,6 +923,80 @@ class AuthController extends Controller
             }
         } catch (\Exception $e) {
             report($e);
+        }
+
+        return null;
+    }
+
+    /**
+     * Ensure the local organization exists on SaaS.
+     * If it doesn't have a saas_org_id, register the user+org on SaaS
+     * and store the returned IDs. Returns a SaaS JWT on success.
+     */
+    private function ensureSaasOrg(Request $request): ?string
+    {
+        $user = $request->user();
+        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
+        if (!$user || !$org) return null;
+
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) return null;
+
+        // Already linked — get a token via the normal path
+        if ($org->saas_org_id) {
+            return $this->getSaasToken($request);
+        }
+
+        // Not linked — register on SaaS to create the org there
+        try {
+            // Use a deterministic temporary password for the SaaS record.
+            // The user never logs into SaaS directly — auth goes through JWT handoff.
+            $tempPassword = 'SaasLink_' . substr(hash('sha256', $user->email . config('app.key')), 0, 16);
+
+            $response = Http::timeout(10)->post("{$saasApi}/auth/register", [
+                'name'     => $user->name,
+                'email'    => $user->email,
+                'password' => $tempPassword,
+                'orgName'  => $org->name,
+                'planSlug' => $org->plan_slug ?? 'starter',
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $saasOrgId = $data['organization']['id'] ?? null;
+                $saasToken = $data['token'] ?? null;
+
+                if ($saasOrgId) {
+                    $org->saas_org_id = $saasOrgId;
+                    $org->save();
+                }
+
+                // Sync entitlements from the newly created SaaS subscription
+                if ($saasToken) {
+                    $this->syncEntitlementsFromSaas($request, $saasToken);
+                }
+
+                return $saasToken;
+            }
+
+            // If user already exists on SaaS (409/422), try service-token auth
+            if (in_array($response->status(), [409, 422])) {
+                // User exists — try to find and link the org via service-token
+                $jwtSecret = config('services.saas.jwt_secret', '');
+                if (!$jwtSecret) return null;
+
+                // We need to discover the SaaS org ID. Try the bootstrap endpoint.
+                // First, forge a service signature for the user's email.
+                // We'll try with empty orgId since we don't know it yet.
+                return null; // Can't auto-link if user already exists — they need to log in via SaaS
+            }
+
+            \Log::warning('SaaS org registration failed', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('SaaS org registration error: ' . $e->getMessage());
         }
 
         return null;

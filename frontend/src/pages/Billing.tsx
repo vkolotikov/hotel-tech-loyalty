@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  CreditCard, Check, ArrowRight,
+  CreditCard, Check, ArrowRight, X,
   AlertTriangle, Crown, Loader2, Zap, ExternalLink,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -13,35 +13,65 @@ interface PlanData {
   monthlyAmount: number; yearlyAmount: number; currency: string; trialDays: number
 }
 
-const PLAN_BULLETS: Record<string, string[]> = {
-  starter: [
-    'Guest CRM — up to 500 profiles',
-    'Basic loyalty program (1 tier)',
-    'Email support',
-    'Single property',
-    'Basic analytics dashboard',
-    'Manual booking management',
-  ],
-  growth: [
-    'Guest CRM — unlimited profiles',
-    'Full loyalty program (up to 5 tiers)',
-    'Booking engine with online payments',
-    'AI-powered chatbot for your website',
-    'Multi-property support (up to 3)',
-    'Advanced analytics & AI insights',
-    'Priority email & chat support',
-    'NFC member cards',
-  ],
-  enterprise: [
-    'Everything in Growth, plus:',
-    'Unlimited properties',
-    'Custom loyalty tiers & rules',
-    'Dedicated account manager',
-    'API access & custom integrations',
-    'White-label branding',
-    'SLA guarantee (99.9% uptime)',
-    'Staff training & onboarding',
-  ],
+// All possible features across all plans — each plan marks which are included
+const ALL_FEATURES = [
+  { key: 'crm', label: 'Guest CRM' },
+  { key: 'loyalty', label: 'Loyalty program' },
+  { key: 'booking', label: 'Booking engine' },
+  { key: 'chatbot', label: 'AI chatbot for website' },
+  { key: 'properties', label: 'Multi-property support' },
+  { key: 'analytics', label: 'Advanced analytics & AI insights' },
+  { key: 'nfc', label: 'NFC member cards' },
+  { key: 'api', label: 'API access & integrations' },
+  { key: 'branding', label: 'White-label branding' },
+  { key: 'support', label: 'Priority support' },
+  { key: 'sla', label: 'SLA guarantee (99.9%)' },
+  { key: 'onboarding', label: 'Dedicated onboarding' },
+] as const
+
+const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
+  starter: {
+    crm: 'Up to 500 profiles',
+    loyalty: 'Basic (1 tier)',
+    booking: false,
+    chatbot: false,
+    properties: 'Single property',
+    analytics: false,
+    nfc: false,
+    api: false,
+    branding: false,
+    support: 'Email support',
+    sla: false,
+    onboarding: false,
+  },
+  growth: {
+    crm: 'Unlimited profiles',
+    loyalty: 'Up to 5 tiers',
+    booking: 'With online payments',
+    chatbot: true,
+    properties: 'Up to 3 properties',
+    analytics: true,
+    nfc: true,
+    api: false,
+    branding: false,
+    support: 'Email & chat',
+    sla: false,
+    onboarding: false,
+  },
+  enterprise: {
+    crm: 'Unlimited profiles',
+    loyalty: 'Custom tiers & rules',
+    booking: 'With online payments',
+    chatbot: true,
+    properties: 'Unlimited',
+    analytics: true,
+    nfc: true,
+    api: true,
+    branding: true,
+    support: 'Dedicated manager',
+    sla: true,
+    onboarding: true,
+  },
 }
 
 const FALLBACK_PLANS: PlanData[] = [
@@ -53,7 +83,7 @@ const FALLBACK_PLANS: PlanData[] = [
 type BillingInterval = 'monthly' | 'yearly'
 
 export function Billing() {
-  const { data: sub, status, billingAvailable } = useSubscription()
+  const { data: sub, status } = useSubscription()
   const isSuperAdmin = !!(sub as any)?.isSuperAdmin
   const queryClient = useQueryClient()
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
@@ -87,48 +117,43 @@ export function Billing() {
     }
   }, [queryClient])
 
-  // Switch plan / start trial via SaaS or locally
+  // Switch plan / start trial — backend auto-registers on SaaS if needed
   const handleCheckout = async (planSlug: string) => {
     setCheckoutLoading(planSlug)
     try {
-      // If billing is available (SaaS linked), use the SaaS checkout flow
-      if (billingAvailable) {
-        const { data } = await api.post('/v1/auth/billing/checkout', {
-          plan_slug: planSlug,
-          interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
-        })
+      const { data } = await api.post('/v1/auth/billing/checkout', {
+        plan_slug: planSlug,
+        interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
+      })
 
-        if (data.checkoutUrl) {
-          window.location.href = data.checkoutUrl
-          return
-        }
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+        return
+      }
 
-        if (data.success) {
-          toast.success('Plan updated!')
-          queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
-        }
-      } else {
-        // No SaaS link — start a local free trial
-        const { data } = await api.post('/v1/auth/billing/start-trial', {
-          plan_slug: planSlug,
-        })
-        toast.success(data.message || 'Free trial started!')
+      if (data.success) {
+        toast.success('Plan updated!')
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       }
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Checkout failed. Please try again.'
+      // If SaaS connection failed, fall back to local trial
+      if (err.response?.status === 503) {
+        try {
+          const { data } = await api.post('/v1/auth/billing/start-trial', { plan_slug: planSlug })
+          toast.success(data.message || 'Free trial started!')
+          queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+          return
+        } catch { /* ignore fallback error */ }
+      }
       toast.error(msg)
     } finally {
       setCheckoutLoading(null)
     }
   }
 
-  // Activate subscription — convert trial to paid via Stripe
+  // Activate subscription — convert trial to paid via Stripe (backend auto-registers on SaaS)
   const handleActivate = async () => {
-    if (!billingAvailable) {
-      toast('To subscribe with payment, please contact info@hotel-tech.ai', { icon: '\u2709\uFE0F' })
-      return
-    }
     setActivateLoading(true)
     try {
       const { data } = await api.post('/v1/auth/billing/activate', {
@@ -153,10 +178,6 @@ export function Billing() {
   }
 
   const handlePortal = async () => {
-    if (!billingAvailable) {
-      toast('To manage billing, please contact info@hotel-tech.ai', { icon: '\u2709\uFE0F' })
-      return
-    }
     setPortalLoading(true)
     try {
       const { data } = await api.post('/v1/auth/billing/portal')
@@ -364,27 +385,28 @@ export function Billing() {
                   </button>
                 )}
               </div>
-              {!billingAvailable && status === 'TRIALING' && (
-                <p className="text-xs text-t-secondary">
-                  To subscribe with payment after your trial, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
-                </p>
-              )}
             </div>
           </div>
         )}
       </div>
 
       {/* Included Features */}
-      {!isLocal && currentSlug && PLAN_BULLETS[currentSlug] && (
+      {!isLocal && currentSlug && PLAN_FEATURES[currentSlug] && (
         <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
           <h2 className="text-sm font-semibold text-t-secondary uppercase tracking-wider mb-3">What's Included</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {PLAN_BULLETS[currentSlug].map((bullet, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm">
-                <Check size={14} className="text-green-400 shrink-0 mt-0.5" />
-                <span className="text-gray-300">{bullet}</span>
-              </div>
-            ))}
+            {ALL_FEATURES.map((f) => {
+              const val = PLAN_FEATURES[currentSlug]?.[f.key]
+              const included = val !== false
+              const detail = typeof val === 'string' ? val : null
+              if (!included) return null
+              return (
+                <div key={f.key} className="flex items-start gap-2 text-sm">
+                  <Check size={14} className="text-green-400 shrink-0 mt-0.5" />
+                  <span className="text-gray-300">{f.label}{detail ? ` — ${detail}` : ''}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -413,7 +435,7 @@ export function Billing() {
           {plans.map((plan) => {
             const isCurrent = currentSlug === plan.slug && !isNoPlan
             const isPopular = plan.slug === 'growth'
-            const bullets = PLAN_BULLETS[plan.slug] || []
+            const features = PLAN_FEATURES[plan.slug] || {}
             const saving = getYearlySaving(plan)
             const isLoading = checkoutLoading === plan.slug
 
@@ -445,16 +467,23 @@ export function Billing() {
                 )}
                 <p className="text-t-secondary text-xs mb-4">{plan.description}</p>
 
-                {bullets.length > 0 && (
-                  <div className="space-y-1.5 mb-4 flex-1">
-                    {bullets.map((b, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <Check size={11} className="text-green-400 shrink-0 mt-0.5" />
-                        <span className="text-gray-300">{b}</span>
+                <div className="space-y-1.5 mb-4 flex-1">
+                  {ALL_FEATURES.map((f) => {
+                    const val = features[f.key]
+                    const included = val !== false
+                    const detail = typeof val === 'string' ? val : null
+                    return (
+                      <div key={f.key} className={'flex items-start gap-2 text-xs ' + (!included ? 'opacity-40' : '')}>
+                        {included
+                          ? <Check size={11} className="text-green-400 shrink-0 mt-0.5" />
+                          : <X size={11} className="text-gray-500 shrink-0 mt-0.5" />}
+                        <span className={included ? 'text-gray-300' : 'text-gray-500 line-through'}>
+                          {f.label}{detail ? ` — ${detail}` : ''}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
 
                 <div className="text-[11px] text-t-secondary mb-3 text-center">{plan.trialDays}-day free trial included</div>
 
