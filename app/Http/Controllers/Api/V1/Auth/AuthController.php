@@ -503,9 +503,12 @@ class AuthController extends Controller
      */
     public function subscription(Request $request): JsonResponse
     {
-        // Super admin gets full access — no subscription needed
+        // Platform admin (hotel-tech.ai operator) gets full access — no subscription needed.
+        // This is NOT the same as org "super_admin" role — every org owner has that.
         $user = $request->user();
-        if ($user && $user->staff?->isSuperAdmin()) {
+        $platformEmails = array_map('trim', explode(',', config('services.saas.platform_admin_emails', '')));
+        $isPlatformAdmin = $user && in_array($user->email, $platformEmails, true);
+        if ($isPlatformAdmin) {
             return response()->json([
                 'active'   => true,
                 'status'   => 'ACTIVE',

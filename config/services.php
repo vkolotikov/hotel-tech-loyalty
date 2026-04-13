@@ -36,6 +36,7 @@ return [
         'gateway_secret'  => env('SAAS_GATEWAY_SECRET', env('SAAS_JWT_SECRET', '')),
         'platform_url'    => env('SAAS_PLATFORM_URL', 'https://saas.hotel-tech.ai'),
         'api_url'         => env('SAAS_API_URL', 'https://saas.hotel-tech.ai/api'),
+        'platform_admin_emails' => env('PLATFORM_ADMIN_EMAILS', 'info@hotel-tech.ai'),
     ],
 
     'cors' => [
