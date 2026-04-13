@@ -705,6 +705,54 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /v1/auth/billing/activate
+     * Proxy to SaaS billing/activate — converts trial to paid via Stripe Checkout.
+     */
+    public function billingActivate(Request $request): JsonResponse
+    {
+        $request->validate([
+            'interval' => 'nullable|string|in:MONTHLY,YEARLY',
+        ]);
+
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'Billing not configured'], 400);
+        }
+
+        $saasToken = $this->getSaasToken($request);
+        if (!$saasToken) {
+            return response()->json(['error' => 'Not connected to billing system. Please re-login.'], 401);
+        }
+
+        try {
+            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/activate", [
+                'interval' => $request->input('interval', 'MONTHLY'),
+            ]);
+
+            if (!$response->successful()) {
+                $body = $response->json();
+                return response()->json([
+                    'error' => $body['error'] ?? 'Activation failed',
+                ], $response->status());
+            }
+
+            $data = $response->json();
+
+            if (isset($data['checkoutUrl'])) {
+                return response()->json(['checkoutUrl' => $data['checkoutUrl']]);
+            }
+
+            // Direct activation — refresh local entitlement cache
+            $this->syncEntitlementsFromSaas($request, $saasToken);
+
+            return response()->json(['success' => true, 'message' => 'Subscription activated']);
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['error' => 'Billing service unavailable'], 503);
+        }
+    }
+
+    /**
      * POST /v1/auth/billing/portal — Proxy to SaaS Stripe Customer Portal.
      */
     public function billingPortal(Request $request): JsonResponse

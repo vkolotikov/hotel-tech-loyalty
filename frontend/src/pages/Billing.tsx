@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CreditCard, Check, ArrowRight,
-  AlertTriangle, Crown, Loader2,
+  AlertTriangle, Crown, Loader2, Zap, ExternalLink,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -59,9 +59,10 @@ export function Billing() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [activateLoading, setActivateLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
 
-  // Fetch live plans
+  // Fetch live plans from SaaS
   const { data: plansData } = useQuery({
     queryKey: ['billing-plans'],
     queryFn: () => api.get('/v1/plans').then(r => r.data),
@@ -86,6 +87,7 @@ export function Billing() {
     }
   }, [queryClient])
 
+  // Switch plan / start trial via SaaS
   const handleCheckout = async (planSlug: string) => {
     if (!billingAvailable) {
       toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to upgrade your plan.')
@@ -104,7 +106,7 @@ export function Billing() {
       }
 
       if (data.success) {
-        toast.success('Subscription activated!')
+        toast.success('Plan updated!')
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       }
     } catch (err: any) {
@@ -112,6 +114,35 @@ export function Billing() {
       toast.error(msg)
     } finally {
       setCheckoutLoading(null)
+    }
+  }
+
+  // Activate subscription — convert trial to paid via Stripe
+  const handleActivate = async () => {
+    if (!billingAvailable) {
+      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to subscribe.')
+      return
+    }
+    setActivateLoading(true)
+    try {
+      const { data } = await api.post('/v1/auth/billing/activate', {
+        interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
+      })
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+        return
+      }
+
+      if (data.success) {
+        toast.success('Subscription activated!')
+        queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Activation failed. Please try again.'
+      toast.error(msg)
+    } finally {
+      setActivateLoading(false)
     }
   }
 
@@ -136,7 +167,7 @@ export function Billing() {
   }
 
   const formatPrice = (cents: number, currency: string) => {
-    const symbol = currency === 'eur' ? '\u20AC' : '$'
+    const symbol = currency === 'eur' ? '\u20AC' : currency === 'gbp' ? '\u00A3' : '$'
     return symbol + (cents / 100).toLocaleString()
   }
 
@@ -192,12 +223,12 @@ export function Billing() {
             </p>
           </div>
           <button
-            onClick={() => handleCheckout(currentSlug || 'growth')}
-            disabled={!!checkoutLoading}
+            onClick={handleActivate}
+            disabled={activateLoading}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
           >
-            {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-            Upgrade now
+            {activateLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+            Subscribe Now
           </button>
         </div>
       )}
@@ -246,7 +277,7 @@ export function Billing() {
                      status === 'ACTIVE' ? 'bg-green-500/20 text-green-300' :
                      'bg-red-500/20 text-red-300')
                   }>
-                    {status === 'TRIALING' ? 'Trial' : status === 'ACTIVE' ? 'Active' : 'Expired'}
+                    {status === 'TRIALING' ? 'Free Trial' : status === 'ACTIVE' ? 'Active' : 'Expired'}
                   </span>
                 </div>
                 {status === 'TRIALING' && daysLeft !== null && (
@@ -259,7 +290,7 @@ export function Billing() {
                   <p className="text-xs text-t-secondary">Renews {periodEnd.toLocaleDateString()}</p>
                 )}
                 {status === 'EXPIRED' && (
-                  <p className="text-xs text-red-400">Your subscription has expired. Upgrade to restore access.</p>
+                  <p className="text-xs text-red-400">Your subscription has expired. Subscribe to restore access.</p>
                 )}
               </div>
             </div>
@@ -285,12 +316,12 @@ export function Billing() {
               <div className="flex gap-3">
                 {(status === 'TRIALING' || status === 'EXPIRED') && (
                   <button
-                    onClick={() => handleCheckout(currentSlug || 'growth')}
-                    disabled={!!checkoutLoading}
+                    onClick={handleActivate}
+                    disabled={activateLoading}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
-                    {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                    {status === 'TRIALING' ? 'Add Payment Method' : 'Reactivate Subscription'}
+                    {activateLoading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                    {status === 'TRIALING' ? 'Subscribe — Add Payment Method' : 'Reactivate Subscription'}
                   </button>
                 )}
                 {status === 'ACTIVE' && (
@@ -299,14 +330,14 @@ export function Billing() {
                     disabled={portalLoading}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-dark-surface2 hover:bg-dark-surface3 text-white text-sm font-medium rounded-lg border border-dark-border transition-colors disabled:opacity-50"
                   >
-                    {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                    {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
                     Manage Billing
                   </button>
                 )}
               </div>
               {!billingAvailable && (status === 'TRIALING' || status === 'EXPIRED') && (
                 <p className="text-xs text-t-secondary">
-                  To upgrade or manage your subscription, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
+                  To subscribe or manage your plan, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
                 </p>
               )}
             </div>
@@ -396,10 +427,23 @@ export function Billing() {
                   </div>
                 )}
 
+                <div className="text-[11px] text-t-secondary mb-3 text-center">{plan.trialDays}-day free trial included</div>
+
                 {isCurrent ? (
-                  <div className="w-full py-2 rounded-lg text-center text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/20 mt-auto">
-                    Your current plan
-                  </div>
+                  status === 'TRIALING' ? (
+                    <button
+                      onClick={handleActivate}
+                      disabled={activateLoading}
+                      className="w-full py-2 rounded-lg text-center text-xs font-medium bg-primary-600 hover:bg-primary-500 text-white transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {activateLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                      Subscribe Now
+                    </button>
+                  ) : (
+                    <div className="w-full py-2 rounded-lg text-center text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/20 mt-auto">
+                      Your current plan
+                    </div>
+                  )
                 ) : (
                   <button
                     onClick={() => handleCheckout(plan.slug)}
@@ -415,7 +459,7 @@ export function Billing() {
                       <Loader2 size={12} className="animate-spin" />
                     ) : (
                       <>
-                        {currentSlug ? 'Switch Plan' : 'Get Started'}
+                        {currentSlug ? 'Switch Plan' : 'Start Free Trial'}
                         <ArrowRight size={12} />
                       </>
                     )}

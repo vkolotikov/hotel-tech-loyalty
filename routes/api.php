@@ -111,6 +111,7 @@ Route::prefix('v1')->group(function () {
             Route::post('push-token',   [AuthController::class, 'updatePushToken']);
             Route::get('subscription',  [AuthController::class, 'subscription']);
             Route::post('billing/checkout',    [AuthController::class, 'billingCheckout']);
+            Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
             Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
         });
 
