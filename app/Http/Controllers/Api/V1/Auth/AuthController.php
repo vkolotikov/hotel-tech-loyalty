@@ -521,6 +521,8 @@ class AuthController extends Controller
                     'nfc_cards' => 'true', 'priority_support' => 'dedicated',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+                'billingAvailable' => false,
+                'isSuperAdmin' => true,
             ]);
         }
 

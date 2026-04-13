@@ -54,6 +54,7 @@ type BillingInterval = 'monthly' | 'yearly'
 
 export function Billing() {
   const { data: sub, status, billingAvailable } = useSubscription()
+  const isSuperAdmin = !!(sub as any)?.isSuperAdmin
   const queryClient = useQueryClient()
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
@@ -205,7 +206,15 @@ export function Billing() {
       <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
         <h2 className="text-sm font-semibold text-t-secondary uppercase tracking-wider mb-4">Current Plan</h2>
 
-        {isLocal ? (
+        {isSuperAdmin ? (
+          <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
+            <Crown size={20} className="text-green-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-300">Super Admin — Full Access</p>
+              <p className="text-xs text-t-secondary mt-0.5">All features are unlocked. No subscription required for the admin account.</p>
+            </div>
+          </div>
+        ) : isLocal ? (
           <div className="flex items-center gap-3 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
             <AlertTriangle size={20} className="text-yellow-400 shrink-0" />
             <div>
@@ -320,8 +329,8 @@ export function Billing() {
         </div>
       )}
 
-      {/* Plans Comparison */}
-      <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
+      {/* Plans Comparison — hide for super admin */}
+      {!isSuperAdmin && <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-semibold text-t-secondary uppercase tracking-wider">
             {currentSlug ? 'Compare Plans' : 'Available Plans'}
@@ -416,7 +425,7 @@ export function Billing() {
             )
           })}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
