@@ -650,7 +650,7 @@ class AuthController extends Controller
                     'has_saas_org_id' => (bool) $orgForDebug?->saas_org_id,
                     'hint' => 'Check laravel.log for detailed SaaS connection errors',
                 ],
-            ], 502);
+            ], 422);
         }
 
         try {
@@ -712,7 +712,7 @@ class AuthController extends Controller
             ]);
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 502);
+            return response()->json(['error' => 'Billing service unavailable'], 422);
         }
     }
 
@@ -730,7 +730,7 @@ class AuthController extends Controller
             ]);
             return response()->json([
                 'error' => 'Billing system error: ' . $e->getMessage(),
-            ], 500);
+            ], 422);
         }
     }
 
@@ -755,7 +755,7 @@ class AuthController extends Controller
                     'has_saas_org_id' => (bool) $org?->saas_org_id,
                     'hint' => 'Check laravel.log for [ensureSaasOrg] entries',
                 ],
-            ], 502);
+            ], 422);
         }
 
         try {
@@ -782,7 +782,7 @@ class AuthController extends Controller
             return response()->json(['success' => true, 'message' => 'Subscription activated']);
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 502);
+            return response()->json(['error' => 'Billing service unavailable'], 422);
         }
     }
 
@@ -798,7 +798,7 @@ class AuthController extends Controller
 
         $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 502);
+            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 422);
         }
 
         try {
@@ -811,7 +811,7 @@ class AuthController extends Controller
             return response()->json($response->json());
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 502);
+            return response()->json(['error' => 'Billing service unavailable'], 422);
         }
     }
 

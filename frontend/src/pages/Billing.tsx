@@ -138,7 +138,7 @@ export function Billing() {
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Checkout failed. Please try again.'
       // If SaaS connection failed, fall back to local trial
-      if (err.response?.status === 503) {
+      if (err.response?.status === 422 || err.response?.status === 503) {
         try {
           const { data } = await api.post('/v1/auth/billing/start-trial', { plan_slug: planSlug })
           toast.success(data.message || 'Free trial started!')
