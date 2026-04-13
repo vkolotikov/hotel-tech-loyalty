@@ -722,24 +722,38 @@ class AuthController extends Controller
      */
     public function billingActivate(Request $request): JsonResponse
     {
+        try {
+            return $this->doBillingActivate($request);
+        } catch (\Throwable $e) {
+            \Log::error('[billingActivate] FATAL: ' . $e->getMessage(), [
+                'file' => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            return response()->json([
+                'error' => 'Billing system error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function doBillingActivate(Request $request): JsonResponse
+    {
         $request->validate([
             'interval' => 'nullable|string|in:MONTHLY,YEARLY',
         ]);
 
         $saasApi = config('services.saas.api_url');
         if (!$saasApi) {
-            return response()->json(['error' => 'Billing not configured'], 400);
+            return response()->json(['error' => 'Billing not configured — SAAS_API_URL missing'], 400);
         }
 
         $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
             $org = $request->user() ? \App\Models\Organization::find($request->user()->organization_id) : null;
             return response()->json([
-                'error' => 'Could not connect to billing system. Please try again.',
+                'error' => 'Could not connect to billing system. Check logs for details.',
                 'debug' => [
                     'saas_api' => $saasApi,
                     'has_saas_org_id' => (bool) $org?->saas_org_id,
-                    'hint' => 'Check laravel.log for detailed SaaS connection errors',
+                    'hint' => 'Check laravel.log for [ensureSaasOrg] entries',
                 ],
             ], 503);
         }
@@ -953,28 +967,55 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
-        if (!$user || !$org) return null;
+        if (!$user || !$org) {
+            \Log::error('[ensureSaasOrg] No user or org', ['user_id' => $user?->id]);
+            return null;
+        }
 
         $saasApi = config('services.saas.api_url');
-        if (!$saasApi) return null;
+        if (!$saasApi) {
+            \Log::error('[ensureSaasOrg] SAAS_API_URL not configured');
+            return null;
+        }
+
+        \Log::error('[ensureSaasOrg] Starting', [
+            'saas_api' => $saasApi,
+            'email' => $user->email,
+            'org_id' => $org->id,
+            'saas_org_id' => $org->saas_org_id,
+        ]);
 
         // Already linked — get a token via the normal path
         if ($org->saas_org_id) {
-            return $this->getSaasToken($request);
+            $token = $this->getSaasToken($request);
+            \Log::error('[ensureSaasOrg] Already linked, getSaasToken result: ' . ($token ? 'OK' : 'FAILED'));
+            return $token;
+        }
+
+        // Quick connectivity check — can we reach SaaS at all?
+        try {
+            $ping = Http::timeout(5)->connectTimeout(3)->get("{$saasApi}/../up");
+            \Log::error('[ensureSaasOrg] SaaS ping: ' . $ping->status());
+        } catch (\Exception $e) {
+            \Log::error('[ensureSaasOrg] SaaS UNREACHABLE: ' . $e->getMessage());
+            return null;
         }
 
         // Not linked — register on SaaS to create the org there
         try {
-            // Use a deterministic temporary password for the SaaS record.
-            // The user never logs into SaaS directly — auth goes through JWT handoff.
             $tempPassword = 'SaasLink_' . substr(hash('sha256', $user->email . config('app.key')), 0, 16);
 
-            $response = Http::timeout(10)->post("{$saasApi}/auth/register", [
+            \Log::error('[ensureSaasOrg] Attempting register on SaaS', ['email' => $user->email]);
+            $response = Http::timeout(8)->connectTimeout(3)->post("{$saasApi}/auth/register", [
                 'name'     => $user->name,
                 'email'    => $user->email,
                 'password' => $tempPassword,
                 'orgName'  => $org->name,
                 'planSlug' => $org->plan_slug ?? 'starter',
+            ]);
+
+            \Log::error('[ensureSaasOrg] Register response: ' . $response->status(), [
+                'body' => substr($response->body(), 0, 300),
             ]);
 
             if ($response->successful()) {
@@ -985,9 +1026,9 @@ class AuthController extends Controller
                 if ($saasOrgId) {
                     $org->saas_org_id = $saasOrgId;
                     $org->save();
+                    \Log::error('[ensureSaasOrg] Linked org: ' . $saasOrgId);
                 }
 
-                // Sync entitlements from the newly created SaaS subscription
                 if ($saasToken) {
                     $this->syncEntitlementsFromSaas($request, $saasToken);
                 }
@@ -995,23 +1036,14 @@ class AuthController extends Controller
                 return $saasToken;
             }
 
-            // If user already exists on SaaS (409/422), try logging in to link the org
+            // User already exists on SaaS (409/422) — try to login and link
             if (in_array($response->status(), [409, 422])) {
+                \Log::error('[ensureSaasOrg] User exists on SaaS, trying login');
                 return $this->loginAndLinkSaasOrg($saasApi, $user, $org, $tempPassword, $request);
             }
 
-            \Log::warning('SaaS org registration failed', [
-                'saas_api' => $saasApi,
-                'email' => $user->email,
-                'status' => $response->status(),
-                'body' => substr($response->body(), 0, 500),
-            ]);
         } catch (\Exception $e) {
-            \Log::warning('SaaS org registration error', [
-                'saas_api' => $saasApi,
-                'email' => $user->email,
-                'error' => $e->getMessage(),
-            ]);
+            \Log::error('[ensureSaasOrg] Exception: ' . $e->getMessage());
         }
 
         return null;
@@ -1024,11 +1056,12 @@ class AuthController extends Controller
     private function loginAndLinkSaasOrg(string $saasApi, $user, $org, string $password, Request $request): ?string
     {
         try {
-            // Login to SaaS to get token + org ID
-            $loginRes = Http::timeout(10)->post("{$saasApi}/auth/token", [
+            $loginRes = Http::timeout(8)->connectTimeout(3)->post("{$saasApi}/auth/token", [
                 'email'    => $user->email,
                 'password' => $password,
             ]);
+
+            \Log::error('[loginAndLinkSaasOrg] Login response: ' . $loginRes->status());
 
             if ($loginRes->successful()) {
                 $data = $loginRes->json();
@@ -1038,6 +1071,7 @@ class AuthController extends Controller
                 if ($saasOrgId && !$org->saas_org_id) {
                     $org->saas_org_id = $saasOrgId;
                     $org->save();
+                    \Log::error('[loginAndLinkSaasOrg] Linked org: ' . $saasOrgId);
                 }
 
                 if ($saasToken) {
@@ -1046,19 +1080,18 @@ class AuthController extends Controller
                 }
             }
 
-            // Login with deterministic password failed — user may have registered
-            // on SaaS independently with a different password.
-            // Try service-token if we already have a saas_org_id from a prior partial link.
+            // Deterministic password didn't work (user registered on SaaS independently).
+            // Try service-token if we have a saas_org_id from a prior partial link.
             if ($org->saas_org_id) {
                 return $this->getSaasToken($request);
             }
 
-            \Log::warning('SaaS login-and-link failed', [
+            \Log::error('[loginAndLinkSaasOrg] Failed — user may have different password on SaaS', [
                 'email' => $user->email,
                 'status' => $loginRes->status(),
             ]);
         } catch (\Exception $e) {
-            \Log::warning('SaaS login-and-link error: ' . $e->getMessage());
+            \Log::error('[loginAndLinkSaasOrg] Exception: ' . $e->getMessage());
         }
 
         return null;
