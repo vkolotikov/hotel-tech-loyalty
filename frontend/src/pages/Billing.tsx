@@ -153,11 +153,12 @@ export function Billing() {
   }
 
   // Activate subscription — convert trial to paid via Stripe (backend auto-registers on SaaS)
-  const handleActivate = async () => {
+  const handleActivate = async (planSlug?: string) => {
     setActivateLoading(true)
     try {
       const { data } = await api.post('/v1/auth/billing/activate', {
         interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
+        plan_slug: planSlug || sub?.plan?.slug || undefined,
       })
 
       if (data.checkoutUrl) {
@@ -251,7 +252,7 @@ export function Billing() {
             </p>
           </div>
           <button
-            onClick={handleActivate}
+            onClick={() => handleActivate()}
             disabled={activateLoading}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
           >
@@ -366,7 +367,7 @@ export function Billing() {
               <div className="flex gap-3">
                 {(status === 'TRIALING' || status === 'EXPIRED') && (
                   <button
-                    onClick={handleActivate}
+                    onClick={() => handleActivate()}
                     disabled={activateLoading}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -490,7 +491,7 @@ export function Billing() {
                 {isCurrent ? (
                   status === 'TRIALING' ? (
                     <button
-                      onClick={handleActivate}
+                      onClick={() => handleActivate(plan.slug)}
                       disabled={activateLoading}
                       className="w-full py-2 rounded-lg text-center text-xs font-medium bg-primary-600 hover:bg-primary-500 text-white transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >

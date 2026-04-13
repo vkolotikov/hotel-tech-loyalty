@@ -737,7 +737,8 @@ class AuthController extends Controller
     private function doBillingActivate(Request $request): JsonResponse
     {
         $request->validate([
-            'interval' => 'nullable|string|in:MONTHLY,YEARLY',
+            'interval'  => 'nullable|string|in:MONTHLY,YEARLY',
+            'plan_slug' => 'nullable|string',
         ]);
 
         $saasApi = config('services.saas.api_url');
@@ -758,9 +759,14 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $loyaltyUrl = config('app.url', 'https://loyalty.hotel-tech.ai');
+
         try {
             $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/activate", [
-                'interval' => $request->input('interval', 'MONTHLY'),
+                'interval'   => $request->input('interval', 'MONTHLY'),
+                'planSlug'   => $request->input('plan_slug'),
+                'successUrl' => "{$loyaltyUrl}/billing?success=1",
+                'cancelUrl'  => "{$loyaltyUrl}/billing?canceled=1",
             ]);
 
             if (!$response->successful()) {
@@ -801,8 +807,12 @@ class AuthController extends Controller
             return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 422);
         }
 
+        $loyaltyUrl = config('app.url', 'https://loyalty.hotel-tech.ai');
+
         try {
-            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/portal");
+            $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/portal", [
+                'returnUrl' => "{$loyaltyUrl}/billing",
+            ]);
 
             if (!$response->successful()) {
                 return response()->json(['error' => 'Billing portal not available'], 400);
