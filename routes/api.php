@@ -114,6 +114,7 @@ Route::prefix('v1')->group(function () {
             Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
             Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
             Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial']);
+            Route::get('billing/diag',        [AuthController::class, 'billingDiag']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────

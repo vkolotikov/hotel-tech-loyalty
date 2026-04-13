@@ -962,138 +962,94 @@ class AuthController extends Controller
      * Ensure the local organization exists on SaaS.
      * If it doesn't have a saas_org_id, register the user+org on SaaS
      * and store the returned IDs. Returns a SaaS JWT on success.
+     *
+     * IMPORTANT: All HTTP calls use very short timeouts (2s connect, 4s total)
+     * because Laravel Cloud kills PHP workers on long requests.
      */
     private function ensureSaasOrg(Request $request): ?string
     {
         $user = $request->user();
         $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
-        if (!$user || !$org) {
-            \Log::error('[ensureSaasOrg] No user or org', ['user_id' => $user?->id]);
-            return null;
-        }
+        if (!$user || !$org) return null;
 
         $saasApi = config('services.saas.api_url');
-        if (!$saasApi) {
-            \Log::error('[ensureSaasOrg] SAAS_API_URL not configured');
-            return null;
-        }
-
-        \Log::error('[ensureSaasOrg] Starting', [
-            'saas_api' => $saasApi,
-            'email' => $user->email,
-            'org_id' => $org->id,
-            'saas_org_id' => $org->saas_org_id,
-        ]);
+        if (!$saasApi) return null;
 
         // Already linked — get a token via the normal path
         if ($org->saas_org_id) {
-            $token = $this->getSaasToken($request);
-            \Log::error('[ensureSaasOrg] Already linked, getSaasToken result: ' . ($token ? 'OK' : 'FAILED'));
-            return $token;
-        }
-
-        // Quick connectivity check — can we reach SaaS at all?
-        try {
-            $ping = Http::timeout(5)->connectTimeout(3)->get("{$saasApi}/../up");
-            \Log::error('[ensureSaasOrg] SaaS ping: ' . $ping->status());
-        } catch (\Exception $e) {
-            \Log::error('[ensureSaasOrg] SaaS UNREACHABLE: ' . $e->getMessage());
-            return null;
+            return $this->getSaasToken($request);
         }
 
         // Not linked — register on SaaS to create the org there
-        try {
-            $tempPassword = 'SaasLink_' . substr(hash('sha256', $user->email . config('app.key')), 0, 16);
+        $tempPassword = 'SaasLink_' . substr(hash('sha256', $user->email . config('app.key')), 0, 16);
 
-            \Log::error('[ensureSaasOrg] Attempting register on SaaS', ['email' => $user->email]);
-            $response = Http::timeout(8)->connectTimeout(3)->post("{$saasApi}/auth/register", [
+        try {
+            $response = Http::connectTimeout(2)->timeout(4)->post("{$saasApi}/auth/register", [
                 'name'     => $user->name,
                 'email'    => $user->email,
                 'password' => $tempPassword,
                 'orgName'  => $org->name,
                 'planSlug' => $org->plan_slug ?? 'starter',
             ]);
-
-            \Log::error('[ensureSaasOrg] Register response: ' . $response->status(), [
-                'body' => substr($response->body(), 0, 300),
+        } catch (\Exception $e) {
+            \Log::error('[ensureSaasOrg] SaaS unreachable', [
+                'url' => "{$saasApi}/auth/register",
+                'error' => $e->getMessage(),
             ]);
+            return null;
+        }
 
-            if ($response->successful()) {
-                $data = $response->json();
+        // Success — new user registered on SaaS
+        if ($response->successful()) {
+            $data = $response->json();
+            $saasOrgId = $data['organization']['id'] ?? null;
+            $saasToken = $data['token'] ?? null;
+
+            if ($saasOrgId) {
+                $org->saas_org_id = $saasOrgId;
+                $org->save();
+            }
+
+            return $saasToken;
+        }
+
+        // User already exists on SaaS — try to login
+        if (in_array($response->status(), [409, 422])) {
+            try {
+                $loginRes = Http::connectTimeout(2)->timeout(4)->post("{$saasApi}/auth/token", [
+                    'email'    => $user->email,
+                    'password' => $tempPassword,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('[ensureSaasOrg] SaaS login unreachable', ['error' => $e->getMessage()]);
+                return null;
+            }
+
+            if ($loginRes->successful()) {
+                $data = $loginRes->json();
                 $saasOrgId = $data['organization']['id'] ?? null;
                 $saasToken = $data['token'] ?? null;
 
-                if ($saasOrgId) {
+                if ($saasOrgId && !$org->saas_org_id) {
                     $org->saas_org_id = $saasOrgId;
                     $org->save();
-                    \Log::error('[ensureSaasOrg] Linked org: ' . $saasOrgId);
-                }
-
-                if ($saasToken) {
-                    $this->syncEntitlementsFromSaas($request, $saasToken);
                 }
 
                 return $saasToken;
             }
 
-            // User already exists on SaaS (409/422) — try to login and link
-            if (in_array($response->status(), [409, 422])) {
-                \Log::error('[ensureSaasOrg] User exists on SaaS, trying login');
-                return $this->loginAndLinkSaasOrg($saasApi, $user, $org, $tempPassword, $request);
-            }
-
-        } catch (\Exception $e) {
-            \Log::error('[ensureSaasOrg] Exception: ' . $e->getMessage());
-        }
-
-        return null;
-    }
-
-    /**
-     * Login to SaaS with the deterministic password and link the org.
-     * Called when registration returns 409 (user already exists on SaaS).
-     */
-    private function loginAndLinkSaasOrg(string $saasApi, $user, $org, string $password, Request $request): ?string
-    {
-        try {
-            $loginRes = Http::timeout(8)->connectTimeout(3)->post("{$saasApi}/auth/token", [
-                'email'    => $user->email,
-                'password' => $password,
-            ]);
-
-            \Log::error('[loginAndLinkSaasOrg] Login response: ' . $loginRes->status());
-
-            if ($loginRes->successful()) {
-                $data = $loginRes->json();
-                $saasToken = $data['token'] ?? null;
-                $saasOrgId = $data['organization']['id'] ?? null;
-
-                if ($saasOrgId && !$org->saas_org_id) {
-                    $org->saas_org_id = $saasOrgId;
-                    $org->save();
-                    \Log::error('[loginAndLinkSaasOrg] Linked org: ' . $saasOrgId);
-                }
-
-                if ($saasToken) {
-                    $this->syncEntitlementsFromSaas($request, $saasToken);
-                    return $saasToken;
-                }
-            }
-
-            // Deterministic password didn't work (user registered on SaaS independently).
-            // Try service-token if we have a saas_org_id from a prior partial link.
-            if ($org->saas_org_id) {
-                return $this->getSaasToken($request);
-            }
-
-            \Log::error('[loginAndLinkSaasOrg] Failed — user may have different password on SaaS', [
+            // Login failed (different password) — can't auto-link
+            \Log::error('[ensureSaasOrg] Cannot auto-link: user exists on SaaS with different password', [
                 'email' => $user->email,
-                'status' => $loginRes->status(),
+                'login_status' => $loginRes->status(),
             ]);
-        } catch (\Exception $e) {
-            \Log::error('[loginAndLinkSaasOrg] Exception: ' . $e->getMessage());
+            return null;
         }
 
+        \Log::error('[ensureSaasOrg] Registration failed', [
+            'status' => $response->status(),
+            'body' => substr($response->body(), 0, 200),
+        ]);
         return null;
     }
 
@@ -1102,6 +1058,61 @@ class AuthController extends Controller
      * Allow existing staff users to start a free trial on their org.
      * Works even without SaaS connection — provisions entitlements locally.
      */
+    /**
+     * GET /v1/auth/billing/diag — Diagnostic: test SaaS connectivity.
+     * Hit this from the browser to see if the loyalty server can reach SaaS.
+     */
+    public function billingDiag(Request $request): JsonResponse
+    {
+        $saasApi = config('services.saas.api_url');
+        $user = $request->user();
+        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
+
+        $result = [
+            'saas_api_url' => $saasApi,
+            'has_jwt_secret' => (bool) config('services.saas.jwt_secret'),
+            'org_id' => $org?->id,
+            'saas_org_id' => $org?->saas_org_id,
+            'plan_slug' => $org?->plan_slug,
+            'subscription_status' => $org?->subscription_status,
+        ];
+
+        if (!$saasApi) {
+            $result['connectivity'] = 'NOT_CONFIGURED';
+            return response()->json($result);
+        }
+
+        // Test connectivity to SaaS
+        $start = microtime(true);
+        try {
+            $response = Http::connectTimeout(2)->timeout(3)->get(rtrim($saasApi, '/api') . '/up');
+            $result['connectivity'] = 'OK';
+            $result['saas_status'] = $response->status();
+            $result['saas_response_ms'] = round((microtime(true) - $start) * 1000);
+        } catch (\Exception $e) {
+            $result['connectivity'] = 'FAILED';
+            $result['saas_error'] = $e->getMessage();
+            $result['saas_response_ms'] = round((microtime(true) - $start) * 1000);
+        }
+
+        // Test SaaS API endpoint
+        try {
+            $start2 = microtime(true);
+            $apiRes = Http::connectTimeout(2)->timeout(3)->post("{$saasApi}/auth/token", [
+                'email' => 'test@test.com',
+                'password' => 'test',
+            ]);
+            $result['api_reachable'] = true;
+            $result['api_status'] = $apiRes->status();
+            $result['api_response_ms'] = round((microtime(true) - $start2) * 1000);
+        } catch (\Exception $e) {
+            $result['api_reachable'] = false;
+            $result['api_error'] = $e->getMessage();
+        }
+
+        return response()->json($result);
+    }
+
     public function billingStartTrial(Request $request): JsonResponse
     {
         $request->validate([
