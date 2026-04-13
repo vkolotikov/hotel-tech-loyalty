@@ -642,7 +642,15 @@ class AuthController extends Controller
         // Get or create SaaS connection for this org (auto-registers if needed)
         $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
+            $orgForDebug = $request->user() ? \App\Models\Organization::find($request->user()->organization_id) : null;
+            return response()->json([
+                'error' => 'Could not connect to billing system. Please try again.',
+                'debug' => [
+                    'saas_api' => $saasApi,
+                    'has_saas_org_id' => (bool) $orgForDebug?->saas_org_id,
+                    'hint' => 'Check laravel.log for detailed SaaS connection errors',
+                ],
+            ], 503);
         }
 
         try {
@@ -725,7 +733,15 @@ class AuthController extends Controller
 
         $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
+            $org = $request->user() ? \App\Models\Organization::find($request->user()->organization_id) : null;
+            return response()->json([
+                'error' => 'Could not connect to billing system. Please try again.',
+                'debug' => [
+                    'saas_api' => $saasApi,
+                    'has_saas_org_id' => (bool) $org?->saas_org_id,
+                    'hint' => 'Check laravel.log for detailed SaaS connection errors',
+                ],
+            ], 503);
         }
 
         try {
@@ -979,24 +995,70 @@ class AuthController extends Controller
                 return $saasToken;
             }
 
-            // If user already exists on SaaS (409/422), try service-token auth
+            // If user already exists on SaaS (409/422), try logging in to link the org
             if (in_array($response->status(), [409, 422])) {
-                // User exists — try to find and link the org via service-token
-                $jwtSecret = config('services.saas.jwt_secret', '');
-                if (!$jwtSecret) return null;
-
-                // We need to discover the SaaS org ID. Try the bootstrap endpoint.
-                // First, forge a service signature for the user's email.
-                // We'll try with empty orgId since we don't know it yet.
-                return null; // Can't auto-link if user already exists — they need to log in via SaaS
+                return $this->loginAndLinkSaasOrg($saasApi, $user, $org, $tempPassword, $request);
             }
 
             \Log::warning('SaaS org registration failed', [
+                'saas_api' => $saasApi,
+                'email' => $user->email,
                 'status' => $response->status(),
-                'body' => $response->json(),
+                'body' => substr($response->body(), 0, 500),
             ]);
         } catch (\Exception $e) {
-            \Log::warning('SaaS org registration error: ' . $e->getMessage());
+            \Log::warning('SaaS org registration error', [
+                'saas_api' => $saasApi,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Login to SaaS with the deterministic password and link the org.
+     * Called when registration returns 409 (user already exists on SaaS).
+     */
+    private function loginAndLinkSaasOrg(string $saasApi, $user, $org, string $password, Request $request): ?string
+    {
+        try {
+            // Login to SaaS to get token + org ID
+            $loginRes = Http::timeout(10)->post("{$saasApi}/auth/token", [
+                'email'    => $user->email,
+                'password' => $password,
+            ]);
+
+            if ($loginRes->successful()) {
+                $data = $loginRes->json();
+                $saasToken = $data['token'] ?? null;
+                $saasOrgId = $data['organization']['id'] ?? null;
+
+                if ($saasOrgId && !$org->saas_org_id) {
+                    $org->saas_org_id = $saasOrgId;
+                    $org->save();
+                }
+
+                if ($saasToken) {
+                    $this->syncEntitlementsFromSaas($request, $saasToken);
+                    return $saasToken;
+                }
+            }
+
+            // Login with deterministic password failed — user may have registered
+            // on SaaS independently with a different password.
+            // Try service-token if we already have a saas_org_id from a prior partial link.
+            if ($org->saas_org_id) {
+                return $this->getSaasToken($request);
+            }
+
+            \Log::warning('SaaS login-and-link failed', [
+                'email' => $user->email,
+                'status' => $loginRes->status(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('SaaS login-and-link error: ' . $e->getMessage());
         }
 
         return null;
