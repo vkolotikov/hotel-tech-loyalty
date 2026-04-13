@@ -101,6 +101,9 @@ Route::prefix('v1')->group(function () {
         Route::get('{widgetKey}/calendar-prices', [WidgetChatController::class, 'widgetCalendarPrices'])->middleware('throttle:30,1');
     });
 
+    // ─── Public diagnostic endpoint (no auth) ────────────────────────────────
+    Route::get('billing/diag', [AuthController::class, 'billingDiag']);
+
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
     Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'throttle:120,1'])->group(function () {
@@ -114,7 +117,6 @@ Route::prefix('v1')->group(function () {
             Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
             Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
             Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial']);
-            Route::get('billing/diag',        [AuthController::class, 'billingDiag']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────

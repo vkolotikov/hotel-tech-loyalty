@@ -1059,22 +1059,18 @@ class AuthController extends Controller
      * Works even without SaaS connection — provisions entitlements locally.
      */
     /**
-     * GET /v1/auth/billing/diag — Diagnostic: test SaaS connectivity.
-     * Hit this from the browser to see if the loyalty server can reach SaaS.
+     * GET /v1/billing/diag — Diagnostic: test SaaS connectivity (public, no auth).
+     * Hit from browser: https://loyalty.hotel-tech.ai/api/v1/billing/diag
      */
     public function billingDiag(Request $request): JsonResponse
     {
         $saasApi = config('services.saas.api_url');
-        $user = $request->user();
-        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
 
         $result = [
             'saas_api_url' => $saasApi,
             'has_jwt_secret' => (bool) config('services.saas.jwt_secret'),
-            'org_id' => $org?->id,
-            'saas_org_id' => $org?->saas_org_id,
-            'plan_slug' => $org?->plan_slug,
-            'subscription_status' => $org?->subscription_status,
+            'php_version' => PHP_VERSION,
+            'timestamp' => now()->toIso8601String(),
         ];
 
         if (!$saasApi) {
@@ -1082,32 +1078,42 @@ class AuthController extends Controller
             return response()->json($result);
         }
 
-        // Test connectivity to SaaS
+        // Test 1: DNS resolution
+        $saasHost = parse_url($saasApi, PHP_URL_HOST);
         $start = microtime(true);
+        $dnsResult = @dns_get_record($saasHost, DNS_A);
+        $result['dns_ms'] = round((microtime(true) - $start) * 1000);
+        $result['dns_resolved'] = !empty($dnsResult);
+        $result['dns_ip'] = $dnsResult[0]['ip'] ?? null;
+
+        // Test 2: Simple GET to SaaS /up (health check)
+        $start2 = microtime(true);
         try {
-            $response = Http::connectTimeout(2)->timeout(3)->get(rtrim($saasApi, '/api') . '/up');
-            $result['connectivity'] = 'OK';
-            $result['saas_status'] = $response->status();
-            $result['saas_response_ms'] = round((microtime(true) - $start) * 1000);
+            $baseUrl = preg_replace('#/api$#', '', $saasApi);
+            $response = Http::connectTimeout(2)->timeout(3)->get("{$baseUrl}/up");
+            $result['health_check'] = 'OK';
+            $result['health_status'] = $response->status();
+            $result['health_ms'] = round((microtime(true) - $start2) * 1000);
         } catch (\Exception $e) {
-            $result['connectivity'] = 'FAILED';
-            $result['saas_error'] = $e->getMessage();
-            $result['saas_response_ms'] = round((microtime(true) - $start) * 1000);
+            $result['health_check'] = 'FAILED';
+            $result['health_error'] = $e->getMessage();
+            $result['health_ms'] = round((microtime(true) - $start2) * 1000);
         }
 
-        // Test SaaS API endpoint
+        // Test 3: POST to SaaS API (auth/token with dummy creds — should get 401/422)
+        $start3 = microtime(true);
         try {
-            $start2 = microtime(true);
             $apiRes = Http::connectTimeout(2)->timeout(3)->post("{$saasApi}/auth/token", [
-                'email' => 'test@test.com',
-                'password' => 'test',
+                'email' => 'diag-test@test.com',
+                'password' => 'diag-test',
             ]);
             $result['api_reachable'] = true;
             $result['api_status'] = $apiRes->status();
-            $result['api_response_ms'] = round((microtime(true) - $start2) * 1000);
+            $result['api_ms'] = round((microtime(true) - $start3) * 1000);
         } catch (\Exception $e) {
             $result['api_reachable'] = false;
             $result['api_error'] = $e->getMessage();
+            $result['api_ms'] = round((microtime(true) - $start3) * 1000);
         }
 
         return response()->json($result);
