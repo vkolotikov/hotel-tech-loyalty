@@ -234,7 +234,7 @@ class AuthController extends Controller
             Mail::to($validated['email'])->send(new VerificationCodeMail($code, $validated['name'] ?? ''));
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Could not send verification email. Please try again.'], 503);
+            return response()->json(['error' => 'Could not send verification email. Please try again.'], 502);
         }
 
         return response()->json(['message' => 'Verification code sent.']);
@@ -650,7 +650,7 @@ class AuthController extends Controller
                     'has_saas_org_id' => (bool) $orgForDebug?->saas_org_id,
                     'hint' => 'Check laravel.log for detailed SaaS connection errors',
                 ],
-            ], 503);
+            ], 502);
         }
 
         try {
@@ -712,7 +712,7 @@ class AuthController extends Controller
             ]);
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 503);
+            return response()->json(['error' => 'Billing service unavailable'], 502);
         }
     }
 
@@ -755,7 +755,7 @@ class AuthController extends Controller
                     'has_saas_org_id' => (bool) $org?->saas_org_id,
                     'hint' => 'Check laravel.log for [ensureSaasOrg] entries',
                 ],
-            ], 503);
+            ], 502);
         }
 
         try {
@@ -782,7 +782,7 @@ class AuthController extends Controller
             return response()->json(['success' => true, 'message' => 'Subscription activated']);
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 503);
+            return response()->json(['error' => 'Billing service unavailable'], 502);
         }
     }
 
@@ -798,7 +798,7 @@ class AuthController extends Controller
 
         $saasToken = $this->ensureSaasOrg($request);
         if (!$saasToken) {
-            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 503);
+            return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 502);
         }
 
         try {
@@ -811,7 +811,7 @@ class AuthController extends Controller
             return response()->json($response->json());
         } catch (\Exception $e) {
             report($e);
-            return response()->json(['error' => 'Billing service unavailable'], 503);
+            return response()->json(['error' => 'Billing service unavailable'], 502);
         }
     }
 
