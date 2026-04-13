@@ -434,12 +434,7 @@ class AuthController extends Controller
         // Either way, the org MUST end up with subscription_status + plan data
         // so that subscription() and CheckSubscription work correctly.
         $planSlug = $validated['plan'] ?? 'starter';
-        $trialDays = match ($planSlug) {
-            'starter'    => 7,
-            'growth'     => 14,
-            'enterprise' => 14,
-            default      => 7,
-        };
+        $trialDays = 7; // Matches SaaS plan config
         $trialSynced = false;
 
         // Path A: Sync from SaaS if registration succeeded
@@ -1168,12 +1163,7 @@ class AuthController extends Controller
         }
 
         $planSlug = $request->input('plan_slug');
-        $trialDays = match ($planSlug) {
-            'starter'    => 7,
-            'growth'     => 14,
-            'enterprise' => 14,
-            default      => 7,
-        };
+        $trialDays = 7; // Matches SaaS plan config
 
         // Try SaaS first if connected
         $saasApi = config('services.saas.api_url');
@@ -1183,15 +1173,28 @@ class AuthController extends Controller
             $saasToken = $this->getSaasToken($request);
             if ($saasToken) {
                 try {
-                    $response = Http::withToken($saasToken)->timeout(10)
-                        ->post("{$saasApi}/billing/subscribe", [
-                            'planSlug' => $planSlug,
-                            'interval' => 'MONTHLY',
-                        ]);
+                    // Resolve plan ID from slug
+                    $plansRes = Http::withToken($saasToken)->timeout(5)->get("{$saasApi}/billing/plans");
+                    $planId = null;
+                    foreach ($plansRes->json('plans', []) as $p) {
+                        if (($p['slug'] ?? '') === $planSlug) {
+                            $planId = $p['id'];
+                            $trialDays = $p['trialDays'] ?? 7;
+                            break;
+                        }
+                    }
 
-                    if ($response->successful()) {
-                        $this->syncEntitlementsFromSaas($request, $saasToken);
-                        $trialSynced = true;
+                    if ($planId) {
+                        $response = Http::withToken($saasToken)->timeout(10)
+                            ->post("{$saasApi}/billing/subscribe", [
+                                'planId'   => $planId,
+                                'interval' => 'MONTHLY',
+                            ]);
+
+                        if ($response->successful()) {
+                            $this->syncEntitlementsFromSaas($request, $saasToken);
+                            $trialSynced = true;
+                        }
                     }
                 } catch (\Exception $e) {
                     report($e);

@@ -75,9 +75,9 @@ const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
 }
 
 const FALLBACK_PLANS: PlanData[] = [
-  { id: 'starter', name: 'Starter', slug: 'starter', description: 'Perfect for small hotels getting started.', monthlyAmount: 2900, yearlyAmount: 29000, currency: 'eur', trialDays: 7 },
-  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing hotels that need loyalty, bookings, and AI.', monthlyAmount: 7900, yearlyAmount: 79000, currency: 'eur', trialDays: 14 },
-  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'Full-featured solution for hotel groups and chains.', monthlyAmount: 19900, yearlyAmount: 199000, currency: 'eur', trialDays: 14 },
+  { id: 'starter', name: 'Starter', slug: 'starter', description: 'For boutique hotels and single properties getting started with guest data and a basic loyalty program. CRM, loyalty tiers and points, manual campaigns. No AI.', monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7 },
+  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing groups that need bookings and AI. Everything in Starter plus the booking engine, AI Chatbot with knowledge base, AI insights and analytics, push campaigns, custom branding and the member mobile app.', monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7 },
+  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'For multi-property operators. Everything in Growth, unlimited properties and members, full API access and webhooks, NFC card support, advanced analytics and dedicated priority support.', monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7 },
 ]
 
 type BillingInterval = 'monthly' | 'yearly'
@@ -92,8 +92,8 @@ export function Billing() {
   const [activateLoading, setActivateLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
 
-  // Fetch live plans from SaaS
-  const { data: plansData } = useQuery({
+  // Fetch live plans from SaaS — use fallback only if API fails or returns empty
+  const { data: plansData, isLoading: plansLoading, isError: plansError } = useQuery({
     queryKey: ['billing-plans'],
     queryFn: () => api.get('/v1/plans').then(r => r.data),
     staleTime: 10 * 60 * 1000,
@@ -103,6 +103,9 @@ export function Billing() {
   useEffect(() => {
     if (plansData?.plans?.length) setPlans(plansData.plans)
   }, [plansData])
+
+  // True when we have definitive plan data (either from API or fallback after failure)
+  const plansReady = !plansLoading || plansError || ((plansData as any)?.plans?.length > 0)
 
   // Check URL for checkout result
   useEffect(() => {
@@ -194,9 +197,10 @@ export function Billing() {
     }
   }
 
-  const formatPrice = (cents: number, currency: string) => {
-    const symbol = currency === 'eur' ? '\u20AC' : currency === 'gbp' ? '\u00A3' : '$'
-    return symbol + (cents / 100).toLocaleString()
+  const formatPrice = (cents: number, currency?: string) => {
+    const cur = (currency || 'usd').toLowerCase()
+    const symbol = cur === 'eur' ? '\u20AC' : cur === 'gbp' ? '\u00A3' : '$'
+    return symbol + Math.round(cents / 100).toLocaleString()
   }
 
   const getPlanPrice = (plan: PlanData) => {
@@ -433,7 +437,12 @@ export function Billing() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {plans.map((plan) => {
+          {!plansReady ? (
+            <div className="col-span-3 flex items-center justify-center gap-3 p-8">
+              <Loader2 size={20} className="animate-spin text-primary-400" />
+              <span className="text-sm text-t-secondary">Loading plans...</span>
+            </div>
+          ) : (plans.map((plan) => {
             const isCurrent = currentSlug === plan.slug && !isNoPlan
             const isPopular = plan.slug === 'growth'
             const features = PLAN_FEATURES[plan.slug] || {}
@@ -526,7 +535,7 @@ export function Billing() {
                 )}
               </div>
             )
-          })}
+          }))}
         </div>
       </div>}
     </div>
