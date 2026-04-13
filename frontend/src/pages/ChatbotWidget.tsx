@@ -381,7 +381,9 @@ export function ChatbotWidget() {
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-xl border border-dark-border bg-dark-bg flex items-center justify-center overflow-hidden shrink-0">
             {f.assistant_avatar_url ? (
-              <img src={resolveImage(f.assistant_avatar_url) || f.assistant_avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={resolveImage(f.assistant_avatar_url) || f.assistant_avatar_url} alt=""
+                className="w-full h-full object-cover"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'; }} />
             ) : (
               <MessageSquare size={22} className="text-[#636366]" />
             )}

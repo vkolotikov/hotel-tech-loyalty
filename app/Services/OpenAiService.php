@@ -292,7 +292,10 @@ Review: {$text}";
         // Knowledge context
         if ($knowledgeContext) {
             $parts[] = "\n{$knowledgeContext}";
-            $parts[] = "Use the knowledge base above to answer questions when relevant. If the answer is not in the knowledge base, use your general knowledge.";
+            $parts[] = "IMPORTANT — Knowledge Base Rules:";
+            $parts[] = "- When the knowledge base above contains an answer, use it IMMEDIATELY. Do NOT ask clarifying sub-questions when you already have the answer.";
+            $parts[] = "- Provide the answer first, then offer additional help if needed.";
+            $parts[] = "- If the answer is not in the knowledge base, use your general knowledge.";
         }
 
         return implode("\n", $parts);

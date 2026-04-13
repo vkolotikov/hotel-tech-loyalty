@@ -1029,7 +1029,11 @@ class WidgetChatController extends Controller
 
         if ($knowledgeContext) {
             $parts[] = "\n{$knowledgeContext}";
-            $parts[] = "Use the knowledge base above to answer questions when relevant.";
+            $parts[] = "IMPORTANT — Knowledge Base Rules:";
+            $parts[] = "- When the knowledge base above contains an answer to the visitor's question, use it IMMEDIATELY and directly. Do NOT ask clarifying sub-questions when you already have the answer.";
+            $parts[] = "- Provide the answer first, THEN offer to help with additional details if needed.";
+            $parts[] = "- Only ask follow-up questions when the knowledge base genuinely does not cover what the visitor is asking about.";
+            $parts[] = "- Prefer giving a complete, helpful answer in one message over dragging out a multi-turn interrogation.";
         }
 
         // Booking context — room catalog + availability

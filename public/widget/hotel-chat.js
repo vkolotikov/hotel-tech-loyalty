@@ -345,7 +345,13 @@
     var headerAvatar = document.getElementById('htchat-header-avatar');
     if (headerAvatar) {
       if (c.assistant_avatar) {
-        headerAvatar.innerHTML = '<img src="' + escapeHtml(c.assistant_avatar) + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover" />';
+        var avatarImg = document.createElement('img');
+        avatarImg.src = c.assistant_avatar;
+        avatarImg.alt = '';
+        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover';
+        avatarImg.onerror = function () { headerAvatar.innerHTML = ICONS.sparkles; };
+        headerAvatar.innerHTML = '';
+        headerAvatar.appendChild(avatarImg);
       } else {
         headerAvatar.innerHTML = ICONS.sparkles;
       }
@@ -636,6 +642,8 @@
         var vcBtn = document.getElementById('htchat-voice-call-btn');
         if (vcBtn) vcBtn.style.display = 'flex';
       }
+      // Load popup rules after config is ready
+      loadPopupRules();
     }).catch(function () {});
   }
 
@@ -1003,10 +1011,23 @@
     }
   }
 
+  // Pre-load voices — Chrome loads them asynchronously and getVoices()
+  // returns [] until the voiceschanged event fires.
+  var cachedVoices = [];
+  if (hasTTS) {
+    cachedVoices = speechSynthesis.getVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = function () {
+        cachedVoices = speechSynthesis.getVoices();
+      };
+    }
+  }
+
   function speak(text) {
     if (!hasTTS || !ttsEnabled) return;
-    speechSynthesis.cancel();
+    try { speechSynthesis.cancel(); } catch (e) {}
     var cleaned = text.replace(/#{1,3}\s/g, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1').replace(/[-•*]\s+/g, '').replace(/\d+[.)]\s+/g, '').trim();
+    if (!cleaned) return;
     var sentences = cleaned.match(/[^.!?\n]+[.!?\n]?/g) || [cleaned];
     var chunks = [];
     var cur = '';
@@ -1020,27 +1041,42 @@
 
     isSpeaking = true;
     var idx = 0;
+    // Chrome bug: speechSynthesis pauses after ~15s. Workaround: resume periodically.
+    var resumeTimer = setInterval(function () {
+      if (isSpeaking && speechSynthesis.paused) {
+        try { speechSynthesis.resume(); } catch (e) {}
+      }
+    }, 5000);
+
     function next() {
-      if (idx >= chunks.length) { isSpeaking = false; return; }
+      if (idx >= chunks.length || !ttsEnabled) {
+        isSpeaking = false;
+        clearInterval(resumeTimer);
+        return;
+      }
       var utt = new SpeechSynthesisUtterance(chunks[idx]);
       utt.rate = 1.05;
       utt.lang = lastUserLang;
-      var voices = speechSynthesis.getVoices();
+      var voices = cachedVoices.length ? cachedVoices : speechSynthesis.getVoices();
       var langPrefix = (lastUserLang || 'en').split('-')[0].toLowerCase();
-      // Prefer exact locale match → language family → Google voice → first
       var pref = voices.find(function (v) { return v.lang && v.lang.toLowerCase() === lastUserLang.toLowerCase(); })
         || voices.find(function (v) { return v.lang && v.lang.toLowerCase().indexOf(langPrefix) === 0; })
         || voices.find(function (v) { return v.name && v.name.indexOf('Google') > -1; });
       if (pref) utt.voice = pref;
       utt.onend = function () { idx++; next(); };
       utt.onerror = function () { idx++; next(); };
-      speechSynthesis.speak(utt);
+      try {
+        speechSynthesis.speak(utt);
+      } catch (e) {
+        isSpeaking = false;
+        clearInterval(resumeTimer);
+      }
     }
     next();
   }
 
   function stopSpeaking() {
-    if (hasTTS) speechSynthesis.cancel();
+    if (hasTTS) { try { speechSynthesis.cancel(); } catch (e) {} }
     isSpeaking = false;
   }
 
@@ -1368,6 +1404,128 @@
 
     var sep = baseUrl.indexOf('?') >= 0 ? '&' : '?';
     return baseUrl + (params.length ? sep + params.join('&') : '');
+  }
+
+  // ── Popup Rules Engine ──
+  var popupRules = [];
+  var firedRules = {};  // rule.id → true, prevents re-firing
+  var pageOpenedAt = Date.now();
+  var maxScrollPct = 0;
+  var exitIntentBound = false;
+
+  function loadPopupRules() {
+    fetch(API + '/popup-rules').then(function (r) { return r.json(); }).then(function (data) {
+      popupRules = (data && data.rules) || [];
+      if (popupRules.length > 0) {
+        startPopupEngine();
+      }
+    }).catch(function () {});
+  }
+
+  function startPopupEngine() {
+    // Evaluate on_load rules immediately
+    evaluateRules('on_load', 0);
+
+    // Time-based rules: check every second
+    setInterval(function () {
+      var elapsed = Math.floor((Date.now() - pageOpenedAt) / 1000);
+      evaluateRules('time_on_page', elapsed);
+    }, 1000);
+
+    // Scroll-based rules
+    window.addEventListener('scroll', function () {
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var docHeight = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      maxScrollPct = Math.max(maxScrollPct, Math.round((scrollTop / docHeight) * 100));
+      evaluateRules('scroll_percent', maxScrollPct);
+    }, { passive: true });
+
+    // Exit intent (mouse leaves viewport from top)
+    if (!exitIntentBound) {
+      exitIntentBound = true;
+      document.addEventListener('mouseout', function (e) {
+        if (e.clientY <= 0) {
+          evaluateRules('exit_intent', 0);
+        }
+      });
+    }
+  }
+
+  function evaluateRules(triggerType, currentValue) {
+    for (var i = 0; i < popupRules.length; i++) {
+      var rule = popupRules[i];
+      if (firedRules[rule.id]) continue;
+      if (rule.trigger_type !== triggerType) continue;
+
+      // Check trigger value threshold
+      if (triggerType === 'time_on_page' && currentValue < (parseInt(rule.trigger_value) || 5)) continue;
+      if (triggerType === 'scroll_percent' && currentValue < (parseInt(rule.trigger_value) || 50)) continue;
+
+      // URL matching
+      if (rule.url_match_value && !matchUrl(rule.url_match_type, rule.url_match_value)) continue;
+
+      // Visitor type
+      if (rule.visitor_type && rule.visitor_type !== 'any') {
+        var hasSession = false;
+        try { hasSession = !!localStorage.getItem(STORAGE_KEY); } catch (e) {}
+        if (rule.visitor_type === 'new' && hasSession) continue;
+        if (rule.visitor_type === 'returning' && !hasSession) continue;
+      }
+
+      // Fire this rule
+      firedRules[rule.id] = true;
+      showPopupMessage(rule);
+      trackImpression(rule.id);
+      break; // only one popup at a time
+    }
+  }
+
+  function matchUrl(type, value) {
+    var url = location.href;
+    if (!value) return true;
+    if (type === 'exact') return url === value;
+    if (type === 'contains') return url.indexOf(value) >= 0;
+    if (type === 'regex') {
+      try { return new RegExp(value).test(url); } catch (e) { return false; }
+    }
+    return true;
+  }
+
+  function showPopupMessage(rule) {
+    if (!rule.message) return;
+    // Auto-open the chat panel and inject the popup message as a system greeting
+    if (!isOpen) {
+      togglePanel();
+    }
+    // Add as a proactive assistant message
+    messages.push({ role: 'assistant', content: rule.message });
+    renderMessages();
+
+    // Add quick replies if present
+    if (Array.isArray(rule.quick_replies) && rule.quick_replies.length > 0) {
+      var container = document.getElementById('htchat-messages');
+      if (container) {
+        var qrHtml = '<div class="htchat-suggestions" style="padding:4px 0">';
+        rule.quick_replies.forEach(function (qr) {
+          if (qr && String(qr).trim()) {
+            qrHtml += '<button class="htchat-suggestion" onclick="document.getElementById(\'htchat-input\').value=\'' +
+              escapeHtml(String(qr)) + '\';document.getElementById(\'htchat-send-btn\').disabled=false;document.getElementById(\'htchat-send-btn\').click()">' +
+              escapeHtml(String(qr)) + '</button>';
+          }
+        });
+        qrHtml += '</div>';
+        container.innerHTML += qrHtml;
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }
+
+  function trackImpression(ruleId) {
+    fetch(API + '/popup-impression', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rule_id: ruleId }),
+    }).catch(function () {});
   }
 
   // ── Boot ──

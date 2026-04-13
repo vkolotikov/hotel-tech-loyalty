@@ -10,11 +10,28 @@ use Illuminate\Support\Facades\Log;
 class KnowledgeService
 {
     /**
+     * Common stop words to exclude from keyword matching.
+     * These would match almost every FAQ item and add noise.
+     */
+    private const STOP_WORDS = [
+        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
+        'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'some',
+        'them', 'than', 'its', 'over', 'such', 'that', 'this', 'with',
+        'will', 'each', 'from', 'they', 'were', 'which', 'their', 'said',
+        'what', 'when', 'who', 'how', 'does', 'your', 'about', 'would',
+        'there', 'could', 'other', 'into', 'more', 'also', 'any', 'tell',
+        'please', 'want', 'need', 'like', 'just', 'know',
+    ];
+
+    /**
      * Search knowledge items relevant to a query using keyword matching.
      */
     public function searchRelevantItems(string $query, int $orgId, int $limit = 5): Collection
     {
-        $words = array_filter(explode(' ', strtolower(trim($query))), fn($w) => strlen($w) >= 3);
+        $words = array_filter(
+            explode(' ', strtolower(trim($query))),
+            fn($w) => strlen($w) >= 3 && !in_array($w, self::STOP_WORDS),
+        );
 
         if (empty($words)) {
             return KnowledgeItem::where('organization_id', $orgId)
