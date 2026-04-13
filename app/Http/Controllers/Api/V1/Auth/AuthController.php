@@ -1013,42 +1013,60 @@ class AuthController extends Controller
             return $saasToken;
         }
 
-        // User already exists on SaaS — try to login
+        // User already exists on SaaS — use service-lookup (HMAC-signed, no password needed)
         if (in_array($response->status(), [409, 422])) {
-            try {
-                $loginRes = Http::connectTimeout(2)->timeout(4)->post("{$saasApi}/auth/token", [
-                    'email'    => $user->email,
-                    'password' => $tempPassword,
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('[ensureSaasOrg] SaaS login unreachable', ['error' => $e->getMessage()]);
-                return null;
-            }
-
-            if ($loginRes->successful()) {
-                $data = $loginRes->json();
-                $saasOrgId = $data['organization']['id'] ?? null;
-                $saasToken = $data['token'] ?? null;
-
-                if ($saasOrgId && !$org->saas_org_id) {
-                    $org->saas_org_id = $saasOrgId;
-                    $org->save();
-                }
-
-                return $saasToken;
-            }
-
-            // Login failed (different password) — can't auto-link
-            \Log::error('[ensureSaasOrg] Cannot auto-link: user exists on SaaS with different password', [
-                'email' => $user->email,
-                'login_status' => $loginRes->status(),
-            ]);
-            return null;
+            return $this->serviceLookupSaas($user, $org, $saasApi);
         }
 
         \Log::error('[ensureSaasOrg] Registration failed', [
             'status' => $response->status(),
             'body' => substr($response->body(), 0, 200),
+        ]);
+        return null;
+    }
+
+    /**
+     * Look up existing user on SaaS using HMAC-signed service call.
+     * No password needed — authenticated via shared JWT secret.
+     */
+    private function serviceLookupSaas($user, $org, string $saasApi): ?string
+    {
+        $jwtSecret = config('services.saas.jwt_secret', '');
+        if (!$jwtSecret) {
+            \Log::error('[serviceLookupSaas] No jwt_secret configured');
+            return null;
+        }
+
+        $signature = hash_hmac('sha256', $user->email, $jwtSecret);
+
+        try {
+            $lookupRes = Http::connectTimeout(2)->timeout(4)
+                ->withHeaders(['X-Service-Signature' => $signature])
+                ->post("{$saasApi}/auth/service-lookup", [
+                    'email' => $user->email,
+                ]);
+        } catch (\Exception $e) {
+            \Log::error('[serviceLookupSaas] SaaS unreachable', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+        if ($lookupRes->successful()) {
+            $data = $lookupRes->json();
+            $saasOrgId = $data['organization']['id'] ?? null;
+            $saasToken = $data['token'] ?? null;
+
+            if ($saasOrgId && !$org->saas_org_id) {
+                $org->saas_org_id = $saasOrgId;
+                $org->save();
+                \Log::error('[serviceLookupSaas] Linked org ' . $org->id . ' → SaaS ' . $saasOrgId);
+            }
+
+            return $saasToken;
+        }
+
+        \Log::error('[serviceLookupSaas] Lookup failed', [
+            'status' => $lookupRes->status(),
+            'body' => substr($lookupRes->body(), 0, 200),
         ]);
         return null;
     }
