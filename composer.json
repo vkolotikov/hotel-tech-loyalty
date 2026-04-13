@@ -12,8 +12,9 @@
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
-        "openai-php/laravel": "^0.19.1",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "openai-php/laravel": "^0.19.1",
+        "phpoffice/phpword": "^1.4",
         "spatie/laravel-permission": "^6.24"
     },
     "require-dev": {

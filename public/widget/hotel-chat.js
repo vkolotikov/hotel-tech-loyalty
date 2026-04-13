@@ -27,6 +27,9 @@
   // endpoint only sends us new agent/system replies. Lives across the panel
   // open/close lifecycle so reopening doesn't replay everything.
   var lastMessageId = 0;
+  // Set of chat_messages.id values we already rendered from sendMessage() inline
+  // response, so the poll doesn't duplicate them.
+  var renderedAiIds = {};
   var pollTimer = null;
   var POLL_INTERVAL_MS = 3500;
   var activeAgent = null; // {name, avatar} when a human takes over
@@ -493,9 +496,10 @@
           data.messages.forEach(function (m) {
             if (m.id > lastMessageId) lastMessageId = m.id;
             // Skip ai messages we already appended locally from sendMessage's
-            // own response — but if a different tab/session generated them
-            // (or AI was triggered server-side), accept them.
+            // inline response to prevent duplicates.
+            if (renderedAiIds[m.id]) return;
             if (m.sender_type === 'ai' || m.sender_type === 'agent') {
+              renderedAiIds[m.id] = true;
               messages.push({
                 role: 'assistant',
                 content: m.content,
@@ -625,7 +629,9 @@
         var h3 = document.querySelector('#htchat-header-info h3');
         if (h3) h3.textContent = data.company_name;
       }
-      if (data.welcome_message) renderMessages();
+      // Always re-render after config loads so the welcome screen picks up
+      // configured welcome_title, welcome_subtitle, and suggestions.
+      renderMessages();
       // If we're outside business hours, prepend a sticky offline notice and
       // dim the launcher pulse so visitors know nobody's listening live.
       if (data.is_open === false) {
@@ -822,10 +828,13 @@
         }
         var reply = data.response || data.message || 'Sorry, I could not process that.';
         messages.push({ role: 'assistant', content: reply });
-        // Advance the poll cursor past the AI message we just rendered
-        // locally so the next poll doesn't deliver it again as a duplicate.
-        if (data.ai_message_id && data.ai_message_id > lastMessageId) {
-          lastMessageId = data.ai_message_id;
+        // Mark this AI message as already-rendered so the poller skips it,
+        // and advance the poll cursor past it.
+        if (data.ai_message_id) {
+          renderedAiIds[data.ai_message_id] = true;
+          if (data.ai_message_id > lastMessageId) {
+            lastMessageId = data.ai_message_id;
+          }
         }
         isLoading = false;
         renderMessages();
@@ -1423,20 +1432,25 @@
   }
 
   function startPopupEngine() {
-    // Evaluate on_load rules immediately
+    // Evaluate page_load / on_load rules immediately
+    evaluateRules('page_load', 0);
     evaluateRules('on_load', 0);
 
     // Time-based rules: check every second
+    // Admin saves as 'time_delay', widget historically used 'time_on_page' — check both
     setInterval(function () {
       var elapsed = Math.floor((Date.now() - pageOpenedAt) / 1000);
+      evaluateRules('time_delay', elapsed);
       evaluateRules('time_on_page', elapsed);
     }, 1000);
 
     // Scroll-based rules
+    // Admin saves as 'scroll_depth', widget historically used 'scroll_percent' — check both
     window.addEventListener('scroll', function () {
       var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       var docHeight = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
       maxScrollPct = Math.max(maxScrollPct, Math.round((scrollTop / docHeight) * 100));
+      evaluateRules('scroll_depth', maxScrollPct);
       evaluateRules('scroll_percent', maxScrollPct);
     }, { passive: true });
 

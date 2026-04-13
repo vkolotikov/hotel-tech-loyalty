@@ -171,10 +171,45 @@ class KnowledgeService
         $phpWord = \PhpOffice\PhpWord\IOFactory::load($path);
         $text = '';
         foreach ($phpWord->getSections() as $section) {
-            foreach ($section->getElements() as $element) {
-                if (method_exists($element, 'getText')) {
-                    $text .= $element->getText() . "\n";
+            $text .= $this->extractElementsText($section->getElements());
+        }
+        return $text ?: null;
+    }
+
+    /**
+     * Recursively extract text from PhpWord elements (handles tables, text runs, etc.)
+     */
+    private function extractElementsText(iterable $elements): string
+    {
+        $text = '';
+        foreach ($elements as $element) {
+            if ($element instanceof \PhpOffice\PhpWord\Element\TextRun) {
+                foreach ($element->getElements() as $child) {
+                    if (method_exists($child, 'getText')) {
+                        $text .= $child->getText();
+                    }
                 }
+                $text .= "\n";
+            } elseif ($element instanceof \PhpOffice\PhpWord\Element\Table) {
+                foreach ($element->getRows() as $row) {
+                    $cells = [];
+                    foreach ($row->getCells() as $cell) {
+                        $cells[] = trim($this->extractElementsText($cell->getElements()));
+                    }
+                    $text .= implode(' | ', $cells) . "\n";
+                }
+                $text .= "\n";
+            } elseif ($element instanceof \PhpOffice\PhpWord\Element\ListItemRun) {
+                foreach ($element->getElements() as $child) {
+                    if (method_exists($child, 'getText')) {
+                        $text .= $child->getText();
+                    }
+                }
+                $text .= "\n";
+            } elseif (method_exists($element, 'getText')) {
+                $text .= $element->getText() . "\n";
+            } elseif (method_exists($element, 'getElements')) {
+                $text .= $this->extractElementsText($element->getElements());
             }
         }
         return $text;
