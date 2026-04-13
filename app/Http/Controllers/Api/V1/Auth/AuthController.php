@@ -924,6 +924,83 @@ class AuthController extends Controller
         return null;
     }
 
+    /**
+     * POST /v1/auth/billing/start-trial
+     * Allow existing staff users to start a free trial on their org.
+     * Works even without SaaS connection — provisions entitlements locally.
+     */
+    public function billingStartTrial(Request $request): JsonResponse
+    {
+        $request->validate([
+            'plan_slug' => 'required|string|in:starter,growth,enterprise',
+        ]);
+
+        $user = $request->user();
+        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
+
+        if (!$org) {
+            return response()->json(['error' => 'No organization found for your account'], 400);
+        }
+
+        // Don't allow if already has an active or trialing subscription
+        if (in_array($org->subscription_status, ['ACTIVE', 'TRIALING'], true)) {
+            if ($org->subscription_status === 'TRIALING' && $org->trial_end && $org->trial_end->isFuture()) {
+                return response()->json(['error' => 'You already have an active trial'], 400);
+            }
+        }
+
+        $planSlug = $request->input('plan_slug');
+        $trialDays = match ($planSlug) {
+            'starter'    => 7,
+            'growth'     => 14,
+            'enterprise' => 14,
+            default      => 7,
+        };
+
+        // Try SaaS first if connected
+        $saasApi = config('services.saas.api_url');
+        $trialSynced = false;
+
+        if ($saasApi && $org->saas_org_id) {
+            $saasToken = $this->getSaasToken($request);
+            if ($saasToken) {
+                try {
+                    $response = Http::withToken($saasToken)->timeout(10)
+                        ->post("{$saasApi}/billing/subscribe", [
+                            'planSlug' => $planSlug,
+                            'interval' => 'MONTHLY',
+                        ]);
+
+                    if ($response->successful()) {
+                        $this->syncEntitlementsFromSaas($request, $saasToken);
+                        $trialSynced = true;
+                    }
+                } catch (\Exception $e) {
+                    report($e);
+                }
+            }
+        }
+
+        // Local trial fallback
+        if (!$trialSynced) {
+            $org->plan_slug           = $planSlug;
+            $org->subscription_status = 'TRIALING';
+            $org->trial_end           = now()->addDays($trialDays);
+            $org->period_end          = now()->addDays($trialDays);
+            $org->entitled_products   = ['crm', 'chat', 'loyalty', 'booking'];
+            $org->plan_features       = $this->getTrialFeatures($planSlug);
+            $org->entitlements_synced_at = now();
+            $org->save();
+        }
+
+        return response()->json([
+            'success'   => true,
+            'plan_slug' => $planSlug,
+            'trial_days'=> $trialDays,
+            'message'   => "Your {$trialDays}-day free trial of " . ucfirst($planSlug) . " has started!",
+        ]);
+    }
+
     public function forgotPassword(Request $request): JsonResponse
     {
         $validated = $request->validate(['email' => 'required|email']);

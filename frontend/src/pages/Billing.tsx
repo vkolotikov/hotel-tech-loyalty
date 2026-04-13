@@ -87,26 +87,32 @@ export function Billing() {
     }
   }, [queryClient])
 
-  // Switch plan / start trial via SaaS
+  // Switch plan / start trial via SaaS or locally
   const handleCheckout = async (planSlug: string) => {
-    if (!billingAvailable) {
-      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to upgrade your plan.')
-      return
-    }
     setCheckoutLoading(planSlug)
     try {
-      const { data } = await api.post('/v1/auth/billing/checkout', {
-        plan_slug: planSlug,
-        interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
-      })
+      // If billing is available (SaaS linked), use the SaaS checkout flow
+      if (billingAvailable) {
+        const { data } = await api.post('/v1/auth/billing/checkout', {
+          plan_slug: planSlug,
+          interval: billingInterval === 'yearly' ? 'YEARLY' : 'MONTHLY',
+        })
 
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl
-        return
-      }
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl
+          return
+        }
 
-      if (data.success) {
-        toast.success('Plan updated!')
+        if (data.success) {
+          toast.success('Plan updated!')
+          queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+        }
+      } else {
+        // No SaaS link — start a local free trial
+        const { data } = await api.post('/v1/auth/billing/start-trial', {
+          plan_slug: planSlug,
+        })
+        toast.success(data.message || 'Free trial started!')
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       }
     } catch (err: any) {
@@ -120,7 +126,7 @@ export function Billing() {
   // Activate subscription — convert trial to paid via Stripe
   const handleActivate = async () => {
     if (!billingAvailable) {
-      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to subscribe.')
+      toast('To subscribe with payment, please contact info@hotel-tech.ai', { icon: '\u2709\uFE0F' })
       return
     }
     setActivateLoading(true)
@@ -148,7 +154,7 @@ export function Billing() {
 
   const handlePortal = async () => {
     if (!billingAvailable) {
-      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to manage your subscription.')
+      toast('To manage billing, please contact info@hotel-tech.ai', { icon: '\u2709\uFE0F' })
       return
     }
     setPortalLoading(true)
@@ -187,7 +193,8 @@ export function Billing() {
   const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
   const currentSlug = sub?.plan?.slug ?? null
   const isLocal = status === 'LOCAL'
-  const isNoPlan = status === 'NO_PLAN' || status === 'LOADING'
+  const isNoPlan = status === 'NO_PLAN' || status === 'EXPIRED'
+  const isLoadingSub = status === 'LOADING'
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -237,7 +244,12 @@ export function Billing() {
       <div className="rounded-xl border border-dark-border bg-dark-surface p-5">
         <h2 className="text-sm font-semibold text-t-secondary uppercase tracking-wider mb-4">Current Plan</h2>
 
-        {isSuperAdmin ? (
+        {isLoadingSub ? (
+          <div className="flex items-center justify-center gap-3 p-6">
+            <Loader2 size={20} className="animate-spin text-primary-400" />
+            <span className="text-sm text-t-secondary">Loading subscription info...</span>
+          </div>
+        ) : isSuperAdmin ? (
           <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
             <Crown size={20} className="text-green-400 shrink-0" />
             <div>
@@ -254,12 +266,29 @@ export function Billing() {
             </div>
           </div>
         ) : isNoPlan ? (
-          <div className="flex items-center gap-3 p-4 bg-primary-500/5 border border-primary-500/20 rounded-lg">
-            <Crown size={20} className="text-primary-400 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-primary-300">No Active Plan</p>
-              <p className="text-xs text-t-secondary mt-0.5">Choose a plan below to get started with your hotel management platform.</p>
+          <div className={`flex items-center gap-4 p-5 rounded-lg border ${
+            status === 'EXPIRED'
+              ? 'bg-orange-500/5 border-orange-500/20'
+              : 'bg-primary-500/5 border-primary-500/20'
+          }`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+              status === 'EXPIRED' ? 'bg-orange-500/15' : 'bg-primary-500/15'
+            }`}>
+              {status === 'EXPIRED'
+                ? <AlertTriangle size={22} className="text-orange-400" />
+                : <Crown size={22} className="text-primary-400" />}
             </div>
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${status === 'EXPIRED' ? 'text-orange-300' : 'text-primary-300'}`}>
+                {status === 'EXPIRED' ? 'Your Trial Has Expired' : 'Get Started with a Free Trial'}
+              </p>
+              <p className="text-xs text-t-secondary mt-0.5">
+                {status === 'EXPIRED'
+                  ? 'Your free trial has ended. Choose a plan below to continue using the platform.'
+                  : 'Choose a plan below to start your free trial. No credit card required — explore all features risk-free.'}
+              </p>
+            </div>
+            <Zap size={18} className={`shrink-0 animate-pulse ${status === 'EXPIRED' ? 'text-orange-400' : 'text-primary-400'}`} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -335,9 +364,9 @@ export function Billing() {
                   </button>
                 )}
               </div>
-              {!billingAvailable && (status === 'TRIALING' || status === 'EXPIRED') && (
+              {!billingAvailable && status === 'TRIALING' && (
                 <p className="text-xs text-t-secondary">
-                  To subscribe or manage your plan, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
+                  To subscribe with payment after your trial, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
                 </p>
               )}
             </div>
@@ -382,7 +411,7 @@ export function Billing() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {plans.map((plan) => {
-            const isCurrent = currentSlug === plan.slug
+            const isCurrent = currentSlug === plan.slug && !isNoPlan
             const isPopular = plan.slug === 'growth'
             const bullets = PLAN_BULLETS[plan.slug] || []
             const saving = getYearlySaving(plan)
@@ -459,7 +488,7 @@ export function Billing() {
                       <Loader2 size={12} className="animate-spin" />
                     ) : (
                       <>
-                        {currentSlug ? 'Switch Plan' : 'Start Free Trial'}
+                        {currentSlug && !isNoPlan ? 'Switch Plan' : 'Start Free Trial'}
                         <ArrowRight size={12} />
                       </>
                     )}

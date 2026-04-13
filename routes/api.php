@@ -110,9 +110,10 @@ Route::prefix('v1')->group(function () {
             Route::delete('logout',     [AuthController::class, 'logout']);
             Route::post('push-token',   [AuthController::class, 'updatePushToken']);
             Route::get('subscription',  [AuthController::class, 'subscription']);
-            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout']);
+            Route::post('billing/checkout',     [AuthController::class, 'billingCheckout']);
             Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
             Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
+            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
