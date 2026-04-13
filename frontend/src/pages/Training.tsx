@@ -7,14 +7,16 @@ import { format } from 'date-fns'
 
 const BASE_MODELS = [
   { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini (recommended)' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
   { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest)' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini (newest)' },
+  { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano' },
 ]
 
 export function Training() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
-  const [baseModel, setBaseModel] = useState('gpt-4o-mini')
+  const [baseModel, setBaseModel] = useState('gpt-4.1-mini')
   const [epochs, setEpochs] = useState(3)
 
   // Training stats

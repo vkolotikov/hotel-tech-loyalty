@@ -17,6 +17,9 @@ trait DispatchesAiChat
 {
     /**
      * Route a chat request to the configured provider with retry/backoff.
+     *
+     * $extra accepts optional model tuning params from ChatbotModelConfig:
+     *   top_p, frequency_penalty, presence_penalty, stop_sequences
      */
     protected function callProvider(
         string $provider,
@@ -25,15 +28,16 @@ trait DispatchesAiChat
         string $model,
         float $temperature,
         int $maxTokens,
+        array $extra = [],
     ): string {
         return match ($provider) {
-            'anthropic' => $this->dispatchAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens),
-            'google'    => $this->dispatchGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens),
-            default     => $this->dispatchOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens),
+            'anthropic' => $this->dispatchAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
+            'google'    => $this->dispatchGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
+            default     => $this->dispatchOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
         };
     }
 
-    private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
     {
         $allMessages = array_merge([['role' => 'system', 'content' => $system]], $messages);
 
@@ -53,31 +57,51 @@ trait DispatchesAiChat
             $params['temperature'] = $temp;
         }
 
+        // Apply optional tuning params from model config (only for non-reasoning models)
+        if (!$isNewFamily) {
+            if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
+                $params['top_p'] = (float) $extra['top_p'];
+            }
+            if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) {
+                $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
+            }
+            if (isset($extra['presence_penalty']) && $extra['presence_penalty'] > 0) {
+                $params['presence_penalty'] = (float) $extra['presence_penalty'];
+            }
+            if (!empty($extra['stop_sequences'])) {
+                $params['stop'] = $extra['stop_sequences'];
+            }
+        }
+
         return $this->withRetry(function () use ($params) {
             $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create($params);
             return $response->choices[0]->message->content ?? '';
         }, "OpenAI/{$model}");
     }
 
-    private function dispatchAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    private function dispatchAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
     {
         $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
         if (!$apiKey) {
             throw new \RuntimeException('Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env');
         }
 
-        return $this->withRetry(function () use ($apiKey, $system, $messages, $model, $temp, $maxTokens) {
-            $response = Http::withHeaders([
-                'x-api-key'         => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
+        return $this->withRetry(function () use ($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra) {
+            $payload = [
                 'model'       => $model,
                 'max_tokens'  => $maxTokens,
                 'temperature' => min($temp, 1.0),
                 'system'      => $system,
                 'messages'    => $messages,
-            ]);
+            ];
+            if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
+                $payload['top_p'] = (float) $extra['top_p'];
+            }
+            $response = Http::withHeaders([
+                'x-api-key'         => $apiKey,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ])->timeout(60)->post('https://api.anthropic.com/v1/messages', $payload);
 
             if ($response->failed()) {
                 $status = $response->status();
@@ -98,7 +122,7 @@ trait DispatchesAiChat
         }, "Anthropic/{$model}");
     }
 
-    private function dispatchGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens): string
+    private function dispatchGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
     {
         $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
         if (!$apiKey) {

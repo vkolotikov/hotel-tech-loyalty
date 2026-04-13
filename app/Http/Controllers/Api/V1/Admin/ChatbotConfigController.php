@@ -114,9 +114,15 @@ class ChatbotConfigController extends Controller
         $modelName = $model->model_name ?? 'gpt-4o';
         $temperature = (float) ($model->temperature ?? 0.7);
         $maxTokens = (int) ($model->max_tokens ?? 500);
+        $extraParams = array_filter([
+            'top_p'             => $model->top_p ?? null,
+            'frequency_penalty' => $model->frequency_penalty ?? null,
+            'presence_penalty'  => $model->presence_penalty ?? null,
+            'stop_sequences'    => $model->stop_sequences ?? null,
+        ], fn($v) => $v !== null);
 
         try {
-            $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens);
+            $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens, $extraParams);
         } catch (\Throwable $e) {
             return response()->json(['error' => 'AI call failed: ' . $e->getMessage()], 500);
         }

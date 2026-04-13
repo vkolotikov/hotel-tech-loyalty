@@ -351,7 +351,7 @@
         var avatarImg = document.createElement('img');
         avatarImg.src = c.assistant_avatar;
         avatarImg.alt = '';
-        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover';
+        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:10px;object-fit:cover';
         avatarImg.onerror = function () { headerAvatar.innerHTML = ICONS.sparkles; };
         headerAvatar.innerHTML = '';
         headerAvatar.appendChild(avatarImg);
@@ -1418,9 +1418,15 @@
   // ── Popup Rules Engine ──
   var popupRules = [];
   var firedRules = {};  // rule.id → true, prevents re-firing
+  var popupShown = false; // global — once ANY popup fires, no more popups this page load
   var pageOpenedAt = Date.now();
   var maxScrollPct = 0;
   var exitIntentBound = false;
+  // Snapshot visitor-type at page load, BEFORE initSession() saves a session
+  // key to localStorage. Otherwise the first popup opens the panel, creates a
+  // session, and the second popup sees hasSession=true → "returning".
+  var isReturningVisitor = false;
+  try { isReturningVisitor = !!localStorage.getItem(STORAGE_KEY); } catch (e) {}
 
   function loadPopupRules() {
     fetch(API + '/popup-rules').then(function (r) { return r.json(); }).then(function (data) {
@@ -1466,28 +1472,30 @@
   }
 
   function evaluateRules(triggerType, currentValue) {
+    if (popupShown) return; // one popup per page load
     for (var i = 0; i < popupRules.length; i++) {
       var rule = popupRules[i];
       if (firedRules[rule.id]) continue;
       if (rule.trigger_type !== triggerType) continue;
 
-      // Check trigger value threshold
-      if (triggerType === 'time_on_page' && currentValue < (parseInt(rule.trigger_value) || 5)) continue;
-      if (triggerType === 'scroll_percent' && currentValue < (parseInt(rule.trigger_value) || 50)) continue;
+      // Check trigger value threshold (admin saves time_delay / scroll_depth;
+      // widget historically used time_on_page / scroll_percent — handle both)
+      if ((triggerType === 'time_on_page' || triggerType === 'time_delay') && currentValue < (parseInt(rule.trigger_value) || 5)) continue;
+      if ((triggerType === 'scroll_percent' || triggerType === 'scroll_depth') && currentValue < (parseInt(rule.trigger_value) || 50)) continue;
 
       // URL matching
       if (rule.url_match_value && !matchUrl(rule.url_match_type, rule.url_match_value)) continue;
 
-      // Visitor type
+      // Visitor type — use the snapshot taken at page load, not live
+      // localStorage (which changes once initSession fires).
       if (rule.visitor_type && rule.visitor_type !== 'any') {
-        var hasSession = false;
-        try { hasSession = !!localStorage.getItem(STORAGE_KEY); } catch (e) {}
-        if (rule.visitor_type === 'new' && hasSession) continue;
-        if (rule.visitor_type === 'returning' && !hasSession) continue;
+        if (rule.visitor_type === 'new' && isReturningVisitor) continue;
+        if (rule.visitor_type === 'returning' && !isReturningVisitor) continue;
       }
 
       // Fire this rule
       firedRules[rule.id] = true;
+      popupShown = true;
       showPopupMessage(rule);
       trackImpression(rule.id);
       break; // only one popup at a time

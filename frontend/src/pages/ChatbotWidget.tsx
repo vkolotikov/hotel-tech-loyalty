@@ -595,8 +595,10 @@ export function ChatbotWidget() {
             <label className={label}>Realtime Model</label>
             <select value={v.realtime_model || 'gpt-4o-realtime-preview'} onChange={e => updateVoice('realtime_model', e.target.value)} className={input}>
               <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview (latest)</option>
+              <option value="gpt-4o-realtime-preview-2025-06-03">gpt-4o-realtime-preview-2025-06-03</option>
               <option value="gpt-4o-realtime-preview-2024-12-17">gpt-4o-realtime-preview-2024-12-17</option>
               <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview (cheap)</option>
+              <option value="gpt-4.1-realtime-preview">gpt-4.1-realtime-preview (newest)</option>
             </select>
           </div>
           <div>

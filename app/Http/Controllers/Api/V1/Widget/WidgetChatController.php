@@ -507,9 +507,15 @@ class WidgetChatController extends Controller
         $model = $modelConfig->model_name ?? 'gpt-4o';
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
+        $extraParams = array_filter([
+            'top_p'             => $modelConfig->top_p ?? null,
+            'frequency_penalty' => $modelConfig->frequency_penalty ?? null,
+            'presence_penalty'  => $modelConfig->presence_penalty ?? null,
+            'stop_sequences'    => $modelConfig->stop_sequences ?? null,
+        ], fn($v) => $v !== null);
 
         try {
-            $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens);
+            $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
         } catch (\Throwable $e) {
             \Log::error("Widget chat error [{$provider}/{$model}]: " . $e->getMessage());
             $aiResponse = $behaviorConfig->fallback_message
@@ -1182,35 +1188,87 @@ class WidgetChatController extends Controller
         $companyName = $widget->company_name ?: 'our hotel';
         $assistantName = $behavior->assistant_name ?? 'Hotel Assistant';
 
+        // If the admin wrote custom voice instructions, use those as the base
+        // and still append the full behavior config + knowledge below.
         $base = $voiceConfig->voice_instructions;
 
         if (!$base) {
+            // Build from chatbot behavior config — reuse ALL the same fields
+            // the text chatbot uses so voice and text stay in sync.
+            $parts = [];
+
+            // Identity
+            if ($behavior && $behavior->identity) {
+                $parts[] = "# Identity\n" . $behavior->identity;
+            } else {
+                $parts[] = "# Identity\nYou are {$assistantName}, the voice AI assistant for {$companyName}.";
+            }
+
+            // Goal
+            if ($behavior && $behavior->goal) {
+                $parts[] = "\n# Goal\n" . $behavior->goal;
+            }
+
+            // Tone & style
+            $toneMap = [
+                'professional' => 'Be professional and courteous.',
+                'friendly'     => 'Be warm, friendly, and approachable.',
+                'casual'       => 'Use a casual, relaxed conversational style.',
+                'formal'       => 'Maintain a formal, respectful tone.',
+            ];
+            $salesMap = [
+                'consultative' => 'Ask questions to understand the caller\'s needs before making recommendations.',
+                'aggressive'   => 'Proactively suggest offers, upsells, and booking opportunities.',
+                'passive'      => 'Only suggest products or services when the caller explicitly asks.',
+                'educational'  => 'Focus on informing and educating the caller, letting them decide.',
+            ];
             $tone = $behavior->tone ?? 'professional';
             $style = $behavior->sales_style ?? 'consultative';
+            $parts[] = "\n# Tone & Style";
+            $parts[] = $toneMap[$tone] ?? $toneMap['professional'];
+            $parts[] = $salesMap[$style] ?? $salesMap['consultative'];
+            $parts[] = "Keep voice answers concise — 2-3 sentences unless more detail is requested.";
+            $parts[] = "Speak naturally with occasional filler words for a human feel.";
 
-            $base = <<<PROMPT
-# Identity
-You are {$assistantName}, the voice AI assistant for {$companyName}.
+            // Core rules from admin config
+            if ($behavior && !empty($behavior->core_rules)) {
+                $parts[] = "\n# Rules you MUST follow";
+                foreach ($behavior->core_rules as $rule) {
+                    $parts[] = "- {$rule}";
+                }
+            } else {
+                $parts[] = "\n# Rules";
+                $parts[] = "- Always greet the caller warmly";
+                $parts[] = "- If you don't know specific details, suggest they contact the front desk";
+                $parts[] = "- Never make up prices or availability — offer to connect them with reservations";
+            }
 
-# Task
-Help hotel guests and website visitors with questions about the hotel: rooms, amenities, check-in/out, dining, booking, loyalty program, and local recommendations.
+            // Escalation policy
+            if ($behavior && $behavior->escalation_policy) {
+                $parts[] = "\n# Escalation\n" . $behavior->escalation_policy;
+            }
 
-# Tone
-{$tone}, warm, and {$style}. Be concise in voice — keep answers to 2-3 sentences unless more detail is requested.
+            // Custom instructions
+            if ($behavior && $behavior->custom_instructions) {
+                $parts[] = "\n# Additional Instructions\n" . $behavior->custom_instructions;
+            }
 
-# Rules
-- Always greet the caller warmly
-- If you don't know specific hotel details, suggest they contact the front desk
-- Never make up prices or availability — offer to connect them with reservations
-- If they want to book, collect their name, dates, and room preference, then confirm
-- Speak naturally with occasional filler words for a human feel
-PROMPT;
+            $base = implode("\n", $parts);
         }
 
+        // Append knowledge base — fetch multiple relevant contexts
         try {
-            $knowledgeSummary = $this->knowledge->getKnowledgeContext('hotel information general', $widget->organization_id);
-            if ($knowledgeSummary) {
-                $base .= "\n\n# Hotel Knowledge Base\n" . $knowledgeSummary;
+            $orgId = $widget->organization_id;
+            $queries = ['hotel information services amenities', 'pricing packages products', 'booking check-in policies'];
+            $knowledgeParts = [];
+            foreach ($queries as $q) {
+                $ctx = $this->knowledge->getKnowledgeContext($q, $orgId);
+                if ($ctx) $knowledgeParts[] = $ctx;
+            }
+            if (!empty($knowledgeParts)) {
+                $combined = implode("\n\n", array_unique($knowledgeParts));
+                $base .= "\n\n# Knowledge Base — use this information to answer caller questions\n" . $combined;
+                $base .= "\n\nIMPORTANT: When the knowledge base contains an answer, use it directly. Do not tell the caller you need to check — just provide the answer.";
             }
         } catch (\Throwable $e) {
             // Knowledge service failure shouldn't break voice

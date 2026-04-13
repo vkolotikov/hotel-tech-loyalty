@@ -38,9 +38,15 @@ class OpenAiService
         $model = $modelConfig->model_name ?? $this->model;
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
         $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
+        $extraParams = array_filter([
+            'top_p'             => $modelConfig->top_p ?? null,
+            'frequency_penalty' => $modelConfig->frequency_penalty ?? null,
+            'presence_penalty'  => $modelConfig->presence_penalty ?? null,
+            'stop_sequences'    => $modelConfig->stop_sequences ?? null,
+        ], fn($v) => $v !== null);
 
         try {
-            return $this->callProvider($provider, $systemPrompt, $messages, $model, $temperature, $maxTokens);
+            return $this->callProvider($provider, $systemPrompt, $messages, $model, $temperature, $maxTokens, $extraParams);
         } catch (\Throwable $e) {
             Log::error("AI chat error [{$provider}/{$model}]: " . $e->getMessage());
 
