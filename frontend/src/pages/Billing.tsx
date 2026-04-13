@@ -53,7 +53,7 @@ const FALLBACK_PLANS: PlanData[] = [
 type BillingInterval = 'monthly' | 'yearly'
 
 export function Billing() {
-  const { data: sub, status } = useSubscription()
+  const { data: sub, status, billingAvailable } = useSubscription()
   const queryClient = useQueryClient()
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
@@ -86,6 +86,10 @@ export function Billing() {
   }, [queryClient])
 
   const handleCheckout = async (planSlug: string) => {
+    if (!billingAvailable) {
+      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to upgrade your plan.')
+      return
+    }
     setCheckoutLoading(planSlug)
     try {
       const { data } = await api.post('/v1/auth/billing/checkout', {
@@ -94,7 +98,6 @@ export function Billing() {
       })
 
       if (data.checkoutUrl) {
-        // Redirect to Stripe Checkout
         window.location.href = data.checkoutUrl
         return
       }
@@ -104,19 +107,18 @@ export function Billing() {
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       }
     } catch (err: any) {
-      const status = err.response?.status
       const msg = err.response?.data?.error || 'Checkout failed. Please try again.'
-      if (status === 401) {
-        toast.error('Billing service connection failed. Please contact support or try logging in again.')
-      } else {
-        toast.error(msg)
-      }
+      toast.error(msg)
     } finally {
       setCheckoutLoading(null)
     }
   }
 
   const handlePortal = async () => {
+    if (!billingAvailable) {
+      toast.error('Online billing is not available yet. Please contact info@hotel-tech.ai to manage your subscription.')
+      return
+    }
     setPortalLoading(true)
     try {
       const { data } = await api.post('/v1/auth/billing/portal')
@@ -270,26 +272,33 @@ export function Billing() {
             )}
 
             {/* Quick actions */}
-            <div className="flex gap-3 pt-1">
-              {(status === 'TRIALING' || status === 'EXPIRED') && (
-                <button
-                  onClick={() => handleCheckout(currentSlug || 'growth')}
-                  disabled={!!checkoutLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                  {status === 'TRIALING' ? 'Add Payment Method' : 'Reactivate Subscription'}
-                </button>
-              )}
-              {status === 'ACTIVE' && (
-                <button
-                  onClick={handlePortal}
-                  disabled={portalLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-dark-surface2 hover:bg-dark-surface3 text-white text-sm font-medium rounded-lg border border-dark-border transition-colors disabled:opacity-50"
-                >
-                  {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                  Manage Billing
-                </button>
+            <div className="flex flex-col gap-3 pt-1">
+              <div className="flex gap-3">
+                {(status === 'TRIALING' || status === 'EXPIRED') && (
+                  <button
+                    onClick={() => handleCheckout(currentSlug || 'growth')}
+                    disabled={!!checkoutLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {checkoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                    {status === 'TRIALING' ? 'Add Payment Method' : 'Reactivate Subscription'}
+                  </button>
+                )}
+                {status === 'ACTIVE' && (
+                  <button
+                    onClick={handlePortal}
+                    disabled={portalLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-dark-surface2 hover:bg-dark-surface3 text-white text-sm font-medium rounded-lg border border-dark-border transition-colors disabled:opacity-50"
+                  >
+                    {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                    Manage Billing
+                  </button>
+                )}
+              </div>
+              {!billingAvailable && (status === 'TRIALING' || status === 'EXPIRED') && (
+                <p className="text-xs text-t-secondary">
+                  To upgrade or manage your subscription, contact <a href="mailto:info@hotel-tech.ai" className="text-primary-400 hover:text-primary-300">info@hotel-tech.ai</a>
+                </p>
               )}
             </div>
           </div>

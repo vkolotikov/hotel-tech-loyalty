@@ -524,10 +524,16 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if billing operations are available (requires SaaS link)
+        $orgForBilling = $request->user()?->organization_id
+            ? \App\Models\Organization::find($request->user()->organization_id)
+            : null;
+        $saasApi = config('services.saas.api_url');
+        $billingAvailable = $saasApi && $orgForBilling && $orgForBilling->saas_org_id;
+
         // 1. Live SaaS query (only when user has a SaaS JWT — set by SaasAuthMiddleware)
         $saasOrgId = $request->attributes->get('saas_org_id');
         if ($saasOrgId) {
-            $saasApi = config('services.saas.api_url');
             $token = $request->bearerToken();
             try {
                 $response = Http::withToken($token)->timeout(5)->get("{$saasApi}/billing/subscriptions");
@@ -545,10 +551,11 @@ class AuthController extends Controller
                                 'periodEnd'  => $sub['currentPeriodEnd'] ?? null,
                                 'features'   => $features,
                                 'products'   => $products,
+                                'billingAvailable' => true,
                             ]);
                         }
                     }
-                    return response()->json(['active' => false, 'status' => 'EXPIRED', 'features' => [], 'products' => []]);
+                    return response()->json(['active' => false, 'status' => 'EXPIRED', 'features' => [], 'products' => [], 'billingAvailable' => true]);
                 }
             } catch (\Exception $e) {
                 // SaaS API unreachable — fall through to cached data
@@ -556,33 +563,29 @@ class AuthController extends Controller
         }
 
         // 2. Cached org entitlements (synced at trial creation or by SaasAuthMiddleware)
-        $org = $request->user()?->organization_id
-            ? \App\Models\Organization::find($request->user()->organization_id)
-            : null;
-
-        if ($org && $org->subscription_status) {
+        if ($orgForBilling && $orgForBilling->subscription_status) {
             // Check if trial has expired since last sync
-            $status = $org->subscription_status;
-            if ($status === 'TRIALING' && $org->trial_end && $org->trial_end->isPast()) {
+            $status = $orgForBilling->subscription_status;
+            if ($status === 'TRIALING' && $orgForBilling->trial_end && $orgForBilling->trial_end->isPast()) {
                 $status = 'EXPIRED';
-                $org->update(['subscription_status' => 'EXPIRED']);
+                $orgForBilling->update(['subscription_status' => 'EXPIRED']);
             }
 
             return response()->json([
                 'active'   => in_array($status, ['ACTIVE', 'TRIALING'], true),
                 'status'   => $status,
-                'plan'     => $org->plan_slug
-                    ? ['name' => ucfirst($org->plan_slug), 'slug' => $org->plan_slug]
+                'plan'     => $orgForBilling->plan_slug
+                    ? ['name' => ucfirst($orgForBilling->plan_slug), 'slug' => $orgForBilling->plan_slug]
                     : null,
-                'trialEnd' => $org->trial_end?->toIso8601String(),
-                'periodEnd'=> $org->period_end?->toIso8601String(),
-                'features' => $org->plan_features ?: [],
-                'products' => $org->entitled_products ?: [],
+                'trialEnd' => $orgForBilling->trial_end?->toIso8601String(),
+                'periodEnd'=> $orgForBilling->period_end?->toIso8601String(),
+                'features' => $orgForBilling->plan_features ?: [],
+                'products' => $orgForBilling->entitled_products ?: [],
+                'billingAvailable' => $billingAvailable,
             ]);
         }
 
         // 3. No subscription data at all — SaaS not configured AND no cached data
-        $saasApi = config('services.saas.api_url');
         if (!$saasApi) {
             // Truly local dev with no SaaS — grant all features for development
             return response()->json([
@@ -598,6 +601,7 @@ class AuthController extends Controller
                     'nfc_cards' => 'true', 'priority_support' => 'dedicated',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
+                'billingAvailable' => false,
             ]);
         }
 
@@ -608,6 +612,7 @@ class AuthController extends Controller
             'plan'     => null,
             'features' => [],
             'products' => [],
+            'billingAvailable' => $billingAvailable,
         ]);
     }
 

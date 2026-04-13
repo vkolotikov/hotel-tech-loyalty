@@ -9,6 +9,7 @@ export interface SubscriptionData {
   periodEnd?: string | null
   features: Record<string, string>
   products: string[]
+  billingAvailable?: boolean
 }
 
 const ALL_FEATURES: SubscriptionData['features'] = {
@@ -52,5 +53,7 @@ export function useSubscription() {
     return products.includes(slug)
   }
 
-  return { data, isLoading, status, features, products, hasFeature, hasProduct }
+  const billingAvailable = data?.billingAvailable ?? false
+
+  return { data, isLoading, status, features, products, hasFeature, hasProduct, billingAvailable }
 }
