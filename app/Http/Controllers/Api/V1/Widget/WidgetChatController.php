@@ -434,6 +434,48 @@ class WidgetChatController extends Controller
             ]);
         }
 
+        // ── Escalation detection ─────────────────────────────────────────────
+        // When a visitor explicitly requests a human agent, immediately disable
+        // AI on the conversation and return a handoff message. This triggers the
+        // "waiting" badge in the Chat Inbox so staff can take over.
+        if ($existingChatConv && $this->detectsEscalationRequest($request->message)) {
+            try {
+                $visitor = $this->resolveVisitor($request, (int) $orgId);
+                $visitor->increment('messages_count');
+                if (!$existingChatConv->visitor_id) {
+                    $existingChatConv->visitor_id = $visitor->id;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Widget visitor heartbeat (escalation) failed: ' . $e->getMessage());
+            }
+            ChatMessage::create([
+                'conversation_id' => $existingChatConv->id,
+                'sender_type'     => 'visitor',
+                'content'         => $request->message,
+                'created_at'      => now(),
+            ]);
+            $escalationMsg = $behaviorConfig->escalation_policy
+                ?: 'I understand you\'d like to speak with a human agent. I\'m connecting you now — our team will be with you shortly.';
+            $aiMsg = ChatMessage::create([
+                'conversation_id' => $existingChatConv->id,
+                'sender_type'     => 'ai',
+                'content'         => $escalationMsg,
+                'created_at'      => now(),
+            ]);
+            $existingChatConv->update([
+                'ai_enabled'      => false,
+                'status'          => 'waiting',
+                'last_message_at' => now(),
+                'messages_count'  => $existingChatConv->messages_count + 2,
+            ]);
+            return response()->json([
+                'response'      => $escalationMsg,
+                'session_id'    => $request->session_id,
+                'ai_message_id' => $aiMsg->id,
+                'escalated'     => true,
+            ]);
+        }
+
         // Get knowledge context
         $knowledgeContext = '';
         try {
@@ -954,6 +996,35 @@ class WidgetChatController extends Controller
             ->increment('impressions_count');
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Returns true if the visitor's message contains an explicit request to speak
+     * with a human agent. Uses keyword matching — no extra API call required.
+     */
+    private function detectsEscalationRequest(string $message): bool
+    {
+        $lower = mb_strtolower($message);
+
+        $phrases = [
+            'speak to a human', 'speak with a human', 'talk to a human', 'talk to a person',
+            'speak to a person', 'speak with a person', 'connect me to', 'transfer me to',
+            'talk to an agent', 'speak to an agent', 'speak with an agent', 'connect me with',
+            'real person', 'live agent', 'live person', 'human agent', 'customer service',
+            'customer support', 'support agent', 'want to talk to someone', 'need to talk to someone',
+            'talk to someone', 'speak to someone', 'speak with someone', 'reach a human',
+            'get a human', 'i want a refund', 'i want to complain', 'file a complaint',
+            'escalate', 'manager please', 'get a manager', 'speak to a manager', 'speak with a manager',
+            'i need help from a human', 'human support',
+        ];
+
+        foreach ($phrases as $phrase) {
+            if (str_contains($lower, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null, string $bookingContext = '', string $bookingWidgetUrl = ''): string

@@ -262,6 +262,9 @@ Route::prefix('v1')->group(function () {
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
             Route::post('settings/test-integration',      [SettingsController::class, 'testIntegration']);
 
+            // ─── Chatbot Analytics ──────────────────────────────────────────
+            Route::get('chatbot/analytics',                   [\App\Http\Controllers\Api\V1\Admin\ChatbotAnalyticsController::class, 'index']);
+
             // ─── Chatbot Configuration ───────────────────────────────────────
             Route::get('chatbot-config/behavior',             [ChatbotConfigController::class, 'getBehavior']);
             Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);

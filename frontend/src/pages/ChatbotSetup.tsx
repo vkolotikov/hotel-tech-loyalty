@@ -1,15 +1,16 @@
 import { useState, lazy, Suspense } from 'react'
-import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate } from 'lucide-react'
+import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate, BarChart2 } from 'lucide-react'
 
-const ChatbotConfig  = lazy(() => import('./ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
-const KnowledgeBase  = lazy(() => import('./KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
-const PopupRules     = lazy(() => import('./PopupRules').then(m => ({ default: m.PopupRules })))
-const Training       = lazy(() => import('./Training').then(m => ({ default: m.Training })))
-const TestAi         = lazy(() => import('./ChatbotTestAi').then(m => ({ default: m.ChatbotTestAi })))
-const CannedReplies  = lazy(() => import('./CannedReplies').then(m => ({ default: m.CannedReplies })))
-const ChatbotWidget  = lazy(() => import('./ChatbotWidget').then(m => ({ default: m.ChatbotWidget })))
+const ChatbotConfig     = lazy(() => import('./ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
+const KnowledgeBase     = lazy(() => import('./KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
+const PopupRules        = lazy(() => import('./PopupRules').then(m => ({ default: m.PopupRules })))
+const Training          = lazy(() => import('./Training').then(m => ({ default: m.Training })))
+const TestAi            = lazy(() => import('./ChatbotTestAi').then(m => ({ default: m.ChatbotTestAi })))
+const CannedReplies     = lazy(() => import('./CannedReplies').then(m => ({ default: m.CannedReplies })))
+const ChatbotWidget     = lazy(() => import('./ChatbotWidget').then(m => ({ default: m.ChatbotWidget })))
+const ChatbotAnalytics  = lazy(() => import('./ChatbotAnalytics').then(m => ({ default: m.ChatbotAnalytics })))
 
-type Tab = 'config' | 'knowledge' | 'widget' | 'canned' | 'popups' | 'training' | 'test'
+type Tab = 'config' | 'knowledge' | 'widget' | 'canned' | 'popups' | 'training' | 'test' | 'analytics'
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'config',    label: 'Behavior & Model', icon: Bot },
@@ -19,6 +20,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'popups',    label: 'Popup Rules',      icon: Zap },
   { key: 'training',  label: 'AI Training',      icon: GraduationCap },
   { key: 'test',      label: 'Test the AI',      icon: MessageCircleQuestion },
+  { key: 'analytics', label: 'Analytics',        icon: BarChart2 },
 ]
 
 // Persist last tab so the page restores its previous view across navigations.
@@ -63,6 +65,7 @@ export function ChatbotSetup() {
         {tab === 'popups'    && <PopupRules />}
         {tab === 'training'  && <Training />}
         {tab === 'test'      && <TestAi />}
+        {tab === 'analytics' && <ChatbotAnalytics />}
       </Suspense>
     </div>
   )
