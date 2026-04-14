@@ -35,15 +35,17 @@ class ChatbotModelConfig extends Model
     {
         return static::where('organization_id', $orgId)->first()
             ?? new static([
-                'organization_id' => $orgId,
+                'organization_id'   => $orgId,
                 'provider'          => 'openai',
-                'model_name'        => 'gpt-4.1',
+                'model_name'        => 'gpt-4o',
                 'temperature'       => 0.70,
                 'top_p'             => 1.00,
-                'max_tokens'        => 1024,   // raised from 500 — allows richer luxury responses
+                'max_tokens'        => 1024,
                 'frequency_penalty' => 0.00,
                 'presence_penalty'  => 0.00,
-                'reasoning_effort'  => 'low',  // used only by gpt-5.x models
+                // reasoning_effort intentionally omitted from defaults:
+                // the DB column has default('low') and we don't want to force-send
+                // this field on saves before the production migration has run.
             ]);
     }
 }

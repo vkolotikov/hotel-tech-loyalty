@@ -39,18 +39,28 @@ trait DispatchesAiChat
 
     private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
     {
+        $apiKey = config('openai.api_key', env('OPENAI_API_KEY', ''));
+        if (!$apiKey) {
+            throw new \RuntimeException('OpenAI API key not configured. Set OPENAI_API_KEY in .env');
+        }
+
         // Classify the model into one of three families:
-        //   gpt5   — gpt-5.x (e.g. gpt-5, gpt-5.4, gpt-5-mini, gpt-5-nano, gpt-5.4-pro)
-        //            → max_output_tokens, reasoning_effort, developer role; no temperature unless effort=none
+        //   gpt5    — gpt-5.x (gpt-5, gpt-5.4, gpt-5.4-pro, gpt-5-mini, gpt-5-nano)
+        //             → max_output_tokens + reasoning_effort + developer role
+        //             → temperature only when reasoning_effort=none
         //   oSeries — o1/o3/o4 reasoning models
-        //            → max_completion_tokens only; no temperature, no penalties
-        //   classic — gpt-4.x, gpt-4o, gpt-3.5, etc.
-        //            → max_tokens + temperature + all penalties
+        //             → max_completion_tokens only; no temperature/penalties
+        //   modern  — gpt-4o, gpt-4.1, gpt-4-turbo (all post-gpt-4 non-o-series)
+        //             → max_completion_tokens + temperature + penalties
+        //   legacy  — gpt-3.5, gpt-4 (original)
+        //             → max_tokens + temperature + penalties
         $isGpt5   = (bool) preg_match('/^gpt-5/i', $model);
         $isOSeries = !$isGpt5 && (bool) preg_match('/^(o1|o3|o4)/i', $model);
-        $isClassic = !$isGpt5 && !$isOSeries;
+        $isModern  = !$isGpt5 && !$isOSeries && (bool) preg_match('/^(gpt-4o|gpt-4\.1|gpt-4-turbo)/i', $model);
+        // Everything else (gpt-4, gpt-3.5) is legacy
+        $isLegacy  = !$isGpt5 && !$isOSeries && !$isModern;
 
-        // For gpt-5.x: use 'developer' role instead of 'system'
+        // GPT-5.x uses 'developer' role instead of 'system'
         $systemRole  = $isGpt5 ? 'developer' : 'system';
         $allMessages = array_merge([['role' => $systemRole, 'content' => $system]], $messages);
 
@@ -60,53 +70,59 @@ trait DispatchesAiChat
         ];
 
         if ($isGpt5) {
-            // GPT-5.x uses max_output_tokens (not max_completion_tokens or max_tokens)
             $params['max_output_tokens'] = $maxTokens;
-
-            // reasoning_effort: none/low/medium/high/xhigh (default: low for fast sales responses)
             $effort = $extra['reasoning_effort'] ?? 'low';
             $params['reasoning_effort'] = $effort;
-
-            // Temperature is only valid when reasoning is disabled
             if ($effort === 'none') {
                 $params['temperature'] = $temp;
-                if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
-                    $params['top_p'] = (float) $extra['top_p'];
-                }
-                if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) {
-                    $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
-                }
-                if (isset($extra['presence_penalty']) && $extra['presence_penalty'] > 0) {
-                    $params['presence_penalty'] = (float) $extra['presence_penalty'];
-                }
+                if (isset($extra['top_p']) && $extra['top_p'] < 1.0)         $params['top_p'] = (float) $extra['top_p'];
+                if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
+                if (isset($extra['presence_penalty'])  && $extra['presence_penalty']  > 0) $params['presence_penalty']  = (float) $extra['presence_penalty'];
             }
-            if (!empty($extra['stop_sequences'])) {
-                $params['stop'] = $extra['stop_sequences'];
-            }
+            if (!empty($extra['stop_sequences'])) $params['stop'] = $extra['stop_sequences'];
+
         } elseif ($isOSeries) {
-            // o1/o3/o4: only max_completion_tokens — no temperature, no penalties
+            // o-series: reasoning models — no temperature or penalties
             $params['max_completion_tokens'] = $maxTokens;
+
         } else {
-            // Classic GPT-4.x / GPT-4o / GPT-3.5
-            $params['max_tokens']  = $maxTokens;
+            // Modern (gpt-4o, gpt-4.1) and legacy (gpt-4, gpt-3.5)
+            // modern uses max_completion_tokens; legacy uses the deprecated max_tokens
+            if ($isModern) {
+                $params['max_completion_tokens'] = $maxTokens;
+            } else {
+                $params['max_tokens'] = $maxTokens;
+            }
             $params['temperature'] = $temp;
-            if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
-                $params['top_p'] = (float) $extra['top_p'];
-            }
-            if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) {
-                $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
-            }
-            if (isset($extra['presence_penalty']) && $extra['presence_penalty'] > 0) {
-                $params['presence_penalty'] = (float) $extra['presence_penalty'];
-            }
-            if (!empty($extra['stop_sequences'])) {
-                $params['stop'] = $extra['stop_sequences'];
-            }
+            if (isset($extra['top_p']) && $extra['top_p'] < 1.0)         $params['top_p'] = (float) $extra['top_p'];
+            if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
+            if (isset($extra['presence_penalty'])  && $extra['presence_penalty']  > 0) $params['presence_penalty']  = (float) $extra['presence_penalty'];
+            if (!empty($extra['stop_sequences'])) $params['stop'] = $extra['stop_sequences'];
         }
 
-        return $this->withRetry(function () use ($params) {
-            $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create($params);
-            return $response->choices[0]->message->content ?? '';
+        return $this->withRetry(function () use ($apiKey, $params, $model) {
+            $response = Http::withToken($apiKey)
+                ->timeout(60)
+                ->post('https://api.openai.com/v1/chat/completions', $params);
+
+            if ($response->failed()) {
+                $status = $response->status();
+                $errorBody = $response->json();
+                $errorMsg = $errorBody['error']['message'] ?? substr($response->body(), 0, 300);
+                if (in_array($status, [429, 500, 503])) {
+                    $delay = $status === 429
+                        ? (int) ($response->header('retry-after') ?: 2)
+                        : 1;
+                    throw new \App\Exceptions\RetryableAiException(
+                        "OpenAI {$status}: {$errorMsg}",
+                        $status,
+                        $delay,
+                    );
+                }
+                throw new \RuntimeException("OpenAI API error {$status} [{$model}]: {$errorMsg}");
+            }
+
+            return $response->json('choices.0.message.content') ?? '';
         }, "OpenAI/{$model}");
     }
 
