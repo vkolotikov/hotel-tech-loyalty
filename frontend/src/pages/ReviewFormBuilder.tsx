@@ -164,6 +164,18 @@ export function ReviewFormBuilder() {
           {!form.is_default && (
             <Checkbox label="Set as default (used for post-stay auto-invitations)" checked={isDefault} onChange={setIsDefault} />
           )}
+          <Checkbox label="Auto-send after guest checkout" checked={!!config.auto_send_post_stay} onChange={v => setConfig({ ...config, auto_send_post_stay: v })} />
+          {config.auto_send_post_stay && (
+            <Field label="Send delay (days after checkout)">
+              <select
+                value={config.auto_send_delay_days ?? 1}
+                onChange={e => setConfig({ ...config, auto_send_delay_days: Number(e.target.value) })}
+                className={inputCls}
+              >
+                {[1, 2, 3, 5, 7, 14].map(n => <option key={n} value={n}>{n} day{n === 1 ? '' : 's'}</option>)}
+              </select>
+            </Field>
+          )}
 
           {form.type === 'basic' && (
             <>

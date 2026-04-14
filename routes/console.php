@@ -13,6 +13,10 @@ Schedule::command('guests:sweep-lifecycle')->dailyAt('03:15');
 // clean and "active" / "waiting" stats reflect reality.
 Schedule::command('chat:reap')->hourly();
 
+// Daily sweep for post-stay review invitations. Each form opts in via
+// config.auto_send_post_stay and sets its own delay via auto_send_delay_days.
+Schedule::command('reviews:send-post-stay')->dailyAt('09:00');
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes
