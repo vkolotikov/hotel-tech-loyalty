@@ -358,6 +358,30 @@ export function ChatbotWidget() {
             onChange={e => update('launcher_size', parseInt(e.target.value))}
             className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500" />
         </div>
+        <div>
+          <label className={label}>Launcher Animation</label>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            {([
+              { v: 'none',   label: 'None',   emoji: '⬜', desc: 'No animation' },
+              { v: 'pulse',  label: 'Pulse',  emoji: '💫', desc: 'Scale + ring expand' },
+              { v: 'ring',   label: 'Ring',   emoji: '🔔', desc: 'Double ring waves' },
+              { v: 'bounce', label: 'Bounce', emoji: '⬆️', desc: 'Vertical bounce' },
+              { v: 'shake',  label: 'Shake',  emoji: '👋', desc: 'Periodic wiggle' },
+            ] as { v: string; label: string; emoji: string; desc: string }[]).map(a => {
+              const active = (f.launcher_animation || 'none') === a.v
+              return (
+                <button key={a.v} type="button" onClick={() => update('launcher_animation', a.v)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center transition-all ${
+                    active ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2 hover:bg-dark-bg/60'
+                  }`}>
+                  <span className="text-lg">{a.emoji}</span>
+                  <span className="text-[11px] font-medium">{a.label}</span>
+                  <span className="text-[9px] opacity-60 leading-tight">{a.desc}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Chat colors */}
@@ -935,7 +959,7 @@ function WidgetPreview({ cfg }: { cfg: any }) {
       <p className="text-[11px] text-t-secondary -mt-2">
         Reflects unsaved changes. Not a live chat — for layout only.
         {windowStyle === 'classic' && <span className="ml-1.5 text-[#636366]">Mobile: fullscreen.</span>}
-        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Mobile: 65% bottom sheet.</span>}
+        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Mobile: floating card above launcher.</span>}
         {windowStyle === 'bubble' && <span className="ml-1.5 text-amber-400">Mobile: 82% bottom sheet · ring launcher.</span>}
         {windowStyle === 'minimal' && <span className="ml-1.5 text-amber-400">Mobile: 62% bottom sheet · pill launcher.</span>}
         {(windowStyle === 'panel' || !windowStyle) && <span className="ml-1.5 text-amber-400">Mobile: 78% bottom sheet (default).</span>}

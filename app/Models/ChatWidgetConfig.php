@@ -58,6 +58,7 @@ class ChatWidgetConfig extends Model
         'rating_prompt_enabled',
         'rating_prompt_text',
         'canned_responses',
+        'launcher_animation',
     ];
 
     protected $casts = [

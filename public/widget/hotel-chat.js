@@ -88,15 +88,17 @@
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
     #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
     #htchat-panel.hidden { opacity: 0; transform: translateY(20px) scale(0.95); pointer-events: none; }\
-    #htchat-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; }\
-    #htchat-header-left { display: flex; align-items: center; gap: 10px; }\
-    #htchat-header-avatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }\
-    #htchat-header-avatar svg { width: 18px; height: 18px; fill: white; }\
-    #htchat-header-info h3 { font-size: 14px; font-weight: 600; }\
-    #htchat-header-info p { font-size: 11px; opacity: 0.8; }\
-    #htchat-header-actions { display: flex; gap: 6px; align-items: center; }\
+    #htchat-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 56px; }\
+    #htchat-header-left { display: flex; align-items: center; gap: 9px; }\
+    #htchat-header-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.3); }\
+    #htchat-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }\
+    #htchat-header-avatar svg { width: 16px; height: 16px; fill: white; }\
+    #htchat-header-info { display: flex; flex-direction: column; gap: 1px; }\
+    #htchat-header-info h3 { font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }\
+    #htchat-header-info p { font-size: 10px; opacity: 0.8; line-height: 1.2; }\
+    #htchat-header-actions { display: flex; gap: 5px; align-items: center; }\
     #htchat-header-actions button { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }\
-    #htchat-header-actions button:hover { background: rgba(255,255,255,0.25); }\
+    #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); }\
     #htchat-header-actions button.active { background: rgba(255,255,255,0.3); }\
     #htchat-header-actions button svg { width: 14px; height: 14px; fill: currentColor; }\
     #htchat-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f9fafb; }\
@@ -111,9 +113,9 @@
     .htchat-welcome-icon svg { width: 26px; height: 26px; }\
     .htchat-welcome h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 6px; }\
     .htchat-welcome p { font-size: 12px; color: #6b7280; max-width: 260px; margin: 0 auto; }\
-    .htchat-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }\
-    .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 12px; font-size: 12px; color: #4b5563; text-align: left; cursor: pointer; transition: all 0.15s; }\
-    .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }\
+    .htchat-suggestions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center; }\
+    .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 6px 14px; font-size: 11.5px; color: #4b5563; text-align: center; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }\
+    .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #f9fafb; }\
     #htchat-input-area { padding: 12px; border-top: 1px solid #e5e7eb; background: white; flex-shrink: 0; }\
     #htchat-input-row { display: flex; gap: 8px; align-items: flex-end; }\
     #htchat-input { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; min-height: 40px; max-height: 80px; transition: border-color 0.2s; }\
@@ -179,6 +181,18 @@
     #htchat-launcher.htchat-bubble::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid currentColor; animation: htchat-launcher-ring 2.4s ease-out 0.3s infinite; pointer-events: none; }\
     #htchat-launcher.htchat-bubble::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid currentColor; animation: htchat-launcher-ring 2.4s ease-out 1.1s infinite; pointer-events: none; }\
     @keyframes htchat-launcher-ring { 0% { transform: scale(0.7); opacity: 0.45; } 100% { transform: scale(1.5); opacity: 0; } }\
+    #htchat-launcher.htchat-anim-pulse { animation: htchat-anim-pulse 2s ease-in-out infinite; }\
+    #htchat-launcher.htchat-anim-pulse::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; background: currentColor; opacity: 0; animation: htchat-anim-pulse-ring 2s ease-out infinite; pointer-events: none; }\
+    @keyframes htchat-anim-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }\
+    @keyframes htchat-anim-pulse-ring { 0% { transform: scale(0.85); opacity: 0.4; } 100% { transform: scale(1.6); opacity: 0; } }\
+    #htchat-launcher.htchat-anim-ring { overflow: visible !important; }\
+    #htchat-launcher.htchat-anim-ring::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; border: 2px solid currentColor; animation: htchat-anim-ring-wave 2s ease-out infinite; pointer-events: none; }\
+    #htchat-launcher.htchat-anim-ring::after { content: ""; position: absolute; inset: -13px; border-radius: inherit; border: 2px solid currentColor; animation: htchat-anim-ring-wave 2s ease-out 0.7s infinite; pointer-events: none; }\
+    @keyframes htchat-anim-ring-wave { 0% { transform: scale(0.75); opacity: 0.6; } 100% { transform: scale(1.4); opacity: 0; } }\
+    #htchat-launcher.htchat-anim-bounce { animation: htchat-anim-bounce 2.4s ease-in-out infinite; }\
+    @keyframes htchat-anim-bounce { 0%, 100% { transform: translateY(0); } 20% { transform: translateY(-8px); } 40% { transform: translateY(0); } 60% { transform: translateY(-4px); } 80% { transform: translateY(0); } }\
+    #htchat-launcher.htchat-anim-shake { animation: htchat-anim-shake 3s ease-in-out infinite; }\
+    @keyframes htchat-anim-shake { 0%, 80%, 100% { transform: rotate(0deg); } 82% { transform: rotate(-12deg); } 84% { transform: rotate(12deg); } 86% { transform: rotate(-10deg); } 88% { transform: rotate(10deg); } 90% { transform: rotate(-6deg); } 92% { transform: rotate(6deg); } 94% { transform: rotate(0deg); } }\
     #htchat-panel.htchat-minimal { border-radius: 6px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.07) !important; }\
     #htchat-panel.htchat-minimal .htchat-msg-bubble { border-radius: 8px !important; }\
     #htchat-panel.htchat-minimal .htchat-msg.assistant .htchat-msg-bubble { border-bottom-left-radius: 2px !important; }\
@@ -190,7 +204,7 @@
     @media (max-width: 600px) {\
       #htchat-panel:not(.htchat-classic) { width: 100vw !important; height: 78dvh !important; max-height: 78dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: auto !important; border-radius: 22px 22px 0 0 !important; }\
       #htchat-panel.htchat-classic { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
-      #htchat-panel.htchat-popup { height: 65dvh !important; max-height: 65dvh !important; border-radius: 24px 24px 0 0 !important; }\
+      #htchat-panel.htchat-popup { width: calc(100vw - 32px) !important; max-width: 420px !important; height: 520px !important; max-height: calc(100dvh - 110px) !important; right: 16px !important; left: auto !important; bottom: 80px !important; top: auto !important; border-radius: 20px !important; }\
       #htchat-panel.htchat-bubble { height: 82dvh !important; max-height: 82dvh !important; border-radius: 28px 28px 0 0 !important; }\
       #htchat-panel.htchat-minimal { height: 62dvh !important; max-height: 62dvh !important; border-radius: 14px 14px 0 0 !important; }\
       #htchat-launcher { bottom: 16px !important; }\
@@ -678,6 +692,12 @@
         if (panel) panel.classList.add(activePresetClass);
         if (launcherEl) launcherEl.classList.add(activePresetClass);
       }
+      // Apply launcher animation class
+      var allAnimClasses = ['htchat-anim-pulse', 'htchat-anim-ring', 'htchat-anim-bounce', 'htchat-anim-shake'];
+      allAnimClasses.forEach(function (cls) { if (launcherEl) launcherEl.classList.remove(cls); });
+      var animMap = { pulse: 'htchat-anim-pulse', ring: 'htchat-anim-ring', bounce: 'htchat-anim-bounce', shake: 'htchat-anim-shake' };
+      var animClass = animMap[data.launcher_animation];
+      if (animClass && launcherEl) launcherEl.classList.add(animClass);
       if (data.company_name) {
         var h3 = document.querySelector('#htchat-header-info h3');
         if (h3) h3.textContent = data.company_name;
