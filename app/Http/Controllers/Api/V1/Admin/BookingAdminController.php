@@ -158,6 +158,8 @@ class BookingAdminController extends Controller
             'syncHealth' => [
                 'lastSyncAt'          => $lastSync?->created_at?->toIso8601String(),
                 'mirroredBookingCount' => $mirrorCount,
+                'pmsEnabled'          => \App\Services\IntegrationStatus::isEnabled('smoobu'),
+                'pmsName'             => 'Smoobu',
             ],
         ]);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Scopes\IntegrationDataScope;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,11 @@ class BookingMirror extends Model
     use BelongsToOrganization;
 
     protected $table = 'booking_mirror';
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new IntegrationDataScope('smoobu'));
+    }
 
     protected $fillable = [
         'organization_id', 'reservation_id', 'booking_reference', 'booking_type',

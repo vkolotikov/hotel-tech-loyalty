@@ -313,6 +313,19 @@ export function Bookings() {
         </div>
       </div>
 
+      {/* PMS deactivated banner */}
+      {dashboard?.syncHealth && dashboard.syncHealth.pmsEnabled === false && (
+        <div className="rounded-xl border border-amber-500/20 px-4 py-3 flex items-center gap-3"
+          style={{ background: 'linear-gradient(180deg, rgba(40,30,12,0.6), rgba(28,20,8,0.7))' }}>
+          <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-amber-200 font-medium">{dashboard.syncHealth.pmsName || 'PMS'} integration is deactivated</p>
+            <p className="text-[11px] text-amber-200/70 mt-0.5">Synced reservations are hidden while the integration is off. Your data in {dashboard.syncHealth.pmsName || 'the PMS'} is untouched. Reactivate from Settings → Integrations to restore the list.</p>
+          </div>
+          <Link to="/settings" className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline whitespace-nowrap">Open settings →</Link>
+        </div>
+      )}
+
       {/* Period tabs + unit filter */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
