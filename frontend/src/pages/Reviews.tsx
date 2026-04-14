@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon } from 'lucide-react'
+import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
 
 type Tab = 'submissions' | 'invitations' | 'forms' | 'integrations'
@@ -150,6 +150,24 @@ function SubmissionsTab() {
           <option value="yes">Redirected externally</option>
           <option value="no">Kept internal</option>
         </select>
+        <button
+          onClick={async () => {
+            const res = await api.get('/v1/admin/reviews/submissions/export', {
+              params: filter,
+              responseType: 'blob',
+            })
+            const url = URL.createObjectURL(res.data)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `reviews-${new Date().toISOString().slice(0, 10)}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+          className="ml-auto border border-dark-border text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 hover:bg-dark-surface2"
+          title="Export filtered submissions as CSV"
+        >
+          <Download size={12} /> Export CSV
+        </button>
       </div>
 
       <div className="overflow-x-auto">

@@ -72,6 +72,16 @@ textarea{min-height:90px;resize:vertical}
   var PRIMARY = @json($color);
   if (PRIMARY) document.documentElement.style.setProperty('--primary', PRIMARY);
 
+  var qs = new URLSearchParams(window.location.search);
+  var KIOSK = qs.get('mode') === 'kiosk';
+  var KIOSK_RESET_MS = 12000;
+  var IN_IFRAME = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
+
+  function postParent(payload){
+    if (!IN_IFRAME) return;
+    try { window.parent.postMessage(Object.assign({ source: 'hotel-tech-review' }, payload), '*'); } catch(e){}
+  }
+
   var app = document.getElementById('app');
   var state = { form:null, invitation:null, integrations:[], prefill:{}, answers:{}, overall:null, nps:null, comment:'', submitting:false };
 
@@ -92,6 +102,7 @@ textarea{min-height:90px;resize:vertical}
         state.integrations = res.body.integrations || [];
         state.prefill = (res.body.invitation && res.body.invitation.prefill) || {};
         render();
+        postParent({ event: 'review-loaded', form_id: state.form.id, form_type: state.form.type });
       })
       .catch(function(){ renderMessage('Error','Could not load the form. Please try again.'); });
   }
@@ -275,7 +286,14 @@ textarea{min-height:90px;resize:vertical}
           render();
           return;
         }
+        postParent({ event: 'review-submitted', submission_id: res.body.submission_id, rating: payload.overall_rating });
         renderThankYou(res.body);
+        if (KIOSK) {
+          setTimeout(function(){
+            state = { form:null, invitation:null, integrations:[], prefill:{}, answers:{}, overall:null, nps:null, comment:'', submitting:false };
+            fetchForm();
+          }, KIOSK_RESET_MS);
+        }
       })
       .catch(function(){
         state.submitting = false;
@@ -298,6 +316,7 @@ textarea{min-height:90px;resize:vertical}
     app.innerHTML = html;
     document.querySelectorAll('[data-platform]').forEach(function(a){
       a.addEventListener('click', function(){
+        postParent({ event: 'review-redirected', submission_id: res.submission_id, platform: a.dataset.platform });
         try {
           navigator.sendBeacon
             ? navigator.sendBeacon(API+'/v1/public/reviews/'+res.submission_id+'/redirected', new Blob([JSON.stringify({platform:a.dataset.platform})], {type:'application/json'}))

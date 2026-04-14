@@ -280,6 +280,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('reviews/integrations/{id}',       [AdminReviewController::class, 'deleteIntegration']);
 
             Route::get('reviews/submissions',                [AdminReviewController::class, 'listSubmissions']);
+            Route::get('reviews/submissions/export',         [AdminReviewController::class, 'exportSubmissions']);
             Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
             Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
 

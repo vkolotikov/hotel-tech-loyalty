@@ -14,6 +14,7 @@ use App\Services\ReviewInvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReviewController extends Controller
 {
@@ -217,6 +218,61 @@ class ReviewController extends Controller
             ->paginate(25);
 
         return response()->json($submissions);
+    }
+
+    public function exportSubmissions(Request $request): StreamedResponse
+    {
+        $query = ReviewSubmission::with(['form:id,name,type', 'member.user:id,name', 'guest:id,full_name']);
+
+        if ($formId = $request->query('form_id'))      $query->where('form_id', $formId);
+        if ($rating = $request->query('rating'))       $query->where('overall_rating', (int) $rating);
+        if ($request->query('redirected') === 'yes')    $query->where('redirected_externally', true);
+        if ($request->query('redirected') === 'no')     $query->where('redirected_externally', false);
+        if ($from = $request->query('date_from'))       $query->where('submitted_at', '>=', $from);
+        if ($to = $request->query('date_to'))           $query->where('submitted_at', '<=', $to . ' 23:59:59');
+        if ($search = $request->query('q')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('comment', 'ilike', "%{$search}%")
+                  ->orWhere('anonymous_name', 'ilike', "%{$search}%")
+                  ->orWhere('anonymous_email', 'ilike', "%{$search}%");
+            });
+        }
+
+        $query->orderByDesc('submitted_at')->orderByDesc('id');
+
+        return response()->streamDownload(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, [
+                'ID', 'Submitted At', 'Form', 'Form Type', 'Overall Rating', 'NPS',
+                'Respondent', 'Email', 'Comment', 'Redirected', 'Platform', 'Invitation ID',
+            ]);
+
+            $query->chunk(500, function ($rows) use ($out) {
+                foreach ($rows as $s) {
+                    $respondent = $s->member?->user?->name
+                        ?? $s->guest?->full_name
+                        ?? $s->anonymous_name
+                        ?? '';
+                    $email = $s->guest?->email ?? $s->anonymous_email ?? '';
+                    fputcsv($out, [
+                        $s->id,
+                        $s->submitted_at?->toDateTimeString(),
+                        $s->form?->name,
+                        $s->form?->type,
+                        $s->overall_rating,
+                        $s->nps_score,
+                        $respondent,
+                        $email,
+                        $s->comment ? preg_replace('/\s+/', ' ', $s->comment) : '',
+                        $s->redirected_externally ? 'yes' : 'no',
+                        $s->external_platform,
+                        $s->invitation_id,
+                    ]);
+                }
+            });
+            fclose($out);
+        }, 'reviews-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function showSubmission(int $id): JsonResponse
