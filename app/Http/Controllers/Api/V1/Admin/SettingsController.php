@@ -208,16 +208,16 @@ class SettingsController extends Controller
                     continue;
                 }
                 // Infer group/type/label from the template when available
-                $group = $template->group ?? $this->inferGroup($item['key']);
-                $type  = $template->type ?? 'string';
-                $label = $template->label ?? ucwords(str_replace('_', ' ', $item['key']));
+                $group = $template?->group ?? $this->inferGroup($item['key']);
+                $type  = $template?->type ?? 'string';
+                $label = $template?->label ?? ucwords(str_replace('_', ' ', $item['key']));
                 HotelSetting::create([
                     'key'   => $item['key'],
                     'value' => $newValue,
                     'type'  => $type,
                     'group' => $group,
                     'label' => $label,
-                    'scope' => $template->scope ?? 'company',
+                    'scope' => $template?->scope ?? 'company',
                 ]);
             }
 

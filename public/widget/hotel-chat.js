@@ -88,15 +88,15 @@
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
     #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
     #htchat-panel.hidden { opacity: 0; transform: translateY(20px) scale(0.95); pointer-events: none; }\
-    #htchat-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 56px; }\
-    #htchat-header-left { display: flex; align-items: center; gap: 9px; }\
-    #htchat-header-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.3); }\
+    #htchat-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 52px; }\
+    #htchat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }\
+    #htchat-header-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.35); }\
     #htchat-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }\
     #htchat-header-avatar svg { width: 16px; height: 16px; fill: white; }\
-    #htchat-header-info { display: flex; flex-direction: column; gap: 1px; }\
-    #htchat-header-info h3 { font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }\
-    #htchat-header-info p { font-size: 10px; opacity: 0.8; line-height: 1.2; }\
-    #htchat-header-actions { display: flex; gap: 5px; align-items: center; }\
+    #htchat-header-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }\
+    #htchat-header-info h3 { font-size: 14px; font-weight: 500; line-height: 1.25; letter-spacing: -0.005em; opacity: 0.95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
+    #htchat-header-info p { font-size: 10.5px; opacity: 0.75; line-height: 1.2; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
+    #htchat-header-actions { display: flex; gap: 10px; align-items: center; margin-left: 8px; flex-shrink: 0; }\
     #htchat-header-actions button { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }\
     #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); }\
     #htchat-header-actions button.active { background: rgba(255,255,255,0.3); }\
@@ -152,12 +152,12 @@
     .htchat-typing span:nth-child(2) { animation-delay: 0.2s; }\
     .htchat-typing span:nth-child(3) { animation-delay: 0.4s; }\
     @keyframes htchat-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }\
-    #htchat-header-actions #htchat-voice-call-btn { background: #22c55e; color: white; border: none; width: 52px; height: 52px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; box-shadow: 0 4px 14px rgba(34,197,94,0.45), 0 0 0 2px rgba(255,255,255,0.15) inset; position: relative; }\
+    #htchat-header-actions #htchat-voice-call-btn { background: #22c55e; color: white; border: none; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; box-shadow: 0 3px 10px rgba(34,197,94,0.4), 0 0 0 2px rgba(255,255,255,0.15) inset; position: relative; }\
     #htchat-header-actions #htchat-voice-call-btn:hover { background: #16a34a; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(34,197,94,0.55), 0 0 0 2px rgba(255,255,255,0.2) inset; }\
-    #htchat-header-actions #htchat-voice-call-btn::after { content: ""; position: absolute; inset: -4px; border-radius: 16px; border: 2px solid rgba(34,197,94,0.45); animation: htchat-call-ring 2s ease-in-out infinite; pointer-events: none; }\
+    #htchat-header-actions #htchat-voice-call-btn::after { content: ""; position: absolute; inset: -3px; border-radius: 12px; border: 2px solid rgba(34,197,94,0.4); animation: htchat-call-ring 2s ease-in-out infinite; pointer-events: none; }\
     #htchat-header-actions #htchat-voice-call-btn.active { background: #ef4444; animation: htchat-pulse-mic 1.5s ease-in-out infinite; box-shadow: 0 4px 14px rgba(239,68,68,0.55), 0 0 0 2px rgba(255,255,255,0.15) inset; }\
     #htchat-header-actions #htchat-voice-call-btn.active::after { border-color: rgba(239,68,68,0.5); }\
-    #htchat-header-actions #htchat-voice-call-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; }\
+    #htchat-header-actions #htchat-voice-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }\
     @keyframes htchat-call-ring { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.25); opacity: 0; } }\
     #htchat-voice-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 10; border-radius: 16px; }\
     #htchat-voice-overlay .voice-wave { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }\
@@ -388,14 +388,19 @@
     // Apply configurable copy
     var headerInfo = document.getElementById('htchat-header-info');
     if (headerInfo) {
-      var ht = c.header_title || 'AI Assistant';
-      var hs = c.header_subtitle || 'Ask me anything';
-      var statusVal = (c.agent_status || 'online');
-      var statusColor = statusVal === 'online' ? '#10b981' : statusVal === 'away' ? '#f59e0b' : '#9ca3af';
-      var statusLabel = statusVal === 'online' ? 'Online' : statusVal === 'away' ? 'Away' : 'Offline';
-      headerInfo.innerHTML = '<h3>' + escapeHtml(ht) + '</h3>' +
-        '<p><span class="htchat-status-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor + ';margin-right:5px;vertical-align:middle"></span>' +
-        escapeHtml(hs || statusLabel) + '</p>';
+      var ht = c.header_title || c.company_name || 'AI Assistant';
+      // Only show subtitle if the admin explicitly configured one. Avoids the
+      // default "Ask me anything" cruft on a brand-new widget and keeps the
+      // header visually compact — just the company name.
+      var hs = (c.header_subtitle || '').trim();
+      var html = '<h3>' + escapeHtml(ht) + '</h3>';
+      if (hs) {
+        var statusVal = (c.agent_status || 'online');
+        var statusColor = statusVal === 'online' ? '#10b981' : statusVal === 'away' ? '#f59e0b' : '#9ca3af';
+        html += '<p><span class="htchat-status-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor + ';margin-right:5px;vertical-align:middle"></span>' +
+          escapeHtml(hs) + '</p>';
+      }
+      headerInfo.innerHTML = html;
     }
     // Configurable assistant avatar in header
     var headerAvatar = document.getElementById('htchat-header-avatar');
@@ -472,7 +477,7 @@
       <div id="htchat-header">\
         <div id="htchat-header-left">\
           <div id="htchat-header-avatar">' + ICONS.sparkles + '</div>\
-          <div id="htchat-header-info"><h3>AI Assistant</h3><p>Ask me anything</p></div>\
+          <div id="htchat-header-info"><h3>AI Assistant</h3></div>\
         </div>\
         <div id="htchat-header-actions">\
           <button id="htchat-voice-call-btn" title="Voice call" style="display:none">' + ICONS.phone + '</button>\

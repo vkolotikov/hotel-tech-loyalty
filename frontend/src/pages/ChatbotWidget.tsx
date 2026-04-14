@@ -937,7 +937,7 @@ function WidgetPreview({ cfg }: { cfg: any }) {
   const statusColor = status === 'online' ? '#10b981' : status === 'away' ? '#f59e0b' : '#6b7280'
 
   const headerTitle    = cfg.header_title || cfg.company_name || 'AI Assistant'
-  const headerSubtitle = cfg.header_subtitle || 'Ask me anything'
+  const headerSubtitle = (cfg.header_subtitle || '').trim()
   const welcomeTitle   = cfg.welcome_title || 'Hi! How can I help you today?'
   const welcomeSub     = cfg.welcome_subtitle || 'Ask about reservations, loyalty program, hotel services, or anything else.'
   const placeholder    = cfg.input_placeholder || 'Type a message...'
@@ -1041,8 +1041,10 @@ function WidgetPreview({ cfg }: { cfg: any }) {
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-semibold truncate" style={{ color: headerText }}>{headerTitle}</div>
-                <div className="text-[11px] truncate" style={{ color: headerText, opacity: 0.85 }}>{headerSubtitle}</div>
+                <div className="text-[13px] font-medium truncate" style={{ color: headerText, opacity: 0.95 }}>{headerTitle}</div>
+                {headerSubtitle && (
+                  <div className="text-[11px] truncate" style={{ color: headerText, opacity: 0.75 }}>{headerSubtitle}</div>
+                )}
               </div>
               <button className="shrink-0 rounded-full flex items-center justify-center"
                 style={{ width: 32, height: 32, background: '#22c55e', color: '#fff' }}
