@@ -34,6 +34,15 @@ const VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'marin', 'no
 
 const STORAGE_KEY = 'loyalty-chatbot-widget-tab'
 
+// Slightly darken/lighten a hex color by a percentage (-100 to +100)
+const shadeColor = (hex: string, pct: number) => {
+  const num = parseInt((hex || '#c9a84c').replace('#', ''), 16)
+  const r = Math.min(255, Math.max(0, (num >> 16) + Math.round(pct * 2.55)))
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + Math.round(pct * 2.55)))
+  const b = Math.min(255, Math.max(0, (num & 0xff) + Math.round(pct * 2.55)))
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
 const card = 'bg-dark-card border border-dark-border rounded-xl p-5 space-y-4'
 const cardTitle = 'text-sm font-semibold text-white flex items-center gap-2'
 const label = 'block text-xs text-t-secondary mb-1'
@@ -170,6 +179,24 @@ export function ChatbotWidget() {
         </div>
 
         <div>
+          <label className={label}>Window Style</label>
+          <div className="flex gap-2">
+            {([
+              { v: 'panel', label: 'Panel', desc: 'Full chat window (mobile: full-screen)' },
+              { v: 'popup', label: 'Popup', desc: 'Compact; mobile shows bottom sheet' },
+            ] as { v: string; label: string; desc: string }[]).map(s => (
+              <button key={s.v} type="button" onClick={() => update('window_style', s.v)}
+                className={`flex-1 py-2 px-3 rounded-lg border text-left ${
+                  (f.window_style || 'panel') === s.v ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
+                }`}>
+                <div className="text-xs font-medium">{s.label}</div>
+                <div className="text-[10px] opacity-70 mt-0.5">{s.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className={label}>Brand Color</label>
           <div className="flex items-center gap-3">
             <div className="flex gap-1.5 flex-wrap">
@@ -299,7 +326,13 @@ export function ChatbotWidget() {
             <label className={label}>Header Style</label>
             <div className="flex gap-2">
               {['solid', 'gradient'].map(s => (
-                <button key={s} onClick={() => update('header_style', s)}
+                <button key={s} onClick={() => {
+                  update('header_style', s)
+                  // Auto-fill a default gradient end color if none is set yet
+                  if (s === 'gradient' && !f.header_gradient_end) {
+                    update('header_gradient_end', shadeColor(f.primary_color || '#c9a84c', -30))
+                  }
+                }}
                   className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
                     (f.header_style || 'solid') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
                   }`}>{s}</button>
@@ -770,8 +803,9 @@ function WidgetPreview({ cfg }: { cfg: any }) {
 
   const primary       = cfg.primary_color || '#c9a84c'
   const headerStyle   = cfg.header_style || 'solid'
+  const gradientEnd   = cfg.header_gradient_end || shadeColor(primary, -30)
   const headerBg      = headerStyle === 'gradient'
-    ? `linear-gradient(135deg, ${primary} 0%, ${cfg.header_gradient_end || primary} 100%)`
+    ? `linear-gradient(135deg, ${primary} 0%, ${gradientEnd} 100%)`
     : primary
   const headerText    = cfg.header_text_color || '#ffffff'
   const userBubble    = cfg.user_bubble_color || primary
@@ -807,6 +841,7 @@ function WidgetPreview({ cfg }: { cfg: any }) {
   const showSugg       = cfg.show_suggestions ?? true
   const suggestions: string[] = (Array.isArray(cfg.suggestions) ? cfg.suggestions : []).filter(Boolean)
   const avatarUrl      = cfg.assistant_avatar_url ? (resolveImage(cfg.assistant_avatar_url) || cfg.assistant_avatar_url) : ''
+  const windowStyle    = cfg.window_style || 'panel'
 
   return (
     <div className={card}>
@@ -816,7 +851,10 @@ function WidgetPreview({ cfg }: { cfg: any }) {
           {open ? 'Show launcher' : 'Open chat'}
         </button>
       </div>
-      <p className="text-[11px] text-t-secondary -mt-2">Reflects unsaved changes. Not a live chat — for layout only.</p>
+      <p className="text-[11px] text-t-secondary -mt-2">
+        Reflects unsaved changes. Not a live chat — for layout only.
+        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Popup mode: on mobile shows as bottom sheet (68% height).</span>}
+      </p>
 
       {/* Browser-window mock */}
       <div

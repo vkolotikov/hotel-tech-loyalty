@@ -169,7 +169,8 @@
     #htchat-voice-overlay .end-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
     @keyframes htchat-voice-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }\
     @media (max-width: 600px) {\
-      #htchat-panel { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
+      #htchat-panel:not(.htchat-popup) { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
+      #htchat-panel.htchat-popup { width: 100vw !important; height: 68dvh !important; max-height: 68dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: auto !important; border-radius: 20px 20px 0 0 !important; }\
       #htchat-launcher { bottom: 16px !important; }\
       #htchat-header { padding-top: max(14px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }\
       #htchat-input-area { padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }\
@@ -290,6 +291,14 @@
     el.style.right = pos.right;
   }
 
+  function shadeHex(hex, pct) {
+    var num = parseInt((hex || '#c9a84c').replace('#', ''), 16);
+    var r = Math.min(255, Math.max(0, (num >> 16) + Math.round(pct * 2.55)));
+    var g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + Math.round(pct * 2.55)));
+    var b = Math.min(255, Math.max(0, (num & 0xff) + Math.round(pct * 2.55)));
+    return '#' + [r, g, b].map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+  }
+
   function applyColor() {
     var color = getColor();
     var c = widgetConfig || {};
@@ -314,8 +323,9 @@
     }
     var header = document.getElementById('htchat-header');
     if (header) {
-      if (c.header_style === 'gradient' && c.header_gradient_end) {
-        header.style.background = 'linear-gradient(135deg, ' + color + ', ' + c.header_gradient_end + ')';
+      if (c.header_style === 'gradient') {
+        var gradEnd = c.header_gradient_end || shadeHex(color, -30);
+        header.style.background = 'linear-gradient(135deg, ' + color + ', ' + gradEnd + ')';
       } else {
         header.style.background = color;
       }
@@ -624,6 +634,12 @@
         var pos = getPosition();
         panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
         panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
+        // Apply popup class so mobile shows a bottom-sheet instead of full-screen
+        if (data.window_style === 'popup') {
+          panel.classList.add('htchat-popup');
+        } else {
+          panel.classList.remove('htchat-popup');
+        }
       }
       if (data.company_name) {
         var h3 = document.querySelector('#htchat-header-info h3');

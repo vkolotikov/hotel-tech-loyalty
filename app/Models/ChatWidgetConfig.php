@@ -39,6 +39,7 @@ class ChatWidgetConfig extends Model
         'show_branding',
         'header_style',
         'header_gradient_end',
+        'window_style',
         'launcher_size',
         'position',
         'icon_style',
