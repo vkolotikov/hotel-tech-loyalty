@@ -208,6 +208,7 @@ class WidgetChatController extends Controller
             'launcher_shape'     => $config->launcher_shape,
             'launcher_icon'      => $config->launcher_icon,
             'window_style'       => $config->window_style ?? 'panel',
+            'widget_template'    => $config->widget_template ?? 'classic',
             'launcher_animation' => $config->launcher_animation ?? 'none',
             'lead_capture'       => [
                 'enabled' => $config->lead_capture_enabled,

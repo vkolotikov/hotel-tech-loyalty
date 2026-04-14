@@ -202,7 +202,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'general',       label: 'General',        icon: Settings2,  desc: 'Company info & account',              groups: ['general'],      custom: true },
-  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true, feature: 'custom_branding' },
+  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true },
   { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',             groups: ['points'],       custom: true, product: 'loyalty' },
   { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'], feature: 'push_notifications' },
   { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true, superAdminOnly: true },

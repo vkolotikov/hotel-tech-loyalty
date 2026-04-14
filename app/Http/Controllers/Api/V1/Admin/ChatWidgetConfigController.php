@@ -41,6 +41,7 @@ class ChatWidgetConfigController extends Controller
             'branding_text'        => 'nullable|string|max:120',
             'agent_status'         => 'nullable|in:online,away,offline',
             'primary_color'        => 'nullable|string|max:7',
+            'widget_template'      => 'nullable|in:classic,onyx_gold,ivory_minimal,emerald_suite,midnight_glass,boutique_rose,coastal_breeze,concierge',
             'header_text_color'    => 'nullable|string|max:7',
             'user_bubble_color'    => 'nullable|string|max:7',
             'user_bubble_text'     => 'nullable|string|max:7',

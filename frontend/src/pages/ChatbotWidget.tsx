@@ -27,6 +27,121 @@ const LAUNCHER_ICON_MAP: Record<string, any> = {
 }
 
 const COLOR_PRESETS = ['#c9a84c', '#2d6a4f', '#1d4ed8', '#7c3aed', '#dc2626', '#0891b2', '#ea580c', '#16a34a', '#4f46e5', '#be185d']
+
+// Curated premium widget templates. Picking one cascades the full visual set
+// (window_style, launcher, colors, font, radius, bubble colors, header treatment)
+// so general admins get a truly different luxury look without touching every knob.
+type WidgetTemplate = {
+  id: string
+  name: string
+  tagline: string
+  swatch: { bg: string; surface: string; text: string; accent: string }
+  defaults: Record<string, any>
+}
+const WIDGET_TEMPLATES: WidgetTemplate[] = [
+  {
+    id: 'classic',
+    name: 'Classic Concierge',
+    tagline: 'Balanced panel · solid header · timeless',
+    swatch: { bg: '#ffffff', surface: '#f9fafb', text: '#1f2937', accent: '#c9a84c' },
+    defaults: {
+      window_style: 'panel', launcher_shape: 'circle', launcher_icon: 'chat',
+      launcher_animation: 'none', header_style: 'solid', font_family: 'Inter',
+      border_radius: 16, bot_bubble_color: '#f3f4f6', bot_bubble_text: '#1f2937',
+      chat_bg_color: '#ffffff', header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'onyx_gold',
+    name: 'Onyx Gold',
+    tagline: 'Black glass · gold accents · five-star',
+    swatch: { bg: '#0f0c08', surface: '#1a1410', text: '#f5e8c6', accent: '#c9a84c' },
+    defaults: {
+      primary_color: '#c9a84c', window_style: 'bubble', launcher_shape: 'circle',
+      launcher_icon: 'chat', launcher_animation: 'ring', header_style: 'gradient',
+      header_gradient_end: '#8a6f2d', font_family: 'Playfair Display', border_radius: 22,
+      bot_bubble_color: '#1a1410', bot_bubble_text: '#f5e8c6', chat_bg_color: '#0f0c08',
+      header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'ivory_minimal',
+    name: 'Ivory Minimal',
+    tagline: 'Clean linework · pill launcher · editorial',
+    swatch: { bg: '#fafaf9', surface: '#f5f5f4', text: '#1c1917', accent: '#1f1f1f' },
+    defaults: {
+      primary_color: '#1f1f1f', window_style: 'minimal', launcher_shape: 'pill',
+      launcher_icon: 'message', launcher_animation: 'none', header_style: 'solid',
+      font_family: 'Inter', border_radius: 6, bot_bubble_color: '#f5f5f4',
+      bot_bubble_text: '#1c1917', chat_bg_color: '#fafaf9', header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'emerald_suite',
+    name: 'Emerald Suite',
+    tagline: 'Forest greens · spa resort mood',
+    swatch: { bg: '#ffffff', surface: '#ecfdf5', text: '#064e3b', accent: '#10b981' },
+    defaults: {
+      primary_color: '#10b981', window_style: 'panel', launcher_shape: 'rounded-square',
+      launcher_icon: 'support', launcher_animation: 'pulse', header_style: 'gradient',
+      header_gradient_end: '#065f46', font_family: 'Montserrat', border_radius: 18,
+      bot_bubble_color: '#ecfdf5', bot_bubble_text: '#064e3b', chat_bg_color: '#ffffff',
+      header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'midnight_glass',
+    name: 'Midnight Glass',
+    tagline: 'Frosted indigo · neon edge · modern',
+    swatch: { bg: '#0f172a', surface: '#1e293b', text: '#e0e7ff', accent: '#6366f1' },
+    defaults: {
+      primary_color: '#6366f1', window_style: 'bubble', launcher_shape: 'circle',
+      launcher_icon: 'chat', launcher_animation: 'pulse', header_style: 'gradient',
+      header_gradient_end: '#0f172a', font_family: 'Poppins', border_radius: 24,
+      bot_bubble_color: '#1e293b', bot_bubble_text: '#e0e7ff', chat_bg_color: '#0f172a',
+      header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'boutique_rose',
+    name: 'Boutique Rose',
+    tagline: 'Soft rose · cream · hospitality warmth',
+    swatch: { bg: '#fffbf7', surface: '#fdf2f8', text: '#831843', accent: '#be185d' },
+    defaults: {
+      primary_color: '#be185d', window_style: 'popup', launcher_shape: 'circle',
+      launcher_icon: 'sales', launcher_animation: 'bounce', header_style: 'gradient',
+      header_gradient_end: '#831843', font_family: 'Playfair Display', border_radius: 20,
+      bot_bubble_color: '#fdf2f8', bot_bubble_text: '#831843', chat_bg_color: '#fffbf7',
+      header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'coastal_breeze',
+    name: 'Coastal Breeze',
+    tagline: 'Ocean teal · bright · beachfront',
+    swatch: { bg: '#f0fdff', surface: '#ecfeff', text: '#164e63', accent: '#0891b2' },
+    defaults: {
+      primary_color: '#0891b2', window_style: 'panel', launcher_shape: 'pill',
+      launcher_icon: 'message', launcher_animation: 'none', header_style: 'gradient',
+      header_gradient_end: '#155e75', font_family: 'Nunito', border_radius: 18,
+      bot_bubble_color: '#ecfeff', bot_bubble_text: '#164e63', chat_bg_color: '#f0fdff',
+      header_text_color: '#ffffff',
+    },
+  },
+  {
+    id: 'concierge',
+    name: 'Night Concierge',
+    tagline: 'Deep navy · copper accents · after-hours',
+    swatch: { bg: '#0f172a', surface: '#1e293b', text: '#fde68a', accent: '#d97706' },
+    defaults: {
+      primary_color: '#d97706', window_style: 'bubble', launcher_shape: 'circle',
+      launcher_icon: 'support', launcher_animation: 'ring', header_style: 'gradient',
+      header_gradient_end: '#1e293b', font_family: 'Georgia', border_radius: 22,
+      bot_bubble_color: '#1e293b', bot_bubble_text: '#fde68a', chat_bg_color: '#0f172a',
+      header_text_color: '#ffffff',
+    },
+  },
+]
 const FONT_OPTIONS = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montserrat', 'Nunito', 'Playfair Display', 'Georgia', 'system-ui']
 const LAUNCHER_SHAPES = ['circle', 'rounded-square', 'pill', 'square'] as const
 const LAUNCHER_ICONS = ['chat', 'message', 'support', 'question', 'sales'] as const
@@ -135,6 +250,17 @@ export function ChatbotWidget() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
   })
 
+  // ─── Appearance advanced panel toggle ────────────────────────────────────
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const applyTemplate = (tpl: WidgetTemplate) => {
+    // Carry over the current primary_color unless the template provides one.
+    const currentPrimary = (f.primary_color as string | undefined) || '#c9a84c'
+    const next = { ...tpl.defaults }
+    if (!next.primary_color) next.primary_color = currentPrimary
+    setForm((prev: any) => ({ ...(prev ?? config ?? {}), widget_template: tpl.id, ...next }))
+  }
+
   // ─── Embed copy state ────────────────────────────────────────────────────
   const [embedTab, setEmbedTab] = useState<'script' | 'iframe' | 'api'>('script')
   const [copied, setCopied] = useState('')
@@ -158,309 +284,330 @@ export function ChatbotWidget() {
 
   // ─── Sub-tab content ─────────────────────────────────────────────────────
 
-  const renderAppearance = () => (
-    <div className="space-y-4">
-      {/* Identity */}
-      <div className={card}>
-        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Identity</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Company Name</label>
-            <input type="text" value={f.company_name || ''} onChange={e => update('company_name', e.target.value)}
-              className={input} placeholder="Your Hotel Name" />
-          </div>
-          <div>
-            <label className={label}>Position on Page</label>
-            <select value={f.position || 'bottom-right'} onChange={e => update('position', e.target.value)} className={input}>
-              <option value="bottom-right">Bottom Right</option>
-              <option value="bottom-left">Bottom Left</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className={label}>Widget Style Preset</label>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              {
-                v: 'panel',
-                label: 'Classic',
-                desc: 'Standard panel · full-screen mobile',
-                preview: (color: string) => (
-                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="2" width="48" height="60" rx="2" fill="#1e1e24" stroke="#333" strokeWidth="0.5"/>
-                    <rect x="2" y="2" width="48" height="14" rx="2" fill={color}/>
-                    <rect x="2" y="10" width="48" height="6" fill={color}/>
-                    <rect x="6" y="5" width="18" height="2.5" rx="1.25" fill="rgba(255,255,255,0.75)"/>
-                    <rect x="6" y="21" width="22" height="5" rx="2.5" fill="#e5e7eb"/>
-                    <rect x="23" y="30" width="22" height="5" rx="2.5" fill={color} opacity="0.85"/>
-                    <rect x="6" y="39" width="26" height="5" rx="2.5" fill="#e5e7eb"/>
-                    <rect x="4" y="52" width="36" height="8" rx="2" fill="#f3f4f6"/>
-                    <rect x="42" y="52" width="8" height="8" rx="2" fill={color}/>
-                  </svg>
-                ),
-              },
-              {
-                v: 'popup',
-                label: 'Popup',
-                desc: 'Compact card · 65% bottom sheet',
-                preview: (color: string) => (
-                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="52" height="64" rx="6" fill="#111118"/>
-                    <rect x="0" y="23" width="52" height="41" rx="9" fill="white"/>
-                    <rect x="0" y="23" width="52" height="13" rx="9" fill={color}/>
-                    <rect x="0" y="30" width="52" height="6" fill={color}/>
-                    <rect x="5" y="26" width="15" height="2" rx="1" fill="rgba(255,255,255,0.8)"/>
-                    <rect x="5" y="41" width="20" height="4" rx="2" fill="#e5e7eb"/>
-                    <rect x="26" y="48" width="20" height="4" rx="2" fill={color} opacity="0.85"/>
-                    <circle cx="43" cy="15" r="7" fill={color}/>
-                    <circle cx="43" cy="15" r="4" fill="rgba(255,255,255,0.25)"/>
-                  </svg>
-                ),
-              },
-              {
-                v: 'bubble',
-                label: 'Bubble',
-                desc: 'Messenger style · ring animation',
-                preview: (color: string) => (
-                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="52" height="64" rx="6" fill="#111118"/>
-                    <rect x="4" y="4" width="44" height="50" rx="14" fill="white"/>
-                    <rect x="4" y="4" width="44" height="15" rx="14" fill={color}/>
-                    <rect x="4" y="13" width="44" height="6" fill={color}/>
-                    <rect x="9" y="6.5" width="16" height="2.5" rx="1.25" fill="rgba(255,255,255,0.8)"/>
-                    <rect x="9" y="24" width="20" height="6" rx="5" fill="#eef0f4"/>
-                    <rect x="22" y="34" width="20" height="6" rx="5" fill={color} opacity="0.9"/>
-                    <circle cx="43" cy="58" r="9" fill={color} opacity="0.15"/>
-                    <circle cx="43" cy="58" r="6" fill={color} opacity="0.25"/>
-                    <circle cx="43" cy="58" r="4" fill={color}/>
-                  </svg>
-                ),
-              },
-              {
-                v: 'minimal',
-                label: 'Minimal',
-                desc: 'Flat clean · pill launcher',
-                preview: (color: string) => (
-                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="52" height="64" rx="6" fill="#111118"/>
-                    <rect x="4" y="4" width="44" height="52" rx="3" fill="white" stroke="rgba(255,255,255,0.08)" strokeWidth="0.75"/>
-                    <rect x="4" y="4" width="44" height="12" rx="3" fill={color}/>
-                    <rect x="4" y="12" width="44" height="4" fill={color}/>
-                    <rect x="8" y="6.5" width="14" height="2" rx="1" fill="rgba(255,255,255,0.8)"/>
-                    <rect x="8" y="22" width="20" height="4" rx="1.5" fill="#e5e7eb"/>
-                    <rect x="23" y="30" width="22" height="4" rx="1.5" fill={color} opacity="0.85"/>
-                    <rect x="29" y="55" width="21" height="8" rx="4" fill={color}/>
-                    <rect x="32" y="57.5" width="5" height="3" rx="1" fill="rgba(255,255,255,0.55)"/>
-                    <rect x="38" y="57.5" width="9" height="3" rx="1" fill="rgba(255,255,255,0.9)"/>
-                  </svg>
-                ),
-              },
-            ] as { v: string; label: string; desc: string; preview: (color: string) => React.ReactNode }[]).map(s => {
-              const active = (f.window_style || 'panel') === s.v
-              const previewColor = f.primary_color || '#c9a84c'
-              return (
-                <button key={s.v} type="button" onClick={() => update('window_style', s.v)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all ${
-                    active ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border text-t-secondary hover:border-dark-border2 hover:bg-dark-bg/60'
-                  }`}>
-                  <div className={`rounded-lg overflow-hidden ${active ? 'ring-1 ring-primary-500/30' : ''}`}>
-                    {s.preview(previewColor)}
-                  </div>
-                  <div>
-                    <div className={`text-xs font-semibold ${active ? 'text-white' : 'text-t-secondary'}`}>{s.label}</div>
-                    <div className="text-[10px] text-[#636366] mt-0.5 leading-tight">{s.desc}</div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div>
-          <label className={label}>Brand Color</label>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map(c => (
-                <button key={c} onClick={() => update('primary_color', c)}
-                  className={`w-7 h-7 rounded-full border-2 transition-all ${(f.primary_color || '#c9a84c') === c ? 'border-white scale-110' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }} />
-              ))}
+  const renderAppearance = () => {
+    const activeTplId = (f.widget_template as string) || 'classic'
+    const primary = (f.primary_color as string) || '#c9a84c'
+    const gradEnd = (f.header_gradient_end as string) || shadeColor(primary, -30)
+    const windowStyle = (f.window_style as string) || 'panel'
+    // Mini preview composed from the template's own swatch so the gallery
+    // shows a real gradient/bubble/launcher mock — not just a color chip.
+    const TemplatePreview = ({ tpl, selected }: { tpl: WidgetTemplate; selected: boolean }) => {
+      const d = tpl.defaults as any
+      const accent = d.primary_color || primary
+      const gEnd  = d.header_gradient_end || shadeColor(accent, -30)
+      const headerBg = d.header_style === 'gradient'
+        ? `linear-gradient(135deg, ${accent} 0%, ${gEnd} 100%)`
+        : accent
+      const radius = d.border_radius ?? 16
+      const isBubble = d.window_style === 'bubble'
+      const isPill   = d.launcher_shape === 'pill'
+      return (
+        <div className="relative w-full h-28 rounded-xl overflow-hidden"
+          style={{ background: tpl.swatch.bg, fontFamily: d.font_family || 'Inter' }}>
+          {/* Chat panel mock */}
+          <div className="absolute left-3 top-3 bottom-3 w-[65%] shadow-lg"
+            style={{
+              background: d.chat_bg_color || '#fff',
+              borderRadius: isBubble ? 18 : radius,
+              border: `1px solid rgba(0,0,0,0.06)`,
+            }}>
+            <div className="h-7 flex items-center px-2 gap-1"
+              style={{
+                background: headerBg,
+                borderTopLeftRadius: isBubble ? 18 : radius,
+                borderTopRightRadius: isBubble ? 18 : radius,
+              }}>
+              <div className="w-3 h-3 rounded-full bg-white/40" />
+              <div className="flex-1 h-1.5 rounded-full bg-white/30" />
             </div>
-            <input type="color" value={f.primary_color || '#c9a84c'} onChange={e => update('primary_color', e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer border-0" />
-            <span className="text-xs text-t-secondary font-mono">{f.primary_color || '#c9a84c'}</span>
-          </div>
-        </div>
-
-        <div>
-          <label className={label}>Agent Status (shown to visitors as a status dot)</label>
-          <div className="flex gap-2">
-            {[
-              { v: 'online',  label: 'Online',  color: '#10b981' },
-              { v: 'away',    label: 'Away',    color: '#f59e0b' },
-              { v: 'offline', label: 'Offline', color: '#6b7280' },
-            ].map(s => (
-              <button key={s.v} type="button" onClick={() => update('agent_status', s.v)}
-                className={`flex-1 py-2 px-3 rounded-lg border text-xs flex items-center justify-center gap-2 ${
-                  (f.agent_status || 'online') === s.v ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
-                }`}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 pt-2 border-t border-dark-border">
-          <Toggle checked={f.is_active ?? true} onChange={v => update('is_active', v)} />
-          <span className="text-sm text-white">Widget is live on the website</span>
-        </div>
-      </div>
-
-      {/* Launcher button */}
-      <div className={card}>
-        <h3 className={cardTitle}><MessageSquare size={14} className="text-primary-500" /> Launcher Button</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Shape</label>
-            <div className="flex gap-2">
-              {LAUNCHER_SHAPES.map(s => (
-                <button key={s} onClick={() => update('launcher_shape', s)}
-                  className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
-                    (f.launcher_shape || 'circle') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
-                  }`}>{s.replace('-', ' ')}</button>
-              ))}
+            <div className="p-2 space-y-1.5">
+              <div className="h-2 w-3/4 rounded-full"
+                style={{ background: d.bot_bubble_color || '#f3f4f6' }} />
+              <div className="h-2 w-1/2 rounded-full ml-auto" style={{ background: accent, opacity: 0.75 }} />
+              <div className="h-2 w-2/3 rounded-full"
+                style={{ background: d.bot_bubble_color || '#f3f4f6' }} />
             </div>
           </div>
-          <div>
-            <label className={label}>Icon</label>
-            <div className="flex gap-2">
-              {LAUNCHER_ICONS.map(i => {
-                const IconCmp = LAUNCHER_ICON_MAP[i] || MessageSquare
-                const active = (f.launcher_icon || 'chat') === i
-                return (
-                  <button key={i} type="button" onClick={() => update('launcher_icon', i)}
-                    title={i}
-                    className={`flex-1 py-2 rounded-lg border flex items-center justify-center ${
-                      active ? 'border-primary-500 bg-primary-500/10 text-primary-500' : 'border-dark-border text-t-secondary hover:text-white'
-                    }`}>
-                    <IconCmp size={16} />
-                  </button>
-                )
-              })}
-            </div>
+          {/* Launcher mock */}
+          <div className={`absolute right-3 bottom-3 flex items-center justify-center shadow-md ${isPill ? 'px-2.5 gap-1' : ''}`}
+            style={{
+              background: accent,
+              color: '#fff',
+              width: isPill ? 'auto' : 28,
+              height: isPill ? 20 : 28,
+              minWidth: isPill ? 42 : undefined,
+              borderRadius: isPill ? 12
+                : d.launcher_shape === 'rounded-square' ? 8
+                : d.launcher_shape === 'square' ? 4
+                : 999,
+            }}>
+            <MessageSquare size={isPill ? 10 : 14} />
+            {isPill && <span className="text-[9px] font-semibold">Chat</span>}
           </div>
+          {selected && (
+            <div className="absolute inset-0 ring-2 ring-inset rounded-xl pointer-events-none"
+              style={{ borderColor: accent, boxShadow: `inset 0 0 0 2px ${accent}` }} />
+          )}
         </div>
-        <div>
-          <label className={label}>Launcher Size: {f.launcher_size || 56}px</label>
-          <input type="range" min={40} max={80} step={2} value={f.launcher_size || 56}
-            onChange={e => update('launcher_size', parseInt(e.target.value))}
-            className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500" />
-        </div>
-        <div>
-          <label className={label}>Launcher Animation</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {([
-              { v: 'none',   label: 'None',   emoji: '⬜', desc: 'No animation' },
-              { v: 'pulse',  label: 'Pulse',  emoji: '💫', desc: 'Scale + ring expand' },
-              { v: 'ring',   label: 'Ring',   emoji: '🔔', desc: 'Double ring waves' },
-              { v: 'bounce', label: 'Bounce', emoji: '⬆️', desc: 'Vertical bounce' },
-              { v: 'shake',  label: 'Shake',  emoji: '👋', desc: 'Periodic wiggle' },
-            ] as { v: string; label: string; emoji: string; desc: string }[]).map(a => {
-              const active = (f.launcher_animation || 'none') === a.v
-              return (
-                <button key={a.v} type="button" onClick={() => update('launcher_animation', a.v)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center transition-all ${
-                    active ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2 hover:bg-dark-bg/60'
-                  }`}>
-                  <span className="text-lg">{a.emoji}</span>
-                  <span className="text-[11px] font-medium">{a.label}</span>
-                  <span className="text-[9px] opacity-60 leading-tight">{a.desc}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+      )
+    }
 
-      {/* Chat colors */}
-      <div className={card}>
-        <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Chat Colors</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {([
-            { key: 'header_text_color', label: 'Header Text', def: '#ffffff' },
-            { key: 'user_bubble_color', label: 'User Bubble', def: f.primary_color || '#c9a84c' },
-            { key: 'user_bubble_text', label: 'User Bubble Text', def: '#ffffff' },
-            { key: 'bot_bubble_color', label: 'Bot Bubble', def: '#f3f4f6' },
-            { key: 'bot_bubble_text', label: 'Bot Bubble Text', def: '#1f2937' },
-            { key: 'chat_bg_color', label: 'Chat Background', def: '#ffffff' },
-          ] as { key: string; label: string; def: string }[]).map(c => (
-            <div key={c.key}>
-              <label className={label}>{c.label}</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={f[c.key] || c.def || '#000000'} onChange={e => update(c.key, e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer border border-dark-border bg-transparent" />
-                <input type="text" value={f[c.key] || ''} placeholder={c.def || 'auto'} onChange={e => update(c.key, e.target.value)}
-                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Typography & layout */}
-      <div className={card}>
-        <h3 className={cardTitle}><Type size={14} className="text-primary-500" /> Typography & Layout</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Font Family</label>
-            <select value={f.font_family || 'Inter'} onChange={e => update('font_family', e.target.value)} className={input}>
-              {FONT_OPTIONS.map(font => <option key={font} value={font}>{font}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={label}>Border Radius: {f.border_radius ?? 16}px</label>
-            <input type="range" min={0} max={24} step={1} value={f.border_radius ?? 16}
-              onChange={e => update('border_radius', parseInt(e.target.value))}
-              className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500 mt-3" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={label}>Header Style</label>
-            <div className="flex gap-2">
-              {['solid', 'gradient'].map(s => (
-                <button key={s} onClick={() => {
-                  update('header_style', s)
-                  // Auto-fill a default gradient end color if none is set yet
-                  if (s === 'gradient' && !f.header_gradient_end) {
-                    update('header_gradient_end', shadeColor(f.primary_color || '#c9a84c', -30))
-                  }
-                }}
-                  className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
-                    (f.header_style || 'solid') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
-                  }`}>{s}</button>
-              ))}
-            </div>
-          </div>
-          {(f.header_style || 'solid') === 'gradient' && (
+    return (
+      <div className="space-y-4">
+        {/* Template gallery — the one-click luxury picker */}
+        <div className={card}>
+          <div className="flex items-start justify-between">
             <div>
-              <label className={label}>Header Gradient End Color</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={f.header_gradient_end || f.primary_color || '#c9a84c'}
-                  onChange={e => update('header_gradient_end', e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer border border-dark-border" />
-                <input type="text" value={f.header_gradient_end || ''} onChange={e => update('header_gradient_end', e.target.value)}
-                  className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono"
-                  placeholder="#7c3aed" />
+              <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Widget Template</h3>
+              <p className="text-[11px] text-t-secondary mt-0.5">
+                Pick a curated look — layout, launcher, typography and bubble colors are all set for you.
+              </p>
+            </div>
+            {activeTplId !== 'classic' && (
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-500/15 text-primary-500 border border-primary-500/20">
+                {WIDGET_TEMPLATES.find(t => t.id === activeTplId)?.name || 'Custom'}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {WIDGET_TEMPLATES.map(tpl => {
+              const selected = activeTplId === tpl.id
+              return (
+                <button key={tpl.id} type="button" onClick={() => applyTemplate(tpl)}
+                  className={`group text-left rounded-xl overflow-hidden border transition-all ${
+                    selected
+                      ? 'border-primary-500 shadow-[0_0_0_1px_rgba(201,168,76,0.35)]'
+                      : 'border-dark-border hover:border-primary-500/40 hover:-translate-y-px'
+                  }`}>
+                  <TemplatePreview tpl={tpl} selected={selected} />
+                  <div className="p-3 space-y-0.5 bg-dark-card">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-white">{tpl.name}</span>
+                      {selected && <Check size={12} className="text-primary-500" />}
+                    </div>
+                    <div className="text-[10px] text-t-secondary leading-tight">{tpl.tagline}</div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Core brand controls — only the things 99% of admins need */}
+        <div className={card}>
+          <h3 className={cardTitle}><Palette size={14} className="text-primary-500" /> Brand</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Company Name</label>
+              <input type="text" value={f.company_name || ''} onChange={e => update('company_name', e.target.value)}
+                className={input} placeholder="Your Hotel Name" />
+            </div>
+            <div>
+              <label className={label}>Position on Page</label>
+              <select value={f.position || 'bottom-right'} onChange={e => update('position', e.target.value)} className={input}>
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={label}>Brand Color</label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
+                {COLOR_PRESETS.map(c => (
+                  <button key={c} onClick={() => update('primary_color', c)}
+                    className={`w-7 h-7 rounded-full border-2 transition-all ${primary === c ? 'border-white scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <input type="color" value={primary} onChange={e => update('primary_color', e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer border-0" />
+              <span className="text-xs text-t-secondary font-mono">{primary}</span>
+            </div>
+            <p className="text-[10px] text-[#636366] mt-1.5">
+              Chosen brand color paints the launcher, header accents and active bubbles. Template colors adjust around it.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 pt-2 border-t border-dark-border">
+            <Toggle checked={f.is_active ?? true} onChange={v => update('is_active', v)} />
+            <span className="text-sm text-white">Widget is live on the website</span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${
+                (f.agent_status || 'online') === 'online' ? 'bg-emerald-500'
+                : (f.agent_status || 'online') === 'away' ? 'bg-amber-500' : 'bg-zinc-500'
+              }`} />
+              <select value={f.agent_status || 'online'} onChange={e => update('agent_status', e.target.value)}
+                className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
+                <option value="online">Online</option>
+                <option value="away">Away</option>
+                <option value="offline">Offline</option>
+              </select>
+            </span>
+          </div>
+        </div>
+
+        {/* Advanced — collapsed by default, contains all granular controls */}
+        <div className={card}>
+          <button type="button" onClick={() => setShowAdvanced(v => !v)}
+            className="w-full flex items-center justify-between">
+            <span className={cardTitle}>
+              <Shield size={14} className="text-primary-500" /> Advanced Customization
+            </span>
+            <span className="text-xs text-t-secondary flex items-center gap-1">
+              {showAdvanced ? 'Hide' : 'Show'}
+              <span className={`inline-block transition-transform ${showAdvanced ? 'rotate-180' : ''}`}>▾</span>
+            </span>
+          </button>
+          {!showAdvanced && (
+            <p className="text-[11px] text-t-secondary -mt-1">
+              Fine-tune launcher, header gradient, chat bubble colors, typography and layout.
+            </p>
+          )}
+
+          {showAdvanced && (
+            <div className="space-y-5 pt-2 border-t border-dark-border">
+              {/* Window style override */}
+              <div>
+                <label className={label}>Window Style (overrides template)</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {['panel', 'popup', 'bubble', 'minimal'].map(s => (
+                    <button key={s} onClick={() => update('window_style', s)}
+                      className={`py-2 rounded-lg border text-xs capitalize ${
+                        windowStyle === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
+                      }`}>{s}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Launcher */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={label}>Launcher Shape</label>
+                  <div className="flex gap-2">
+                    {LAUNCHER_SHAPES.map(s => (
+                      <button key={s} onClick={() => update('launcher_shape', s)}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
+                          (f.launcher_shape || 'circle') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
+                        }`}>{s.replace('-', ' ')}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className={label}>Launcher Icon</label>
+                  <div className="flex gap-2">
+                    {LAUNCHER_ICONS.map(i => {
+                      const IconCmp = LAUNCHER_ICON_MAP[i] || MessageSquare
+                      const active = (f.launcher_icon || 'chat') === i
+                      return (
+                        <button key={i} type="button" onClick={() => update('launcher_icon', i)} title={i}
+                          className={`flex-1 py-2 rounded-lg border flex items-center justify-center ${
+                            active ? 'border-primary-500 bg-primary-500/10 text-primary-500' : 'border-dark-border text-t-secondary hover:text-white'
+                          }`}>
+                          <IconCmp size={16} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={label}>Launcher Size: {f.launcher_size || 56}px</label>
+                  <input type="range" min={40} max={80} step={2} value={f.launcher_size || 56}
+                    onChange={e => update('launcher_size', parseInt(e.target.value))}
+                    className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500" />
+                </div>
+                <div>
+                  <label className={label}>Launcher Animation</label>
+                  <select value={f.launcher_animation || 'none'} onChange={e => update('launcher_animation', e.target.value)} className={input}>
+                    <option value="none">None</option>
+                    <option value="pulse">Pulse</option>
+                    <option value="ring">Ring waves</option>
+                    <option value="bounce">Bounce</option>
+                    <option value="shake">Attention shake</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Header style */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={label}>Header Style</label>
+                  <div className="flex gap-2">
+                    {['solid', 'gradient'].map(s => (
+                      <button key={s} onClick={() => {
+                        update('header_style', s)
+                        if (s === 'gradient' && !f.header_gradient_end) {
+                          update('header_gradient_end', shadeColor(primary, -30))
+                        }
+                      }}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs capitalize ${
+                          (f.header_style || 'solid') === s ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary'
+                        }`}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                {(f.header_style || 'solid') === 'gradient' && (
+                  <div>
+                    <label className={label}>Gradient End Color</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={gradEnd}
+                        onChange={e => update('header_gradient_end', e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer border border-dark-border" />
+                      <input type="text" value={f.header_gradient_end || ''} onChange={e => update('header_gradient_end', e.target.value)}
+                        className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono"
+                        placeholder="#7c3aed" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat colors */}
+              <div>
+                <h4 className="text-[11px] font-semibold text-t-secondary uppercase tracking-wider mb-2">Chat Colors</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {([
+                    { key: 'header_text_color', label: 'Header Text', def: '#ffffff' },
+                    { key: 'user_bubble_color', label: 'User Bubble', def: primary },
+                    { key: 'user_bubble_text', label: 'User Bubble Text', def: '#ffffff' },
+                    { key: 'bot_bubble_color', label: 'Bot Bubble', def: '#f3f4f6' },
+                    { key: 'bot_bubble_text', label: 'Bot Bubble Text', def: '#1f2937' },
+                    { key: 'chat_bg_color', label: 'Chat Background', def: '#ffffff' },
+                  ] as { key: string; label: string; def: string }[]).map(c => (
+                    <div key={c.key}>
+                      <label className={label}>{c.label}</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={f[c.key] || c.def || '#000000'} onChange={e => update(c.key, e.target.value)}
+                          className="w-8 h-8 rounded cursor-pointer border border-dark-border bg-transparent" />
+                        <input type="text" value={f[c.key] || ''} placeholder={c.def || 'auto'} onChange={e => update(c.key, e.target.value)}
+                          className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Typography / layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={label}>Font Family</label>
+                  <select value={f.font_family || 'Inter'} onChange={e => update('font_family', e.target.value)} className={input}>
+                    {FONT_OPTIONS.map(font => <option key={font} value={font}>{font}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Border Radius: {f.border_radius ?? 16}px</label>
+                  <input type="range" min={0} max={24} step={1} value={f.border_radius ?? 16}
+                    onChange={e => update('border_radius', parseInt(e.target.value))}
+                    className="w-full h-2 bg-dark-border rounded-lg appearance-none cursor-pointer accent-primary-500 mt-3" />
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderCopy = () => (
     <div className="space-y-4">
