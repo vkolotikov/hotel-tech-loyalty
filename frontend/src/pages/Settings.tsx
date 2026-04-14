@@ -1233,6 +1233,18 @@ export function Settings() {
       const isOpen = expandedSections.has(section.id)
       const result = section.testType ? testResults[section.testType] : null
       const hasAnyValue = items.some((s: any) => s.has_value)
+      const enabledKey = `${section.id}_enabled`
+      // Default to enabled when the flag has never been saved — matches
+      // pre-toggle behaviour where any saved credential immediately took effect.
+      const enabledRaw = getVal(enabledKey)
+      const isEnabled = enabledRaw === '' ? true : enabledRaw === 'true' || enabledRaw === '1'
+      const toggleEnabled = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const next = !isEnabled
+        setEditedSettings(prev => ({ ...prev, [enabledKey]: String(next) }))
+        saveMutation.mutate([{ key: enabledKey, value: String(next) }])
+      }
+      const showActive = hasAnyValue && isEnabled
 
       return (
         <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
@@ -1247,13 +1259,14 @@ export function Settings() {
           <button onClick={() => toggleSection(section.id)}
             className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.02] transition-colors">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
-              <section.icon size={15} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
+              style={{ background: showActive ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+              <section.icon size={15} className={showActive ? 'text-emerald-400' : 'text-gray-500'} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">{section.title}</span>
-                {hasAnyValue && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
+                <span className={`text-sm font-bold ${isEnabled ? 'text-white' : 'text-gray-500'}`}>{section.title}</span>
+                {showActive && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
+                {hasAnyValue && !isEnabled && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/15">Disabled</span>}
                 {result && (
                   <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
                     {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />} {result.message}
@@ -1262,14 +1275,24 @@ export function Settings() {
               </div>
               <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
             </div>
+            {hasAnyValue && (
+              <span onClick={toggleEnabled} role="switch" aria-checked={isEnabled}
+                title={isEnabled ? 'Click to deactivate (credentials kept; data sync stops)' : 'Click to reactivate'}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 cursor-pointer ${isEnabled ? 'bg-emerald-500/70' : 'bg-gray-600/60'}`}>
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+              </span>
+            )}
             <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
           {isOpen && (
             <div className="px-5 pb-4 border-t border-white/[0.04]">
               {section.testType && (
-                <div className="flex justify-end pt-3 pb-1">
+                <div className="flex items-center justify-between pt-3 pb-1">
+                  {!isEnabled && hasAnyValue ? (
+                    <p className="text-[11px] text-gray-500">Integration is deactivated — sync paused. Credentials are kept; flip the toggle above to resume.</p>
+                  ) : <span />}
                   <button onClick={() => testConnection(section.testType!)}
-                    disabled={testingIntegration === section.testType}
+                    disabled={testingIntegration === section.testType || !isEnabled}
                     className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40 text-xs'}>
                     {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test</>}
                   </button>

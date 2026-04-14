@@ -55,8 +55,12 @@ class SmoobuClient
         $this->baseUrl   = rtrim($this->setting('booking_smoobu_base_url', config('services.smoobu.base_url', 'https://login.smoobu.com/api/')), '/');
         $this->apiKey    = $this->setting('booking_smoobu_api_key', config('services.smoobu.api_key', ''));
         $provider        = $this->setting('booking_smoobu_provider', config('services.smoobu.provider', 'mock'));
-        // Auto-detect: if API key is present, treat as live regardless of provider setting
-        $this->isMock    = empty($this->apiKey) && $provider === 'mock';
+        // Admin can deactivate the integration without removing credentials.
+        // When disabled, behave as if no key is configured: serve mock data,
+        // skip outbound calls. Smoobu's own data is never touched.
+        $disabled        = !IntegrationStatus::isEnabled('smoobu');
+        // Auto-detect: if API key is present AND not disabled, treat as live.
+        $this->isMock    = $disabled || (empty($this->apiKey) && $provider === 'mock');
         $this->channelId = $this->setting('booking_smoobu_channel_id', config('services.smoobu.channel_id', ''));
         $this->timeout   = (int) config('services.smoobu.timeout', 30);
         $this->loadedForOrg = $orgId;

@@ -209,7 +209,8 @@ class SettingsController extends Controller
                 }
                 // Infer group/type/label from the template when available
                 $group = $template?->group ?? $this->inferGroup($item['key']);
-                $type  = $template?->type ?? 'string';
+                $isEnabledFlag = str_ends_with($item['key'], '_enabled');
+                $type  = $template?->type ?? ($isEnabledFlag ? 'boolean' : 'string');
                 $label = $template?->label ?? ucwords(str_replace('_', ' ', $item['key']));
                 HotelSetting::create([
                     'key'   => $item['key'],
@@ -242,6 +243,15 @@ class SettingsController extends Controller
     private function inferGroup(string $key): string
     {
         $k = strtolower($key);
+        // {integration}_enabled toggles live alongside their credentials in the
+        // integrations group so the UI can find them next to the section.
+        if (str_ends_with($k, '_enabled') && !str_starts_with($k, 'push_')
+            && !str_starts_with($k, 'email_') && !str_starts_with($k, 'welcome_')
+            && !str_starts_with($k, 'inbox_') && !str_starts_with($k, 'rating_')
+            && !str_starts_with($k, 'lead_') && !str_starts_with($k, 'gdpr_')
+            && !str_starts_with($k, 'dark_')) {
+            return 'integrations';
+        }
         if (str_starts_with($k, 'mobile_')) return 'mobile_app';
         if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';
         if (str_starts_with($k, 'booking_')) return 'booking';
