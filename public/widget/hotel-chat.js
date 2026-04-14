@@ -101,18 +101,18 @@
     #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); }\
     #htchat-header-actions button.active { background: rgba(255,255,255,0.3); }\
     #htchat-header-actions button svg { width: 14px; height: 14px; fill: currentColor; }\
-    #htchat-messages { flex: 1; overflow-y: auto; padding: 16px; background: #f9fafb; }\
+    #htchat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; background: #f9fafb; }\
     .htchat-msg { margin-bottom: 12px; display: flex; gap: 8px; }\
     .htchat-msg.user { justify-content: flex-end; }\
     .htchat-msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.5; word-wrap: break-word; }\
     .htchat-msg.assistant .htchat-msg-bubble { background: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }\
     .htchat-msg.user .htchat-msg-bubble { color: white; border-bottom-right-radius: 4px; }\
     .htchat-msg-bubble strong { font-weight: 600; }\
-    .htchat-welcome { text-align: center; padding: 30px 20px; }\
-    .htchat-welcome-icon { width: 52px; height: 52px; border-radius: 16px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }\
-    .htchat-welcome-icon svg { width: 26px; height: 26px; }\
-    .htchat-welcome h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 6px; }\
-    .htchat-welcome p { font-size: 12px; color: #6b7280; max-width: 260px; margin: 0 auto; }\
+    .htchat-welcome { text-align: center; padding: 16px 16px 8px; }\
+    .htchat-welcome-icon { width: 44px; height: 44px; border-radius: 14px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }\
+    .htchat-welcome-icon svg { width: 22px; height: 22px; }\
+    .htchat-welcome h3 { font-size: 15px; font-weight: 700; color: #1f2937; margin-bottom: 4px; letter-spacing: -0.01em; }\
+    .htchat-welcome p { font-size: 12px; color: #6b7280; max-width: 260px; margin: 0 auto; line-height: 1.45; }\
     .htchat-suggestions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center; }\
     .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 6px 14px; font-size: 11.5px; color: #4b5563; text-align: center; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }\
     .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #f9fafb; }\

@@ -194,20 +194,30 @@ class SettingsController extends Controller
             }
 
             $oldValue = $setting?->value;
+            $newValue = is_array($item['value']) ? json_encode($item['value']) : (string) $item['value'];
 
             if ($setting) {
-                $setting->update(['value' => is_array($item['value']) ? json_encode($item['value']) : (string) $item['value']]);
+                $setting->update(['value' => $newValue]);
             } else {
-                // Only super_admin can create new setting keys
-                if (!$isSuperAdmin) {
+                // Row doesn't exist for this org yet. Check if the key exists as a
+                // template in any other org (fresh orgs have no seeded settings
+                // rows until they first save). If it's a known company-scoped key
+                // or missing entirely, let the staff user create it for their org.
+                $template = HotelSetting::withoutGlobalScopes()->where('key', $item['key'])->first();
+                if ($template && $template->scope === 'system' && !$isSuperAdmin) {
                     continue;
                 }
+                // Infer group/type/label from the template when available
+                $group = $template->group ?? $this->inferGroup($item['key']);
+                $type  = $template->type ?? 'string';
+                $label = $template->label ?? ucwords(str_replace('_', ' ', $item['key']));
                 HotelSetting::create([
                     'key'   => $item['key'],
-                    'value' => is_array($item['value']) ? json_encode($item['value']) : (string) $item['value'],
-                    'type'  => 'string',
-                    'group' => 'custom',
-                    'label' => ucwords(str_replace('_', ' ', $item['key'])),
+                    'value' => $newValue,
+                    'type'  => $type,
+                    'group' => $group,
+                    'label' => $label,
+                    'scope' => $template->scope ?? 'company',
                 ]);
             }
 
@@ -222,6 +232,22 @@ class SettingsController extends Controller
         }
 
         return response()->json(['message' => 'Settings updated']);
+    }
+
+    /**
+     * Infer the hotel_settings group for a key that has no template row yet.
+     * Matches the conventions used in the seeder / frontend so a freshly-created
+     * org can save settings without manual seeding.
+     */
+    private function inferGroup(string $key): string
+    {
+        $k = strtolower($key);
+        if (str_starts_with($k, 'mobile_')) return 'mobile_app';
+        if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';
+        if (str_starts_with($k, 'booking_')) return 'booking';
+        if (str_starts_with($k, 'mail_')) return 'email';
+        if (str_starts_with($k, 'stripe_')) return 'billing';
+        return 'general';
     }
 
     public function uploadLogo(Request $request): JsonResponse
