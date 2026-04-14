@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 
@@ -43,6 +44,7 @@ const CHANNELS = [
 
 export function Notifications() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [step, setStep] = useState<Step>(1)
   const [form, setForm] = useState({
@@ -228,7 +230,7 @@ export function Notifications() {
             </thead>
             <tbody className="divide-y divide-dark-border">
               {campaigns.map(c => (
-                <tr key={c.id} className="hover:bg-dark-surface2 transition-colors">
+                <tr key={c.id} onClick={() => navigate(`/notifications/${c.id}`)} className="hover:bg-dark-surface2 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <p className="font-semibold text-white">{c.name}</p>
                     <p className="text-[#636366] text-xs mt-0.5 truncate max-w-xs">{c.template?.split('\n')[0]}</p>

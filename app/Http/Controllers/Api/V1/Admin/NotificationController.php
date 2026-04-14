@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CampaignRecipient;
 use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use App\Models\NotificationCampaign;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationController extends Controller
 {
@@ -23,6 +25,70 @@ class NotificationController extends Controller
         return response()->json([
             'campaigns' => $campaigns,
             'total'     => $campaigns->count(),
+        ]);
+    }
+
+    /**
+     * Campaign detail + delivery analytics: per-channel counts, unique
+     * open count, timestamps-based open-over-time buckets, and the full
+     * recipient list with member/email/opened status.
+     */
+    public function show(int $id): JsonResponse
+    {
+        $campaign = NotificationCampaign::findOrFail($id);
+
+        $recipients = CampaignRecipient::with(['member.user', 'member.tier'])
+            ->where('campaign_id', $id)
+            ->orderByDesc('opened_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $byChannel = $recipients->groupBy('channel');
+        $pushStats = [
+            'sent'   => ($byChannel['push']    ?? collect())->where('status', 'sent')->count(),
+            'failed' => ($byChannel['push']    ?? collect())->where('status', 'failed')->count(),
+        ];
+        $emailStats = [
+            'sent'      => ($byChannel['email'] ?? collect())->where('status', 'sent')->count(),
+            'failed'    => ($byChannel['email'] ?? collect())->where('status', 'failed')->count(),
+            'opened'    => ($byChannel['email'] ?? collect())->whereNotNull('opened_at')->count(),
+            'total_opens' => (int) ($byChannel['email'] ?? collect())->sum('open_count'),
+        ];
+        $emailStats['open_rate'] = $emailStats['sent'] > 0
+            ? round($emailStats['opened'] / $emailStats['sent'] * 100, 1)
+            : 0.0;
+
+        // Open timeline — group opened_at by hour since send
+        $timeline = $recipients
+            ->filter(fn($r) => $r->opened_at && $r->sent_at)
+            ->groupBy(fn($r) => $r->opened_at->format('Y-m-d H:00'))
+            ->map(fn($bucket, $hour) => [
+                'hour'  => $hour,
+                'opens' => $bucket->count(),
+            ])
+            ->values();
+
+        return response()->json([
+            'campaign'   => $campaign,
+            'push'       => $pushStats,
+            'email'      => $emailStats,
+            'timeline'   => $timeline,
+            'recipients' => $recipients->map(fn($r) => [
+                'id'          => $r->id,
+                'channel'     => $r->channel,
+                'status'      => $r->status,
+                'email'       => $r->email,
+                'sent_at'     => $r->sent_at,
+                'opened_at'   => $r->opened_at,
+                'open_count'  => $r->open_count,
+                'error'       => $r->error,
+                'member'      => $r->member ? [
+                    'id'    => $r->member->id,
+                    'name'  => $r->member->user->name ?? 'Member',
+                    'email' => $r->member->user->email ?? null,
+                    'tier'  => $r->member->tier->name ?? null,
+                ] : null,
+            ]),
         ]);
     }
 
@@ -191,6 +257,13 @@ class NotificationController extends Controller
         foreach ($members as $member) {
             // Send push notification
             if ($sendPush && $member->expo_push_token) {
+                $pushRecipient = CampaignRecipient::create([
+                    'campaign_id'       => $campaign->id,
+                    'loyalty_member_id' => $member->id,
+                    'channel'           => 'push',
+                    'status'            => 'sent',
+                    'sent_at'           => now(),
+                ]);
                 try {
                     $this->notifications->send($member, [
                         'type'  => 'campaign',
@@ -199,13 +272,43 @@ class NotificationController extends Controller
                         'data'  => ['campaign_id' => $campaign->id],
                     ]);
                     $pushCount++;
-                } catch (\Exception) {}
+                } catch (\Throwable $e) {
+                    $pushRecipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
+                }
             }
 
-            // Send email
+            // Send email (with tracking pixel)
             if ($sendEmail && $emailTemplate) {
-                if ($this->notifications->sendCampaignEmail($member, $emailTemplate)) {
+                $member->loadMissing(['user', 'tier']);
+                $toEmail = $member->email_notifications ? ($member->user->email ?? null) : null;
+                if (!$toEmail) {
+                    continue;
+                }
+
+                $emailRecipient = CampaignRecipient::create([
+                    'campaign_id'       => $campaign->id,
+                    'loyalty_member_id' => $member->id,
+                    'channel'           => 'email',
+                    'email'             => $toEmail,
+                    'status'            => 'sent',
+                    'sent_at'           => now(),
+                ]);
+
+                try {
+                    $rendered = $emailTemplate->render($member);
+                    $pixel = '<img src="' . url('/api/v1/track/open/' . $emailRecipient->id) . '" alt="" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" />';
+                    $html = $rendered['html'];
+                    $html = str_contains($html, '</body>')
+                        ? str_replace('</body>', $pixel . '</body>', $html)
+                        : $html . $pixel;
+
+                    Mail::html($html, function ($message) use ($toEmail, $member, $rendered) {
+                        $message->to($toEmail, $member->user->name)
+                                ->subject($rendered['subject']);
+                    });
                     $emailCount++;
+                } catch (\Throwable $e) {
+                    $emailRecipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
                 }
             }
         }
@@ -214,6 +317,8 @@ class NotificationController extends Controller
             'status'           => 'sent',
             'sent_count'       => $pushCount,
             'email_sent_count' => $emailCount,
+            'target_count'     => $members->count(),
+            'sent_at'          => now(),
         ]);
 
         $parts = [];

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Admin\NfcController;
 use App\Http\Controllers\Api\V1\Admin\OffersAdminController;
 use App\Http\Controllers\Api\V1\Admin\AnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Api\V1\Public\CampaignTrackingController;
 use App\Http\Controllers\Api\V1\Member\NotificationController as MemberNotificationController;
 use App\Http\Controllers\Api\V1\Admin\SettingsController;
 use App\Http\Controllers\Api\V1\Admin\TierController;
@@ -64,6 +65,9 @@ Route::prefix('v1')->group(function () {
 
     // Public: fetch available plans from SaaS
     Route::get('plans', [AuthController::class, 'plans']);
+
+    // Public: email open-tracking pixel (no auth, no tenant scope)
+    Route::get('track/open/{recipient}', [CampaignTrackingController::class, 'open']);
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
     Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
@@ -246,6 +250,7 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
+            Route::get('campaigns/{id}',                  [AdminNotificationController::class, 'show']);
             Route::post('campaigns/preview-audience',     [AdminNotificationController::class, 'previewAudience']);
             Route::post('campaigns/send-test',            [AdminNotificationController::class, 'sendTest']);
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
