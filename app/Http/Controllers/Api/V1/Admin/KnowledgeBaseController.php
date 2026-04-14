@@ -186,9 +186,8 @@ class KnowledgeBaseController extends Controller
         $doc = KnowledgeDocument::where('organization_id', $request->user()->organization_id)
             ->findOrFail($id);
 
-        // Delete the file
-        $storagePath = str_replace('/storage/', '', $doc->file_path);
-        \Storage::disk('public')->delete($storagePath);
+        // Delete the file from whichever disk it is stored on (local or cloud).
+        \App\Services\MediaService::delete($doc->file_path);
 
         $doc->delete();
 

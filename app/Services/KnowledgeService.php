@@ -109,14 +109,32 @@ class KnowledgeService
      */
     public function processDocument(KnowledgeDocument $doc): void
     {
+        $tmpPath = null;
         try {
             $doc->update(['processing_status' => 'processing']);
 
-            $relativePath = str_starts_with($doc->file_path, '/storage/')
-                ? substr($doc->file_path, 9)
-                : $doc->file_path;
-            $fullPath = storage_path('app/public/' . $relativePath);
+            // Resolve the actual file path — handle both local and cloud (DO Spaces) storage.
+            if (str_starts_with($doc->file_path, 'http')) {
+                // Cloud storage URL — download to a temp file so text extraction works.
+                $ext = strtolower(pathinfo(parse_url($doc->file_path, PHP_URL_PATH), PATHINFO_EXTENSION));
+                $tmpPath = tempnam(sys_get_temp_dir(), 'kb_doc_') . ($ext ? ".{$ext}" : '');
+                $response = \Illuminate\Support\Facades\Http::timeout(120)->get($doc->file_path);
+                if ($response->failed()) {
+                    Log::error('Document download from cloud failed', ['url' => $doc->file_path, 'status' => $response->status()]);
+                    $doc->update(['processing_status' => 'failed']);
+                    return;
+                }
+                file_put_contents($tmpPath, $response->body());
+                $fullPath = $tmpPath;
+            } else {
+                $relativePath = str_starts_with($doc->file_path, '/storage/')
+                    ? substr($doc->file_path, 9)
+                    : $doc->file_path;
+                $fullPath = storage_path('app/public/' . $relativePath);
+            }
+
             if (!file_exists($fullPath)) {
+                Log::warning('Document file not found for processing', ['path' => $fullPath]);
                 $doc->update(['processing_status' => 'failed']);
                 return;
             }
@@ -137,7 +155,7 @@ class KnowledgeService
 
             $doc->update([
                 'extracted_text' => $text,
-                'chunks_count' => count($chunks),
+                'chunks_count'   => count($chunks),
                 'processing_status' => 'completed',
             ]);
         } catch (\Throwable $e) {
@@ -146,6 +164,11 @@ class KnowledgeService
                 'error' => $e->getMessage(),
             ]);
             $doc->update(['processing_status' => 'failed']);
+        } finally {
+            // Always clean up the temporary file if we created one.
+            if ($tmpPath && file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
         }
     }
 

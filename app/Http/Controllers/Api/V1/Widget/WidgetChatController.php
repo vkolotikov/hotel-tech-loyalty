@@ -548,7 +548,7 @@ class WidgetChatController extends Controller
         $provider = $modelConfig->provider ?? 'openai';
         $model = $modelConfig->model_name ?? 'gpt-4o';
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
-        $maxTokens = (int) ($modelConfig->max_tokens ?? 500);
+        $maxTokens = (int) ($modelConfig->max_tokens ?? 1024);
         $extraParams = array_filter([
             'top_p'             => $modelConfig->top_p ?? null,
             'frequency_penalty' => $modelConfig->frequency_penalty ?? null,
@@ -1031,6 +1031,13 @@ class WidgetChatController extends Controller
     {
         $parts = [];
 
+        // Admin-configured language overrides browser language detection.
+        // If admin set "English" in Behavior Config, the bot always replies in English
+        // regardless of what language the visitor's browser reports.
+        if ($config && !empty($config->language) && $config->language !== 'auto') {
+            $userLang = $config->language;
+        }
+
         // Language instruction — match the user's browser/voice locale so replies are in their language.
         if ($userLang) {
             $langMap = [
@@ -1049,7 +1056,11 @@ class WidgetChatController extends Controller
         }
 
         if ($config && $config->identity) {
-            $parts[] = $config->identity;
+            // Inject the assistant name at the front of the identity block so it is
+            // always included, even when the admin has written a full custom persona.
+            $name = $config->assistant_name ?? 'Hotel Assistant';
+            $nameIntro = "Your name is {$name}" . ($companyName ? ", the AI assistant for {$companyName}" : '') . ".";
+            $parts[] = $nameIntro . " " . $config->identity;
         } else {
             $name = $config->assistant_name ?? 'Hotel Assistant';
             $parts[] = "You are {$name}, a helpful hotel concierge AI assistant" . ($companyName ? " for {$companyName}" : '') . ".";
@@ -1093,7 +1104,11 @@ class WidgetChatController extends Controller
             }
 
             if ($config->escalation_policy) {
-                $parts[] = "Escalation: {$config->escalation_policy}";
+                $parts[] = "Escalation handling: {$config->escalation_policy}";
+            }
+
+            if (!empty($config->fallback_message)) {
+                $parts[] = "If you truly cannot answer a question and have no relevant information, respond with: \"{$config->fallback_message}\"";
             }
 
             if ($config->custom_instructions) {
@@ -1101,7 +1116,7 @@ class WidgetChatController extends Controller
             }
         }
 
-        $parts[] = "You are chatting with a website visitor. You do not have access to their loyalty account.";
+        $parts[] = "You are chatting with a website visitor. You do not have access to their personal loyalty account data.";
         $parts[] = "Date: " . now()->format('Y-m-d');
 
         if ($knowledgeContext) {

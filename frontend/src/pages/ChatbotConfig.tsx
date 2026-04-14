@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Bot, Save, Plus, X } from 'lucide-react'
+import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const SALES_STYLES = [
@@ -45,31 +45,36 @@ const LANGUAGES = [
 ]
 
 const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', models: [
-    { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
-    { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
-    { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
-    { value: 'gpt-5.3', label: 'GPT-5.3' },
-    { value: 'gpt-5.3-mini', label: 'GPT-5.3 Mini' },
-    { value: 'o3', label: 'o3 (reasoning)' },
-    { value: 'o4-mini', label: 'o4-mini (reasoning, fast)' },
-    { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'openai', label: 'OpenAI', defaultModel: 'gpt-4.1', models: [
+    { value: 'gpt-4.1',          label: 'GPT-4.1 — best for sales & hospitality ★' },
+    { value: 'gpt-4.1-mini',     label: 'GPT-4.1 Mini — fast & affordable' },
+    { value: 'gpt-4.1-nano',     label: 'GPT-4.1 Nano — fastest response' },
+    { value: 'gpt-4o',           label: 'GPT-4o — multimodal, highly capable' },
+    { value: 'gpt-4o-mini',      label: 'GPT-4o Mini' },
+    { value: 'o3',               label: 'o3 — deep reasoning (slow)' },
+    { value: 'o4-mini',          label: 'o4-mini — fast reasoning' },
+    { value: 'gpt-5',            label: 'GPT-5 (if available on your account)' },
+    { value: 'gpt-5-mini',       label: 'GPT-5 Mini (if available on your account)' },
   ]},
-  { value: 'anthropic', label: 'Anthropic', models: [
-    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (most capable)' },
-    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fastest)' },
+  { value: 'anthropic', label: 'Anthropic (Claude)', defaultModel: 'claude-opus-4-6', models: [
+    { value: 'claude-opus-4-6',             label: 'Claude Opus 4.6 — most intelligent ★' },
+    { value: 'claude-sonnet-4-6',           label: 'Claude Sonnet 4.6 — balanced speed & quality' },
+    { value: 'claude-haiku-4-5-20251001',   label: 'Claude Haiku 4.5 — fastest & cheapest' },
   ]},
-  { value: 'google', label: 'Google', models: [
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (latest)' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { value: 'google', label: 'Google (Gemini)', defaultModel: 'gemini-2.5-pro', models: [
+    { value: 'gemini-2.5-pro',              label: 'Gemini 2.5 Pro — best reasoning & context ★' },
+    { value: 'gemini-2.5-flash',            label: 'Gemini 2.5 Flash — fast & cost-effective' },
+    { value: 'gemini-2.5-flash-lite-preview-06-17', label: 'Gemini 2.5 Flash Lite — fastest' },
+    { value: 'gemini-2.0-flash',            label: 'Gemini 2.0 Flash' },
   ]},
 ]
+
+/** Provider → recommended model for a luxury sales agent */
+const PROVIDER_RECOMMENDED: Record<string, string> = {
+  openai: 'gpt-4.1',
+  anthropic: 'claude-opus-4-6',
+  google: 'gemini-2.5-pro',
+}
 
 export function ChatbotConfig() {
   const qc = useQueryClient()
@@ -141,6 +146,7 @@ export function ChatbotConfig() {
     updateBehavior('core_rules', rules)
   }
 
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const selectedProvider = PROVIDERS.find(p => p.value === (mForm.provider || 'openai'))
   const isLoading = loadingBehavior || loadingModel
   const isSaving = saveBehavior.isPending || saveModel.isPending
@@ -162,7 +168,12 @@ export function ChatbotConfig() {
         <div className="space-y-6">
           {/* AI Model */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">AI Model</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">AI Model</h2>
+              <span className="text-xs text-t-secondary bg-dark-hover px-2 py-1 rounded-lg">
+                ★ = recommended for luxury hospitality
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -170,9 +181,10 @@ export function ChatbotConfig() {
                 <select
                   value={mForm.provider || 'openai'}
                   onChange={e => {
-                    updateModel('provider', e.target.value)
-                    const prov = PROVIDERS.find(p => p.value === e.target.value)
-                    if (prov) updateModel('model_name', prov.models[0].value)
+                    const providerKey = e.target.value
+                    updateModel('provider', providerKey)
+                    const recommended = PROVIDER_RECOMMENDED[providerKey]
+                    if (recommended) updateModel('model_name', recommended)
                   }}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
@@ -182,13 +194,72 @@ export function ChatbotConfig() {
               <div>
                 <label className="block text-sm text-t-secondary mb-1">Model</label>
                 <select
-                  value={mForm.model_name || 'gpt-4o'}
+                  value={mForm.model_name || 'gpt-4.1'}
                   onChange={e => updateModel('model_name', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
                   {(selectedProvider?.models || []).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Advanced Settings */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors"
+              >
+                {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                Advanced Settings
+              </button>
+
+              {showAdvanced && (
+                <div className="mt-4 space-y-4 border border-dark-border rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-sm text-t-secondary">Temperature</label>
+                        <span className="text-xs text-t-secondary">({(mForm.temperature ?? 0.7).toFixed(1)})</span>
+                        <span title="Controls creativity. Lower = more factual, higher = more creative. 0.7 is recommended for hospitality.">
+                          <Info size={11} className="text-t-secondary cursor-help" />
+                        </span>
+                      </div>
+                      <input
+                        type="range" min="0" max="1" step="0.05"
+                        value={mForm.temperature ?? 0.7}
+                        onChange={e => updateModel('temperature', parseFloat(e.target.value))}
+                        className="w-full accent-primary-500"
+                      />
+                      <div className="flex justify-between text-xs text-t-secondary mt-0.5">
+                        <span>Precise (0.0)</span><span>Creative (1.0)</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-sm text-t-secondary">Max Response Tokens</label>
+                        <span className="text-xs text-t-secondary">({mForm.max_tokens ?? 1024})</span>
+                        <span title="Maximum length of AI response. 1024 allows ~750 words — good for detailed hotel info. Increase for very long answers.">
+                          <Info size={11} className="text-t-secondary cursor-help" />
+                        </span>
+                      </div>
+                      <input
+                        type="range" min="200" max="4096" step="128"
+                        value={mForm.max_tokens ?? 1024}
+                        onChange={e => updateModel('max_tokens', parseInt(e.target.value))}
+                        className="w-full accent-primary-500"
+                      />
+                      <div className="flex justify-between text-xs text-t-secondary mt-0.5">
+                        <span>Short (200)</span><span>Detailed (4096)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-t-secondary">
+                    For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.
+                    Note: reasoning models (o3, o4) ignore temperature.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

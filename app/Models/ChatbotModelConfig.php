@@ -35,13 +35,13 @@ class ChatbotModelConfig extends Model
         return static::where('organization_id', $orgId)->first()
             ?? new static([
                 'organization_id' => $orgId,
-                'provider' => 'openai',
-                'model_name' => 'gpt-4o',
-                'temperature' => 0.70,
-                'top_p' => 1.00,
-                'max_tokens' => 500,
+                'provider'          => 'openai',
+                'model_name'        => 'gpt-4.1',
+                'temperature'       => 0.70,
+                'top_p'             => 1.00,
+                'max_tokens'        => 1024,   // raised from 500 — allows richer luxury responses
                 'frequency_penalty' => 0.00,
-                'presence_penalty' => 0.00,
+                'presence_penalty'  => 0.00,
             ]);
     }
 }

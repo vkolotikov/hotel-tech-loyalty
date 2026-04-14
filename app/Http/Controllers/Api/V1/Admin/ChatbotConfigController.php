@@ -113,7 +113,7 @@ class ChatbotConfigController extends Controller
         $provider = $model->provider ?? 'openai';
         $modelName = $model->model_name ?? 'gpt-4o';
         $temperature = (float) ($model->temperature ?? 0.7);
-        $maxTokens = (int) ($model->max_tokens ?? 500);
+        $maxTokens = (int) ($model->max_tokens ?? 1024);
         $extraParams = array_filter([
             'top_p'             => $model->top_p ?? null,
             'frequency_penalty' => $model->frequency_penalty ?? null,
