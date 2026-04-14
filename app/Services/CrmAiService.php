@@ -388,6 +388,12 @@ Capabilities — grouped by module:
 - Canned Replies: agent quick-insert library
 - Training: OpenAI fine-tune jobs from graded conversations + FAQ data
 
+**Reviews & Feedback:**
+- List recent review submissions (filter by rating, form, date range)
+- Read invitation funnel: sent / opened / submitted / redirected / failed
+- Send a review invitation by email — to a member, guest, booking, or ad-hoc address — picking one of the org's active forms
+- Forms split by type: Basic (star+comment with threshold-redirect to Google/TripAdvisor/Trustpilot) and Custom (admin-built questionnaires). Post-stay auto-sweep runs daily for forms that opted in.
+
 **Analytics & AI:**
 - Generate weekly performance reports (with optional email delivery)
 - Detect anomalies: unusual transactions, inactive VIPs, revenue outliers, cancellation spikes

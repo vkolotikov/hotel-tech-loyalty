@@ -236,8 +236,34 @@ class CrmAiToolset
                 'value' => ['type' => 'string', 'description' => 'New value (required)'],
             ], ['key', 'value']),
 
+            // ── Reviews & Feedback Tools ──
+            $this->tool('list_review_forms', 'List review forms configured for this organization. Each form has id, name, type (basic|custom), is_active, is_default, and config.', [
+                'active_only' => ['type' => 'boolean', 'description' => 'Only return is_active=true forms (default true)'],
+            ], []),
+
+            $this->tool('get_review_stats', 'Get aggregate review stats: submission count, average overall rating, NPS, rating distribution, invitation funnel (sent/opened/submitted/redirected/failed).', [
+                'form_id'   => ['type' => 'integer', 'description' => 'Filter to a single form (optional)'],
+                'days'      => ['type' => 'integer', 'description' => 'Rolling window in days (default 30)'],
+            ], []),
+
+            $this->tool('list_recent_reviews', 'List recent review submissions, newest first. Supports rating/form filters.', [
+                'form_id'    => ['type' => 'integer', 'description' => 'Filter by form id (optional)'],
+                'min_rating' => ['type' => 'integer', 'description' => 'Only reviews with overall_rating >= N'],
+                'max_rating' => ['type' => 'integer', 'description' => 'Only reviews with overall_rating <= N'],
+                'limit'      => ['type' => 'integer', 'description' => 'Max rows (default 10, max 50)'],
+            ], []),
+
+            $this->tool('send_review_invitation', 'Send a review invitation email. Exactly one of member_id / guest_id / email must be provided. If form_id is omitted, picks the default active form.', [
+                'member_id' => ['type' => 'integer', 'description' => 'LoyaltyMember ID'],
+                'guest_id'  => ['type' => 'integer', 'description' => 'Guest ID'],
+                'email'     => ['type' => 'string', 'description' => 'Ad-hoc recipient email (requires name)'],
+                'name'      => ['type' => 'string', 'description' => 'Ad-hoc recipient name (pairs with email)'],
+                'form_id'   => ['type' => 'integer', 'description' => 'Specific form id (optional)'],
+                'subject'   => ['type' => 'string', 'description' => 'Override email subject (optional)'],
+            ], []),
+
             $this->tool('get_system_guide', 'Get comprehensive guide on how to use this hotel platform. Covers all modules, best practices, use cases, security, integrations, configuration, and FAQ. Use when user asks "how do I...", "what can I do with...", "best practices for...", or any platform guidance questions.', [
-                'topic' => ['type' => 'string', 'description' => 'Topic slug: overview, crm, loyalty, live-chat, booking-engine, ai-system, analytics, campaigns, venues-events, security, integrations, configuration, use-cases, or "all" for complete docs (default: all)'],
+                'topic' => ['type' => 'string', 'description' => 'Topic slug: overview, crm, loyalty, live-chat, booking-engine, reviews, ai-system, analytics, campaigns, venues-events, security, integrations, configuration, use-cases, or "all" for complete docs (default: all)'],
             ], []),
 
             $this->tool('get_system_health', 'Check system health: configured integrations, data counts, sync status, API keys status, recent errors.', [], []),
@@ -289,6 +315,10 @@ class CrmAiToolset
                 'update_pms_booking'     => $this->toolUpdatePmsBooking($in),
                 'get_settings'           => $this->toolGetSettings($in),
                 'update_setting'         => $this->toolUpdateSetting($in),
+                'list_review_forms'      => $this->toolListReviewForms($in),
+                'get_review_stats'       => $this->toolGetReviewStats($in),
+                'list_recent_reviews'    => $this->toolListRecentReviews($in),
+                'send_review_invitation' => $this->toolSendReviewInvitation($in),
                 'get_system_guide'       => $this->toolGetSystemGuide($in),
                 'get_system_health'      => $this->toolGetSystemHealth(),
                 default                  => ['success' => false, 'data' => ['error' => "Unknown tool: $name"]],
@@ -1132,5 +1162,144 @@ class CrmAiToolset
         ];
 
         return ['success' => true, 'data' => $health];
+    }
+
+    /* ────────── Reviews Tools ────────── */
+
+    private function toolListReviewForms(array $in): array
+    {
+        $activeOnly = $in['active_only'] ?? true;
+        $q = \App\Models\ReviewForm::query();
+        if ($activeOnly) $q->where('is_active', true);
+        $forms = $q->orderByDesc('is_default')->orderBy('name')->get()
+            ->map(fn($f) => [
+                'id'         => $f->id,
+                'name'       => $f->name,
+                'type'       => $f->type,
+                'is_active'  => (bool) $f->is_active,
+                'is_default' => (bool) $f->is_default,
+                'auto_send_post_stay'   => (bool) ($f->config['auto_send_post_stay'] ?? false),
+                'auto_send_delay_days'  => (int) ($f->config['auto_send_delay_days'] ?? 0),
+                'redirect_threshold'    => $f->config['redirect_threshold'] ?? null,
+            ])->toArray();
+
+        return ['success' => true, 'data' => ['forms' => $forms, 'count' => count($forms)]];
+    }
+
+    private function toolGetReviewStats(array $in): array
+    {
+        $days = max(1, (int) ($in['days'] ?? 30));
+        $since = now()->subDays($days);
+        $formId = $in['form_id'] ?? null;
+
+        $subQ = \App\Models\ReviewSubmission::query()->where('submitted_at', '>=', $since);
+        $invQ = \App\Models\ReviewInvitation::query()->where('sent_at', '>=', $since);
+        if ($formId) {
+            $subQ->where('form_id', $formId);
+            $invQ->where('form_id', $formId);
+        }
+
+        $subs = $subQ->get(['overall_rating', 'nps_score', 'redirected_externally']);
+        $ratings = $subs->pluck('overall_rating')->filter()->values();
+        $nps     = $subs->pluck('nps_score')->filter(fn($v) => $v !== null)->values();
+
+        $distribution = [];
+        for ($i = 1; $i <= 5; $i++) $distribution[$i] = 0;
+        foreach ($ratings as $r) if (isset($distribution[$r])) $distribution[$r]++;
+
+        $npsScore = null;
+        if ($nps->count() > 0) {
+            $promoters  = $nps->filter(fn($v) => $v >= 9)->count();
+            $detractors = $nps->filter(fn($v) => $v <= 6)->count();
+            $npsScore = (int) round((($promoters - $detractors) / $nps->count()) * 100);
+        }
+
+        $funnel = [
+            'sent'       => (clone $invQ)->count(),
+            'opened'     => (clone $invQ)->whereNotNull('opened_at')->count(),
+            'submitted'  => (clone $invQ)->whereNotNull('submitted_at')->count(),
+            'failed'     => (clone $invQ)->where('status', 'failed')->count(),
+            'redirected' => $subs->where('redirected_externally', true)->count(),
+        ];
+
+        return ['success' => true, 'data' => [
+            'window_days'         => $days,
+            'form_id'             => $formId,
+            'submissions'         => $subs->count(),
+            'avg_rating'          => $ratings->count() ? round($ratings->avg(), 2) : null,
+            'rating_distribution' => $distribution,
+            'nps_responses'       => $nps->count(),
+            'nps_score'           => $npsScore,
+            'invitation_funnel'   => $funnel,
+        ]];
+    }
+
+    private function toolListRecentReviews(array $in): array
+    {
+        $limit = min(50, max(1, (int) ($in['limit'] ?? 10)));
+        $q = \App\Models\ReviewSubmission::with(['form:id,name,type', 'guest:id,name,email', 'member:id,user_id'])
+            ->orderByDesc('submitted_at');
+        if (!empty($in['form_id']))    $q->where('form_id', (int) $in['form_id']);
+        if (isset($in['min_rating']))  $q->where('overall_rating', '>=', (int) $in['min_rating']);
+        if (isset($in['max_rating']))  $q->where('overall_rating', '<=', (int) $in['max_rating']);
+
+        $rows = $q->limit($limit)->get()->map(fn($s) => [
+            'id'             => $s->id,
+            'form'           => $s->form ? ['id' => $s->form->id, 'name' => $s->form->name, 'type' => $s->form->type] : null,
+            'overall_rating' => $s->overall_rating,
+            'nps_score'      => $s->nps_score,
+            'comment'        => $s->comment,
+            'redirected_externally' => (bool) $s->redirected_externally,
+            'external_platform'     => $s->external_platform,
+            'guest_name'     => $s->guest?->name ?? $s->anonymous_name,
+            'guest_email'    => $s->guest?->email ?? $s->anonymous_email,
+            'submitted_at'   => $s->submitted_at?->toDateTimeString(),
+        ])->toArray();
+
+        return ['success' => true, 'data' => ['reviews' => $rows, 'count' => count($rows)]];
+    }
+
+    private function toolSendReviewInvitation(array $in): array
+    {
+        $memberId = $in['member_id'] ?? null;
+        $guestId  = $in['guest_id'] ?? null;
+        $email    = $in['email'] ?? null;
+
+        $provided = collect([$memberId, $guestId, $email])->filter()->count();
+        if ($provided !== 1) {
+            return ['success' => false, 'data' => ['error' => 'Provide exactly one of member_id, guest_id, or email.']];
+        }
+
+        $form = !empty($in['form_id'])
+            ? \App\Models\ReviewForm::where('is_active', true)->find((int) $in['form_id'])
+            : \App\Models\ReviewForm::where('is_active', true)->orderByDesc('is_default')->first();
+
+        if (!$form) {
+            return ['success' => false, 'data' => ['error' => 'No active review form available.']];
+        }
+
+        if ($memberId) {
+            $recipient = LoyaltyMember::with('user')->find((int) $memberId);
+            if (!$recipient) return ['success' => false, 'data' => ['error' => 'Member not found.']];
+        } elseif ($guestId) {
+            $recipient = Guest::find((int) $guestId);
+            if (!$recipient) return ['success' => false, 'data' => ['error' => 'Guest not found.']];
+        } else {
+            $recipient = ['name' => $in['name'] ?? 'Guest', 'email' => $email];
+        }
+
+        $options = [];
+        if (!empty($in['subject'])) $options['subject'] = $in['subject'];
+
+        $svc = app(\App\Services\ReviewInvitationService::class);
+        $invitation = $svc->sendEmail($form, $recipient, $options);
+
+        return ['success' => true, 'data' => [
+            'invitation_id' => $invitation->id,
+            'form_id'       => $form->id,
+            'form_name'     => $form->name,
+            'status'        => $invitation->status,
+            'token'         => $invitation->token,
+        ]];
     }
 }
