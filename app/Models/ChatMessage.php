@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class ChatMessage extends Model
 {
+    use BelongsToOrganization;
+
     public $timestamps = false;
 
     protected $fillable = [
+        'organization_id',
         'conversation_id',
         'sender_type',
         'sender_user_id',
