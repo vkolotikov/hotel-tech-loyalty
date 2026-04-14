@@ -246,6 +246,8 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
+            Route::post('campaigns/preview-audience',     [AdminNotificationController::class, 'previewAudience']);
+            Route::post('campaigns/send-test',            [AdminNotificationController::class, 'sendTest']);
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
 
             // ─── Email Templates ─────────────────────────────────────────────

@@ -45,6 +45,10 @@ const BLOCK_LIBRARY: { type: Block['type']; label: string; make: () => Block }[]
   { type: 'image', label: 'Image', make: () => ({ type: 'image', url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600', alt: '' }) },
   { type: 'quote', label: 'Quote', make: () => ({ type: 'quote', content: 'A thoughtful line worth emphasising.', author: '' }) },
   { type: 'spacer', label: 'Spacer', make: () => ({ type: 'spacer', size: 'md' }) },
+  { type: 'hero', label: 'Hero Image', make: () => ({ type: 'hero', imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80', headline: 'Your headline', subheadline: '', overlay: 'dark' }) },
+  { type: 'twoColumn', label: 'Two Columns', make: () => ({ type: 'twoColumn', leftHeading: 'Left', leftText: 'Left column copy.', rightHeading: 'Right', rightText: 'Right column copy.' }) },
+  { type: 'voucher', label: 'Voucher', make: () => ({ type: 'voucher', title: 'Gift', value: '€100', code: 'GIFT-CODE', terms: '' }) },
+  { type: 'stats', label: 'Stats Row', make: () => ({ type: 'stats', items: [ { value: '19:30', label: 'Arrival' }, { value: 'Black Tie', label: 'Attire' }, { value: 'RSVP', label: 'By Friday' } ] }) },
 ]
 
 export function EmailTemplates() {
@@ -819,6 +823,163 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
       )
     case 'divider':
       return <div className="text-[11px] text-[#636366] italic">Thin horizontal line in divider color</div>
+    case 'hero':
+      return (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={block.imageUrl}
+            onChange={e => onChange({ imageUrl: e.target.value } as Partial<Block>)}
+            placeholder="Background image URL"
+            className={cls}
+          />
+          <input
+            type="text"
+            value={block.headline}
+            onChange={e => onChange({ headline: e.target.value } as Partial<Block>)}
+            placeholder="Headline"
+            className={cls}
+          />
+          <input
+            type="text"
+            value={block.subheadline ?? ''}
+            onChange={e => onChange({ subheadline: e.target.value } as Partial<Block>)}
+            placeholder="Subheadline (optional)"
+            className={cls}
+          />
+          <div className="flex gap-2">
+            {(['dark', 'light', 'none'] as const).map(o => (
+              <button
+                key={o}
+                onClick={() => onChange({ overlay: o } as Partial<Block>)}
+                className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
+                  (block.overlay ?? 'dark') === o
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-[#111] text-t-secondary border border-dark-border'
+                }`}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    case 'twoColumn':
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="text"
+            value={block.leftHeading ?? ''}
+            onChange={e => onChange({ leftHeading: e.target.value } as Partial<Block>)}
+            placeholder="Left heading"
+            className={cls}
+          />
+          <input
+            type="text"
+            value={block.rightHeading ?? ''}
+            onChange={e => onChange({ rightHeading: e.target.value } as Partial<Block>)}
+            placeholder="Right heading"
+            className={cls}
+          />
+          <textarea
+            value={block.leftText}
+            onChange={e => onChange({ leftText: e.target.value } as Partial<Block>)}
+            rows={3}
+            className={cls + ' resize-y'}
+          />
+          <textarea
+            value={block.rightText}
+            onChange={e => onChange({ rightText: e.target.value } as Partial<Block>)}
+            rows={3}
+            className={cls + ' resize-y'}
+          />
+        </div>
+      )
+    case 'voucher':
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              value={block.title}
+              onChange={e => onChange({ title: e.target.value } as Partial<Block>)}
+              placeholder="Title (e.g. Member Gift)"
+              className={cls}
+            />
+            <input
+              type="text"
+              value={block.value}
+              onChange={e => onChange({ value: e.target.value } as Partial<Block>)}
+              placeholder="Value (e.g. €100)"
+              className={cls}
+            />
+          </div>
+          <input
+            type="text"
+            value={block.code}
+            onChange={e => onChange({ code: e.target.value } as Partial<Block>)}
+            placeholder="Voucher code"
+            className={cls}
+          />
+          <input
+            type="text"
+            value={block.terms ?? ''}
+            onChange={e => onChange({ terms: e.target.value } as Partial<Block>)}
+            placeholder="Terms (optional)"
+            className={cls}
+          />
+        </div>
+      )
+    case 'stats':
+      return (
+        <div className="space-y-2">
+          {block.items.map((it, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <input
+                type="text"
+                value={it.value}
+                onChange={e => {
+                  const items = [...block.items]
+                  items[idx] = { ...items[idx], value: e.target.value }
+                  onChange({ items } as Partial<Block>)
+                }}
+                placeholder="Value"
+                className={cls}
+              />
+              <input
+                type="text"
+                value={it.label}
+                onChange={e => {
+                  const items = [...block.items]
+                  items[idx] = { ...items[idx], label: e.target.value }
+                  onChange({ items } as Partial<Block>)
+                }}
+                placeholder="Label"
+                className={cls}
+              />
+              <button
+                onClick={() => {
+                  const items = block.items.filter((_, i) => i !== idx)
+                  onChange({ items } as Partial<Block>)
+                }}
+                className="w-6 h-6 rounded text-xs text-[#ff6680] hover:bg-[#ff375f]/15"
+                title="Remove"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              const items = [...block.items, { value: '', label: '' }]
+              onChange({ items } as Partial<Block>)
+            }}
+            className="text-[11px] font-semibold text-primary-400 hover:text-primary-300"
+          >
+            + Add stat
+          </button>
+        </div>
+      )
   }
 }
 
