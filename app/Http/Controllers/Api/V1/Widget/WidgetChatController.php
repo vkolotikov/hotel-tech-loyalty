@@ -554,6 +554,7 @@ class WidgetChatController extends Controller
             'frequency_penalty' => $modelConfig->frequency_penalty ?? null,
             'presence_penalty'  => $modelConfig->presence_penalty ?? null,
             'stop_sequences'    => $modelConfig->stop_sequences ?? null,
+            'reasoning_effort'  => $modelConfig->reasoning_effort ?? 'low',
         ], fn($v) => $v !== null);
 
         try {

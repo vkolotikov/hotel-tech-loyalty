@@ -30,7 +30,7 @@ const COLOR_PRESETS = ['#c9a84c', '#2d6a4f', '#1d4ed8', '#7c3aed', '#dc2626', '#
 const FONT_OPTIONS = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montserrat', 'Nunito', 'Playfair Display', 'Georgia', 'system-ui']
 const LAUNCHER_SHAPES = ['circle', 'rounded-square', 'pill', 'square'] as const
 const LAUNCHER_ICONS = ['chat', 'message', 'support', 'question', 'sales'] as const
-const VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse']
+const VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'marin', 'nova', 'onyx', 'sage', 'shimmer', 'verse']
 
 const STORAGE_KEY = 'loyalty-chatbot-widget-tab'
 
@@ -594,11 +594,13 @@ export function ChatbotWidget() {
           <div>
             <label className={label}>Realtime Model</label>
             <select value={v.realtime_model || 'gpt-4o-realtime-preview'} onChange={e => updateVoice('realtime_model', e.target.value)} className={input}>
-              <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview (latest)</option>
+              <option value="gpt-realtime-1.5">gpt-realtime-1.5 — latest GPT-5 realtime ★</option>
+              <option value="gpt-realtime-mini">gpt-realtime-mini — fast & affordable GPT-5 realtime</option>
+              <option value="gpt-4.1-realtime-preview">gpt-4.1-realtime-preview — stable GPT-4.1</option>
+              <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview</option>
               <option value="gpt-4o-realtime-preview-2025-06-03">gpt-4o-realtime-preview-2025-06-03</option>
               <option value="gpt-4o-realtime-preview-2024-12-17">gpt-4o-realtime-preview-2024-12-17</option>
               <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview (cheap)</option>
-              <option value="gpt-4.1-realtime-preview">gpt-4.1-realtime-preview (newest)</option>
             </select>
           </div>
           <div>

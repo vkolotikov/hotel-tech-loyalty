@@ -39,26 +39,57 @@ trait DispatchesAiChat
 
     private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
     {
-        $allMessages = array_merge([['role' => 'system', 'content' => $system]], $messages);
+        // Classify the model into one of three families:
+        //   gpt5   — gpt-5.x (e.g. gpt-5, gpt-5.4, gpt-5-mini, gpt-5-nano, gpt-5.4-pro)
+        //            → max_output_tokens, reasoning_effort, developer role; no temperature unless effort=none
+        //   oSeries — o1/o3/o4 reasoning models
+        //            → max_completion_tokens only; no temperature, no penalties
+        //   classic — gpt-4.x, gpt-4o, gpt-3.5, etc.
+        //            → max_tokens + temperature + all penalties
+        $isGpt5   = (bool) preg_match('/^gpt-5/i', $model);
+        $isOSeries = !$isGpt5 && (bool) preg_match('/^(o1|o3|o4)/i', $model);
+        $isClassic = !$isGpt5 && !$isOSeries;
 
-        // Reasoning models (o1/o3/o4) and GPT-5 family require `max_completion_tokens`
-        // instead of `max_tokens`, and only accept the default temperature (1).
-        $isNewFamily = (bool) preg_match('/^(o1|o3|o4|gpt-5)/i', $model);
+        // For gpt-5.x: use 'developer' role instead of 'system'
+        $systemRole  = $isGpt5 ? 'developer' : 'system';
+        $allMessages = array_merge([['role' => $systemRole, 'content' => $system]], $messages);
 
         $params = [
             'model'    => $model,
             'messages' => $allMessages,
         ];
 
-        if ($isNewFamily) {
+        if ($isGpt5) {
+            // GPT-5.x uses max_output_tokens (not max_completion_tokens or max_tokens)
+            $params['max_output_tokens'] = $maxTokens;
+
+            // reasoning_effort: none/low/medium/high/xhigh (default: low for fast sales responses)
+            $effort = $extra['reasoning_effort'] ?? 'low';
+            $params['reasoning_effort'] = $effort;
+
+            // Temperature is only valid when reasoning is disabled
+            if ($effort === 'none') {
+                $params['temperature'] = $temp;
+                if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
+                    $params['top_p'] = (float) $extra['top_p'];
+                }
+                if (isset($extra['frequency_penalty']) && $extra['frequency_penalty'] > 0) {
+                    $params['frequency_penalty'] = (float) $extra['frequency_penalty'];
+                }
+                if (isset($extra['presence_penalty']) && $extra['presence_penalty'] > 0) {
+                    $params['presence_penalty'] = (float) $extra['presence_penalty'];
+                }
+            }
+            if (!empty($extra['stop_sequences'])) {
+                $params['stop'] = $extra['stop_sequences'];
+            }
+        } elseif ($isOSeries) {
+            // o1/o3/o4: only max_completion_tokens — no temperature, no penalties
             $params['max_completion_tokens'] = $maxTokens;
         } else {
+            // Classic GPT-4.x / GPT-4o / GPT-3.5
             $params['max_tokens']  = $maxTokens;
             $params['temperature'] = $temp;
-        }
-
-        // Apply optional tuning params from model config (only for non-reasoning models)
-        if (!$isNewFamily) {
             if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
                 $params['top_p'] = (float) $extra['top_p'];
             }

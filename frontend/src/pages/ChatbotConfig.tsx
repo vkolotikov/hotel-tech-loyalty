@@ -46,15 +46,18 @@ const LANGUAGES = [
 
 const PROVIDERS = [
   { value: 'openai', label: 'OpenAI', defaultModel: 'gpt-4.1', models: [
-    { value: 'gpt-4.1',          label: 'GPT-4.1 — best for sales & hospitality ★' },
+    { value: 'gpt-5.4-pro',      label: 'GPT-5.4 Pro — top-tier reasoning & luxury sales ★' },
+    { value: 'gpt-5.4',          label: 'GPT-5.4 — flagship GPT-5 model' },
+    { value: 'gpt-5',            label: 'GPT-5 — latest alias' },
+    { value: 'gpt-5-mini',       label: 'GPT-5 Mini — fast GPT-5' },
+    { value: 'gpt-5-nano',       label: 'GPT-5 Nano — fastest & cheapest GPT-5' },
+    { value: 'gpt-4.1',          label: 'GPT-4.1 — best stable model for hospitality' },
     { value: 'gpt-4.1-mini',     label: 'GPT-4.1 Mini — fast & affordable' },
     { value: 'gpt-4.1-nano',     label: 'GPT-4.1 Nano — fastest response' },
     { value: 'gpt-4o',           label: 'GPT-4o — multimodal, highly capable' },
     { value: 'gpt-4o-mini',      label: 'GPT-4o Mini' },
     { value: 'o3',               label: 'o3 — deep reasoning (slow)' },
     { value: 'o4-mini',          label: 'o4-mini — fast reasoning' },
-    { value: 'gpt-5',            label: 'GPT-5 (if available on your account)' },
-    { value: 'gpt-5-mini',       label: 'GPT-5 Mini (if available on your account)' },
   ]},
   { value: 'anthropic', label: 'Anthropic (Claude)', defaultModel: 'claude-opus-4-6', models: [
     { value: 'claude-opus-4-6',             label: 'Claude Opus 4.6 — most intelligent ★' },
@@ -254,9 +257,36 @@ export function ChatbotConfig() {
                       </div>
                     </div>
                   </div>
+                  {/* Reasoning effort — only relevant for GPT-5.x models */}
+                  {(mForm.model_name || '').startsWith('gpt-5') && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-sm text-t-secondary">Reasoning Effort</label>
+                        <span title="Controls how much GPT-5.x 'thinks' before answering. Higher effort = slower but deeper. For a fast sales chatbot, 'low' is ideal. Temperature is ignored unless set to 'none'.">
+                          <Info size={11} className="text-t-secondary cursor-help" />
+                        </span>
+                      </div>
+                      <select
+                        value={mForm.reasoning_effort ?? 'low'}
+                        onChange={e => updateModel('reasoning_effort', e.target.value)}
+                        className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value="none">None — temperature active, fastest (like classic GPT)</option>
+                        <option value="low">Low — light reasoning, fast responses ★ recommended for chat</option>
+                        <option value="medium">Medium — balanced depth and speed</option>
+                        <option value="high">High — deep reasoning, slower responses</option>
+                        <option value="xhigh">xHigh — maximum reasoning, slowest (for complex analysis)</option>
+                      </select>
+                      {(mForm.reasoning_effort ?? 'low') !== 'none' && (
+                        <p className="text-xs text-amber-400 mt-1">
+                          Temperature and top_p are ignored when reasoning effort is active (none disables it).
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-t-secondary">
                     For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.
-                    Note: reasoning models (o3, o4) ignore temperature.
+                    Note: o3/o4 reasoning models and GPT-5.x (with effort &gt; none) ignore temperature.
                   </p>
                 </div>
               )}

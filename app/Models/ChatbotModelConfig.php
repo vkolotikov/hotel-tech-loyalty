@@ -19,6 +19,7 @@ class ChatbotModelConfig extends Model
         'frequency_penalty',
         'presence_penalty',
         'stop_sequences',
+        'reasoning_effort',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class ChatbotModelConfig extends Model
                 'max_tokens'        => 1024,   // raised from 500 — allows richer luxury responses
                 'frequency_penalty' => 0.00,
                 'presence_penalty'  => 0.00,
+                'reasoning_effort'  => 'low',  // used only by gpt-5.x models
             ]);
     }
 }

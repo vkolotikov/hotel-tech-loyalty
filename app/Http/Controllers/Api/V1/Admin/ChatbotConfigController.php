@@ -70,6 +70,7 @@ class ChatbotConfigController extends Controller
             'frequency_penalty' => 'nullable|numeric|between:0,2',
             'presence_penalty'  => 'nullable|numeric|between:0,2',
             'stop_sequences'    => 'nullable|array',
+            'reasoning_effort'  => 'nullable|in:none,low,medium,high,xhigh',
         ]);
 
         $orgId = $request->user()->organization_id;
@@ -119,6 +120,7 @@ class ChatbotConfigController extends Controller
             'frequency_penalty' => $model->frequency_penalty ?? null,
             'presence_penalty'  => $model->presence_penalty ?? null,
             'stop_sequences'    => $model->stop_sequences ?? null,
+            'reasoning_effort'  => $model->reasoning_effort ?? 'low',
         ], fn($v) => $v !== null);
 
         try {
