@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Hotel, Lock, Mail, User, Building2, ArrowRight, Star,
   Users, BarChart3, CreditCard, Shield, Sparkles, Check, ChevronRight,
-  ShieldCheck,
+  ShieldCheck, Eye, EyeOff, ArrowLeft,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
-type View = 'intro' | 'login' | 'trial' | 'verify'
+type View = 'intro' | 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
 type BillingInterval = 'monthly' | 'yearly'
 
 interface PlanData {
@@ -101,6 +101,14 @@ export function Login() {
   const [verified, setVerified] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Password reset state
+  const [showPassword, setShowPassword] = useState(false)
+  const [resetCode, setResetCode] = useState('')
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [resetSent, setResetSent] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
 
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -245,6 +253,53 @@ export function Login() {
         setView('verify')
         setVerified(false)
       }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      await api.post('/v1/auth/forgot-password', { email })
+      setResetSent(true)
+      setView('reset')
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not send reset code. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (resetPassword !== resetConfirm) {
+      setError('Passwords do not match.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      await api.post('/v1/auth/reset-password', {
+        email,
+        code: resetCode,
+        password: resetPassword,
+        password_confirmation: resetConfirm,
+      })
+      setResetDone(true)
+      setTimeout(() => {
+        setView('login')
+        setPassword(resetPassword)
+        setResetCode('')
+        setResetPassword('')
+        setResetConfirm('')
+        setResetDone(false)
+        setResetSent(false)
+      }, 1800)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid or expired reset code.')
     } finally {
       setLoading(false)
     }
@@ -461,26 +516,120 @@ export function Login() {
     )
   }
 
-  // ─── Login / Trial Form Views ───────────────────────────────────────────────
+  // ─── Login / Trial / Forgot / Reset Views — Split-screen premium ─────────
+  const isTrial = view === 'trial'
+  const isForgot = view === 'forgot'
+  const isReset = view === 'reset'
+
+  const heroTitle = isTrial
+    ? 'Run your whole hotel on one platform'
+    : isForgot || isReset
+      ? 'Locked out? No problem.'
+      : 'AI Hotel Management Systems'
+  const heroSubtitle = isTrial
+    ? 'CRM, Loyalty, Booking engine and AI Chatbot — included in your free trial.'
+    : isForgot
+      ? 'Enter your email and we\'ll send a 6-digit reset code. Valid for 15 minutes.'
+      : isReset
+        ? 'Enter the code from your email and choose a new password.'
+        : 'The unified platform for reservations, loyalty, guest chat and revenue — powered by AI.'
+
+  const formTitle = isTrial
+    ? 'Start your free trial'
+    : isForgot
+      ? 'Reset your password'
+      : isReset
+        ? 'Choose a new password'
+        : 'Welcome back'
+  const formSubtitle = isTrial
+    ? 'No credit card required. Cancel anytime.'
+    : isForgot
+      ? 'We\'ll email you a 6-digit code.'
+      : isReset
+        ? `Code sent to ${email}`
+        : 'Sign in to your HotelTech workspace'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <button onClick={() => setView('intro')} className="inline-block">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
-              <Hotel size={32} className="text-white" />
-            </div>
-          </button>
-          <h1 className="text-2xl font-bold text-white">Hotel Management System</h1>
-          <p className="text-gray-500 mt-1">
-            {view === 'login' ? 'Admin Dashboard' : 'Start Your Free Trial'}
-          </p>
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-[#060b1e] text-white">
+      {/* ─── Hero ──────────────────────────────────────────────── */}
+      <aside className="relative overflow-hidden hidden lg:flex flex-col justify-between p-14 border-r border-white/[0.06]"
+        style={{
+          background:
+            'radial-gradient(1200px 600px at 10% 0%, rgba(59,130,246,0.35), transparent 60%),' +
+            'radial-gradient(900px 500px at 100% 100%, rgba(14,165,233,0.28), transparent 60%),' +
+            'linear-gradient(135deg, #060b1e 0%, #0a1635 45%, #0b2556 100%)',
+        }}
+      >
+        <div aria-hidden className="absolute inset-0 pointer-events-none opacity-30"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px),' +
+              'linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)',
+            backgroundSize: '44px 44px',
+            maskImage: 'radial-gradient(ellipse at 50% 30%, #000 40%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at 50% 30%, #000 40%, transparent 75%)',
+          }}
+        />
+        <div aria-hidden className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full blur-[80px] bg-blue-500/40 pointer-events-none" />
+        <div aria-hidden className="absolute -bottom-36 -right-24 w-[380px] h-[380px] rounded-full blur-[80px] bg-sky-400/30 pointer-events-none" />
+
+        <button onClick={() => setView('intro')} className="relative z-10 inline-flex items-center gap-3 text-left">
+          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
+          <span className="text-[17px] font-semibold">HotelTech</span>
+        </button>
+
+        <div className="relative z-10 max-w-[520px]">
+          <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
+            AI-native hospitality suite
+          </span>
+          <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
+            {heroTitle}
+          </h2>
+          <p className="text-[16px] leading-[1.55] text-slate-400 max-w-[460px] mb-7">{heroSubtitle}</p>
+
+          <ul className="space-y-3">
+            {[
+              'Unified CRM, Loyalty & Booking engine',
+              'Smart AI chatbot for guests and staff',
+              'Smoobu PMS sync & revenue insights',
+            ].map((t) => (
+              <li key={t} className="flex gap-3 items-start text-sm text-slate-300">
+                <span className="shrink-0 w-[22px] h-[22px] rounded-full inline-flex items-center justify-center text-[12px] font-bold bg-green-500/15 text-green-400 border border-green-500/25">✓</span>
+                {t}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="bg-[#141419] rounded-2xl border border-white/[0.06] p-8">
-          <h2 className="text-xl font-semibold text-white mb-6">
-            {view === 'login' ? 'Sign in to your account' : 'Create your account'}
-          </h2>
+        <div className="relative z-10 text-xs text-slate-500">© {new Date().getFullYear()} HotelTech. All rights reserved.</div>
+      </aside>
+
+      {/* ─── Form column ───────────────────────────────────────── */}
+      <main className="relative flex flex-col justify-center px-5 py-8 sm:px-14 sm:py-12"
+        style={{
+          background:
+            'radial-gradient(circle at 80% 10%, rgba(59,130,246,0.08), transparent 55%), #0b1226',
+        }}
+      >
+        <button onClick={() => setView('intro')} className="lg:hidden inline-flex items-center gap-3 mb-6 self-start">
+          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
+          <span className="text-[17px] font-semibold">HotelTech</span>
+        </button>
+
+        <div className="w-full max-w-[440px] mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
+          <button
+            onClick={() => {
+              if (isForgot || isReset) setView('login')
+              else setView('intro')
+              setError('')
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-4"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+
+          <h1 className="text-[26px] leading-tight tracking-tight font-semibold text-white mb-1.5">{formTitle}</h1>
+          <p className="text-sm text-slate-400 mb-6">{formSubtitle}</p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -488,149 +637,225 @@ export function Login() {
             </div>
           )}
 
-          {view === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type="email" value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                    placeholder="admin@hotel.com" required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                    placeholder="Enter password" required
-                  />
-                </div>
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50">
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+          {/* ── Login ───────────────────────────────────────── */}
+          {view === 'login' && (
+            <>
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Your Name</label>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                   <div className="relative">
-                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
-                      type="text" value={name} onChange={e => setName(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                      placeholder="John Smith" required
+                      type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      autoFocus required placeholder="you@hotel.com"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Hotel Name</label>
-                  <div className="relative">
-                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                    <input
-                      type="text" value={hotelName} onChange={e => setHotelName(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                      placeholder="Grand Hotel" required
-                    />
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <label className="block text-[13px] font-medium text-slate-300">Password</label>
+                    <button type="button" onClick={() => { setView('forgot'); setError('') }}
+                      className="text-xs text-blue-400 hover:text-blue-300">Forgot password?</button>
                   </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type="email" value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                    placeholder="you@hotel.com" required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e24] border border-white/[0.08] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-white placeholder-gray-600"
-                    placeholder="Min 8 characters" required minLength={8}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Select Plan</label>
-                {/* Billing toggle */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-gray-500')}>Monthly</span>
-                  <button type="button"
-                    onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
-                    className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-primary-600' : 'bg-white/10')}
-                  >
-                    <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
-                  </button>
-                  <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-gray-500')}>
-                    Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {plans.map((p) => (
-                    <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
-                      className={'rounded-lg border p-2.5 text-center transition-all ' +
-                        (selectedPlan === p.slug
-                          ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30'
-                          : 'border-white/[0.08] bg-[#1e1e24] hover:border-white/20')}>
-                      <div className="text-xs font-semibold text-white">{p.name}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{getPlanPrice(p)}/mo</div>
-                      <div className="text-[10px] text-primary-400 mt-0.5">{p.trialDays}d trial</div>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                      required placeholder="Enter password"
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
+                    />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
-                  ))}
+                  </div>
                 </div>
-              </div>
-
-              <button type="submit" disabled={loading}
-                className="w-full bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                {loading ? 'Sending code...' : (
-                  <>
-                    <ShieldCheck size={16} />
-                    Verify Email & Start Trial
-                  </>
-                )}
-              </button>
-
-              <p className="text-[11px] text-gray-600 text-center">
-                We'll send a verification code to your email. No credit card required.
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  {loading ? 'Signing in…' : 'Sign In'}
+                </button>
+              </form>
+              <p className="mt-6 text-center text-sm text-slate-400">
+                New to HotelTech?{' '}
+                <button onClick={() => { setView('trial'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Start free trial</button>
               </p>
-            </form>
+            </>
           )}
 
-          <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
-            {view === 'login' ? (
-              <p className="text-sm text-gray-500">
-                No account?{' '}
-                <button onClick={() => { setView('trial'); setError('') }} className="text-primary-400 hover:text-primary-300 font-medium">
-                  Start free trial
+          {/* ── Trial / Register ────────────────────────────── */}
+          {view === 'trial' && (
+            <>
+              <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
+                <strong className="font-semibold">What you get:</strong> full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.
+              </div>
+              <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Your Name</label>
+                    <div className="relative">
+                      <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Smith"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Hotel</label>
+                    <div className="relative">
+                      <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type="text" value={hotelName} onChange={e => setHotelName(e.target.value)} required placeholder="Grand Hotel"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@hotel.com"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                      required minLength={8} placeholder="At least 8 characters"
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-2">Plan</label>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>Monthly</span>
+                    <button type="button" onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
+                      className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
+                      <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+                    </button>
+                    <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-slate-500')}>
+                      Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {plans.map((p) => (
+                      <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
+                        className={'rounded-lg border p-2.5 text-center transition-all ' +
+                          (selectedPlan === p.slug
+                            ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30'
+                            : 'border-white/[0.1] bg-slate-950/50 hover:border-white/25')}>
+                        <div className="text-xs font-semibold text-white">{p.name}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{getPlanPrice(p)}/mo</div>
+                        <div className="text-[10px] text-blue-400 mt-0.5">{p.trialDays}d trial</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                  {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> Verify Email & Start Trial</>)}
                 </button>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">
+                <p className="text-[11px] text-slate-500 text-center">We'll send a verification code to your email. No credit card required.</p>
+              </form>
+              <p className="mt-6 text-center text-sm text-slate-400">
                 Already have an account?{' '}
-                <button onClick={() => { setView('login'); setError('') }} className="text-primary-400 hover:text-primary-300 font-medium">
-                  Sign in
-                </button>
+                <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Sign in</button>
               </p>
-            )}
-          </div>
+            </>
+          )}
+
+          {/* ── Forgot password ─────────────────────────────── */}
+          {view === 'forgot' && (
+            <>
+              <form onSubmit={handleForgot} className="space-y-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder="you@hotel.com"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                  </div>
+                </div>
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  {loading ? 'Sending…' : 'Send reset code'}
+                </button>
+              </form>
+              <p className="mt-6 text-center text-sm text-slate-400">
+                Remembered it?{' '}
+                <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+              </p>
+            </>
+          )}
+
+          {/* ── Reset password ──────────────────────────────── */}
+          {view === 'reset' && (
+            resetDone ? (
+              <div className="text-center py-4 flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center">
+                  <Check size={28} className="text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mt-1">Password updated</h3>
+                <p className="text-sm text-slate-400">Redirecting you to sign in…</p>
+              </div>
+            ) : (
+              <>
+                {resetSent && (
+                  <div className="bg-blue-500/10 border border-blue-500/25 text-blue-300 text-xs rounded-lg px-3.5 py-2.5 mb-4">
+                    A 6-digit code has been sent to <strong className="text-white">{email}</strong>. It expires in 15 minutes.
+                  </div>
+                )}
+                <form onSubmit={handleReset} className="space-y-4">
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Reset code</label>
+                    <input type="text" value={resetCode} onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required maxLength={6} inputMode="numeric" placeholder="123456" autoFocus
+                      className="w-full px-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-center text-lg tracking-[0.4em] font-mono text-white placeholder-slate-600 transition" />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">New password</label>
+                    <div className="relative">
+                      <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type={showPassword ? 'text' : 'password'} value={resetPassword} onChange={e => setResetPassword(e.target.value)}
+                        required minLength={8} placeholder="At least 8 characters"
+                        className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                      <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Confirm new password</label>
+                    <div className="relative">
+                      <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type={showPassword ? 'text' : 'password'} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
+                        required minLength={8} placeholder="Repeat your new password"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={loading}
+                    className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                    {loading ? 'Updating…' : 'Update password'}
+                  </button>
+                </form>
+                <p className="mt-6 text-center text-sm text-slate-400">
+                  <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+                </p>
+              </>
+            )
+          )}
         </div>
-      </div>
+      </main>
     </div>
   )
 }
