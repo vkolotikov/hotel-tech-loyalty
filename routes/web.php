@@ -52,6 +52,35 @@ Route::get('/book/{token}', function (string $token) {
     ]);
 });
 
+// ─── Public Review Page (tokenized + embed-key) ─────────────────────────────
+// Token flow: /review/t/{token}  (personalised invitation link)
+// Embed flow: /review/{formId}?key=...  (anonymous / iframe)
+Route::get('/review/t/{token}', function (string $token) {
+    $apiBase = rtrim(url('/'), '/') . '/api';
+    return response()
+        ->view('review-form', [
+            'mode' => 'token',
+            'key'  => ['token' => $token],
+            'apiBase' => $apiBase,
+            'color' => request('color', ''),
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+});
+
+Route::get('/review/{id}', function (int $id, \Illuminate\Http\Request $request) {
+    $apiBase = rtrim(url('/'), '/') . '/api';
+    return response()
+        ->view('review-form', [
+            'mode' => 'embed',
+            'key'  => ['id' => $id, 'key' => (string) $request->query('key', '')],
+            'apiBase' => $apiBase,
+            'color' => $request->query('color', ''),
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+})->where('id', '[0-9]+');
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -59,7 +88,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|review/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

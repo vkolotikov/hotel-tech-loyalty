@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\OffersAdminController;
 use App\Http\Controllers\Api\V1\Admin\AnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Api\V1\Public\ReviewPublicController;
 use App\Http\Controllers\Api\V1\Public\CampaignTrackingController;
 use App\Http\Controllers\Api\V1\Member\NotificationController as MemberNotificationController;
 use App\Http\Controllers\Api\V1\Admin\SettingsController;
@@ -79,6 +80,15 @@ Route::prefix('v1')->group(function () {
         Route::post('confirm',              [BookingPublicController::class, 'confirm']);
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
+    });
+
+    // ─── Public Review API ─────────────────────────────────────────────────────
+    Route::prefix('public/reviews')->middleware('throttle:60,1')->group(function () {
+        Route::get('token/{token}',           [ReviewPublicController::class, 'byToken']);
+        Route::get('form/{id}',               [ReviewPublicController::class, 'byFormKey']);
+        Route::post('token/{token}',          [ReviewPublicController::class, 'submitByToken'])->middleware('throttle:10,1');
+        Route::post('form/{id}',              [ReviewPublicController::class, 'submitByFormKey'])->middleware('throttle:10,1');
+        Route::post('{submissionId}/redirected', [ReviewPublicController::class, 'markRedirected']);
     });
 
     // ─── Public Chat Widget API ────────────────────────────────────────────────
