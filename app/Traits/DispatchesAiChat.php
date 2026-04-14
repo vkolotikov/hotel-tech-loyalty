@@ -70,7 +70,7 @@ trait DispatchesAiChat
         ];
 
         if ($isGpt5) {
-            $params['max_output_tokens'] = $maxTokens;
+            $params['max_completion_tokens'] = $maxTokens;
             $effort = $extra['reasoning_effort'] ?? 'low';
             $params['reasoning_effort'] = $effort;
             if ($effort === 'none') {
