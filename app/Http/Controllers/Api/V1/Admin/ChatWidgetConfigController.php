@@ -52,7 +52,7 @@ class ChatWidgetConfigController extends Controller
             'show_branding'        => 'nullable|boolean',
             'header_style'         => 'nullable|in:solid,gradient',
             'header_gradient_end'  => 'nullable|string|max:7',
-            'window_style'         => 'nullable|in:panel,popup',
+            'window_style'         => 'nullable|in:panel,popup,classic,bubble,minimal',
             'launcher_size'        => 'nullable|integer|min:40|max:80',
             'position'             => 'nullable|in:bottom-right,bottom-left',
             'icon_style'           => 'nullable|string|max:30',

@@ -179,20 +179,101 @@ export function ChatbotWidget() {
         </div>
 
         <div>
-          <label className={label}>Window Style</label>
-          <div className="flex gap-2">
+          <label className={label}>Widget Style Preset</label>
+          <div className="grid grid-cols-2 gap-2">
             {([
-              { v: 'panel', label: 'Panel', desc: 'Full chat window (mobile: full-screen)' },
-              { v: 'popup', label: 'Popup', desc: 'Compact; mobile shows bottom sheet' },
-            ] as { v: string; label: string; desc: string }[]).map(s => (
-              <button key={s.v} type="button" onClick={() => update('window_style', s.v)}
-                className={`flex-1 py-2 px-3 rounded-lg border text-left ${
-                  (f.window_style || 'panel') === s.v ? 'border-primary-500 bg-primary-500/10 text-white' : 'border-dark-border text-t-secondary hover:border-dark-border2'
-                }`}>
-                <div className="text-xs font-medium">{s.label}</div>
-                <div className="text-[10px] opacity-70 mt-0.5">{s.desc}</div>
-              </button>
-            ))}
+              {
+                v: 'panel',
+                label: 'Classic',
+                desc: 'Standard panel · full-screen mobile',
+                preview: (color: string) => (
+                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="48" height="60" rx="2" fill="#1e1e24" stroke="#333" strokeWidth="0.5"/>
+                    <rect x="2" y="2" width="48" height="14" rx="2" fill={color}/>
+                    <rect x="2" y="10" width="48" height="6" fill={color}/>
+                    <rect x="6" y="5" width="18" height="2.5" rx="1.25" fill="rgba(255,255,255,0.75)"/>
+                    <rect x="6" y="21" width="22" height="5" rx="2.5" fill="#e5e7eb"/>
+                    <rect x="23" y="30" width="22" height="5" rx="2.5" fill={color} opacity="0.85"/>
+                    <rect x="6" y="39" width="26" height="5" rx="2.5" fill="#e5e7eb"/>
+                    <rect x="4" y="52" width="36" height="8" rx="2" fill="#f3f4f6"/>
+                    <rect x="42" y="52" width="8" height="8" rx="2" fill={color}/>
+                  </svg>
+                ),
+              },
+              {
+                v: 'popup',
+                label: 'Popup',
+                desc: 'Compact card · 65% bottom sheet',
+                preview: (color: string) => (
+                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="52" height="64" rx="6" fill="#111118"/>
+                    <rect x="0" y="23" width="52" height="41" rx="9" fill="white"/>
+                    <rect x="0" y="23" width="52" height="13" rx="9" fill={color}/>
+                    <rect x="0" y="30" width="52" height="6" fill={color}/>
+                    <rect x="5" y="26" width="15" height="2" rx="1" fill="rgba(255,255,255,0.8)"/>
+                    <rect x="5" y="41" width="20" height="4" rx="2" fill="#e5e7eb"/>
+                    <rect x="26" y="48" width="20" height="4" rx="2" fill={color} opacity="0.85"/>
+                    <circle cx="43" cy="15" r="7" fill={color}/>
+                    <circle cx="43" cy="15" r="4" fill="rgba(255,255,255,0.25)"/>
+                  </svg>
+                ),
+              },
+              {
+                v: 'bubble',
+                label: 'Bubble',
+                desc: 'Messenger style · ring animation',
+                preview: (color: string) => (
+                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="52" height="64" rx="6" fill="#111118"/>
+                    <rect x="4" y="4" width="44" height="50" rx="14" fill="white"/>
+                    <rect x="4" y="4" width="44" height="15" rx="14" fill={color}/>
+                    <rect x="4" y="13" width="44" height="6" fill={color}/>
+                    <rect x="9" y="6.5" width="16" height="2.5" rx="1.25" fill="rgba(255,255,255,0.8)"/>
+                    <rect x="9" y="24" width="20" height="6" rx="5" fill="#eef0f4"/>
+                    <rect x="22" y="34" width="20" height="6" rx="5" fill={color} opacity="0.9"/>
+                    <circle cx="43" cy="58" r="9" fill={color} opacity="0.15"/>
+                    <circle cx="43" cy="58" r="6" fill={color} opacity="0.25"/>
+                    <circle cx="43" cy="58" r="4" fill={color}/>
+                  </svg>
+                ),
+              },
+              {
+                v: 'minimal',
+                label: 'Minimal',
+                desc: 'Flat clean · pill launcher',
+                preview: (color: string) => (
+                  <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="52" height="64" rx="6" fill="#111118"/>
+                    <rect x="4" y="4" width="44" height="52" rx="3" fill="white" stroke="rgba(255,255,255,0.08)" strokeWidth="0.75"/>
+                    <rect x="4" y="4" width="44" height="12" rx="3" fill={color}/>
+                    <rect x="4" y="12" width="44" height="4" fill={color}/>
+                    <rect x="8" y="6.5" width="14" height="2" rx="1" fill="rgba(255,255,255,0.8)"/>
+                    <rect x="8" y="22" width="20" height="4" rx="1.5" fill="#e5e7eb"/>
+                    <rect x="23" y="30" width="22" height="4" rx="1.5" fill={color} opacity="0.85"/>
+                    <rect x="29" y="55" width="21" height="8" rx="4" fill={color}/>
+                    <rect x="32" y="57.5" width="5" height="3" rx="1" fill="rgba(255,255,255,0.55)"/>
+                    <rect x="38" y="57.5" width="9" height="3" rx="1" fill="rgba(255,255,255,0.9)"/>
+                  </svg>
+                ),
+              },
+            ] as { v: string; label: string; desc: string; preview: (color: string) => React.ReactNode }[]).map(s => {
+              const active = (f.window_style || 'panel') === s.v
+              const previewColor = f.primary_color || '#c9a84c'
+              return (
+                <button key={s.v} type="button" onClick={() => update('window_style', s.v)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all ${
+                    active ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border text-t-secondary hover:border-dark-border2 hover:bg-dark-bg/60'
+                  }`}>
+                  <div className={`rounded-lg overflow-hidden ${active ? 'ring-1 ring-primary-500/30' : ''}`}>
+                    {s.preview(previewColor)}
+                  </div>
+                  <div>
+                    <div className={`text-xs font-semibold ${active ? 'text-white' : 'text-t-secondary'}`}>{s.label}</div>
+                    <div className="text-[10px] text-[#636366] mt-0.5 leading-tight">{s.desc}</div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -853,7 +934,11 @@ function WidgetPreview({ cfg }: { cfg: any }) {
       </div>
       <p className="text-[11px] text-t-secondary -mt-2">
         Reflects unsaved changes. Not a live chat — for layout only.
-        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Popup mode: on mobile shows as bottom sheet (68% height).</span>}
+        {windowStyle === 'classic' && <span className="ml-1.5 text-[#636366]">Mobile: fullscreen.</span>}
+        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Mobile: 65% bottom sheet.</span>}
+        {windowStyle === 'bubble' && <span className="ml-1.5 text-amber-400">Mobile: 82% bottom sheet · ring launcher.</span>}
+        {windowStyle === 'minimal' && <span className="ml-1.5 text-amber-400">Mobile: 62% bottom sheet · pill launcher.</span>}
+        {(windowStyle === 'panel' || !windowStyle) && <span className="ml-1.5 text-amber-400">Mobile: 78% bottom sheet (default).</span>}
       </p>
 
       {/* Browser-window mock */}
@@ -898,16 +983,21 @@ function WidgetPreview({ cfg }: { cfg: any }) {
         {/* Chat panel (when open) */}
         {open && (
           <div
-            className="absolute flex flex-col overflow-hidden shadow-2xl"
+            className="absolute flex flex-col overflow-hidden"
             style={{
               [isLeft ? 'left' : 'right']: 18,
               bottom: 18,
-              width: 320,
+              width: windowStyle === 'minimal' ? 300 : 320,
               maxWidth: 'calc(100% - 36px)',
-              height: 440,
-              background: chatBg,
-              borderRadius: radius,
+              height: windowStyle === 'bubble' ? 460 : windowStyle === 'minimal' ? 420 : 440,
+              background: windowStyle === 'bubble' ? '#eef0f4' : chatBg,
+              borderRadius: windowStyle === 'bubble' ? 28 : windowStyle === 'minimal' ? 6 : radius,
               color: botBubbleTxt,
+              boxShadow: windowStyle === 'minimal'
+                ? '0 4px 20px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.07)'
+                : windowStyle === 'bubble'
+                  ? '0 28px 80px rgba(0,0,0,0.28)'
+                  : '0 20px 60px rgba(0,0,0,0.3)',
             } as any}
           >
             {/* Header */}
@@ -946,7 +1036,12 @@ function WidgetPreview({ cfg }: { cfg: any }) {
               <div className="flex">
                 <div
                   className="px-3 py-2 text-[12px] leading-snug max-w-[85%]"
-                  style={{ background: botBubble, color: botBubbleTxt, borderRadius: Math.max(radius - 4, 6), borderBottomLeftRadius: 4 }}
+                  style={{
+                    background: windowStyle === 'bubble' ? 'white' : botBubble,
+                    color: botBubbleTxt,
+                    borderRadius: windowStyle === 'bubble' ? 20 : windowStyle === 'minimal' ? 8 : Math.max(radius - 4, 6),
+                    borderBottomLeftRadius: 4,
+                  }}
                 >
                   <div className="font-semibold mb-0.5">{welcomeTitle}</div>
                   <div className="opacity-80">{welcomeSub}</div>
@@ -975,7 +1070,12 @@ function WidgetPreview({ cfg }: { cfg: any }) {
               <div className="flex justify-end pt-1">
                 <div
                   className="px-3 py-2 text-[12px] max-w-[80%]"
-                  style={{ background: userBubble, color: userBubbleTxt, borderRadius: Math.max(radius - 4, 6), borderBottomRightRadius: 4 }}
+                  style={{
+                    background: userBubble,
+                    color: userBubbleTxt,
+                    borderRadius: windowStyle === 'bubble' ? 20 : windowStyle === 'minimal' ? 8 : Math.max(radius - 4, 6),
+                    borderBottomRightRadius: 4,
+                  }}
                 >
                   Do you have rooms available this weekend?
                 </div>

@@ -168,9 +168,31 @@
     #htchat-voice-overlay .end-call-btn:hover { background: #dc2626; }\
     #htchat-voice-overlay .end-call-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }\
     @keyframes htchat-voice-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }\
+    #htchat-panel.htchat-popup { border-radius: 20px !important; }\
+    #htchat-panel.htchat-bubble { border-radius: 28px !important; box-shadow: 0 28px 80px rgba(0,0,0,0.28), 0 8px 24px rgba(0,0,0,0.12) !important; }\
+    #htchat-panel.htchat-bubble .htchat-msg-bubble { border-radius: 20px !important; }\
+    #htchat-panel.htchat-bubble .htchat-msg.assistant .htchat-msg-bubble { border-bottom-left-radius: 4px !important; }\
+    #htchat-panel.htchat-bubble .htchat-msg.user .htchat-msg-bubble { border-bottom-right-radius: 4px !important; }\
+    #htchat-panel.htchat-bubble #htchat-messages { background: #eef0f4 !important; }\
+    #htchat-panel.htchat-bubble #htchat-header { padding: 16px 18px; }\
+    #htchat-launcher.htchat-bubble { overflow: visible !important; }\
+    #htchat-launcher.htchat-bubble::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid currentColor; animation: htchat-launcher-ring 2.4s ease-out 0.3s infinite; pointer-events: none; }\
+    #htchat-launcher.htchat-bubble::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid currentColor; animation: htchat-launcher-ring 2.4s ease-out 1.1s infinite; pointer-events: none; }\
+    @keyframes htchat-launcher-ring { 0% { transform: scale(0.7); opacity: 0.45; } 100% { transform: scale(1.5); opacity: 0; } }\
+    #htchat-panel.htchat-minimal { border-radius: 6px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.07) !important; }\
+    #htchat-panel.htchat-minimal .htchat-msg-bubble { border-radius: 8px !important; }\
+    #htchat-panel.htchat-minimal .htchat-msg.assistant .htchat-msg-bubble { border-bottom-left-radius: 2px !important; }\
+    #htchat-panel.htchat-minimal .htchat-msg.user .htchat-msg-bubble { border-bottom-right-radius: 2px !important; }\
+    #htchat-panel.htchat-minimal #htchat-header { padding: 10px 14px; }\
+    #htchat-launcher.htchat-minimal { border-radius: 22px !important; width: auto !important; height: 44px !important; padding: 0 16px !important; gap: 7px; font-size: 13px; font-weight: 600; }\
+    #htchat-launcher.htchat-minimal svg { width: 18px !important; height: 18px !important; }\
+    #htchat-launcher.htchat-minimal .htchat-pulse { top: -1px !important; right: -1px !important; }\
     @media (max-width: 600px) {\
-      #htchat-panel:not(.htchat-popup) { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
-      #htchat-panel.htchat-popup { width: 100vw !important; height: 68dvh !important; max-height: 68dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: auto !important; border-radius: 20px 20px 0 0 !important; }\
+      #htchat-panel:not(.htchat-classic) { width: 100vw !important; height: 78dvh !important; max-height: 78dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: auto !important; border-radius: 22px 22px 0 0 !important; }\
+      #htchat-panel.htchat-classic { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
+      #htchat-panel.htchat-popup { height: 65dvh !important; max-height: 65dvh !important; border-radius: 24px 24px 0 0 !important; }\
+      #htchat-panel.htchat-bubble { height: 82dvh !important; max-height: 82dvh !important; border-radius: 28px 28px 0 0 !important; }\
+      #htchat-panel.htchat-minimal { height: 62dvh !important; max-height: 62dvh !important; border-radius: 14px 14px 0 0 !important; }\
       #htchat-launcher { bottom: 16px !important; }\
       #htchat-header { padding-top: max(14px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }\
       #htchat-input-area { padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }\
@@ -305,20 +327,27 @@
     var launcher = document.getElementById('htchat-launcher');
     if (launcher) {
       launcher.style.background = color;
-      // Launcher size
-      var sz = (c.launcher_size || 56) + 'px';
-      launcher.style.width = sz;
-      launcher.style.height = sz;
-      // Launcher shape
-      var shape = c.launcher_shape || 'circle';
-      launcher.style.borderRadius = shape === 'circle' ? '50%'
-        : shape === 'pill' ? (c.launcher_size || 56) / 2 + 'px'
-        : shape === 'rounded-square' ? '16px' : '8px';
-      // Launcher icon
+      var preset = (widgetConfig && widgetConfig.window_style) || 'panel';
       var iconName = c.launcher_icon || 'chat';
-      if (ICONS[iconName]) {
-        var pulse = launcher.querySelector('.htchat-pulse');
-        launcher.innerHTML = ICONS[iconName] + (pulse ? pulse.outerHTML : '<span class="htchat-pulse"></span>');
+      var pulse = launcher.querySelector('.htchat-pulse');
+      var pulseHtml = pulse ? pulse.outerHTML : '<span class="htchat-pulse"></span>';
+      if (preset === 'minimal') {
+        // Pill launcher: CSS handles shape/size, JS adds "Chat" label
+        launcher.innerHTML = (ICONS[iconName] || ICONS.chat) +
+          '<span style="font-size:13px;font-weight:600;color:white;white-space:nowrap;letter-spacing:0.01em">Chat</span>' +
+          pulseHtml;
+      } else {
+        // Normal launcher: apply size + shape + icon
+        var sz = (c.launcher_size || 56) + 'px';
+        launcher.style.width = sz;
+        launcher.style.height = sz;
+        var shape = c.launcher_shape || 'circle';
+        launcher.style.borderRadius = shape === 'circle' ? '50%'
+          : shape === 'pill' ? (c.launcher_size || 56) / 2 + 'px'
+          : shape === 'rounded-square' ? '16px' : '8px';
+        if (ICONS[iconName]) {
+          launcher.innerHTML = ICONS[iconName] + pulseHtml;
+        }
       }
     }
     var header = document.getElementById('htchat-header');
@@ -630,16 +659,24 @@
       var launcher = document.getElementById('htchat-launcher');
       if (launcher) applyPosition(launcher);
       var panel = document.getElementById('htchat-panel');
+      var launcherEl = document.getElementById('htchat-launcher');
       if (panel) {
         var pos = getPosition();
         panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
         panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
-        // Apply popup class so mobile shows a bottom-sheet instead of full-screen
-        if (data.window_style === 'popup') {
-          panel.classList.add('htchat-popup');
-        } else {
-          panel.classList.remove('htchat-popup');
-        }
+      }
+      // Apply widget preset classes to panel + launcher
+      var preset = data.window_style || 'panel';
+      var presetClassMap = { classic: 'htchat-classic', popup: 'htchat-popup', bubble: 'htchat-bubble', minimal: 'htchat-minimal' };
+      var allPresetClasses = ['htchat-classic', 'htchat-popup', 'htchat-bubble', 'htchat-minimal'];
+      allPresetClasses.forEach(function (cls) {
+        if (panel) panel.classList.remove(cls);
+        if (launcherEl) launcherEl.classList.remove(cls);
+      });
+      var activePresetClass = presetClassMap[preset];
+      if (activePresetClass) {
+        if (panel) panel.classList.add(activePresetClass);
+        if (launcherEl) launcherEl.classList.add(activePresetClass);
       }
       if (data.company_name) {
         var h3 = document.querySelector('#htchat-header-info h3');
