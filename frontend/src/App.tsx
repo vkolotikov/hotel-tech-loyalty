@@ -108,6 +108,9 @@ export default function App() {
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Login />} />
+          <Route path="/forgot-password" element={<Login />} />
+          <Route path="/reset-password" element={<Login />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
           <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />

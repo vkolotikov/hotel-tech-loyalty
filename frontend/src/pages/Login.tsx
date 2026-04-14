@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
-  Hotel, Lock, Mail, User, Building2, ArrowRight, Star,
-  Users, BarChart3, CreditCard, Shield, Sparkles, Check, ChevronRight,
+  Lock, Mail, User, Building2, Check,
   ShieldCheck, Eye, EyeOff, ArrowLeft,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
-type View = 'intro' | 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
+type View = 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
 type BillingInterval = 'monthly' | 'yearly'
 
 interface PlanData {
@@ -24,36 +23,6 @@ interface PlanData {
   planFeatures?: { feature: { name: string; key: string }; value: string }[]
 }
 
-const PLAN_BULLETS: Record<string, string[]> = {
-  starter: [
-    'Guest CRM — up to 500 profiles',
-    'Basic loyalty program (1 tier)',
-    'Email support',
-    'Single property',
-    'Basic analytics dashboard',
-    'Manual booking management',
-  ],
-  growth: [
-    'Guest CRM — unlimited profiles',
-    'Full loyalty program (up to 5 tiers)',
-    'Booking engine with online payments',
-    'AI-powered chatbot for your website',
-    'Multi-property support (up to 3)',
-    'Advanced analytics & AI insights',
-    'Priority email & chat support',
-    'NFC member cards',
-  ],
-  enterprise: [
-    'Everything in Growth, plus:',
-    'Unlimited properties',
-    'Custom loyalty tiers & rules',
-    'Dedicated account manager',
-    'API access & custom integrations',
-    'White-label branding',
-    'SLA guarantee (99.9% uptime)',
-    'Staff training & onboarding',
-  ],
-}
 
 /** Hardcoded fallback when SaaS API is unavailable */
 const FALLBACK_PLANS: PlanData[] = [
@@ -74,17 +43,16 @@ const FALLBACK_PLANS: PlanData[] = [
   },
 ]
 
-const FEATURES = [
-  { icon: Users, title: 'Guest CRM', desc: 'Full guest profiles, tags, segmentation & activity tracking' },
-  { icon: Star, title: 'Loyalty Program', desc: 'Points, tiers, rewards, NFC cards & member mobile app' },
-  { icon: BarChart3, title: 'Analytics & AI', desc: 'Revenue insights, churn prediction & AI-powered recommendations' },
-  { icon: CreditCard, title: 'Booking Engine', desc: 'Reservations, venue management & calendar scheduling' },
-  { icon: Shield, title: 'Multi-property', desc: 'Manage multiple hotels from one dashboard' },
-  { icon: Sparkles, title: 'AI Concierge', desc: 'Virtual assistant for guests with custom personas' },
-]
+const pathToView = (pathname: string): View => {
+  if (pathname.startsWith('/register')) return 'trial'
+  if (pathname.startsWith('/forgot-password')) return 'forgot'
+  if (pathname.startsWith('/reset-password')) return 'reset'
+  return 'login'
+}
 
 export function Login() {
-  const [view, setView] = useState<View>('intro')
+  const location = useLocation()
+  const [view, setView] = useState<View>(pathToView(location.pathname))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -143,6 +111,14 @@ export function Login() {
     const t = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
   }, [countdown])
+
+  // Sync view with URL path (ignore transient 'verify' state)
+  useEffect(() => {
+    if (view !== 'verify') {
+      setView(pathToView(location.pathname))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -265,7 +241,7 @@ export function Login() {
     try {
       await api.post('/v1/auth/forgot-password', { email })
       setResetSent(true)
-      setView('reset')
+      navigate('/reset-password')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Could not send reset code. Please try again.')
     } finally {
@@ -290,13 +266,13 @@ export function Login() {
       })
       setResetDone(true)
       setTimeout(() => {
-        setView('login')
         setPassword(resetPassword)
         setResetCode('')
         setResetPassword('')
         setResetConfirm('')
         setResetDone(false)
         setResetSent(false)
+        navigate('/login')
       }, 1800)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid or expired reset code.')
@@ -316,127 +292,6 @@ export function Login() {
       return formatPrice(Math.round(plan.yearlyAmount / 12), plan.currency)
     }
     return formatPrice(plan.monthlyAmount, plan.currency)
-  }
-
-  const getYearlySaving = (plan: PlanData) => {
-    const monthlyTotal = plan.monthlyAmount * 12
-    const yearlyTotal = plan.yearlyAmount
-    if (yearlyTotal >= monthlyTotal) return 0
-    return Math.round(((monthlyTotal - yearlyTotal) / monthlyTotal) * 100)
-  }
-
-  // ─── Intro View ─────────────────────────────────────────────────────────────
-  if (view === 'intro') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-primary-500/20">
-            <Hotel size={40} className="text-white" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-3">
-            Hotel Management System
-          </h1>
-          <p className="text-lg text-gray-400 text-center max-w-xl mb-10">
-            The all-in-one hotel management platform. CRM, loyalty program,
-            booking engine, AI chatbot &amp; analytics &mdash; built for modern hotels.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 mb-16">
-            <button
-              onClick={() => setView('trial')}
-              className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold px-8 py-3.5 rounded-xl text-lg transition-all shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40"
-            >
-              Start Free Trial <ArrowRight size={20} />
-            </button>
-            <button
-              onClick={() => setView('login')}
-              className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-8 py-3.5 rounded-xl text-lg transition-colors"
-            >
-              Sign In <ChevronRight size={18} />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl w-full">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 hover:border-primary-500/20 transition-colors">
-                <f.icon size={22} className="text-primary-400 mb-3" />
-                <h3 className="text-white font-semibold text-sm mb-1">{f.title}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-16 w-full max-w-5xl">
-            <h2 className="text-xl font-bold text-white text-center mb-2">Plans &amp; Pricing</h2>
-            <p className="text-gray-500 text-center text-sm mb-6">All plans include a free trial. No credit card required.</p>
-
-            {/* Billing toggle */}
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <span className={'text-sm font-medium ' + (billingInterval === 'monthly' ? 'text-white' : 'text-gray-500')}>Monthly</span>
-              <button
-                onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
-                className={'relative w-12 h-6 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-primary-600' : 'bg-white/10')}
-              >
-                <div className={'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-6' : 'translate-x-0.5')} />
-              </button>
-              <span className={'text-sm font-medium ' + (billingInterval === 'yearly' ? 'text-white' : 'text-gray-500')}>
-                Yearly
-                <span className="ml-1.5 text-xs text-green-400 font-semibold">Save up to 17%</span>
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {plans.map((plan) => {
-                const isPopular = plan.slug === 'growth'
-                const bullets = PLAN_BULLETS[plan.slug] || []
-                const saving = getYearlySaving(plan)
-                return (
-                  <div key={plan.id} className={'rounded-xl border p-6 relative flex flex-col ' + (isPopular ? 'border-primary-500/50 bg-primary-500/[0.04] ring-1 ring-primary-500/20' : 'border-white/[0.06] bg-white/[0.02]')}>
-                    {isPopular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-500 text-black text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
-                        Most Popular
-                      </div>
-                    )}
-                    <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                    <div className="mt-2 mb-1">
-                      <span className="text-3xl font-bold text-white">{getPlanPrice(plan)}</span>
-                      <span className="text-gray-500 text-sm">/mo{billingInterval === 'yearly' ? ' (billed yearly)' : ''} + VAT</span>
-                    </div>
-                    {billingInterval === 'yearly' && saving > 0 && (
-                      <p className="text-green-400 text-xs font-medium mb-1">Save {saving}% vs monthly</p>
-                    )}
-                    <p className="text-gray-500 text-xs mb-3">{plan.trialDays}-day free trial</p>
-                    <p className="text-gray-400 text-xs leading-relaxed mb-4">{plan.description}</p>
-
-                    {bullets.length > 0 && (
-                      <div className="space-y-2 mb-5 flex-1">
-                        {bullets.map((bullet, i) => (
-                          <div key={i} className="flex items-start gap-2 text-xs">
-                            <Check size={12} className="text-green-400 shrink-0 mt-0.5" />
-                            <span className="text-gray-300">{bullet}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => { setSelectedPlan(plan.slug); setView('trial') }}
-                      className={'w-full py-2.5 rounded-lg font-medium text-sm transition-colors mt-auto ' + (isPopular ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10')}
-                    >
-                      Start {plan.trialDays}-Day Trial
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center py-6 text-gray-600 text-xs">
-          Powered by <span className="text-gray-400">HotelTech</span> &middot; hotel-tech.ai
-        </div>
-      </div>
-    )
   }
 
   // ─── Verify View ────────────────────────────────────────────────────────────
@@ -503,7 +358,7 @@ export function Login() {
 
               <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
                 <button
-                  onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false) }}
+                  onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false); navigate('/register') }}
                   className="text-sm text-gray-500 hover:text-gray-400"
                 >
                   Back to registration
@@ -573,7 +428,7 @@ export function Login() {
         <div aria-hidden className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full blur-[80px] bg-blue-500/40 pointer-events-none" />
         <div aria-hidden className="absolute -bottom-36 -right-24 w-[380px] h-[380px] rounded-full blur-[80px] bg-sky-400/30 pointer-events-none" />
 
-        <button onClick={() => setView('intro')} className="relative z-10 inline-flex items-center gap-3 text-left">
+        <button onClick={() => navigate('/login')} className="relative z-10 inline-flex items-center gap-3 text-left">
           <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
           <span className="text-[17px] font-semibold">HotelTech</span>
         </button>
@@ -611,22 +466,20 @@ export function Login() {
             'radial-gradient(circle at 80% 10%, rgba(59,130,246,0.08), transparent 55%), #0b1226',
         }}
       >
-        <button onClick={() => setView('intro')} className="lg:hidden inline-flex items-center gap-3 mb-6 self-start">
+        <button onClick={() => navigate('/login')} className="lg:hidden inline-flex items-center gap-3 mb-6 self-start">
           <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
           <span className="text-[17px] font-semibold">HotelTech</span>
         </button>
 
         <div className="w-full max-w-[440px] mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
-          <button
-            onClick={() => {
-              if (isForgot || isReset) setView('login')
-              else setView('intro')
-              setError('')
-            }}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-4"
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
+          {(isForgot || isReset) && (
+            <button
+              onClick={() => { navigate('/login'); setError('') }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-4"
+            >
+              <ArrowLeft size={14} /> Back to sign in
+            </button>
+          )}
 
           <h1 className="text-[26px] leading-tight tracking-tight font-semibold text-white mb-1.5">{formTitle}</h1>
           <p className="text-sm text-slate-400 mb-6">{formSubtitle}</p>
@@ -655,7 +508,7 @@ export function Login() {
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
                     <label className="block text-[13px] font-medium text-slate-300">Password</label>
-                    <button type="button" onClick={() => { setView('forgot'); setError('') }}
+                    <button type="button" onClick={() => { navigate('/forgot-password'); setError('') }}
                       className="text-xs text-blue-400 hover:text-blue-300">Forgot password?</button>
                   </div>
                   <div className="relative">
@@ -679,7 +532,7 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 New to HotelTech?{' '}
-                <button onClick={() => { setView('trial'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Start free trial</button>
+                <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Start free trial</button>
               </p>
             </>
           )}
@@ -767,7 +620,7 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 Already have an account?{' '}
-                <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Sign in</button>
+                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Sign in</button>
               </p>
             </>
           )}
@@ -791,7 +644,7 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 Remembered it?{' '}
-                <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
               </p>
             </>
           )}
@@ -849,7 +702,7 @@ export function Login() {
                   </button>
                 </form>
                 <p className="mt-6 text-center text-sm text-slate-400">
-                  <button onClick={() => { setView('login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+                  <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
                 </p>
               </>
             )
