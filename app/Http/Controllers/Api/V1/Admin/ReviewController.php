@@ -8,6 +8,9 @@ use App\Models\ReviewFormQuestion;
 use App\Models\ReviewIntegration;
 use App\Models\ReviewInvitation;
 use App\Models\ReviewSubmission;
+use App\Models\Guest;
+use App\Models\LoyaltyMember;
+use App\Services\ReviewInvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -306,5 +309,91 @@ class ReviewController extends Controller
                 'thank_you_text'  => 'Thank you for your feedback.',
                 'allow_anonymous' => true,
             ];
+    }
+
+    // ─── Invitations ─────────────────────────────────────────────────────────
+
+    public function listInvitations(Request $request): JsonResponse
+    {
+        $q = ReviewInvitation::with([
+                'form:id,name,type',
+                'guest:id,full_name,email',
+                'member.user:id,name,email',
+                'submission:id,invitation_id,overall_rating',
+            ])
+            ->orderByDesc('created_at');
+
+        if ($formId = $request->query('form_id')) {
+            $q->where('form_id', (int) $formId);
+        }
+        if ($status = $request->query('status')) {
+            $q->where('status', $status);
+        }
+        if ($channel = $request->query('channel')) {
+            $q->where('channel', $channel);
+        }
+
+        return response()->json($q->paginate(50));
+    }
+
+    public function invitationFunnel(Request $request): JsonResponse
+    {
+        $q = ReviewInvitation::query();
+        if ($formId = $request->query('form_id')) {
+            $q->where('form_id', (int) $formId);
+        }
+        $rows = $q->selectRaw('status, COUNT(*) as n')->groupBy('status')->pluck('n', 'status')->all();
+
+        return response()->json([
+            'pending'    => (int) ($rows['pending']    ?? 0),
+            'opened'     => (int) ($rows['opened']     ?? 0),
+            'submitted'  => (int) ($rows['submitted']  ?? 0),
+            'redirected' => (int) ($rows['redirected'] ?? 0),
+            'failed'     => (int) ($rows['failed']     ?? 0),
+        ]);
+    }
+
+    public function sendInvitation(Request $request, ReviewInvitationService $svc): JsonResponse
+    {
+        $data = $request->validate([
+            'form_id'     => 'nullable|integer|exists:review_forms,id',
+            'member_id'   => 'nullable|integer|exists:loyalty_members,id',
+            'guest_id'    => 'nullable|integer|exists:guests,id',
+            'email'       => 'nullable|email|max:255',
+            'name'        => 'nullable|string|max:255',
+            'subject'     => 'nullable|string|max:200',
+        ]);
+
+        $form = $data['form_id']
+            ? ReviewForm::find($data['form_id'])
+            : ReviewForm::where('is_default', true)->where('is_active', true)->first();
+
+        if (!$form) {
+            return response()->json(['message' => 'No form specified and no default form exists.'], 422);
+        }
+
+        $recipient = match (true) {
+            !empty($data['member_id']) => LoyaltyMember::with('user')->findOrFail($data['member_id']),
+            !empty($data['guest_id'])  => Guest::findOrFail($data['guest_id']),
+            !empty($data['email'])     => ['name' => $data['name'] ?? null, 'email' => $data['email']],
+            default                    => null,
+        };
+
+        if (!$recipient) {
+            return response()->json(['message' => 'Provide member_id, guest_id, or email.'], 422);
+        }
+
+        try {
+            $invitation = $svc->sendEmail($form, $recipient, array_filter([
+                'subject' => $data['subject'] ?? null,
+            ]));
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok'         => true,
+            'invitation' => $invitation->load(['form:id,name', 'guest:id,full_name,email', 'member.user:id,name,email']),
+        ], 201);
     }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { SendReviewButton } from '../components/SendReviewButton'
 import toast from 'react-hot-toast'
 import { ArrowLeft, RefreshCw, Send, User, Calendar, DollarSign, MessageSquare, MapPin, ExternalLink, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react'
 
@@ -104,6 +105,9 @@ export function BookingDetail() {
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
           </button>
+          {b.guest_email && (
+            <SendReviewButton target={{ email: b.guest_email, name: b.guest_name }} />
+          )}
         </div>
       </div>
 

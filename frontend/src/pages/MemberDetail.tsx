@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
+import { SendReviewButton } from '../components/SendReviewButton'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -186,6 +187,7 @@ export function MemberDetail() {
           </div>
           <p className="text-sm text-t-secondary mt-0.5">{user?.email} · {member?.member_number}</p>
         </div>
+        {member?.id && <SendReviewButton target={{ memberId: member.id }} />}
         {(isAdmin || staff?.can_view_analytics) && (
           <button
             onClick={() => refetchAi()}

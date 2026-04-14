@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { SendReviewButton } from '../components/SendReviewButton';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, User, Mail, Star, Calendar,
@@ -155,12 +156,15 @@ export function GuestDetail() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => setEditing(!editing)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
-          >
-            {editing ? <><X size={16} /> Cancel</> : <><Edit3 size={16} /> Edit</>}
-          </button>
+          <div className="flex items-center gap-2">
+            {g.id && <SendReviewButton target={{ guestId: g.id }} />}
+            <button
+              onClick={() => setEditing(!editing)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+            >
+              {editing ? <><X size={16} /> Cancel</> : <><Edit3 size={16} /> Edit</>}
+            </button>
+          </div>
         </div>
       </div>
 

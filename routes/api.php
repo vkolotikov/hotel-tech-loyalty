@@ -283,6 +283,10 @@ Route::prefix('v1')->group(function () {
             Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
             Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
 
+            Route::get('reviews/invitations',                [AdminReviewController::class, 'listInvitations']);
+            Route::get('reviews/invitations/funnel',         [AdminReviewController::class, 'invitationFunnel']);
+            Route::post('reviews/invitations',               [AdminReviewController::class, 'sendInvitation']);
+
             // ─── Email Templates ─────────────────────────────────────────────
             Route::get('email-templates',                  [EmailTemplateController::class, 'index']);
             Route::post('email-templates',                 [EmailTemplateController::class, 'store']);

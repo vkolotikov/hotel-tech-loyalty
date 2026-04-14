@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
 
-type Tab = 'submissions' | 'forms' | 'integrations'
+type Tab = 'submissions' | 'invitations' | 'forms' | 'integrations'
 
 interface Form {
   id: number
@@ -78,7 +78,7 @@ export function Reviews() {
       {stats && <StatsRow stats={stats} />}
 
       <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm mb-4 w-fit">
-        {(['submissions', 'forms', 'integrations'] as const).map(t => (
+        {(['submissions', 'invitations', 'forms', 'integrations'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -90,6 +90,7 @@ export function Reviews() {
       </div>
 
       {tab === 'submissions' && <SubmissionsTab />}
+      {tab === 'invitations' && <InvitationsTab />}
       {tab === 'forms' && <FormsTab />}
       {tab === 'integrations' && <IntegrationsTab />}
     </div>
@@ -420,4 +421,153 @@ function IntegrationRow({ platform, existing, onSave }: { platform: string; exis
       </button>
     </div>
   )
+}
+
+// ─── Invitations Tab ─────────────────────────────────────────────────────
+interface Invitation {
+  id: number
+  channel: string
+  status: 'pending' | 'opened' | 'submitted' | 'redirected' | 'failed'
+  sent_at: string | null
+  opened_at: string | null
+  submitted_at: string | null
+  form: { id: number; name: string; type: string } | null
+  guest: { id: number; full_name: string; email: string | null } | null
+  member: { id: number; user: { name: string; email: string | null } } | null
+  submission: { id: number; overall_rating: number | null } | null
+}
+
+interface FunnelCounts {
+  pending: number
+  opened: number
+  submitted: number
+  redirected: number
+  failed: number
+}
+
+function InvitationsTab() {
+  const navigate = useNavigate()
+  const [statusFilter, setStatusFilter] = useState<string>('')
+
+  const { data: funnel } = useQuery<FunnelCounts>({
+    queryKey: ['review-invitations-funnel'],
+    queryFn: () => api.get('/v1/admin/reviews/invitations/funnel').then(r => r.data),
+  })
+
+  const { data } = useQuery<{ data: Invitation[] }>({
+    queryKey: ['review-invitations', statusFilter],
+    queryFn: () => api.get('/v1/admin/reviews/invitations', {
+      params: statusFilter ? { status: statusFilter } : {},
+    }).then(r => r.data),
+  })
+
+  const invitations = data?.data ?? []
+  const total = funnel ? funnel.pending + funnel.opened + funnel.submitted + funnel.redirected + funnel.failed : 0
+  const openRate = total > 0 && funnel ? Math.round(((funnel.opened + funnel.submitted + funnel.redirected) / total) * 100) : 0
+  const submitRate = total > 0 && funnel ? Math.round(((funnel.submitted + funnel.redirected) / total) * 100) : 0
+
+  return (
+    <div className="space-y-4">
+      {funnel && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <FunnelStat label="Sent" value={total} tone="default" />
+          <FunnelStat label="Opened" value={funnel.opened + funnel.submitted + funnel.redirected} sub={`${openRate}%`} tone="blue" />
+          <FunnelStat label="Submitted" value={funnel.submitted + funnel.redirected} sub={`${submitRate}%`} tone="green" />
+          <FunnelStat label="Redirected" value={funnel.redirected} tone="amber" />
+          <FunnelStat label="Failed" value={funnel.failed} tone="red" />
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white"
+        >
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="opened">Opened</option>
+          <option value="submitted">Submitted</option>
+          <option value="redirected">Redirected</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+
+      <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[#151515] text-[#a0a0a0]">
+            <tr>
+              <th className="text-left px-4 py-3 font-semibold">Recipient</th>
+              <th className="text-left px-4 py-3 font-semibold">Form</th>
+              <th className="text-left px-4 py-3 font-semibold">Channel</th>
+              <th className="text-left px-4 py-3 font-semibold">Status</th>
+              <th className="text-left px-4 py-3 font-semibold">Sent</th>
+              <th className="text-left px-4 py-3 font-semibold">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invitations.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-10 text-[#666]">No invitations yet.</td></tr>
+            )}
+            {invitations.map(inv => {
+              const name = inv.member?.user.name ?? inv.guest?.full_name ?? '—'
+              const email = inv.member?.user.email ?? inv.guest?.email
+              return (
+                <tr key={inv.id} className="border-t border-dark-border">
+                  <td className="px-4 py-3">
+                    <div className="text-white font-medium">{name}</div>
+                    {email && <div className="text-xs text-[#a0a0a0]">{email}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-[#e5e5e5]">{inv.form?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-[#a0a0a0] capitalize">{inv.channel}</td>
+                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                  <td className="px-4 py-3 text-[#a0a0a0]">{inv.sent_at ? new Date(inv.sent_at).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3">
+                    {inv.submission ? (
+                      <button
+                        onClick={() => navigate(`/reviews/submissions/${inv.submission!.id}`)}
+                        className="text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1"
+                      >
+                        {inv.submission.overall_rating ? `${inv.submission.overall_rating}★` : 'View'}
+                      </button>
+                    ) : (
+                      <span className="text-[#666]">—</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function FunnelStat({ label, value, sub, tone }: { label: string; value: number; sub?: string; tone: 'default' | 'blue' | 'green' | 'amber' | 'red' }) {
+  const color = {
+    default: 'text-white',
+    blue:    'text-blue-300',
+    green:   'text-emerald-300',
+    amber:   'text-amber-300',
+    red:     'text-red-300',
+  }[tone]
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+      <div className="text-xs text-[#a0a0a0] uppercase tracking-wider mb-1">{label}</div>
+      <div className={`text-2xl font-bold ${color}`}>{value.toLocaleString()}</div>
+      {sub && <div className="text-xs text-[#a0a0a0] mt-0.5">{sub}</div>}
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: Invitation['status'] }) {
+  const styles: Record<Invitation['status'], string> = {
+    pending:    'bg-[#1e1e1e] text-[#a0a0a0]',
+    opened:     'bg-blue-500/15 text-blue-300',
+    submitted:  'bg-emerald-500/15 text-emerald-300',
+    redirected: 'bg-amber-500/15 text-amber-300',
+    failed:     'bg-red-500/15 text-red-300',
+  }
+  return <span className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${styles[status]}`}>{status}</span>
 }
