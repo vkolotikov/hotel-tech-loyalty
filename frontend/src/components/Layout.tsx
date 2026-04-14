@@ -10,7 +10,7 @@ import {
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CalendarDays, CreditCard, Home, Package, Eye,
+  BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -78,6 +78,7 @@ const navGroups: NavGroup[] = [
       { path: '/corporate',       label: 'Corporate',       icon: Briefcase, gate: 'admin' },
       { path: '/notifications',   label: 'Campaigns',       icon: Bell,      gate: 'admin', feature: 'push_notifications' },
       { path: '/email-templates', label: 'Email Templates', icon: Mail,      gate: 'admin' },
+      { path: '/reviews',         label: 'Reviews',         icon: Star,      gate: 'admin' },
     ],
   },
   {

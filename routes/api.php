@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Admin\NfcController;
 use App\Http\Controllers\Api\V1\Admin\OffersAdminController;
 use App\Http\Controllers\Api\V1\Admin\AnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Api\V1\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Api\V1\Public\CampaignTrackingController;
 use App\Http\Controllers\Api\V1\Member\NotificationController as MemberNotificationController;
 use App\Http\Controllers\Api\V1\Admin\SettingsController;
@@ -254,6 +255,23 @@ Route::prefix('v1')->group(function () {
             Route::post('campaigns/preview-audience',     [AdminNotificationController::class, 'previewAudience']);
             Route::post('campaigns/send-test',            [AdminNotificationController::class, 'sendTest']);
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
+
+            // ─── Reviews ─────────────────────────────────────────────────
+            Route::get('reviews/forms',                      [AdminReviewController::class, 'listForms']);
+            Route::post('reviews/forms',                     [AdminReviewController::class, 'createForm']);
+            Route::get('reviews/forms/{id}',                 [AdminReviewController::class, 'showForm']);
+            Route::put('reviews/forms/{id}',                 [AdminReviewController::class, 'updateForm']);
+            Route::delete('reviews/forms/{id}',              [AdminReviewController::class, 'deleteForm']);
+            Route::post('reviews/forms/{id}/rotate-key',     [AdminReviewController::class, 'rotateEmbedKey']);
+            Route::put('reviews/forms/{id}/questions',       [AdminReviewController::class, 'replaceQuestions']);
+
+            Route::get('reviews/integrations',               [AdminReviewController::class, 'listIntegrations']);
+            Route::post('reviews/integrations',              [AdminReviewController::class, 'upsertIntegration']);
+            Route::delete('reviews/integrations/{id}',       [AdminReviewController::class, 'deleteIntegration']);
+
+            Route::get('reviews/submissions',                [AdminReviewController::class, 'listSubmissions']);
+            Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
+            Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
 
             // ─── Email Templates ─────────────────────────────────────────────
             Route::get('email-templates',                  [EmailTemplateController::class, 'index']);

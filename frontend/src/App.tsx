@@ -28,6 +28,9 @@ const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ default: m.CampaignDetail })))
+const Reviews = lazy(() => import('./pages/Reviews').then(m => ({ default: m.Reviews })))
+const ReviewFormBuilder = lazy(() => import('./pages/ReviewFormBuilder').then(m => ({ default: m.ReviewFormBuilder })))
+const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ default: m.ReviewDetail })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const Benefits = lazy(() => import('./pages/Benefits').then(m => ({ default: m.Benefits })))
@@ -132,6 +135,9 @@ export default function App() {
           <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
           <Route path="/notifications/:id" element={<LazyRoute gate="admin" feature="push_notifications"><CampaignDetail /></LazyRoute>} />
+          <Route path="/reviews" element={<LazyRoute gate="admin"><Reviews /></LazyRoute>} />
+          <Route path="/reviews/forms/:id" element={<LazyRoute gate="admin"><ReviewFormBuilder /></LazyRoute>} />
+          <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin"><ReviewDetail /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />
           <Route path="/benefits" element={<LazyRoute gate="admin" product="loyalty"><Benefits /></LazyRoute>} />

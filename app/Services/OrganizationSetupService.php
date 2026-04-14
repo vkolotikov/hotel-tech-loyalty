@@ -9,6 +9,7 @@ use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\Organization;
 use App\Models\Property;
+use App\Models\ReviewForm;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -84,6 +85,26 @@ class OrganizationSetupService
                 $setting
             );
         }
+
+        // Default basic rating form — gives every org a working review
+        // URL out of the box; custom forms can be added later in admin.
+        ReviewForm::withoutGlobalScopes()->firstOrCreate(
+            ['organization_id' => $org->id, 'is_default' => true],
+            [
+                'name'       => 'Stay Feedback',
+                'type'       => 'basic',
+                'is_active'  => true,
+                'embed_key'  => Str::random(32),
+                'config'     => [
+                    'intro_text'         => 'We hope you enjoyed your stay. Your feedback helps us improve.',
+                    'thank_you_text'     => 'Thank you for taking the time to share your experience.',
+                    'ask_for_comment'    => true,
+                    'allow_anonymous'    => true,
+                    'redirect_threshold' => 4,
+                    'redirect_prompt'    => 'Would you share this on a review site?',
+                ],
+            ]
+        );
     }
 
     /**
