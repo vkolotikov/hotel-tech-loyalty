@@ -19,6 +19,8 @@ export function Scan() {
   const [nfcUid, setNfcUid] = useState('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
+  const nfcInputRef = useRef<HTMLInputElement>(null)
+  const autoSubmitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const stopScanning = () => {
     controlsRef.current?.stop()
@@ -53,15 +55,19 @@ export function Scan() {
     }
   }
 
-  const scanNfc = async () => {
-    if (!nfcUid.trim()) { toast.error('Enter NFC UID'); return }
+  const scanNfc = async (uidOverride?: string) => {
+    const uid = (uidOverride ?? nfcUid).trim()
+    if (!uid) { toast.error('Enter NFC UID'); return }
     try {
-      const { data } = await api.post('/v1/admin/scan/nfc', { uid: nfcUid.trim() })
+      const { data } = await api.post('/v1/admin/scan/nfc', { uid })
       setMember(data.member)
       setAiUpsell(data.ai_upsell_suggestion)
       toast.success(`Member found: ${data.member.name}`)
     } catch {
       toast.error('NFC card not found')
+    } finally {
+      setNfcUid('')
+      setTimeout(() => nfcInputRef.current?.focus(), 50)
     }
   }
 
@@ -82,6 +88,34 @@ export function Scan() {
   }
 
   useEffect(() => () => { stopScanning() }, [])
+
+  // Keep the NFC input focused when the NFC tab is active so USB HID readers
+  // land their characters in the field even if the user clicks elsewhere. Most
+  // USB NFC readers type the UID then press Enter, but a few don't — so we
+  // also auto-submit after 300ms of no input (fires once the reader finishes
+  // "typing" the UID).
+  useEffect(() => {
+    if (mode !== 'nfc') return
+    nfcInputRef.current?.focus()
+    const refocus = () => {
+      if (document.activeElement !== nfcInputRef.current) {
+        nfcInputRef.current?.focus()
+      }
+    }
+    const interval = setInterval(refocus, 1000)
+    return () => clearInterval(interval)
+  }, [mode])
+
+  useEffect(() => {
+    if (mode !== 'nfc' || !nfcUid.trim()) return
+    if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current)
+    autoSubmitTimer.current = setTimeout(() => {
+      if (nfcUid.trim().length >= 4) scanNfc(nfcUid)
+    }, 300)
+    return () => {
+      if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current)
+    }
+  }, [nfcUid, mode])
 
   return (
     <div className="space-y-6">
@@ -144,6 +178,7 @@ export function Scan() {
               <div className="relative">
                 <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
                 <input
+                  ref={nfcInputRef}
                   type="text"
                   placeholder="Tap NFC card or enter UID..."
                   value={nfcUid}
@@ -153,7 +188,7 @@ export function Scan() {
                   onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
                 />
               </div>
-              <button onClick={scanNfc} className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
+              <button onClick={() => scanNfc()} className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
                 Look Up Member
               </button>
             </div>

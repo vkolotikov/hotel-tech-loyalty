@@ -32,6 +32,25 @@ class ChatInboxController extends Controller
             ])
             ->withCount(['messages as unread_count' => fn($q) => $q->where('is_read', false)->where('sender_type', 'visitor')]);
 
+        // Default: hide empty conversations (visitor opened the widget but never
+        // typed anything — these are noise for the agent inbox; they live on
+        // the Visitors page already). Show them when the agent explicitly
+        // opts in via ?include_empty=1, when searching, or when a filter is
+        // applied that implies intent.
+        if (!$request->boolean('include_empty') && !$request->filled('search')) {
+            $query->where(function ($q) {
+                $q->whereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('chat_messages')
+                        ->whereColumn('chat_messages.conversation_id', 'chat_conversations.id')
+                        ->where('chat_messages.sender_type', 'visitor');
+                })
+                ->orWhereNotNull('visitor_email')
+                ->orWhereNotNull('visitor_phone')
+                ->orWhere('lead_captured', true);
+            });
+        }
+
         // Filter by status
         if ($request->status && $request->status !== 'all') {
             $query->where('status', $request->status);

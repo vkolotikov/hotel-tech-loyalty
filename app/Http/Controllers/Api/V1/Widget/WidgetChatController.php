@@ -10,6 +10,8 @@ use App\Models\ChatMessage;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Models\ChatWidgetConfig;
+use App\Models\Guest;
+use App\Models\Inquiry;
 use App\Models\PopupRule;
 use App\Models\Visitor;
 use App\Models\VisitorPageView;
@@ -430,6 +432,13 @@ class WidgetChatController extends Controller
                 'messages_count'  => $existingChatConv->messages_count + 1,
                 'status'          => 'waiting',
             ]);
+            try {
+                if (!$existingChatConv->inquiry_id) {
+                    $this->autoCaptureLeadFromMessage($existingChatConv, $visitor ?? null, $request->message);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Widget auto-lead capture (ai-paused) failed: ' . $e->getMessage());
+            }
             return response()->json([
                 'response'   => null,
                 'ai_paused'  => true,
@@ -614,11 +623,107 @@ class WidgetChatController extends Controller
             \Log::warning('Widget inbox save failed: ' . $e->getMessage());
         }
 
+        // Auto-capture: if the visitor typed an email or phone number in
+        // their message, promote the conversation to a lead and create an
+        // Inquiry automatically so it lands in CRM (admin) + staff app
+        // without the agent needing to run the manual capture form.
+        try {
+            if (isset($chatConv) && $chatConv && !$chatConv->inquiry_id) {
+                $this->autoCaptureLeadFromMessage($chatConv, $visitor ?? null, $request->message);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Widget auto-lead capture failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'response'      => $aiResponse,
             'session_id'    => $request->session_id,
             'ai_message_id' => $aiMessageId,
         ]);
+    }
+
+    /**
+     * Detect an email or phone number in a visitor message and, if present,
+     * create a Guest + Inquiry exactly like the manual captureLead flow. Safe
+     * to call on every inbound message — it no-ops once an inquiry already
+     * exists on the conversation. The detection is conservative on purpose:
+     * we only create a lead when the signal is unambiguous (proper email
+     * shape, or 8+ digit run that starts with + or a digit).
+     */
+    private function autoCaptureLeadFromMessage(ChatConversation $conv, ?Visitor $visitor, string $message): void
+    {
+        $email = null;
+        $phone = null;
+
+        if (preg_match('/[\w\.\-\+]+@[\w\-]+\.[\w\-\.]+/', $message, $m)) {
+            $email = strtolower(trim($m[0], " .,;:"));
+        }
+        if (preg_match('/(?:\+?\d[\s\-\(\)]?){8,}\d/', $message, $m)) {
+            $digits = preg_replace('/\D/', '', $m[0]);
+            if ($digits !== null && strlen($digits) >= 8) {
+                $phone = trim($m[0]);
+            }
+        }
+
+        if (!$email && !$phone) return;
+
+        $orgId = $conv->organization_id;
+
+        // Prefer an existing guest matched by email — avoids polluting the
+        // CRM with duplicates when the same person chats multiple times.
+        $guest = null;
+        if ($email) {
+            $guest = Guest::where('organization_id', $orgId)->where('email', $email)->first();
+        }
+
+        if (!$guest) {
+            $displayName = $conv->visitor_name
+                ?: ($visitor?->display_name)
+                ?: 'Chat Visitor';
+            $nameParts = explode(' ', $displayName, 2);
+            $guest = Guest::create([
+                'organization_id'  => $orgId,
+                'first_name'       => $nameParts[0] ?? 'Chat',
+                'last_name'        => $nameParts[1] ?? 'Visitor',
+                'full_name'        => $displayName,
+                'email'            => $email ?: $conv->visitor_email,
+                'phone'            => $phone ?: $conv->visitor_phone,
+                'guest_type'       => 'Individual',
+                'lead_source'      => 'Chat Widget',
+                'lifecycle_status' => 'Lead',
+                'last_activity_at' => now(),
+            ]);
+        } else {
+            $updates = [];
+            if (!$guest->phone && $phone) $updates['phone'] = $phone;
+            if (!$guest->email && $email) $updates['email'] = $email;
+            if ($updates) $guest->update($updates + ['last_activity_at' => now()]);
+        }
+
+        $inquiry = Inquiry::create([
+            'organization_id' => $orgId,
+            'guest_id'        => $guest->id,
+            'notes'           => "Auto-captured from chat conversation #{$conv->id}: \"" . mb_substr($message, 0, 500) . "\"",
+            'source'          => 'chatbot',
+            'status'          => 'new',
+            'inquiry_type'    => 'general',
+        ]);
+
+        $conv->update([
+            'lead_captured' => true,
+            'inquiry_id'    => $inquiry->id,
+            'visitor_email' => $conv->visitor_email ?: $email,
+            'visitor_phone' => $conv->visitor_phone ?: $phone,
+        ]);
+
+        if ($visitor) {
+            $visitor->update([
+                'is_lead'  => true,
+                'guest_id' => $guest->id,
+                'email'    => $visitor->email ?: $email,
+                'phone'    => $visitor->phone ?: $phone,
+            ]);
+        }
     }
 
     /**
