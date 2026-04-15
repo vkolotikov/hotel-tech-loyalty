@@ -315,12 +315,15 @@ class ReviewPublicController extends Controller
             'type'       => $form->type,
             'config'     => $form->config ?? [],
             'questions'  => $form->questions->map(fn($q) => [
-                'id'        => $q->id,
-                'kind'      => $q->kind,
-                'label'     => $q->label,
-                'help_text' => $q->help_text,
-                'options'   => $q->options,
-                'required'  => (bool) $q->required,
+                'id'                 => $q->id,
+                'kind'               => $q->kind,
+                'label'              => $q->label,
+                'help_text'          => $q->help_text,
+                'options'            => $q->options,
+                'required'           => (bool) $q->required,
+                'condition_index'    => $q->condition_index,
+                'condition_operator' => $q->condition_operator,
+                'condition_value'    => $q->condition_value,
             ])->values(),
         ];
     }

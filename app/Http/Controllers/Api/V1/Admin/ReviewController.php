@@ -20,7 +20,11 @@ class ReviewController extends Controller
 {
     private const QUESTION_KINDS = [
         'text', 'textarea', 'stars', 'scale', 'nps',
-        'single_choice', 'multi_choice', 'boolean',
+        'single_choice', 'multi_choice', 'boolean', 'emoji',
+    ];
+
+    private const CONDITION_OPERATORS = [
+        'eq', 'neq', 'gte', 'lte', 'contains', 'any_of',
     ];
 
     private const PLATFORMS = ['google', 'trustpilot', 'tripadvisor', 'facebook'];
@@ -124,6 +128,9 @@ class ReviewController extends Controller
             'questions.*.options'       => 'nullable|array',
             'questions.*.required'      => 'nullable|boolean',
             'questions.*.weight'        => 'nullable|integer|min:1|max:10',
+            'questions.*.condition_index'    => 'nullable|integer|min:0',
+            'questions.*.condition_operator' => 'nullable|in:' . implode(',', self::CONDITION_OPERATORS),
+            'questions.*.condition_value'    => 'nullable',
         ]);
 
         // Wipe + re-insert keeps ordering simple. Historical submissions'
@@ -133,15 +140,28 @@ class ReviewController extends Controller
         $form->questions()->delete();
 
         foreach ($data['questions'] as $idx => $q) {
+            // Normalize condition_value — accept scalar or array, store as array/null.
+            $condVal = $q['condition_value'] ?? null;
+            if ($condVal !== null && !is_array($condVal)) {
+                $condVal = [$condVal];
+            }
+
+            $hasCondition = isset($q['condition_index'])
+                && isset($q['condition_operator'])
+                && $q['condition_index'] < $idx; // only backward refs
+
             ReviewFormQuestion::create([
-                'form_id'   => $form->id,
-                'order'     => $idx,
-                'kind'      => $q['kind'],
-                'label'     => $q['label'],
-                'help_text' => $q['help_text'] ?? null,
-                'options'   => $q['options'] ?? null,
-                'required'  => $q['required'] ?? false,
-                'weight'    => $q['weight'] ?? 1,
+                'form_id'            => $form->id,
+                'order'              => $idx,
+                'kind'               => $q['kind'],
+                'label'              => $q['label'],
+                'help_text'          => $q['help_text'] ?? null,
+                'options'            => $q['options'] ?? null,
+                'required'           => $q['required'] ?? false,
+                'weight'             => $q['weight'] ?? 1,
+                'condition_index'    => $hasCondition ? $q['condition_index'] : null,
+                'condition_operator' => $hasCondition ? $q['condition_operator'] : null,
+                'condition_value'    => $hasCondition ? $condVal : null,
             ]);
         }
 

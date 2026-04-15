@@ -44,6 +44,12 @@ textarea{min-height:90px;resize:vertical}
 .choice:hover{border-color:var(--primary)}
 .choice.on{background:color-mix(in srgb, var(--primary) 10%, #fff);border-color:var(--primary)}
 .choice input{margin:0}
+.emojis{display:flex;gap:6px;flex-wrap:wrap}
+.emoji-btn{flex:1;min-width:64px;padding:10px 6px;border:1px solid var(--border);background:#fff;border-radius:10px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.emoji-btn:hover{border-color:var(--primary)}
+.emoji-btn.on{background:color-mix(in srgb, var(--primary) 10%, #fff);border-color:var(--primary)}
+.emoji-btn .em{font-size:28px;line-height:1}
+.emoji-btn .lbl{font-size:11px;color:var(--muted);font-weight:500}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:15px;cursor:pointer;transition:background .15s;width:100%}
 .btn:hover{background:var(--primary-hover)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -123,7 +129,10 @@ textarea{min-height:90px;resize:vertical}
       html += renderStarBlock();
       if (cfg.ask_for_comment) html += renderCommentBlock();
     } else {
-      (f.questions||[]).forEach(function(q){ html += renderQuestion(q); });
+      (f.questions||[]).forEach(function(q, idx){
+        if (!isQuestionVisible(q, idx)) return;
+        html += renderQuestion(q);
+      });
     }
 
     if (!state.invitation && (cfg.allow_anonymous !== false)) {
@@ -149,6 +158,37 @@ textarea{min-height:90px;resize:vertical}
 
   function renderCommentBlock(){
     return '<div class="q"><label class="q-label">Tell us more (optional)</label><textarea id="comment" placeholder="What stood out? Anything we could improve?">'+esc(state.comment)+'</textarea></div>';
+  }
+
+  function isQuestionVisible(q, idx){
+    if (q.condition_index === null || q.condition_index === undefined || !q.condition_operator) return true;
+    var qs = (state.form && state.form.questions) || [];
+    var parent = qs[q.condition_index];
+    if (!parent || q.condition_index >= idx) return true; // guard against bad refs
+    // Chain-hide: parent hidden → child hidden
+    if (!isQuestionVisible(parent, q.condition_index)) return false;
+    var pv = state.answers[parent.id];
+    var cv = q.condition_value;
+    var cvFirst = Array.isArray(cv) ? cv[0] : cv;
+    switch (q.condition_operator) {
+      case 'eq':       return String(pv) === String(cvFirst);
+      case 'neq':      return String(pv) !== String(cvFirst);
+      case 'gte':      return pv !== undefined && pv !== null && Number(pv) >= Number(cvFirst);
+      case 'lte':      return pv !== undefined && pv !== null && Number(pv) <= Number(cvFirst);
+      case 'contains':
+        if (Array.isArray(pv)) return pv.map(String).indexOf(String(cvFirst)) >= 0;
+        return String(pv||'').toLowerCase().indexOf(String(cvFirst||'').toLowerCase()) >= 0;
+      case 'any_of':
+        var list = Array.isArray(cv) ? cv : [cv];
+        if (Array.isArray(pv)) return pv.some(function(x){ return list.map(String).indexOf(String(x)) >= 0; });
+        return list.map(String).indexOf(String(pv)) >= 0;
+    }
+    return true;
+  }
+
+  function visibleQuestions(){
+    var qs = (state.form && state.form.questions) || [];
+    return qs.filter(function(q, idx){ return isQuestionVisible(q, idx); });
   }
 
   function renderQuestion(q){
@@ -189,6 +229,18 @@ textarea{min-height:90px;resize:vertical}
           var on = arr.indexOf(c)>=0 ? 'on':'';
           html += '<label class="choice '+on+'"><input type="checkbox" value="'+esc(c)+'" '+(arr.indexOf(c)>=0?'checked':'')+' data-multi="'+q.id+'">'+esc(c)+'</label>';
         }); break;
+      case 'emoji':
+        var emo = (q.options && q.options.emojis) || [];
+        var lbls = (q.options && q.options.choices) || [];
+        html += '<div class="emojis" data-emoji="'+q.id+'">';
+        emo.forEach(function(em, ei){
+          var val = lbls[ei] || em;
+          html += '<button type="button" class="emoji-btn '+(v===val?'on':'')+'" data-v="'+esc(val)+'">'
+               + '<span class="em">'+esc(em)+'</span>'
+               + (lbls[ei] ? '<span class="lbl">'+esc(lbls[ei])+'</span>' : '')
+               + '</button>';
+        });
+        html += '</div>'; break;
     }
     html += '</div>';
     return html;
@@ -224,6 +276,11 @@ textarea{min-height:90px;resize:vertical}
     document.querySelectorAll('[data-single]').forEach(function(el){
       el.addEventListener('change', function(){ state.answers[el.dataset.single] = el.value; render(); });
     });
+    document.querySelectorAll('[data-emoji]').forEach(function(el){
+      el.querySelectorAll('.emoji-btn').forEach(function(b){
+        b.addEventListener('click', function(){ state.answers[el.dataset.emoji] = b.dataset.v; render(); });
+      });
+    });
     document.querySelectorAll('[data-multi]').forEach(function(el){
       el.addEventListener('change', function(){
         var qid = el.dataset.multi;
@@ -246,7 +303,7 @@ textarea{min-height:90px;resize:vertical}
       return null;
     }
     var miss = null;
-    (f.questions||[]).forEach(function(q){
+    visibleQuestions().forEach(function(q){
       if (miss || !q.required) return;
       var v = state.answers[q.id];
       if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) miss = 'Please answer: '+q.label;
@@ -261,10 +318,19 @@ textarea{min-height:90px;resize:vertical}
     errEl.style.display='none';
     state.submitting = true; render();
 
+    // Strip answers for hidden (conditionally-skipped) questions — don't store
+    // responses the user couldn't actually see.
+    var visibleAnswers = null;
+    if (state.form.type === 'custom') {
+      visibleAnswers = {};
+      visibleQuestions().forEach(function(q){
+        if (state.answers[q.id] !== undefined) visibleAnswers[q.id] = state.answers[q.id];
+      });
+    }
     var payload = {
       overall_rating: state.form.type==='basic' ? state.overall : null,
       comment: state.form.type==='basic' ? (state.comment||null) : null,
-      answers: state.form.type==='custom' ? state.answers : null,
+      answers: visibleAnswers,
     };
     var nameEl = document.getElementById('anon_name');
     var emailEl = document.getElementById('anon_email');

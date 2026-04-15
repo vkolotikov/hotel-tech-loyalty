@@ -5,16 +5,20 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, Save, Plus, Trash2, GripVertical, Copy, RefreshCw } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
 
-type Kind = 'text' | 'textarea' | 'stars' | 'scale' | 'nps' | 'single_choice' | 'multi_choice' | 'boolean'
+type Kind = 'text' | 'textarea' | 'stars' | 'scale' | 'nps' | 'single_choice' | 'multi_choice' | 'boolean' | 'emoji'
+type CondOp = 'eq' | 'neq' | 'gte' | 'lte' | 'contains' | 'any_of'
 
 interface Question {
   id?: number
   kind: Kind
   label: string
   help_text?: string
-  options?: { choices?: string[]; min?: number; max?: number }
+  options?: { choices?: string[]; emojis?: string[]; min?: number; max?: number }
   required: boolean
   weight: number
+  condition_index?: number | null
+  condition_operator?: CondOp | null
+  condition_value?: any
 }
 
 interface Form {
@@ -37,7 +41,19 @@ const KIND_LABELS: Record<Kind, string> = {
   single_choice: 'Single Choice',
   multi_choice: 'Multi Choice',
   boolean: 'Yes / No',
+  emoji: 'Emoji Reaction',
 }
+
+const COND_OP_LABELS: Record<CondOp, string> = {
+  eq: 'equals',
+  neq: 'does not equal',
+  gte: 'is at least',
+  lte: 'is at most',
+  contains: 'contains',
+  any_of: 'is any of',
+}
+
+const DEFAULT_EMOJIS = ['😡', '😕', '😐', '🙂', '😍']
 
 export function ReviewFormBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -90,6 +106,9 @@ export function ReviewFormBuilder() {
         options: q.options ?? null,
         required: q.required,
         weight: q.weight,
+        condition_index: q.condition_index ?? null,
+        condition_operator: q.condition_operator ?? null,
+        condition_value: q.condition_value ?? null,
       })),
     }),
     onSuccess: () => {
@@ -224,6 +243,8 @@ export function ReviewFormBuilder() {
               <QuestionEditor
                 key={i}
                 q={q}
+                index={i}
+                priorQuestions={questions.slice(0, i)}
                 onChange={updated => setQuestions(qs => qs.map((x, ix) => ix === i ? updated : x))}
                 onDelete={() => setQuestions(qs => qs.filter((_, ix) => ix !== i))}
                 onMove={(dir) => {
@@ -274,9 +295,22 @@ function Checkbox({ label, checked, onChange }: { label: string; checked: boolea
   )
 }
 
-function QuestionEditor({ q, onChange, onDelete, onMove }: { q: Question; onChange: (q: Question) => void; onDelete: () => void; onMove: (dir: 'up' | 'down') => void }) {
+function QuestionEditor({ q, index, priorQuestions, onChange, onDelete, onMove }: {
+  q: Question
+  index: number
+  priorQuestions: Question[]
+  onChange: (q: Question) => void
+  onDelete: () => void
+  onMove: (dir: 'up' | 'down') => void
+}) {
   const hasChoices = q.kind === 'single_choice' || q.kind === 'multi_choice'
+  const isEmoji = q.kind === 'emoji'
   const choices = q.options?.choices ?? []
+  const emojis = q.options?.emojis ?? []
+  const hasCondition = q.condition_index !== null && q.condition_index !== undefined
+  const condValStr = Array.isArray(q.condition_value)
+    ? q.condition_value.join(', ')
+    : (q.condition_value ?? '')
 
   return (
     <div className="bg-[#151515] border border-dark-border rounded-lg p-3 flex gap-3">
@@ -327,11 +361,126 @@ function QuestionEditor({ q, onChange, onDelete, onMove }: { q: Question; onChan
               </button>
             </div>
           )}
+          {isEmoji && (
+            <div className="mt-2 space-y-1">
+              <div className="text-[10px] uppercase tracking-wider text-[#666] mb-1">Emoji + label pairs</div>
+              {emojis.map((emoji, ci) => (
+                <div key={ci} className="flex gap-2">
+                  <input
+                    value={emoji}
+                    onChange={e => {
+                      const next = [...emojis]; next[ci] = e.target.value
+                      onChange({ ...q, options: { ...(q.options ?? {}), emojis: next } })
+                    }}
+                    placeholder="😀"
+                    className={inputCls + ' !w-16 text-center text-lg'}
+                    style={{ width: 64 }}
+                  />
+                  <input
+                    value={choices[ci] ?? ''}
+                    onChange={e => {
+                      const next = [...choices]; next[ci] = e.target.value
+                      onChange({ ...q, options: { ...(q.options ?? {}), choices: next } })
+                    }}
+                    placeholder="Label (e.g. Awful)"
+                    className={inputCls}
+                  />
+                  <button
+                    onClick={() => onChange({
+                      ...q,
+                      options: {
+                        ...(q.options ?? {}),
+                        emojis: emojis.filter((_, x) => x !== ci),
+                        choices: choices.filter((_, x) => x !== ci),
+                      },
+                    })}
+                    className="text-red-300 border border-red-500/30 px-2 rounded-lg hover:bg-red-500/10"
+                  ><Trash2 size={12} /></button>
+                </div>
+              ))}
+              <button
+                onClick={() => onChange({
+                  ...q,
+                  options: {
+                    ...(q.options ?? {}),
+                    emojis: [...emojis, '🙂'],
+                    choices: [...choices, `Option ${emojis.length + 1}`],
+                  },
+                })}
+                className="text-xs text-primary-400 hover:text-primary-300"
+              >
+                + Add emoji
+              </button>
+            </div>
+          )}
+
+          {/* Conditional show/hide */}
+          {index > 0 && (
+            <div className="mt-3 p-2 border border-dashed border-dark-border rounded-lg bg-[#0f0f0f]">
+              <label className="flex items-center gap-2 text-xs text-white cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={hasCondition}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      onChange({
+                        ...q,
+                        condition_index: index - 1,
+                        condition_operator: 'eq',
+                        condition_value: '',
+                      })
+                    } else {
+                      onChange({ ...q, condition_index: null, condition_operator: null, condition_value: null })
+                    }
+                  }}
+                />
+                Show only if…
+              </label>
+              {hasCondition && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select
+                    value={q.condition_index ?? 0}
+                    onChange={e => onChange({ ...q, condition_index: Number(e.target.value) })}
+                    className={inputCls}
+                  >
+                    {priorQuestions.map((pq, pi) => (
+                      <option key={pi} value={pi}>Q{pi + 1}: {pq.label.slice(0, 40)}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={q.condition_operator ?? 'eq'}
+                    onChange={e => onChange({ ...q, condition_operator: e.target.value as CondOp })}
+                    className={inputCls}
+                  >
+                    {Object.entries(COND_OP_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <input
+                    value={condValStr}
+                    onChange={e => {
+                      const raw = e.target.value
+                      const val = q.condition_operator === 'any_of'
+                        ? raw.split(',').map(s => s.trim()).filter(Boolean)
+                        : raw
+                      onChange({ ...q, condition_value: val })
+                    }}
+                    placeholder={q.condition_operator === 'any_of' ? 'a, b, c' : 'value'}
+                    className={inputCls}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <select
             value={q.kind}
-            onChange={e => onChange({ ...q, kind: e.target.value as Kind, options: e.target.value === 'single_choice' || e.target.value === 'multi_choice' ? { choices: ['Option 1', 'Option 2'] } : undefined })}
+            onChange={e => {
+              const k = e.target.value as Kind
+              let options: Question['options'] = undefined
+              if (k === 'single_choice' || k === 'multi_choice') options = { choices: ['Option 1', 'Option 2'] }
+              if (k === 'emoji') options = { emojis: [...DEFAULT_EMOJIS], choices: ['Awful', 'Poor', 'OK', 'Good', 'Great'] }
+              onChange({ ...q, kind: k, options })
+            }}
             className={inputCls}
           >
             {Object.entries(KIND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
