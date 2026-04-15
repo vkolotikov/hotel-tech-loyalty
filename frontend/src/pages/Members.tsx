@@ -16,7 +16,7 @@ export function Members() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [createTab, setCreateTab] = useState<'form' | 'ai'>('form')
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', tier_id: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', tier_id: '' })
   const [captureText, setCaptureText] = useState('')
   const [captureLoading, setCaptureLoading] = useState(false)
   const [captureResult, setCaptureResult] = useState<any>(null)
@@ -38,15 +38,15 @@ export function Members() {
     mutationFn: () => api.post('/v1/admin/members', {
       name: form.name,
       email: form.email,
-      password: form.password,
       phone: form.phone || undefined,
       tier_id: form.tier_id || undefined,
-    }),
-    onSuccess: () => {
+      send_welcome_email: true,
+    }).then(r => r.data),
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ['admin-members'] })
-      toast.success('Member created successfully!')
+      toast.success(data?.message ?? 'Member created — welcome email sent.')
       setShowCreate(false)
-      setForm({ name: '', email: '', password: '', phone: '', tier_id: '' })
+      setForm({ name: '', email: '', phone: '', tier_id: '' })
     },
     onError: (e: any) => {
       const errors = e.response?.data?.errors
@@ -253,10 +253,8 @@ export function Members() {
                       <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@example.com"
                         className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Password *</label>
-                      <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min. 8 characters"
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <div className="rounded-lg border border-primary-500/30 bg-primary-500/5 px-3 py-2.5 text-xs text-[#a0a0a0]">
+                      <span className="font-semibold text-primary-400">Password:</span> the member will receive a welcome email with a 6-digit code to set their own password. No password needed from you.
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Phone <span className="font-normal text-[#636366]">(optional)</span></label>
@@ -277,7 +275,7 @@ export function Members() {
                 <div className="flex gap-3 p-6 border-t border-dark-border">
                   <button onClick={() => setShowCreate(false)}
                     className="flex-1 border border-dark-border text-[#a0a0a0] py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
-                  <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.email || !form.password || createMutation.isPending}
+                  <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.email || createMutation.isPending}
                     className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     {createMutation.isPending ? 'Creating...' : 'Create Member'}
                   </button>
@@ -325,7 +323,6 @@ export function Members() {
                         { key: 'name', label: 'Full Name', type: 'text' },
                         { key: 'email', label: 'Email', type: 'email' },
                         { key: 'phone', label: 'Phone', type: 'text' },
-                        { key: 'password', label: 'Password', type: 'text' },
                         { key: 'nationality', label: 'Nationality', type: 'text' },
                         { key: 'language', label: 'Language', type: 'text' },
                       ].map(({ key, label, type }) => (
@@ -358,15 +355,15 @@ export function Members() {
                           onClick={async () => {
                             const r = captureResult
                             try {
-                              await api.post('/v1/admin/members', {
+                              const resp = await api.post('/v1/admin/members', {
                                 name: r.name,
                                 email: r.email,
-                                password: r.password,
                                 phone: r.phone || undefined,
                                 tier_id: r.tier_id || tiers.find(t => t.name === r.tier)?.id || undefined,
+                                send_welcome_email: true,
                               })
                               qc.invalidateQueries({ queryKey: ['admin-members'] })
-                              toast.success(`Member created for ${r.name}`)
+                              toast.success(resp.data?.message ?? `Member created for ${r.name}`)
                               setShowCreate(false); setCaptureResult(null); setCaptureText('')
                             } catch (e: any) {
                               const errors = e.response?.data?.errors
@@ -374,7 +371,7 @@ export function Members() {
                               else { toast.error(e.response?.data?.message || 'Failed to create member') }
                             }
                           }}
-                          disabled={!captureResult.name || !captureResult.email || !captureResult.password}
+                          disabled={!captureResult.name || !captureResult.email}
                           className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
                         >
                           Create Member

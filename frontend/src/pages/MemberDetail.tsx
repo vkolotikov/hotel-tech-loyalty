@@ -142,6 +142,12 @@ export function MemberDetail() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
   })
 
+  const resendWelcomeMutation = useMutation({
+    mutationFn: () => api.post(`/v1/admin/members/${id}/resend-welcome`).then(r => r.data),
+    onSuccess: (data: any) => toast.success(data?.message ?? 'Welcome email sent'),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not send email'),
+  })
+
   const redeemMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/points/redeem', {
       member_id: Number(id),
@@ -421,6 +427,23 @@ export function MemberDetail() {
         <div className="space-y-4">
           {/* Member QR Code */}
           <MemberQrCard memberId={id!} memberNumber={member?.member_number} />
+
+          {/* Resend welcome / set-password email */}
+          {isAdmin && (
+            <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+              <h3 className="font-semibold text-white mb-2">Welcome Email</h3>
+              <p className="text-xs text-[#a0a0a0] mb-3">
+                Resend the set-password email with a fresh 48-hour code.
+              </p>
+              <button
+                onClick={() => resendWelcomeMutation.mutate()}
+                disabled={resendWelcomeMutation.isPending}
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors"
+              >
+                {resendWelcomeMutation.isPending ? 'Sending...' : 'Resend Welcome Email'}
+              </button>
+            </div>
+          )}
 
           {/* Award Points */}
           {(isAdmin || staff?.can_award_points) && <div className="bg-dark-surface rounded-xl border border-dark-border p-5">

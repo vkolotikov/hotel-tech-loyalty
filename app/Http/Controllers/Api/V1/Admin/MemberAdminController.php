@@ -36,15 +36,16 @@ class MemberAdminController extends Controller
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
+            // Password is now OPTIONAL — when omitted, the member gets a
+            // welcome email with a 6-digit code they use to set their own
+            // password via the standard password-reset flow.
+            'password' => 'nullable|string|min:8',
             'phone'    => 'nullable|string|max:20',
             'tier_id'  => 'nullable|exists:loyalty_tiers,id',
             'nfc_uid'  => 'nullable|string|max:100',
+            'send_welcome_email' => 'nullable|boolean',
         ]);
 
-        // Resolve tier first so we fail fast with a clear error if no tier exists
-        // for this organization (the Bronze fallback can return null on a fresh
-        // tenant whose loyalty tiers haven't been seeded yet).
         $tier = !empty($validated['tier_id'])
             ? LoyaltyTier::find($validated['tier_id'])
             : (LoyaltyTier::where('name', 'Bronze')->first()
@@ -56,12 +57,18 @@ class MemberAdminController extends Controller
             ], 422);
         }
 
+        $useInviteFlow = empty($validated['password']);
+        $welcomeBonus = (int) HotelSetting::getValue('welcome_bonus_points', 500);
+        $sendEmail = $request->boolean('send_welcome_email', $useInviteFlow);
+
         try {
-            $member = \DB::transaction(function () use ($validated, $request, $tier) {
+            $result = \DB::transaction(function () use ($validated, $request, $tier, $useInviteFlow, $welcomeBonus) {
                 $user = User::create([
                     'name'      => $validated['name'],
                     'email'     => $validated['email'],
-                    'password'  => Hash::make($validated['password']),
+                    // Use a random password when admin didn't provide one —
+                    // the user will reset it via the welcome-email code.
+                    'password'  => Hash::make($validated['password'] ?? \Illuminate\Support\Str::random(40)),
                     'phone'     => $validated['phone'] ?? null,
                     'user_type' => 'member',
                 ]);
@@ -93,11 +100,42 @@ class MemberAdminController extends Controller
                     $member->update(['qr_code_token' => $nfcUid]);
                 }
 
-                return $member;
+                // Award welcome bonus INSIDE the transaction so a failure rolls
+                // everything back — no more orphaned zero-point members.
+                if ($welcomeBonus > 0) {
+                    $this->loyaltyService->awardPoints(
+                        $member,
+                        $welcomeBonus,
+                        'Welcome bonus — registered by staff',
+                        'bonus',
+                        $request->user(),
+                    );
+                }
+
+                // Generate an invite code (48h) if we're using the email flow.
+                $inviteCode = null;
+                if ($useInviteFlow) {
+                    \App\Models\EmailVerificationCode::where('email', $user->email)
+                        ->whereNull('verified_at')
+                        ->delete();
+
+                    $inviteCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                    \App\Models\EmailVerificationCode::create([
+                        'email'      => $user->email,
+                        'code'       => $inviteCode,
+                        'expires_at' => now()->addHours(48),
+                    ]);
+                }
+
+                return ['member' => $member, 'invite_code' => $inviteCode];
             });
+
+            $member = $result['member'];
+            $inviteCode = $result['invite_code'];
         } catch (\Throwable $e) {
             \Log::error('Member store failed', [
                 'error'     => $e->getMessage(),
+                'file'      => $e->getFile() . ':' . $e->getLine(),
                 'org_bound' => app()->bound('current_organization_id'),
                 'org_id'    => app()->bound('current_organization_id') ? app('current_organization_id') : null,
             ]);
@@ -106,12 +144,21 @@ class MemberAdminController extends Controller
             ], 500);
         }
 
-        // Best-effort post-creation steps — failures here must NOT 500 the request
-        // (the member already exists in the DB and is usable).
-        try {
-            $this->loyaltyService->awardPoints($member, (int) HotelSetting::getValue('welcome_bonus_points', 500), 'Welcome bonus — registered by staff', 'bonus');
-        } catch (\Throwable $e) {
-            \Log::warning('Welcome bonus award failed', ['member_id' => $member->id, 'error' => $e->getMessage()]);
+        // Fire-and-forget welcome email — failure here shouldn't 500 the
+        // request (the member already exists; admin can resend later).
+        $emailSent = false;
+        if ($sendEmail && $inviteCode) {
+            try {
+                $org = \App\Models\Organization::find($member->organization_id);
+                \Illuminate\Support\Facades\Mail::to($member->user->email)
+                    ->send(new \App\Mail\WelcomeMemberMail($member->load(['user', 'tier']), $org, $inviteCode));
+                $emailSent = true;
+            } catch (\Throwable $e) {
+                \Log::warning('Welcome email send failed', [
+                    'member_id' => $member->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         try { $this->linkService->linkMemberToGuests($member); }
@@ -134,9 +181,55 @@ class MemberAdminController extends Controller
         try { AnalyticsService::clearDashboardCache(); } catch (\Throwable $e) {}
 
         return response()->json([
-            'message' => 'Member created successfully',
-            'member'  => $member->load(['user', 'tier']),
+            'message'      => $useInviteFlow
+                ? ($emailSent
+                    ? 'Member created. Welcome email sent — user will set their own password.'
+                    : 'Member created, but the welcome email failed to send. You may need to share credentials manually.')
+                : 'Member created successfully',
+            'member'       => $member->load(['user', 'tier']),
+            'invite_flow'  => $useInviteFlow,
+            'email_sent'   => $emailSent,
         ], 201);
+    }
+
+    /**
+     * Resend the welcome / set-password email to a member.
+     * Generates a fresh 48h code each time.
+     */
+    public function resendWelcomeEmail(int $id): JsonResponse
+    {
+        $member = LoyaltyMember::with(['user', 'tier'])->findOrFail($id);
+
+        if (!$member->user || !$member->user->email) {
+            return response()->json(['message' => 'Member has no email on file'], 422);
+        }
+
+        \App\Models\EmailVerificationCode::where('email', $member->user->email)
+            ->whereNull('verified_at')
+            ->delete();
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        \App\Models\EmailVerificationCode::create([
+            'email'      => $member->user->email,
+            'code'       => $code,
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        try {
+            $org = \App\Models\Organization::find($member->organization_id);
+            \Illuminate\Support\Facades\Mail::to($member->user->email)
+                ->send(new \App\Mail\WelcomeMemberMail($member, $org, $code));
+        } catch (\Throwable $e) {
+            \Log::error('Welcome email resend failed', [
+                'member_id' => $member->id,
+                'error'     => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Could not send email: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json(['message' => 'Welcome email sent to ' . $member->user->email]);
     }
 
     public function index(Request $request): JsonResponse

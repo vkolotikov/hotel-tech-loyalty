@@ -7,6 +7,10 @@ use App\Services\LoyaltyService;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
 {
@@ -95,6 +99,75 @@ class MemberController extends Controller
             'nfc_uid'       => $member->nfc_uid,
             'tier'          => $member->tier,
             'current_points'=> $member->current_points,
+        ]);
+    }
+
+    /**
+     * DELETE /v1/member/account
+     *
+     * Members can delete their own account from the mobile app. We
+     * anonymize rather than hard-delete so the append-only points ledger
+     * and related audit records remain intact (required for compliance +
+     * analytics). The user's login is permanently revoked.
+     *
+     * Requires password re-confirmation to prevent accidental deletion
+     * and to confirm account ownership on a device that may be shared.
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'password'      => 'required|string',
+            'confirmation'  => 'required|string|in:DELETE',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Incorrect password.'],
+            ]);
+        }
+
+        $member = $user->loyaltyMember;
+
+        try {
+            DB::transaction(function () use ($user, $member) {
+                // Anonymize user-identifying fields. Keep the row so FKs
+                // (points_transactions, bookings, audit_logs) stay valid.
+                $deletedEmail = 'deleted-' . $user->id . '-' . time() . '@deleted.local';
+                $user->update([
+                    'name'          => 'Deleted Member',
+                    'email'         => $deletedEmail,
+                    'phone'         => null,
+                    'date_of_birth' => null,
+                    'nationality'   => null,
+                    'avatar_url'    => null,
+                    'password'      => Hash::make(\Illuminate\Support\Str::random(64)),
+                ]);
+
+                if ($member) {
+                    $member->update([
+                        'is_active'       => false,
+                        'qr_code_token'   => null,
+                        'last_activity_at'=> now(),
+                    ]);
+                }
+
+                // Revoke all Sanctum tokens — immediate logout everywhere.
+                $user->tokens()->delete();
+            });
+        } catch (\Throwable $e) {
+            Log::error('Account deletion failed', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Could not delete account: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Your account has been deleted. We are sorry to see you go.',
         ]);
     }
 
