@@ -11,7 +11,9 @@ use App\Models\Organization;
 use App\Models\Property;
 use App\Models\ReviewForm;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class OrganizationSetupService
@@ -109,28 +111,49 @@ class OrganizationSetupService
 
     /**
      * Populate an organization with sample/demo data.
+     *
+     * Wrapped in a transaction so a partial failure rolls back cleanly —
+     * the Setup wizard can safely retry or the user can re-run the step.
      */
     public function seedSampleData(Organization $org): void
     {
         app()->instance('current_organization_id', $org->id);
 
+        // Make sure default tiers exist even if the caller skipped setupDefaults.
+        $this->setupDefaults($org);
+
         $bronzeTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Bronze')->first();
         $silverTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Silver')->first();
         $goldTier   = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Gold')->first();
 
-        if (!$bronzeTier) return;
+        if (!$bronzeTier) {
+            Log::warning('seedSampleData: tiers missing after setupDefaults — aborting', ['org_id' => $org->id]);
+            return;
+        }
 
-        $sampleMembers = [
-            ['name' => 'Alice Johnson',  'email' => "alice.{$org->id}@sample.hotel-tech.ai",  'tier' => $goldTier,   'points' => 7500],
-            ['name' => 'Bob Smith',      'email' => "bob.{$org->id}@sample.hotel-tech.ai",    'tier' => $silverTier, 'points' => 2200],
-            ['name' => 'Carol Davis',    'email' => "carol.{$org->id}@sample.hotel-tech.ai",  'tier' => $bronzeTier, 'points' => 450],
-            ['name' => 'David Wilson',   'email' => "david.{$org->id}@sample.hotel-tech.ai",  'tier' => $silverTier, 'points' => 1800],
-            ['name' => 'Emma Brown',     'email' => "emma.{$org->id}@sample.hotel-tech.ai",   'tier' => $goldTier,   'points' => 6200],
+        DB::transaction(function () use ($org, $bronzeTier, $silverTier, $goldTier) {
+            $this->seedSampleMembers($org, $bronzeTier, $silverTier, $goldTier);
+            $this->seedSampleGuests($org);
+            $this->seedSampleOffers($org);
+        });
+    }
+
+    protected function seedSampleMembers(Organization $org, LoyaltyTier $bronze, LoyaltyTier $silver, LoyaltyTier $gold): void
+    {
+        $members = [
+            ['name' => 'Alice Johnson',  'tier' => $gold,   'points' => 7500],
+            ['name' => 'Bob Smith',      'tier' => $silver, 'points' => 2200],
+            ['name' => 'Carol Davis',    'tier' => $bronze, 'points' => 450],
+            ['name' => 'David Wilson',   'tier' => $silver, 'points' => 1800],
+            ['name' => 'Emma Brown',     'tier' => $gold,   'points' => 6200],
         ];
 
-        foreach ($sampleMembers as $sm) {
+        foreach ($members as $sm) {
+            $slug = Str::slug(explode(' ', $sm['name'])[0]);
+            $email = "{$slug}.{$org->id}@sample.hotel-tech.ai";
+
             $user = User::withoutGlobalScopes()->firstOrCreate(
-                ['email' => $sm['email']],
+                ['email' => $email],
                 [
                     'name'            => $sm['name'],
                     'password'        => Hash::make('password'),
@@ -144,33 +167,84 @@ class OrganizationSetupService
                 [
                     'organization_id' => $org->id,
                     'tier_id'         => $sm['tier']->id,
-                    'member_number'   => 'M' . str_pad(random_int(10000, 99999), 6, '0'),
+                    'member_number'   => 'M' . str_pad((string) random_int(10000, 999999), 6, '0', STR_PAD_LEFT),
                     'qr_code_token'   => Str::random(64),
                     'referral_code'   => strtoupper(Str::random(8)),
                     'current_points'  => $sm['points'],
                     'lifetime_points' => $sm['points'] + random_int(500, 3000),
                     'is_active'       => true,
                     'joined_at'       => now()->subDays(random_int(30, 365)),
+                    'last_activity_at'=> now()->subDays(random_int(1, 14)),
                 ]
             );
         }
+    }
 
-        $sampleGuests = [
-            ['first_name' => 'James',   'last_name' => 'Anderson', 'email' => 'james.a@example.com',   'vip_level' => 'gold',   'total_stays' => 12, 'total_revenue' => 15000],
-            ['first_name' => 'Sophie',  'last_name' => 'Martin',   'email' => 'sophie.m@example.com',  'vip_level' => 'silver', 'total_stays' => 5,  'total_revenue' => 6500],
-            ['first_name' => 'Michael', 'last_name' => 'Chen',     'email' => 'michael.c@example.com', 'vip_level' => null,     'total_stays' => 2,  'total_revenue' => 1800],
+    protected function seedSampleGuests(Organization $org): void
+    {
+        // vip_level values must match the column default space ('Standard', 'silver', 'gold').
+        // NEVER pass explicit null — the column is NOT NULL. Omit the key instead so the
+        // PG default ('Standard') fires when we want the baseline.
+        $guests = [
+            ['first_name' => 'James',   'last_name' => 'Anderson', 'email' => "james.{$org->id}@sample.hotel-tech.ai",   'vip_level' => 'gold',     'total_stays' => 12, 'total_revenue' => 15000],
+            ['first_name' => 'Sophie',  'last_name' => 'Martin',   'email' => "sophie.{$org->id}@sample.hotel-tech.ai",  'vip_level' => 'silver',   'total_stays' => 5,  'total_revenue' => 6500],
+            ['first_name' => 'Michael', 'last_name' => 'Chen',     'email' => "michael.{$org->id}@sample.hotel-tech.ai", 'vip_level' => 'Standard', 'total_stays' => 2,  'total_revenue' => 1800],
         ];
 
-        foreach ($sampleGuests as $sg) {
+        foreach ($guests as $sg) {
             Guest::withoutGlobalScopes()->firstOrCreate(
                 ['organization_id' => $org->id, 'email' => $sg['email']],
-                array_merge($sg, [
+                array_filter(array_merge($sg, [
                     'full_name'      => $sg['first_name'] . ' ' . $sg['last_name'],
                     'guest_type'     => 'Individual',
                     'lead_source'    => 'Sample Data',
                     'last_stay_date' => now()->subDays(random_int(5, 90)),
-                ])
+                    'first_stay_date'=> now()->subDays(random_int(180, 730)),
+                    'email_consent'  => true,
+                ]), fn($v) => $v !== null)
             );
+        }
+    }
+
+    protected function seedSampleOffers(Organization $org): void
+    {
+        if (!class_exists(\App\Models\SpecialOffer::class)) return;
+
+        $offers = [
+            [
+                'title'       => 'Welcome Getaway',
+                'description' => '20% off your first weekend stay as a new loyalty member.',
+                'type'        => 'percentage',
+                'value'       => 20,
+                'is_active'   => true,
+                'is_featured' => true,
+                'start_date'  => now()->subDays(3),
+                'end_date'    => now()->addDays(60),
+            ],
+            [
+                'title'       => 'Spa Indulgence',
+                'description' => 'Complimentary 30-min massage upgrade with any spa booking.',
+                'type'        => 'complimentary',
+                'is_active'   => true,
+                'start_date'  => now()->subDays(1),
+                'end_date'    => now()->addDays(90),
+            ],
+        ];
+
+        foreach ($offers as $o) {
+            try {
+                \App\Models\SpecialOffer::withoutGlobalScopes()->firstOrCreate(
+                    ['organization_id' => $org->id, 'title' => $o['title']],
+                    array_filter($o, fn($v) => $v !== null)
+                );
+            } catch (\Throwable $e) {
+                // Non-fatal — offers are a nice-to-have on sample data.
+                Log::warning('seedSampleOffers: could not create offer', [
+                    'org_id' => $org->id,
+                    'title'  => $o['title'],
+                    'error'  => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

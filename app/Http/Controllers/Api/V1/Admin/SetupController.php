@@ -56,12 +56,25 @@ class SetupController extends Controller
             $org->update(['name' => $request->input('hotel_name')]);
         }
 
-        // Set up defaults (tiers, benefits, settings)
-        $this->setup->setupDefaults($org);
+        try {
+            // Set up defaults (tiers, benefits, settings) — idempotent
+            $this->setup->setupDefaults($org);
 
-        // Optionally seed sample data
-        if ($request->boolean('with_sample_data')) {
-            $this->setup->seedSampleData($org);
+            // Optionally seed sample data (wrapped in its own transaction)
+            if ($request->boolean('with_sample_data')) {
+                $this->setup->seedSampleData($org);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Setup initialize failed', [
+                'org_id' => $org->id,
+                'with_sample_data' => $request->boolean('with_sample_data'),
+                'error'  => $e->getMessage(),
+                'file'   => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            return response()->json([
+                'error'   => 'Setup failed: ' . $e->getMessage(),
+                'details' => $e->getFile() . ':' . $e->getLine(),
+            ], 500);
         }
 
         return response()->json([
