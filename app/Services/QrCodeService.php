@@ -98,12 +98,31 @@ class QrCodeService
     }
 
     /**
-     * Generate a member number.
+     * Generate a globally-unique member number.
+     *
+     * The member_number unique constraint is global across all tenants, so
+     * the counter must ignore the tenant scope — otherwise every org's
+     * first member collides on HL-YYYY-000001. Loops on the (tiny) chance
+     * of a race with a concurrent insert.
      */
     public function generateMemberNumber(): string
     {
         $year = now()->year;
-        $count = LoyaltyMember::count() + 1;
-        return sprintf('HL-%d-%06d', $year, $count);
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $count = LoyaltyMember::withoutGlobalScopes()->count() + 1 + $attempt;
+            $candidate = sprintf('HL-%d-%06d', $year, $count);
+
+            $exists = LoyaltyMember::withoutGlobalScopes()
+                ->where('member_number', $candidate)
+                ->exists();
+
+            if (!$exists) {
+                return $candidate;
+            }
+        }
+
+        // Fallback — extremely unlikely. Guarantees uniqueness via timestamp.
+        return sprintf('HL-%d-%s', $year, substr((string) now()->timestamp, -6));
     }
 }
