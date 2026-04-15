@@ -74,6 +74,15 @@ class SettingsController extends Controller
         $staff = $user?->staff;
         $isSuperAdmin = $staff && $staff->role === 'super_admin';
 
+        // Fresh (non-super-admin) orgs have no seeded hotel_settings rows, so the
+        // Settings UI would render empty color/brand fields and the theme endpoint
+        // would return nothing. Lazy-seed the missing rows for this tenant the
+        // first time they open Settings so the color inputs show up and preset
+        // saves have something to update.
+        if (!$isSuperAdmin) {
+            $this->ensureTenantHasDefaultSettings();
+        }
+
         $query = HotelSetting::query();
         // Non-super-admins can only see company-scoped settings
         if (!$isSuperAdmin) {
@@ -233,6 +242,48 @@ class SettingsController extends Controller
         }
 
         return response()->json(['message' => 'Settings updated']);
+    }
+
+    /**
+     * Lazy-seed a minimal set of hotel_settings rows for the current tenant.
+     * Only creates keys that don't already exist for this org. Safe to call
+     * repeatedly — only touches missing rows.
+     */
+    private function ensureTenantHasDefaultSettings(): void
+    {
+        if (!app()->bound('current_organization_id') || !app('current_organization_id')) {
+            return;
+        }
+
+        $existingKeys = HotelSetting::pluck('key')->all();
+
+        $defaults = [
+            // Appearance (brand colors) — this is what non-super-admins need
+            // for the Branding tab to render editable inputs.
+            ['key' => 'primary_color',        'value' => '#c9a84c', 'type' => 'string',  'group' => 'appearance', 'label' => 'Primary Color'],
+            ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string',  'group' => 'appearance', 'label' => 'Secondary Color'],
+            ['key' => 'accent_color',         'value' => '#32d74b', 'type' => 'string',  'group' => 'appearance', 'label' => 'Accent / Success'],
+            ['key' => 'background_color',     'value' => '#0d0d0d', 'type' => 'string',  'group' => 'appearance', 'label' => 'Background'],
+            ['key' => 'surface_color',        'value' => '#161616', 'type' => 'string',  'group' => 'appearance', 'label' => 'Surface / Card'],
+            ['key' => 'text_color',           'value' => '#ffffff', 'type' => 'string',  'group' => 'appearance', 'label' => 'Text Color'],
+            ['key' => 'text_secondary_color', 'value' => '#8e8e93', 'type' => 'string',  'group' => 'appearance', 'label' => 'Secondary Text'],
+            ['key' => 'border_color',         'value' => '#2c2c2c', 'type' => 'string',  'group' => 'appearance', 'label' => 'Border Color'],
+            ['key' => 'error_color',          'value' => '#ff375f', 'type' => 'string',  'group' => 'appearance', 'label' => 'Error / Danger'],
+            ['key' => 'warning_color',        'value' => '#ffd60a', 'type' => 'string',  'group' => 'appearance', 'label' => 'Warning'],
+            ['key' => 'info_color',           'value' => '#0a84ff', 'type' => 'string',  'group' => 'appearance', 'label' => 'Info'],
+            ['key' => 'dark_mode_enabled',    'value' => 'true',    'type' => 'boolean', 'group' => 'appearance', 'label' => 'Dark Mode'],
+
+            // General
+            ['key' => 'hotel_currency',       'value' => 'EUR',     'type' => 'string',  'group' => 'general',    'label' => 'Currency'],
+            ['key' => 'hotel_timezone',       'value' => 'UTC',     'type' => 'string',  'group' => 'general',    'label' => 'Timezone'],
+        ];
+
+        foreach ($defaults as $d) {
+            if (in_array($d['key'], $existingKeys, true)) {
+                continue;
+            }
+            HotelSetting::create(array_merge($d, ['scope' => 'company']));
+        }
     }
 
     /**

@@ -117,6 +117,54 @@ export function Scan() {
     }
   }, [nfcUid, mode])
 
+  // Belt-and-braces: some USB HID NFC readers emit keystrokes at the document
+  // level when the input loses focus (e.g. user clicks elsewhere, dev tools
+  // open). Capture alphanumeric + Enter globally while the NFC tab is active
+  // and route them into the input regardless of focus. Ignores typing while
+  // another input/textarea is focused so we don't hijack normal data entry.
+  useEffect(() => {
+    if (mode !== 'nfc') return
+    const globalBuffer = { current: '', timer: null as ReturnType<typeof setTimeout> | null }
+
+    const flush = () => {
+      const uid = globalBuffer.current.trim()
+      globalBuffer.current = ''
+      if (uid.length >= 4) scanNfc(uid)
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      // If the NFC input itself is focused, let the normal handlers run.
+      if (target === nfcInputRef.current) return
+      // Don't hijack typing in any other input/textarea.
+      if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
+
+      if (e.key === 'Enter') {
+        if (globalBuffer.current.trim().length >= 4) {
+          e.preventDefault()
+          flush()
+        }
+        return
+      }
+      // Single printable character — most HID readers emit hex digits + optional colons.
+      if (e.key.length === 1 && /[0-9a-fA-F:\-]/.test(e.key)) {
+        globalBuffer.current += e.key
+        setNfcUid(globalBuffer.current)
+        if (globalBuffer.current.length >= 4) {
+          if (globalBuffer.timer) clearTimeout(globalBuffer.timer)
+          globalBuffer.timer = setTimeout(flush, 300)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (globalBuffer.timer) clearTimeout(globalBuffer.timer)
+    }
+  }, [mode])
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Scan Member</h1>
