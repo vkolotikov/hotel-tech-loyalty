@@ -284,13 +284,77 @@ class SettingsController extends Controller
             // General
             ['key' => 'hotel_currency',       'value' => 'EUR',     'type' => 'string',  'group' => 'general',    'label' => 'Currency'],
             ['key' => 'hotel_timezone',       'value' => 'UTC',     'type' => 'string',  'group' => 'general',    'label' => 'Timezone'],
+
+            // Integrations — PMS
+            ['key' => 'booking_smoobu_api_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API Key'],
+            ['key' => 'booking_smoobu_channel_id',    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Channel ID'],
+            ['key' => 'booking_smoobu_base_url',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API URL'],
+            ['key' => 'booking_smoobu_webhook_secret', 'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Webhook Secret'],
+            ['key' => 'cloudbeds_api_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds API Key'],
+            ['key' => 'cloudbeds_property_id',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Property ID'],
+            ['key' => 'cloudbeds_client_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Client ID'],
+            ['key' => 'cloudbeds_client_secret',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Client Secret'],
+            ['key' => 'mews_access_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews Access Token'],
+            ['key' => 'mews_client_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews Client Token'],
+            ['key' => 'mews_platform_url',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews API URL'],
+            ['key' => 'guesty_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty API Key'],
+            ['key' => 'guesty_api_secret',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty API Secret'],
+            ['key' => 'guesty_account_id',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty Account ID'],
+            ['key' => 'hostaway_api_key',             'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Hostaway API Key'],
+            ['key' => 'hostaway_account_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Hostaway Account ID'],
+            ['key' => 'beds24_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Beds24 API Key'],
+            ['key' => 'beds24_property_id',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Beds24 Property ID'],
+            ['key' => 'lodgify_api_key',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Lodgify API Key'],
+            ['key' => 'lodgify_property_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Lodgify Property ID'],
+            ['key' => 'little_hotelier_api_key',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Little Hotelier API Key'],
+            ['key' => 'little_hotelier_property_id',  'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Little Hotelier Property ID'],
+            ['key' => 'roomraccoon_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'RoomRaccoon API Key'],
+            ['key' => 'roomraccoon_property_id',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'RoomRaccoon Property ID'],
+            // Integrations — OTA / Channels
+            ['key' => 'booking_com_hotel_id',         'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Booking.com Hotel ID'],
+            ['key' => 'booking_com_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Booking.com API Key'],
+            ['key' => 'airbnb_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Airbnb API Key'],
+            ['key' => 'airbnb_listing_ids',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Airbnb Listing IDs'],
+            ['key' => 'expedia_api_key',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expedia API Key'],
+            ['key' => 'expedia_property_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expedia Property ID'],
+            // Integrations — Payments & Communication
+            ['key' => 'stripe_publishable_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Publishable Key'],
+            ['key' => 'stripe_secret_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Secret Key'],
+            ['key' => 'stripe_webhook_secret',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Webhook Secret'],
+            ['key' => 'stripe_currency',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Currency'],
+            ['key' => 'mail_host',                    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Host'],
+            ['key' => 'mail_port',                    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Port'],
+            ['key' => 'mail_username',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Username'],
+            ['key' => 'mail_password',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Password'],
+            ['key' => 'mail_from_address',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'From Address'],
+            ['key' => 'mail_from_name',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'From Name'],
+            ['key' => 'twilio_account_sid',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Account SID'],
+            ['key' => 'twilio_auth_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Auth Token'],
+            ['key' => 'twilio_phone_number',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Phone Number'],
+            ['key' => 'whatsapp_phone_id',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Phone Number ID'],
+            ['key' => 'whatsapp_access_token',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Access Token'],
+            ['key' => 'whatsapp_verify_token',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Verify Token'],
+            ['key' => 'expo_access_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expo Push Token'],
+            ['key' => 'google_maps_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Maps API Key'],
+            ['key' => 'google_analytics_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Analytics ID'],
+            ['key' => 'google_tag_manager_id',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Tag Manager ID'],
+            ['key' => 'zapier_webhook_url',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Zapier Webhook URL'],
+            ['key' => 'custom_webhook_url',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Custom Webhook URL'],
+            ['key' => 'custom_webhook_secret',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Custom Webhook Secret'],
+            // Integrations — AI (system scope, seeded here for completeness)
+            ['key' => 'ai_openai_api_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'OpenAI API Key',       'scope' => 'system'],
+            ['key' => 'ai_openai_model',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'OpenAI Model',          'scope' => 'system'],
+            ['key' => 'ai_anthropic_api_key',         'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic API Key',     'scope' => 'system'],
+            ['key' => 'ai_anthropic_model',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic Model',       'scope' => 'system'],
         ];
 
         foreach ($defaults as $d) {
             if (in_array($d['key'], $existingKeys, true)) {
                 continue;
             }
-            HotelSetting::create(array_merge($d, ['scope' => 'company']));
+            $scope = $d['scope'] ?? 'company';
+            unset($d['scope']);
+            HotelSetting::create(array_merge($d, ['scope' => $scope]));
         }
     }
 

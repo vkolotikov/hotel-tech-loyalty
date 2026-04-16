@@ -224,11 +224,8 @@ export function Login() {
       navigate('/')
     } catch (err: any) {
       setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.')
-      // If verification error, go back to verify
-      if (err.response?.data?.error?.includes('verify')) {
-        setView('verify')
-        setVerified(false)
-      }
+      setVerified(false)
+      setCodeDigits(['', '', '', '', '', ''])
     } finally {
       setLoading(false)
     }
@@ -309,6 +306,11 @@ export function Login() {
             <p className="text-gray-500 mt-1">
               {verified ? 'Creating your account...' : `Enter the 6-digit code sent to ${email}`}
             </p>
+            {verified && (
+              <div className="flex justify-center mt-4">
+                <div className="w-6 h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
 
           {!verified && (

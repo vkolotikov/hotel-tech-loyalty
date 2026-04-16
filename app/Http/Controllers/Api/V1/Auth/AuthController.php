@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\VerificationCodeMail;
+use App\Mail\WelcomeTrialMail;
 use App\Models\EmailVerificationCode;
 use App\Models\LoyaltyMember;
 use App\Models\Staff;
@@ -477,6 +478,20 @@ class AuthController extends Controller
 
         $sanctumToken = $localUser->createToken('admin')->plainTextToken;
         $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
+
+        try {
+            $planLabel = ucfirst($planSlug);
+            $loginUrl = config('app.frontend_url', config('app.url', 'https://loyalty.hotel-tech.ai'));
+            Mail::to($validated['email'])->send(new WelcomeTrialMail(
+                userName: $validated['name'],
+                hotelName: $validated['hotel_name'],
+                planName: $planLabel,
+                trialDays: $trialDays,
+                loginUrl: $loginUrl,
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'token'      => $sanctumToken,
