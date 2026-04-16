@@ -139,11 +139,23 @@ class SettingsController extends Controller
         }
 
         if (!$orgId) {
-            // Try to resolve from authenticated user (Bearer token)
+            // Try to resolve from authenticated user (Sanctum token)
             $user = auth('sanctum')->user();
             if ($user) {
                 $staff = \App\Models\Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
                 $orgId = $staff?->organization_id ?? $user->organization_id ?? null;
+            }
+        }
+
+        if (!$orgId) {
+            // Try SaaS JWT — tenant users authenticate via SaaS-issued JWT which
+            // Sanctum can't resolve. Verify the JWT and look up the local org.
+            $authHeader = request()->header('Authorization', '');
+            if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
+                $token = trim(substr($authHeader, 7));
+                if ($token && !str_contains($token, '|')) {
+                    $orgId = $this->resolveOrgFromSaasJwt($token);
+                }
             }
         }
 
@@ -280,6 +292,40 @@ class SettingsController extends Controller
             }
             HotelSetting::create(array_merge($d, ['scope' => 'company']));
         }
+    }
+
+    /**
+     * Verify a SaaS-issued JWT and return the local organization_id.
+     * Returns null if the token is invalid or the org doesn't exist locally.
+     */
+    private function resolveOrgFromSaasJwt(string $token): ?int
+    {
+        $secret = config('services.saas.jwt_secret', '');
+        if (!$secret) return null;
+
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) return null;
+
+        [$header, $payload, $signature] = $parts;
+        $expected = rtrim(strtr(base64_encode(
+            hash_hmac('sha256', "$header.$payload", $secret, true)
+        ), '+/', '-_'), '=');
+
+        if (!hash_equals($expected, $signature)) return null;
+
+        $data = json_decode(base64_decode(str_pad(
+            strtr($payload, '-_', '+/'),
+            strlen($payload) % 4 ? strlen($payload) + 4 - strlen($payload) % 4 : strlen($payload),
+            '='
+        )), true);
+
+        if (!$data || (isset($data['exp']) && $data['exp'] < time())) return null;
+
+        $saasOrgId = $data['currentOrgId'] ?? null;
+        if (!$saasOrgId) return null;
+
+        $org = \App\Models\Organization::where('saas_org_id', $saasOrgId)->first();
+        return $org?->id;
     }
 
     /**
