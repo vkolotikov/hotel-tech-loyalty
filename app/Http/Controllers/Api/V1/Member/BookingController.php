@@ -12,6 +12,10 @@ class BookingController extends Controller
     {
         $member = $request->user()->loyaltyMember;
 
+        if (!$member) {
+            return response()->json(['data' => [], 'next_page_url' => null]);
+        }
+
         $bookings = $member->bookings()
             ->orderByDesc('check_in')
             ->paginate(10);
@@ -22,6 +26,11 @@ class BookingController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $member = $request->user()->loyaltyMember;
+
+        if (!$member) {
+            return response()->json(['message' => 'No member record found.'], 404);
+        }
+
         $booking = $member->bookings()->findOrFail($id);
         return response()->json($booking);
     }

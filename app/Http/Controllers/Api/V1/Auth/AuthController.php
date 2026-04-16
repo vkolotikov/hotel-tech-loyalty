@@ -307,6 +307,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name'       => 'required|string|max:191',
             'email'      => 'required|email|max:191',
+            'phone'      => 'required|string|max:30',
             'password'   => 'required|string|min:8',
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
@@ -346,6 +347,7 @@ class AuthController extends Controller
                 $regResponse = Http::timeout(10)->post("{$saasApi}/auth/register", [
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
+                    'phone'    => $validated['phone'],
                     'password' => $validated['password'],
                     'orgName'  => $validated['hotel_name'],
                     'planSlug' => $validated['plan'] ?? 'starter',
@@ -400,6 +402,7 @@ class AuthController extends Controller
                 $localUser = User::create([
                     'name'            => $validated['name'],
                     'email'           => $validated['email'],
+                    'phone'           => $validated['phone'] ?? null,
                     'password'        => Hash::make($validated['password']),
                     'user_type'       => 'staff',
                     'organization_id' => $org->id,
@@ -1327,13 +1330,19 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($validated['password'])]);
         $record->update(['verified_at' => now()]);
 
-        $member = LoyaltyMember::where('user_id', $user->id)->first();
+        // Bind org context so subsequent scoped queries work (same as login)
+        if ($user->organization_id) {
+            app()->instance('current_organization_id', $user->organization_id);
+        }
+
+        $member = LoyaltyMember::withoutGlobalScopes()
+            ->where('user_id', $user->id)->with('tier')->first();
         $token  = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
             'token'  => $token,
             'user'   => $user,
-            'member' => $member?->load('tier'),
+            'member' => $member,
         ]);
     }
 }

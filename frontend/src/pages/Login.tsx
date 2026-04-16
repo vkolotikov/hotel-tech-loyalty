@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
-  Lock, Mail, User, Building2, Check,
+  Lock, Mail, User, Building2, Check, Phone,
   ShieldCheck, Eye, EyeOff, ArrowLeft,
 } from 'lucide-react'
 import { api } from '../lib/api'
@@ -56,6 +56,7 @@ export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [hotelName, setHotelName] = useState('')
   const [selectedPlan, setSelectedPlan] = useState('growth')
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
@@ -215,6 +216,7 @@ export function Login() {
       const { data } = await api.post('/v1/auth/trial', {
         name,
         email,
+        phone,
         password,
         hotel_name: hotelName,
         plan: selectedPlan,
@@ -564,12 +566,22 @@ export function Login() {
                     </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@hotel.com"
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
+                    <div className="relative">
+                      <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@hotel.com"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Phone</label>
+                    <div className="relative">
+                      <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+1 234 567 8900"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                    </div>
                   </div>
                 </div>
                 <div>

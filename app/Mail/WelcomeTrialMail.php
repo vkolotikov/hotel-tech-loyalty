@@ -18,6 +18,8 @@ class WelcomeTrialMail extends Mailable
         public string $planName,
         public int $trialDays,
         public string $loginUrl,
+        public string $docsUrl = 'https://hotel-tech.ai/docs',
+        public string $supportEmail = 'support@hotel-tech.ai',
     ) {}
 
     public function envelope(): Envelope
