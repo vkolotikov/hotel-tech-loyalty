@@ -82,9 +82,9 @@ class BookingPublicController extends Controller
             'theme'         => $this->getStringSetting($orgId, 'booking_widget_theme', 'light'),
             'primary_color' => $this->getStringSetting($orgId, 'booking_widget_color', '') ?: $brandPrimary,
             'border_radius' => (int) $this->getStringSetting($orgId, 'booking_widget_radius', '12'),
-            'show_name'     => $this->getStringSetting($orgId, 'booking_widget_show_name', 'true') === 'true',
+            'show_name'     => $this->getStringSetting($orgId, 'booking_widget_show_name', 'false') === 'true',
             'property_name' => $this->getStringSetting($orgId, 'booking_widget_property_name', ''),
-            'show_logo'     => $this->getStringSetting($orgId, 'booking_widget_show_logo', 'false') === 'true' || !empty($brandLogo),
+            'show_logo'     => $this->getStringSetting($orgId, 'booking_widget_show_logo', 'false') === 'true',
             'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', '') ?: $brandLogo,
         ];
 

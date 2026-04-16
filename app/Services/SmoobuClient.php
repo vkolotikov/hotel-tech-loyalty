@@ -437,8 +437,7 @@ class SmoobuClient
                 $dateStr = $cur->format('Y-m-d');
                 $dow = (int) $cur->format('N');
                 $price = ($dow >= 5 && $dow <= 6) ? round($base * 1.2, 2) : $base;
-                $seed = crc32($dateStr . $id);
-                $price = max(1.0, $price + ($seed % 21) - 10);
+                // Use the exact base price (with weekend markup) — no random noise
                 $byDate[$dateStr] = ['price' => $price, 'available' => true, 'min_stay' => 1];
                 $cur->modify('+1 day');
             }

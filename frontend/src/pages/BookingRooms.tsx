@@ -71,7 +71,7 @@ export default function BookingRooms() {
   const syncMut = useMutation({
     mutationFn: () => api.post('/v1/admin/booking-rooms/sync'),
     onSuccess: (r) => { toast.success(r.data.message); qc.invalidateQueries({ queryKey: ['booking-rooms'] }) },
-    onError: () => toast.error('Sync failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Sync failed'),
   })
 
   const deleteMut = useMutation({
@@ -232,7 +232,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
   const [maxGuests, setMaxGuests] = useState(room?.max_guests || 2)
   const [bedrooms, setBedrooms] = useState(room?.bedrooms || 1)
   const [bedType, setBedType] = useState(room?.bed_type || '')
-  const [basePrice, setBasePrice] = useState(room?.base_price || 0)
+  const [basePrice, setBasePrice] = useState(room?.base_price != null ? String(room.base_price) : '')
   const [inventoryCount, setInventoryCount] = useState(room?.inventory_count || 1)
   const [size, setSize] = useState(room?.size || '')
   const [amenities, setAmenities] = useState<string[]>(room?.amenities || [])
@@ -270,7 +270,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
     fd.append('max_guests', String(maxGuests))
     fd.append('bedrooms', String(bedrooms))
     fd.append('bed_type', bedType)
-    fd.append('base_price', String(basePrice))
+    fd.append('base_price', String(parseFloat(basePrice) || 0))
     fd.append('inventory_count', String(inventoryCount))
     fd.append('size', size)
     fd.append('amenities', JSON.stringify(amenities))
@@ -316,7 +316,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Base Price (€ / night)</label>
-              <input type="number" value={basePrice} onChange={e => setBasePrice(Number(e.target.value))} className={inputCls} />
+              <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} min={0} placeholder="0" className={inputCls} />
             </div>
           </div>
 
@@ -351,9 +351,9 @@ function RoomForm({ room, onClose, onSave, saving }: {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Bed Type</label>
-              <select value={bedType} onChange={e => setBedType(e.target.value)} className={inputCls}>
-                <option value="">—</option>
-                {BED_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+              <select value={bedType} onChange={e => setBedType(e.target.value)} className={inputCls} style={{ colorScheme: 'dark' }}>
+                <option value="" style={{ background: '#0f1c18', color: '#fff' }}>—</option>
+                {BED_TYPES.map(bt => <option key={bt} value={bt} style={{ background: '#0f1c18', color: '#fff' }}>{bt}</option>)}
               </select>
             </div>
             <div>

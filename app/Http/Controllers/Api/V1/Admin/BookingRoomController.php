@@ -160,6 +160,14 @@ class BookingRoomController extends Controller
     {
         $orgId = app('current_organization_id');
 
+        // Guard: do not sync if no real PMS integration is configured
+        if ($smoobu->isMock()) {
+            return response()->json([
+                'message' => 'No PMS integration configured. Please connect your Smoobu API key in Settings → Integrations before syncing rooms.',
+                'synced' => 0, 'created' => 0, 'updated' => 0,
+            ], 422);
+        }
+
         try {
             $response = $smoobu->getApartments();
             $apartments = $response['apartments'] ?? [];
