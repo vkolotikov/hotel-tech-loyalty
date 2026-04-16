@@ -1278,4 +1278,47 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Password has been reset successfully.']);
     }
+
+    /**
+     * POST /v1/auth/claim
+     *
+     * Staff creates a member without a password → member receives a
+     * welcome email with a 6-digit invitation code. This endpoint lets
+     * the member set their password AND log in with a single request.
+     */
+    public function claimAccount(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email'    => 'required|email',
+            'code'     => 'required|string|size:6',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = EmailVerificationCode::where('email', $validated['email'])
+            ->where('code', $validated['code'])
+            ->whereNull('verified_at')
+            ->latest()
+            ->first();
+
+        if (!$record || $record->isExpired()) {
+            return response()->json(['message' => 'Invalid or expired invitation code.'], 422);
+        }
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'No account found for this email.'], 422);
+        }
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+        $record->update(['verified_at' => now()]);
+
+        $member = LoyaltyMember::where('user_id', $user->id)->first();
+        $token  = $user->createToken('mobile-app')->plainTextToken;
+
+        return response()->json([
+            'token'  => $token,
+            'user'   => $user,
+            'member' => $member?->load('tier'),
+        ]);
+    }
 }
