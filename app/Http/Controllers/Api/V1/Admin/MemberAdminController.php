@@ -251,6 +251,7 @@ class MemberAdminController extends Controller
                   ->orWhere('member_number', 'ILIKE', "%{$search}%");
             })
             ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
+            ->when($request->tier, fn($q, $tierName) => $q->whereHas('tier', fn($t) => $t->where('name', $tierName)))
             ->when($request->lead_source, fn($q, $src) => $q->whereHas('guests', fn($g) => $g->where('lead_source', $src)))
             ->when($request->lifecycle, fn($q, $ls) => $q->whereHas('guests', fn($g) => $g->where('lifecycle_status', $ls)))
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')));
@@ -551,6 +552,7 @@ class MemberAdminController extends Controller
                   ->orWhere('member_number', 'ILIKE', "%{$search}%");
             })
             ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
+            ->when($request->tier, fn($q, $tierName) => $q->whereHas('tier', fn($t) => $t->where('name', $tierName)))
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')))
             ->orderByDesc('created_at');
 
