@@ -256,7 +256,7 @@ export function Scan() {
                   className="w-full flex items-center justify-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 py-3 rounded-lg text-sm font-medium hover:bg-blue-600/30 transition-colors"
                 >
                   <Usb size={16} />
-                  Connect USB NFC Reader (ACR122U)
+                  Connect USB NFC Reader
                 </button>
               )}
 

@@ -1,17 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 /**
- * WebHID driver for ACS ACR122U NFC reader.
- * Communicates via CCID-over-HID to poll for contactless cards and read UIDs.
+ * Universal WebHID NFC reader hook.
+ *
+ * Works with ANY USB HID NFC reader — no hardcoded vendor/product filters.
+ * The browser's device picker lets the user select their reader manually.
+ *
+ * Communication strategy:
+ * 1. Try CCID-over-HID protocol (works with ACR122U, SCL3711, Identiv, etc.)
+ * 2. If CCID fails, fall back to raw HID report parsing (some readers send
+ *    the UID directly in input reports without needing CCID framing)
  */
-
-const ACR122U_FILTERS: HIDDeviceFilter[] = [
-  { vendorId: 0x072f, productId: 0x2200 },  // ACR122U
-  { vendorId: 0x072f, productId: 0x2214 },  // ACR1222L
-  { vendorId: 0x072f, productId: 0x0901 },  // ACR1281U
-  { vendorId: 0x04e6, productId: 0x5116 },  // SCL3711
-  { vendorId: 0x04e6, productId: 0x5810 },  // Identiv uTrust 3700
-]
 
 // CCID message types
 const PC_TO_RDR_ICC_POWER_ON = 0x62
@@ -50,6 +49,34 @@ function uidToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+/**
+ * Check if an input report looks like a raw UID (non-CCID readers that
+ * just dump the card UID bytes directly into an HID report).
+ * Returns the hex UID string if valid, null otherwise.
+ */
+function tryParseRawUid(data: DataView): string | null {
+  // Raw UID reports are typically 4, 7, or 10 bytes (MIFARE, etc.)
+  // Some readers pad with zeros. Find meaningful bytes.
+  const len = data.byteLength
+  if (len < 4) return null
+
+  // Find the last non-zero byte to determine real length
+  let realLen = len
+  while (realLen > 0 && data.getUint8(realLen - 1) === 0) realLen--
+  if (realLen < 4 || realLen > 10) return null
+
+  // All bytes should be in a reasonable range (not ASCII text, not all 0xFF)
+  let allFF = true
+  for (let i = 0; i < realLen; i++) {
+    if (data.getUint8(i) !== 0xff) allFF = false
+  }
+  if (allFF) return null
+
+  const bytes = new Uint8Array(realLen)
+  for (let i = 0; i < realLen; i++) bytes[i] = data.getUint8(i)
+  return uidToHex(bytes)
+}
+
 export function useNfcReader(onUidRead: (uid: string) => void) {
   const [state, setState] = useState<NfcReaderState>({
     status: 'disconnected',
@@ -63,6 +90,8 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastUidRef = useRef<string | null>(null)
   const pendingResolve = useRef<((data: DataView) => void) | null>(null)
+  const useCcidRef = useRef(true)
+  const rawUidCooldown = useRef(false)
 
   const nextSeq = () => seqRef.current = (seqRef.current + 1) & 0xff
 
@@ -88,15 +117,34 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
     })
   }, [])
 
+  const onUidReadRef = useRef(onUidRead)
+  onUidReadRef.current = onUidRead
+
   const handleReport = useCallback((e: HIDInputReportEvent) => {
+    // If we have a pending CCID command, route the report there
     if (pendingResolve.current) {
       const resolve = pendingResolve.current
       pendingResolve.current = null
       resolve(e.data)
+      return
+    }
+
+    // Otherwise, try to parse as raw UID (non-CCID reader)
+    if (!useCcidRef.current && !rawUidCooldown.current) {
+      const uid = tryParseRawUid(e.data)
+      if (uid && uid !== lastUidRef.current) {
+        lastUidRef.current = uid
+        setState(s => ({ ...s, lastUid: uid, status: 'waiting' }))
+        onUidReadRef.current(uid)
+        // Cooldown to avoid duplicate reads from the same card tap
+        rawUidCooldown.current = true
+        setTimeout(() => { rawUidCooldown.current = false }, 1500)
+      }
     }
   }, [])
 
   const pollCard = useCallback(async () => {
+    if (!useCcidRef.current) return // Non-CCID readers use input reports directly
     try {
       // Power on → activates card if present
       const atr = await sendCommand(PC_TO_RDR_ICC_POWER_ON, [])
@@ -140,7 +188,7 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
       if (uid !== lastUidRef.current) {
         lastUidRef.current = uid
         setState(s => ({ ...s, lastUid: uid, status: 'waiting' }))
-        onUidRead(uid)
+        onUidReadRef.current(uid)
       }
     } catch {
       // Timeout or comm error — card removed or transient, keep polling
@@ -149,7 +197,49 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
         setState(s => ({ ...s, lastUid: null, status: 'waiting' }))
       }
     }
-  }, [sendCommand, onUidRead])
+  }, [sendCommand])
+
+  const startDevice = useCallback(async (device: HIDDevice) => {
+    await device.open()
+    device.addEventListener('inputreport', handleReport)
+    deviceRef.current = device
+    seqRef.current = 0
+    lastUidRef.current = null
+    useCcidRef.current = true
+
+    const deviceName = device.productName || 'NFC Reader'
+
+    setState(s => ({
+      ...s,
+      status: 'waiting',
+      error: null,
+      deviceName,
+    }))
+
+    // Probe whether this device supports CCID by sending a power-on command.
+    // If it times out or errors, switch to raw HID report mode.
+    try {
+      const probe = await sendCommand(PC_TO_RDR_ICC_POWER_ON, [])
+      const msgType = probe.getUint8(0)
+      // If we get a valid CCID response (even "no card"), CCID works
+      if (msgType === RDR_TO_PC_DATA_BLOCK || msgType === 0x81 /* slot status */) {
+        useCcidRef.current = true
+        pollRef.current = setInterval(pollCard, 500)
+      } else {
+        throw new Error('Not CCID')
+      }
+    } catch {
+      // CCID probe failed — this reader doesn't speak CCID.
+      // It may send raw UID reports via inputreport events,
+      // or it's a keyboard-emulation reader (handled by Scan.tsx).
+      useCcidRef.current = false
+      setState(s => ({
+        ...s,
+        status: 'waiting',
+        deviceName: `${deviceName} (raw mode)`,
+      }))
+    }
+  }, [handleReport, sendCommand, pollCard])
 
   const connect = useCallback(async () => {
     if (!('hid' in navigator)) {
@@ -158,26 +248,14 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
     }
     setState(s => ({ ...s, status: 'connecting', error: null }))
     try {
-      const devices = await (navigator as any).hid.requestDevice({ filters: ACR122U_FILTERS })
+      // Empty filters → browser shows ALL HID devices for the user to pick
+      const devices = await (navigator as any).hid.requestDevice({ filters: [] })
       const device = devices[0] as HIDDevice | undefined
       if (!device) {
         setState(s => ({ ...s, status: 'disconnected', error: 'No reader selected' }))
         return
       }
-      await device.open()
-      device.addEventListener('inputreport', handleReport)
-      deviceRef.current = device
-      seqRef.current = 0
-      lastUidRef.current = null
-      setState(s => ({
-        ...s,
-        status: 'waiting',
-        error: null,
-        deviceName: device.productName || 'NFC Reader',
-      }))
-
-      // Start polling
-      pollRef.current = setInterval(pollCard, 500)
+      await startDevice(device)
     } catch (e: any) {
       setState(s => ({
         ...s,
@@ -185,7 +263,7 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
         error: e.message || 'Failed to connect',
       }))
     }
-  }, [handleReport, pollCard])
+  }, [startDevice])
 
   const disconnect = useCallback(async () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -196,30 +274,18 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
       deviceRef.current = null
     }
     lastUidRef.current = null
+    useCcidRef.current = true
     setState({ status: 'disconnected', error: null, deviceName: null, lastUid: null })
   }, [handleReport])
 
-  // Auto-reconnect previously paired devices
+  // Auto-reconnect any previously paired HID device
   useEffect(() => {
     if (!('hid' in navigator)) return
     ;(navigator as any).hid.getDevices().then((devices: HIDDevice[]) => {
-      const known = devices.find((d: HIDDevice) =>
-        ACR122U_FILTERS.some(f => f.vendorId === d.vendorId && f.productId === d.productId)
-      )
+      // Try to reconnect the first available previously-paired device
+      const known = devices[0]
       if (known && !deviceRef.current) {
-        known.open().then(() => {
-          known.addEventListener('inputreport', handleReport)
-          deviceRef.current = known
-          seqRef.current = 0
-          lastUidRef.current = null
-          setState(s => ({
-            ...s,
-            status: 'waiting',
-            error: null,
-            deviceName: known.productName || 'NFC Reader',
-          }))
-          pollRef.current = setInterval(pollCard, 500)
-        }).catch(() => { /* user will click Connect */ })
+        startDevice(known).catch(() => { /* user will click Connect */ })
       }
     })
     return () => { disconnect() }
