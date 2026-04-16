@@ -21,13 +21,16 @@ class ReviewPublicController extends Controller
     public function byToken(string $token): JsonResponse
     {
         $invitation = ReviewInvitation::withoutGlobalScope(TenantScope::class)
-            ->with(['form.questions', 'guest', 'member.user', 'member.tier'])
             ->where('token', $token)
             ->first();
 
         if (!$invitation) {
             return response()->json(['message' => 'Invitation not found'], 404);
         }
+
+        // Bind tenant context so eager-loaded relations (form.questions) aren't blocked by TenantScope
+        app()->instance('current_organization_id', $invitation->organization_id);
+        $invitation->load(['form.questions', 'guest', 'member.user', 'member.tier']);
 
         if ($invitation->expires_at && $invitation->expires_at->isPast()) {
             return response()->json(['message' => 'Invitation expired', 'status' => 'expired'], 410);
@@ -72,7 +75,6 @@ class ReviewPublicController extends Controller
         }
 
         $form = ReviewForm::withoutGlobalScope(TenantScope::class)
-            ->with('questions')
             ->where('id', $id)
             ->where('embed_key', $key)
             ->where('is_active', true)
@@ -81,6 +83,10 @@ class ReviewPublicController extends Controller
         if (!$form) {
             return response()->json(['message' => 'Form not found or inactive'], 404);
         }
+
+        // Bind tenant context so eager-loaded questions aren't blocked by TenantScope
+        app()->instance('current_organization_id', $form->organization_id);
+        $form->load('questions');
 
         if (!($form->config['allow_anonymous'] ?? true)) {
             return response()->json(['message' => 'Anonymous submissions disabled'], 403);
@@ -99,13 +105,15 @@ class ReviewPublicController extends Controller
     public function submitByToken(string $token, Request $request): JsonResponse
     {
         $invitation = ReviewInvitation::withoutGlobalScope(TenantScope::class)
-            ->with('form.questions')
             ->where('token', $token)
             ->first();
 
         if (!$invitation) {
             return response()->json(['message' => 'Invitation not found'], 404);
         }
+
+        app()->instance('current_organization_id', $invitation->organization_id);
+        $invitation->load('form.questions');
 
         if (in_array($invitation->status, ['submitted', 'redirected'])) {
             return response()->json(['message' => 'Already submitted'], 409);
@@ -137,7 +145,6 @@ class ReviewPublicController extends Controller
         $key = $request->query('key');
 
         $form = ReviewForm::withoutGlobalScope(TenantScope::class)
-            ->with('questions')
             ->where('id', $id)
             ->where('embed_key', $key)
             ->where('is_active', true)
@@ -146,6 +153,9 @@ class ReviewPublicController extends Controller
         if (!$form) {
             return response()->json(['message' => 'Form not found'], 404);
         }
+
+        app()->instance('current_organization_id', $form->organization_id);
+        $form->load('questions');
 
         if (!($form->config['allow_anonymous'] ?? true)) {
             return response()->json(['message' => 'Anonymous submissions disabled'], 403);

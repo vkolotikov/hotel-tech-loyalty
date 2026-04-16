@@ -183,12 +183,14 @@ class BookingPublicController extends Controller
             return response()->json(['error' => 'Online payment is not enabled.'], 400);
         }
 
-        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
-        $holdQuery = \App\Models\BookingHold::where('hold_token', $validated['hold_token']);
-        if ($orgId) {
-            $holdQuery->where('organization_id', $orgId);
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        if (!$orgId) {
+            return response()->json(['error' => 'Organization context required.'], 400);
         }
-        $hold = $holdQuery->first();
+        $hold = \App\Models\BookingHold::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('hold_token', $validated['hold_token'])
+            ->first();
 
         if (!$hold || !$hold->isActive()) {
             return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
@@ -243,6 +245,12 @@ class BookingPublicController extends Controller
                     if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
                         return response()->json([
                             'error' => 'Payment has not been completed. Status: ' . $intent->status,
+                        ], 400);
+                    }
+                    // Verify the payment intent belongs to this booking (hold_token in metadata)
+                    if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
+                        return response()->json([
+                            'error' => 'Payment does not match this booking.',
                         ], 400);
                     }
                     // Attach payment method info to the booking data
@@ -308,6 +316,8 @@ class BookingPublicController extends Controller
             $stripe = app(StripeService::class);
 
             try {
+                // Signature verification proves the payload is authentic from Stripe,
+                // so the org_id in metadata is trustworthy after this succeeds.
                 $event = $stripe->constructWebhookEvent($payload, $sigHeader);
             } catch (\Stripe\Exception\SignatureVerificationException $e) {
                 return response()->json(['error' => 'Invalid signature'], 400);
@@ -315,11 +325,9 @@ class BookingPublicController extends Controller
                 return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
             }
         } else {
-            // No org context — log and acknowledge
-            \App\Models\AuditLog::create([
-                'action'       => 'booking.payment.webhook_no_org',
-                'subject_type' => 'stripe_payment',
-                'details'      => json_encode(['event_type' => $rawPayload['type'] ?? 'unknown']),
+            // No org context — log and acknowledge (use Log since AuditLog requires org)
+            \Illuminate\Support\Facades\Log::info('Stripe webhook without org context', [
+                'event_type' => $rawPayload['type'] ?? 'unknown',
             ]);
             return response()->json(['received' => true]);
         }
@@ -330,12 +338,13 @@ class BookingPublicController extends Controller
             $holdToken = $intent->metadata->hold_token ?? null;
             $orgId = $intent->metadata->org_id ?? null;
 
-            // Find the BookingMirror by stripe_payment_intent_id (set during confirm)
+            // Find the BookingMirror by stripe_payment_intent_id, scoped to the org
             $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', (int) $orgId)
                 ->where('stripe_payment_intent_id', $intent->id)
                 ->first();
 
-            if ($mirror) {
+            if ($mirror && $mirror->payment_status !== 'paid') {
                 $mirror->update([
                     'payment_status' => 'paid',
                     'payment_method' => 'stripe',

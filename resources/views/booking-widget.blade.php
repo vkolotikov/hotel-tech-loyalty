@@ -973,7 +973,7 @@ function bindEvents() {
   on('w-back1', 'click', function() { state.step = 1; state.error = null; render(); });
   on('w-back2', 'click', function() { state.step = 2; render(); });
   on('w-back3', 'click', function() { state.step = 3; render(); });
-  on('w-back4', 'click', function() { state.step = 4; state.paymentError = null; render(); });
+  on('w-back4', 'click', function() { unmountStripeElement(); state.step = 4; state.paymentError = null; render(); });
   on('w-next2', 'click', doSelectUnit);
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);
@@ -1181,7 +1181,17 @@ function doGoToPayment() {
   });
 }
 
+function unmountStripeElement() {
+  if (state.cardElement) {
+    try { state.cardElement.unmount(); } catch (e) {}
+    state.cardElement = null;
+  }
+  state.stripeElements = null;
+}
+
 function mountStripeElement() {
+  unmountStripeElement();
+
   if (!state.stripeInstance || !state.paymentIntentClientSecret) return;
   var container = document.getElementById('stripe-card-element');
   if (!container) return;
