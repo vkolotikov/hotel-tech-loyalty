@@ -53,7 +53,12 @@ class SmoobuClient
         }
 
         $this->baseUrl   = rtrim($this->setting('booking_smoobu_base_url', config('services.smoobu.base_url', 'https://login.smoobu.com/api/')), '/');
-        $this->apiKey    = $this->setting('booking_smoobu_api_key', config('services.smoobu.api_key', ''));
+        // Per-org API key is authoritative. Only fall back to global env key
+        // when there is NO tenant context (e.g. artisan commands, queue jobs).
+        // This prevents org A's Smoobu rooms from leaking to org B when B has
+        // no key configured and the global env key belongs to A.
+        $perOrgKey       = $this->setting('booking_smoobu_api_key', '');
+        $this->apiKey    = $perOrgKey ?: ($orgId ? '' : config('services.smoobu.api_key', ''));
         $provider        = $this->setting('booking_smoobu_provider', config('services.smoobu.provider', 'mock'));
         // Admin can deactivate the integration without removing credentials.
         // When disabled, behave as if no key is configured: serve mock data,

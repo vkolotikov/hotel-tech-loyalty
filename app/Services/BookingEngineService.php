@@ -100,7 +100,11 @@ class BookingEngineService
         }
 
         $holdToken = $data['hold_token'];
-        $hold      = BookingHold::where('hold_token', $holdToken)->first();
+        $holdQuery = BookingHold::where('hold_token', $holdToken);
+        if ($orgId) {
+            $holdQuery->where('organization_id', $orgId);
+        }
+        $hold = $holdQuery->first();
 
         if (!$hold || !$hold->isActive()) {
             $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey);

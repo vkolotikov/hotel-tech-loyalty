@@ -30,54 +30,27 @@ class BookingPublicController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        if ($dbRooms->isNotEmpty()) {
-            $units = $dbRooms->map(fn($r) => [
-                'id' => $r->pms_id ?: (string) $r->id,
-                'name' => $r->name,
-                'description' => $r->description,
-                'short_description' => $r->short_description,
-                'max_guests' => $r->max_guests,
-                'bedrooms' => $r->bedrooms,
-                'bed_type' => $r->bed_type,
-                'size' => $r->size,
-                'image' => $r->image,
-                'gallery' => $r->gallery ?? [],
-                'amenities' => $r->amenities ?? [],
-                'tags' => $r->tags ?? [],
-                'base_price' => (float) $r->base_price,
-            ])->values()->toArray();
-        } else {
-            // Legacy fallback — auto-sync from PMS if no rooms exist yet
+        $units = $dbRooms->map(fn($r) => [
+            'id' => $r->pms_id ?: (string) $r->id,
+            'name' => $r->name,
+            'description' => $r->description,
+            'short_description' => $r->short_description,
+            'max_guests' => $r->max_guests,
+            'bedrooms' => $r->bedrooms,
+            'bed_type' => $r->bed_type,
+            'size' => $r->size,
+            'image' => $r->image,
+            'gallery' => $r->gallery ?? [],
+            'amenities' => $r->amenities ?? [],
+            'tags' => $r->tags ?? [],
+            'base_price' => (float) $r->base_price,
+        ])->values()->toArray();
+
+        // Legacy fallback: check JSON settings (no auto-sync — PMS sync must
+        // be triggered explicitly from admin to prevent cross-tenant data leak
+        // when a global Smoobu API key falls back for orgs without their own).
+        if (empty($units)) {
             $units = $this->getJsonSetting($orgId, 'booking_units', []);
-            if (empty($units)) {
-                try {
-                    $smoobu = app(SmoobuClient::class);
-                    $response = $smoobu->getApartments();
-                    foreach ($response['apartments'] ?? [] as $apt) {
-                        $pmsId = (string) ($apt['id'] ?? '');
-                        if (!$pmsId) continue;
-                        $rooms = $apt['rooms'] ?? [];
-                        \App\Models\BookingRoom::withoutGlobalScopes()->create([
-                            'organization_id' => $orgId, 'pms_id' => $pmsId,
-                            'name' => $apt['name'] ?? "Unit {$pmsId}",
-                            'slug' => \Illuminate\Support\Str::slug($apt['name'] ?? "unit-{$pmsId}"),
-                            'description' => $apt['description'] ?? '',
-                            'max_guests' => $rooms['maxOccupancy'] ?? $apt['maxOccupancy'] ?? 4,
-                            'bedrooms' => $rooms['bedrooms'] ?? 1,
-                            'base_price' => $apt['price'] ?? $apt['pricePerNight'] ?? 100,
-                        ]);
-                    }
-                    // Re-read
-                    $dbRooms = \App\Models\BookingRoom::withoutGlobalScopes()
-                        ->where('organization_id', $orgId)->where('is_active', true)->orderBy('sort_order')->get();
-                    $units = $dbRooms->map(fn($r) => [
-                        'id' => $r->pms_id ?: (string) $r->id, 'name' => $r->name,
-                        'description' => $r->description, 'max_guests' => $r->max_guests,
-                        'image' => $r->image, 'amenities' => $r->amenities ?? [], 'tags' => $r->tags ?? [],
-                        'base_price' => (float) $r->base_price,
-                    ])->values()->toArray();
-                } catch (\Throwable) {}
-            }
         }
 
         // Load extras from DB table (primary) with legacy JSON fallback

@@ -252,6 +252,7 @@ class BookingRoomController extends Controller
     {
         $items = $request->validate(['items' => 'required|array', 'items.*.id' => 'required|integer', 'items.*.sort_order' => 'required|integer'])['items'];
         foreach ($items as $item) {
+            // TenantScope on the model ensures only this org's rooms are updated
             BookingRoom::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
         return response()->json(['message' => 'Order updated']);
