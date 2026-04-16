@@ -2,13 +2,20 @@
 
 namespace App\Services;
 
+use App\Mail\BookingConfirmationMail;
+use App\Mail\BookingMembershipMail;
 use App\Models\AuditLog;
 use App\Models\BookingHold;
 use App\Models\BookingIdempotencyKey;
 use App\Models\BookingMirror;
 use App\Models\BookingPriceElement;
 use App\Models\BookingSubmission;
+use App\Models\EmailVerificationCode;
 use App\Models\Guest;
+use App\Models\HotelSetting;
+use App\Models\LoyaltyMember;
+use App\Models\Organization;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class BookingEngineService
@@ -242,6 +249,9 @@ class BookingEngineService
             'ip_address'  => $ip,
         ]);
 
+        // Send booking confirmation & membership emails
+        $this->sendBookingEmails($guest, $payload, $response, $orgId);
+
         return $response;
     }
 
@@ -378,6 +388,127 @@ class BookingEngineService
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * Send booking confirmation email + membership invitation email.
+     * Wrapped in try/catch so email failures never break the booking flow.
+     */
+    private function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
+    {
+        $email = $guest['email'] ?? null;
+        if (!$email) return;
+
+        $guestName = trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')) ?: 'Guest';
+        $hotelName = $this->resolveHotelName($orgId);
+        $supportEmail = $this->resolveSetting($orgId, 'support_email', 'support@hotel-tech.ai');
+
+        // Load policies for the confirmation email
+        $policiesJson = $this->resolveSetting($orgId, 'booking_policies', '');
+        $policies = $policiesJson ? (json_decode($policiesJson, true) ?: []) : [];
+
+        // Resolve extras with names for the confirmation email
+        $extrasBreakdown = [];
+        $selectedExtras = $payload['extras'] ?? [];
+        if (!empty($selectedExtras)) {
+            $allExtras = collect($this->loadExtrasConfig());
+            foreach ($selectedExtras as $item) {
+                $def = $allExtras->firstWhere('id', $item['id'] ?? '');
+                if ($def) {
+                    $qty = max(1, (int) ($item['quantity'] ?? 1));
+                    $unitPrice = (float) ($def['price'] ?? 0);
+                    $extrasBreakdown[] = [
+                        'name' => $def['name'] ?? 'Extra',
+                        'quantity' => $qty,
+                        'total' => $unitPrice * $qty,
+                    ];
+                }
+            }
+        }
+
+        // 1) Booking Confirmation Email
+        try {
+            Mail::to($email)->send(new BookingConfirmationMail(
+                guestName: $guestName,
+                hotelName: $hotelName,
+                bookingReference: $response['booking_reference'] ?? $response['reservation_id'] ?? '—',
+                unitName: $payload['unit_name'] ?? 'Room',
+                checkIn: $payload['check_in'],
+                checkOut: $payload['check_out'],
+                nights: (int) ($payload['nights'] ?? 1),
+                adults: (int) ($payload['adults'] ?? 2),
+                children: (int) ($payload['children'] ?? 0),
+                roomTotal: (float) ($payload['room_total'] ?? 0),
+                extrasTotal: (float) ($payload['extras_total'] ?? 0),
+                grossTotal: (float) ($payload['gross_total'] ?? 0),
+                currency: $payload['currency'] ?? 'EUR',
+                pricePerNight: (float) ($payload['price_per_night'] ?? 0),
+                extras: $extrasBreakdown,
+                policies: $policies,
+                supportEmail: $supportEmail,
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Booking confirmation email failed', [
+                'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // 2) Membership Invitation Email — only if a member was auto-created
+        try {
+            $member = LoyaltyMember::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereHas('user', fn($q) => $q->where('email', $email))
+                ->with(['user', 'tier'])
+                ->first();
+
+            if ($member) {
+                // Generate a verification code so the guest can set their password
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+                EmailVerificationCode::create([
+                    'email'      => $email,
+                    'code'       => $code,
+                    'expires_at' => now()->addHours(48),
+                ]);
+
+                Mail::to($email)->send(new BookingMembershipMail(
+                    guestName: $guestName,
+                    hotelName: $hotelName,
+                    memberNumber: $member->member_number,
+                    tierName: $member->tier?->name ?? 'Bronze',
+                    email: $email,
+                    code: $code,
+                    supportEmail: $supportEmail,
+                ));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Booking membership email failed', [
+                'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function resolveHotelName(?int $orgId): string
+    {
+        if (!$orgId) return 'Hotel';
+
+        // Try hotel_settings company_name first
+        $name = $this->resolveSetting($orgId, 'company_name', '');
+        if ($name) return $name;
+
+        // Fall back to organization name
+        $org = Organization::withoutGlobalScopes()->find($orgId);
+        return $org?->name ?? 'Hotel';
+    }
+
+    private function resolveSetting(?int $orgId, string $key, string $default): string
+    {
+        if (!$orgId) return $default;
+
+        return HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', $key)
+            ->value('value') ?? $default;
+    }
 
     private function linkOrCreateGuest(array $guestData, ?int $orgId): ?int
     {
