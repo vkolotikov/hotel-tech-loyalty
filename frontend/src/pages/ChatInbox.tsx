@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
-  Inbox, Search, Send, UserPlus, CheckCircle, Archive,
-  MessageSquare, User, Bot, AlertCircle, X, Flag,
-  MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Edit3, Save,
+  Search, Send, CheckCircle, Archive, MessageSquare, User, Bot, X,
+  MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Save,
   PauseCircle, PlayCircle, ArrowRightLeft, Zap, Paperclip, Download, FileText,
+  MoreHorizontal, UserPlus, Edit3,
 } from 'lucide-react'
 import { API_URL } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -25,8 +25,6 @@ export function ChatInbox() {
   }, [searchParams])
   const [statusFilter, setStatusFilter] = useState<ConvStatus>('all')
   const [search, setSearch] = useState('')
-  // Persist the "group by visitor" toggle so admins don't have to re-enable it
-  // every time. Default ON — most users want one row per visitor, not per session.
   const [groupByVisitor, setGroupByVisitor] = useState<boolean>(() => {
     try { return localStorage.getItem('chat-inbox-group-by-visitor') !== '0' } catch { return true }
   })
@@ -38,6 +36,7 @@ export function ChatInbox() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showCannedMenu, setShowCannedMenu] = useState(false)
   const [showTransferMenu, setShowTransferMenu] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState<number | null>(null)
   const [feedbackForm, setFeedbackForm] = useState<{ rating: 'good' | 'bad'; comment: string; corrected_answer: string; apply_to_training: boolean }>({
     rating: 'good', comment: '', corrected_answer: '', apply_to_training: false,
@@ -45,13 +44,8 @@ export function ChatInbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastTypingPingRef = useRef<number>(0)
-  // Tracks the highest unread total we've seen so we only beep when it grows.
-  // Persisted across mounts via a module-level ref so navigating away & back
-  // doesn't replay the sound for already-known messages.
   const lastUnreadRef = useRef<number>(-1)
 
-  // Tiny WebAudio "ding" — no asset file needed. Plays a short two-tone beep
-  // when the unread count increases (a new visitor message arrived).
   const playDing = () => {
     try {
       const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
@@ -75,10 +69,6 @@ export function ChatInbox() {
     } catch {}
   }
 
-  // Throttled "agent typing" ping — fires at most once per 2s while the
-  // agent is composing in the reply box. The server holds a 5s window so the
-  // visitor's widget keeps showing typing dots between pings, then clears
-  // naturally when the reply lands.
   const pingAgentTyping = () => {
     if (!selectedId) return
     const now = Date.now()
@@ -89,207 +79,110 @@ export function ChatInbox() {
 
   const EMOJIS = ['😊', '😀', '😂', '😍', '🙏', '👍', '👏', '🎉', '❤️', '🔥', '✨', '💯', '👋', '🤝', '☺️', '😎', '🙌', '💪', '🌟', '✅']
 
-  // Stats
   const { data: stats } = useQuery({
     queryKey: ['chat-inbox-stats'],
     queryFn: () => api.get('/v1/admin/chat-inbox/stats').then(r => r.data),
     refetchInterval: 5000,
   })
 
-  // Beep whenever the unread count goes up. First load (lastUnreadRef = -1)
-  // is treated as a baseline so we don't ding for pre-existing unreads.
   useEffect(() => {
-    const cur = stats?.unread_messages ?? 0
-    if (lastUnreadRef.current === -1) {
-      lastUnreadRef.current = cur
-      return
-    }
-    if (cur > lastUnreadRef.current) {
-      playDing()
-    }
-    lastUnreadRef.current = cur
+    const total = stats?.unread_messages ?? 0
+    if (lastUnreadRef.current === -1) { lastUnreadRef.current = total; return }
+    if (total > lastUnreadRef.current) playDing()
+    lastUnreadRef.current = total
   }, [stats?.unread_messages])
 
-  // Conversation list
-  const { data: convData, isLoading } = useQuery({
+  const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['chat-inbox', statusFilter, search, groupByVisitor],
     queryFn: () => api.get('/v1/admin/chat-inbox', {
-      params: {
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        search: search || undefined,
-        group_by_visitor: groupByVisitor ? 1 : undefined,
-      },
-    }).then(r => r.data),
+      params: { status: statusFilter === 'all' ? undefined : statusFilter, search: search || undefined, group_by_visitor: groupByVisitor ? 1 : 0 },
+    }).then(r => r.data.data || r.data),
     refetchInterval: 10000,
   })
-  const conversations = convData?.data || []
 
-  // Selected conversation detail
   const { data: detail } = useQuery({
     queryKey: ['chat-inbox-detail', selectedId],
     queryFn: () => api.get(`/v1/admin/chat-inbox/${selectedId}`).then(r => r.data),
     enabled: !!selectedId,
     refetchInterval: 5000,
   })
+  const conv = detail?.conversation
+  const messages: any[] = detail?.messages || []
+  // detail?.siblings available for future session linking
 
-  const sendReply = useMutation({
-    mutationFn: (content: string) => api.post(`/v1/admin/chat-inbox/${selectedId}/messages`, { content }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      setReplyText('')
-    },
-    onError: () => toast.error('Failed to send message'),
-  })
-
-  const uploadAttachment = useMutation({
-    mutationFn: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return api.post(`/v1/admin/chat-inbox/${selectedId}/upload`, fd)
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      toast.success('File sent')
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
-  })
-
-  const downloadTranscript = (format: 'text' | 'html') => {
-    if (!selectedId) return
-    const url = `${API_URL}/api/v1/admin/chat-inbox/${selectedId}/transcript?format=${format}`
-    const token = localStorage.getItem('auth_token') || ''
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.blob() : Promise.reject(r))
-      .then(blob => {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `chat-${selectedId}.${format === 'html' ? 'html' : 'txt'}`
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-      })
-      .catch(() => toast.error('Failed to download transcript'))
-  }
-
-  const updateStatus = useMutation({
-    mutationFn: (status: string) => api.put(`/v1/admin/chat-inbox/${selectedId}/status`, { status }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox-stats'] })
-      toast.success('Status updated')
-    },
-  })
-
-  const toggleAi = useMutation({
-    mutationFn: (ai_enabled: boolean) =>
-      api.put(`/v1/admin/chat-inbox/${selectedId}/ai-toggle`, { ai_enabled }),
-    onSuccess: (_d, ai_enabled) => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      toast.success(ai_enabled ? 'AI auto-reply re-enabled' : 'AI paused — you are taking over')
-    },
-    onError: () => toast.error('Failed to toggle AI'),
-  })
-
-  const updateContact = useMutation({
-    mutationFn: (data: any) => api.put(`/v1/admin/chat-inbox/${selectedId}/contact`, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      setShowContactEdit(false)
-      toast.success('Contact details updated')
-    },
-    onError: () => toast.error('Failed to update contact'),
-  })
-
-  const submitFeedback = useMutation({
-    mutationFn: ({ messageId, payload }: { messageId: number; payload: any }) =>
-      api.post(`/v1/admin/chat-inbox/messages/${messageId}/feedback`, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      setFeedbackOpen(null)
-      setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false })
-      toast.success('Feedback saved')
-    },
-    onError: () => toast.error('Failed to save feedback'),
-  })
-
-  // Canned responses (org-scoped quick-reply snippets) and team agent list
-  // for the transfer dropdown.
-  const { data: cannedData } = useQuery({
+  const { data: cannedResponses = [] } = useQuery({
     queryKey: ['chat-canned'],
     queryFn: () => api.get('/v1/admin/chat-inbox-canned').then(r => r.data),
     staleTime: 60000,
   })
-  const cannedResponses: { label: string; text: string }[] = cannedData?.canned_responses || []
-
   const { data: agentList } = useQuery({
     queryKey: ['chat-agents'],
     queryFn: () => api.get('/v1/admin/chat-inbox-agents').then(r => r.data),
     staleTime: 60000,
   })
 
-  const transferConv = useMutation({
-    mutationFn: (userId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { user_id: userId }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      qc.invalidateQueries({ queryKey: ['chat-inbox'] })
-      setShowTransferMenu(false)
-      toast.success('Conversation transferred')
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
+
+  useEffect(() => {
+    if (conv && showContactEdit) {
+      setContactForm({
+        visitor_name: conv.visitor_name || '', visitor_email: conv.visitor_email || '',
+        visitor_phone: conv.visitor_phone || '', visitor_country: conv.visitor_country || '',
+        visitor_city: conv.visitor_city || '', agent_notes: conv.agent_notes || '',
+      })
+    }
+  }, [conv?.id, showContactEdit])
+
+  const invalidateAll = () => { qc.invalidateQueries({ queryKey: ['chat-inbox-detail'] }); qc.invalidateQueries({ queryKey: ['chat-inbox'] }) }
+
+  const sendReply = useMutation({
+    mutationFn: (text: string) => api.post(`/v1/admin/chat-inbox/${selectedId}/messages`, { content: text }),
+    onSuccess: () => { setReplyText(''); invalidateAll() },
+    onError: () => toast.error('Failed to send'),
+  })
+
+  const uploadAttachment = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData(); fd.append('file', file)
+      return api.post(`/v1/admin/chat-inbox/${selectedId}/upload`, fd)
     },
-    onError: () => toast.error('Failed to transfer'),
+    onSuccess: () => { invalidateAll(); toast.success('File sent') },
+    onError: () => toast.error('Upload failed (max 8MB)'),
+  })
+
+  const downloadTranscript = (format: 'text' | 'html') => {
+    window.open(`${API_URL}/api/v1/admin/chat-inbox/${selectedId}/transcript?format=${format}&token=${localStorage.getItem('auth_token')}`, '_blank')
+  }
+
+  const updateStatus = useMutation({
+    mutationFn: (status: string) => api.put(`/v1/admin/chat-inbox/${selectedId}/status`, { status }),
+    onSuccess: () => { invalidateAll(); setShowMoreMenu(false); toast.success('Status updated') },
+  })
+
+  const toggleAi = useMutation({
+    mutationFn: (enabled: boolean) => api.put(`/v1/admin/chat-inbox/${selectedId}/ai-toggle`, { ai_enabled: enabled }),
+    onSuccess: () => invalidateAll(),
+  })
+
+  const updateContact = useMutation({
+    mutationFn: (data: any) => api.put(`/v1/admin/chat-inbox/${selectedId}/contact`, data),
+    onSuccess: () => { invalidateAll(); setShowContactEdit(false); toast.success('Contact updated') },
   })
 
   const captureLead = useMutation({
     mutationFn: (data: any) => api.post(`/v1/admin/chat-inbox/${selectedId}/capture-lead`, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chat-inbox-detail', selectedId] })
-      setShowLeadForm(false)
-      setLeadForm({ name: '', email: '', phone: '', notes: '' })
-      toast.success('Lead captured as inquiry')
-    },
-    onError: () => toast.error('Failed to capture lead'),
+    onSuccess: () => { invalidateAll(); setShowLeadForm(false); toast.success('Lead captured → Inquiries') },
   })
 
-  // Auto-scroll messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [detail?.messages])
+  const submitFeedback = useMutation({
+    mutationFn: ({ messageId, payload }: any) => api.post(`/v1/admin/chat-inbox/messages/${messageId}/feedback`, payload),
+    onSuccess: () => { invalidateAll(); setFeedbackOpen(null); toast.success('Feedback saved') },
+  })
 
-  const conv = detail?.conversation
-  const messages = detail?.messages || []
-  const siblings = detail?.siblings || []
-
-  // Hydrate contact form when conversation changes
-  useEffect(() => {
-    if (conv) {
-      setContactForm({
-        visitor_name: conv.visitor_name || '',
-        visitor_email: conv.visitor_email || '',
-        visitor_phone: conv.visitor_phone || '',
-        visitor_country: conv.visitor_country || '',
-        visitor_city: conv.visitor_city || '',
-        agent_notes: conv.agent_notes || '',
-      })
-    }
-  }, [conv?.id])
-
-  const statusColors: Record<string, string> = {
-    active: 'bg-green-500/20 text-green-400',
-    waiting: 'bg-yellow-500/20 text-yellow-400',
-    resolved: 'bg-blue-500/20 text-blue-400',
-    archived: 'bg-dark-surface4 text-t-secondary',
-  }
-
-  const senderStyles: Record<string, { bg: string; align: string; icon: any }> = {
-    visitor: { bg: 'bg-dark-surface border border-dark-border', align: 'justify-start', icon: User },
-    ai: { bg: 'bg-primary-600/20 border border-primary-500/30', align: 'justify-start', icon: Bot },
-    agent: { bg: 'bg-blue-600/30 border border-blue-500/30', align: 'justify-end', icon: User },
-    system: { bg: 'bg-dark-surface/50', align: 'justify-center', icon: AlertCircle },
-  }
+  const transferConv = useMutation({
+    mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { agent_id: agentId }),
+    onSuccess: () => { invalidateAll(); setShowTransferMenu(false); toast.success('Transferred') },
+  })
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -298,442 +191,489 @@ export function ChatInbox() {
     }
   }
 
+  const statusColors: Record<string, string> = {
+    active: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
+    waiting: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
+    resolved: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',
+    archived: 'bg-white/[0.04] text-gray-500 border border-white/[0.06]',
+  }
+
+  const senderStyles: Record<string, any> = {
+    visitor: { icon: User, align: 'justify-start', bg: 'bg-white/[0.03] border border-white/[0.06]' },
+    ai: { icon: Bot, align: 'justify-start', bg: 'bg-primary-500/[0.06] border border-primary-500/15' },
+    agent: { icon: User, align: 'justify-end', bg: 'bg-blue-500/[0.08] border border-blue-500/15' },
+    system: { icon: User, align: 'justify-center', bg: '' },
+  }
+
+  const convName = (c: any) => c.member?.user?.name || c.visitor_name || 'Visitor'
+  const convInitial = (c: any) => (convName(c)).charAt(0).toUpperCase()
+
+  // ─── Render ──────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Inbox className="text-primary-500" size={28} />
-          <div>
-            <h1 className="text-2xl font-bold text-white">Chat Inbox</h1>
-            <p className="text-sm text-t-secondary">Manage visitor and member chat conversations</p>
-          </div>
-        </div>
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      {/* ═══ Compact Header ═══ */}
+      <div className="flex items-center justify-between px-1 pb-3">
+        <h1 className="text-lg font-bold text-white">Inbox</h1>
         {stats && (
-          <div className="flex gap-4 text-xs">
-            <div className="text-center"><div className="text-lg font-bold text-green-400">{stats.active}</div><div className="text-t-secondary">Active</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-yellow-400">{stats.waiting}</div><div className="text-t-secondary">Waiting</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-red-400">{stats.unassigned}</div><div className="text-t-secondary">Unassigned</div></div>
-            <div className="text-center"><div className="text-lg font-bold text-blue-400">{stats.resolved_today}</div><div className="text-t-secondary">Resolved Today</div></div>
+          <div className="flex gap-3">
+            {[
+              { label: 'Active', value: stats.active, color: 'text-emerald-400' },
+              { label: 'Waiting', value: stats.waiting, color: 'text-amber-400' },
+              { label: 'Unassigned', value: stats.unassigned, color: 'text-red-400' },
+            ].filter(s => s.value > 0).map(s => (
+              <span key={s.label} className="flex items-center gap-1.5 text-xs">
+                <span className={`text-sm font-bold ${s.color}`}>{s.value}</span>
+                <span className="text-gray-500">{s.label}</span>
+              </span>
+            ))}
           </div>
         )}
       </div>
 
-      <div className="flex gap-4 flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 gap-0 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(14,18,16,0.6)' }}>
+
         {/* ═══ LEFT: Conversation List ═══ */}
-        <div className="w-96 flex-shrink-0 flex flex-col bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
-          {/* Filters */}
-          <div className="p-3 border-b border-dark-border space-y-2">
+        <div className="w-80 flex-shrink-0 flex flex-col border-r border-white/[0.06]">
+          {/* Search + Filters */}
+          <div className="p-2.5 space-y-2 border-b border-white/[0.04]">
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-border2" />
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-8 pr-3 py-1.5 text-white text-xs"
-                placeholder="Search by name or email..." />
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg pl-8 pr-3 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30"
+                placeholder="Search conversations..." />
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-0.5 bg-white/[0.02] rounded-lg p-0.5">
               {(['all', 'active', 'waiting', 'resolved', 'archived'] as ConvStatus[]).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
-                  className={`flex-1 py-1 px-2 rounded text-xs capitalize transition-colors ${
-                    statusFilter === s ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white hover:bg-dark-surface3'
+                  className={`flex-1 py-1 rounded-md text-[11px] capitalize transition-all ${
+                    statusFilter === s
+                      ? 'bg-white/[0.08] text-white font-medium shadow-sm'
+                      : 'text-gray-500 hover:text-gray-300'
                   }`}>{s}</button>
               ))}
             </div>
-            <label className="flex items-center justify-between gap-2 text-[11px] text-t-secondary cursor-pointer select-none">
-              <span className="flex items-center gap-1.5">
-                <User size={11} /> Group by visitor
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !groupByVisitor
-                  setGroupByVisitor(next)
-                  try { localStorage.setItem('chat-inbox-group-by-visitor', next ? '1' : '0') } catch {}
-                }}
-                className={`relative w-7 h-4 rounded-full transition-colors ${groupByVisitor ? 'bg-primary-600' : 'bg-dark-surface3'}`}
-                title="Collapse multiple sessions from the same visitor IP into one row"
-              >
-                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
-              </button>
-            </label>
           </div>
 
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
-              <div className="text-center text-t-secondary py-8 text-sm">Loading...</div>
+              <div className="flex items-center justify-center py-12">
+                <div className="w-5 h-5 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              </div>
             ) : conversations.length === 0 ? (
-              <div className="text-center text-t-secondary py-8 text-sm">No conversations found</div>
-            ) : conversations.map((c: any) => (
-              <button key={c.id} onClick={() => setSelectedId(c.id)}
-                className={`w-full text-left p-3 border-b border-dark-border hover:bg-[#1a1a1a] transition-colors ${
-                  selectedId === c.id ? 'bg-[#1a1a1a] border-l-2 border-l-primary-500' : ''
-                }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-white truncate">
-                    {c.member?.user?.name || c.visitor_name || 'Visitor'}
-                  </span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[c.status] || ''}`}>
-                    {c.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-t-secondary truncate">{c.visitor_email || c.channel}</span>
-                  <span className="text-[10px] text-dark-border2">
-                    {c.last_message_at ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true }) : ''}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {c.assigned_agent && <span className="text-[10px] text-t-secondary">@ {c.assigned_agent.name}</span>}
-                  {c.unread_count > 0 && (
-                    <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{c.unread_count}</span>
-                  )}
-                  {c.ip_session_count > 1 && (
-                    <span
-                      className="bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[10px] px-1.5 py-0.5 rounded-full"
-                      title={`${c.ip_session_count} sessions from this visitor`}
-                    >
-                      {c.ip_session_count}× sessions
-                    </span>
-                  )}
-                  {c.lead_captured && <Flag size={10} className="text-green-400" />}
-                </div>
+              <div className="text-center text-gray-600 py-12 text-xs">No conversations</div>
+            ) : conversations.map((c: any) => {
+              const active = selectedId === c.id
+              return (
+                <button key={c.id} onClick={() => setSelectedId(c.id)}
+                  className={`w-full text-left px-3 py-2.5 transition-all border-l-2 ${
+                    active
+                      ? 'bg-white/[0.04] border-l-primary-500'
+                      : 'border-l-transparent hover:bg-white/[0.02]'
+                  }`}>
+                  <div className="flex items-start gap-2.5">
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      c.status === 'active' ? 'bg-emerald-500/15 text-emerald-400' :
+                      c.status === 'waiting' ? 'bg-amber-500/15 text-amber-400' :
+                      'bg-white/[0.06] text-gray-500'
+                    }`}>
+                      {convInitial(c)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[13px] font-medium text-white truncate">{convName(c)}</span>
+                        <span className="text-[10px] text-gray-600 flex-shrink-0">
+                          {c.last_message_at ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false }) : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {c.visitor_email && <span className="text-[11px] text-gray-500 truncate">{c.visitor_email}</span>}
+                        {!c.visitor_email && c.channel && <span className="text-[11px] text-gray-500">{c.channel}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {c.unread_count > 0 && (
+                          <span className="bg-primary-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{c.unread_count}</span>
+                        )}
+                        {c.ip_session_count > 1 && (
+                          <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full">{c.ip_session_count}×</span>
+                        )}
+                        {c.assigned_agent && <span className="text-[10px] text-gray-600">@{c.assigned_agent.name}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Bottom toggle */}
+          <div className="px-3 py-2 border-t border-white/[0.04]">
+            <label className="flex items-center justify-between text-[11px] text-gray-500 cursor-pointer select-none">
+              <span>Group by visitor</span>
+              <button type="button" onClick={() => {
+                const next = !groupByVisitor
+                setGroupByVisitor(next)
+                try { localStorage.setItem('chat-inbox-group-by-visitor', next ? '1' : '0') } catch {}
+              }} className={`relative w-7 h-3.5 rounded-full transition-colors ${groupByVisitor ? 'bg-primary-600' : 'bg-white/[0.08]'}`}>
+                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
               </button>
-            ))}
+            </label>
           </div>
         </div>
 
         {/* ═══ RIGHT: Conversation Detail ═══ */}
         {selectedId && conv ? (
-          <div className="flex-1 flex flex-col bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
-            {/* Conversation Header */}
-            <div className="p-4 border-b border-dark-border flex items-center justify-between">
-              <div>
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* ── Header ── */}
+            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between gap-4">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{conv.member?.user?.name || conv.visitor_name || 'Visitor'}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[conv.status] || ''}`}>{conv.status}</span>
-                  {conv.member?.tier && <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">{conv.member.tier.name}</span>}
-                </div>
-                <div className="text-xs text-t-secondary mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 items-center">
-                  {conv.visitor_email && <span>{conv.visitor_email}</span>}
-                  {conv.visitor_phone && <span>| {conv.visitor_phone}</span>}
-                  <span>| {conv.channel}</span>
-                  {(conv.visitor_country || conv.visitor_city || conv.visitor_ip) && (
-                    <span className="flex items-center gap-1 text-primary-300">
-                      <MapPin size={10} />
-                      {[conv.visitor_city, conv.visitor_country].filter(Boolean).join(', ') || conv.visitor_ip}
-                      {conv.visitor_ip && <span className="text-dark-border2">({conv.visitor_ip})</span>}
-                    </span>
-                  )}
-                  {siblings.length > 0 && (
-                    <span className="text-yellow-400">| {siblings.length} other session{siblings.length !== 1 ? 's' : ''} from this IP</span>
-                  )}
-                  {conv.assigned_agent && <span>| Assigned: {conv.assigned_agent.name}</span>}
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    conv.status === 'active' ? 'bg-emerald-500/15 text-emerald-400' :
+                    conv.status === 'waiting' ? 'bg-amber-500/15 text-amber-400' :
+                    conv.status === 'resolved' ? 'bg-blue-500/15 text-blue-400' :
+                    'bg-white/[0.06] text-gray-500'
+                  }`}>
+                    {convInitial(conv)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{convName(conv)}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[conv.status] || ''}`}>{conv.status}</span>
+                      {conv.member?.tier && <span className="text-[10px] bg-primary-500/15 text-primary-400 px-1.5 py-0.5 rounded">{conv.member.tier.name}</span>}
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      {conv.visitor_email && <span>{conv.visitor_email}</span>}
+                      {conv.visitor_phone && <><span className="text-gray-700">·</span><span>{conv.visitor_phone}</span></>}
+                      {(conv.visitor_city || conv.visitor_country) && (
+                        <><span className="text-gray-700">·</span><span className="flex items-center gap-0.5"><MapPin size={9} />{[conv.visitor_city, conv.visitor_country].filter(Boolean).join(', ')}</span></>
+                      )}
+                      {conv.assigned_agent && <><span className="text-gray-700">·</span><span>@{conv.assigned_agent.name}</span></>}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleAi.mutate(!(conv.ai_enabled ?? true))}
-                  disabled={toggleAi.isPending}
-                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg ${
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* AI Toggle */}
+                <button onClick={() => toggleAi.mutate(!(conv.ai_enabled ?? true))} disabled={toggleAi.isPending}
+                  className={`flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg transition-colors ${
                     (conv.ai_enabled ?? true)
-                      ? 'bg-primary-600/20 text-primary-300 hover:bg-primary-600/30'
-                      : 'bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30'
+                      ? 'bg-primary-500/10 text-primary-400 hover:bg-primary-500/20'
+                      : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
                   }`}
-                  title={(conv.ai_enabled ?? true) ? 'Click to pause AI auto-replies and take over' : 'Click to re-enable AI auto-replies'}
-                >
-                  {(conv.ai_enabled ?? true) ? <><PauseCircle size={12} /> Pause AI</> : <><PlayCircle size={12} /> Resume AI</>}
+                  title={(conv.ai_enabled ?? true) ? 'Pause AI auto-replies' : 'Resume AI auto-replies'}>
+                  {(conv.ai_enabled ?? true) ? <><PauseCircle size={12} /> AI On</> : <><PlayCircle size={12} /> AI Off</>}
                 </button>
-                <button onClick={() => setShowContactEdit(v => !v)}
-                  className="flex items-center gap-1 text-xs bg-primary-600/20 text-primary-300 px-3 py-1.5 rounded-lg hover:bg-primary-600/30">
-                  <Edit3 size={12} /> {showContactEdit ? 'Hide' : 'Contact'}
-                </button>
-                {!conv.lead_captured && (
-                  <button onClick={() => {
-                    setLeadForm({ name: conv.visitor_name || '', email: conv.visitor_email || '', phone: conv.visitor_phone || '', notes: '' })
-                    setShowLeadForm(true)
-                  }} className="flex items-center gap-1 text-xs bg-green-600/20 text-green-400 px-3 py-1.5 rounded-lg hover:bg-green-600/30">
-                    <UserPlus size={12} /> Capture Lead
-                  </button>
-                )}
-                <div className="relative">
-                  <button onClick={() => setShowTransferMenu(v => !v)}
-                    className="flex items-center gap-1 text-xs bg-purple-600/20 text-purple-400 px-3 py-1.5 rounded-lg hover:bg-purple-600/30">
-                    <ArrowRightLeft size={12} /> Transfer
-                  </button>
-                  {showTransferMenu && (
-                    <div className="absolute right-0 top-full mt-1 z-20 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[200px] max-h-72 overflow-y-auto">
-                      {(agentList || []).length === 0 && (
-                        <div className="p-3 text-xs text-t-secondary">No agents available</div>
-                      )}
-                      {(agentList || []).map((a: any) => (
-                        <button key={a.id} onClick={() => transferConv.mutate(a.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs text-white hover:bg-dark-surface2 border-b border-dark-border last:border-b-0">
-                          <div className="w-6 h-6 rounded-full bg-purple-600/30 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                            {a.name?.charAt(0) || '?'}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate">{a.name}</div>
-                            <div className="text-[10px] text-t-secondary truncate">{a.email}</div>
-                          </div>
-                          {conv.assigned_to === a.id && <span className="text-[10px] text-primary-400">current</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button onClick={() => downloadTranscript('text')}
-                  title="Download transcript (.txt)"
-                  className="flex items-center gap-1 text-xs bg-dark-surface3 text-t-secondary hover:text-white px-3 py-1.5 rounded-lg">
-                  <Download size={12} /> Transcript
-                </button>
-                {conv.status !== 'resolved' && (
+
+                {/* Resolve */}
+                {conv.status !== 'resolved' && conv.status !== 'archived' && (
                   <button onClick={() => updateStatus.mutate('resolved')}
-                    className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-lg hover:bg-blue-600/30">
+                    className="flex items-center gap-1 text-[11px] bg-blue-500/10 text-blue-400 px-2.5 py-1.5 rounded-lg hover:bg-blue-500/20">
                     <CheckCircle size={12} /> Resolve
                   </button>
                 )}
-                {conv.status !== 'archived' && (
-                  <button onClick={() => updateStatus.mutate('archived')}
-                    className="flex items-center gap-1 text-xs bg-dark-surface4 text-t-secondary px-3 py-1.5 rounded-lg hover:bg-dark-border2">
-                    <Archive size={12} /> Archive
+
+                {/* More Menu */}
+                <div className="relative">
+                  <button onClick={() => setShowMoreMenu(v => !v)}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
+                    <MoreHorizontal size={16} />
                   </button>
-                )}
+                  {showMoreMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[200px] py-1 overflow-hidden">
+                        <button onClick={() => { setShowContactEdit(v => !v); setShowMoreMenu(false) }}
+                          className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
+                          <Edit3 size={13} /> Edit contact info
+                        </button>
+                        {!conv.lead_captured && (
+                          <button onClick={() => {
+                            setLeadForm({ name: conv.visitor_name || '', email: conv.visitor_email || '', phone: conv.visitor_phone || '', notes: '' })
+                            setShowLeadForm(true); setShowMoreMenu(false)
+                          }} className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
+                            <UserPlus size={13} /> Capture as lead
+                          </button>
+                        )}
+                        <button onClick={() => { setShowTransferMenu(true); setShowMoreMenu(false) }}
+                          className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
+                          <ArrowRightLeft size={13} /> Transfer to agent
+                        </button>
+                        <button onClick={() => { downloadTranscript('text'); setShowMoreMenu(false) }}
+                          className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
+                          <Download size={13} /> Download transcript
+                        </button>
+                        <div className="border-t border-white/[0.06] my-1" />
+                        {conv.status !== 'archived' && (
+                          <button onClick={() => updateStatus.mutate('archived')}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-500 hover:bg-white/[0.04] hover:text-gray-300">
+                            <Archive size={13} /> Archive
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Lead Capture Modal */}
+            {/* ── Transfer Agent Selector ── */}
+            {showTransferMenu && (
+              <div className="px-4 py-2.5 border-b border-white/[0.06] bg-purple-500/[0.03]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-purple-300">Transfer to:</span>
+                  <button onClick={() => setShowTransferMenu(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(agentList || []).length === 0 && <span className="text-[11px] text-gray-500">No agents available</span>}
+                  {(agentList || []).map((a: any) => (
+                    <button key={a.id} onClick={() => transferConv.mutate(a.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] transition-colors ${
+                        conv.assigned_to === a.id
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.06] hover:text-white border border-white/[0.06]'
+                      }`}>
+                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-400">
+                        {a.name?.charAt(0) || '?'}
+                      </div>
+                      {a.name}
+                      {conv.assigned_to === a.id && <span className="text-[9px] text-purple-500">(current)</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Lead Capture ── */}
             {showLeadForm && (
-              <div className="p-4 border-b border-dark-border bg-green-900/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Capture Lead as Inquiry</h3>
-                  <button onClick={() => setShowLeadForm(false)} className="text-t-secondary hover:text-white"><X size={14} /></button>
+              <div className="px-4 py-3 border-b border-white/[0.06] bg-emerald-500/[0.03]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-emerald-300">Capture as inquiry</span>
+                  <button onClick={() => setShowLeadForm(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex gap-2 items-end">
                   <input type="text" value={leadForm.name} onChange={e => setLeadForm(p => ({ ...p, name: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Name" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Name" />
                   <input type="email" value={leadForm.email} onChange={e => setLeadForm(p => ({ ...p, email: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Email" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Email" />
                   <input type="text" value={leadForm.phone} onChange={e => setLeadForm(p => ({ ...p, phone: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Phone" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Phone" />
+                  <button onClick={() => captureLead.mutate(leadForm)} disabled={captureLead.isPending}
+                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 flex-shrink-0">
+                    {captureLead.isPending ? '...' : 'Create'}
+                  </button>
                 </div>
-                <textarea value={leadForm.notes} onChange={e => setLeadForm(p => ({ ...p, notes: e.target.value }))}
-                  rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Notes..." />
-                <button onClick={() => captureLead.mutate(leadForm)} disabled={captureLead.isPending}
-                  className="bg-green-600 text-white px-4 py-1.5 rounded text-xs hover:bg-green-700 disabled:opacity-50">
-                  {captureLead.isPending ? 'Saving...' : 'Create Inquiry'}
-                </button>
               </div>
             )}
 
-            {/* Contact Edit Panel */}
+            {/* ── Contact Edit ── */}
             {showContactEdit && (
-              <div className="p-4 border-b border-dark-border bg-primary-900/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Contact details & notes</h3>
-                  <button onClick={() => setShowContactEdit(false)} className="text-t-secondary hover:text-white"><X size={14} /></button>
+              <div className="px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-300">Contact details</span>
+                  <button onClick={() => setShowContactEdit(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   <input type="text" value={contactForm.visitor_name || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_name: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Name" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Name" />
                   <input type="email" value={contactForm.visitor_email || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_email: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Email" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Email" />
                   <input type="text" value={contactForm.visitor_phone || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_phone: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Phone" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Phone" />
                   <input type="text" value={contactForm.visitor_country || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_country: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Country" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Country" />
                   <input type="text" value={contactForm.visitor_city || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_city: e.target.value }))}
-                    className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="City" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="City" />
                 </div>
-                <textarea value={contactForm.agent_notes || ''} onChange={e => setContactForm((p: any) => ({ ...p, agent_notes: e.target.value }))}
-                  rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-xs" placeholder="Internal notes about this visitor..." />
-                <button onClick={() => updateContact.mutate(contactForm)} disabled={updateContact.isPending}
-                  className="flex items-center gap-1 bg-primary-600 text-white px-4 py-1.5 rounded text-xs hover:bg-primary-700 disabled:opacity-50">
-                  <Save size={12} /> {updateContact.isPending ? 'Saving...' : 'Save contact'}
-                </button>
+                <div className="flex gap-2 mt-2">
+                  <input type="text" value={contactForm.agent_notes || ''} onChange={e => setContactForm((p: any) => ({ ...p, agent_notes: e.target.value }))}
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Internal notes..." />
+                  <button onClick={() => updateContact.mutate(contactForm)} disabled={updateContact.isPending}
+                    className="flex items-center gap-1 bg-primary-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50 flex-shrink-0">
+                    <Save size={11} /> Save
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* ── Messages ── */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
               {messages.map((msg: any) => {
                 const style = senderStyles[msg.sender_type] || senderStyles.system
-                const Icon = style.icon
 
                 if (msg.sender_type === 'system') {
                   return (
-                    <div key={msg.id} className="flex justify-center">
-                      <span className="text-[10px] text-dark-border2 bg-dark-surface px-3 py-1 rounded-full">{msg.content}</span>
+                    <div key={msg.id} className="flex justify-center py-1">
+                      <span className="text-[10px] text-gray-600 bg-white/[0.02] px-3 py-0.5 rounded-full">{msg.content}</span>
                     </div>
                   )
                 }
 
+                const isAgent = msg.sender_type === 'agent'
+
                 return (
-                  <div key={msg.id} className={`flex ${style.align} gap-2`}>
-                    {msg.sender_type !== 'agent' && (
-                      <div className="w-7 h-7 rounded-full bg-dark-surface4 flex items-center justify-center flex-shrink-0">
-                        <Icon size={12} className="text-t-secondary" />
+                  <div key={msg.id} className={`flex ${style.align} gap-2 group`}>
+                    {!isAgent && (
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
+                        msg.sender_type === 'ai' ? 'bg-primary-500/15' : 'bg-white/[0.06]'
+                      }`}>
+                        {msg.sender_type === 'ai' ? <Bot size={11} className="text-primary-400" /> : <User size={11} className="text-gray-500" />}
                       </div>
                     )}
-                    <div className={`${style.bg} rounded-xl px-3 py-2 max-w-[70%]`}>
+                    <div className={`${style.bg} rounded-2xl px-3.5 py-2 max-w-[70%]`}>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] font-medium text-t-secondary capitalize">
-                          {msg.sender_type === 'agent' ? (msg.sender_user?.name || 'Agent') : msg.sender_type}
+                        <span className="text-[10px] font-medium text-gray-500 capitalize">
+                          {isAgent ? (msg.sender_user?.name || 'You') : msg.sender_type}
                         </span>
-                        <span className="text-[10px] text-dark-border2">
+                        <span className="text-[10px] text-gray-700">
                           {msg.created_at ? formatDistanceToNow(new Date(msg.created_at), { addSuffix: true }) : ''}
                         </span>
                       </div>
-                      <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-[13px] text-white/90 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                       {msg.attachment_url && (
                         <div className="mt-2">
                           {msg.attachment_type === 'image' ? (
                             <a href={API_URL + msg.attachment_url} target="_blank" rel="noopener noreferrer">
                               <img src={API_URL + msg.attachment_url} alt={msg.content || 'attachment'}
-                                className="max-w-[200px] max-h-[200px] rounded-lg border border-dark-border" />
+                                className="max-w-[200px] max-h-[200px] rounded-lg border border-white/[0.06]" />
                             </a>
                           ) : (
                             <a href={API_URL + msg.attachment_url} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 bg-dark-surface px-3 py-2 rounded border border-dark-border text-xs text-primary-400 hover:text-primary-300">
-                              <FileText size={14} /> {msg.content || 'Download file'}
+                              className="inline-flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs text-primary-400 hover:text-primary-300">
+                              <FileText size={13} /> {msg.content || 'Download file'}
                             </a>
                           )}
                         </div>
                       )}
+                      {/* AI Feedback */}
                       {msg.sender_type === 'ai' && (
-                        <div className="mt-2 pt-2 border-t border-primary-500/20">
+                        <div className="mt-2 pt-1.5 border-t border-white/[0.04]">
                           {msg.feedback ? (
-                            <div className="flex items-center gap-2 text-[10px] text-t-secondary">
-                              {msg.feedback.rating === 'good' ? <ThumbsUp size={10} className="text-green-400" /> : <ThumbsDown size={10} className="text-red-400" />}
+                            <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                              {msg.feedback.rating === 'good' ? <ThumbsUp size={9} className="text-emerald-400" /> : <ThumbsDown size={9} className="text-red-400" />}
                               <span>Reviewed</span>
-                              {msg.feedback.applied_to_training && <span className="flex items-center gap-1 text-yellow-400"><GraduationCap size={10} /> trained</span>}
-                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: msg.feedback.rating, comment: msg.feedback.comment || '', corrected_answer: '', apply_to_training: false }) }} className="ml-auto text-primary-400 hover:underline">Edit</button>
+                              {msg.feedback.applied_to_training && <span className="flex items-center gap-0.5 text-amber-400"><GraduationCap size={9} /> trained</span>}
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: msg.feedback.rating, comment: msg.feedback.comment || '', corrected_answer: '', apply_to_training: false }) }}
+                                className="ml-auto text-gray-600 hover:text-gray-400">Edit</button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false }) }} className="text-[10px] text-t-secondary hover:text-green-400 flex items-center gap-1"><ThumbsUp size={10} /> Good</button>
-                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'bad', comment: '', corrected_answer: '', apply_to_training: true }) }} className="text-[10px] text-t-secondary hover:text-red-400 flex items-center gap-1"><ThumbsDown size={10} /> Bad / Correct it</button>
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false }) }}
+                                className="text-[10px] text-gray-600 hover:text-emerald-400 flex items-center gap-0.5"><ThumbsUp size={9} /> Good</button>
+                              <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'bad', comment: '', corrected_answer: '', apply_to_training: true }) }}
+                                className="text-[10px] text-gray-600 hover:text-red-400 flex items-center gap-0.5"><ThumbsDown size={9} /> Bad</button>
                             </div>
                           )}
                           {feedbackOpen === msg.id && (
-                            <div className="mt-2 space-y-2 bg-dark-surface/60 p-2 rounded border border-dark-border">
-                              <div className="flex gap-2">
+                            <div className="mt-2 space-y-2 bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.06]">
+                              <div className="flex gap-1.5">
                                 <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'good' }))}
-                                  className={`flex-1 text-[10px] py-1 rounded flex items-center justify-center gap-1 ${feedbackForm.rating === 'good' ? 'bg-green-600/30 text-green-300' : 'bg-dark-surface text-t-secondary'}`}>
-                                  <ThumbsUp size={10} /> Good
+                                  className={`flex-1 text-[10px] py-1 rounded-lg flex items-center justify-center gap-1 ${feedbackForm.rating === 'good' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/[0.04] text-gray-500'}`}>
+                                  <ThumbsUp size={9} /> Good
                                 </button>
                                 <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'bad' }))}
-                                  className={`flex-1 text-[10px] py-1 rounded flex items-center justify-center gap-1 ${feedbackForm.rating === 'bad' ? 'bg-red-600/30 text-red-300' : 'bg-dark-surface text-t-secondary'}`}>
-                                  <ThumbsDown size={10} /> Bad
+                                  className={`flex-1 text-[10px] py-1 rounded-lg flex items-center justify-center gap-1 ${feedbackForm.rating === 'bad' ? 'bg-red-500/15 text-red-300' : 'bg-white/[0.04] text-gray-500'}`}>
+                                  <ThumbsDown size={9} /> Bad
                                 </button>
                               </div>
                               <textarea value={feedbackForm.comment} onChange={e => setFeedbackForm(p => ({ ...p, comment: e.target.value }))}
-                                rows={2} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1 text-white text-xs" placeholder="Comment (optional)" />
+                                rows={2} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder="Comment (optional)" />
                               {feedbackForm.rating === 'bad' && (
                                 <>
                                   <textarea value={feedbackForm.corrected_answer} onChange={e => setFeedbackForm(p => ({ ...p, corrected_answer: e.target.value }))}
-                                    rows={3} className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1 text-white text-xs" placeholder="What should the AI have said?" />
-                                  <label className="flex items-center gap-2 text-[10px] text-t-secondary">
-                                    <input type="checkbox" checked={feedbackForm.apply_to_training} onChange={e => setFeedbackForm(p => ({ ...p, apply_to_training: e.target.checked }))} />
-                                    <GraduationCap size={10} /> Save corrected answer to AI knowledge base
+                                    rows={3} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder="What should the AI have said?" />
+                                  <label className="flex items-center gap-2 text-[10px] text-gray-500">
+                                    <input type="checkbox" checked={feedbackForm.apply_to_training} onChange={e => setFeedbackForm(p => ({ ...p, apply_to_training: e.target.checked }))} className="rounded" />
+                                    <GraduationCap size={9} /> Save to AI knowledge base
                                   </label>
                                 </>
                               )}
                               <div className="flex gap-2">
                                 <button onClick={() => submitFeedback.mutate({ messageId: msg.id, payload: feedbackForm })} disabled={submitFeedback.isPending}
-                                  className="flex-1 bg-primary-600 text-white text-[10px] py-1 rounded hover:bg-primary-700 disabled:opacity-50">
-                                  {submitFeedback.isPending ? 'Saving...' : 'Submit feedback'}
+                                  className="flex-1 bg-primary-600 text-white text-[10px] py-1.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium">
+                                  {submitFeedback.isPending ? 'Saving...' : 'Submit'}
                                 </button>
-                                <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-t-secondary hover:text-white">Cancel</button>
+                                <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-gray-500 hover:text-white">Cancel</button>
                               </div>
                             </div>
                           )}
                         </div>
                       )}
                     </div>
-                    {msg.sender_type === 'agent' && (
-                      <div className="w-7 h-7 rounded-full bg-blue-600/30 flex items-center justify-center flex-shrink-0">
-                        <Icon size={12} className="text-blue-400" />
+                    {isAgent && (
+                      <div className="w-6 h-6 rounded-full bg-blue-500/15 flex items-center justify-center flex-shrink-0 mt-1">
+                        <User size={11} className="text-blue-400" />
                       </div>
                     )}
                   </div>
                 )
               })}
               {detail?.visitor_typing && (
-                <div className="flex justify-start mb-2">
-                  <div className="bg-dark-surface border border-dark-border rounded-2xl px-4 py-2 flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '120ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-t-secondary animate-bounce" style={{ animationDelay: '240ms' }} />
-                    <span className="text-[10px] text-t-muted ml-1">visitor typing…</span>
+                <div className="flex justify-start">
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl px-4 py-2 flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '120ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '240ms' }} />
+                    <span className="text-[10px] text-gray-600 ml-1">typing…</span>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Reply Input */}
+            {/* ── Reply Input ── */}
             {conv.status !== 'archived' && (
-              <div className="p-3 border-t border-dark-border relative">
+              <div className="px-4 py-3 border-t border-white/[0.06] relative">
                 {showEmojiPicker && (
-                  <div className="absolute bottom-full left-3 mb-2 bg-dark-surface border border-dark-border rounded-lg p-2 shadow-xl grid grid-cols-10 gap-1 z-10">
+                  <div className="absolute bottom-full left-4 mb-2 bg-[#1a1e1c] border border-white/[0.08] rounded-xl p-2 shadow-2xl grid grid-cols-10 gap-0.5 z-10">
                     {EMOJIS.map(e => (
                       <button key={e} type="button" onClick={() => { setReplyText(p => p + e); setShowEmojiPicker(false) }}
-                        className="text-lg hover:bg-dark-surface3 rounded p-1">{e}</button>
+                        className="text-base hover:bg-white/[0.06] rounded-lg p-1 transition-colors">{e}</button>
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2 items-end">
-                  <button type="button" onClick={() => setShowEmojiPicker(v => !v)}
-                    className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5"
-                    title="Insert emoji">
-                    <Smile size={16} />
-                  </button>
-                  <input ref={fileInputRef} type="file" className="hidden"
-                    accept="image/*,.pdf,.doc,.docx,.txt"
-                    onChange={e => {
-                      const file = e.target.files?.[0]
-                      if (file) uploadAttachment.mutate(file)
-                    }} />
-                  <button type="button" onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadAttachment.isPending}
-                    className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5 disabled:opacity-50"
-                    title="Attach file or image">
-                    <Paperclip size={16} />
-                  </button>
-                  <div className="relative">
-                    <button type="button" onClick={() => setShowCannedMenu(v => !v)}
-                      className="bg-dark-surface border border-dark-border text-t-secondary hover:text-white rounded-lg p-2.5"
-                      title="Insert canned response">
+                {showCannedMenu && (
+                  <div className="absolute bottom-full left-16 mb-2 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[260px] max-h-72 overflow-y-auto">
+                    {cannedResponses.length === 0 && (
+                      <div className="p-3 text-xs text-gray-500">No canned responses yet</div>
+                    )}
+                    {cannedResponses.map((c: any, i: number) => (
+                      <button key={i} onClick={() => { setReplyText(p => p ? p + ' ' + c.text : c.text); setShowCannedMenu(false) }}
+                        className="block w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white border-b border-white/[0.04] last:border-b-0">
+                        <div className="font-medium">{c.label}</div>
+                        <div className="text-[10px] text-gray-600 truncate mt-0.5">{c.text}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-1.5 items-end">
+                  <div className="flex gap-0.5">
+                    <button type="button" onClick={() => { setShowEmojiPicker(v => !v); setShowCannedMenu(false) }}
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title="Emoji">
+                      <Smile size={16} />
+                    </button>
+                    <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.txt"
+                      onChange={e => { const file = e.target.files?.[0]; if (file) uploadAttachment.mutate(file) }} />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors disabled:opacity-50" title="Attach file">
+                      <Paperclip size={16} />
+                    </button>
+                    <button type="button" onClick={() => { setShowCannedMenu(v => !v); setShowEmojiPicker(false) }}
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title="Canned responses">
                       <Zap size={16} />
                     </button>
-                    {showCannedMenu && (
-                      <div className="absolute bottom-full left-0 mb-2 z-20 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[260px] max-h-72 overflow-y-auto">
-                        {cannedResponses.length === 0 && (
-                          <div className="p-3 text-xs text-t-secondary">No canned responses yet. Add some in Chatbot Setup.</div>
-                        )}
-                        {cannedResponses.map((c, i) => (
-                          <button key={i} onClick={() => { setReplyText(p => p ? p + ' ' + c.text : c.text); setShowCannedMenu(false) }}
-                            className="block w-full text-left px-3 py-2 text-xs text-white hover:bg-dark-surface2 border-b border-dark-border last:border-b-0">
-                            <div className="font-medium">{c.label}</div>
-                            <div className="text-[10px] text-t-secondary truncate">{c.text}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  <textarea
-                    value={replyText}
-                    onChange={e => { setReplyText(e.target.value); pingAgentTyping() }}
-                    onKeyDown={handleKeyDown}
-                    rows={2}
-                    className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm resize-none"
-                    placeholder="Type a reply as agent... (Enter to send, Shift+Enter for newline)"
-                  />
-                  <button
-                    onClick={() => { if (replyText.trim()) sendReply.mutate(replyText.trim()) }}
+                  <textarea value={replyText} onChange={e => { setReplyText(e.target.value); pingAgentTyping() }}
+                    onKeyDown={handleKeyDown} rows={1}
+                    className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white resize-none placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30"
+                    placeholder="Type a reply... (Enter to send)" />
+                  <button onClick={() => { if (replyText.trim()) sendReply.mutate(replyText.trim()) }}
                     disabled={!replyText.trim() || sendReply.isPending}
-                    className="bg-primary-600 text-white px-4 py-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                  >
+                    className="bg-primary-600 text-white p-2 rounded-xl hover:bg-primary-700 disabled:opacity-30 transition-colors">
                     <Send size={16} />
                   </button>
                 </div>
@@ -741,10 +681,10 @@ export function ChatInbox() {
             )}
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-dark-surface border border-dark-border rounded-xl">
-            <div className="text-center text-t-secondary">
-              <MessageSquare size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm">Select a conversation to view messages</p>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare size={40} className="mx-auto mb-3 text-gray-800" />
+              <p className="text-sm text-gray-600">Select a conversation</p>
             </div>
           </div>
         )}
