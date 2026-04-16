@@ -72,13 +72,26 @@ class OrganizationSetupService
 
         // Default settings — type, group, label are NOT NULL
         $defaults = [
-            ['key' => 'hotel_name',            'value' => $org->name, 'type' => 'text',   'group' => 'general',  'label' => 'Hotel Name'],
-            ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Welcome Bonus Points'],
-            ['key' => 'referrer_bonus_points', 'value' => '250',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Referrer Bonus Points'],
-            ['key' => 'referee_bonus_points',  'value' => '250',      'type' => 'number', 'group' => 'loyalty',  'label' => 'Referee Bonus Points'],
-            ['key' => 'points_expiry_months',  'value' => '24',       'type' => 'number', 'group' => 'loyalty',  'label' => 'Points Expiry (Months)'],
-            ['key' => 'points_per_currency',   'value' => '10',       'type' => 'number', 'group' => 'loyalty',  'label' => 'Points per Currency Unit'],
-            ['key' => 'currency_symbol',       'value' => '€',        'type' => 'text',   'group' => 'general',  'label' => 'Currency Symbol'],
+            ['key' => 'hotel_name',            'value' => $org->name, 'type' => 'text',   'group' => 'general',    'label' => 'Hotel Name'],
+            ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Welcome Bonus Points'],
+            ['key' => 'referrer_bonus_points', 'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referrer Bonus Points'],
+            ['key' => 'referee_bonus_points',  'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referee Bonus Points'],
+            ['key' => 'points_expiry_months',  'value' => '24',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points Expiry (Months)'],
+            ['key' => 'points_per_currency',   'value' => '10',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points per Currency Unit'],
+            ['key' => 'currency_symbol',       'value' => '€',        'type' => 'text',   'group' => 'general',    'label' => 'Currency Symbol'],
+            // Appearance (brand colors) — needed for theme endpoint + branding UI
+            ['key' => 'primary_color',        'value' => '#c9a84c', 'type' => 'string', 'group' => 'appearance', 'label' => 'Primary Color'],
+            ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string', 'group' => 'appearance', 'label' => 'Secondary Color'],
+            ['key' => 'accent_color',         'value' => '#32d74b', 'type' => 'string', 'group' => 'appearance', 'label' => 'Accent / Success'],
+            ['key' => 'background_color',     'value' => '#0d0d0d', 'type' => 'string', 'group' => 'appearance', 'label' => 'Background'],
+            ['key' => 'surface_color',        'value' => '#161616', 'type' => 'string', 'group' => 'appearance', 'label' => 'Surface / Card'],
+            ['key' => 'text_color',           'value' => '#ffffff', 'type' => 'string', 'group' => 'appearance', 'label' => 'Text Color'],
+            ['key' => 'text_secondary_color', 'value' => '#8e8e93', 'type' => 'string', 'group' => 'appearance', 'label' => 'Secondary Text'],
+            ['key' => 'border_color',         'value' => '#2c2c2c', 'type' => 'string', 'group' => 'appearance', 'label' => 'Border Color'],
+            ['key' => 'error_color',          'value' => '#ff375f', 'type' => 'string', 'group' => 'appearance', 'label' => 'Error / Danger'],
+            ['key' => 'warning_color',        'value' => '#ffd60a', 'type' => 'string', 'group' => 'appearance', 'label' => 'Warning'],
+            ['key' => 'info_color',           'value' => '#0a84ff', 'type' => 'string', 'group' => 'appearance', 'label' => 'Info'],
+            ['key' => 'dark_mode_enabled',    'value' => 'true',    'type' => 'boolean','group' => 'appearance', 'label' => 'Dark Mode'],
         ];
 
         foreach ($defaults as $setting) {

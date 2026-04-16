@@ -74,14 +74,10 @@ class SettingsController extends Controller
         $staff = $user?->staff;
         $isSuperAdmin = $staff && $staff->role === 'super_admin';
 
-        // Fresh (non-super-admin) orgs have no seeded hotel_settings rows, so the
-        // Settings UI would render empty color/brand fields and the theme endpoint
-        // would return nothing. Lazy-seed the missing rows for this tenant the
-        // first time they open Settings so the color inputs show up and preset
-        // saves have something to update.
-        if (!$isSuperAdmin) {
-            $this->ensureTenantHasDefaultSettings();
-        }
+        // Lazy-seed default hotel_settings rows (appearance colors, general) for
+        // the current tenant so the Settings UI renders editable inputs and the
+        // theme endpoint returns values. Idempotent — only creates missing keys.
+        $this->ensureTenantHasDefaultSettings();
 
         $query = HotelSetting::query();
         // Non-super-admins can only see company-scoped settings

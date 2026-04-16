@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { BrowserQRCodeReader } from '@zxing/browser'
 import type { IScannerControls } from '@zxing/browser'
-import { QrCode, CreditCard, Award, User, Gift } from 'lucide-react'
+import { QrCode, CreditCard, Award, User, Gift, Usb, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { api } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
+import { useNfcReader } from '../hooks/useNfcReader'
 import toast from 'react-hot-toast'
 
 type ScanMode = 'qr' | 'nfc'
@@ -17,6 +18,7 @@ export function Scan() {
   const [pointsInput, setPointsInput] = useState('')
   const [pointsDesc, setPointsDesc] = useState('')
   const [nfcUid, setNfcUid] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
   const nfcInputRef = useRef<HTMLInputElement>(null)
@@ -27,6 +29,26 @@ export function Scan() {
     controlsRef.current = null
     setScanning(false)
   }
+
+  const lookupNfc = useCallback(async (uid: string) => {
+    uid = uid.trim()
+    if (!uid || uid.length < 4) return
+    setLookingUp(true)
+    try {
+      const { data } = await api.post('/v1/admin/scan/nfc', { uid })
+      setMember(data.member)
+      setAiUpsell(data.ai_upsell_suggestion)
+      toast.success(`Member found: ${data.member.name}`)
+    } catch {
+      toast.error('NFC card not found')
+    } finally {
+      setLookingUp(false)
+      setNfcUid('')
+      setTimeout(() => nfcInputRef.current?.focus(), 50)
+    }
+  }, [])
+
+  const nfcReader = useNfcReader(lookupNfc)
 
   const startQrScan = async () => {
     if (!videoRef.current) return
@@ -58,17 +80,7 @@ export function Scan() {
   const scanNfc = async (uidOverride?: string) => {
     const uid = (uidOverride ?? nfcUid).trim()
     if (!uid) { toast.error('Enter NFC UID'); return }
-    try {
-      const { data } = await api.post('/v1/admin/scan/nfc', { uid })
-      setMember(data.member)
-      setAiUpsell(data.ai_upsell_suggestion)
-      toast.success(`Member found: ${data.member.name}`)
-    } catch {
-      toast.error('NFC card not found')
-    } finally {
-      setNfcUid('')
-      setTimeout(() => nfcInputRef.current?.focus(), 50)
-    }
+    lookupNfc(uid)
   }
 
   const awardPoints = async () => {
@@ -90,10 +102,7 @@ export function Scan() {
   useEffect(() => () => { stopScanning() }, [])
 
   // Keep the NFC input focused when the NFC tab is active so USB HID readers
-  // land their characters in the field even if the user clicks elsewhere. Most
-  // USB NFC readers type the UID then press Enter, but a few don't — so we
-  // also auto-submit after 300ms of no input (fires once the reader finishes
-  // "typing" the UID).
+  // that emulate keyboard input land their characters in the field.
   useEffect(() => {
     if (mode !== 'nfc') return
     nfcInputRef.current?.focus()
@@ -106,6 +115,7 @@ export function Scan() {
     return () => clearInterval(interval)
   }, [mode])
 
+  // Auto-submit after 300ms of no keyboard input (for HID keyboard-emulation readers)
   useEffect(() => {
     if (mode !== 'nfc' || !nfcUid.trim()) return
     if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current)
@@ -117,11 +127,7 @@ export function Scan() {
     }
   }, [nfcUid, mode])
 
-  // Belt-and-braces: some USB HID NFC readers emit keystrokes at the document
-  // level when the input loses focus (e.g. user clicks elsewhere, dev tools
-  // open). Capture alphanumeric + Enter globally while the NFC tab is active
-  // and route them into the input regardless of focus. Ignores typing while
-  // another input/textarea is focused so we don't hijack normal data entry.
+  // Global keydown capture for HID readers that emit at document level
   useEffect(() => {
     if (mode !== 'nfc') return
     const globalBuffer = { current: '', timer: null as ReturnType<typeof setTimeout> | null }
@@ -135,9 +141,7 @@ export function Scan() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       const tag = target?.tagName?.toLowerCase()
-      // If the NFC input itself is focused, let the normal handlers run.
       if (target === nfcInputRef.current) return
-      // Don't hijack typing in any other input/textarea.
       if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
 
       if (e.key === 'Enter') {
@@ -147,7 +151,6 @@ export function Scan() {
         }
         return
       }
-      // Single printable character — most HID readers emit hex digits + optional colons.
       if (e.key.length === 1 && /[0-9a-fA-F:\-]/.test(e.key)) {
         globalBuffer.current += e.key
         setNfcUid(globalBuffer.current)
@@ -164,6 +167,33 @@ export function Scan() {
       if (globalBuffer.timer) clearTimeout(globalBuffer.timer)
     }
   }, [mode])
+
+  const readerStatusBadge = () => {
+    if (!nfcReader.supported) return null
+    const s = nfcReader.status
+    const colors: Record<string, string> = {
+      disconnected: 'text-[#636366]',
+      connecting: 'text-yellow-400',
+      waiting: 'text-green-400',
+      reading: 'text-blue-400',
+      error: 'text-red-400',
+    }
+    const labels: Record<string, string> = {
+      disconnected: 'Reader not connected',
+      connecting: 'Connecting…',
+      waiting: 'Waiting for card…',
+      reading: 'Reading card…',
+      error: nfcReader.error || 'Reader error',
+    }
+    const Icon = s === 'waiting' || s === 'reading' ? Wifi : s === 'connecting' ? Loader2 : WifiOff
+    return (
+      <div className={`flex items-center gap-1.5 text-xs ${colors[s]}`}>
+        <Icon size={12} className={s === 'connecting' ? 'animate-spin' : ''} />
+        <span>{nfcReader.deviceName ? `${nfcReader.deviceName} — ` : ''}{labels[s]}</span>
+        {nfcReader.lastUid && <span className="font-mono text-[#a0a0a0] ml-1">UID: {nfcReader.lastUid}</span>}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -214,31 +244,72 @@ export function Scan() {
             </div>
           ) : (
             <div className="space-y-4">
-              <h3 className="font-semibold text-white">NFC Card Scan</h3>
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                <p className="text-xs text-blue-300">
-                  <strong>USB NFC Reader:</strong> Place your cursor in the field below, then tap the NFC card on your reader. The UID will be entered automatically.
-                </p>
-                <p className="text-xs text-blue-300/70 mt-1">
-                  If you don't have a USB reader, you can type the card UID manually (e.g. 04:A3:B2:1C:F4).
-                </p>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-white">NFC Card Scan</h3>
+                {readerStatusBadge()}
               </div>
-              <div className="relative">
-                <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-                <input
-                  ref={nfcInputRef}
-                  type="text"
-                  placeholder="Tap NFC card or enter UID..."
-                  value={nfcUid}
-                  onChange={(e) => setNfcUid(e.target.value)}
-                  autoFocus
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
-                  onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
-                />
+
+              {/* WebHID reader connection */}
+              {nfcReader.supported && nfcReader.status === 'disconnected' && (
+                <button
+                  onClick={nfcReader.connect}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 py-3 rounded-lg text-sm font-medium hover:bg-blue-600/30 transition-colors"
+                >
+                  <Usb size={16} />
+                  Connect USB NFC Reader (ACR122U)
+                </button>
+              )}
+
+              {nfcReader.status === 'waiting' && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-sm font-medium text-green-300">Reader Active</span>
+                  </div>
+                  <p className="text-xs text-green-300/70">Place an NFC card on the reader to scan</p>
+                </div>
+              )}
+
+              {nfcReader.status === 'reading' && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-center">
+                  <Loader2 size={20} className="mx-auto text-blue-400 animate-spin mb-1" />
+                  <p className="text-xs text-blue-300">Reading card…</p>
+                </div>
+              )}
+
+              {lookingUp && (
+                <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-3 text-center">
+                  <Loader2 size={20} className="mx-auto text-primary-400 animate-spin mb-1" />
+                  <p className="text-xs text-primary-300">Looking up member…</p>
+                </div>
+              )}
+
+              {nfcReader.error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-xs text-red-300">{nfcReader.error}</p>
+                </div>
+              )}
+
+              {/* Manual / keyboard-emulation fallback */}
+              <div className="border-t border-dark-border pt-4 mt-4">
+                <p className="text-xs text-[#636366] mb-2">Manual entry or keyboard-emulation reader:</p>
+                <div className="relative">
+                  <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+                  <input
+                    ref={nfcInputRef}
+                    type="text"
+                    placeholder="Tap NFC card or enter UID..."
+                    value={nfcUid}
+                    onChange={(e) => setNfcUid(e.target.value)}
+                    autoFocus
+                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
+                    onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
+                  />
+                </div>
+                <button onClick={() => scanNfc()} className="w-full mt-2 bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                  Look Up Member
+                </button>
               </div>
-              <button onClick={() => scanNfc()} className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
-                Look Up Member
-              </button>
             </div>
           )}
         </Card>
