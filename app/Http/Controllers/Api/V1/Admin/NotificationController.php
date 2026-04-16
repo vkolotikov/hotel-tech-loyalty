@@ -194,10 +194,15 @@ class NotificationController extends Controller
 
     public function createCampaign(Request $request): JsonResponse
     {
+        $channel = $request->input('channel', 'push');
+        // title/body are only required for push notifications, not email-only campaigns
+        $titleRule = $channel === 'email' ? 'nullable|string|max:255' : 'required|string|max:255';
+        $bodyRule  = $channel === 'email' ? 'nullable|string' : 'required|string';
+
         $validated = $request->validate([
             'name'              => 'required|string|max:255',
-            'title'             => 'required|string|max:255',
-            'body'              => 'required|string',
+            'title'             => $titleRule,
+            'body'              => $bodyRule,
             'segment_rules'     => 'nullable|array',
             'scheduled_at'      => 'nullable|date',
             'channel'           => 'nullable|in:push,email,both',
@@ -220,8 +225,8 @@ class NotificationController extends Controller
 
         $campaign = NotificationCampaign::create([
             'name'              => $validated['name'],
-            'title'             => $validated['title'],
-            'body'              => $validated['body'],
+            'title'             => $validated['title'] ?? '',
+            'body'              => $validated['body'] ?? '',
             'channel'           => $channel,
             'email_template_id' => $validated['email_template_id'] ?? null,
             'email_subject'     => $validated['email_subject'] ?? $emailTemplate?->subject,
