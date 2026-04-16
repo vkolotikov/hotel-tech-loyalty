@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BookingRoom;
 use App\Models\AuditLog;
+use App\Services\PmsResolver;
 use App\Services\SmoobuClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -155,15 +156,33 @@ class BookingRoomController extends Controller
         return response()->json($room->fresh());
     }
 
-    /** POST /v1/admin/booking-rooms/sync — pull rooms from PMS and upsert into booking_rooms table. */
-    public function sync(SmoobuClient $smoobu): JsonResponse
+    /** POST /v1/admin/booking-rooms/sync — pull rooms from the active PMS and upsert into booking_rooms table. */
+    public function sync(SmoobuClient $smoobu, PmsResolver $pms): JsonResponse
     {
         $orgId = app('current_organization_id');
+        $activePms = $pms->activePms();
 
-        // Guard: do not sync if no real PMS integration is configured
-        if ($smoobu->isMock()) {
+        // No PMS configured at all
+        if (!$activePms) {
             return response()->json([
-                'message' => 'No PMS integration configured. Please connect your Smoobu API key in Settings → Integrations before syncing rooms.',
+                'message' => 'No PMS integration configured. Connect a PMS provider in Settings → Integrations to sync rooms.',
+                'synced' => 0, 'created' => 0, 'updated' => 0,
+            ], 422);
+        }
+
+        // PMS is configured but doesn't have sync support yet
+        if (!$activePms['syncable']) {
+            return response()->json([
+                'message' => "{$activePms['name']} is connected but room sync is not yet supported for this provider. You can add rooms manually.",
+                'synced' => 0, 'created' => 0, 'updated' => 0,
+                'provider' => $activePms['name'],
+            ], 422);
+        }
+
+        // Smoobu is the active syncable provider — verify client is live
+        if ($activePms['id'] === 'smoobu' && $smoobu->isMock()) {
+            return response()->json([
+                'message' => 'Smoobu API key is missing or invalid. Check your credentials in Settings → Integrations.',
                 'synced' => 0, 'created' => 0, 'updated' => 0,
             ], 422);
         }
@@ -173,7 +192,7 @@ class BookingRoomController extends Controller
             $apartments = $response['apartments'] ?? [];
 
             if (empty($apartments)) {
-                return response()->json(['message' => 'No apartments found in PMS.', 'synced' => 0, 'created' => 0, 'updated' => 0]);
+                return response()->json(['message' => "No apartments found in {$activePms['name']}.", 'synced' => 0, 'created' => 0, 'updated' => 0]);
             }
 
             // Fetch current rates to get real prices (Smoobu apartments don't include prices)
@@ -214,7 +233,6 @@ class BookingRoomController extends Controller
                         'bedrooms' => $rooms['bedrooms'] ?? $existing->bedrooms,
                         'meta' => array_merge($existing->meta ?? [], ['pms_raw' => $apt]),
                     ];
-                    // Update price from PMS rates (always sync latest rate)
                     if ($ratePrice > 0) {
                         $updateData['base_price'] = $ratePrice;
                     }
@@ -241,17 +259,18 @@ class BookingRoomController extends Controller
                 'organization_id' => $orgId,
                 'user_id' => request()->user()?->id,
                 'action' => 'booking_rooms.synced',
-                'description' => "Synced rooms from PMS: {$created} created, {$updated} updated",
+                'description' => "Synced rooms from {$activePms['name']}: {$created} created, {$updated} updated",
             ]);
 
             return response()->json([
-                'message' => "Synced {$created} new rooms, updated {$updated} existing.",
+                'message' => "Synced {$created} new rooms, updated {$updated} existing from {$activePms['name']}.",
                 'synced' => $created + $updated,
                 'created' => $created,
                 'updated' => $updated,
+                'provider' => $activePms['name'],
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Sync failed: ' . $e->getMessage()], 500);
+            return response()->json(['message' => "Sync from {$activePms['name']} failed: " . $e->getMessage()], 500);
         }
     }
 

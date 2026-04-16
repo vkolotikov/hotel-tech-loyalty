@@ -8,6 +8,7 @@ use App\Models\BookingMirror;
 use App\Models\BookingNote;
 use App\Models\BookingSubmission;
 use App\Services\BookingEngineService;
+use App\Services\PmsResolver;
 use App\Services\SmoobuClient;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -155,12 +156,16 @@ class BookingAdminController extends Controller
             'arrivals'             => $arrivals,
             'recentUnpaidBookings' => $recentUnpaid,
             'recentSubmissions'    => $recentSubs,
-            'syncHealth' => [
-                'lastSyncAt'          => $lastSync?->created_at?->toIso8601String(),
-                'mirroredBookingCount' => $mirrorCount,
-                'pmsEnabled'          => \App\Services\IntegrationStatus::isEnabled('smoobu'),
-                'pmsName'             => 'Smoobu',
-            ],
+            'syncHealth' => (function () use ($lastSync, $mirrorCount) {
+                $pms = app(PmsResolver::class)->activePms();
+                return [
+                    'lastSyncAt'           => $lastSync?->created_at?->toIso8601String(),
+                    'mirroredBookingCount' => $mirrorCount,
+                    'pmsEnabled'           => $pms !== null,
+                    'pmsName'              => $pms['name'] ?? null,
+                    'pmsSyncable'          => $pms['syncable'] ?? false,
+                ];
+            })(),
         ]);
     }
 
@@ -293,11 +298,21 @@ class BookingAdminController extends Controller
     /** POST /v1/admin/bookings/sync — bulk sync from PMS. */
     public function syncAll(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
+        $activePms = app(PmsResolver::class)->activePms();
+
         // Always sync apartments (works in both mock and live mode)
         try { $this->syncApartments($smoobu); } catch (\Throwable) {}
 
+        if (!$activePms) {
+            return response()->json(['message' => 'No PMS integration configured. Connect a provider in Settings → Integrations to sync bookings.', 'synced' => 0]);
+        }
+
+        if (!$activePms['syncable']) {
+            return response()->json(['message' => "{$activePms['name']} is connected but booking sync is not yet supported for this provider.", 'synced' => 0]);
+        }
+
         if ($smoobu->isMock()) {
-            return response()->json(['message' => 'PMS is in mock mode — apartments synced from demo data. Add your Smoobu API key in Settings > Integrations for real bookings.', 'synced' => 0]);
+            return response()->json(['message' => "Smoobu API key is missing or invalid. Check your credentials in Settings → Integrations.", 'synced' => 0]);
         }
 
         try {

@@ -68,6 +68,15 @@ export default function BookingRooms() {
     queryFn: () => api.get('/v1/admin/booking-rooms').then(r => r.data),
   })
 
+  const { data: dashData } = useQuery<{ syncHealth?: { pmsEnabled?: boolean; pmsName?: string | null; pmsSyncable?: boolean } }>({
+    queryKey: ['booking-dashboard-pms'],
+    queryFn: () => api.get('/v1/admin/bookings/dashboard').then(r => r.data),
+    staleTime: 60_000,
+  })
+  const pmsName = dashData?.syncHealth?.pmsName
+  const pmsEnabled = dashData?.syncHealth?.pmsEnabled
+  const pmsSyncable = dashData?.syncHealth?.pmsSyncable
+
   const syncMut = useMutation({
     mutationFn: () => api.post('/v1/admin/booking-rooms/sync'),
     onSuccess: (r) => { toast.success(r.data.message); qc.invalidateQueries({ queryKey: ['booking-rooms'] }) },
@@ -101,13 +110,25 @@ export default function BookingRooms() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Rooms & Units</h1>
-          <p className="text-xs text-gray-500 mt-1">Manage your property rooms. Sync from PMS, then customize images, amenities and tags.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Manage your property rooms.
+            {pmsEnabled && pmsName
+              ? ` Connected to ${pmsName}${pmsSyncable ? ' — sync to pull rooms automatically.' : '.'}`
+              : ' Connect a PMS in Settings → Integrations, or add rooms manually.'}
+          </p>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}
-            className={btnPrimary + ' bg-white/[0.04] border border-white/[0.08] text-gray-300 hover:bg-white/[0.08]'}>
-            <RefreshCw size={14} className={syncMut.isPending ? 'animate-spin' : ''} /> Sync from PMS
-          </button>
+          {pmsEnabled && pmsSyncable && (
+            <button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}
+              className={btnPrimary + ' bg-white/[0.04] border border-white/[0.08] text-gray-300 hover:bg-white/[0.08]'}>
+              <RefreshCw size={14} className={syncMut.isPending ? 'animate-spin' : ''} /> Sync from {pmsName}
+            </button>
+          )}
+          {pmsEnabled && !pmsSyncable && (
+            <span className="flex items-center gap-2 text-[11px] text-amber-400/70 px-3 py-2">
+              {pmsName} connected — sync coming soon
+            </span>
+          )}
           <button onClick={openNew} className={btnPrimary} style={btnPrimaryStyle}>
             <Plus size={14} /> Add Room
           </button>
@@ -123,10 +144,21 @@ export default function BookingRooms() {
         <div className={card + ' text-center py-16'} style={cardBg}>
           <BedDouble size={40} className="mx-auto text-gray-600 mb-4" />
           <p className="text-gray-400 font-medium">No rooms yet</p>
-          <p className="text-xs text-gray-600 mt-1 mb-4">Sync from your PMS or add rooms manually</p>
-          <button onClick={() => syncMut.mutate()} className={btnPrimary + ' mx-auto'} style={btnPrimaryStyle}>
-            <RefreshCw size={14} /> Sync from PMS
-          </button>
+          <p className="text-xs text-gray-600 mt-1 mb-4">
+            {pmsEnabled && pmsName
+              ? `Sync from ${pmsName} or add rooms manually`
+              : 'Connect a PMS in Settings → Integrations, or add rooms manually'}
+          </p>
+          <div className="flex gap-3 justify-center">
+            {pmsEnabled && pmsSyncable && (
+              <button onClick={() => syncMut.mutate()} className={btnPrimary} style={btnPrimaryStyle}>
+                <RefreshCw size={14} /> Sync from {pmsName}
+              </button>
+            )}
+            <button onClick={openNew} className={btnPrimary + (pmsEnabled && pmsSyncable ? ' bg-white/[0.04] border border-white/[0.08] text-gray-300' : '')} style={pmsEnabled && pmsSyncable ? undefined : btnPrimaryStyle}>
+              <Plus size={14} /> Add Manually
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
