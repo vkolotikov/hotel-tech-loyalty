@@ -78,8 +78,10 @@ Route::prefix('v1')->group(function () {
         Route::get('availability',          [BookingPublicController::class, 'availability']);
         Route::get('unit/{unitId}/rates',   [BookingPublicController::class, 'unitRates']);
         Route::post('quote',                [BookingPublicController::class, 'quote']);
+        Route::post('payment-intent',       [BookingPublicController::class, 'paymentIntent']);
         Route::post('confirm',              [BookingPublicController::class, 'confirm']);
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
+        Route::post('webhooks/stripe',      [BookingPublicController::class, 'stripeWebhook']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 

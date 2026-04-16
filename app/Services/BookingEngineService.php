@@ -166,6 +166,11 @@ class BookingEngineService
         // Consume hold
         $hold->update(['status' => 'consumed']);
 
+        // Resolve payment info (from Stripe verification in controller)
+        $paymentIntentId = $data['payment_intent_id'] ?? null;
+        $paymentMethod   = $data['payment_method'] ?? null;
+        $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? 'paid' : null);
+
         // Create mirror record
         $mirror = BookingMirror::create([
             'reservation_id'    => (string) ($result['id'] ?? ''),
@@ -184,6 +189,10 @@ class BookingEngineService
             'arrival_date'      => $payload['check_in'],
             'departure_date'    => $payload['check_out'],
             'price_total'       => $payload['gross_total'],
+            'price_paid'        => $paymentStatus === 'paid' ? $payload['gross_total'] : null,
+            'payment_status'    => $paymentStatus,
+            'payment_method'    => $paymentMethod,
+            'stripe_payment_intent_id' => $paymentIntentId,
             'internal_status'   => $internalStatus,
             'synced_at'         => $pmsResult ? now() : null,
         ]);

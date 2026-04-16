@@ -28,7 +28,7 @@ class BookingMirror extends Model
         'price_total', 'price_paid', 'prepayment_amount', 'prepayment_paid',
         'deposit_amount', 'deposit_paid',
         'notice', 'assistant_notice', 'guest_app_url',
-        'payment_method', 'payment_status', 'internal_status', 'invoice_state',
+        'payment_method', 'payment_status', 'stripe_payment_intent_id', 'internal_status', 'invoice_state',
         'source_created_at', 'source_updated_at', 'synced_at', 'lifecycle_counted_at', 'raw_json',
     ];
 

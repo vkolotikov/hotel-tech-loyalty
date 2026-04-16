@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Globe, Shield, ExternalLink, Copy, Palette, Sun, Moon,
-  Clock, Settings2, DollarSign, ToggleLeft, Zap,
+  Clock, Settings2, DollarSign, ToggleLeft, Zap, CreditCard,
 } from 'lucide-react'
 
 /**
@@ -323,6 +323,34 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                 className={inputClass} />
             </div>
           </div>
+
+          {/* Online Payment (Stripe) */}
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white flex items-center gap-1.5">
+                <CreditCard size={13} className="text-gray-500" /> Online Payment
+              </label>
+              <p className="text-xs text-gray-500 mt-0.5">When enabled, guests can pay for their booking via Stripe during the reservation process. Requires Stripe API keys in Integrations.</p>
+            </div>
+            <button onClick={() => handleChange('booking_payment_enabled', (getVal('booking_payment_enabled') || 'false') === 'true' ? 'false' : 'true')}
+              className={`relative w-12 h-6 rounded-full transition-colors ${(getVal('booking_payment_enabled') || 'false') === 'true' ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${(getVal('booking_payment_enabled') || 'false') === 'true' ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+          {(getVal('booking_payment_enabled') || 'false') === 'true' && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+              <p className="text-[11px] text-emerald-400 flex items-center gap-1.5">
+                <CreditCard size={11} /> Stripe payment is active. Make sure your Stripe API keys are configured in Settings &rarr; Integrations.
+              </p>
+            </div>
+          )}
+          {(getVal('booking_payment_enabled') || 'false') === 'true' && !getVal('stripe_secret_key') && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 mt-2">
+              <p className="text-[11px] text-amber-400 flex items-center gap-1.5">
+                <Zap size={11} /> Warning: No Stripe secret key detected. Payment will not work until keys are configured in Integrations.
+              </p>
+            </div>
+          )}
 
           {/* Mock Mode */}
           <div className="flex items-center justify-between py-2">

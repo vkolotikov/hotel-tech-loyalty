@@ -7,6 +7,7 @@ use App\Models\HotelSetting;
 use App\Services\AvailabilityService;
 use App\Services\BookingEngineService;
 use App\Services\SmoobuClient;
+use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -88,6 +89,10 @@ class BookingPublicController extends Controller
             'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', '') ?: $brandLogo,
         ];
 
+        // Payment: expose whether Stripe payment is enabled + publishable key
+        $stripe = app(StripeService::class);
+        $paymentEnabled = $stripe->isEnabled();
+
         return response()->json([
             'units'      => $units,
             'extras'     => $extras,
@@ -96,6 +101,8 @@ class BookingPublicController extends Controller
             'min_nights' => $minNights,
             'max_nights' => $maxNights,
             'style'      => $style,
+            'payment_enabled'      => $paymentEnabled,
+            'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
         ]);
     }
 
@@ -163,6 +170,55 @@ class BookingPublicController extends Controller
         }
     }
 
+    /** POST /v1/booking/payment-intent — create a Stripe PaymentIntent from a hold token. */
+    public function paymentIntent(Request $request, StripeService $stripe): JsonResponse
+    {
+        $this->bindOrg($request);
+
+        $validated = $request->validate([
+            'hold_token' => 'required|string',
+        ]);
+
+        if (!$stripe->isEnabled()) {
+            return response()->json(['error' => 'Online payment is not enabled.'], 400);
+        }
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $holdQuery = \App\Models\BookingHold::where('hold_token', $validated['hold_token']);
+        if ($orgId) {
+            $holdQuery->where('organization_id', $orgId);
+        }
+        $hold = $holdQuery->first();
+
+        if (!$hold || !$hold->isActive()) {
+            return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
+        }
+
+        $payload = $hold->payload_json;
+        $amount = (float) ($payload['gross_total'] ?? 0);
+        $unitName = $payload['unit_name'] ?? 'Room';
+        $checkIn = $payload['check_in'] ?? '';
+        $checkOut = $payload['check_out'] ?? '';
+
+        try {
+            $intent = $stripe->createPaymentIntent(
+                $amount,
+                "Booking: {$unitName} ({$checkIn} — {$checkOut})",
+                [
+                    'hold_token' => $validated['hold_token'],
+                    'org_id'     => (string) ($orgId ?? ''),
+                    'unit_name'  => $unitName,
+                    'check_in'   => $checkIn,
+                    'check_out'  => $checkOut,
+                ],
+            );
+
+            return response()->json($intent);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Failed to create payment: ' . $e->getMessage()], 500);
+        }
+    }
+
     /** POST /v1/booking/confirm — confirm booking from hold token. */
     public function confirm(Request $request, BookingEngineService $booking): JsonResponse
     {
@@ -175,7 +231,30 @@ class BookingPublicController extends Controller
             'guest.email'          => 'required|email',
             'guest.phone'          => 'nullable|string|max:40',
             'payment_method'       => 'nullable|string|max:40',
+            'payment_intent_id'    => 'nullable|string|max:255',
         ]);
+
+        // If a payment_intent_id is provided, verify it succeeded before confirming
+        if (!empty($validated['payment_intent_id'])) {
+            $stripe = app(StripeService::class);
+            if ($stripe->isEnabled()) {
+                try {
+                    $intent = $stripe->retrievePaymentIntent($validated['payment_intent_id']);
+                    if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
+                        return response()->json([
+                            'error' => 'Payment has not been completed. Status: ' . $intent->status,
+                        ], 400);
+                    }
+                    // Attach payment method info to the booking data
+                    $validated['payment_method'] = 'stripe';
+                    $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
+                } catch (\Throwable $e) {
+                    return response()->json([
+                        'error' => 'Unable to verify payment: ' . $e->getMessage(),
+                    ], 400);
+                }
+            }
+        }
 
         try {
             $result = $booking->confirm(
@@ -208,6 +287,89 @@ class BookingPublicController extends Controller
         });
 
         return response()->json(['prices' => $prices]);
+    }
+
+    /** POST /v1/booking/webhooks/stripe — Stripe payment webhook receiver. */
+    public function stripeWebhook(Request $request): JsonResponse
+    {
+        $payload = $request->getContent();
+        $sigHeader = $request->header('Stripe-Signature', '');
+
+        // Try to verify with any configured webhook secret across all orgs.
+        // Stripe sends webhooks without org context, so we check org_id from
+        // the PaymentIntent metadata to find the right org's secret.
+        $event = null;
+        $rawPayload = json_decode($payload, true);
+        $orgId = $rawPayload['data']['object']['metadata']['org_id'] ?? null;
+
+        if ($orgId) {
+            // Bind the org so StripeService can load the correct keys
+            app()->instance('current_organization_id', (int) $orgId);
+            $stripe = app(StripeService::class);
+
+            try {
+                $event = $stripe->constructWebhookEvent($payload, $sigHeader);
+            } catch (\Stripe\Exception\SignatureVerificationException $e) {
+                return response()->json(['error' => 'Invalid signature'], 400);
+            } catch (\Throwable $e) {
+                return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
+            }
+        } else {
+            // No org context — log and acknowledge
+            \App\Models\AuditLog::create([
+                'action'       => 'booking.payment.webhook_no_org',
+                'subject_type' => 'stripe_payment',
+                'details'      => json_encode(['event_type' => $rawPayload['type'] ?? 'unknown']),
+            ]);
+            return response()->json(['received' => true]);
+        }
+
+        // Handle relevant events
+        if ($event->type === 'payment_intent.succeeded') {
+            $intent = $event->data->object;
+            $holdToken = $intent->metadata->hold_token ?? null;
+            $orgId = $intent->metadata->org_id ?? null;
+
+            // Find the BookingMirror by stripe_payment_intent_id (set during confirm)
+            $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('stripe_payment_intent_id', $intent->id)
+                ->first();
+
+            if ($mirror) {
+                $mirror->update([
+                    'payment_status' => 'paid',
+                    'payment_method' => 'stripe',
+                    'price_paid'     => $intent->amount / 100,
+                ]);
+            }
+
+            \App\Models\AuditLog::create([
+                'action'       => 'booking.payment.succeeded',
+                'subject_type' => 'stripe_payment',
+                'subject_id'   => $intent->id,
+                'details'      => json_encode([
+                    'amount'     => $intent->amount,
+                    'currency'   => $intent->currency,
+                    'hold_token' => $holdToken,
+                ]),
+            ]);
+        } elseif ($event->type === 'payment_intent.payment_failed') {
+            $intent = $event->data->object;
+
+            \App\Models\AuditLog::create([
+                'action'       => 'booking.payment.failed',
+                'subject_type' => 'stripe_payment',
+                'subject_id'   => $intent->id,
+                'details'      => json_encode([
+                    'amount'        => $intent->amount,
+                    'currency'      => $intent->currency,
+                    'failure_code'  => $intent->last_payment_error?->code ?? null,
+                    'hold_token'    => $intent->metadata->hold_token ?? null,
+                ]),
+            ]);
+        }
+
+        return response()->json(['received' => true]);
     }
 
     /** POST /v1/booking/webhooks/smoobu — Smoobu webhook receiver. */

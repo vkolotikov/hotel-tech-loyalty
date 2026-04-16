@@ -295,6 +295,16 @@ var state = {
   requests: '',
   confirming: false,
   confirmation: null,
+  // Payment (Stripe)
+  paymentEnabled: false,
+  stripePublishableKey: null,
+  stripeInstance: null,
+  stripeElements: null,
+  cardElement: null,
+  paymentIntentClientSecret: null,
+  paymentIntentId: null,
+  paymentProcessing: false,
+  paymentError: null,
   calendarOpen: false,
   calendarPrices: {},
   calendarPricesLoading: false,
@@ -304,7 +314,10 @@ var state = {
 };
 
 var $app = document.getElementById('app');
-var STEPS = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
+var STEPS_NO_PAY = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
+var STEPS_PAY = ['Dates & Guests','Rooms & Rates','Extras','Guest Details','Payment'];
+function getSteps() { return state.paymentEnabled ? STEPS_PAY : STEPS_NO_PAY; }
+function successStep() { return state.paymentEnabled ? 6 : 5; }
 
 /* Fallback images for known ForRest room names */
 var ASSETS_BASE = API_BASE.replace(/\/api$/, '') + '/assets/images/';
@@ -429,13 +442,15 @@ function render() {
   }
 
   // Stepper (hide on success)
-  if (state.step <= 4) {
+  var steps = getSteps();
+  var sStep = successStep();
+  if (state.step < sStep) {
     html += '<div class="stepper">';
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < steps.length; i++) {
       var cls = (i + 1) < state.step ? 'stepper-item done' : ((i + 1) === state.step ? 'stepper-item active' : 'stepper-item');
       html += '<div class="' + cls + '">';
       html += '<div class="step-circle">' + ((i + 1) < state.step ? svgCheck() : (i + 1)) + '</div>';
-      html += '<div class="step-label">' + STEPS[i] + '</div>';
+      html += '<div class="step-label">' + steps[i] + '</div>';
       html += '</div>';
     }
     html += '</div>';
@@ -453,7 +468,9 @@ function render() {
     html += renderExtras();
   } else if (state.step === 4) {
     html += renderDetails();
-  } else if (state.step === 5) {
+  } else if (state.step === 5 && state.paymentEnabled) {
+    html += renderPayment();
+  } else if (state.step === successStep()) {
     html += renderSuccess();
   }
   html += '</div>';
@@ -774,8 +791,16 @@ function renderSummary() {
     h += state.quoteLoading ? spinner() + ' Calculating...' : 'Review Booking ' + svgArrowRight();
     h += '</button>';
   } else if (state.step === 4) {
-    h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.confirming ? ' disabled' : '') + '>';
-    h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
+    if (state.paymentEnabled) {
+      h += '<button class="btn btn-primary" id="w-to-payment" style="margin-top:16px">Continue to Payment ' + svgArrowRight() + '</button>';
+    } else {
+      h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.confirming ? ' disabled' : '') + '>';
+      h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
+      h += '</button>';
+    }
+  } else if (state.step === 5 && state.paymentEnabled) {
+    h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.paymentProcessing ? ' disabled' : '') + '>';
+    h += state.paymentProcessing ? spinner() + ' Processing...' : svgLock() + ' Pay & Confirm';
     h += '</button>';
   }
 
@@ -843,9 +868,16 @@ function renderDetails() {
   h += field('Special Requests', '<textarea id="w-requests" placeholder="Any special requirements...">' + esc(state.requests) + '</textarea>');
   h += '<div class="btn-row">';
   h += '<button class="btn btn-outline" id="w-back3">' + svgArrowLeft() + ' Back</button>';
-  h += '<button class="btn btn-primary" id="w-confirm"' + (state.confirming ? ' disabled' : '') + '>';
-  h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
-  h += '</button></div></div>';
+
+  if (state.paymentEnabled) {
+    // When payment is enabled, this step just collects details — payment is next
+    h += '<button class="btn btn-primary" id="w-to-payment">Continue to Payment ' + svgArrowRight() + '</button>';
+  } else {
+    h += '<button class="btn btn-primary" id="w-confirm"' + (state.confirming ? ' disabled' : '') + '>';
+    h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
+    h += '</button>';
+  }
+  h += '</div></div>';
 
   // Summary sidebar with hero
   h += renderSummary();
@@ -854,7 +886,55 @@ function renderDetails() {
   return h;
 }
 
-/* --- Step 5: Success --- */
+/* --- Step 5: Payment (Stripe) --- */
+function renderPayment() {
+  var q = state.quote || {};
+  var h = '';
+  if (state.error) h += errorHtml(state.error);
+  if (state.paymentError) h += errorHtml(state.paymentError);
+
+  h += '<div class="page-layout">';
+  h += '<div>';
+
+  h += '<div class="card">';
+  h += '<div class="card-title">' + svgLock() + ' Secure Payment</div>';
+  h += '<div class="card-sub">Enter your card details below. Your payment is secured by Stripe.</div>';
+
+  // Amount summary
+  h += '<div style="background:var(--primary-light);border:1px solid color-mix(in srgb, var(--primary) 20%, transparent);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
+  h += '<span style="font-size:14px;font-weight:600;color:var(--text)">Total Amount</span>';
+  h += '<span style="font-size:22px;font-weight:700;color:var(--primary)">' + formatCurrency(q.gross_total || 0) + '</span>';
+  h += '</div>';
+
+  // Stripe card element mount point
+  h += '<div class="field"><label>Card Details</label>';
+  h += '<div id="stripe-card-element" style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-height:44px;transition:border-color .2s"></div>';
+  h += '<div id="stripe-card-errors" style="color:var(--error);font-size:12px;margin-top:6px"></div>';
+  h += '</div>';
+
+  // Security badges
+  h += '<div style="display:flex;align-items:center;gap:8px;margin:16px 0;font-size:11px;color:var(--text-secondary)">';
+  h += svgLock() + ' <span>256-bit SSL encryption</span>';
+  h += '<span style="margin:0 4px">&middot;</span>';
+  h += '<span>Powered by <strong>Stripe</strong></span>';
+  h += '</div>';
+
+  h += '<div class="btn-row">';
+  h += '<button class="btn btn-outline" id="w-back4">' + svgArrowLeft() + ' Back</button>';
+  h += '<button class="btn btn-primary" id="w-pay"' + (state.paymentProcessing ? ' disabled' : '') + '>';
+  h += state.paymentProcessing ? spinner() + ' Processing...' : svgLock() + ' Pay & Confirm';
+  h += '</button></div>';
+  h += '</div>';
+
+  h += '</div>';
+
+  // Summary sidebar
+  h += renderSummary();
+  h += '</div>';
+  return h;
+}
+
+/* --- Success Step --- */
 function renderSuccess() {
   var c = state.confirmation || {};
   var h = '<div class="card">';
@@ -862,8 +942,12 @@ function renderSuccess() {
   h += '<div class="success-wrap">';
   h += '<div class="success-icon">' + svgCheckLg() + '</div>';
   h += '<h2>Booking Confirmed!</h2>';
-  h += '<p>Thank you for your reservation. A confirmation email has been sent to <strong>' + esc(state.email) + '</strong>.</p>';
-  if (c.reference) h += '<div class="success-ref">' + esc(c.reference) + '</div>';
+  var msg = 'Thank you for your reservation.';
+  if (state.paymentEnabled) msg += ' Your payment has been processed successfully.';
+  msg += ' A confirmation email has been sent to <strong>' + esc(state.email) + '</strong>.';
+  h += '<p>' + msg + '</p>';
+  if (c.booking_reference) h += '<div class="success-ref">' + esc(c.booking_reference) + '</div>';
+  else if (c.reference) h += '<div class="success-ref">' + esc(c.reference) + '</div>';
   h += '<div style="margin-top:24px"><button class="btn btn-outline" id="w-new" style="max-width:220px;margin:0 auto">Make Another Booking</button></div>';
   h += '</div></div>';
   return h;
@@ -889,16 +973,20 @@ function bindEvents() {
   on('w-back1', 'click', function() { state.step = 1; state.error = null; render(); });
   on('w-back2', 'click', function() { state.step = 2; render(); });
   on('w-back3', 'click', function() { state.step = 3; render(); });
+  on('w-back4', 'click', function() { state.step = 4; state.paymentError = null; render(); });
   on('w-next2', 'click', doSelectUnit);
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);
+  on('w-to-payment', 'click', doGoToPayment);
+  on('w-pay', 'click', doPayAndConfirm);
   // Summary sidebar buttons
   on('w-summary-next', 'click', doSelectUnit);
   on('w-summary-quote', 'click', doQuote);
-  on('w-summary-confirm', 'click', doConfirm);
+  on('w-summary-confirm', 'click', state.paymentEnabled ? doPayAndConfirm : doConfirm);
   on('w-new', 'click', function() {
     state.step = 1; state.selectedUnit = null; state.selectedExtras = {};
     state.quote = null; state.confirmation = null; state.error = null;
+    state.paymentError = null; state.paymentIntentClientSecret = null; state.paymentIntentId = null;
     state.firstName = ''; state.lastName = ''; state.email = ''; state.phone = ''; state.requests = '';
     render();
   });
@@ -1055,12 +1143,130 @@ function doConfirm() {
     state.confirming = false;
     if (data.error) { state.error = data.error; render(); return; }
     state.confirmation = data;
-    state.step = 5;
+    state.step = successStep();
     render();
   }).catch(function() {
     state.confirming = false;
     state.error = 'Booking failed. Please try again.';
     render();
+  });
+}
+
+function doGoToPayment() {
+  state.error = null;
+  if (!state.firstName.trim()) { state.error = 'First name is required.'; render(); return; }
+  if (!state.lastName.trim()) { state.error = 'Last name is required.'; render(); return; }
+  if (!state.email.trim() || state.email.indexOf('@') < 1) { state.error = 'A valid email address is required.'; render(); return; }
+
+  // Create a PaymentIntent from the hold token
+  state.paymentProcessing = true;
+  state.paymentError = null;
+  render();
+
+  apiPost('payment-intent', {
+    hold_token: state.quote ? state.quote.hold_token : ''
+  }).then(function(data) {
+    state.paymentProcessing = false;
+    if (data.error) { state.error = data.error; render(); return; }
+    state.paymentIntentClientSecret = data.client_secret;
+    state.paymentIntentId = data.payment_intent_id;
+    state.step = 5;
+    render();
+    // Mount Stripe Elements after DOM is rendered
+    mountStripeElement();
+  }).catch(function() {
+    state.paymentProcessing = false;
+    state.error = 'Failed to initialize payment. Please try again.';
+    render();
+  });
+}
+
+function mountStripeElement() {
+  if (!state.stripeInstance || !state.paymentIntentClientSecret) return;
+  var container = document.getElementById('stripe-card-element');
+  if (!container) return;
+
+  var appearance = {
+    theme: (state.style && state.style.theme === 'dark') ? 'night' : 'stripe',
+    variables: {
+      colorPrimary: (state.style && state.style.primary_color) || '#2d6a4f',
+      borderRadius: '8px'
+    }
+  };
+
+  state.stripeElements = state.stripeInstance.elements({
+    clientSecret: state.paymentIntentClientSecret,
+    appearance: appearance
+  });
+
+  state.cardElement = state.stripeElements.create('payment');
+  state.cardElement.mount('#stripe-card-element');
+
+  state.cardElement.on('change', function(event) {
+    var errEl = document.getElementById('stripe-card-errors');
+    if (errEl) errEl.textContent = event.error ? event.error.message : '';
+  });
+}
+
+function doPayAndConfirm() {
+  if (!state.stripeInstance || !state.stripeElements || !state.paymentIntentClientSecret) {
+    state.paymentError = 'Payment not initialized. Please go back and try again.';
+    render();
+    return;
+  }
+
+  state.paymentProcessing = true;
+  state.paymentError = null;
+  render();
+
+  state.stripeInstance.confirmPayment({
+    elements: state.stripeElements,
+    confirmParams: {
+      return_url: window.location.href, // Fallback for 3D Secure redirects
+      payment_method_data: {
+        billing_details: {
+          name: state.firstName.trim() + ' ' + state.lastName.trim(),
+          email: state.email.trim(),
+          phone: state.phone.trim() || undefined
+        }
+      }
+    },
+    redirect: 'if_required'
+  }).then(function(result) {
+    if (result.error) {
+      state.paymentProcessing = false;
+      state.paymentError = result.error.message || 'Payment failed. Please try again.';
+      render();
+      return;
+    }
+
+    // Payment succeeded — now confirm the booking
+    state.confirming = true;
+    render();
+
+    apiPost('confirm', {
+      hold_token: state.quote ? state.quote.hold_token : '',
+      guest: {
+        first_name: state.firstName.trim(),
+        last_name: state.lastName.trim(),
+        email: state.email.trim(),
+        phone: state.phone.trim()
+      },
+      payment_intent_id: state.paymentIntentId,
+      payment_method: 'stripe'
+    }).then(function(data) {
+      state.confirming = false;
+      state.paymentProcessing = false;
+      if (data.error) { state.paymentError = data.error; render(); return; }
+      state.confirmation = data;
+      state.step = successStep();
+      render();
+    }).catch(function() {
+      state.confirming = false;
+      state.paymentProcessing = false;
+      state.paymentError = 'Payment was processed but booking confirmation failed. Please contact support.';
+      render();
+    });
   });
 }
 
@@ -1217,6 +1423,17 @@ function applyStyle(cfg) {
   if (cfg.currency) CURRENCY = cfg.currency;
 }
 
+/* --- Load Stripe.js lazily --- */
+function loadStripeJs(cb) {
+  if (typeof Stripe !== 'undefined') { cb(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://js.stripe.com/v3/';
+  s.async = true;
+  s.onload = cb;
+  s.onerror = function() { console.warn('Failed to load Stripe.js'); };
+  document.head.appendChild(s);
+}
+
 /* --- Spin keyframe (inline for spinner) --- */
 var styleTag = document.createElement('style');
 styleTag.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
@@ -1227,6 +1444,15 @@ apiGet('config').then(function(data) {
   state.config = data;
   state.loading = false;
   applyStyle(data);
+
+  // Initialize Stripe if payment is enabled
+  if (data.payment_enabled && data.stripe_publishable_key) {
+    state.paymentEnabled = true;
+    state.stripePublishableKey = data.stripe_publishable_key;
+    loadStripeJs(function() {
+      state.stripeInstance = Stripe(state.stripePublishableKey);
+    });
+  }
 
   // Read URL params for pre-fill (from chat widget "Book Now" links)
   var urlParams = {};
