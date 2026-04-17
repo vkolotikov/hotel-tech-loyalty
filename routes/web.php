@@ -28,6 +28,48 @@ Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
     return view('booking-widget', compact('orgId', 'lang', 'color', 'apiBase'));
 });
 
+// ─── Public Services Reservation Widget (embeddable) ───────────────────────
+Route::get('/services-widget', function (\Illuminate\Http\Request $request) {
+    $orgId = $request->query('org', '');
+    $lang  = $request->query('lang', 'en');
+    $color = $request->query('color', '');
+
+    $apiBase = rtrim(url('/'), '/') . '/api';
+
+    return response()
+        ->view('services-widget', compact('orgId', 'lang', 'color', 'apiBase'))
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+});
+
+// ─── Standalone Services Booking Page ──────────────────────────────────────
+Route::get('/services/{token}', function (string $token) {
+    $org = \App\Models\Organization::where('widget_token', $token)->first();
+    if (!$org) {
+        abort(404, 'Services booking page not found');
+    }
+    $color = request('color', '');
+    if (!$color) {
+        $color = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $org->id)
+            ->where('key', 'services_widget_color')
+            ->value('value')
+            ?: \App\Models\HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $org->id)
+                ->where('key', 'primary_color')
+                ->value('value')
+            ?: '';
+    }
+    $apiBase = url('/') . '/api';
+    return view('services-widget', [
+        'orgId'  => $token,
+        'lang'   => request('lang', 'en'),
+        'color'  => $color,
+        'apiBase' => $apiBase,
+        'standalone' => true,
+    ]);
+});
+
 // ─── Standalone Booking Page ────────────────────────────────────────────────
 Route::get('/book/{token}', function (string $token) {
     $org = \App\Models\Organization::where('widget_token', $token)->first();
@@ -88,7 +130,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|review/).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|review/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

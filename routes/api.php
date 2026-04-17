@@ -40,7 +40,13 @@ use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\Admin\BookingRoomController;
 use App\Http\Controllers\Api\V1\Admin\BookingExtraController;
+use App\Http\Controllers\Api\V1\Admin\ServiceCategoryController;
+use App\Http\Controllers\Api\V1\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Api\V1\Admin\ServiceMasterController;
+use App\Http\Controllers\Api\V1\Admin\ServiceExtraController;
+use App\Http\Controllers\Api\V1\Admin\ServiceBookingController;
 use App\Http\Controllers\Api\V1\BookingPublicController;
+use App\Http\Controllers\Api\V1\ServicePublicController;
 use App\Http\Controllers\Api\V1\Admin\ChatWidgetConfigController;
 use App\Http\Controllers\Api\V1\Admin\ChatInboxController;
 use App\Http\Controllers\Api\V1\Admin\PopupRuleController;
@@ -83,6 +89,16 @@ Route::prefix('v1')->group(function () {
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/stripe',      [BookingPublicController::class, 'stripeWebhook']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
+    });
+
+    // ─── Public Services Reservation Widget API ─────────────────────────────
+    Route::prefix('services')->middleware('throttle:60,1')->group(function () {
+        Route::get('config',          [ServicePublicController::class, 'config']);
+        Route::get('availability',    [ServicePublicController::class, 'availability']);
+        Route::get('calendar',        [ServicePublicController::class, 'calendar']);
+        Route::post('quote',          [ServicePublicController::class, 'quote']);
+        Route::post('payment-intent', [ServicePublicController::class, 'paymentIntent']);
+        Route::post('confirm',        [ServicePublicController::class, 'confirm']);
     });
 
     // ─── Public Review API ─────────────────────────────────────────────────────
@@ -477,6 +493,30 @@ Route::prefix('v1')->group(function () {
             Route::post('booking-rooms/{id}/remove-gallery', [BookingRoomController::class, 'removeGallery']);
             Route::apiResource('booking-rooms',           BookingRoomController::class);
             Route::apiResource('booking-extras',          BookingExtraController::class);
+
+            // ─── Services Reservation (Admin) ───────────────────────────────
+            Route::post('service-categories/reorder',     [ServiceCategoryController::class, 'reorder']);
+            Route::apiResource('service-categories',      ServiceCategoryController::class);
+
+            Route::post('services/reorder',               [AdminServiceController::class, 'reorder']);
+            Route::post('services/{id}/remove-gallery',   [AdminServiceController::class, 'removeGallery']);
+            Route::apiResource('services',                AdminServiceController::class);
+
+            Route::post('service-masters/{id}/time-off',                [ServiceMasterController::class, 'addTimeOff']);
+            Route::delete('service-masters/{id}/time-off/{entryId}',    [ServiceMasterController::class, 'removeTimeOff']);
+            Route::apiResource('service-masters',         ServiceMasterController::class);
+
+            Route::apiResource('service-extras',          ServiceExtraController::class);
+
+            Route::get('service-bookings/dashboard',      [ServiceBookingController::class, 'dashboard']);
+            Route::get('service-bookings/calendar',       [ServiceBookingController::class, 'calendar']);
+            Route::get('service-bookings/availability',   [ServiceBookingController::class, 'availability']);
+            Route::get('service-bookings/submissions',    [ServiceBookingController::class, 'submissions']);
+            Route::get('service-bookings',                [ServiceBookingController::class, 'index']);
+            Route::post('service-bookings',               [ServiceBookingController::class, 'store']);
+            Route::get('service-bookings/{id}',           [ServiceBookingController::class, 'show']);
+            Route::patch('service-bookings/{id}/status',  [ServiceBookingController::class, 'updateStatus']);
+            Route::delete('service-bookings/{id}',        [ServiceBookingController::class, 'destroy']);
 
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);

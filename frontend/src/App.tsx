@@ -50,6 +50,11 @@ const BookingPayments = lazy(() => import('./pages/BookingPayments').then(m => (
 const BookingSubmissions = lazy(() => import('./pages/BookingSubmissions').then(m => ({ default: m.BookingSubmissions })))
 const BookingRooms = lazy(() => import('./pages/BookingRooms'))
 const BookingExtras = lazy(() => import('./pages/BookingExtras'))
+const Services = lazy(() => import('./pages/Services'))
+const ServiceMasters = lazy(() => import('./pages/ServiceMasters'))
+const ServiceExtras = lazy(() => import('./pages/ServiceExtras'))
+const ServiceBookings = lazy(() => import('./pages/ServiceBookings'))
+const ServiceBookingCalendar = lazy(() => import('./pages/ServiceBookingCalendar'))
 const AiChat = lazy(() => import('./components/AiChat'))
 
 function PageLoader() {
@@ -159,6 +164,11 @@ export default function App() {
           {/* Submissions log still routable from inside Bookings page header. */}
           <Route path="/bookings/submissions" element={<LazyRoute gate="admin" product="booking"><BookingSubmissions /></LazyRoute>} />
           <Route path="/bookings/:id" element={<LazyRoute product="booking"><BookingDetail /></LazyRoute>} />
+          <Route path="/services"                  element={<LazyRoute gate="admin" product="booking"><Services /></LazyRoute>} />
+          <Route path="/service-masters"           element={<LazyRoute gate="admin" product="booking"><ServiceMasters /></LazyRoute>} />
+          <Route path="/service-extras"            element={<LazyRoute gate="admin" product="booking"><ServiceExtras /></LazyRoute>} />
+          <Route path="/service-bookings"          element={<LazyRoute product="booking"><ServiceBookings /></LazyRoute>} />
+          <Route path="/service-bookings/calendar" element={<LazyRoute product="booking"><ServiceBookingCalendar /></LazyRoute>} />
           <Route path="/billing" element={<LazyRoute gate="admin"><Billing /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />

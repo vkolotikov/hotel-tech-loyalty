@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Globe, Shield, ExternalLink, Copy, Palette, Sun, Moon,
   Clock, Settings2, DollarSign, ToggleLeft, Zap, CreditCard,
+  Scissors,
 } from 'lucide-react'
 
 /**
@@ -37,8 +38,14 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
   const iframePreviewUrl = `${widgetBaseUrl}/booking-widget?org=${widgetToken}`
   const directBookingUrl = `${widgetBaseUrl}/book/${widgetToken}`
 
+  const servicesEmbedSnippet = `<!-- Hotel Tech Services Widget -->\n<div id="hoteltech-services"></div>\n<script src="${widgetBaseUrl}/widget/services-loader.js"\n        data-org="${widgetToken}"></script>`
+  const servicesIframeUrl = `${widgetBaseUrl}/services-widget?org=${widgetToken}`
+  const servicesDirectUrl = `${widgetBaseUrl}/services/${widgetToken}`
+
   const [embedCopied, setEmbedCopied] = useState(false)
   const [directUrlCopied, setDirectUrlCopied] = useState(false)
+  const [servicesEmbedCopied, setServicesEmbedCopied] = useState(false)
+  const [servicesDirectUrlCopied, setServicesDirectUrlCopied] = useState(false)
 
   const parseJsonSetting = <T,>(key: string, fallback: T): T => {
     const raw = getVal(key)
@@ -372,6 +379,141 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Section 7: Services Reservation Widget ── */}
+      <div className={cardClass} style={cardStyle}>
+        <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+          <Scissors size={15} className="text-emerald-400" /> Services Reservation Widget
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">
+          For spa, beauty, and treatment bookings. Guests pick a service, master, date, and time slot — then add optional extras and confirm. Embed it on your site the same way as the room widget.
+        </p>
+
+        {!widgetToken ? (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+            <p className="text-xs text-amber-400">No organization found. Complete the setup wizard first to get your services widget embed code.</p>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{servicesEmbedSnippet}</pre>
+              <button
+                onClick={() => { navigator.clipboard.writeText(servicesEmbedSnippet); setServicesEmbedCopied(true); setTimeout(() => setServicesEmbedCopied(false), 2000) }}
+                className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                style={{ background: servicesEmbedCopied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', color: servicesEmbedCopied ? '#22c55e' : '#8e8e93', border: servicesEmbedCopied ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                {servicesEmbedCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+              <a href={servicesIframeUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
+                <ExternalLink size={11} /> Preview services widget
+              </a>
+            </div>
+
+            <div className="mt-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[11px] text-gray-400 font-semibold mb-2">Direct Services Booking URL</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs font-mono bg-black/40 border border-white/[0.06] rounded-lg px-3 py-2 text-gray-300 overflow-x-auto">{servicesDirectUrl}</code>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(servicesDirectUrl); setServicesDirectUrlCopied(true); setTimeout(() => setServicesDirectUrlCopied(false), 2000) }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0"
+                  style={{ background: servicesDirectUrlCopied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', color: servicesDirectUrlCopied ? '#22c55e' : '#8e8e93', border: servicesDirectUrlCopied ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                  <Copy size={10} /> {servicesDirectUrlCopied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Services-specific behavior */}
+        <div className="mt-5 space-y-4">
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white flex items-center gap-1.5"><Clock size={13} className="text-gray-500" /> Slot Step</label>
+              <p className="text-xs text-gray-500 mt-0.5">How far apart offered start times are, in minutes (e.g. every 15, 30, 60 min).</p>
+            </div>
+            <div className="w-40">
+              <select value={getVal('services_slot_step') || '30'}
+                onChange={e => handleChange('services_slot_step', e.target.value)}
+                className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: 'dark' }}>
+                {[10, 15, 20, 30, 45, 60].map(v =>
+                  <option key={v} value={v} style={{ background: '#0f1c18', color: '#fff' }}>Every {v} min</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white">Lead Time</label>
+              <p className="text-xs text-gray-500 mt-0.5">Minimum minutes in advance a guest must book. 0 allows same-moment bookings.</p>
+            </div>
+            <div className="w-40">
+              <input type="number" value={getVal('services_lead_minutes') || '60'} min={0} max={10080}
+                onChange={e => handleChange('services_lead_minutes', e.target.value)}
+                className={inputClass} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white">Max Advance Days</label>
+              <p className="text-xs text-gray-500 mt-0.5">How far ahead guests can book (e.g. 60 = up to 60 days out).</p>
+            </div>
+            <div className="w-40">
+              <input type="number" value={getVal('services_max_advance_days') || '60'} min={1} max={365}
+                onChange={e => handleChange('services_max_advance_days', e.target.value)}
+                className={inputClass} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white">Allow Choosing Master</label>
+              <p className="text-xs text-gray-500 mt-0.5">When off, the system auto-assigns an available master based on service. When on, guests can pick their preferred master.</p>
+            </div>
+            <button onClick={() => handleChange('services_allow_master_choice', (getVal('services_allow_master_choice') || 'true') === 'true' ? 'false' : 'true')}
+              className={`relative w-12 h-6 rounded-full transition-colors ${(getVal('services_allow_master_choice') || 'true') === 'true' ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${(getVal('services_allow_master_choice') || 'true') === 'true' ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div>
+              <label className="block text-sm font-medium text-white">Require Deposit</label>
+              <p className="text-xs text-gray-500 mt-0.5">When on, guests must pay a deposit (via Stripe) to confirm their booking. Uses the same Stripe keys as the room widget.</p>
+            </div>
+            <button onClick={() => handleChange('services_require_deposit', (getVal('services_require_deposit') || 'false') === 'true' ? 'false' : 'true')}
+              className={`relative w-12 h-6 rounded-full transition-colors ${(getVal('services_require_deposit') || 'false') === 'true' ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${(getVal('services_require_deposit') || 'false') === 'true' ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          {(getVal('services_require_deposit') || 'false') === 'true' && (
+            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+              <div>
+                <label className="block text-sm font-medium text-white">Deposit Percent</label>
+                <p className="text-xs text-gray-500 mt-0.5">What percentage of the total the guest pays upfront. 100 = full prepayment.</p>
+              </div>
+              <div className="w-40">
+                <input type="number" value={getVal('services_deposit_percent') || '100'} min={5} max={100}
+                  onChange={e => handleChange('services_deposit_percent', e.target.value)}
+                  className={inputClass} />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Cancellation Policy (Services)</label>
+            <textarea value={getVal('services_cancellation_policy') || ''}
+              onChange={e => handleChange('services_cancellation_policy', e.target.value)}
+              placeholder="e.g. Free cancellation up to 4 hours before appointment. Late cancellations forfeit the deposit."
+              rows={3} className={inputClass} />
+          </div>
         </div>
       </div>
 
