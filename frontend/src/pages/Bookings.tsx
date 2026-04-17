@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -66,14 +66,9 @@ function payLabel(s: string) {
 
 /* ── Reusable card wrapper ───────────────────────────────────────── */
 
-function Card({ children, className = '', accent = false }: { children: React.ReactNode; className?: string; accent?: boolean }) {
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl border border-white/[0.06] overflow-hidden ${className}`}
-      style={{
-        background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
-        boxShadow: '0 16px 30px rgba(0,0,0,0.18)',
-      }}>
-      {accent && <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #74c895, #d98f45)' }} />}
+    <div className={`bg-dark-surface rounded-xl border border-dark-border ${className}`}>
       {children}
     </div>
   )
@@ -273,68 +268,69 @@ export function Bookings() {
   }
 
   const kpis = dashboard?.kpis ?? []
-  const kpiMeta: Record<string, { icon: any; color: string; gradient: string }> = {
-    total_bookings:  { icon: Calendar,      color: 'text-blue-400',    gradient: 'from-blue-500/20' },
-    revenue:         { icon: DollarSign,    color: 'text-emerald-400', gradient: 'from-emerald-500/20' },
-    confirmed:       { icon: TrendingUp,    color: 'text-green-400',   gradient: 'from-green-500/20' },
-    cancelled:       { icon: XCircle,       color: 'text-red-400',     gradient: 'from-red-500/20' },
-    pending_payment: { icon: AlertTriangle, color: 'text-amber-400',   gradient: 'from-amber-500/20' },
-    avg_stay:        { icon: Users,         color: 'text-purple-400',  gradient: 'from-purple-500/20' },
-    balance_due:     { icon: Clock,         color: 'text-orange-400',  gradient: 'from-orange-500/20' },
+  const kpiMeta: Record<string, { icon: any; color: string; bg: string }> = {
+    total_bookings:  { icon: Calendar,      color: 'text-blue-400',    bg: 'bg-blue-500/10' },
+    revenue:         { icon: DollarSign,    color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    confirmed:       { icon: TrendingUp,    color: 'text-green-400',   bg: 'bg-green-500/10' },
+    cancelled:       { icon: XCircle,       color: 'text-red-400',     bg: 'bg-red-500/10' },
+    pending_payment: { icon: AlertTriangle, color: 'text-amber-400',   bg: 'bg-amber-500/10' },
+    avg_stay:        { icon: Users,         color: 'text-purple-400',  bg: 'bg-purple-500/10' },
+    balance_due:     { icon: Clock,         color: 'text-orange-400',  bg: 'bg-orange-500/10' },
   }
 
-  const selectClass = 'bg-dark-surface border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500/40 appearance-none cursor-pointer'
+  const selectClass = 'bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
+
+  // Hide analytics section entirely when there is no meaningful data to plot
+  const a = dashboard?.analytics
+  const hasAnalytics = !!a && (
+    (a.paymentMix?.length ?? 0) > 0 ||
+    (a.arrivalPace?.total ?? 0) > 0 ||
+    (a.unitPerformance?.length ?? 0) > 0 ||
+    (a.channelMix?.length ?? 0) > 0
+  )
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(var(--color-primary-rgb, 116,200,149),0.12)', color: 'rgb(var(--color-primary-rgb, 116,200,149))' }}>
-            Booking Engine
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Reservations</h1>
-          <p className="text-sm text-gray-500 mt-1">PMS reservations synced from your booking channels</p>
+          <h1 className="text-2xl font-bold text-white">Reservations</h1>
+          <p className="text-sm text-t-secondary mt-0.5">PMS reservations synced from your booking channels</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link to="/bookings/submissions" className="text-xs text-gray-500 hover:text-gray-300 transition-colors underline-offset-4 hover:underline">
+        <div className="flex items-center gap-2">
+          <Link to="/bookings/submissions"
+            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
+            <FileText size={16} />
             Submission log
           </Link>
-        <button onClick={handleSync} disabled={syncing}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:scale-[1.02]"
-          style={{
-            background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)',
-            boxShadow: '0 8px 20px rgba(var(--color-primary-rgb, 116,200,149),0.25)',
-          }}>
-          <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Syncing...' : 'Sync PMS'}
-        </button>
+          <button onClick={handleSync} disabled={syncing}
+            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors">
+            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync PMS'}
+          </button>
         </div>
       </div>
 
       {/* PMS deactivated banner */}
       {dashboard?.syncHealth && dashboard.syncHealth.pmsEnabled === false && (
-        <div className="rounded-xl border border-amber-500/20 px-4 py-3 flex items-center gap-3"
-          style={{ background: 'linear-gradient(180deg, rgba(40,30,12,0.6), rgba(28,20,8,0.7))' }}>
-          <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-amber-200 font-medium">{dashboard.syncHealth.pmsName || 'PMS'} integration is deactivated</p>
-            <p className="text-[11px] text-amber-200/70 mt-0.5">Synced reservations are hidden while the integration is off. Your data in {dashboard.syncHealth.pmsName || 'the PMS'} is untouched. Reactivate from Settings → Integrations to restore the list.</p>
+            <p className="text-xs text-amber-200/70 mt-0.5">Synced reservations are hidden while the integration is off. Your data in {dashboard.syncHealth.pmsName || 'the PMS'} is untouched.</p>
           </div>
           <Link to="/settings" className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline whitespace-nowrap">Open settings →</Link>
         </div>
       )}
 
       {/* Period tabs + unit filter */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="inline-flex p-1 rounded-lg bg-dark-surface border border-dark-border">
           {['week', 'month', 'year'].map(p => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${period === p
-                ? 'text-white shadow-lg'
-                : 'text-gray-500 hover:text-gray-300'}`}
-              style={period === p ? { background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)', boxShadow: '0 6px 16px rgba(var(--color-primary-rgb, 116,200,149),0.2)' } : {}}>
+              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${period === p
+                ? 'bg-primary-600 text-white'
+                : 'text-t-secondary hover:text-white'}`}>
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
@@ -346,53 +342,61 @@ export function Bookings() {
           </select>
         )}
         {dashboard?.scope && (
-          <span className="text-[11px] text-gray-600 ml-auto font-medium">{dashboard.scope.label}: {dashboard.scope.from} — {dashboard.scope.to}</span>
+          <span className="text-xs text-[#636366] ml-auto">{dashboard.scope.label}: {dashboard.scope.from} — {dashboard.scope.to}</span>
         )}
       </div>
 
-      {/* KPI Grid */}
+      {/* KPI Grid — clean, tight, no double-gradient */}
       {kpis.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {kpis.map((kpi: any) => {
-            const meta = kpiMeta[kpi.key] || { icon: Activity, color: 'text-gray-400', gradient: 'from-gray-500/20' }
+            const meta = kpiMeta[kpi.key] || { icon: Activity, color: 'text-gray-400', bg: 'bg-gray-500/10' }
             const Icon = meta.icon
             return (
-              <Card key={kpi.key} accent>
-                <div className={`p-4 bg-gradient-to-br ${meta.gradient} to-transparent`}>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Icon size={13} className={meta.color} />
-                    <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider truncate">{kpi.label}</span>
+              <div key={kpi.key} className="bg-dark-surface rounded-xl border border-dark-border p-4 hover:border-white/10 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-[#636366] font-semibold uppercase tracking-wider truncate">{kpi.label}</span>
+                  <div className={`p-1.5 rounded-lg ${meta.bg}`}>
+                    <Icon size={12} className={meta.color} />
                   </div>
-                  <div className="text-2xl font-bold text-white tabular-nums">{kpi.displayValue}</div>
                 </div>
-              </Card>
+                <div className="text-2xl font-bold text-white tabular-nums">{kpi.displayValue}</div>
+              </div>
             )
           })}
         </div>
       )}
 
-      {/* Analytics Charts — 2×2 */}
-      {dashboard?.analytics && (
+      {/* Analytics Charts — 2×2, only shown when there's data */}
+      {hasAnalytics && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="p-6">
-            <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-5">Payment Mix</h3>
-            <DonutChart data={dashboard.analytics.paymentMix || []} />
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Arrival Pace</h3>
-              <span className="text-xs text-gray-600 font-medium tabular-nums">{dashboard.analytics.arrivalPace?.total ?? 0} total</span>
-            </div>
-            <BarChart data={dashboard.analytics.arrivalPace?.days || []} />
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-5">Unit Performance</h3>
-            <HorizontalBars data={dashboard.analytics.unitPerformance || []} />
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-5">Channel Mix</h3>
-            <ChannelList data={dashboard.analytics.channelMix || []} />
-          </Card>
+          {(a!.paymentMix?.length ?? 0) > 0 && (
+            <Card className="p-6">
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Payment Mix</h3>
+              <DonutChart data={a!.paymentMix || []} />
+            </Card>
+          )}
+          {(a!.arrivalPace?.total ?? 0) > 0 && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">Arrival Pace</h3>
+                <span className="text-xs text-[#636366] tabular-nums">{a!.arrivalPace?.total ?? 0} total</span>
+              </div>
+              <BarChart data={a!.arrivalPace?.days || []} />
+            </Card>
+          )}
+          {(a!.unitPerformance?.length ?? 0) > 0 && (
+            <Card className="p-6">
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Unit Performance</h3>
+              <HorizontalBars data={a!.unitPerformance || []} />
+            </Card>
+          )}
+          {(a!.channelMix?.length ?? 0) > 0 && (
+            <Card className="p-6">
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Channel Mix</h3>
+              <ChannelList data={a!.channelMix || []} />
+            </Card>
+          )}
         </div>
       )}
 
@@ -402,21 +406,17 @@ export function Bookings() {
           {/* Upcoming Arrivals */}
           {(dashboard.arrivals?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-4">Upcoming Arrivals</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Upcoming Arrivals</h3>
               <div className="space-y-2">
                 {dashboard.arrivals.map((a: any) => (
                   <Link key={a.id} to={`/bookings/${a.id}`}
-                    className="flex items-center justify-between rounded-xl p-3 transition-all hover:-translate-y-px hover:shadow-lg"
-                    style={{
-                      background: 'linear-gradient(180deg, rgba(22,35,30,0.95), rgba(19,33,29,0.98))',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                    }}>
+                    className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{a.guest_name || 'Unknown'}</div>
-                      <div className="text-[11px] text-gray-500 mt-0.5">{a.apartment_name} · {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</div>
+                      <div className="text-xs text-[#636366] mt-0.5">{a.apartment_name || '—'} · {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      <div className="text-[11px] font-medium" style={{ color: '#74c895' }}>{fmtDateShort(a.arrival_date)}</div>
+                      <div className="text-xs font-medium text-primary-400">{fmtDateShort(a.arrival_date)}</div>
                       {a.payment_status && (
                         <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[a.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
                           {payLabel(a.payment_status)}
@@ -432,15 +432,14 @@ export function Bookings() {
           {/* Recent Unpaid */}
           {(dashboard.recentUnpaidBookings?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-4">Recent Unpaid</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Recent Unpaid</h3>
               <div className="space-y-2">
                 {dashboard.recentUnpaidBookings.map((b: any) => (
                   <Link key={b.id} to={`/bookings/${b.id}`}
-                    className="flex items-center justify-between rounded-xl p-3 transition-all hover:-translate-y-px"
-                    style={{ background: 'linear-gradient(180deg, rgba(22,35,30,0.95), rgba(19,33,29,0.98))', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
-                      <div className="text-[11px] text-gray-500">{b.apartment_name} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
+                      <div className="text-xs text-[#636366]">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3 tabular-nums">
                       <div className="text-xs text-emerald-400 font-semibold">€{Number(b.price_paid || 0).toFixed(0)}</div>
@@ -455,21 +454,27 @@ export function Bookings() {
           {/* Recent Submissions */}
           {(dashboard.recentSubmissions?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-4">Recent Submissions</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Recent Submissions</h3>
               <div className="space-y-2">
                 {dashboard.recentSubmissions.map((s: any) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-xl p-3"
-                    style={{ background: 'linear-gradient(180deg, rgba(22,35,30,0.95), rgba(19,33,29,0.98))', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div className="min-w-0 flex items-center gap-2">
-                      {s.outcome === 'success' ? <CheckCircle size={14} className="text-emerald-400 flex-shrink-0" /> : <XCircle size={14} className="text-red-400 flex-shrink-0" />}
-                      <div>
-                        <span className="text-sm text-white font-medium truncate block">{s.guest_name || '—'}</span>
-                        <div className="text-[11px] text-gray-500">{s.unit_name} · {s.check_in} → {s.check_out}</div>
+                  <div key={s.id} className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border">
+                    <div className="min-w-0 flex items-center gap-2.5">
+                      {s.outcome === 'success'
+                        ? <CheckCircle size={16} className="text-emerald-400 flex-shrink-0" />
+                        : <XCircle size={16} className="text-red-400 flex-shrink-0" />}
+                      <div className="min-w-0">
+                        <div className="text-sm text-white font-medium truncate">{s.guest_name || '—'}</div>
+                        {(s.unit_name || s.check_in) && (
+                          <div className="text-xs text-[#636366] truncate">
+                            {s.unit_name || '—'}
+                            {s.check_in && s.check_out && ` · ${fmtDateShort(s.check_in)} → ${fmtDateShort(s.check_out)}`}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">€{Number(s.gross_total).toFixed(0)}</div>}
-                      <div className="text-[10px] text-gray-600">{new Date(s.created_at).toLocaleDateString()}</div>
+                      {s.gross_total ? <div className="text-xs text-white font-semibold tabular-nums">€{Number(s.gross_total).toFixed(0)}</div> : null}
+                      <div className="text-[10px] text-[#636366]">{new Date(s.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
                 ))}
@@ -480,14 +485,28 @@ export function Bookings() {
           {/* Sync Health */}
           {dashboard.syncHealth && (
             <Card className="p-5">
-              <h3 className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-4">Sync Health</h3>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">Sync Health</h3>
+                <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${dashboard.syncHealth.pmsEnabled
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
+                  <Wifi size={10} />
+                  {dashboard.syncHealth.pmsEnabled ? 'CONNECTED' : 'OFFLINE'}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {dashboard.syncHealth.pmsName && (
+                  <div className="flex justify-between items-center pb-3 border-b border-dark-border">
+                    <span className="text-sm text-t-secondary">Provider</span>
+                    <span className="text-sm text-white font-medium">{dashboard.syncHealth.pmsName}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">Mirrored Bookings</span>
+                  <span className="text-sm text-t-secondary">Mirrored Bookings</span>
                   <span className="text-lg font-bold text-white tabular-nums">{dashboard.syncHealth.mirroredBookingCount}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">Last Sync</span>
+                  <span className="text-sm text-t-secondary">Last Sync</span>
                   <span className="text-sm text-white">{dashboard.syncHealth.lastSyncAt ? new Date(dashboard.syncHealth.lastSyncAt).toLocaleString() : 'Never'}</span>
                 </div>
               </div>
@@ -500,10 +519,10 @@ export function Bookings() {
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search guest, email, reference..."
-              className="w-full pl-10 pr-4 py-2.5 bg-dark-surface border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+              className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass}>
@@ -521,11 +540,11 @@ export function Bookings() {
       </Card>
 
       {/* Table */}
-      <Card>
+      <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+              <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-[#636366] font-bold bg-[#1a1a1a]">
                 <th className="text-left p-4">Guest</th><th className="text-left p-4">Unit</th>
                 <th className="text-left p-4">Arrival</th><th className="text-left p-4">Departure</th>
                 <th className="text-right p-4">Total</th><th className="text-right p-4">Balance</th>
@@ -535,27 +554,27 @@ export function Bookings() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={10} className="p-12 text-center text-gray-600">
-                  <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <tr><td colSpan={10} className="p-12 text-center text-[#636366]">
+                  <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={10} className="p-12 text-center text-gray-600">No bookings found.</td></tr>
+                <tr><td colSpan={10} className="p-12 text-center text-[#636366]">No bookings found.</td></tr>
               ) : bookings.map((b: any) => {
                 const payStatus = derivePaymentStatus(b)
                 const nights = b.arrival_date && b.departure_date
                   ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
                   : null
                 return (
-                <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                <tr key={b.id} className="border-b border-dark-border hover:bg-dark-surface2/50 transition-colors">
                   <td className="p-4">
                     <div className="text-white font-medium">{b.guest_name || '—'}</div>
-                    <div className="text-gray-600 text-[11px]">{b.guest_email || ''}</div>
+                    <div className="text-[#636366] text-xs">{b.guest_email || ''}</div>
                   </td>
-                  <td className="p-4 text-gray-400 text-xs">{b.apartment_name || '—'}</td>
-                  <td className="p-4 text-gray-400 text-xs tabular-nums">{fmtDate(b.arrival_date)}</td>
+                  <td className="p-4 text-t-secondary text-xs">{b.apartment_name || '—'}</td>
+                  <td className="p-4 text-t-secondary text-xs tabular-nums">{fmtDate(b.arrival_date)}</td>
                   <td className="p-4 text-xs tabular-nums">
-                    <span className="text-gray-400">{fmtDate(b.departure_date)}</span>
-                    {nights && <span className="text-gray-600 ml-1.5">({nights}n)</span>}
+                    <span className="text-t-secondary">{fmtDate(b.departure_date)}</span>
+                    {nights && <span className="text-[#636366] ml-1.5">({nights}n)</span>}
                   </td>
                   <td className="p-4 text-right text-white font-semibold tabular-nums">
                     {b.price_total ? `€${Number(b.price_total).toLocaleString()}` : '—'}
@@ -563,9 +582,9 @@ export function Bookings() {
                   <td className="p-4 text-right tabular-nums">
                     {b.balance_due > 0
                       ? <span className="text-red-400 font-semibold">€{Number(b.balance_due).toLocaleString()}</span>
-                      : <span className="text-emerald-400/50 text-[10px] font-bold">SETTLED</span>}
+                      : <span className="text-emerald-400/60 text-[10px] font-bold">SETTLED</span>}
                   </td>
-                  <td className="p-4 text-gray-500 text-[11px]">{b.channel_name || '—'}</td>
+                  <td className="p-4 text-[#636366] text-xs">{b.channel_name || '—'}</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_PILL[b.internal_status] || STATUS_PILL[b.booking_state] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
                       {(b.internal_status || b.booking_state || 'new').replace(/-/g, ' ')}
@@ -590,15 +609,15 @@ export function Bookings() {
         </div>
 
         {lastPage > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-white/[0.06]">
-            <span className="text-xs text-gray-600">Page {page} of {lastPage} · {data?.total ?? 0} total</span>
+          <div className="flex items-center justify-between p-4 border-t border-dark-border">
+            <span className="text-xs text-[#636366]">Page {page} of {lastPage} · {data?.total ?? 0} total</span>
             <div className="flex gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-2 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 transition-colors" style={{ background: 'rgba(22,40,35,0.6)' }}>
+                className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                 <ChevronLeft size={14} />
               </button>
               <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="p-2 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 transition-colors" style={{ background: 'rgba(22,40,35,0.6)' }}>
+                className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                 <ChevronRight size={14} />
               </button>
             </div>
