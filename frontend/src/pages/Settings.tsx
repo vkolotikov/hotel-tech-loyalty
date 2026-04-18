@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import {
@@ -7,8 +8,8 @@ import {
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
   Mail, Wifi, CheckCircle, XCircle, Eye, EyeOff,
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
-  ChevronDown, Link2, Phone,
-  Clock,
+  ChevronDown, ChevronRight, Link2, Phone,
+  Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck,
   BookOpen, Search, HelpCircle, FileText
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -31,6 +32,16 @@ function formatDocContent(text: string): string {
 const TIER_COLORS: Record<string, string> = {
   Bronze: '#CD7F32', Silver: '#C0C0C0', Gold: '#FFD700',
   Platinum: '#6B6B6B', Diamond: '#00BCD4',
+}
+
+const TIER_ICON_MAP: Record<string, any> = {
+  award: Award, star: Star, crown: Crown, gem: Gem, diamond: Gem,
+  shield: ShieldCheck, layers: Layers,
+}
+
+const tierIconComponent = (icon?: string | null) => {
+  if (!icon) return Crown
+  return TIER_ICON_MAP[icon.toLowerCase()] ?? Crown
 }
 
 const COLOR_KEYS = [
@@ -1038,26 +1049,34 @@ export function Settings() {
 
   const renderLoyalty = () => {
     const tiers = tiersData?.tiers ?? []
-    const totalMembers = tiers.reduce((sum: number, t: any) => sum + (t.member_count || 0), 0)
     const welcomeBonus = parseInt(getVal('welcome_bonus_points') || '0')
     const pointsPerDollar = parseInt(getVal('points_per_dollar') || '0')
     const referrerBonus = parseInt(getVal('referrer_bonus_points') || '0')
+    const refereeBonus = parseInt(getVal('referee_bonus_points') || '0')
     const minRedeem = parseInt(getVal('min_redeem_points') || '0')
     const expiryMonths = parseInt(getVal('points_expiry_months') || '0')
+    const qualModel = getVal('tier_qualification_model') || 'points'
+
+    const managePages = [
+      { to: '/tiers',    label: 'Tiers',    icon: <Crown size={16} />,     desc: `${tiers.length} tier${tiers.length === 1 ? '' : 's'} · qualification rules, perks`, accent: '#fbbf24' },
+      { to: '/benefits', label: 'Benefits', icon: <ShieldCheck size={16} />, desc: 'Reusable benefits assigned to tiers',           accent: '#a78bfa' },
+      { to: '/offers',   label: 'Offers',   icon: <Tag size={16} />,       desc: 'Targeted promotions & reward redemptions',        accent: '#60a5fa' },
+      { to: '/members',  label: 'Members',  icon: <Users size={16} />,     desc: 'Member directory, points ledger, tier overrides', accent: '#74c895' },
+    ]
 
     return (
     <div className="space-y-6">
-      {/* Loyalty Overview */}
+      {/* Program health snapshot — unique to Settings (reflects hotel_settings DB values, not member stats) */}
       <div className={cardClass} style={cardStyle}>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Star size={15} className="text-emerald-400" /> Loyalty Program Overview
+          <Star size={15} className="text-emerald-400" /> Program Configuration
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[
-            { label: 'Active Members', value: totalMembers.toLocaleString(),       sub: 'across all tiers',     color: '#74c895' },
-            { label: 'Welcome Bonus',  value: welcomeBonus.toLocaleString() + ' pts', sub: 'awarded on signup',  color: '#fbbf24' },
-            { label: 'Earn Rate',      value: pointsPerDollar + ' pts/$',          sub: 'base earning rate',     color: '#60a5fa' },
-            { label: 'Min Redeem',     value: minRedeem.toLocaleString() + ' pts', sub: 'redemption threshold', color: '#a78bfa' },
+            { label: 'Welcome Bonus',      value: welcomeBonus.toLocaleString() + ' pts', sub: 'awarded on signup',    color: '#fbbf24' },
+            { label: 'Earn Rate',          value: pointsPerDollar + ' pts/$',              sub: 'base earning rate',    color: '#60a5fa' },
+            { label: 'Min Redeem',         value: minRedeem.toLocaleString() + ' pts',     sub: 'redemption threshold', color: '#a78bfa' },
+            { label: 'Qualification',      value: qualModel.charAt(0).toUpperCase() + qualModel.slice(1), sub: 'tier assessment model', color: '#74c895' },
           ].map(stat => (
             <div key={stat.label} className="rounded-xl p-3 border border-white/[0.04]"
               style={{ background: 'rgba(15,28,24,0.5)' }}>
@@ -1068,42 +1087,17 @@ export function Settings() {
           ))}
         </div>
 
-        {/* Tier distribution bar */}
-        {tiers.length > 0 && totalMembers > 0 && (
-          <div>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">Tier Distribution</p>
-            <div className="h-3 rounded-full overflow-hidden flex border border-white/[0.06]" style={{ background: 'rgba(15,28,24,0.5)' }}>
-              {tiers.map((tier: any) => {
-                const pct = totalMembers > 0 ? (tier.member_count / totalMembers) * 100 : 0
-                if (pct === 0) return null
-                return (
-                  <div key={tier.id} title={`${tier.name}: ${tier.member_count} (${pct.toFixed(1)}%)`}
-                    style={{ width: `${pct}%`, backgroundColor: tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8' }} />
-                )
-              })}
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-              {tiers.map((tier: any) => {
-                const pct = totalMembers > 0 ? (tier.member_count / totalMembers) * 100 : 0
-                return (
-                  <div key={tier.id} className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8' }} />
-                    <span className="text-[11px] text-gray-400">
-                      <strong className="text-white">{tier.name}</strong> {tier.member_count} <span className="text-gray-600">({pct.toFixed(0)}%)</span>
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Quick health indicators */}
-        <div className="mt-5 pt-4 border-t border-white/[0.04] flex flex-wrap gap-2">
-          {referrerBonus > 0 && (
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.04]">
+          {referrerBonus > 0 && refereeBonus > 0 ? (
             <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
               <CheckCircle size={10} className="inline -mt-px mr-1" />
-              Referral program live ({referrerBonus} pts)
+              Referral live — referrer {referrerBonus} / referee {refereeBonus} pts
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/15">
+              <XCircle size={10} className="inline -mt-px mr-1" />
+              Referral rewards not configured
             </span>
           )}
           {expiryMonths > 0 ? (
@@ -1117,65 +1111,79 @@ export function Settings() {
               Points never expire
             </span>
           )}
-          {tiers.length > 0 && (
+          {tiers.length > 0 ? (
             <span className="text-[11px] px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">
               <Layers size={10} className="inline -mt-px mr-1" />
               {tiers.length} tier{tiers.length === 1 ? '' : 's'} configured
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/15">
+              <XCircle size={10} className="inline -mt-px mr-1" />
+              No tiers yet — set up in Tiers page
             </span>
           )}
         </div>
       </div>
 
-      {/* Points settings */}
+      {/* Points settings — the only settings that truly belong here */}
       {groupSettings('points').length > 0 && (
         <div className={cardClass} style={cardStyle}>
-          <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-            <Star size={15} className="text-emerald-400" /> Points & Rewards
+          <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+            <Gift size={15} className="text-emerald-400" /> Points & Rewards Rules
           </h3>
+          <p className="text-[11px] text-gray-500 mb-3">
+            Global defaults for how points are earned, expire, redeemed, and authorised for staff awards.
+          </p>
           {groupSettings('points').map(renderSettingRow)}
         </div>
       )}
 
-      {/* Tiers */}
+      {/* Manage loyalty content — in-app navigation, replaces the duplicated tier list */}
       <div className={cardClass} style={cardStyle}>
-        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Layers size={15} className="text-emerald-400" /> Loyalty Tiers
+        <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+          <Layers size={15} className="text-emerald-400" /> Manage Loyalty Content
         </h3>
-        {tiersLoading ? (
-          <div className="space-y-3">
-            {Array(4).fill(0).map((_, i) => <div key={i} className="h-16 bg-white/[0.02] rounded-xl animate-pulse" />)}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {(tiersData?.tiers ?? []).map((tier: any) => (
-              <div key={tier.id} className="rounded-xl p-4 border border-white/[0.04] hover:border-white/[0.08] transition-colors"
-                style={{ background: 'rgba(15,28,24,0.5)' }}>
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ backgroundColor: tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8' }}>
-                    {tier.icon ?? tier.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-bold text-white">{tier.name}</h4>
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/[0.04] text-gray-400 border border-white/[0.06]">
-                        {tier.member_count} members
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {tier.min_points.toLocaleString()} – {tier.max_points ? tier.max_points.toLocaleString() : '∞'} pts · <strong className="text-white">{tier.earn_rate}x</strong> earn
-                    </p>
-                  </div>
-                </div>
-                {tier.perks?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 ml-14">
-                    {tier.perks.map((perk: string, i: number) => (
-                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">{perk}</span>
-                    ))}
-                  </div>
-                )}
+        <p className="text-[11px] text-gray-500 mb-4">
+          Tiers, benefits, offers and member records are managed in their dedicated sections to avoid duplication.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {managePages.map(page => (
+            <Link key={page.to} to={page.to}
+              className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
+              style={{ background: 'rgba(15,28,24,0.5)' }}>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: page.accent + '18', color: page.accent }}>
+                {page.icon}
               </div>
-            ))}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">{page.label}</p>
+                <p className="text-[11px] text-gray-500 truncate">{page.desc}</p>
+              </div>
+              <ChevronRight size={14} className="text-gray-600 group-hover:text-emerald-400 transition-colors" />
+            </Link>
+          ))}
+        </div>
+
+        {/* Tier roster preview — icons match the Tiers page */}
+        {!tiersLoading && tiers.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/[0.04]">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">Current Tiers</p>
+            <div className="flex flex-wrap gap-2">
+              {tiers.map((tier: any) => {
+                const TierIcon = tierIconComponent(tier.icon)
+                const color = tier.color_hex ?? TIER_COLORS[tier.name] ?? '#94a3b8'
+                return (
+                  <Link key={tier.id} to="/tiers"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border hover:-translate-y-px transition-all"
+                    style={{ background: color + '12', borderColor: color + '30' }}
+                    title={`${tier.member_count} members · ${tier.min_points.toLocaleString()}${tier.max_points ? '–' + tier.max_points.toLocaleString() : '+'} pts`}>
+                    <TierIcon size={14} style={{ color }} />
+                    <span className="text-xs font-semibold" style={{ color }}>{tier.name}</span>
+                    <span className="text-[10px] text-gray-500">{tier.earn_rate}x</span>
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>

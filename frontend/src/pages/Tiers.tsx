@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Crown, Plus, Pencil, X, Users, Award } from 'lucide-react'
+import { Crown, Plus, Pencil, X, Users, Award, Star, Gem, ShieldCheck, Layers } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Tier {
@@ -11,6 +11,7 @@ interface Tier {
   max_points: number | null
   earn_rate: number
   color_hex: string
+  icon: string | null
   description: string | null
   min_nights: number | null
   min_stays: number | null
@@ -22,6 +23,21 @@ interface Tier {
   is_active: boolean
   sort_order: number
   member_count: number
+}
+
+const TIER_ICON_OPTIONS = [
+  { value: 'star',    label: 'Star',   Icon: Star },
+  { value: 'award',   label: 'Award',  Icon: Award },
+  { value: 'crown',   label: 'Crown',  Icon: Crown },
+  { value: 'gem',     label: 'Gem',    Icon: Gem },
+  { value: 'diamond', label: 'Diamond', Icon: Gem },
+  { value: 'shield',  label: 'Shield', Icon: ShieldCheck },
+  { value: 'layers',  label: 'Layers', Icon: Layers },
+]
+
+const tierIconFor = (icon?: string | null) => {
+  const entry = TIER_ICON_OPTIONS.find(o => o.value === (icon || '').toLowerCase())
+  return entry?.Icon ?? Crown
 }
 
 interface TierBenefit {
@@ -36,7 +52,7 @@ interface TierBenefit {
 
 const emptyForm = {
   name: '', min_points: '0', max_points: '', earn_rate: '1',
-  color_hex: '#C0C0C0', description: '', min_nights: '', min_stays: '',
+  color_hex: '#C0C0C0', icon: 'star', description: '', min_nights: '', min_stays: '',
   min_spend: '', qualification_window: 'rolling_12', grace_period_days: '90',
   soft_landing: true, invitation_only: false, sort_order: '0',
 }
@@ -114,6 +130,7 @@ export function Tiers() {
     setForm({
       name: t.name, min_points: t.min_points.toString(), max_points: t.max_points?.toString() || '',
       earn_rate: t.earn_rate.toString(), color_hex: t.color_hex || '#C0C0C0',
+      icon: t.icon || 'star',
       description: t.description || '', min_nights: t.min_nights?.toString() || '',
       min_stays: t.min_stays?.toString() || '', min_spend: t.min_spend?.toString() || '',
       qualification_window: t.qualification_window || 'rolling_12',
@@ -144,11 +161,15 @@ export function Tiers() {
             <h2 className="text-lg font-semibold text-white">{editId ? 'Edit' : 'New'} Tier</h2>
             <button type="button" onClick={() => setShowForm(false)} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tier Name" required
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
             <input value={form.color_hex} onChange={e => setForm({ ...form, color_hex: e.target.value })} type="color"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 h-[38px]" />
+            <select value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })}
+              className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+              {TIER_ICON_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <input value={form.sort_order} onChange={e => setForm({ ...form, sort_order: e.target.value })} placeholder="Sort order" type="number"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
           </div>
@@ -199,13 +220,15 @@ export function Tiers() {
         <div className="text-center text-t-secondary py-12">Loading...</div>
       ) : (
         <div className="space-y-4">
-          {tiers.map(t => (
+          {tiers.map(t => {
+            const TierIcon = tierIconFor(t.icon)
+            return (
             <div key={t.id} className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-dark-surface2 transition-colors"
                 onClick={() => setExpandedTier(expandedTier === t.id ? null : t.id)}>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: t.color_hex + '20' }}>
-                    <Crown size={20} style={{ color: t.color_hex }} />
+                    <TierIcon size={20} style={{ color: t.color_hex }} />
                   </div>
                   <div>
                     <h3 className="text-white font-medium">{t.name}</h3>
@@ -258,7 +281,8 @@ export function Tiers() {
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
