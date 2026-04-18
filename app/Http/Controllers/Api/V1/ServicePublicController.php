@@ -484,15 +484,9 @@ class ServicePublicController extends Controller
         }
 
         $token = $request->input('org') ?? $request->header('X-Org-Token');
-        $orgId = $request->input('org_id') ?? $request->header('X-Org-Id');
+        if (!$token) return;
 
-        $org = null;
-        if ($token) {
-            $org = Organization::where('widget_token', $token)->first();
-        } elseif ($orgId) {
-            $org = Organization::find((int) $orgId);
-        }
-
+        $org = Organization::where('widget_token', $token)->first();
         if ($org) {
             app()->instance('current_organization_id', $org->id);
         }

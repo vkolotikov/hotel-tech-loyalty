@@ -548,8 +548,4 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::post('webhooks/booking', function (\Illuminate\Http\Request $request) {
-        \Illuminate\Support\Facades\Log::info('Booking webhook', $request->all());
-        return response()->json(['received' => true]);
-    });
 });

@@ -407,18 +407,10 @@ class BookingPublicController extends Controller
             return;
         }
 
-        // Widget passes org via opaque widget_token (preferred) or legacy org_id
         $token = $request->input('org') ?? $request->header('X-Org-Token');
-        $orgId = $request->input('org_id') ?? $request->header('X-Org-Id');
+        if (!$token) return;
 
-        $org = null;
-        if ($token) {
-            $org = \App\Models\Organization::where('widget_token', $token)->first();
-        } elseif ($orgId) {
-            // Legacy fallback — will be deprecated
-            $org = \App\Models\Organization::find((int) $orgId);
-        }
-
+        $org = \App\Models\Organization::where('widget_token', $token)->first();
         if ($org) {
             app()->instance('current_organization_id', $org->id);
         }

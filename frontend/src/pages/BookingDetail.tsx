@@ -54,6 +54,7 @@ export function BookingDetail() {
   const updateStatus = useMutation({
     mutationFn: (data: any) => api.patch(`/v1/admin/bookings/${id}/status`, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['booking-detail', id] }); toast.success('Updated') },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to update booking'),
   })
 
   const handleSync = async () => {
