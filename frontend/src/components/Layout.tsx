@@ -11,7 +11,7 @@ import {
   Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
-  Sparkle, Scissors, UserCog,
+  UserCog,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -28,6 +28,7 @@ interface NavItem {
   gate: NavGate
   product?: string   // required SaaS product slug
   feature?: string   // required SaaS feature key
+  altPaths?: string[] // sibling routes that should keep this item highlighted (used for PairTabs siblings)
 }
 
 interface NavGroup {
@@ -66,13 +67,10 @@ const navGroups: NavGroup[] = [
     label: 'Bookings',
     items: [
       { path: '/calendar',          label: 'Calendar',         icon: CalendarDays,  gate: 'all',   product: 'booking' },
-      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking' },
-      { path: '/service-bookings',  label: 'Service Bookings', icon: ClipboardList, gate: 'all',   product: 'booking' },
-      { path: '/booking-rooms',     label: 'Rooms',            icon: Home,          gate: 'admin', product: 'booking' },
-      { path: '/services',          label: 'Services',         icon: Scissors,      gate: 'admin', product: 'booking' },
+      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/service-bookings'] },
+      { path: '/booking-rooms',     label: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
       { path: '/service-masters',   label: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
-      { path: '/booking-extras',    label: 'Extras',           icon: Package,       gate: 'admin', product: 'booking' },
-      { path: '/service-extras',    label: 'Add-ons',          icon: Sparkle,       gate: 'admin', product: 'booking' },
+      { path: '/booking-extras',    label: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
       { path: '/bookings/payments', label: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
     ],
   },
@@ -139,7 +137,12 @@ export function Layout({ children }: { children: ReactNode }) {
   // Auto-expand group containing current page
   useEffect(() => {
     for (const group of navGroups) {
-      if (group.items.some(i => i.path === location.pathname || (i.path !== '/' && location.pathname.startsWith(i.path)))) {
+      const match = group.items.some(i => {
+        if (i.path === location.pathname) return true
+        if (i.path !== '/' && location.pathname.startsWith(i.path)) return true
+        return (i.altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))
+      })
+      if (match) {
         setExpandedGroups(prev => ({ ...prev, [group.label]: true }))
         break
       }
@@ -283,8 +286,10 @@ export function Layout({ children }: { children: ReactNode }) {
                 )}
 
                 {/* Group items */}
-                {isOpen && items.map(({ path, label: itemLabel, icon: Icon }) => {
-                  const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
+                {isOpen && items.map(({ path, label: itemLabel, icon: Icon, altPaths }) => {
+                  const active = path === '/'
+                    ? location.pathname === '/'
+                    : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p)))
                   const badge = path === '/chat-inbox' && chatUnread > 0 ? chatUnread : 0
                   return (
                     <Link
