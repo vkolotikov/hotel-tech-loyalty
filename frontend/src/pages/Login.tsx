@@ -24,22 +24,22 @@ interface PlanData {
 }
 
 
-/** Hardcoded fallback when SaaS API is unavailable */
+/** Hardcoded fallback — mirrors the SaaS plan catalog so prices never go stale. */
 const FALLBACK_PLANS: PlanData[] = [
   {
     id: 'starter', name: 'Starter', slug: 'starter',
     description: 'Perfect for small hotels getting started with guest management.',
-    monthlyAmount: 2900, yearlyAmount: 29000, currency: 'eur', trialDays: 7,
+    monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7,
   },
   {
     id: 'growth', name: 'Growth', slug: 'growth',
     description: 'For growing hotels that need loyalty, bookings, and AI.',
-    monthlyAmount: 7900, yearlyAmount: 79000, currency: 'eur', trialDays: 14,
+    monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7,
   },
   {
     id: 'enterprise', name: 'Enterprise', slug: 'enterprise',
     description: 'Full-featured solution for hotel groups and chains.',
-    monthlyAmount: 19900, yearlyAmount: 199000, currency: 'eur', trialDays: 14,
+    monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7,
   },
 ]
 
@@ -60,7 +60,7 @@ export function Login() {
   const [hotelName, setHotelName] = useState('')
   const [selectedPlan, setSelectedPlan] = useState('growth')
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
-  const [plans, setPlans] = useState<PlanData[]>(FALLBACK_PLANS)
+  const [plans, setPlans] = useState<PlanData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -99,11 +99,11 @@ export function Login() {
     }
   }, [searchParams, setAuth, navigate])
 
-  // Fetch plans on mount — use fallback if API fails
+  // Fetch plans on mount — use fallback only if API fails
   useEffect(() => {
     api.get('/v1/plans').then(({ data }) => {
-      if (data.plans?.length) setPlans(data.plans)
-    }).catch(() => {})
+      setPlans(data.plans?.length ? data.plans : FALLBACK_PLANS)
+    }).catch(() => setPlans(FALLBACK_PLANS))
   }, [])
 
   // Countdown timer for resend
@@ -571,7 +571,7 @@ export function Login() {
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@hotel.com"
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder="you@hotel.com"
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
@@ -612,17 +612,25 @@ export function Login() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {plans.map((p) => (
-                      <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
-                        className={'rounded-lg border p-2.5 text-center transition-all ' +
-                          (selectedPlan === p.slug
-                            ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30'
-                            : 'border-white/[0.1] bg-slate-950/50 hover:border-white/25')}>
-                        <div className="text-xs font-semibold text-white">{p.name}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{getPlanPrice(p)}/mo</div>
-                        <div className="text-[10px] text-blue-400 mt-0.5">{p.trialDays}d trial</div>
-                      </button>
-                    ))}
+                    {plans.length === 0
+                      ? [0, 1, 2].map((i) => (
+                          <div key={i} className="rounded-lg border border-white/[0.1] bg-slate-950/50 p-2.5 text-center animate-pulse">
+                            <div className="h-3 w-12 mx-auto bg-white/10 rounded" />
+                            <div className="h-2 w-14 mx-auto bg-white/5 rounded mt-1.5" />
+                            <div className="h-2 w-10 mx-auto bg-white/5 rounded mt-1.5" />
+                          </div>
+                        ))
+                      : plans.map((p) => (
+                          <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
+                            className={'rounded-lg border p-2.5 text-center transition-all ' +
+                              (selectedPlan === p.slug
+                                ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30'
+                                : 'border-white/[0.1] bg-slate-950/50 hover:border-white/25')}>
+                            <div className="text-xs font-semibold text-white">{p.name}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{getPlanPrice(p)}/mo</div>
+                            <div className="text-[10px] text-blue-400 mt-0.5">{p.trialDays}d trial</div>
+                          </button>
+                        ))}
                   </div>
                 </div>
 
