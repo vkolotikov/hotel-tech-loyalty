@@ -1,30 +1,14 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Users, Award, DollarSign, Sparkles, RefreshCw, Scan, Bell, Gift, Activity,
-  ArrowUpRight, ArrowDownRight, Calendar, Hotel, CreditCard, ChevronRight,
-  UserCheck, FileText, Briefcase, Clock, AlertCircle, CheckCircle2, Phone, Mail, MessageSquare
+  ArrowUpRight, ArrowDownRight, Calendar, Hotel, ChevronRight,
+  UserCheck, FileText, Briefcase, Clock, AlertCircle, CheckCircle2, Phone, Mail, MessageSquare,
+  Cake, TrendingUp, Timer, Star, PackageCheck, Radio, MessageCircle,
 } from 'lucide-react'
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Card, StatCard } from '../components/ui/Card'
-import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
-
-const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#E5E4E2', '#B9F2FF']
-const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 10, color: '#fff' }
-const CHART_LABEL = { color: '#8e8e93' }
-
-const POINTS_RANGES = [
-  { label: '7d', days: 7 },
-  { label: '14d', days: 14 },
-  { label: '30d', days: 30 },
-  { label: '90d', days: 90 },
-]
 
 const STATUS_COLORS: Record<string, string> = {
   'New': '#3b82f6',
@@ -39,6 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 const ACTIVITY_ICONS: Record<string, any> = {
   inquiry: { icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/15' },
   reservation: { icon: Calendar, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
+  booking: { icon: Calendar, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
   email: { icon: Mail, color: 'text-purple-400', bg: 'bg-purple-500/15' },
   call: { icon: Phone, color: 'text-amber-400', bg: 'bg-amber-500/15' },
   guest: { icon: UserCheck, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
@@ -53,38 +38,22 @@ const VIP_COLORS: Record<string, string> = {
   Diamond: '#00BCD4',
 }
 
+function ratingStars(n: number | null) {
+  if (n === null || n === undefined) return null
+  return '★'.repeat(n) + '☆'.repeat(Math.max(0, 5 - n))
+}
+
 export function Dashboard() {
   const navigate = useNavigate()
-  const [pointsDays, setPointsDays] = useState(30)
 
   const { data: kpis } = useQuery({
     queryKey: ['dashboard-kpis'],
     queryFn: () => api.get('/v1/admin/dashboard/kpis').then(r => r.data),
   })
 
-  const { data: pointsChart } = useQuery({
-    queryKey: ['points-chart', pointsDays],
-    queryFn: () => api.get(`/v1/admin/dashboard/points-chart?days=${pointsDays}`).then(r => r.data),
-  })
-
-  const { data: memberGrowth } = useQuery({
-    queryKey: ['member-growth'],
-    queryFn: () => api.get('/v1/admin/dashboard/member-growth').then(r => r.data),
-  })
-
-  const { data: topMembers } = useQuery({
-    queryKey: ['top-members'],
-    queryFn: () => api.get('/v1/admin/dashboard/top-members').then(r => r.data),
-  })
-
   const { data: weekComp } = useQuery({
     queryKey: ['week-comparison'],
     queryFn: () => api.get('/v1/admin/dashboard/week-comparison').then(r => r.data),
-  })
-
-  const { data: bookingTrends } = useQuery({
-    queryKey: ['dashboard-booking-trends'],
-    queryFn: () => api.get('/v1/admin/dashboard/booking-trends?days=14').then(r => r.data),
   })
 
   const { data: aiInsights, refetch: refetchAi, isFetching: aiLoading } = useQuery({
@@ -93,7 +62,6 @@ export function Dashboard() {
     enabled: false,
   })
 
-  // CRM queries
   const { data: arrivals } = useQuery({
     queryKey: ['dashboard-arrivals'],
     queryFn: () => api.get('/v1/admin/dashboard/arrivals-today').then(r => r.data),
@@ -119,11 +87,48 @@ export function Dashboard() {
     queryFn: () => api.get('/v1/admin/dashboard/tasks-due').then(r => r.data),
   })
 
+  // NEW operational widgets
+  const { data: liveOps } = useQuery({
+    queryKey: ['dashboard-live-ops'],
+    queryFn: () => api.get('/v1/admin/dashboard/live-ops').then(r => r.data),
+    refetchInterval: 30000,
+  })
+
+  const { data: birthdays } = useQuery({
+    queryKey: ['dashboard-birthdays'],
+    queryFn: () => api.get('/v1/admin/dashboard/birthdays-today').then(r => r.data),
+  })
+
+  const { data: tierUps } = useQuery({
+    queryKey: ['dashboard-tier-ups'],
+    queryFn: () => api.get('/v1/admin/dashboard/tier-up-candidates').then(r => r.data),
+  })
+
+  const { data: expiring } = useQuery({
+    queryKey: ['dashboard-expiring'],
+    queryFn: () => api.get('/v1/admin/dashboard/expiring-points').then(r => r.data),
+  })
+
+  const { data: reviews } = useQuery({
+    queryKey: ['dashboard-reviews'],
+    queryFn: () => api.get('/v1/admin/dashboard/recent-reviews').then(r => r.data),
+  })
+
+  const { data: pendingSubmissions } = useQuery({
+    queryKey: ['dashboard-pending-submissions'],
+    queryFn: () => api.get('/v1/admin/dashboard/pending-submissions').then(r => r.data),
+  })
+
+  const { data: recentChats } = useQuery({
+    queryKey: ['dashboard-recent-chats'],
+    queryFn: () => api.get('/v1/admin/dashboard/recent-chats').then(r => r.data),
+    refetchInterval: 30000,
+  })
+
   const newMembersChange = kpis && kpis.new_members_last_month > 0
     ? Math.round(((kpis.new_members_this_month - kpis.new_members_last_month) / kpis.new_members_last_month) * 100)
     : 0
 
-  // Week comparison helpers
   const wk = weekComp?.week
   const lwk = weekComp?.last_week
   const weekChange = (curr: number, prev: number) => {
@@ -156,6 +161,36 @@ export function Dashboard() {
             <Bell size={15} /> Send Campaign
           </button>
         </div>
+      </div>
+
+      {/* Live Ops Strip — real-time operational counters */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        {[
+          { label: 'Online Now', value: liveOps?.online_visitors ?? 0, icon: <Radio size={15} />, color: '#32d74b', route: '/visitors', pulse: (liveOps?.online_visitors ?? 0) > 0 },
+          { label: 'Unassigned Chats', value: liveOps?.unassigned_chats ?? 0, icon: <MessageCircle size={15} />, color: '#06b6d4', route: '/chat-inbox', alert: (liveOps?.unassigned_chats ?? 0) > 0 },
+          { label: 'Waiting', value: liveOps?.waiting_chats ?? 0, icon: <Timer size={15} />, color: '#f59e0b', route: '/chat-inbox', alert: (liveOps?.waiting_chats ?? 0) > 0 },
+          { label: 'Pending Bookings', value: liveOps?.pending_submissions ?? 0, icon: <PackageCheck size={15} />, color: '#8b5cf6', route: '/booking-submissions', alert: (liveOps?.pending_submissions ?? 0) > 0 },
+          { label: 'New Leads Today', value: liveOps?.new_leads_today ?? 0, icon: <UserCheck size={15} />, color: '#ec4899', route: '/visitors' },
+          { label: 'Chats Today', value: liveOps?.chats_today ?? 0, icon: <MessageSquare size={15} />, color: '#3b82f6', route: '/chat-inbox' },
+        ].map(item => (
+          <div
+            key={item.label}
+            onClick={() => navigate(item.route)}
+            className="bg-dark-surface rounded-xl p-3 border border-dark-border hover:border-primary-500/40 cursor-pointer transition-colors relative"
+          >
+            {item.pulse && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#32d74b] animate-pulse" />
+            )}
+            {item.alert && !item.pulse && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+            )}
+            <div className="flex items-center gap-2 mb-1" style={{ color: item.color }}>
+              {item.icon}
+              <p className="text-[10px] text-t-secondary uppercase tracking-wide font-semibold">{item.label}</p>
+            </div>
+            <p className="text-xl font-bold text-white">{item.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Today at a Glance — Unified */}
@@ -308,94 +343,89 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Points Chart + Tier Pie */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-white">Points Activity</h3>
-            <div className="flex gap-1 bg-dark-surface2 rounded-lg p-0.5">
-              {POINTS_RANGES.map(r => (
-                <button
-                  key={r.days}
-                  onClick={() => setPointsDays(r.days)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                    pointsDays === r.days
-                      ? 'bg-primary-600 text-white shadow-sm'
-                      : 'text-t-secondary hover:text-white'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
+      {/* Birthdays + Tier-Up Candidates */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Birthdays Today */}
+        <Card padding={false}>
+          <div className="p-5 pb-3 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <Cake size={16} className="text-pink-400" />
+              Birthdays Today
+            </h3>
+            <span className="text-xs text-[#636366]">{birthdays?.count ?? 0} members</span>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={pointsChart ?? []}>
-              <defs>
-                <linearGradient id="earned" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#c9a84c" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#c9a84c" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="redeemed" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#32d74b" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#32d74b" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5)} />
-              <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-              <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => Number(v).toLocaleString()} />
-              <Legend />
-              <Area type="monotone" dataKey="earned" stroke="#c9a84c" strokeWidth={2} fill="url(#earned)" name="Earned" />
-              <Area type="monotone" dataKey="redeemed" stroke="#32d74b" strokeWidth={2} fill="url(#redeemed)" name="Redeemed" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="divide-y divide-dark-border">
+            {(birthdays?.items ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">No birthdays today</p>
+            ) : (birthdays?.items ?? []).slice(0, 5).map((b: any) => (
+              <div
+                key={b.id}
+                onClick={() => typeof b.id === 'number' ? navigate(`/members/${b.id}`) : navigate(`/guests/${String(b.id).replace('g-', '')}`)}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-dark-surface2 cursor-pointer transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-pink-400">
+                  {b.name?.charAt(0) ?? '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{b.name}</p>
+                  <p className="text-xs text-[#636366]">
+                    {b.member_number ? `${b.member_number} · ` : ''}
+                    {b.tier}
+                    {b.age ? ` · turns ${b.age}` : ''}
+                  </p>
+                </div>
+                <Cake size={14} className="text-pink-400/60" />
+              </div>
+            ))}
+          </div>
         </Card>
 
-        {/* Tier Distribution */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-white">Tier Distribution</h3>
-            <span className="text-xs text-[#636366]">{kpis?.total_members ?? 0} total</span>
+        {/* Tier-Up Candidates */}
+        <Card padding={false}>
+          <div className="p-5 pb-3 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <TrendingUp size={16} className="text-amber-400" />
+              Close to Next Tier
+            </h3>
+            <span className="text-xs text-[#636366]">{tierUps?.count ?? 0} candidates</span>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie
-                data={kpis?.tier_distribution ?? []}
-                dataKey="count"
-                nameKey="tier"
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={70}
+          <div className="divide-y divide-dark-border">
+            {(tierUps?.items ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">No tier-up candidates</p>
+            ) : (tierUps?.items ?? []).slice(0, 5).map((m: any) => (
+              <div
+                key={m.id}
+                onClick={() => navigate(`/members/${m.id}`)}
+                className="px-5 py-3 hover:bg-dark-surface2 cursor-pointer transition-colors"
               >
-                {(kpis?.tier_distribution ?? []).map((_: any, i: number) => (
-                  <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={CHART_TOOLTIP} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-1.5 mt-2">
-            {(kpis?.tier_distribution ?? []).map((t: any, i: number) => {
-              const total = (kpis?.tier_distribution ?? []).reduce((s: number, x: any) => s + x.count, 0)
-              const pct = total > 0 ? Math.round((t.count / total) * 100) : 0
-              return (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
-                  <span className="text-xs text-[#a0a0a0] flex-1">{t.tier}</span>
-                  <span className="text-xs font-medium text-white">{t.count}</span>
-                  <span className="text-xs text-[#636366] w-8 text-right">{pct}%</span>
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-amber-400">
+                    {m.name?.charAt(0) ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{m.name}</p>
+                    <p className="text-xs text-[#636366]">
+                      {m.current_tier} → <span style={{ color: m.next_tier_color || '#c9a84c' }}>{m.next_tier}</span>
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-white">
+                    {m.points_needed.toLocaleString()} pts
+                  </span>
                 </div>
-              )
-            })}
+                <div className="h-1.5 bg-dark-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${m.progress_pct}%`, backgroundColor: m.next_tier_color || '#c9a84c' }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
 
       {/* Inquiry Pipeline + Tasks Due */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Inquiry Pipeline */}
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -431,7 +461,6 @@ export function Dashboard() {
           </div>
         </Card>
 
-        {/* Tasks Due */}
         <Card padding={false}>
           <div className="p-5 pb-3 flex items-center justify-between">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -472,140 +501,218 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Booking Trends + Member Growth */}
+      {/* Pending Booking Submissions + Unassigned Chats */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-semibold text-white">Booking Trends</h3>
-              <p className="text-xs text-[#636366] mt-0.5">Last 14 days</p>
-            </div>
-            <Hotel size={18} className="text-[#636366]" />
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={bookingTrends ?? []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5)} />
-              <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-              <Tooltip
-                contentStyle={CHART_TOOLTIP}
-                labelStyle={CHART_LABEL}
-                formatter={(v: any, name: any) => [String(name).includes('Revenue') ? `$${Number(v).toLocaleString()}` : v, name]}
-              />
-              <Legend />
-              <Bar dataKey="bookings" fill="#6366f1" radius={[3, 3, 0, 0]} name="Bookings" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-semibold text-white">Member Growth</h3>
-              <p className="text-xs text-[#636366] mt-0.5">New signups by month</p>
-            </div>
-            <Activity size={18} className="text-[#636366]" />
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={memberGrowth ?? []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-              <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-              <Bar dataKey="new_members" fill="#c9a84c" radius={[4, 4, 0, 0]} name="New Members" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
-      {/* Recent Activity + Financial Summary */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Recent Activity */}
+        {/* Pending Booking Submissions */}
         <Card padding={false}>
           <div className="p-5 pb-3 flex items-center justify-between">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
-              <Activity size={16} className="text-primary-400" />
-              Recent Activity
+              <PackageCheck size={16} className="text-purple-400" />
+              Pending Booking Submissions
             </h3>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-[#636366]">{pendingSubmissions?.today ?? 0} today</span>
+              {(pendingSubmissions?.failed ?? 0) > 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-[#ff375f]/15 text-[#ff375f] font-semibold">
+                  {pendingSubmissions.failed} failed
+                </span>
+              )}
+              <button onClick={() => navigate('/booking-submissions')} className="text-primary-400 hover:text-primary-300 flex items-center gap-0.5">
+                View all <ChevronRight size={12} />
+              </button>
+            </div>
           </div>
           <div className="divide-y divide-dark-border">
-            {(recentActivity ?? []).length === 0 ? (
-              <p className="px-5 py-6 text-sm text-[#636366] text-center">No recent activity</p>
-            ) : (recentActivity ?? []).slice(0, 8).map((a: any) => {
-              const act = ACTIVITY_ICONS[a.type] || ACTIVITY_ICONS.note
-              const Icon = act.icon
-              return (
-                <div key={a.id} className="flex items-start gap-3 px-5 py-3">
-                  <div className={`w-7 h-7 rounded-full ${act.bg} ${act.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                    <Icon size={13} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#e0e0e0] leading-snug">{a.message}</p>
-                    <p className="text-xs text-[#636366] mt-0.5">{a.created_at ? format(new Date(a.created_at), 'MMM d, h:mm a') : ''}</p>
-                  </div>
+            {(pendingSubmissions?.items ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">No pending submissions</p>
+            ) : (pendingSubmissions?.items ?? []).slice(0, 5).map((s: any) => (
+              <div
+                key={s.id}
+                onClick={() => navigate(`/booking-submissions/${s.id}`)}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-dark-surface2 cursor-pointer transition-colors"
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  s.outcome === 'failed' ? 'bg-[#ff375f]/20 text-[#ff375f]' :
+                  s.outcome === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-purple-500/20 text-purple-400'
+                }`}>
+                  <PackageCheck size={14} />
                 </div>
-              )
-            })}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{s.guest_name || s.guest_email || 'Anonymous'}</p>
+                  <p className="text-xs text-[#636366] truncate">
+                    {s.unit_name || 'Room'} · {s.check_in} → {s.check_out}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold text-white">${Number(s.gross_total ?? 0).toFixed(0)}</p>
+                  <p className="text-[10px] text-[#636366]">{s.time_ago}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
-        {/* Points Liability */}
-        <Card>
-          <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-            <CreditCard size={16} className="text-primary-400" />
-            Points Liability
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-t-secondary mb-1">Outstanding Points</p>
-              <p className="text-xl font-bold text-amber-400">{(kpis?.total_outstanding_points ?? 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-t-secondary mb-1">Estimated Liability</p>
-              <p className="text-xl font-bold text-purple-400">${(kpis?.point_liability_currency ?? 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-t-secondary mb-1">Conversion Rate</p>
-              <p className="text-xl font-bold text-blue-400">{kpis?.conversion_rate ?? 0}%</p>
-            </div>
-            <div className="bg-[#1a1a2e] rounded-xl p-4 border border-[#2e2e50]">
-              <p className="text-xs text-t-secondary mb-1">Avg Daily Rate</p>
-              <p className="text-xl font-bold text-[#32d74b]">${Number(kpis?.avg_daily_rate ?? 0).toFixed(0)}</p>
-            </div>
+        {/* Unassigned Chats */}
+        <Card padding={false}>
+          <div className="p-5 pb-3 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <MessageCircle size={16} className="text-cyan-400" />
+              Unassigned Conversations
+            </h3>
+            <button onClick={() => navigate('/chat-inbox')} className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-0.5">
+              Inbox <ChevronRight size={12} />
+            </button>
+          </div>
+          <div className="divide-y divide-dark-border">
+            {(recentChats ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">All chats assigned</p>
+            ) : (recentChats ?? []).slice(0, 5).map((c: any) => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/chat-inbox?conversation=${c.id}`)}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-dark-surface2 cursor-pointer transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-cyan-400 relative">
+                  {c.visitor_name?.charAt(0) ?? '?'}
+                  {c.status === 'waiting' && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {c.visitor_name}
+                    {c.is_lead && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-[#32d74b]/15 text-[#32d74b]">LEAD</span>}
+                  </p>
+                  <p className="text-xs text-[#636366] truncate">
+                    {c.country && `${c.country} · `}{c.messages_count} msg · {c.time_ago}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  c.status === 'waiting' ? 'bg-amber-500/15 text-amber-400' : 'bg-cyan-500/15 text-cyan-400'
+                }`}>
+                  {c.status}
+                </span>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
 
-      {/* Top Members */}
+      {/* Expiring Points + Recent Reviews */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Expiring Points */}
+        <Card padding={false}>
+          <div className="p-5 pb-3">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2 mb-3">
+              <Timer size={16} className="text-orange-400" />
+              Expiring Points
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-dark-bg rounded-lg p-3 border border-dark-border">
+                <p className="text-[10px] text-t-secondary uppercase tracking-wide">Next 30 days</p>
+                <p className="text-xl font-bold text-orange-400">{(expiring?.total_expiring_30d ?? 0).toLocaleString()}</p>
+              </div>
+              <div className="bg-dark-bg rounded-lg p-3 border border-dark-border">
+                <p className="text-[10px] text-t-secondary uppercase tracking-wide">Next 60 days</p>
+                <p className="text-xl font-bold text-amber-400">{(expiring?.total_expiring_60d ?? 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-dark-border">
+            {(expiring?.top_members ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">No expiring points</p>
+            ) : (expiring?.top_members ?? []).slice(0, 5).map((m: any) => (
+              <div
+                key={m.id}
+                onClick={() => navigate(`/members/${m.id}`)}
+                className="flex items-center gap-3 px-5 py-2.5 hover:bg-dark-surface2 cursor-pointer transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-orange-400">
+                  {m.name?.charAt(0) ?? '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{m.name}</p>
+                  <p className="text-xs text-[#636366]">{m.tier}</p>
+                </div>
+                <span className="text-sm font-semibold text-orange-400">
+                  {m.expiring_points.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Recent Reviews */}
+        <Card padding={false}>
+          <div className="p-5 pb-3 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <Star size={16} className="text-yellow-400" />
+              Recent Reviews
+            </h3>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-[#636366]">
+                Avg {reviews?.summary?.avg_rating ?? '—'}★ · NPS {reviews?.summary?.avg_nps ?? '—'}
+              </span>
+              {(reviews?.summary?.detractors_count ?? 0) > 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-[#ff375f]/15 text-[#ff375f] font-semibold">
+                  {reviews.summary.detractors_count} detractors
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="divide-y divide-dark-border">
+            {(reviews?.reviews ?? []).length === 0 ? (
+              <p className="px-5 py-6 text-sm text-[#636366] text-center">No recent reviews</p>
+            ) : (reviews?.reviews ?? []).slice(0, 4).map((r: any) => (
+              <div key={r.id} className="px-5 py-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-white truncate">{r.reviewer_name}</span>
+                  {r.is_detractor && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ff375f]/15 text-[#ff375f] font-semibold">
+                      Detractor
+                    </span>
+                  )}
+                  {r.overall_rating !== null && (
+                    <span className="text-xs text-yellow-400 ml-auto">{ratingStars(r.overall_rating)}</span>
+                  )}
+                </div>
+                {r.comment && (
+                  <p className="text-xs text-[#a0a0a0] line-clamp-2 leading-snug">{r.comment}</p>
+                )}
+                <p className="text-[10px] text-[#636366] mt-1">{r.time_ago}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
       <Card padding={false}>
-        <div className="p-6 pb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-white">Top Members</h3>
-          <button
-            onClick={() => navigate('/members')}
-            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-0.5"
-          >
-            View all <ChevronRight size={12} />
-          </button>
+        <div className="p-5 pb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-white flex items-center gap-2">
+            <Activity size={16} className="text-primary-400" />
+            Recent Activity
+          </h3>
         </div>
         <div className="divide-y divide-dark-border">
-          {(topMembers ?? []).slice(0, 5).map((m: any, i: number) => (
-            <div
-              key={i}
-              onClick={() => navigate(`/members/${m.id}`)}
-              className="flex items-center gap-3 px-6 py-3 hover:bg-dark-surface2 cursor-pointer transition-colors"
-            >
-              <span className="text-sm font-bold text-[#636366] w-5">{i + 1}</span>
-              <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold text-primary-400">{m.name?.charAt(0)}</span>
+          {(recentActivity ?? []).length === 0 ? (
+            <p className="px-5 py-6 text-sm text-[#636366] text-center">No recent activity</p>
+          ) : (recentActivity ?? []).slice(0, 8).map((a: any) => {
+            const act = ACTIVITY_ICONS[a.type] || ACTIVITY_ICONS.note
+            const Icon = act.icon
+            return (
+              <div key={a.id} className="flex items-start gap-3 px-5 py-3">
+                <div className={`w-7 h-7 rounded-full ${act.bg} ${act.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <Icon size={13} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#e0e0e0] leading-snug">{a.message}</p>
+                  <p className="text-xs text-[#636366] mt-0.5">{a.created_at ? format(new Date(a.created_at), 'MMM d, h:mm a') : ''}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{m.name}</p>
-                <p className="text-xs text-[#636366]">{m.member_number}</p>
-              </div>
-              <TierBadge tier={m.tier} />
-              <span className="text-sm font-semibold text-[#e0e0e0]">{m.lifetime_points?.toLocaleString()} pts</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </Card>
 
@@ -630,7 +737,7 @@ export function Dashboard() {
             {aiInsights.insight}
           </div>
         ) : (
-          <p className="text-[#636366] text-sm">Click "Generate Insights" to get AI-powered analysis of this week's performance.</p>
+          <p className="text-[#636366] text-sm">Click "Generate Insights" to get AI-powered analysis of this week's performance. Trends &amp; charts live in the Analytics section.</p>
         )}
       </Card>
     </div>

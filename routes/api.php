@@ -199,6 +199,13 @@ Route::prefix('v1')->group(function () {
             Route::get('dashboard/inquiries-by-status', [DashboardController::class, 'inquiriesByStatus']);
             Route::get('dashboard/recent-activity',  [DashboardController::class, 'recentActivity']);
             Route::get('dashboard/tasks-due',        [DashboardController::class, 'tasksDue']);
+            Route::get('dashboard/birthdays-today',         [DashboardController::class, 'birthdaysToday']);
+            Route::get('dashboard/tier-up-candidates',      [DashboardController::class, 'tierUpCandidates']);
+            Route::get('dashboard/expiring-points',         [DashboardController::class, 'expiringPoints']);
+            Route::get('dashboard/recent-reviews',          [DashboardController::class, 'recentReviews']);
+            Route::get('dashboard/pending-submissions',     [DashboardController::class, 'pendingBookingSubmissions']);
+            Route::get('dashboard/live-ops',                [DashboardController::class, 'liveOps']);
+            Route::get('dashboard/recent-chats',            [DashboardController::class, 'recentChatActivity']);
 
             Route::post('scan/qr',                [ScanController::class, 'scanQr']);
             Route::post('scan/nfc',               [ScanController::class, 'scanNfc']);
