@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
+import { PairTabs, LOCATIONS_TABS } from '../components/PairTabs'
 import {
   Plus, Search, Filter, ChevronLeft, ChevronRight, X,
   Calendar, CalendarDays, CalendarRange, Users as UsersIcon, MapPin, Building2,
@@ -233,6 +234,7 @@ export function Venues() {
 
   return (
     <div className="p-6 space-y-5">
+      <PairTabs tabs={LOCATIONS_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

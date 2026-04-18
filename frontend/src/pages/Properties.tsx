@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import { Building2, Plus, Pencil, X, Store, Upload, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { PairTabs, LOCATIONS_TABS } from '../components/PairTabs'
 
 interface Property {
   id: number
@@ -148,6 +149,7 @@ export function Properties() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={LOCATIONS_TABS} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Properties</h1>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyPropertyForm); clearImage() }}

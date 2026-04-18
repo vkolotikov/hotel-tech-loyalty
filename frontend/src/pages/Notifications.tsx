@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
+import { PairTabs, CAMPAIGNS_TABS } from '../components/PairTabs'
 
 interface Campaign {
   id: number
@@ -183,6 +184,7 @@ export function Notifications() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={CAMPAIGNS_TABS} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Notification Campaigns</h1>

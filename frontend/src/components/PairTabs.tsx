@@ -54,3 +54,13 @@ export const EXTRAS_TABS: Tab[] = [
   { to: '/booking-extras', label: 'Extras' },
   { to: '/service-extras', label: 'Add-ons' },
 ]
+
+export const CAMPAIGNS_TABS: Tab[] = [
+  { to: '/notifications',   label: 'Push Campaigns' },
+  { to: '/email-templates', label: 'Email Templates' },
+]
+
+export const LOCATIONS_TABS: Tab[] = [
+  { to: '/properties', label: 'Properties' },
+  { to: '/venues',     label: 'Venues' },
+]

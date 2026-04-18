@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight,
   Crown, Award, Building2, FileText,
-  Briefcase, ClipboardList, MapPin, Radio, Mail, ScrollText,
+  Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
   UserCog,
@@ -77,19 +77,17 @@ const navGroups: NavGroup[] = [
   {
     label: 'CRM & Marketing',
     items: [
-      { path: '/inquiries',       label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
-      { path: '/corporate',       label: 'Corporate',       icon: Briefcase, gate: 'admin' },
-      { path: '/notifications',   label: 'Campaigns',       icon: Bell,      gate: 'admin', feature: 'push_notifications' },
-      { path: '/email-templates', label: 'Email Templates', icon: Mail,      gate: 'admin' },
-      { path: '/reviews',         label: 'Reviews',         icon: Star,      gate: 'admin' },
+      { path: '/inquiries',     label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
+      { path: '/corporate',     label: 'Corporate',         icon: Briefcase, gate: 'admin' },
+      { path: '/notifications', label: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
+      { path: '/reviews',       label: 'Reviews',           icon: Star,      gate: 'admin' },
     ],
   },
   {
     label: 'Operations',
     items: [
       { path: '/planner',    label: 'Planner',    icon: ClipboardList, gate: 'all' },
-      { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin' },
-      { path: '/venues',     label: 'Venues',     icon: MapPin,        gate: 'admin' },
+      { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
       { path: '/scan',       label: 'Scan',       icon: Scan,          gate: 'all' },
     ],
   },
