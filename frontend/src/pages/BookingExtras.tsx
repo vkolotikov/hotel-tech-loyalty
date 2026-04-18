@@ -160,7 +160,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
 function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; onClose: () => void; onSave: (fd: FormData) => void; saving: boolean }) {
   const [name, setName] = useState(extra?.name || '')
   const [description, setDescription] = useState(extra?.description || '')
-  const [price, setPrice] = useState(extra?.price || 0)
+  const [price, setPrice] = useState<string>(extra?.price != null ? String(extra.price) : '')
   const [priceType, setPriceType] = useState(extra?.price_type || 'per_stay')
   const [category, setCategory] = useState(extra?.category || '')
   const [icon] = useState(extra?.icon || '')
@@ -175,7 +175,7 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
     if (extra?.id) fd.append('_id', String(extra.id))
     fd.append('name', name)
     fd.append('description', description)
-    fd.append('price', String(price))
+    fd.append('price', String(Number(price) || 0))
     fd.append('price_type', priceType)
     fd.append('category', category)
     fd.append('icon', icon)
@@ -219,7 +219,7 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price (€)</label>
-              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} min={0} step={0.5} className={inputCls} />
+              <input type="number" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} min={0} step={0.5} className={inputCls} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price Type</label>

@@ -117,10 +117,10 @@ export default function ServiceExtras() {
 function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(extra?.name || '')
   const [description, setDescription] = useState(extra?.description || '')
-  const [price, setPrice] = useState(Number(extra?.price ?? 0))
+  const [price, setPrice] = useState<string>(extra?.price != null ? String(extra.price) : '')
   const [priceType, setPriceType] = useState(extra?.price_type || 'per_booking')
   const [currency, setCurrency] = useState(extra?.currency || 'EUR')
-  const [duration, setDuration] = useState(extra?.duration_minutes || 0)
+  const [duration, setDuration] = useState<string>(extra?.duration_minutes != null ? String(extra.duration_minutes) : '')
   const [category, setCategory] = useState(extra?.category || '')
   const [isActive, setIsActive] = useState(extra?.is_active ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -134,10 +134,10 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
     const fd = new FormData()
     fd.append('name', name)
     fd.append('description', description)
-    fd.append('price', String(price))
+    fd.append('price', String(Number(price) || 0))
     fd.append('price_type', priceType)
     fd.append('currency', currency)
-    fd.append('duration_minutes', String(duration))
+    fd.append('duration_minutes', String(Number(duration) || 0))
     fd.append('category', category)
     fd.append('is_active', isActive ? '1' : '0')
     if (imageFile) fd.append('image', imageFile)
@@ -192,7 +192,7 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price</label>
-              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} min={0} step={0.5} className={inputCls} />
+              <input type="number" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} min={0} step={0.5} className={inputCls} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Currency</label>
@@ -211,7 +211,7 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Adds time (min)</label>
-              <input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} min={0} step={5} className={inputCls} />
+              <input type="number" inputMode="numeric" value={duration} onChange={e => setDuration(e.target.value)} min={0} step={5} className={inputCls} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Category (optional)</label>

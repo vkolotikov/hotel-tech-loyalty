@@ -6,6 +6,19 @@
 
 * { box-sizing: border-box; }
 
+/* Force native form controls (select dropdowns, number spinners, date pickers) to
+   render with the OS dark theme — otherwise options render white-on-white on our
+   dark UI. */
+select,
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;

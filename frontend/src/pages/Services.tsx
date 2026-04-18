@@ -222,9 +222,9 @@ function ServiceForm({
   const [categoryId, setCategoryId] = useState<number | ''>(service?.category_id ?? '')
   const [description, setDescription] = useState(service?.description || '')
   const [shortDescription, setShortDescription] = useState(service?.short_description || '')
-  const [duration, setDuration] = useState(service?.duration_minutes || 60)
-  const [buffer, setBuffer] = useState(service?.buffer_after_minutes || 0)
-  const [price, setPrice] = useState(Number(service?.price ?? 0))
+  const [duration, setDuration] = useState<string>(String(service?.duration_minutes ?? 60))
+  const [buffer, setBuffer] = useState<string>(String(service?.buffer_after_minutes ?? 0))
+  const [price, setPrice] = useState<string>(service?.price != null ? String(service.price) : '')
   const [currency, setCurrency] = useState(service?.currency || 'EUR')
   const [tagsStr, setTagsStr] = useState((service?.tags || []).join(', '))
   const [isActive, setIsActive] = useState(service?.is_active ?? true)
@@ -236,16 +236,17 @@ function ServiceForm({
 
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error('Name is required'); return }
-    if (duration < 5) { toast.error('Duration must be at least 5 minutes'); return }
+    const durationNum = Number(duration) || 0
+    if (durationNum < 5) { toast.error('Duration must be at least 5 minutes'); return }
     setSaving(true)
     const fd = new FormData()
     fd.append('name', name)
     if (categoryId) fd.append('category_id', String(categoryId))
     fd.append('description', description)
     fd.append('short_description', shortDescription)
-    fd.append('duration_minutes', String(duration))
-    fd.append('buffer_after_minutes', String(buffer))
-    fd.append('price', String(price))
+    fd.append('duration_minutes', String(durationNum))
+    fd.append('buffer_after_minutes', String(Number(buffer) || 0))
+    fd.append('price', String(Number(price) || 0))
     fd.append('currency', currency)
     fd.append('is_active', isActive ? '1' : '0')
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
@@ -323,15 +324,15 @@ function ServiceForm({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Duration (min) *</label>
-              <input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} min={5} step={5} className={inputCls} />
+              <input type="number" inputMode="numeric" value={duration} onChange={e => setDuration(e.target.value)} min={5} step={5} className={inputCls} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Buffer after (min)</label>
-              <input type="number" value={buffer} onChange={e => setBuffer(Number(e.target.value))} min={0} step={5} className={inputCls} />
+              <input type="number" inputMode="numeric" value={buffer} onChange={e => setBuffer(e.target.value)} min={0} step={5} className={inputCls} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price</label>
-              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} min={0} step={1} className={inputCls} />
+              <input type="number" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} min={0} step={1} className={inputCls} />
             </div>
           </div>
 
