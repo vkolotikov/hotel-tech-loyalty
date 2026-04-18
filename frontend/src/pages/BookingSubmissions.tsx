@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react'
+import { money } from '../lib/money'
 
 export function BookingSubmissions({ embedded = false }: { embedded?: boolean } = {}) {
   const [search, setSearch] = useState('')
@@ -90,7 +91,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
               </div>
               {/* Total */}
               <div className="text-sm font-bold text-white tabular-nums min-w-[80px] text-right">
-                {s.gross_total ? `€${Number(s.gross_total).toFixed(2)}` : '—'}
+                {money(s.gross_total)}
               </div>
               {/* Method */}
               <div className="min-w-[70px] text-center">

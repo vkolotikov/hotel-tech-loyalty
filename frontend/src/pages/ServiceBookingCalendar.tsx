@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ChevronLeft, ChevronRight, Clock, User, Scissors, X } from 'lucide-react'
+import { money } from '../lib/money'
 
 interface ServiceBookingLite {
   id: number
@@ -146,7 +147,7 @@ export default function ServiceBookingCalendar() {
             style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Service Calendar</div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Service Bookings</h1>
           <p className="text-xs text-gray-500 mt-1">
-            {dayTotals.bookings} bookings &middot; {Number(dayTotals.revenue).toLocaleString(undefined, { maximumFractionDigits: 0 })} total value this month
+            {dayTotals.bookings} bookings &middot; {money(dayTotals.revenue)} total value this month
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -307,7 +308,7 @@ export default function ServiceBookingCalendar() {
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.04]">
                       <span className="text-[10px] text-gray-600 font-mono">{b.booking_reference}</span>
                       <span className="text-xs font-bold text-white">
-                        {Number(b.total_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {money(b.total_amount)}
                       </span>
                     </div>
                   </Link>

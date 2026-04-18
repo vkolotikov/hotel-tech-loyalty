@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { money } from '../lib/money'
 
 /* ── Unit visual theming ─────────────────────────────────────────── */
 
@@ -331,9 +332,9 @@ export function BookingCalendar() {
                               height: ROW_H, background: s.bg, border: `1px solid ${s.border}`, color: s.text,
                               boxShadow: `0 4px 10px rgba(0,0,0,0.2)`,
                             }}
-                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n€${Number(b.price_total).toLocaleString()}` : ''}`}>
+                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n${money(b.price_total)}` : ''}`}>
                             {shortGuest(b.guest_name)}
-                            {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">€{Number(b.price_total).toLocaleString()}</span> : null}
+                            {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">{money(b.price_total)}</span> : null}
                           </Link>
                         )
                       })}

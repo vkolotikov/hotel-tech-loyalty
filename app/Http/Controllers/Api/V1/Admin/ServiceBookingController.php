@@ -268,8 +268,6 @@ class ServiceBookingController extends Controller
     /** PATCH /v1/admin/service-bookings/{id}/status */
     public function updateStatus(Request $request, int $id): JsonResponse
     {
-        $booking = ServiceBooking::findOrFail($id);
-
         $data = $request->validate([
             'status'              => 'nullable|string|in:pending,confirmed,in_progress,completed,cancelled,no_show',
             'payment_status'      => 'nullable|string|in:unpaid,paid,refunded,failed',
@@ -277,18 +275,26 @@ class ServiceBookingController extends Controller
             'staff_notes'         => 'nullable|string|max:2000',
         ]);
 
-        if (($data['status'] ?? null) === 'cancelled' && !$booking->cancelled_at) {
-            $data['cancelled_at'] = now();
-        }
+        // Row-lock the booking so two concurrent updates serialize instead of
+        // both reading the pre-change state and racing their writes.
+        $booking = DB::transaction(function () use ($id, $data, $request) {
+            $booking = ServiceBooking::lockForUpdate()->findOrFail($id);
 
-        $booking->update(array_filter($data, fn ($v) => $v !== null));
+            if (($data['status'] ?? null) === 'cancelled' && !$booking->cancelled_at) {
+                $data['cancelled_at'] = now();
+            }
 
-        AuditLog::create([
-            'organization_id' => app('current_organization_id'),
-            'user_id'         => $request->user()?->id,
-            'action'          => 'service_booking.updated',
-            'description'     => "Updated booking {$booking->booking_reference}",
-        ]);
+            $booking->update(array_filter($data, fn ($v) => $v !== null));
+
+            AuditLog::create([
+                'organization_id' => app('current_organization_id'),
+                'user_id'         => $request->user()?->id,
+                'action'          => 'service_booking.updated',
+                'description'     => "Updated booking {$booking->booking_reference}",
+            ]);
+
+            return $booking;
+        });
 
         return response()->json($booking->fresh(['service', 'master', 'extras']));
     }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { money } from '../lib/money'
 
 const PAY_PILL: Record<string, string> = {
   paid:            'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
@@ -110,17 +111,17 @@ export function BookingPayments() {
                 <div className="flex items-center gap-5 tabular-nums min-w-[260px] justify-end">
                   <div className="text-right">
                     <div className="text-[9px] text-gray-600 font-bold uppercase">Paid</div>
-                    <div className="text-sm font-bold text-emerald-400">€{Number(b.price_paid || 0).toFixed(2)}</div>
+                    <div className="text-sm font-bold text-emerald-400">{money(b.price_paid || 0)}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-[9px] text-gray-600 font-bold uppercase">Due</div>
                     <div className={`text-sm font-bold ${balanceDue > 0 ? 'text-red-400' : 'text-gray-600'}`}>
-                      {balanceDue > 0 ? `€${Number(balanceDue).toFixed(2)}` : '—'}
+                      {balanceDue > 0 ? money(balanceDue) : '—'}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-[9px] text-gray-600 font-bold uppercase">Total</div>
-                    <div className="text-sm font-bold text-white">€{Number(b.price_total || 0).toFixed(2)}</div>
+                    <div className="text-sm font-bold text-white">{money(b.price_total || 0)}</div>
                   </div>
                 </div>
                 {/* Tags */}

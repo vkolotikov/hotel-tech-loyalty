@@ -5,6 +5,7 @@ import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
+import { money } from '../lib/money'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -177,7 +178,7 @@ function HorizontalBars({ data }: { data: { unit_name: string; revenue: number; 
           <div className="flex justify-between text-xs mb-1.5">
             <span className="text-gray-300 font-medium truncate">{d.unit_name || 'Unknown'}</span>
             <span className="text-gray-500 flex-shrink-0 ml-3 tabular-nums">
-              €{d.revenue.toLocaleString()} · {d.bookings} bookings · {d.avg_nights}n
+              {money(d.revenue)} · {d.bookings} bookings · {d.avg_nights}n
             </span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(34,51,45,0.6)' }}>
@@ -189,7 +190,7 @@ function HorizontalBars({ data }: { data: { unit_name: string; revenue: number; 
               }}
             />
           </div>
-          {d.balance > 0 && <div className="text-[10px] text-red-400/70 mt-1">€{d.balance.toLocaleString()} outstanding</div>}
+          {d.balance > 0 && <div className="text-[10px] text-red-400/70 mt-1">{money(d.balance)} outstanding</div>}
         </div>
       ))}
     </div>
@@ -444,8 +445,8 @@ export function Bookings() {
                       <div className="text-xs text-[#636366]">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3 tabular-nums">
-                      <div className="text-xs text-emerald-400 font-semibold">€{Number(b.price_paid || 0).toFixed(0)}</div>
-                      <div className="text-xs text-red-400">/ €{Number(b.price_total || 0).toFixed(0)}</div>
+                      <div className="text-xs text-emerald-400 font-semibold">{money(b.price_paid || 0)}</div>
+                      <div className="text-xs text-red-400">/ {money(b.price_total || 0)}</div>
                     </div>
                   </Link>
                 ))}
@@ -475,7 +476,7 @@ export function Bookings() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      {s.gross_total ? <div className="text-xs text-white font-semibold tabular-nums">€{Number(s.gross_total).toFixed(0)}</div> : null}
+                      {s.gross_total ? <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total)}</div> : null}
                       <div className="text-[10px] text-[#636366]">{new Date(s.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
@@ -579,11 +580,11 @@ export function Bookings() {
                     {nights && <span className="text-[#636366] ml-1.5">({nights}n)</span>}
                   </td>
                   <td className="p-4 text-right text-white font-semibold tabular-nums">
-                    {b.price_total ? `€${Number(b.price_total).toLocaleString()}` : '—'}
+                    {money(b.price_total)}
                   </td>
                   <td className="p-4 text-right tabular-nums">
                     {b.balance_due > 0
-                      ? <span className="text-red-400 font-semibold">€{Number(b.balance_due).toLocaleString()}</span>
+                      ? <span className="text-red-400 font-semibold">{money(b.balance_due)}</span>
                       : <span className="text-emerald-400/60 text-[10px] font-bold">SETTLED</span>}
                   </td>
                   <td className="p-4 text-[#636366] text-xs">{b.channel_name || '—'}</td>

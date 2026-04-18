@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import toast from 'react-hot-toast'
 import { ArrowLeft, RefreshCw, Send, User, Calendar, DollarSign, MessageSquare, MapPin, ExternalLink, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react'
+import { money } from '../lib/money'
 
 const STATUS_OPTIONS = ['new', 'confirmed', 'follow_up', 'waiting_invoice_payment', 'paid_verified', 'checked-in', 'checked-out', 'issue', 'done', 'cancelled', 'no-show']
 const INVOICE_OPTIONS = ['not_applicable', 'to_issue', 'issued', 'waiting_funds', 'funds_received']
@@ -172,25 +173,25 @@ export function BookingDetail() {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">Total</div>
-                    <div className="text-xl font-bold text-white mt-1 tabular-nums">{b.price_total ? `€${Number(b.price_total).toLocaleString()}` : '—'}</div>
+                    <div className="text-xl font-bold text-white mt-1 tabular-nums">{money(b.price_total)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">Paid</div>
-                    <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{b.price_paid ? `€${Number(b.price_paid).toLocaleString()}` : '€0'}</div>
+                    <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{money(b.price_paid || 0)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">Balance</div>
                     <div className={`text-xl font-bold mt-1 tabular-nums ${balanceDue > 0 ? 'text-red-400' : 'text-emerald-400/50'}`}>
-                      {balanceDue > 0 ? `€${balanceDue.toLocaleString()}` : 'Settled'}
+                      {balanceDue > 0 ? money(balanceDue) : 'Settled'}
                     </div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">Deposit</div>
-                    <div className="text-sm text-white mt-1">{b.deposit_amount ? `€${b.deposit_amount}` : '—'} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
+                    <div className="text-sm text-white mt-1">{money(b.deposit_amount)} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">Prepayment</div>
-                    <div className="text-sm text-white mt-1">{b.prepayment_amount ? `€${b.prepayment_amount}` : '—'} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
+                    <div className="text-sm text-white mt-1">{money(b.prepayment_amount)} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                 </div>
 
@@ -210,7 +211,7 @@ export function BookingDetail() {
                     {b.price_elements.map((pe: any) => (
                       <div key={pe.id} className="flex justify-between text-sm py-1.5">
                         <span className="text-gray-400">{pe.name || pe.element_type}</span>
-                        <span className="text-white font-medium tabular-nums">€{Number(pe.amount || 0).toFixed(2)} × {pe.quantity}</span>
+                        <span className="text-white font-medium tabular-nums">{money(pe.amount || 0)} × {pe.quantity}</span>
                       </div>
                     ))}
                   </div>

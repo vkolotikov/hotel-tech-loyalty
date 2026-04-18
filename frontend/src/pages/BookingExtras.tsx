@@ -4,6 +4,7 @@ import { api, resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
 import { Plus, Trash2, Pencil, X, Save, RefreshCw, Upload, Sparkles } from 'lucide-react'
 import { PairTabs, EXTRAS_TABS } from '../components/PairTabs'
+import { money } from '../lib/money'
 
 interface Extra {
   id: number
@@ -143,7 +144,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
           </div>
           {extra.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{extra.description}</p>}
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-bold text-white">€{Number(extra.price).toFixed(0)} <span className="text-xs font-normal text-gray-500">/ {PRICE_TYPES.find(p => p.value === extra.price_type)?.label || extra.price_type}</span></span>
+            <span className="text-sm font-bold text-white">{money(extra.price)} <span className="text-xs font-normal text-gray-500">/ {PRICE_TYPES.find(p => p.value === extra.price_type)?.label || extra.price_type}</span></span>
             <div className="flex gap-1">
               <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
               <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={12} /></button>

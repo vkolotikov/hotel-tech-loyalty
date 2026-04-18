@@ -273,8 +273,6 @@ class BookingAdminController extends Controller
     /** PATCH /v1/admin/bookings/{id}/status — update internal status / invoice / payment. */
     public function updateStatus(Request $request, int $id): JsonResponse
     {
-        $booking = BookingMirror::findOrFail($id);
-
         $validated = $request->validate([
             'internal_status' => 'nullable|string|max:40',
             'invoice_state'   => 'nullable|string|max:40',
@@ -282,7 +280,12 @@ class BookingAdminController extends Controller
             'price_paid'      => 'nullable|numeric|min:0',
         ]);
 
-        $booking->update(array_filter($validated, fn ($v) => $v !== null));
+        // Row-lock so concurrent status/payment edits serialize instead of
+        // racing (e.g. one operator marks paid while another changes status).
+        DB::transaction(function () use ($id, $validated) {
+            $booking = BookingMirror::lockForUpdate()->findOrFail($id);
+            $booking->update(array_filter($validated, fn ($v) => $v !== null));
+        });
 
         return $this->show($id);
     }

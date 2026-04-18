@@ -8,6 +8,7 @@ import {
   Users, BedDouble, Maximize, X, Save, Tag,
 } from 'lucide-react'
 import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
+import { money } from '../lib/money'
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface Room {
@@ -224,7 +225,7 @@ export default function BookingRooms() {
               {/* Price + Actions */}
               <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/[0.04]">
                 <div>
-                  <span className="text-lg font-bold text-white">€{Number(room.base_price).toFixed(0)}</span>
+                  <span className="text-lg font-bold text-white">{money(room.base_price)}</span>
                   <span className="text-xs text-gray-500 ml-1">/ night</span>
                 </div>
                 <div className="flex gap-2">

@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle,
 } from 'lucide-react'
 import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
+import { money } from '../lib/money'
 
 interface ServiceBooking {
   id: number
@@ -122,7 +123,7 @@ export default function ServiceBookings() {
             <div key={k.key} className={card + ' p-4'} style={cardBg}>
               <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{k.label}</div>
               <div className="text-xl font-bold text-white mt-1">
-                {typeof k.value === 'number' && k.key === 'revenue' ? `€${Number(k.value).toFixed(0)}` : k.value}
+                {typeof k.value === 'number' && k.key === 'revenue' ? money(k.value) : k.value}
               </div>
             </div>
           ))}
@@ -178,7 +179,7 @@ export default function ServiceBookings() {
                     <div className="text-xs text-gray-500">{b.customer_email}</div>
                   </td>
                   <td className="p-4 text-gray-300">{new Date(b.start_at).toLocaleString()}</td>
-                  <td className="p-4 font-bold text-white">{b.currency} {Number(b.total_amount).toFixed(0)}</td>
+                  <td className="p-4 font-bold text-white">{money(b.total_amount, b.currency)}</td>
                   <td className="p-4">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${STATUS_COLOR[b.status] || 'bg-white/[0.05] text-gray-400'}`}>
                       {b.status.replace('_', ' ')}
@@ -281,7 +282,7 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
             {detail.extras.map((e: any) => (
               <div key={e.id} className="flex items-center justify-between text-xs">
                 <span className="text-gray-300">{e.name} × {e.quantity}</span>
-                <span className="text-white font-medium">{booking.currency} {Number(e.line_total).toFixed(2)}</span>
+                <span className="text-white font-medium">{money(e.line_total, booking.currency)}</span>
               </div>
             ))}
           </div>
@@ -289,7 +290,7 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
 
         <div className="space-y-1 mb-6">
           <p className="text-xs text-gray-500">Total</p>
-          <p className="text-2xl font-bold text-white">{booking.currency} {Number(booking.total_amount).toFixed(2)}</p>
+          <p className="text-2xl font-bold text-white">{money(booking.total_amount, booking.currency)}</p>
         </div>
 
         <hr className="border-white/[0.06] my-4" />
