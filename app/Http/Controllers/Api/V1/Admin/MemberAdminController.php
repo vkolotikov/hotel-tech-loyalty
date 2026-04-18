@@ -366,6 +366,18 @@ class MemberAdminController extends Controller
             $request->only(['is_active', 'marketing_consent', 'tier_id']),
             fn($v) => $v !== null
         );
+
+        // When tier_id changes via admin override, also refresh the timing
+        // fields so mobile-app tier progress / expiry / review calculations
+        // aren't stuck on the previous tier's schedule. Without this the
+        // tier name would update but getProgressToNextTier() — and any UI
+        // that reads tier_effective_until — would show stale data.
+        if (isset($memberFields['tier_id']) && (int) $memberFields['tier_id'] !== (int) $oldTierId) {
+            $memberFields['tier_effective_from']  = now()->toDateString();
+            $memberFields['tier_effective_until'] = now()->addYear()->toDateString();
+            $memberFields['tier_review_date']     = now()->addYear()->toDateString();
+        }
+
         if (!empty($memberFields)) {
             $member->update($memberFields);
         }

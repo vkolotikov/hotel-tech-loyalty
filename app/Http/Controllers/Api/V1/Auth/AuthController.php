@@ -42,31 +42,30 @@ class AuthController extends Controller
             'organization_id' => 'nullable|integer|exists:organizations,id',
         ]);
 
+        $validated['email'] = strtolower(trim($validated['email']));
+
         // Bind org context for tenant-scoped queries (tier lookup, settings, etc.)
         $orgId = $validated['organization_id'] ?? null;
         if ($orgId && !app()->bound('current_organization_id')) {
             app()->instance('current_organization_id', $orgId);
         }
 
-        $user = User::create([
-            'name'          => $validated['name'],
-            'email'         => $validated['email'],
-            'password'      => Hash::make($validated['password']),
-            'phone'         => $validated['phone'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'nationality'   => $validated['nationality'] ?? null,
-            'language'      => $validated['language'] ?? 'en',
-            'user_type'     => 'member',
-            'organization_id' => $orgId,
-        ]);
-
-        // Find default tier (Bronze) — scoped to the org if available
+        // Resolve default tier up-front so we can fail cleanly before creating
+        // any rows. Previously a missing tier would 500 on a null->id access
+        // after the user row was already written, leaving an orphan.
         $tierQuery = \App\Models\LoyaltyTier::withoutGlobalScopes()
-            ->where('min_points', 0)->where('is_active', true);
+            ->where('is_active', true);
         if ($orgId) {
             $tierQuery->where('organization_id', $orgId);
         }
-        $defaultTier = $tierQuery->first();
+        $defaultTier = (clone $tierQuery)->where('min_points', 0)->first()
+            ?? $tierQuery->orderBy('min_points')->first();
+
+        if (!$defaultTier) {
+            return response()->json([
+                'message' => 'Loyalty program is not configured for this hotel yet. Please contact reception.',
+            ], 422);
+        }
 
         // Find referrer if code provided — scoped to same org
         $referredBy = null;
@@ -79,40 +78,72 @@ class AuthController extends Controller
             $referredBy = $referrerQuery->first();
         }
 
-        $qrToken = $this->qrService->generateToken(new LoyaltyMember(['id' => 0, 'member_number' => '']));
+        try {
+            $result = \DB::transaction(function () use ($validated, $orgId, $defaultTier, $referredBy) {
+                $user = User::create([
+                    'name'            => $validated['name'],
+                    'email'           => $validated['email'],
+                    'password'        => Hash::make($validated['password']),
+                    'phone'           => $validated['phone'] ?? null,
+                    'date_of_birth'   => $validated['date_of_birth'] ?? null,
+                    'nationality'     => $validated['nationality'] ?? null,
+                    'language'        => $validated['language'] ?? 'en',
+                    'user_type'       => 'member',
+                    'organization_id' => $orgId,
+                ]);
 
-        $member = LoyaltyMember::create([
-            'user_id'      => $user->id,
-            'member_number'=> $this->qrService->generateMemberNumber(),
-            'tier_id'      => $defaultTier->id,
-            'qr_code_token'=> hash_hmac('sha256', $user->id . now()->timestamp, config('app.key')),
-            'referral_code'=> $this->qrService->generateReferralCode(),
-            'referred_by'  => $referredBy?->id,
-            'joined_at'    => now(),
-            'points_expiry_date' => now()->addMonths((int) ($orgId ? HotelSetting::getValue('points_expiry_months', 24) : 24)),
-        ]);
+                $member = LoyaltyMember::create([
+                    'user_id'            => $user->id,
+                    'member_number'      => $this->qrService->generateMemberNumber(),
+                    'tier_id'            => $defaultTier->id,
+                    'qr_code_token'      => hash_hmac('sha256', $user->id . now()->timestamp, config('app.key')),
+                    'referral_code'      => $this->qrService->generateReferralCode(),
+                    'referred_by'        => $referredBy?->id,
+                    'joined_at'          => now(),
+                    'points_expiry_date' => now()->addMonths((int) ($orgId ? HotelSetting::getValue('points_expiry_months', 24) : 24)),
+                ]);
 
-        // Award welcome bonus (use org-scoped settings with safe fallbacks)
-        $welcomeBonus = (int) ($orgId ? HotelSetting::getValue('welcome_bonus_points', 500) : 500);
-        $this->loyaltyService->awardPoints($member, $welcomeBonus, 'Welcome bonus points', 'bonus');
+                // Award welcome bonus inside the same transaction — if it
+                // fails, the whole registration rolls back instead of
+                // leaving a zero-point orphan.
+                $welcomeBonus = (int) ($orgId ? HotelSetting::getValue('welcome_bonus_points', 500) : 500);
+                if ($welcomeBonus > 0) {
+                    $this->loyaltyService->awardPoints($member, $welcomeBonus, 'Welcome bonus points', 'bonus');
+                }
 
-        // Award referral points if applicable
-        if ($referredBy) {
-            $referrerBonus = (int) ($orgId ? HotelSetting::getValue('referrer_bonus_points', 250) : 250);
-            $refereeBonus = (int) ($orgId ? HotelSetting::getValue('referee_bonus_points', 250) : 250);
-            $this->loyaltyService->awardPoints($referredBy, $referrerBonus, "Referral: {$user->name} joined", 'referral');
-            $this->loyaltyService->awardPoints($member, $refereeBonus, 'Referral bonus for joining via referral', 'referral');
+                if ($referredBy) {
+                    $referrerBonus = (int) ($orgId ? HotelSetting::getValue('referrer_bonus_points', 250) : 250);
+                    $refereeBonus  = (int) ($orgId ? HotelSetting::getValue('referee_bonus_points', 250) : 250);
+                    $this->loyaltyService->awardPoints($referredBy, $referrerBonus, "Referral: {$user->name} joined", 'referral');
+                    $this->loyaltyService->awardPoints($member, $refereeBonus, 'Referral bonus for joining via referral', 'referral');
+                }
+
+                return ['user' => $user, 'member' => $member];
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Member register failed', [
+                'email' => $validated['email'],
+                'error' => $e->getMessage(),
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            return response()->json([
+                'message' => 'Registration failed: ' . $e->getMessage(),
+            ], 500);
         }
 
-        // Auto-link existing CRM guests by email
-        $this->linkService->linkMemberToGuests($member);
+        $user = $result['user'];
+        $member = $result['member'];
+
+        // Non-critical side effects — don't fail registration if they throw
+        try { $this->linkService->linkMemberToGuests($member); }
+        catch (\Throwable $e) { \Log::warning('linkMemberToGuests failed', ['member_id' => $member->id, 'error' => $e->getMessage()]); }
 
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
             'token'  => $token,
-            'user'   => $user,
-            'member' => $member->load('tier'),
+            'user'   => $user->fresh(),
+            'member' => $member->fresh()->load('tier'),
         ], 201);
     }
 
@@ -123,6 +154,8 @@ class AuthController extends Controller
             'password' => 'required|string',
             'device'   => 'nullable|string|max:50',
         ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
 
         // No tenant context at login — bypass global scopes
         $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
@@ -208,6 +241,10 @@ class AuthController extends Controller
             'name'  => 'nullable|string|max:191',
         ]);
 
+        // Normalize email — verification codes are matched on exact equality,
+        // so stray casing or whitespace between send/verify breaks the flow.
+        $validated['email'] = strtolower(trim($validated['email']));
+
         // Rate limit: max 1 code per email per 60 seconds
         $recent = EmailVerificationCode::where('email', $validated['email'])
             ->where('created_at', '>', now()->subMinutes(1))
@@ -250,6 +287,9 @@ class AuthController extends Controller
             'email' => 'required|email',
             'code'  => 'required|string|size:6',
         ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
+        $validated['code']  = trim($validated['code']);
 
         // Brute-force protection: max 5 failed attempts per email per 15 minutes
         $attemptKey = 'verify_attempts:' . strtolower($validated['email']);
@@ -312,6 +352,8 @@ class AuthController extends Controller
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
         ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
 
         // Require verified email (only if a code was actually sent — skip if mail isn't configured)
         $codeWasSent = EmailVerificationCode::where('email', $validated['email'])->exists();
@@ -396,7 +438,9 @@ class AuthController extends Controller
             // NOTE: Do NOT call setupDefaults() here — let the Setup wizard handle it
             // so the user gets to choose blank vs demo data.
 
-            // Create or re-use local user
+            // Create or re-use local user. When an existing user completes
+            // their trial signup (they had a half-set-up account), honor the
+            // password they just typed — otherwise they'll be locked out.
             $localUser = $existingUser;
             if (!$localUser) {
                 $localUser = User::create([
@@ -407,8 +451,16 @@ class AuthController extends Controller
                     'user_type'       => 'staff',
                     'organization_id' => $org->id,
                 ]);
-            } elseif (!$localUser->organization_id) {
-                $localUser->update(['organization_id' => $org->id]);
+            } else {
+                $updates = [
+                    'password' => Hash::make($validated['password']),
+                    'name'     => $validated['name'],
+                    'phone'    => $validated['phone'] ?? $localUser->phone,
+                ];
+                if (!$localUser->organization_id) {
+                    $updates['organization_id'] = $org->id;
+                }
+                $localUser->update($updates);
             }
 
             // Create staff record if missing (bypass scopes for check)
@@ -1243,6 +1295,7 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $validated = $request->validate(['email' => 'required|email']);
+        $validated['email'] = strtolower(trim($validated['email']));
 
         $user = User::where('email', $validated['email'])->first();
         if (!$user) {
@@ -1275,6 +1328,9 @@ class AuthController extends Controller
             'code'     => 'required|string|size:6',
             'password' => 'required|string|min:8|confirmed',
         ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
+        $validated['code']  = trim($validated['code']);
 
         $record = EmailVerificationCode::where('email', $validated['email'])
             ->where('code', $validated['code'])
@@ -1311,6 +1367,9 @@ class AuthController extends Controller
             'code'     => 'required|string|size:6',
             'password' => 'required|string|min:8|confirmed',
         ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
+        $validated['code']  = trim($validated['code']);
 
         $record = EmailVerificationCode::where('email', $validated['email'])
             ->where('code', $validated['code'])
