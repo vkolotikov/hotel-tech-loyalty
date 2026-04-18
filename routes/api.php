@@ -167,6 +167,10 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings',          [BookingController::class, 'index']);
             Route::get('bookings/{id}',     [BookingController::class, 'show']);
             Route::get('referral',              [ReferralController::class, 'index']);
+            // Hotel Services catalog (read-only browse for member mobile app).
+            // Reuses the public widget controller — tenant middleware has already
+            // bound the org so bindOrg() is a no-op and returns the same shape.
+            Route::get('services',          [ServicePublicController::class, 'config']);
             Route::get('notifications',             [MemberNotificationController::class, 'index']);
             Route::post('notifications/read-all',  [MemberNotificationController::class, 'markAllRead']);
             Route::post('notifications/{id}/read', [MemberNotificationController::class, 'markRead']);
