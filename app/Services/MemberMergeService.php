@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LoyaltyMember;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Merges a "loser" loyalty_member into a "winner". Used when the same person
@@ -55,36 +56,36 @@ class MemberMergeService
         $snapshot = $loser->load('user')->toArray();
 
         return DB::transaction(function () use ($winner, $loser, $snapshot, $performedByUserId, $reason) {
-            // 1) Plain re-points
+            // 1) Plain re-points. Skip missing tables/columns via Schema checks
+            //    — on PostgreSQL, letting a query error bubble up aborts the
+            //    whole transaction (25P02), so a try/catch around DB::table
+            //    here wouldn't actually let us continue.
             $moved = [];
             foreach (self::PLAIN_TABLES as $table) {
-                try {
-                    $moved[$table] = DB::table($table)
-                        ->where('member_id', $loser->id)
-                        ->update(['member_id' => $winner->id]);
-                } catch (\Throwable $e) {
-                    // Table may not exist in this deployment — skip silently.
-                    Log::info("MemberMerge: skipped {$table}", ['error' => $e->getMessage()]);
+                if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'member_id')) {
+                    continue;
                 }
+                $moved[$table] = DB::table($table)
+                    ->where('member_id', $loser->id)
+                    ->update(['member_id' => $winner->id]);
             }
 
             // 2) Unique-constrained tables: drop loser rows whose key already
             //    exists on the winner, then re-point what's left.
             foreach (self::UNIQUE_TABLES as $table => $col) {
-                try {
-                    $winnerKeys = DB::table($table)->where('member_id', $winner->id)->pluck($col);
-                    if ($winnerKeys->isNotEmpty()) {
-                        DB::table($table)
-                            ->where('member_id', $loser->id)
-                            ->whereIn($col, $winnerKeys)
-                            ->delete();
-                    }
-                    $moved[$table] = DB::table($table)
-                        ->where('member_id', $loser->id)
-                        ->update(['member_id' => $winner->id]);
-                } catch (\Throwable $e) {
-                    Log::info("MemberMerge: skipped {$table}", ['error' => $e->getMessage()]);
+                if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'member_id') || !Schema::hasColumn($table, $col)) {
+                    continue;
                 }
+                $winnerKeys = DB::table($table)->where('member_id', $winner->id)->pluck($col);
+                if ($winnerKeys->isNotEmpty()) {
+                    DB::table($table)
+                        ->where('member_id', $loser->id)
+                        ->whereIn($col, $winnerKeys)
+                        ->delete();
+                }
+                $moved[$table] = DB::table($table)
+                    ->where('member_id', $loser->id)
+                    ->update(['member_id' => $winner->id]);
             }
 
             // 3) Guest CRM rows — re-point member_id (nullable, no unique).
@@ -146,11 +147,7 @@ class MemberMergeService
             $loserUserId = $loser->user_id;
             $loser->delete();
             if ($loserUserId) {
-                try {
-                    DB::table('users')->where('id', $loserUserId)->delete();
-                } catch (\Throwable $e) {
-                    Log::info('MemberMerge: loser user delete skipped', ['error' => $e->getMessage()]);
-                }
+                DB::table('users')->where('id', $loserUserId)->delete();
             }
 
             return [
