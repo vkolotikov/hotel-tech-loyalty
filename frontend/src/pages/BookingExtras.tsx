@@ -224,7 +224,7 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price Type</label>
               <select value={priceType} onChange={e => setPriceType(e.target.value)} className={inputCls}>
-                {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
+                {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: '#0f1c18', color: '#fff' }}>{pt.label}</option>)}
               </select>
             </div>
           </div>

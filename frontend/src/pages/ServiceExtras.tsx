@@ -197,13 +197,13 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Currency</label>
               <select value={currency} onChange={e => setCurrency(e.target.value)} className={inputCls}>
-                <option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option>
+                {['EUR','USD','GBP','CHF'].map(c => <option key={c} value={c} style={{ background: '#0f1c18', color: '#fff' }}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Charge</label>
               <select value={priceType} onChange={e => setPriceType(e.target.value)} className={inputCls}>
-                {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
+                {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: '#0f1c18', color: '#fff' }}>{pt.label}</option>)}
               </select>
             </div>
           </div>
