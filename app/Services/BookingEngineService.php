@@ -15,6 +15,7 @@ use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -120,88 +121,133 @@ class BookingEngineService
 
         $payload = $hold->payload_json;
         $guest   = $data['guest'] ?? [];
+        $apartmentId = $payload['unit_id'];
 
-        // Try to link or create a CRM guest
+        // Try to link or create a CRM guest (outside the lock — idempotent by email).
         $guestId = $this->linkOrCreateGuest($guest, $orgId);
 
-        // Create reservation in Smoobu. Field names follow the Smoobu Channel
-        // Manager API contract (apartmentId / arrivalDate / departureDate /
-        // channel_id). If the account doesn't have the write API enabled,
-        // Smoobu returns 404 — in that case we still record the booking locally
-        // as pending_pms_sync so the customer flow completes and staff can
-        // reconcile in the dashboard.
-        $pmsResult = null;
-        $pmsError  = null;
-        try {
-            $pmsResult = $this->smoobu->createReservation([
-                'apartmentId' => $payload['unit_id'],
-                'arrivalDate' => $payload['check_in'],
-                'departureDate' => $payload['check_out'],
-                'channel_id'  => (int) ($this->smoobu->channelId() ?: 0),
-                'firstName'   => $guest['first_name'] ?? '',
-                'lastName'    => $guest['last_name'] ?? '',
-                'email'       => $guest['email'] ?? '',
-                'phone'       => $guest['phone'] ?? '',
-                'adults'      => (int) $payload['adults'],
-                'children'    => (int) $payload['children'],
-                'price'       => (float) $payload['gross_total'],
-                'language'    => 'en',
+        // Serialize concurrent confirms for the same room+org using a PG advisory
+        // transaction lock. Two guests holding overlapping dates on the same room
+        // would otherwise both pass the quote-time check and both create mirrors,
+        // double-booking a single-inventory unit.
+        $lockKey = "room:{$orgId}:{$apartmentId}";
+
+        [$mirror, $result, $internalStatus, $pmsResult] = DB::transaction(function () use (
+            $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey
+        ) {
+            DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+
+            // Re-load hold under lock — defends against concurrent consumption.
+            $hold = BookingHold::where('id', $hold->id)->lockForUpdate()->first();
+            if (!$hold || !$hold->isActive()) {
+                $this->logSubmission('failure', 'hold_expired', 'Hold expired or consumed', $data, $requestId, $idempotencyKey);
+                throw new \RuntimeException('Hold expired or not found');
+            }
+
+            // Re-check inventory now that we own the lock. Anything committed
+            // during the quote window is visible here.
+            $rooms = \App\Models\BookingRoom::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where(function ($q) use ($apartmentId) {
+                    $q->where('pms_id', $apartmentId)->orWhere('id', $apartmentId);
+                })
+                ->first();
+            $inventory = max(1, (int) ($rooms->inventory_count ?? 1));
+
+            $booked = BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('apartment_id', $apartmentId)
+                ->whereNotIn('booking_state', ['cancelled'])
+                ->where(function ($q) {
+                    $q->whereNull('internal_status')->orWhereNotIn('internal_status', ['cancelled']);
+                })
+                ->where('arrival_date', '<', $payload['check_out'])
+                ->where('departure_date', '>', $payload['check_in'])
+                ->count();
+
+            if ($booked >= $inventory) {
+                $this->logSubmission('failure', 'inventory_unavailable', 'Room no longer available for selected dates', $data, $requestId, $idempotencyKey);
+                throw new \RuntimeException('This room is no longer available for the selected dates. Please choose another.');
+            }
+
+            // Create reservation in Smoobu. Field names follow the Smoobu Channel
+            // Manager API contract. If the account doesn't have the write API
+            // enabled, Smoobu returns 404 — in that case we still record the
+            // booking locally as pending_pms_sync so the customer flow completes
+            // and staff can reconcile in the dashboard.
+            $pmsResult = null;
+            try {
+                $pmsResult = $this->smoobu->createReservation([
+                    'apartmentId' => $payload['unit_id'],
+                    'arrivalDate' => $payload['check_in'],
+                    'departureDate' => $payload['check_out'],
+                    'channel_id'  => (int) ($this->smoobu->channelId() ?: 0),
+                    'firstName'   => $guest['first_name'] ?? '',
+                    'lastName'    => $guest['last_name'] ?? '',
+                    'email'       => $guest['email'] ?? '',
+                    'phone'       => $guest['phone'] ?? '',
+                    'adults'      => (int) $payload['adults'],
+                    'children'    => (int) $payload['children'],
+                    'price'       => (float) $payload['gross_total'],
+                    'language'    => 'en',
+                ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
+                    'org_id'  => $orgId,
+                    'unit_id' => $payload['unit_id'],
+                    'error'   => $e->getMessage(),
+                ]);
+                $this->logSubmission('warning', 'pms_error', $e->getMessage(), $data, $requestId, $idempotencyKey);
+            }
+
+            $result = $pmsResult ?: [
+                'id'           => 'LOCAL-' . strtoupper(\Illuminate\Support\Str::random(10)),
+                'reference-id' => 'LOC-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)),
+            ];
+            $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
+
+            // Consume hold inside the lock — the updated row is visible to
+            // concurrent requests once this transaction commits.
+            $hold->update(['status' => 'consumed']);
+
+            // Resolve payment info (from Stripe verification in controller)
+            $paymentIntentId = $data['payment_intent_id'] ?? null;
+            $paymentMethod   = $data['payment_method'] ?? null;
+            $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? 'paid' : null);
+
+            $mirror = BookingMirror::create([
+                'reservation_id'    => (string) ($result['id'] ?? ''),
+                'booking_reference' => $result['reference-id'] ?? null,
+                'booking_type'      => 'reservation',
+                'booking_state'     => 'confirmed',
+                'apartment_id'      => $payload['unit_id'],
+                'apartment_name'    => $payload['unit_name'],
+                'channel_name'      => 'Website',
+                'guest_id'          => $guestId,
+                'guest_name'        => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
+                'guest_email'       => $guest['email'] ?? null,
+                'guest_phone'       => $guest['phone'] ?? null,
+                'adults'            => $payload['adults'],
+                'children'          => $payload['children'],
+                'arrival_date'      => $payload['check_in'],
+                'departure_date'    => $payload['check_out'],
+                'price_total'       => $payload['gross_total'],
+                'price_paid'        => $paymentStatus === 'paid' ? $payload['gross_total'] : null,
+                'payment_status'    => $paymentStatus,
+                'payment_method'    => $paymentMethod,
+                'stripe_payment_intent_id' => $paymentIntentId,
+                'internal_status'   => $internalStatus,
+                'synced_at'         => $pmsResult ? now() : null,
             ]);
-        } catch (\Throwable $e) {
-            $pmsError = $e->getMessage();
-            \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
-                'org_id'  => $orgId,
-                'unit_id' => $payload['unit_id'],
-                'error'   => $pmsError,
-            ]);
-            $this->logSubmission('warning', 'pms_error', $pmsError, $data, $requestId, $idempotencyKey);
-        }
 
-        $result = $pmsResult ?: [
-            'id'           => 'LOCAL-' . strtoupper(\Illuminate\Support\Str::random(10)),
-            'reference-id' => 'LOC-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)),
-        ];
-        $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
+            // Persist line-item breakdown so admin booking detail can show the
+            // accommodation row plus every extra the guest selected. Keeping
+            // this inside the transaction means the mirror and its line items
+            // commit atomically.
+            $this->persistPriceElements($mirror, $payload, $orgId);
 
-        // Consume hold
-        $hold->update(['status' => 'consumed']);
-
-        // Resolve payment info (from Stripe verification in controller)
-        $paymentIntentId = $data['payment_intent_id'] ?? null;
-        $paymentMethod   = $data['payment_method'] ?? null;
-        $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? 'paid' : null);
-
-        // Create mirror record
-        $mirror = BookingMirror::create([
-            'reservation_id'    => (string) ($result['id'] ?? ''),
-            'booking_reference' => $result['reference-id'] ?? null,
-            'booking_type'      => 'reservation',
-            'booking_state'     => 'confirmed',
-            'apartment_id'      => $payload['unit_id'],
-            'apartment_name'    => $payload['unit_name'],
-            'channel_name'      => 'Website',
-            'guest_id'          => $guestId,
-            'guest_name'        => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
-            'guest_email'       => $guest['email'] ?? null,
-            'guest_phone'       => $guest['phone'] ?? null,
-            'adults'            => $payload['adults'],
-            'children'          => $payload['children'],
-            'arrival_date'      => $payload['check_in'],
-            'departure_date'    => $payload['check_out'],
-            'price_total'       => $payload['gross_total'],
-            'price_paid'        => $paymentStatus === 'paid' ? $payload['gross_total'] : null,
-            'payment_status'    => $paymentStatus,
-            'payment_method'    => $paymentMethod,
-            'stripe_payment_intent_id' => $paymentIntentId,
-            'internal_status'   => $internalStatus,
-            'synced_at'         => $pmsResult ? now() : null,
-        ]);
-
-        // Persist line-item breakdown so admin booking detail can show the
-        // accommodation row plus every extra the guest selected. Without this
-        // the BookingDetail price-elements panel stays empty for direct
-        // bookings made through the website widget.
-        $this->persistPriceElements($mirror, $payload, $orgId);
+            return [$mirror, $result, $internalStatus, $pmsResult];
+        });
 
         // Lifecycle: a confirmed widget booking is real engagement. If the
         // departure date has already passed (rare for widget but possible

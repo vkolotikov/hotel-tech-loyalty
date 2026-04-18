@@ -184,19 +184,26 @@ class ServiceBookingController extends Controller
 
         $service = Service::findOrFail($data['service_id']);
 
-        try {
-            $reservation = $scheduler->reserveSlot(
-                $service,
-                $data['service_master_id'] ?? null,
-                $data['start_at'],
-            );
-        } catch (\RuntimeException $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
-        }
+        // Serialize slot claims per master (or per service when master is "any")
+        // so two concurrent admin creates — or an admin + widget race — cannot
+        // both reserve overlapping slots on the same master.
+        $lockKey = !empty($data['service_master_id'])
+            ? "svcm:{$data['service_master_id']}"
+            : "svc:{$service->id}";
 
-        return DB::transaction(function () use ($data, $service, $reservation, $request) {
-            $partySize = (int) ($data['party_size'] ?? 1);
-            $servicePrice = (float) $reservation['price'];
+        try {
+            return DB::transaction(function () use ($data, $service, $scheduler, $request, $lockKey) {
+                DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+
+                // Re-check conflicts inside the lock — authoritative.
+                $reservation = $scheduler->reserveSlot(
+                    $service,
+                    $data['service_master_id'] ?? null,
+                    $data['start_at'],
+                );
+
+                $partySize = (int) ($data['party_size'] ?? 1);
+                $servicePrice = (float) $reservation['price'];
 
             $extrasTotal = 0;
             $extraRows = [];
@@ -262,7 +269,11 @@ class ServiceBookingController extends Controller
             ]);
 
             return response()->json($booking->fresh(['service', 'master', 'extras']), 201);
-        });
+            });
+        } catch (\RuntimeException $e) {
+            // reserveSlot lost the race to a concurrent confirm.
+            return response()->json(['error' => $e->getMessage()], 409);
+        }
     }
 
     /** PATCH /v1/admin/service-bookings/{id}/status */

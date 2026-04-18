@@ -350,19 +350,25 @@ class ServicePublicController extends Controller
             }
         }
 
-        try {
-            $reservation = $scheduler->reserveSlot(
-                $service,
-                $data['service_master_id'] ?? null,
-                $data['start_at'],
-            );
-        } catch (\RuntimeException $e) {
-            $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 409);
-        }
+        // Serialize slot claims per master (or per service when master is "any")
+        // using a PG advisory xact lock. Two concurrent confirms for the same
+        // master would otherwise both pass reserveSlot's SELECT-only check and
+        // both insert overlapping bookings.
+        $lockKey = !empty($data['service_master_id'])
+            ? "svcm:{$data['service_master_id']}"
+            : "svc:{$service->id}";
 
         try {
-            $booking = DB::transaction(function () use ($data, $service, $reservation, $orgId, $paymentStatus) {
+            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey) {
+                DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+
+                // Re-run the conflict check inside the lock — definitive source of truth.
+                $reservation = $scheduler->reserveSlot(
+                    $service,
+                    $data['service_master_id'] ?? null,
+                    $data['start_at'],
+                );
+
                 $partySize = (int) ($data['party_size'] ?? 1);
                 $servicePrice = (float) $reservation['price'];
 
@@ -422,6 +428,11 @@ class ServicePublicController extends Controller
 
                 return $booking;
             });
+        } catch (\RuntimeException $e) {
+            // reserveSlot threw — the requested slot was taken by a concurrent
+            // confirm while we were waiting for the advisory lock.
+            $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 409);
         } catch (\Throwable $e) {
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
             return response()->json(['error' => 'Failed to create booking: ' . $e->getMessage()], 500);
