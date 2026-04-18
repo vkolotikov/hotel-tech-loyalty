@@ -43,6 +43,7 @@ export default function ServiceExtras() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/service-extras/${id}`),
     onSuccess: () => { toast.success('Extra deleted'); qc.invalidateQueries({ queryKey: ['service-extras'] }) },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   return (

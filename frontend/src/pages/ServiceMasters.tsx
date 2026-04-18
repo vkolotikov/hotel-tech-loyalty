@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -64,6 +64,7 @@ export default function ServiceMasters() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/service-masters/${id}`),
     onSuccess: () => { toast.success('Master deleted'); qc.invalidateQueries({ queryKey: ['service-masters'] }) },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   return (
@@ -320,11 +321,14 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
 
   const [schedules, setSchedules] = useState<Schedule[]>(master.schedules || [])
   const [savingSched, setSavingSched] = useState(false)
+  const [hydratedFromDetail, setHydratedFromDetail] = useState(false)
 
-  // Sync from detail when it loads
-  if (detail && detail.schedules && schedules.length === 0 && (master.schedules || []).length === 0) {
-    setSchedules(detail.schedules)
-  }
+  useEffect(() => {
+    if (!hydratedFromDetail && detail?.schedules && (master.schedules || []).length === 0) {
+      setSchedules(detail.schedules)
+      setHydratedFromDetail(true)
+    }
+  }, [detail, hydratedFromDetail, master.schedules])
 
   const toggleDay = (dow: number) => {
     const exists = schedules.find(s => s.day_of_week === dow)
@@ -373,13 +377,16 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
       setOffDate(''); setOffReason('')
       qc.invalidateQueries({ queryKey: ['service-master', master.id] })
     },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to add time-off'),
   })
 
   const removeTimeOffMut = useMutation({
     mutationFn: (entryId: number) => api.delete(`/v1/admin/service-masters/${master.id}/time-off/${entryId}`),
     onSuccess: () => {
+      toast.success('Time-off removed')
       qc.invalidateQueries({ queryKey: ['service-master', master.id] })
     },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to remove time-off'),
   })
 
   const timeOff = detail?.time_off || []

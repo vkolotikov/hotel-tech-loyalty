@@ -103,6 +103,7 @@ function ServicesList() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/services/${id}`),
     onSuccess: () => { toast.success('Service deleted'); qc.invalidateQueries({ queryKey: ['services'] }) },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   const filtered = services.filter(s => {
@@ -397,6 +398,7 @@ function CategoriesList() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/service-categories/${id}`),
     onSuccess: () => { toast.success('Category deleted'); qc.invalidateQueries({ queryKey: ['service-categories'] }) },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   return (

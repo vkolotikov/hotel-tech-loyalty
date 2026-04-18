@@ -282,7 +282,7 @@ export function BookingDetail() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">€{Number(s.gross_total).toFixed(2)}</div>}
+                      {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total)}</div>}
                       <div className="text-[10px] text-gray-600">{new Date(s.created_at).toLocaleString()}</div>
                       {s.failure_code && <div className="text-[10px] text-red-400 mt-0.5">{s.failure_code}</div>}
                     </div>

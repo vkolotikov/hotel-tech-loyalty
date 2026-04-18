@@ -88,6 +88,7 @@ export default function BookingRooms() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/booking-rooms/${id}`),
     onSuccess: () => { toast.success('Room deleted'); qc.invalidateQueries({ queryKey: ['booking-rooms'] }) },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   const saveMut = useMutation({

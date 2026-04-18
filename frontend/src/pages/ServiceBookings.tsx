@@ -94,6 +94,7 @@ export default function ServiceBookings() {
       qc.invalidateQueries({ queryKey: ['service-bookings-dashboard'] })
       toast.success('Status updated')
     },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to update status'),
   })
 
   return (
@@ -193,7 +194,8 @@ export default function ServiceBookings() {
                   <td className="p-4 text-right">
                     {b.status === 'pending' && (
                       <button onClick={e => { e.stopPropagation(); updateStatusMut.mutate({ id: b.id, status: 'confirmed' }) }}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 font-bold">Confirm</button>
+                        disabled={updateStatusMut.isPending && updateStatusMut.variables?.id === b.id}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 font-bold disabled:opacity-40">Confirm</button>
                     )}
                   </td>
                 </tr>
