@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, X, Save, RefreshCw, Upload, Sparkles } from 'lucide-react'
+import { PairTabs, EXTRAS_TABS } from '../components/PairTabs'
 
 interface Extra {
   id: number
@@ -46,6 +47,7 @@ export default function ServiceExtras() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={EXTRAS_TABS} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Service Extras</h1>

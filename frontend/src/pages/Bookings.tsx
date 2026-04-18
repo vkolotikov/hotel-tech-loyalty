@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -291,6 +292,7 @@ export function Bookings() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={BOOKINGS_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

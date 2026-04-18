@@ -6,6 +6,7 @@ import {
   Plus, Pencil, Trash2, X, Save, RefreshCw, Upload, Sparkles,
   Clock, Tag, FolderTree, Search,
 } from 'lucide-react'
+import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
 
 interface ServiceCategory {
   id: number
@@ -55,6 +56,7 @@ export default function Services() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={CATALOG_TABS} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Services</h1>

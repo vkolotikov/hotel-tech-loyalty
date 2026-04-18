@@ -7,6 +7,7 @@ import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
   CheckCircle2, AlertCircle,
 } from 'lucide-react'
+import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
 
 interface ServiceBooking {
   id: number
@@ -96,6 +97,7 @@ export default function ServiceBookings() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={BOOKINGS_TABS} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Service Bookings</h1>

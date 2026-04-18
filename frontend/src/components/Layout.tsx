@@ -63,23 +63,17 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Reservations',
+    label: 'Bookings',
     items: [
-      { path: '/bookings',             label: 'Reservations', icon: BedDouble,     gate: 'all',   product: 'booking' },
-      { path: '/bookings/calendar',    label: 'Calendar',     icon: CalendarDays,  gate: 'all',   product: 'booking' },
-      { path: '/booking-rooms',        label: 'Rooms',        icon: Home,          gate: 'admin', product: 'booking' },
-      { path: '/booking-extras',       label: 'Extras',       icon: Package,       gate: 'admin', product: 'booking' },
-      { path: '/bookings/payments',    label: 'Payments',     icon: CreditCard,    gate: 'all',   product: 'booking' },
-    ],
-  },
-  {
-    label: 'Services',
-    items: [
-      { path: '/service-bookings',          label: 'Bookings',  icon: ClipboardList, gate: 'all',   product: 'booking' },
-      { path: '/service-bookings/calendar', label: 'Calendar',  icon: CalendarDays,  gate: 'all',   product: 'booking' },
-      { path: '/services',                  label: 'Services',  icon: Scissors,      gate: 'admin', product: 'booking' },
-      { path: '/service-masters',           label: 'Masters',   icon: UserCog,       gate: 'admin', product: 'booking' },
-      { path: '/service-extras',            label: 'Add-ons',   icon: Sparkle,       gate: 'admin', product: 'booking' },
+      { path: '/calendar',          label: 'Calendar',         icon: CalendarDays,  gate: 'all',   product: 'booking' },
+      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking' },
+      { path: '/service-bookings',  label: 'Service Bookings', icon: ClipboardList, gate: 'all',   product: 'booking' },
+      { path: '/booking-rooms',     label: 'Rooms',            icon: Home,          gate: 'admin', product: 'booking' },
+      { path: '/services',          label: 'Services',         icon: Scissors,      gate: 'admin', product: 'booking' },
+      { path: '/service-masters',   label: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
+      { path: '/booking-extras',    label: 'Extras',           icon: Package,       gate: 'admin', product: 'booking' },
+      { path: '/service-extras',    label: 'Add-ons',          icon: Sparkle,       gate: 'admin', product: 'booking' },
+      { path: '/bookings/payments', label: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
     ],
   },
   {

@@ -7,6 +7,7 @@ import {
   Plus, Trash2, Pencil, Image as ImageIcon, Upload, RefreshCw,
   Users, BedDouble, Maximize, X, Save, Tag,
 } from 'lucide-react'
+import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface Room {
@@ -106,6 +107,7 @@ export default function BookingRooms() {
 
   return (
     <div className="space-y-6">
+      <PairTabs tabs={CATALOG_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

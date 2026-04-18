@@ -55,6 +55,7 @@ const ServiceMasters = lazy(() => import('./pages/ServiceMasters'))
 const ServiceExtras = lazy(() => import('./pages/ServiceExtras'))
 const ServiceBookings = lazy(() => import('./pages/ServiceBookings'))
 const ServiceBookingCalendar = lazy(() => import('./pages/ServiceBookingCalendar'))
+const CalendarUnified = lazy(() => import('./pages/CalendarUnified'))
 const AiChat = lazy(() => import('./components/AiChat'))
 
 function PageLoader() {
@@ -159,6 +160,7 @@ export default function App() {
           <Route path="/bookings" element={<LazyRoute product="booking"><Bookings /></LazyRoute>} />
           <Route path="/booking-rooms" element={<LazyRoute gate="admin" product="booking"><BookingRooms /></LazyRoute>} />
           <Route path="/booking-extras" element={<LazyRoute gate="admin" product="booking"><BookingExtras /></LazyRoute>} />
+          <Route path="/calendar" element={<LazyRoute product="booking"><CalendarUnified /></LazyRoute>} />
           <Route path="/bookings/calendar" element={<LazyRoute product="booking"><BookingCalendar /></LazyRoute>} />
           <Route path="/bookings/payments" element={<LazyRoute product="booking"><BookingPayments /></LazyRoute>} />
           {/* Submissions log still routable from inside Bookings page header. */}
