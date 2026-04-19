@@ -7,6 +7,37 @@ import {
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
+// Optional — set VITE_BRAND_LOGO_URL in the frontend .env to render a real
+// logo on the login screen instead of the fallback "HT" gradient badge.
+const BRAND_LOGO_URL = import.meta.env.VITE_BRAND_LOGO_URL as string | undefined
+
+function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact?: boolean }) {
+  const [failed, setFailed] = useState(false)
+  const Wrapper = onClick ? 'button' : 'div'
+  const height = compact ? 28 : 36
+
+  if (BRAND_LOGO_URL && !failed) {
+    return (
+      <Wrapper onClick={onClick} className="relative z-10 inline-flex items-center gap-3 text-left">
+        <img
+          src={BRAND_LOGO_URL}
+          alt="HotelTech"
+          onError={() => setFailed(true)}
+          style={{ height, width: 'auto', display: 'block' }}
+          className="drop-shadow-lg"
+        />
+      </Wrapper>
+    )
+  }
+
+  return (
+    <Wrapper onClick={onClick} className="relative z-10 inline-flex items-center gap-3 text-left">
+      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
+      <span className="text-[17px] font-semibold">HotelTech</span>
+    </Wrapper>
+  )
+}
+
 type View = 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
 type BillingInterval = 'monthly' | 'yearly'
 
@@ -420,14 +451,14 @@ export function Login() {
     ? 'Run your whole hotel on one platform'
     : isForgot || isReset
       ? 'Locked out? No problem.'
-      : 'AI Hotel Management Systems'
+      : 'The AI-native platform for modern hotels'
   const heroSubtitle = isTrial
-    ? 'CRM, Loyalty, Booking engine and AI Chatbot — included in your free trial.'
+    ? 'CRM, loyalty, bookings and a 24/7 AI chatbot — included in your free trial.'
     : isForgot
       ? 'Enter your email and we\'ll send a 6-digit reset code. Valid for 15 minutes.'
       : isReset
         ? 'Enter the code from your email and choose a new password.'
-        : 'The unified platform for reservations, loyalty, guest chat and revenue — powered by AI.'
+        : 'CRM, loyalty, bookings, live chat and analytics — unified in one workspace.'
 
   const formTitle = isTrial
     ? 'Start your free trial'
@@ -468,10 +499,7 @@ export function Login() {
         <div aria-hidden className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full blur-[80px] bg-blue-500/40 pointer-events-none" />
         <div aria-hidden className="absolute -bottom-36 -right-24 w-[380px] h-[380px] rounded-full blur-[80px] bg-sky-400/30 pointer-events-none" />
 
-        <button onClick={() => navigate('/login')} className="relative z-10 inline-flex items-center gap-3 text-left">
-          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
-          <span className="text-[17px] font-semibold">HotelTech</span>
-        </button>
+        <BrandMark onClick={() => navigate('/login')} />
 
         <div className="relative z-10 max-w-[520px]">
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
@@ -484,9 +512,9 @@ export function Login() {
 
           <ul className="space-y-3">
             {[
-              'Unified CRM, Loyalty & Booking engine',
-              'Smart AI chatbot for guests and staff',
-              'Smoobu PMS sync & revenue insights',
+              'Unified CRM, loyalty and booking engine',
+              'AI copilot for staff, smart chatbot for guests',
+              'Live chat inbox, visitor tracking and automation',
             ].map((t) => (
               <li key={t} className="flex gap-3 items-start text-sm text-slate-300">
                 <span className="shrink-0 w-[22px] h-[22px] rounded-full inline-flex items-center justify-center text-[12px] font-bold bg-green-500/15 text-green-400 border border-green-500/25">✓</span>
@@ -506,10 +534,9 @@ export function Login() {
             'radial-gradient(circle at 80% 10%, rgba(59,130,246,0.08), transparent 55%), #0b1226',
         }}
       >
-        <button onClick={() => navigate('/login')} className="lg:hidden inline-flex items-center gap-3 mb-6 self-start">
-          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
-          <span className="text-[17px] font-semibold">HotelTech</span>
-        </button>
+        <div className="lg:hidden mb-6 self-start">
+          <BrandMark onClick={() => navigate('/login')} compact />
+        </div>
 
         <div className="w-full max-w-[440px] mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
           {(isForgot || isReset) && (
