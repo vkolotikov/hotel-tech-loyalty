@@ -1438,4 +1438,173 @@ class AuthController extends Controller
             'member' => $member,
         ]);
     }
+
+    /**
+     * POST /v1/auth/activate
+     *
+     * Activate a new staff account from a SaaS invite email. Takes the
+     * password-reset token emitted by SaaS, sets the password there (SaaS
+     * remains the source of truth for identity), then provisions the local
+     * User / Organization / Staff records so the new user lands straight
+     * in the loyalty admin — no extra redirect through the SaaS frontend.
+     */
+    public function activateAccount(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token'    => 'required|string',
+            'email'    => 'required|email',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $validated['email'] = strtolower(trim($validated['email']));
+
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'Account service is not configured. Please contact support.'], 500);
+        }
+
+        // 1. Set password against SaaS — it owns identity + billing.
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(12)->acceptJson()->post(
+                rtrim($saasApi, '/') . '/auth/reset-password',
+                [
+                    'token'    => $validated['token'],
+                    'email'    => $validated['email'],
+                    'password' => $validated['password'],
+                ]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'error' => 'Could not reach the account service. Please try again in a moment.',
+            ], 502);
+        }
+
+        if (!$response->successful()) {
+            $body = $response->json();
+            $msg  = $body['error'] ?? $body['message'] ?? 'This activation link is invalid or has expired. Please request a new one.';
+            return response()->json(['error' => $msg], $response->status());
+        }
+
+        $data       = $response->json();
+        $saasToken  = $data['token'] ?? null;
+        $saasUser   = $data['user'] ?? null;
+        $saasOrg    = $data['organization'] ?? null;
+
+        if (!$saasUser) {
+            return response()->json([
+                'error' => 'Activation succeeded but no account information was returned. Please sign in manually.',
+            ], 500);
+        }
+
+        // 2. Provision the local Organization + User + Staff so the user
+        //    can use the loyalty admin immediately. Mirrors the
+        //    SaasAuthMiddleware sync logic but runs eagerly here so we can
+        //    surface any failure on the activation page instead of
+        //    stranding the user on the login screen.
+        try {
+            $org = null;
+            if ($saasOrg && !empty($saasOrg['id'])) {
+                $org = \App\Models\Organization::where('saas_org_id', $saasOrg['id'])->first();
+                if (!$org) {
+                    $baseSlug = !empty($saasOrg['slug'])
+                        ? $saasOrg['slug']
+                        : \Illuminate\Support\Str::slug($saasOrg['name'] ?? 'org');
+                    $slug   = $baseSlug ?: 'org';
+                    $suffix = 1;
+                    while (\App\Models\Organization::where('slug', $slug)->exists()) {
+                        $slug = $baseSlug . '-' . $suffix++;
+                    }
+                    $org = \App\Models\Organization::create([
+                        'saas_org_id' => $saasOrg['id'],
+                        'name'        => $saasOrg['name'] ?? 'Organization',
+                        'slug'        => $slug,
+                    ]);
+                }
+            }
+
+            $localUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+            if (!$org && $localUser?->organization_id) {
+                $org = \App\Models\Organization::find($localUser->organization_id);
+            }
+            if (!$org) {
+                return response()->json([
+                    'error' => 'No organization is linked to this invite. Please contact your administrator.',
+                ], 422);
+            }
+
+            app()->instance('current_organization_id', $org->id);
+
+            if (!$localUser) {
+                $localUser = User::create([
+                    'name'            => $saasUser['name'] ?? $validated['email'],
+                    'email'           => $validated['email'],
+                    'password'        => Hash::make($validated['password']),
+                    'user_type'       => 'staff',
+                    'organization_id' => $org->id,
+                ]);
+            } else {
+                $updates = ['password' => Hash::make($validated['password'])];
+                if (!$localUser->organization_id) {
+                    $updates['organization_id'] = $org->id;
+                }
+                if (empty($localUser->name) && !empty($saasUser['name'])) {
+                    $updates['name'] = $saasUser['name'];
+                }
+                $localUser->update($updates);
+            }
+
+            $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
+            if (!$staff) {
+                $staff = Staff::withoutGlobalScopes()->create([
+                    'user_id'            => $localUser->id,
+                    'organization_id'    => $org->id,
+                    'role'               => $saasOrg['role'] ?? 'super_admin',
+                    'hotel_name'         => $org->name,
+                    'can_award_points'   => true,
+                    'can_redeem_points'  => true,
+                    'can_manage_offers'  => true,
+                    'can_view_analytics' => true,
+                ]);
+            }
+
+            // Best-effort entitlements sync from SaaS bootstrap endpoint.
+            if ($saasToken) {
+                try {
+                    $bootstrap = \Illuminate\Support\Facades\Http::withToken($saasToken)->timeout(5)
+                        ->acceptJson()->get(rtrim($saasApi, '/') . '/tools/bootstrap');
+                    if ($bootstrap->successful()) {
+                        $bs  = $bootstrap->json();
+                        $sub = $bs['subscription'] ?? null;
+                        if ($sub) {
+                            $org->plan_slug           = $sub['plan']['slug'] ?? $org->plan_slug;
+                            $org->subscription_status = $sub['status'] ?? 'TRIALING';
+                            $org->trial_end           = $sub['trialEnd'] ?? $org->trial_end;
+                            $org->period_end          = $sub['currentPeriodEnd'] ?? $org->period_end;
+                        }
+                        $org->entitled_products      = $bs['entitled_product_slugs'] ?? ($org->entitled_products ?? []);
+                        $org->plan_features          = (array) ($bs['features'] ?? ($org->plan_features ?? []));
+                        $org->entitlements_synced_at = now();
+                        $org->save();
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'error' => 'Could not finish setting up your account: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        $localUser->refresh();
+        $sanctumToken = $localUser->createToken('admin')->plainTextToken;
+
+        return response()->json([
+            'token' => $sanctumToken,
+            'user'  => $localUser,
+            'staff' => $staff,
+        ]);
+    }
 }

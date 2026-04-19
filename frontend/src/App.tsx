@@ -12,6 +12,7 @@ import { useSubscription } from './hooks/useSubscription'
 
 // Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
+import { Activate } from './pages/Activate'
 import { Dashboard } from './pages/Dashboard'
 import { Setup } from './pages/Setup'
 
@@ -121,6 +122,7 @@ export default function App() {
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />
           <Route path="/reset-password" element={<Login />} />
+          <Route path="/activate" element={<Activate />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
           <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />

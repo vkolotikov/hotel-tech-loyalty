@@ -69,6 +69,7 @@ Route::prefix('v1')->group(function () {
         Route::post('verify-code',      [AuthController::class, 'verifyCode']);
         Route::post('forgot-password',  [AuthController::class, 'forgotPassword']);
         Route::post('reset-password',   [AuthController::class, 'resetPassword']);
+        Route::post('activate',         [AuthController::class, 'activateAccount']);
         Route::post('claim',            [AuthController::class, 'claimAccount']);
     });
 
