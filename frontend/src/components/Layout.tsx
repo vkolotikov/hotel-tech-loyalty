@@ -11,7 +11,7 @@ import {
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
-  UserCog,
+  UserCog, AlertTriangle, Zap,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -416,6 +416,9 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
+        {/* Expired plan banner — unmissable prompt to renew */}
+        <ExpiredPlanBanner />
+
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
           {children}
@@ -480,6 +483,62 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
           <p className="text-[10px] text-red-400">Renew to restore access</p>
         )}
       </Link>
+    </div>
+  )
+}
+
+function ExpiredPlanBanner() {
+  const { status } = useSubscription()
+  const { staff } = useAuthStore()
+  const location = useLocation()
+
+  if (status !== 'EXPIRED' && status !== 'NO_PLAN') return null
+  if (location.pathname === '/billing') return null
+
+  const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
+  const expired = status === 'EXPIRED'
+
+  return (
+    <div className={clsx(
+      'border-b px-6 py-3 flex items-center gap-4',
+      expired
+        ? 'bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/30'
+        : 'bg-gradient-to-r from-primary-500/10 to-primary-600/10 border-primary-500/30'
+    )}>
+      <div className={clsx(
+        'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+        expired ? 'bg-orange-500/20' : 'bg-primary-500/20'
+      )}>
+        {expired
+          ? <AlertTriangle size={18} className="text-orange-400" />
+          : <Zap size={18} className="text-primary-400" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={clsx('text-sm font-semibold', expired ? 'text-orange-200' : 'text-primary-200')}>
+          {expired ? 'Your subscription has expired' : 'Choose a plan to activate your workspace'}
+        </p>
+        <p className="text-xs text-t-secondary mt-0.5">
+          {isAdmin
+            ? (expired
+                ? 'Renew now to restore access to loyalty, bookings, chat and AI features.'
+                : 'Start your free trial in one click — no credit card required.')
+            : 'Please ask your workspace administrator to renew the plan to restore full access.'}
+        </p>
+      </div>
+      {isAdmin && (
+        <Link
+          to="/billing"
+          className={clsx(
+            'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 transition-colors shadow-lg',
+            expired
+              ? 'bg-orange-500 hover:bg-orange-400 text-black shadow-orange-500/30'
+              : 'bg-primary-500 hover:bg-primary-400 text-black shadow-primary-500/30'
+          )}
+        >
+          <CreditCard size={14} />
+          {expired ? 'Renew Plan' : 'Choose Plan'}
+        </Link>
+      )}
     </div>
   )
 }
