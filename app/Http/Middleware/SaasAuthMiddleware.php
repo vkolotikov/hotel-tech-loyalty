@@ -247,6 +247,13 @@ class SaasAuthMiddleware
             }
         }
 
+        // Log in on the default (web) guard, and also pin the user on the
+        // sanctum guard so that `auth:sanctum` — which runs after this
+        // middleware — sees an authenticated user. Without the second call,
+        // Sanctum's RequestGuard resolves independently and rejects the JWT
+        // (it's not in the `id|plaintext` personal-access-token format), so
+        // the whole chain 401s even though we just verified the SaaS token.
         Auth::login($user);
+        Auth::guard('sanctum')->setUser($user);
     }
 }
