@@ -125,6 +125,7 @@ Route::prefix('v1')->group(function () {
         Route::post('{widgetKey}/typing',     [WidgetChatController::class, 'visitorTyping']);
         Route::post('{widgetKey}/rate',       [WidgetChatController::class, 'rateConversation'])->middleware('throttle:5,1');
         Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1');
+        Route::post('{widgetKey}/transcribe', [WidgetChatController::class, 'transcribe'])->middleware('throttle:30,1');
         Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
         Route::post('{widgetKey}/popup-impression', [WidgetChatController::class, 'popupImpression'])->middleware('throttle:30,1');
@@ -370,6 +371,7 @@ Route::prefix('v1')->group(function () {
             Route::put('chat-inbox-canned',                   [ChatInboxController::class, 'updateCannedResponses']);
             Route::get('chat-inbox-agents',                   [ChatInboxController::class, 'listAgents']);
             Route::post('chat-inbox/{id}/upload',             [ChatInboxController::class, 'uploadAttachment']);
+            Route::post('chat-inbox/transcribe',              [ChatInboxController::class, 'transcribe']);
             Route::get('chat-inbox/{id}/transcript',          [ChatInboxController::class, 'transcript']);
 
             // ─── Visitors (chat widget identities, online/offline, page views)

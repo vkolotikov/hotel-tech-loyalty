@@ -10,38 +10,95 @@ use Illuminate\Support\Facades\Log;
 class KnowledgeService
 {
     /**
-     * Common stop words to exclude from keyword matching.
-     * These would match almost every FAQ item and add noise.
+     * Multi-lingual stop words. These are lexical filler that would otherwise
+     * match almost every FAQ entry and drown out real signal. The list
+     * deliberately covers the main languages the widget ships to (EN/ES/FR/
+     * DE/IT/PT/RU) — adding a language here costs ~40 bytes, missing one
+     * causes every German "wo ist" query to match every entry mentioning "der".
      */
     private const STOP_WORDS = [
-        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-        'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'some',
-        'them', 'than', 'its', 'over', 'such', 'that', 'this', 'with',
-        'will', 'each', 'from', 'they', 'were', 'which', 'their', 'said',
-        'what', 'when', 'who', 'how', 'does', 'your', 'about', 'would',
-        'there', 'could', 'other', 'into', 'more', 'also', 'any', 'tell',
-        'please', 'want', 'need', 'like', 'just', 'know',
+        // English
+        'the','and','for','are','but','not','you','all','can','had','her','was','one',
+        'our','out','has','have','been','some','them','than','its','over','such','that',
+        'this','with','will','each','from','they','were','which','their','said','what',
+        'when','who','how','does','your','about','would','there','could','other','into',
+        'more','also','any','tell','please','want','need','like','just','know','is','it',
+        'be','to','of','in','on','at','as','by','or','if','so','do','am','my','me','we',
+        // Spanish
+        'que','por','con','las','los','una','uno','del','para','como','pero','este','esta',
+        'esto','muy','tambien','donde','cuando','porque','porqué','hola','gracias','tengo',
+        'tiene','puedo','puede','hay','quiero','necesito',
+        // French
+        'que','pour','avec','les','des','une','cette','dans','mais','comme','aussi','tres',
+        'très','ou','où','quand','pourquoi','bonjour','merci','est','sont','avez','avoir',
+        'voudrais','peux','peut','besoin',
+        // German
+        'der','die','das','und','mit','für','von','ein','eine','einen','auf','nicht','wie',
+        'wo','wann','warum','ist','sind','hat','haben','ich','sie','möchte','mochte','brauche',
+        // Italian
+        'che','per','con','una','uno','del','della','dei','degli','delle','come','ma',
+        'molto','dove','quando','perche','perché','ciao','grazie','sono','hai','ho','vorrei',
+        // Portuguese
+        'que','para','com','uma','dos','das','como','mas','muito','onde','quando','porque',
+        'por que','ola','olá','obrigado','obrigada','tenho','tem','queria','quero','preciso',
+        // Russian (Cyrillic — lowercased)
+        'что','как','для','или','это','тот','так','что','где','когда','почему','привет',
+        'спасибо','есть','нет','хочу','нужно','можно','мне','вы','мы','они','он','она',
     ];
 
     /**
-     * Search knowledge items relevant to a query using keyword matching.
+     * Tokenise a natural-language query into scoring words. Works for
+     * Latin-script AND non-Latin scripts (Cyrillic, Greek, CJK etc.) — we
+     * split on whitespace and punctuation, lowercase, drop short/filler
+     * tokens. CJK: since there are no word boundaries, we fall back to
+     * treating each 2+ char n-gram-like chunk the way we split gives a
+     * practical signal for FAQ matching. Good enough without a tokeniser.
+     */
+    private function tokeniseQuery(string $query): array
+    {
+        $q = mb_strtolower(trim($query), 'UTF-8');
+        // Split on any non-letter/non-digit in a unicode-aware way.
+        $raw = preg_split('/[^\p{L}\p{N}]+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+        if (!$raw) return [];
+
+        $words = [];
+        foreach ($raw as $w) {
+            $len = mb_strlen($w, 'UTF-8');
+            // Latin-script words need 3+ chars to mean something; for non-Latin
+            // (Cyrillic, CJK, Arabic, Hebrew…) a 2-char token often carries
+            // real meaning, so we keep those.
+            $isLatin = preg_match('/^[a-z0-9]+$/u', $w) === 1;
+            if ($isLatin && $len < 3) continue;
+            if ($len < 2) continue;
+            if (in_array($w, self::STOP_WORDS, true)) continue;
+            $words[] = $w;
+        }
+        return array_values(array_unique($words));
+    }
+
+    /**
+     * Search knowledge items relevant to a query. Fetches a superset by
+     * ILIKE/JSON match, then scores in-memory by how many tokens the item's
+     * question/answer/keywords hit (weighted: question > keywords > answer),
+     * boosted by the admin-set priority. Returns the top $limit items.
      */
     public function searchRelevantItems(string $query, int $orgId, int $limit = 5): Collection
     {
-        $words = array_filter(
-            explode(' ', strtolower(trim($query))),
-            fn($w) => strlen($w) >= 3 && !in_array($w, self::STOP_WORDS),
-        );
+        $words = $this->tokeniseQuery($query);
 
         if (empty($words)) {
             return KnowledgeItem::where('organization_id', $orgId)
                 ->active()
                 ->orderByDesc('priority')
+                ->orderByDesc('use_count')
                 ->limit($limit)
                 ->get();
         }
 
-        return KnowledgeItem::where('organization_id', $orgId)
+        // Pull a broader candidate set so the scoring step has material to work
+        // with — a single matching token shouldn't exclude an item that would
+        // have scored high on others.
+        $candidates = KnowledgeItem::where('organization_id', $orgId)
             ->active()
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
@@ -51,8 +108,38 @@ class KnowledgeService
                 }
             })
             ->orderByDesc('priority')
-            ->limit($limit)
+            ->orderByDesc('use_count')
+            ->limit(max(25, $limit * 5))
             ->get();
+
+        if ($candidates->isEmpty()) {
+            return $candidates;
+        }
+
+        // Score each candidate by weighted hit count. Priority is a multiplier
+        // so an admin-flagged "featured" item outranks a generic match.
+        $scored = $candidates->map(function ($item) use ($words) {
+            $q = mb_strtolower((string) $item->question, 'UTF-8');
+            $a = mb_strtolower((string) $item->answer, 'UTF-8');
+            $kw = is_array($item->keywords) ? array_map(fn($k) => mb_strtolower((string) $k, 'UTF-8'), $item->keywords) : [];
+
+            $score = 0;
+            foreach ($words as $w) {
+                if (str_contains($q, $w))  $score += 3;
+                if (in_array($w, $kw, true)) $score += 2;
+                if (str_contains($a, $w))  $score += 1;
+            }
+            // Priority: 0–10 from admin. Add it (not multiply) so a priority-10
+            // item still needs SOME textual signal to surface.
+            $score += (int) ($item->priority ?? 0);
+            $item->setAttribute('_score', $score);
+            return $item;
+        });
+
+        return $scored
+            ->sortByDesc(fn($i) => $i->getAttribute('_score'))
+            ->take($limit)
+            ->values();
     }
 
     /**
@@ -61,47 +148,59 @@ class KnowledgeService
     public function getKnowledgeContext(string $query, int $orgId): string
     {
         $items = $this->searchRelevantItems($query, $orgId);
+        $words = $this->tokeniseQuery($query);
 
-        if ($items->isEmpty()) {
-            return '';
+        $hasItems = !$items->isEmpty();
+        if ($hasItems) {
+            KnowledgeItem::whereIn('id', $items->pluck('id'))->increment('use_count');
         }
 
-        // Increment use counts
-        KnowledgeItem::whereIn('id', $items->pluck('id'))->increment('use_count');
-
-        $context = "## Relevant Knowledge Base\n\n";
-        foreach ($items as $item) {
-            $context .= "**Q:** {$item->question}\n**A:** {$item->answer}\n\n";
+        $context = '';
+        if ($hasItems) {
+            $context .= "Below are the most relevant FAQ entries for this query, ranked by relevance. Treat these as authoritative.\n\n";
+            foreach ($items as $item) {
+                $context .= "Q: {$item->question}\nA: {$item->answer}\n\n";
+            }
         }
 
-        // Add relevant document excerpts
+        // Document excerpts — score by overlap instead of first-hit-wins so the
+        // most relevant doc surfaces, and truncate to a reasonable slice.
         $docs = KnowledgeDocument::where('organization_id', $orgId)
             ->completed()
             ->whereNotNull('extracted_text')
             ->get();
 
-        foreach ($docs as $doc) {
-            $text = $doc->extracted_text;
-            if (empty($text)) continue;
-
-            // Simple relevance check: does the document mention any query words?
-            $lowerText = strtolower($text);
-            $words = array_filter(explode(' ', strtolower(trim($query))), fn($w) => strlen($w) >= 3);
-            $relevant = false;
-            foreach ($words as $word) {
-                if (str_contains($lowerText, $word)) {
-                    $relevant = true;
-                    break;
+        if ($docs->isNotEmpty() && !empty($words)) {
+            $docScored = [];
+            foreach ($docs as $doc) {
+                $text = (string) $doc->extracted_text;
+                if ($text === '') continue;
+                $lower = mb_strtolower($text, 'UTF-8');
+                $hits = 0;
+                foreach ($words as $w) {
+                    if (mb_strpos($lower, $w) !== false) $hits++;
+                }
+                if ($hits > 0) {
+                    // Locate the first hit to extract a nearby excerpt instead
+                    // of always using the opening of the document.
+                    $firstPos = null;
+                    foreach ($words as $w) {
+                        $p = mb_strpos($lower, $w);
+                        if ($p !== false && ($firstPos === null || $p < $firstPos)) $firstPos = $p;
+                    }
+                    $start = max(0, ($firstPos ?? 0) - 120);
+                    $excerpt = mb_substr($text, $start, 900);
+                    $docScored[] = ['doc' => $doc, 'hits' => $hits, 'excerpt' => trim($excerpt)];
                 }
             }
 
-            if ($relevant) {
-                $excerpt = mb_substr($text, 0, 800);
-                $context .= "**From document \"{$doc->file_name}\":**\n{$excerpt}\n\n";
+            usort($docScored, fn($a, $b) => $b['hits'] <=> $a['hits']);
+            foreach (array_slice($docScored, 0, 2) as $d) {
+                $context .= "From document \"{$d['doc']->file_name}\":\n{$d['excerpt']}\n\n";
             }
         }
 
-        return $context;
+        return trim($context);
     }
 
     /**

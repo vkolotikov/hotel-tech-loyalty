@@ -62,8 +62,16 @@
   try { gdprAccepted = localStorage.getItem('htchat_gdpr_ok') === '1'; } catch (e) {}
 
   // ── Feature detection ──
+  // Primary STT path: MediaRecorder → OpenAI Whisper via our /transcribe
+  // endpoint. Browser-agnostic, supports every language Whisper does, and
+  // runs inside an asyncronous "review before send" flow. Fallback: Web
+  // Speech API on the rare browser where MediaRecorder/getUserMedia are
+  // unavailable (older mobile Safari variants, some PWAs) — same manual-send
+  // UX, just using the native engine.
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var hasSTT = !!SpeechRecognition;
+  var hasMediaRecorder = typeof window.MediaRecorder !== 'undefined' &&
+    navigator && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
+  var hasSTT = hasMediaRecorder || !!SpeechRecognition;
   var hasTTS = 'speechSynthesis' in window;
 
   // ── State ──
@@ -1062,19 +1070,197 @@
       });
   }
 
-  // ── Voice: STT ──
+  // ── Voice: Speech-to-Text ──
+  //
+  // Flow (primary — MediaRecorder → Whisper):
+  //   1. Tap mic → request getUserMedia, start recording (webm/opus).
+  //   2. Tap mic again → stop recording, upload blob to /transcribe.
+  //   3. Server calls OpenAI Whisper with auto language detection and
+  //      returns the transcript.
+  //   4. Transcript lands in the input — user reviews/edits/sends manually.
+  //      We NEVER auto-send. This fixes the "spoke Russian, got English
+  //      garbage auto-sent" complaint and gives the visitor control.
+  //
+  // Fallback: If MediaRecorder is unavailable (rare), we use the Web Speech
+  // API the same way — start/stop, result drops into input, manual send.
+  var mediaRecorder = null;
+  var mediaStream = null;
+  var mediaChunks = [];
+  var isTranscribing = false;
+
   function toggleListening() {
-    if (isListening) {
+    if (isListening || isTranscribing) {
       stopListening();
     } else {
       startListening();
     }
   }
 
-  // Web Speech API needs a full BCP-47 locale ("en-US", "ru-RU") — a bare
-  // 2-letter code is silently treated as English by most browsers, which is
-  // why widget config lang="es" / "ru" / etc. ended up always transcribing
-  // as English. Map 2-letter codes to a sensible default region.
+  function setMicRecordingUI(hintText) {
+    var btn = document.getElementById('htchat-mic-btn');
+    if (btn) { btn.className = 'recording'; btn.innerHTML = ICONS.micOff; }
+    var hint = document.getElementById('htchat-input-hint');
+    if (hint) hint.innerHTML = '<span class="recording-hint"><span class="recording-dot"></span>' + escapeHtml(hintText) + '</span>';
+    var inputEl = document.getElementById('htchat-input');
+    if (inputEl) { inputEl.placeholder = hintText; inputEl.style.borderColor = '#ef4444'; }
+  }
+
+  function setMicTranscribingUI() {
+    var btn = document.getElementById('htchat-mic-btn');
+    if (btn) { btn.className = 'recording'; btn.innerHTML = ICONS.mic; btn.disabled = true; }
+    var hint = document.getElementById('htchat-input-hint');
+    if (hint) hint.innerHTML = '<span class="recording-hint"><span class="recording-dot"></span>Transcribing…</span>';
+    var inputEl = document.getElementById('htchat-input');
+    if (inputEl) { inputEl.placeholder = 'Transcribing…'; inputEl.style.borderColor = '#f59e0b'; }
+  }
+
+  function startListening() {
+    if (!hasSTT || isListening || isTranscribing) return;
+    if (hasMediaRecorder) {
+      startWhisperRecording();
+    } else if (SpeechRecognition) {
+      startBrowserStt();
+    }
+  }
+
+  function stopListening() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      try { mediaRecorder.stop(); } catch (e) {}
+      return;
+    }
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+  }
+
+  function cleanupMediaStream() {
+    if (mediaStream) {
+      try { mediaStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+      mediaStream = null;
+    }
+    mediaRecorder = null;
+    mediaChunks = [];
+  }
+
+  function pickRecorderMime() {
+    // Order matters — pick the smallest file format the current browser can
+    // produce. Whisper accepts all of these.
+    var prefs = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/mpeg'];
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      for (var i = 0; i < prefs.length; i++) {
+        if (MediaRecorder.isTypeSupported(prefs[i])) return prefs[i];
+      }
+    }
+    return '';
+  }
+
+  function startWhisperRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function (stream) {
+        mediaStream = stream;
+        mediaChunks = [];
+        var mime = pickRecorderMime();
+        try {
+          mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        } catch (e) {
+          mediaRecorder = new MediaRecorder(stream);
+        }
+
+        mediaRecorder.addEventListener('dataavailable', function (e) {
+          if (e.data && e.data.size > 0) mediaChunks.push(e.data);
+        });
+        mediaRecorder.addEventListener('stop', function () {
+          isListening = false;
+          var blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          cleanupMediaStream();
+          if (blob.size < 800) {
+            // Tap-and-release noise — nothing useful to transcribe.
+            resetMicUI();
+            return;
+          }
+          uploadForTranscription(blob);
+        });
+        mediaRecorder.addEventListener('error', function (e) {
+          console.warn('HotelChat recorder error:', e);
+          isListening = false;
+          cleanupMediaStream();
+          resetMicUI();
+        });
+
+        isListening = true;
+        setMicRecordingUI('Listening… tap mic to stop');
+        mediaRecorder.start();
+      })
+      .catch(function (err) {
+        console.warn('HotelChat mic permission denied:', err);
+        resetMicUI();
+        // Fallback to native engine if the user denied but it might be cached
+        if (SpeechRecognition) startBrowserStt();
+      });
+  }
+
+  function uploadForTranscription(blob) {
+    isTranscribing = true;
+    setMicTranscribingUI();
+
+    // Extension from mime for a sensible filename — Whisper sniffs by content
+    // but a matching extension avoids format-rejection edge cases.
+    var mime = blob.type || 'audio/webm';
+    var ext = 'webm';
+    if (mime.indexOf('mp4') !== -1) ext = 'mp4';
+    else if (mime.indexOf('ogg') !== -1) ext = 'ogg';
+    else if (mime.indexOf('mpeg') !== -1) ext = 'mp3';
+
+    var fd = new FormData();
+    fd.append('audio', blob, 'voice.' + ext);
+    // Hint the detected/preferred language but let Whisper auto-detect when
+    // "auto" or unset — best for multilingual sites.
+    var cfgLang = (widgetConfig && widgetConfig.language) || (window.HotelChatConfig && window.HotelChatConfig.lang) || '';
+    if (cfgLang && String(cfgLang).toLowerCase() !== 'auto') {
+      fd.append('language', String(cfgLang).toLowerCase().slice(0, 2));
+    }
+
+    fetch(API + '/transcribe', { method: 'POST', body: fd })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        isTranscribing = false;
+        var inputEl = document.getElementById('htchat-input');
+        var sendBtn = document.getElementById('htchat-send-btn');
+        var text = res && res.ok ? String(res.body.text || '').trim() : '';
+
+        if (!text) {
+          resetMicUI();
+          if (inputEl) inputEl.placeholder = "Couldn't hear that — try again";
+          return;
+        }
+
+        if (inputEl) {
+          // Append if the user already typed something, otherwise replace.
+          var existing = (inputEl.value || '').trim();
+          inputEl.value = existing ? (existing + ' ' + text) : text;
+          inputEl.focus();
+          // Remember the detected language so the server replies in kind.
+          if (res.body.language) {
+            var detected = String(res.body.language).toLowerCase();
+            lastUserLang = detected.length === 2 ? (LANG_DEFAULT_REGION_LOOKUP(detected) || detected) : detected;
+          }
+        }
+        if (sendBtn) sendBtn.disabled = !(inputEl && inputEl.value.trim());
+        resetMicUI();
+      })
+      .catch(function (err) {
+        console.warn('HotelChat transcribe failed:', err);
+        isTranscribing = false;
+        resetMicUI();
+        var inputEl = document.getElementById('htchat-input');
+        if (inputEl) inputEl.placeholder = 'Transcription failed — try typing';
+      });
+  }
+
+  // ── Browser SpeechRecognition fallback (same manual-send UX) ──
+  // Web Speech API needs a BCP-47 locale ("en-US", "ru-RU") — a bare 2-letter
+  // code is silently treated as English by most browsers, which is why widget
+  // config lang="es" / "ru" previously transcribed as English.
   var LANG_DEFAULT_REGION = {
     en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
     pt: 'pt-BR', ru: 'ru-RU', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN',
@@ -1083,85 +1269,40 @@
     he: 'he-IL', hi: 'hi-IN', hu: 'hu-HU', ro: 'ro-RO', uk: 'uk-UA',
     vi: 'vi-VN', th: 'th-TH', id: 'id-ID',
   };
+  function LANG_DEFAULT_REGION_LOOKUP(two) { return LANG_DEFAULT_REGION[two]; }
   function toBcp47(raw) {
     if (!raw) return null;
     var s = String(raw).trim().replace('_', '-');
     if (!s) return null;
-    // Already has a region like "en-US" / "pt-BR" — keep as-is (normalize case)
     if (s.indexOf('-') !== -1) {
       var parts = s.split('-');
       return parts[0].toLowerCase() + '-' + parts.slice(1).join('-').toUpperCase();
     }
-    var two = s.toLowerCase();
-    return LANG_DEFAULT_REGION[two] || null;
+    return LANG_DEFAULT_REGION[s.toLowerCase()] || null;
   }
-
-  // Resolve the best BCP-47 locale for speech recognition. Priority:
-  //   1. navigator.language — already has a region, most accurate
-  //      (if its base language matches the widget-configured language, or
-  //       if the widget didn't configure one at all)
-  //   2. widget config lang mapped via LANG_DEFAULT_REGION
-  //   3. navigator.language regardless of match
-  //   4. 'en-US'
   function resolveSttLang() {
     var navLang = navigator.language || navigator.userLanguage || '';
-    var cfgLang = (window.HotelChatConfig && window.HotelChatConfig.lang) || '';
+    var cfgLang = (widgetConfig && widgetConfig.language) || (window.HotelChatConfig && window.HotelChatConfig.lang) || '';
     var navBase = navLang.toLowerCase().slice(0, 2);
     var cfgBase = String(cfgLang).toLowerCase().slice(0, 2);
-
-    if (navLang && navLang.indexOf('-') !== -1) {
-      if (!cfgBase || cfgBase === navBase) return toBcp47(navLang);
-    }
+    if (navLang && navLang.indexOf('-') !== -1 && (!cfgBase || cfgBase === navBase)) return toBcp47(navLang);
     return toBcp47(cfgLang) || toBcp47(navLang) || 'en-US';
   }
 
-  var sttLang = resolveSttLang();
-  var silenceTimer = null;
-  var SILENCE_MS = 2500; // auto-finalize after 2.5s of no new speech
-  var manualStop = false;
-
-  function startListening() {
-    if (!hasSTT || isListening) return;
-    // Re-resolve each time — widget config or navigator state may have
-    // changed since the widget loaded (e.g. site switched locale).
-    sttLang = resolveSttLang();
+  function startBrowserStt() {
+    var sttLang = resolveSttLang();
     recognition = new SpeechRecognition();
-    // continuous=true so the browser doesn't cut off at first short pause —
-    // we manage end-of-utterance ourselves via a silence timer.
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = sttLang;
-    manualStop = false;
 
     var finalTranscript = '';
 
-    function armSilenceTimer() {
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(function () {
-        if (recognition && isListening) {
-          try { recognition.stop(); } catch (e) {}
-        }
-      }, SILENCE_MS);
-    }
-
     recognition.onstart = function () {
       isListening = true;
-      var btn = document.getElementById('htchat-mic-btn');
-      if (btn) { btn.className = 'recording'; btn.innerHTML = ICONS.micOff; }
-      var hint = document.getElementById('htchat-input-hint');
-      if (hint) hint.innerHTML = '<span class="recording-hint"><span class="recording-dot"></span>Listening… tap mic to stop</span>';
-      var inputEl = document.getElementById('htchat-input');
-      if (inputEl) { inputEl.placeholder = 'Listening…'; inputEl.style.borderColor = '#ef4444'; }
-      armSilenceTimer();
+      setMicRecordingUI('Listening… tap mic to stop');
     };
-
     recognition.onresult = function (e) {
-      // Mobile Chrome's continuous mode pushes a NEW result entry on every
-      // tick that contains a CUMULATIVE snapshot of the whole utterance so
-      // far — concatenating all results gives "hellohellohello can you...".
-      // The latest result alone is the authoritative current transcript,
-      // so we just take the last entry. For multi-utterance continuous
-      // sessions, onend bundles up the final value before sendMessage.
       var last = e.results[e.results.length - 1];
       if (!last || !last[0]) return;
       var combined = String(last[0].transcript || '').replace(/\s+/g, ' ').trim();
@@ -1169,39 +1310,35 @@
       var inputEl = document.getElementById('htchat-input');
       if (inputEl) {
         inputEl.value = combined;
-        document.getElementById('htchat-send-btn').disabled = !combined;
+        var sendBtn = document.getElementById('htchat-send-btn');
+        if (sendBtn) sendBtn.disabled = !combined;
       }
-      armSilenceTimer();
     };
-
     recognition.onend = function () {
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       isListening = false;
       recognition = null;
       resetMicUI();
       var text = finalTranscript.trim();
-      if (text && !manualStop) {
-        // Remember language used so the AI replies in the same language
-        lastUserLang = sttLang;
-        setTimeout(function () { sendMessage(text); }, 150);
-      } else if (text && manualStop) {
-        // User tapped mic to stop — leave text in input but don't auto-send
+      if (text) {
+        // No auto-send — the user reviews and taps Send.
         var inputEl = document.getElementById('htchat-input');
-        if (inputEl) inputEl.value = text;
+        if (inputEl) {
+          inputEl.value = text;
+          inputEl.focus();
+        }
+        lastUserLang = sttLang;
       }
     };
-
     recognition.onerror = function (e) {
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-      if (e.error !== 'aborted' && e.error !== 'no-speech') console.warn('HotelChat STT error:', e.error);
+      if (e.error !== 'aborted' && e.error !== 'no-speech') {
+        console.warn('HotelChat STT error:', e.error);
+      }
       isListening = false;
       recognition = null;
       resetMicUI();
     };
-
-    try {
-      recognition.start();
-    } catch (e) {
+    try { recognition.start(); }
+    catch (e) {
       console.warn('HotelChat STT start failed:', e);
       isListening = false;
       recognition = null;
@@ -1209,16 +1346,10 @@
     }
   }
 
-  function stopListening() {
-    manualStop = true;
-    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-    if (recognition) try { recognition.stop(); } catch (e) {}
-  }
-
   function resetMicUI() {
     var c = widgetConfig || {};
     var btn = document.getElementById('htchat-mic-btn');
-    if (btn) { btn.className = ''; btn.innerHTML = ICONS.mic; }
+    if (btn) { btn.className = ''; btn.innerHTML = ICONS.mic; btn.disabled = false; }
     var hint = document.getElementById('htchat-input-hint');
     if (hint) hint.innerHTML = '<span>' + escapeHtml(c.input_hint_text || T.hint) + '</span>';
     var inputEl = document.getElementById('htchat-input');

@@ -6,7 +6,7 @@ import {
   Search, Send, CheckCircle, Archive, MessageSquare, User, Bot, X,
   MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Save,
   PauseCircle, PlayCircle, ArrowRightLeft, Zap, Paperclip, Download, FileText,
-  MoreHorizontal, UserPlus, Edit3,
+  MoreHorizontal, UserPlus, Edit3, Mic, Square, Loader2,
 } from 'lucide-react'
 import { API_URL } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -45,6 +45,104 @@ export function ChatInbox() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastTypingPingRef = useRef<number>(0)
   const lastUnreadRef = useRef<number>(-1)
+
+  // Voice dictation: agents tap the mic, speak their reply, and we drop the
+  // transcript into the reply textarea. Manual-send only — we never auto-post
+  // so the agent can edit wording before the visitor sees it.
+  const [micState, setMicState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const mediaChunksRef = useRef<Blob[]>([])
+
+  const hasMediaRecorder = typeof window !== 'undefined'
+    && 'MediaRecorder' in window
+    && !!navigator.mediaDevices?.getUserMedia
+
+  const pickRecorderMime = (): string => {
+    const prefs = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+    if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+      for (const m of prefs) if (MediaRecorder.isTypeSupported(m)) return m
+    }
+    return ''
+  }
+
+  const cleanupMic = () => {
+    if (mediaStreamRef.current) {
+      try { mediaStreamRef.current.getTracks().forEach(t => t.stop()) } catch {}
+      mediaStreamRef.current = null
+    }
+    mediaRecorderRef.current = null
+    mediaChunksRef.current = []
+  }
+
+  const startDictation = async () => {
+    if (micState !== 'idle') return
+    if (!hasMediaRecorder) {
+      toast.error('Voice input not supported in this browser')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      mediaChunksRef.current = []
+      const mime = pickRecorderMime()
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
+      mediaRecorderRef.current = rec
+
+      rec.addEventListener('dataavailable', (e) => {
+        if (e.data && e.data.size > 0) mediaChunksRef.current.push(e.data)
+      })
+      rec.addEventListener('stop', async () => {
+        const blob = new Blob(mediaChunksRef.current, { type: rec.mimeType || 'audio/webm' })
+        cleanupMic()
+        if (blob.size < 800) {
+          setMicState('idle')
+          return
+        }
+        setMicState('transcribing')
+        try {
+          const mime = blob.type || 'audio/webm'
+          const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm'
+          const fd = new FormData()
+          fd.append('audio', blob, `reply.${ext}`)
+          const res = await api.post('/v1/admin/chat-inbox/transcribe', fd)
+          const text = String(res.data?.text || '').trim()
+          if (text) {
+            setReplyText(prev => (prev.trim() ? prev.trim() + ' ' + text : text))
+          } else {
+            toast('No speech detected', { icon: 'ℹ️' })
+          }
+        } catch (e: any) {
+          toast.error(e?.response?.data?.error || 'Transcription failed')
+        } finally {
+          setMicState('idle')
+        }
+      })
+      rec.addEventListener('error', () => {
+        cleanupMic()
+        setMicState('idle')
+      })
+
+      setMicState('recording')
+      rec.start()
+    } catch (e: any) {
+      toast.error('Microphone permission denied')
+      cleanupMic()
+      setMicState('idle')
+    }
+  }
+
+  const stopDictation = () => {
+    const rec = mediaRecorderRef.current
+    if (rec && rec.state !== 'inactive') {
+      try { rec.stop() } catch {}
+    }
+  }
+
+  const toggleDictation = () => {
+    if (micState === 'recording') stopDictation()
+    else if (micState === 'idle') startDictation()
+  }
 
   const playDing = () => {
     try {
@@ -670,7 +768,21 @@ export function ChatInbox() {
                   <textarea value={replyText} onChange={e => { setReplyText(e.target.value); pingAgentTyping() }}
                     onKeyDown={handleKeyDown} rows={1}
                     className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white resize-none placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30"
-                    placeholder="Type a reply... (Enter to send)" />
+                    placeholder={micState === 'recording' ? 'Listening… tap stop when done' : micState === 'transcribing' ? 'Transcribing…' : 'Type a reply... (Enter to send)'} />
+                  {hasMediaRecorder && (
+                    <button type="button" onClick={toggleDictation} disabled={micState === 'transcribing'}
+                      title={micState === 'recording' ? 'Stop recording' : 'Dictate reply'}
+                      className={
+                        'p-2 rounded-xl transition-colors disabled:opacity-50 ' +
+                        (micState === 'recording'
+                          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 animate-pulse'
+                          : micState === 'transcribing'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-white/[0.03] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.06]')
+                      }>
+                      {micState === 'recording' ? <Square size={16} /> : micState === 'transcribing' ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}
+                    </button>
+                  )}
                   <button onClick={() => { if (replyText.trim()) sendReply.mutate(replyText.trim()) }}
                     disabled={!replyText.trim() || sendReply.isPending}
                     className="bg-primary-600 text-white p-2 rounded-xl hover:bg-primary-700 disabled:opacity-30 transition-colors">
