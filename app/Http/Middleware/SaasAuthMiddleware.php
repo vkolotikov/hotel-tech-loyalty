@@ -189,10 +189,25 @@ class SaasAuthMiddleware
             $isNew = false;
             $org = Organization::where('saas_org_id', $saasOrgId)->first();
             if (!$org) {
+                // Derive a globally-unique slug. Archived orgs (saas_deleted_at)
+                // keep their slug in the table, so a fresh SaaS company that
+                // happens to share a name with a previously-archived one would
+                // collide on organizations.slug UNIQUE and blow up the SSO
+                // middleware with a 500 — the invited owner then lands on the
+                // loyalty login form unable to sign in (their local password
+                // is random because it was never set here).
+                $baseSlug = $request->attributes->get('saas_org_slug')
+                    ?: Str::slug($saasOrgId);
+                $slug = $baseSlug;
+                $suffix = 1;
+                while (Organization::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $suffix++;
+                }
+
                 $org = Organization::create([
                     'saas_org_id' => $saasOrgId,
                     'name' => $request->attributes->get('saas_org_slug') ?: 'Organization',
-                    'slug' => $request->attributes->get('saas_org_slug') ?: Str::slug($saasOrgId),
+                    'slug' => $slug,
                 ]);
                 $isNew = true;
             } elseif ($org->saas_deleted_at) {
@@ -203,9 +218,22 @@ class SaasAuthMiddleware
                 $org->update(['saas_deleted_at' => null]);
             }
 
-            // Auto-setup defaults for new organizations
+            // Auto-setup defaults for new organizations. Run this best-effort —
+            // a partial seed failure must NOT block the SSO handoff, or the
+            // invited owner lands on the loyalty login screen staring at a
+            // generic error and is forced to enter credentials they don't
+            // have (SSO-created users have a random local password).
             if ($isNew) {
-                app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+                try {
+                    app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+                } catch (\Throwable $e) {
+                    \Log::warning('OrganizationSetupService::setupDefaults failed during SSO — continuing', [
+                        'org_id'  => $org->id,
+                        'saas_org_id' => $org->saas_org_id,
+                        'error'   => $e->getMessage(),
+                        'file'    => $e->getFile() . ':' . $e->getLine(),
+                    ]);
+                }
             }
 
             // Refresh cached SaaS entitlements (plan, products, features) if stale.
@@ -234,17 +262,26 @@ class SaasAuthMiddleware
                 default => 'receptionist',
             };
 
-            Staff::withoutGlobalScopes()->create([
-                'user_id'           => $user->id,
-                'organization_id'   => $org?->id,
-                'role'              => $localRole,
-                'hotel_name'        => $org?->name ?? 'Hotel',
-                'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
-                'can_redeem_points' => true,
-                'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
-                'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
-                'is_active'         => true,
-            ]);
+            // Best-effort staff seed — if it fails, we still have a user to
+            // authenticate. A missing staff row is recoverable (the Setup
+            // wizard will create one); a failed SSO is not.
+            try {
+                Staff::withoutGlobalScopes()->create([
+                    'user_id'           => $user->id,
+                    'organization_id'   => $org?->id,
+                    'role'              => $localRole,
+                    'hotel_name'        => $org?->name ?? 'Hotel',
+                    'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
+                    'can_redeem_points' => true,
+                    'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
+                    'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
+                    'is_active'         => true,
+                ]);
+            } catch (\Throwable $e) {
+                \Log::warning('Staff seed failed during SSO — continuing', [
+                    'user_id' => $user->id, 'org_id' => $org?->id, 'error' => $e->getMessage(),
+                ]);
+            }
         } elseif ($org && $user->organization_id !== $org->id) {
             // The JWT is authoritative for which org this user is currently
             // operating in. If their local `organization_id` points somewhere

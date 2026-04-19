@@ -27,15 +27,29 @@ class OrganizationSetupService
         // Bind org context for BelongsToOrganization trait
         app()->instance('current_organization_id', $org->id);
 
-        // Create default property
-        Property::withoutGlobalScopes()->firstOrCreate(
-            ['organization_id' => $org->id, 'code' => Str::upper(Str::substr($org->slug ?? 'HTL', 0, 5)) . '01'],
-            [
-                'name'    => $org->name . ' Main',
-                'city'    => '',
-                'country' => $org->country ?? '',
-            ]
-        );
+        // Create default property — properties.code is GLOBALLY unique
+        // (not scoped to org), so two orgs with similar slugs would collide.
+        // Skip if this org already has any property; otherwise pick a code
+        // with a numeric suffix that isn't already taken.
+        $existing = Property::withoutGlobalScopes()
+            ->where('organization_id', $org->id)
+            ->exists();
+        if (!$existing) {
+            $base = Str::upper(Str::substr($org->slug ?? 'HTL', 0, 5));
+            $code = $base . '01';
+            $suffix = 1;
+            while (Property::withoutGlobalScopes()->where('code', $code)->exists()) {
+                $suffix++;
+                $code = $base . str_pad((string) $suffix, 2, '0', STR_PAD_LEFT);
+            }
+            Property::withoutGlobalScopes()->create([
+                'organization_id' => $org->id,
+                'code'            => $code,
+                'name'            => $org->name . ' Main',
+                'city'            => '',
+                'country'         => $org->country ?? '',
+            ]);
+        }
 
         // Create default tiers — column is "earn_rate" not "earn_multiplier"
         $tiers = [
