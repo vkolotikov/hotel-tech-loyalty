@@ -87,11 +87,17 @@ export function Login() {
   useEffect(() => {
     const saasToken = searchParams.get('token')
     if (saasToken) {
+      // Only honour local paths so an open-redirect via `?redirect=https://evil`
+      // isn't possible.
+      const rawRedirect = searchParams.get('redirect') || '/'
+      const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+        ? rawRedirect
+        : '/'
       localStorage.setItem('auth_token', saasToken)
       api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
       api.get('/v1/auth/me').then(({ data }) => {
         setAuth(saasToken, data, data.staff)
-        navigate('/')
+        navigate(redirectTo)
       }).catch(() => {
         setError('Invalid or expired session. Please log in.')
         localStorage.removeItem('auth_token')
