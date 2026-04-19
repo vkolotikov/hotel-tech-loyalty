@@ -525,7 +525,7 @@ class AuthController extends Controller
             $org->subscription_status = 'TRIALING';
             $org->trial_end           = now()->addDays($trialDays);
             $org->period_end          = now()->addDays($trialDays);
-            $org->entitled_products   = ['crm', 'chat', 'loyalty', 'booking'];
+            $org->entitled_products   = $this->getPlanProducts($planSlug);
             $org->plan_features       = $this->getTrialFeatures($planSlug);
             $org->entitlements_synced_at = now();
             $org->save();
@@ -633,7 +633,22 @@ class AuthController extends Controller
             }
         }
 
-        // 2. Cached org entitlements (synced at trial creation or by SaasAuthMiddleware)
+        // 2. Cached org entitlements (synced at trial creation or by SaasAuthMiddleware).
+        //    For Sanctum-authenticated requests (no SaaS JWT), also try a refresh when
+        //    the cache is stale so orgs created before the per-plan entitlement fix
+        //    inherit the correct products/features on their next page load.
+        if ($orgForBilling && $orgForBilling->saas_org_id) {
+            $stale = !$orgForBilling->entitlements_synced_at
+                || $orgForBilling->entitlements_synced_at->lt(now()->subMinutes(5));
+            if ($stale) {
+                $saasToken = $this->getSaasToken($request);
+                if ($saasToken) {
+                    $this->syncEntitlementsFromSaas($request, $saasToken);
+                    $orgForBilling->refresh();
+                }
+            }
+        }
+
         if ($orgForBilling && $orgForBilling->subscription_status) {
             // Check if trial has expired since last sync
             $status = $orgForBilling->subscription_status;
@@ -891,35 +906,51 @@ class AuthController extends Controller
     }
 
     /**
+     * Canonical product list per plan — mirrors apps/saas/backend's v3 plan matrix
+     * (reset_plans_to_v3 migration). Used when SaaS is unreachable so the local
+     * fallback doesn't grant every plan the same entitlements.
+     */
+    private function getPlanProducts(string $planSlug): array
+    {
+        return match ($planSlug) {
+            'starter'    => ['crm', 'loyalty'],
+            'growth'     => ['crm', 'loyalty', 'booking', 'chat'],
+            'enterprise' => ['crm', 'loyalty', 'booking', 'chat'],
+            default      => ['crm', 'loyalty'],
+        };
+    }
+
+    /**
      * Feature set for each plan tier (used when SaaS is unreachable).
-     * These mirror the plans defined in the SaaS product catalog.
+     * These mirror the PlanFeature seed in apps/saas/backend/database/seeders/DatabaseSeeder.php
+     * — keep them in sync.
      */
     private function getTrialFeatures(string $planSlug): array
     {
         return match ($planSlug) {
             'starter' => [
-                'max_team_members'     => '3',
-                'max_guests'           => '500',
+                'max_team_members'     => '5',
+                'max_guests'           => '1000',
                 'max_properties'       => '1',
-                'max_loyalty_members'  => '200',
+                'max_loyalty_members'  => '500',
                 'ai_insights'          => 'false',
                 'ai_avatars'           => 'false',
                 'custom_branding'      => 'false',
                 'api_access'           => 'false',
-                'push_notifications'   => 'true',
-                'mobile_app'           => 'true',
+                'push_notifications'   => 'false',
+                'mobile_app'           => 'false',
                 'nfc_cards'            => 'false',
                 'priority_support'     => 'email',
             ],
             'growth' => [
-                'max_team_members'     => '10',
-                'max_guests'           => 'unlimited',
+                'max_team_members'     => '25',
+                'max_guests'           => '10000',
                 'max_properties'       => '3',
-                'max_loyalty_members'  => 'unlimited',
+                'max_loyalty_members'  => '5000',
                 'ai_insights'          => 'true',
                 'ai_avatars'           => 'false',
                 'custom_branding'      => 'true',
-                'api_access'           => 'false',
+                'api_access'           => 'true',
                 'push_notifications'   => 'true',
                 'mobile_app'           => 'true',
                 'nfc_cards'            => 'true',
@@ -931,7 +962,7 @@ class AuthController extends Controller
                 'max_properties'       => 'unlimited',
                 'max_loyalty_members'  => 'unlimited',
                 'ai_insights'          => 'true',
-                'ai_avatars'           => 'true',
+                'ai_avatars'           => 'false',
                 'custom_branding'      => 'true',
                 'api_access'           => 'true',
                 'push_notifications'   => 'true',
@@ -940,14 +971,14 @@ class AuthController extends Controller
                 'priority_support'     => 'dedicated',
             ],
             default => [
-                'max_team_members'     => '3',
-                'max_guests'           => '500',
+                'max_team_members'     => '5',
+                'max_guests'           => '1000',
                 'max_properties'       => '1',
-                'max_loyalty_members'  => '200',
+                'max_loyalty_members'  => '500',
                 'ai_insights'          => 'false',
                 'custom_branding'      => 'false',
-                'push_notifications'   => 'true',
-                'mobile_app'           => 'true',
+                'push_notifications'   => 'false',
+                'mobile_app'           => 'false',
             ],
         };
     }
@@ -1312,7 +1343,7 @@ class AuthController extends Controller
             $org->subscription_status = 'TRIALING';
             $org->trial_end           = now()->addDays($trialDays);
             $org->period_end          = now()->addDays($trialDays);
-            $org->entitled_products   = ['crm', 'chat', 'loyalty', 'booking'];
+            $org->entitled_products   = $this->getPlanProducts($planSlug);
             $org->plan_features       = $this->getTrialFeatures($planSlug);
             $org->entitlements_synced_at = now();
             $org->save();
