@@ -13,6 +13,7 @@ class Organization extends Model
         'website', 'settings', 'is_active',
         'plan_slug', 'subscription_status', 'trial_end', 'period_end',
         'entitled_products', 'plan_features', 'entitlements_synced_at',
+        'saas_deleted_at',
     ];
 
     protected static function booted(): void
@@ -33,7 +34,14 @@ class Organization extends Model
         'trial_end'             => 'datetime',
         'period_end'            => 'datetime',
         'entitlements_synced_at'=> 'datetime',
+        'saas_deleted_at'       => 'datetime',
     ];
+
+    /** Orgs whose SaaS company still exists (the default for tenant lookups). */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('saas_deleted_at');
+    }
 
     public function properties(): HasMany
     {

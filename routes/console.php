@@ -17,6 +17,10 @@ Schedule::command('chat:reap')->hourly();
 // config.auto_send_post_stay and sets its own delay via auto_send_delay_days.
 Schedule::command('reviews:send-post-stay')->dailyAt('09:00');
 
+// Daily reconciliation with the SaaS platform — archives local org rows
+// whose SaaS company has been deleted, so orphan data doesn't accumulate.
+Schedule::command('saas:reconcile-orgs')->dailyAt('03:30');
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes

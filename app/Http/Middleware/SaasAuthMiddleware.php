@@ -195,6 +195,12 @@ class SaasAuthMiddleware
                     'slug' => $request->attributes->get('saas_org_slug') ?: Str::slug($saasOrgId),
                 ]);
                 $isNew = true;
+            } elseif ($org->saas_deleted_at) {
+                // Reconcile job had previously marked this org as deleted in
+                // SaaS, but SaaS is still signing JWTs for it — resurrect.
+                // Usually means the reconcile raced a restore, or the delete
+                // was rolled back on the SaaS side.
+                $org->update(['saas_deleted_at' => null]);
             }
 
             // Auto-setup defaults for new organizations
