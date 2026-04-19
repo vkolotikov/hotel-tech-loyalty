@@ -52,7 +52,9 @@ const pathToView = (pathname: string): View => {
 
 export function Login() {
   const location = useLocation()
+  const initialHasToken = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('token')
   const [view, setView] = useState<View>(pathToView(location.pathname))
+  const [ssoLoading, setSsoLoading] = useState(initialHasToken)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -83,26 +85,40 @@ export function Login() {
   const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
 
-  // Handle SaaS JWT login via URL param
+  // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
+  // (not the shared axios `api` instance) because its global 401 interceptor
+  // hard-redirects to `/login`, which would strip the `?token=` query and
+  // lose the handoff context, leaving the user staring at a blank login form
+  // with no error. A direct fetch lets us surface the real failure reason
+  // and keep the user on the SSO loading screen until we decide what to do.
   useEffect(() => {
     const saasToken = searchParams.get('token')
-    if (saasToken) {
-      // Only honour local paths so an open-redirect via `?redirect=https://evil`
-      // isn't possible.
-      const rawRedirect = searchParams.get('redirect') || '/'
-      const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
-        ? rawRedirect
-        : '/'
-      localStorage.setItem('auth_token', saasToken)
-      api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
-      api.get('/v1/auth/me').then(({ data }) => {
-        setAuth(saasToken, data, data.staff)
-        navigate(redirectTo)
-      }).catch(() => {
-        setError('Invalid or expired session. Please log in.')
-        localStorage.removeItem('auth_token')
+    if (!saasToken) { setSsoLoading(false); return }
+
+    // Only honour local paths so an open-redirect via `?redirect=https://evil`
+    // isn't possible.
+    const rawRedirect = searchParams.get('redirect') || '/'
+    const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : '/'
+
+    const base = (api.defaults.baseURL || '').replace(/\/$/, '')
+    fetch(base + '/v1/auth/me', {
+      headers: { Authorization: 'Bearer ' + saasToken, Accept: 'application/json' },
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.message || body?.error || `Sign-in failed (${res.status})`)
+        localStorage.setItem('auth_token', saasToken)
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
+        setAuth(saasToken, body, body.staff)
+        navigate(redirectTo, { replace: true })
       })
-    }
+      .catch((err) => {
+        setError(err?.message || 'Could not complete single sign-on. Please try signing in below.')
+        localStorage.removeItem('auth_token')
+        setSsoLoading(false)
+      })
   }, [searchParams, setAuth, navigate])
 
   // Fetch plans on mount — use fallback only if API fails
@@ -297,6 +313,20 @@ export function Login() {
       return formatPrice(Math.round(plan.yearlyAmount / 12), plan.currency)
     }
     return formatPrice(plan.monthlyAmount, plan.currency)
+  }
+
+  // ─── SSO handoff in progress ────────────────────────────────────────────────
+  // While we exchange the SaaS JWT for a loyalty session, don't flash the
+  // login form — the user just set their password and expects to be signed in.
+  if (ssoLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#060b1e] text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-400">Signing you in…</p>
+        </div>
+      </div>
+    )
   }
 
   // ─── Verify View ────────────────────────────────────────────────────────────
