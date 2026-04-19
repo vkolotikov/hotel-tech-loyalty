@@ -93,32 +93,42 @@ img{max-width:100%;display:block}
 @media(max-width:600px){.row{grid-template-columns:1fr}}
 
 /* Category tiles */
-.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.cat-tile{border:2px solid var(--border);border-radius:var(--radius);padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:8px}
-.cat-tile:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));transform:translateY(-1px);box-shadow:var(--shadow)}
-.cat-tile.active{border-color:var(--primary);background:var(--primary-light)}
-.cat-ico{width:42px;height:42px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
-.cat-name{font-size:13px;font-weight:600}
-.cat-count{font-size:11px;color:var(--text-secondary)}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.cat-tile{position:relative;border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .25s;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;text-align:center}
+.cat-tile:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.cat-tile.active{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
+.cat-thumb{width:100%;height:110px;background:var(--surface-muted);overflow:hidden;position:relative}
+.cat-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.cat-tile:hover .cat-thumb img{transform:scale(1.05)}
+.cat-thumb-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 18%,transparent),color-mix(in srgb,var(--primary) 4%,transparent))}
+.cat-body{padding:14px 12px 16px;display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.cat-ico{width:42px;height:42px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;font-family:var(--font-display);margin-top:-34px;border:3px solid var(--surface);box-shadow:var(--shadow-sm);position:relative;z-index:1}
+.cat-tile.no-image .cat-ico{margin-top:0;border:none}
+.cat-name{font-size:13px;font-weight:700;color:var(--text)}
+.cat-count{font-size:11px;color:var(--text-secondary);font-weight:500}
 
-/* Service cards */
-.svc-card{display:flex;gap:0;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;transition:all .25s;cursor:pointer;background:var(--surface)}
-.svc-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+/* Service cards — image on the RIGHT side (room-widget style, reversed) */
+.svc-card{display:flex;flex-direction:row-reverse;gap:0;border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--surface)}
+.svc-card:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 .svc-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
-.svc-hero{width:200px;min-height:160px;background:var(--surface-muted);flex-shrink:0;overflow:hidden;position:relative}
-.svc-hero img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.svc-hero{width:260px;min-height:220px;background:var(--surface-muted);flex-shrink:0;overflow:hidden;position:relative}
+.svc-hero img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .svc-card:hover .svc-hero img{transform:scale(1.04)}
-.svc-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-family:var(--font-display);font-size:32px;opacity:.35}
-.svc-body{padding:16px 18px;flex:1;display:flex;flex-direction:column;min-width:0}
-.svc-name{font-family:var(--font-display);font-size:1.35rem;font-weight:600;line-height:1.2}
-.svc-desc{font-size:12px;color:var(--text-secondary);margin:6px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.svc-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text-secondary);margin-bottom:10px}
-.svc-tag{padding:3px 9px;background:color-mix(in srgb, var(--primary) 6%, transparent);border-radius:20px;font-size:10px;font-weight:600;color:var(--primary)}
-.svc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:10px;border-top:1px solid var(--border)}
-.svc-price{font-size:18px;font-weight:700;color:var(--primary)}
-.svc-btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap}
+.svc-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-family:var(--font-display);font-size:40px;opacity:.35;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 12%,transparent),color-mix(in srgb,var(--primary) 3%,transparent))}
+.svc-hero-badge{position:absolute;top:12px;left:12px;padding:5px 10px;background:rgba(255,255,255,.95);backdrop-filter:blur(6px);color:#1a1a1a;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.svc-body{padding:20px 22px;flex:1;display:flex;flex-direction:column;min-width:0}
+.svc-name{font-family:var(--font-display);font-size:1.5rem;font-weight:600;line-height:1.15;color:var(--text)}
+.svc-desc{font-size:13px;color:var(--text-secondary);line-height:1.55;margin:8px 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.svc-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.svc-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--surface-muted);border-radius:20px;font-size:11px;font-weight:600;color:var(--text-secondary)}
+.svc-tag{padding:4px 10px;background:color-mix(in srgb, var(--primary) 8%, transparent);border-radius:20px;font-size:10px;font-weight:700;color:var(--primary);letter-spacing:.3px;text-transform:uppercase}
+.svc-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.svc-pricing{display:flex;flex-direction:column;gap:1px}
+.svc-price-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary)}
+.svc-price{font-size:20px;font-weight:700;color:var(--primary);line-height:1.1}
+.svc-btn{padding:10px 18px;border-radius:10px;font-size:12px;font-weight:700;letter-spacing:.3px;border:2px solid var(--primary);background:transparent;color:var(--primary);transition:all .2s;white-space:nowrap;text-transform:uppercase}
 .svc-card.selected .svc-btn,.svc-btn:hover{background:var(--primary);color:#fff}
-@media(max-width:600px){.svc-card{flex-direction:column}.svc-hero{width:100%;min-height:140px}}
+@media(max-width:600px){.svc-card{flex-direction:column-reverse}.svc-hero{width:100%;min-height:180px}}
 
 /* Master cards */
 .master-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
@@ -168,12 +178,18 @@ img{max-width:100%;display:block}
 .extra-hero img{width:100%;height:100%;object-fit:cover}
 
 /* Summary */
-.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);position:sticky;top:16px}
-.summary-title{font-family:var(--font-display);font-size:1.3rem;font-weight:600;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);position:sticky;top:16px;overflow:hidden}
+.summary-hero{position:relative;height:150px;background:var(--surface-muted);overflow:hidden}
+.summary-hero img{width:100%;height:100%;object-fit:cover}
+.summary-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 18%,transparent),color-mix(in srgb,var(--primary) 4%,transparent));font-family:var(--font-display);font-size:42px;color:var(--primary);opacity:.55;font-weight:700}
+.summary-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 65%)}
+.summary-hero-title{position:absolute;bottom:14px;left:18px;right:18px;color:#fff;font-family:var(--font-display);font-size:1.25rem;font-weight:600;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.summary-body{padding:20px 22px}
+.summary-title{font-family:var(--font-display);font-size:1.15rem;font-weight:600;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 .summary-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:13px;padding:6px 0}
 .summary-row .lbl{color:var(--text-secondary)}
 .summary-row .val{font-weight:600;text-align:right}
-.summary-total{margin-top:14px;padding-top:14px;border-top:1.5px solid var(--border);display:flex;justify-content:space-between;font-size:16px;font-weight:700}
+.summary-total{margin-top:14px;padding-top:14px;border-top:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:baseline;font-size:16px;font-weight:700}
 .summary-total .val{color:var(--primary);font-size:22px}
 .summary-empty{color:var(--text-secondary);font-size:13px;text-align:center;padding:18px 0}
 
@@ -584,16 +600,23 @@ img{max-width:100%;display:block}
     if (cats.length > 0) {
       h += '<div class="card"><h2 class="card-title">Choose a category</h2><p class="card-sub">Pick what you\'re interested in to see available services.</p>'
       h += '<div class="cat-grid">'
-      h += '<div class="cat-tile' + (state.categoryId === null ? ' active' : '') + '" data-act="cat" data-id="">' +
-        '<div class="cat-ico">★</div><div class="cat-name">All</div></div>'
+      var totalCount = state.config.services.length
+      h += '<div class="cat-tile no-image' + (state.categoryId === null ? ' active' : '') + '" data-act="cat" data-id="">' +
+        '<div class="cat-body"><div class="cat-ico">★</div><div class="cat-name">All services</div>' +
+        '<div class="cat-count">' + totalCount + ' service' + (totalCount === 1 ? '' : 's') + '</div></div></div>'
       cats.forEach(function (c) {
         var count = state.config.services.filter(function (s) { return s.category_id === c.id }).length
         var ico = c.icon ? escapeHtml(c.icon.slice(0, 2)) : (c.name || '?').charAt(0)
-        h += '<div class="cat-tile' + (state.categoryId === c.id ? ' active' : '') + '" data-act="cat" data-id="' + c.id + '">'
+        var hasImg = !!c.image
+        h += '<div class="cat-tile' + (hasImg ? '' : ' no-image') + (state.categoryId === c.id ? ' active' : '') + '" data-act="cat" data-id="' + c.id + '">'
+        if (hasImg) {
+          h += '<div class="cat-thumb"><img src="' + escapeHtml(resolveImg(c.image)) + '" alt="' + escapeHtml(c.name) + '"></div>'
+        }
+        h += '<div class="cat-body">'
         h += '<div class="cat-ico" style="' + (c.color ? 'background:color-mix(in srgb,' + c.color + ' 14%,transparent);color:' + c.color : '') + '">' + escapeHtml(ico) + '</div>'
         h += '<div class="cat-name">' + escapeHtml(c.name) + '</div>'
         h += '<div class="cat-count">' + count + ' service' + (count === 1 ? '' : 's') + '</div>'
-        h += '</div>'
+        h += '</div></div>'
       })
       h += '</div></div>'
     }
@@ -605,21 +628,25 @@ img{max-width:100%;display:block}
     } else {
       list.forEach(function (s) {
         var tagsHtml = ''
-        ;(s.tags || []).slice(0, 3).forEach(function (t) { tagsHtml += '<span class="svc-tag">' + escapeHtml(t) + '</span>' })
-        var metaHtml = '<span>⏱ ' + fmtMinutes(s.duration_minutes) + '</span>'
+        ;(s.tags || []).slice(0, 2).forEach(function (t) { tagsHtml += '<span class="svc-tag">' + escapeHtml(t) + '</span>' })
+        var durationChip = '<span class="svc-chip">⏱ ' + fmtMinutes(s.duration_minutes) + '</span>'
+        var cat = getCategory(s.category_id)
+        var catChip = cat ? '<span class="svc-chip" style="' + (cat.color ? 'color:' + cat.color + ';background:color-mix(in srgb,' + cat.color + ' 10%,transparent)' : '') + '">' + escapeHtml(cat.name) + '</span>' : ''
         h += '<div class="svc-card' + (state.serviceId === s.id ? ' selected' : '') + '" data-act="svc" data-id="' + s.id + '">'
         h += '<div class="svc-hero">'
         if (s.image) h += '<img src="' + escapeHtml(resolveImg(s.image)) + '" alt="">'
         else h += '<div class="svc-hero-placeholder">' + escapeHtml((s.name || '?').charAt(0)) + '</div>'
+        if ((s.tags || []).indexOf('featured') >= 0) h += '<div class="svc-hero-badge">Featured</div>'
         h += '</div>'
         h += '<div class="svc-body">'
         h += '<div class="svc-name">' + escapeHtml(s.name) + '</div>'
         if (s.short_description || s.description) {
           h += '<div class="svc-desc">' + escapeHtml(s.short_description || s.description) + '</div>'
         }
-        h += '<div class="svc-meta">' + metaHtml + tagsHtml + '</div>'
-        h += '<div class="svc-footer"><div class="svc-price">' + fmtMoney(s.price, s.currency) + '</div>'
-        h += '<button class="svc-btn">Select</button></div>'
+        h += '<div class="svc-meta">' + durationChip + catChip + tagsHtml + '</div>'
+        h += '<div class="svc-footer">'
+        h += '<div class="svc-pricing"><div class="svc-price-label">From</div><div class="svc-price">' + fmtMoney(s.price, s.currency) + '</div></div>'
+        h += '<button class="svc-btn">Select →</button></div>'
         h += '</div></div>'
       })
     }
@@ -789,13 +816,24 @@ img{max-width:100%;display:block}
     var svc = getService()
     var master = getMaster()
     var h = '<div class="summary-card">'
-    h += '<div class="summary-title">Your booking</div>'
     if (!svc) {
-      h += '<div class="summary-empty">Select a service to get started.</div>'
-      h += '</div>'
+      h += '<div class="summary-body"><div class="summary-title">Your booking</div>'
+      h += '<div class="summary-empty">Select a service to get started.</div></div></div>'
       return h
     }
-    h += '<div class="summary-row"><span class="lbl">Service</span><span class="val">' + escapeHtml(svc.name) + '</span></div>'
+
+    // Hero image from selected service (falls back to category thumb or placeholder)
+    var cat = getCategory(svc.category_id)
+    var heroSrc = svc.image || (cat && cat.image) || ''
+    h += '<div class="summary-hero">'
+    if (heroSrc) h += '<img src="' + escapeHtml(resolveImg(heroSrc)) + '" alt="">'
+    else h += '<div class="summary-hero-placeholder">' + escapeHtml((svc.name || '?').charAt(0)) + '</div>'
+    h += '<div class="summary-hero-overlay"></div>'
+    h += '<div class="summary-hero-title">' + escapeHtml(svc.name) + '</div>'
+    h += '</div>'
+
+    h += '<div class="summary-body">'
+    h += '<div class="summary-title">Booking summary</div>'
     h += '<div class="summary-row"><span class="lbl">Duration</span><span class="val">' + fmtMinutes(svc.duration_minutes) + '</span></div>'
     if (master) h += '<div class="summary-row"><span class="lbl">Master</span><span class="val">' + escapeHtml(master.name) + '</span></div>'
     else if (state.step >= 3) h += '<div class="summary-row"><span class="lbl">Master</span><span class="val">Any available</span></div>'
@@ -809,6 +847,9 @@ img{max-width:100%;display:block}
       try { t = new Date(state.startAt).toLocaleTimeString(CFG.lang || 'en', { hour:'2-digit', minute:'2-digit' }) } catch(e) {}
       h += '<div class="summary-row"><span class="lbl">Time</span><span class="val">' + escapeHtml(t) + '</span></div>'
     }
+    if (state.partySize > 1) {
+      h += '<div class="summary-row"><span class="lbl">Party size</span><span class="val">' + state.partySize + '</span></div>'
+    }
 
     var q = state.quote
     if (q) {
@@ -818,9 +859,9 @@ img{max-width:100%;display:block}
       })
       h += '<div class="summary-total"><span>Total</span><span class="val">' + fmtMoney(q.total_amount, q.currency) + '</span></div>'
     } else if (!state.startAt) {
-      h += '<div class="summary-row"><span class="lbl">Total</span><span class="val">' + fmtMoney(svc.price, svc.currency) + '</span></div>'
+      h += '<div class="summary-total"><span>From</span><span class="val">' + fmtMoney(svc.price, svc.currency) + '</span></div>'
     }
-    h += '</div>'
+    h += '</div></div>'
     return h
   }
 

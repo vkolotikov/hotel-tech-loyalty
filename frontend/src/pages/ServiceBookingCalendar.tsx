@@ -39,11 +39,12 @@ function isoDay(iso: string) {
   return iso.slice(0, 10)
 }
 
+type View = 'day' | 'week' | 'month'
+
 export default function ServiceBookingCalendar() {
-  const [month, setMonth] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [view, setView] = useState<View>('month')
+  const [cursor, setCursor] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const month = cursor.slice(0, 7)
   const [statusFilter, setStatusFilter] = useState('')
   const [masterFilter, setMasterFilter] = useState('')
   const [serviceFilter, setServiceFilter] = useState('')
@@ -62,10 +63,11 @@ export default function ServiceBookingCalendar() {
   }, [month])
 
   const nav = (d: number) => {
-    let m = mon + d, y = year
-    if (m < 1) { m = 12; y-- }
-    if (m > 12) { m = 1; y++ }
-    setMonth(`${y}-${String(m).padStart(2, '0')}`)
+    const c = new Date(cursor + 'T00:00:00')
+    if (view === 'day')   c.setDate(c.getDate() + d)
+    if (view === 'week')  c.setDate(c.getDate() + d * 7)
+    if (view === 'month') c.setMonth(c.getMonth() + d)
+    setCursor(c.toISOString().slice(0, 10))
   }
 
   // Build full 6-week grid (Mon-first)
@@ -86,6 +88,16 @@ export default function ServiceBookingCalendar() {
     }
     return result.slice(0, 42)
   }, [year, mon])
+
+  const weekDays = useMemo(() => {
+    const c = new Date(cursor + 'T00:00:00')
+    const dow = c.getDay() === 0 ? 6 : c.getDay() - 1
+    const start = new Date(c); start.setDate(c.getDate() - dow)
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start); d.setDate(start.getDate() + i)
+      return d.toISOString().slice(0, 10)
+    })
+  }, [cursor])
 
   const masters = useMemo(() => {
     const m = new Map<number, string>()
@@ -123,6 +135,23 @@ export default function ServiceBookingCalendar() {
   const monthLabel = new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+  const viewLabel = useMemo(() => {
+    if (view === 'day') {
+      return new Date(cursor + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    }
+    if (view === 'week') {
+      const s = weekDays[0], e = weekDays[6]
+      const ds = new Date(s + 'T00:00:00'), de = new Date(e + 'T00:00:00')
+      const sameMonth = ds.getMonth() === de.getMonth()
+      const sFmt = ds.toLocaleDateString(undefined, { day: 'numeric', ...(sameMonth ? {} : { month: 'short' }) })
+      const eFmt = de.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+      return `${sFmt} – ${eFmt}`
+    }
+    return monthLabel
+  }, [view, cursor, weekDays, monthLabel])
+
+  const dayBookings = useMemo(() => byDay.get(cursor) || [], [byDay, cursor])
+
   const dayTotals = useMemo(() => {
     let bookings = 0, revenue = 0
     filtered.forEach(b => {
@@ -151,15 +180,22 @@ export default function ServiceBookingCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {(['day', 'week', 'month'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
-          <span className="text-white font-semibold min-w-[170px] text-center text-sm">{monthLabel}</span>
+          <span className="text-white font-semibold min-w-[200px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
-          <button onClick={() => {
-            const d = new Date()
-            setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-          }} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+          <button onClick={() => setCursor(new Date().toISOString().slice(0, 10))}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
@@ -195,67 +231,169 @@ export default function ServiceBookingCalendar() {
         </div>
       </div>
 
-      {/* Month grid */}
-      <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
-        {/* Weekday axis */}
-        <div className="grid grid-cols-7 border-b border-white/[0.06]">
-          {weekdays.map(w => (
-            <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
-              {w}
-            </div>
-          ))}
-        </div>
+      {view === 'month' && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          <div className="grid grid-cols-7 border-b border-white/[0.06]">
+            {weekdays.map(w => (
+              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
+                {w}
+              </div>
+            ))}
+          </div>
 
-        {/* Day cells */}
-        <div className="grid grid-cols-7">
-          {days.map((d, idx) => {
-            const inMonth = d.startsWith(month)
-            const isToday = d === today
-            const isWe = [5, 6].includes(idx % 7)
-            const list = byDay.get(d) || []
-            const visible = list.slice(0, 3)
-            const more = list.length - visible.length
-            return (
-              <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
-                className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[108px] transition-colors hover:bg-white/[0.02] focus:outline-none"
-                style={{
-                  background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
-                  opacity: inMonth ? 1 : 0.35,
-                  cursor: list.length > 0 ? 'pointer' : 'default',
-                }}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
-                    {new Date(d).getDate()}
-                  </span>
-                  {list.length > 0 && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
-                      {list.length}
+          <div className="grid grid-cols-7">
+            {days.map((d, idx) => {
+              const inMonth = d.startsWith(month)
+              const isToday = d === today
+              const isWe = [5, 6].includes(idx % 7)
+              const list = byDay.get(d) || []
+              const visible = list.slice(0, 3)
+              const more = list.length - visible.length
+              return (
+                <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
+                  className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[108px] transition-colors hover:bg-white/[0.02] focus:outline-none"
+                  style={{
+                    background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
+                    opacity: inMonth ? 1 : 0.35,
+                    cursor: list.length > 0 ? 'pointer' : 'default',
+                  }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
+                      {new Date(d).getDate()}
                     </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {visible.map(b => {
-                    const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
-                    return (
-                      <div key={b.id}
-                        className="text-[10px] px-1.5 py-1 rounded-md truncate"
-                        style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}
-                        title={`${fmtTime(b.start_at)} ${b.customer_name} — ${b.service?.name || ''}`}>
-                        <span className="font-bold">{fmtTime(b.start_at)}</span>
-                        <span className="ml-1 opacity-80">{b.customer_name}</span>
-                      </div>
-                    )
-                  })}
-                  {more > 0 && (
-                    <div className="text-[9px] text-gray-500 font-semibold px-1.5">+{more} more</div>
-                  )}
-                </div>
-              </button>
-            )
-          })}
+                    {list.length > 0 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
+                        {list.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {visible.map(b => {
+                      const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
+                      return (
+                        <div key={b.id}
+                          className="text-[10px] px-1.5 py-1 rounded-md truncate"
+                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+                          title={`${fmtTime(b.start_at)} ${b.customer_name} — ${b.service?.name || ''}`}>
+                          <span className="font-bold">{fmtTime(b.start_at)}</span>
+                          <span className="ml-1 opacity-80">{b.customer_name}</span>
+                        </div>
+                      )
+                    })}
+                    {more > 0 && (
+                      <div className="text-[9px] text-gray-500 font-semibold px-1.5">+{more} more</div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {view === 'week' && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          <div className="grid grid-cols-7">
+            {weekDays.map((d, idx) => {
+              const isToday = d === today
+              const isWe = [5, 6].includes(idx)
+              const dt = new Date(d + 'T00:00:00')
+              const list = byDay.get(d) || []
+              return (
+                <div key={d} className="border-r border-white/[0.04] last:border-r-0 min-h-[360px]"
+                  style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }}>
+                  <div className="px-3 py-2 border-b border-white/[0.04] flex items-center justify-between sticky top-0 z-[1]"
+                    style={{ background: 'rgba(14,20,18,0.98)' }}>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        {dt.toLocaleDateString(undefined, { weekday: 'short' })}
+                      </div>
+                      <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : 'text-white'}`}>{dt.getDate()}</div>
+                    </div>
+                    {list.length > 0 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.06] text-gray-400">
+                        {list.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    {list.length === 0 && <div className="text-[10px] text-gray-700 text-center pt-3">—</div>}
+                    {list.map(b => {
+                      const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
+                      return (
+                        <button key={b.id} onClick={() => setSelectedDay(d)}
+                          className="w-full text-left rounded-md px-2 py-1.5 transition-opacity hover:opacity-90"
+                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
+                          <div className="text-[10px] font-bold">{fmtTime(b.start_at)}</div>
+                          <div className="text-[11px] font-semibold truncate">{b.customer_name}</div>
+                          {b.service && <div className="text-[9px] opacity-70 truncate">{b.service.name}</div>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {view === 'day' && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          {dayBookings.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="text-gray-600 text-sm mb-1">No bookings scheduled</div>
+              <div className="text-gray-700 text-xs">{cursor === today ? 'Your day is clear.' : 'Nothing on this day.'}</div>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Hour column + schedule */}
+              <div className="grid" style={{ gridTemplateColumns: '70px 1fr' }}>
+                {Array.from({ length: 14 }, (_, i) => i + 7).map(hour => {
+                  const hourBookings = dayBookings.filter(b => new Date(b.start_at).getHours() === hour)
+                  const isCurrentHour = cursor === today && new Date().getHours() === hour
+                  return (
+                    <div key={hour} className="contents">
+                      <div className="border-r border-b border-white/[0.04] p-2 text-right text-[11px] font-bold text-gray-500"
+                        style={{ background: isCurrentHour ? 'rgba(116,200,149,0.04)' : 'transparent' }}>
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                      <div className="border-b border-white/[0.04] min-h-[60px] p-2 space-y-1.5"
+                        style={{ background: isCurrentHour ? 'rgba(116,200,149,0.03)' : 'transparent' }}>
+                        {hourBookings.map(b => {
+                          const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
+                          return (
+                            <Link key={b.id} to={`/service-bookings?id=${b.id}`}
+                              className="block rounded-lg px-3 py-2 transition-all hover:-translate-y-px"
+                              style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <div className="flex items-center gap-2">
+                                  <Clock size={11} />
+                                  <span className="text-[11px] font-bold">{fmtTime(b.start_at)}{b.end_at ? ` – ${fmtTime(b.end_at)}` : ''}</span>
+                                </div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider opacity-75">{b.status.replace('_', ' ')}</span>
+                              </div>
+                              <div className="text-xs font-semibold truncate">{b.customer_name}</div>
+                              {b.service && (
+                                <div className="text-[10px] opacity-75 truncate">
+                                  {b.service.name}{b.master ? ` · ${b.master.name}` : ''}
+                                </div>
+                              )}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {isLoading && (
         <div className="text-center text-xs text-gray-600 py-4">Loading calendar…</div>
