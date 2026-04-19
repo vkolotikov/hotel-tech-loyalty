@@ -239,11 +239,47 @@ class SaasAuthMiddleware
                 'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
                 'is_active'         => true,
             ]);
-        } elseif ($org && !$user->organization_id) {
+        } elseif ($org && $user->organization_id !== $org->id) {
+            // The JWT is authoritative for which org this user is currently
+            // operating in. If their local `organization_id` points somewhere
+            // else (e.g. an old org they were invited to that's since been
+            // deleted in SaaS, or a different org they belong to), repoint
+            // them — otherwise `/v1/auth/me`, the staff record, and anything
+            // else that reads `user->organization_id` will show stale data
+            // from the previous org.
             $user->update(['organization_id' => $org->id]);
+
             $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
-            if ($staff && !$staff->organization_id) {
-                $staff->update(['organization_id' => $org->id]);
+            $saasRole = $request->attributes->get('saas_role', 'STAFF');
+            $localRole = match (strtoupper($saasRole)) {
+                'OWNER' => 'super_admin',
+                'ADMIN' => 'manager',
+                default => 'receptionist',
+            };
+
+            if ($staff) {
+                $staff->update([
+                    'organization_id'   => $org->id,
+                    'role'              => $localRole,
+                    'hotel_name'        => $org->name ?? $staff->hotel_name,
+                    'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
+                    'can_redeem_points' => true,
+                    'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
+                    'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
+                    'is_active'         => true,
+                ]);
+            } else {
+                Staff::withoutGlobalScopes()->create([
+                    'user_id'           => $user->id,
+                    'organization_id'   => $org->id,
+                    'role'              => $localRole,
+                    'hotel_name'        => $org->name ?? 'Hotel',
+                    'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
+                    'can_redeem_points' => true,
+                    'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
+                    'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
+                    'is_active'         => true,
+                ]);
             }
         }
 
