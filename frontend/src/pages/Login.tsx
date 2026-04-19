@@ -7,9 +7,9 @@ import {
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
-// Optional — set VITE_BRAND_LOGO_URL in the frontend .env to render a real
-// logo on the login screen instead of the fallback "HT" gradient badge.
-const BRAND_LOGO_URL = import.meta.env.VITE_BRAND_LOGO_URL as string | undefined
+const BRAND_LOGO_URL =
+  (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
+  `${import.meta.env.BASE_URL}hotel-tech-logo.png`
 
 function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact?: boolean }) {
   const [failed, setFailed] = useState(false)
