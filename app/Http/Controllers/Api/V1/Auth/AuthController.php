@@ -1158,13 +1158,47 @@ class AuthController extends Controller
     public function billingDiag(Request $request): JsonResponse
     {
         $saasApi = config('services.saas.api_url');
+        $secret = config('services.saas.jwt_secret');
 
         $result = [
             'saas_api_url' => $saasApi,
-            'has_jwt_secret' => (bool) config('services.saas.jwt_secret'),
+            'has_jwt_secret' => (bool) $secret,
+            'jwt_secret_len' => $secret ? strlen($secret) : 0,
             'php_version' => PHP_VERSION,
             'timestamp' => now()->toIso8601String(),
         ];
+
+        // Optional JWT diagnostic — pass ?token=<saas_jwt> to see exactly why
+        // verification fails. Reports signature match, expiry, payload fields
+        // — never echoes the secret itself.
+        if ($token = trim((string) $request->query('token', ''))) {
+            $jwt = ['supplied' => true, 'length' => strlen($token)];
+            $parts = explode('.', $token);
+            $jwt['parts'] = count($parts);
+
+            if (count($parts) === 3 && $secret) {
+                [$h, $p, $sig] = $parts;
+                $expected = rtrim(strtr(base64_encode(
+                    hash_hmac('sha256', "$h.$p", $secret, true)
+                ), '+/', '-_'), '=');
+                $jwt['signature_match'] = hash_equals($expected, $sig);
+
+                $padded = str_pad(strtr($p, '-_', '+/'),
+                    strlen($p) % 4 ? strlen($p) + 4 - strlen($p) % 4 : strlen($p),
+                    '=');
+                $data = json_decode(base64_decode($padded), true) ?: [];
+                $jwt['payload_decoded'] = (bool) $data;
+                $jwt['payload_fields'] = array_keys($data);
+                $jwt['email'] = $data['email'] ?? null;
+                $jwt['org_id'] = $data['currentOrgId'] ?? null;
+                $jwt['iat'] = $data['iat'] ?? null;
+                $jwt['exp'] = $data['exp'] ?? null;
+                $jwt['now'] = time();
+                $jwt['expired'] = isset($data['exp']) ? ($data['exp'] < time()) : null;
+            }
+
+            $result['jwt'] = $jwt;
+        }
 
         if (!$saasApi) {
             $result['connectivity'] = 'NOT_CONFIGURED';
