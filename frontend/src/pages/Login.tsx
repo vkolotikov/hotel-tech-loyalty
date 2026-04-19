@@ -14,7 +14,7 @@ const BRAND_LOGO_URL =
 function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact?: boolean }) {
   const [failed, setFailed] = useState(false)
   const Wrapper = onClick ? 'button' : 'div'
-  const height = compact ? 28 : 36
+  const height = compact ? 56 : 72
 
   if (BRAND_LOGO_URL && !failed) {
     return (
