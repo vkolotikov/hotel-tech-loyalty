@@ -73,7 +73,17 @@
   var isSpeaking = false;
   var ttsEnabled = false;
   var recognition = null;
-  var lastUserLang = (navigator.language || 'en-US');
+  // Initial best-guess BCP-47 locale; refined after each STT session or when
+  // the user types in a language that differs from navigator.language.
+  var lastUserLang = (function () {
+    var n = navigator.language || 'en-US';
+    if (n.indexOf('-') === -1) {
+      var map = { en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+        pt: 'pt-BR', ru: 'ru-RU', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN' };
+      return map[n.toLowerCase()] || 'en-US';
+    }
+    return n;
+  })();
   var isVoiceCall = false;
   var voicePc = null; // WebRTC PeerConnection
   var voiceDataChannel = null;
@@ -1061,15 +1071,60 @@
     }
   }
 
-  // Detected language for STT/TTS — uses browser locale, can be overridden by widget config
-  var sttLang = (window.HotelChatConfig && window.HotelChatConfig.lang)
-    || (navigator.language || navigator.userLanguage || 'en-US');
+  // Web Speech API needs a full BCP-47 locale ("en-US", "ru-RU") — a bare
+  // 2-letter code is silently treated as English by most browsers, which is
+  // why widget config lang="es" / "ru" / etc. ended up always transcribing
+  // as English. Map 2-letter codes to a sensible default region.
+  var LANG_DEFAULT_REGION = {
+    en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+    pt: 'pt-BR', ru: 'ru-RU', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN',
+    ar: 'ar-SA', tr: 'tr-TR', nl: 'nl-NL', pl: 'pl-PL', sv: 'sv-SE',
+    da: 'da-DK', no: 'nb-NO', fi: 'fi-FI', cs: 'cs-CZ', el: 'el-GR',
+    he: 'he-IL', hi: 'hi-IN', hu: 'hu-HU', ro: 'ro-RO', uk: 'uk-UA',
+    vi: 'vi-VN', th: 'th-TH', id: 'id-ID',
+  };
+  function toBcp47(raw) {
+    if (!raw) return null;
+    var s = String(raw).trim().replace('_', '-');
+    if (!s) return null;
+    // Already has a region like "en-US" / "pt-BR" — keep as-is (normalize case)
+    if (s.indexOf('-') !== -1) {
+      var parts = s.split('-');
+      return parts[0].toLowerCase() + '-' + parts.slice(1).join('-').toUpperCase();
+    }
+    var two = s.toLowerCase();
+    return LANG_DEFAULT_REGION[two] || null;
+  }
+
+  // Resolve the best BCP-47 locale for speech recognition. Priority:
+  //   1. navigator.language — already has a region, most accurate
+  //      (if its base language matches the widget-configured language, or
+  //       if the widget didn't configure one at all)
+  //   2. widget config lang mapped via LANG_DEFAULT_REGION
+  //   3. navigator.language regardless of match
+  //   4. 'en-US'
+  function resolveSttLang() {
+    var navLang = navigator.language || navigator.userLanguage || '';
+    var cfgLang = (window.HotelChatConfig && window.HotelChatConfig.lang) || '';
+    var navBase = navLang.toLowerCase().slice(0, 2);
+    var cfgBase = String(cfgLang).toLowerCase().slice(0, 2);
+
+    if (navLang && navLang.indexOf('-') !== -1) {
+      if (!cfgBase || cfgBase === navBase) return toBcp47(navLang);
+    }
+    return toBcp47(cfgLang) || toBcp47(navLang) || 'en-US';
+  }
+
+  var sttLang = resolveSttLang();
   var silenceTimer = null;
   var SILENCE_MS = 2500; // auto-finalize after 2.5s of no new speech
   var manualStop = false;
 
   function startListening() {
     if (!hasSTT || isListening) return;
+    // Re-resolve each time — widget config or navigator state may have
+    // changed since the widget loaded (e.g. site switched locale).
+    sttLang = resolveSttLang();
     recognition = new SpeechRecognition();
     // continuous=true so the browser doesn't cut off at first short pause —
     // we manage end-of-utterance ourselves via a silence timer.
