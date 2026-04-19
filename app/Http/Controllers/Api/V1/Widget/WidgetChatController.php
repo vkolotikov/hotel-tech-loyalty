@@ -558,7 +558,7 @@ class WidgetChatController extends Controller
         );
 
         $provider = $modelConfig->provider ?? 'openai';
-        $model = $modelConfig->model_name ?? 'gpt-4o';
+        $model = $modelConfig->model_name ?? 'gpt-5.4-mini';
         $temperature = (float) ($modelConfig->temperature ?? 0.7);
         $maxTokens = (int) ($modelConfig->max_tokens ?? 1024);
         $extraParams = array_filter([
@@ -570,7 +570,17 @@ class WidgetChatController extends Controller
         ], fn($v) => $v !== null);
 
         try {
-            $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
+            // OpenAI provider gets the agent tool-calling loop so the model can
+            // check room/service availability itself and propose bookings. Other
+            // providers fall back to plain text generation with pre-injected
+            // booking context only.
+            if ($provider === 'openai') {
+                $aiResponse = $this->callOpenAiWithTools(
+                    $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams, (int) $orgId
+                );
+            } else {
+                $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
+            }
         } catch (\Throwable $e) {
             \Log::error("Widget chat error [{$provider}/{$model}]: " . $e->getMessage());
             $aiResponse = $behaviorConfig->fallback_message
@@ -1219,6 +1229,416 @@ class WidgetChatController extends Controller
         return false;
     }
 
+    /**
+     * OpenAI chat completion with function-calling loop. The agent can decide
+     * to call any of the registered tools (check_room_availability,
+     * list_services, check_service_availability) to ground its reply in live
+     * data. Loops up to 4 rounds so the model can chain calls (e.g. list
+     * services → check a specific service's slots).
+     */
+    private function callOpenAiWithTools(
+        string $systemPrompt,
+        array $messages,
+        string $model,
+        float $temperature,
+        int $maxTokens,
+        array $extra,
+        int $orgId,
+    ): string {
+        $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!$apiKey) {
+            throw new \RuntimeException('OpenAI API key not configured.');
+        }
+
+        $isGpt5    = (bool) preg_match('/^gpt-5/i', $model);
+        $isOSeries = !$isGpt5 && (bool) preg_match('/^(o1|o3|o4)/i', $model);
+        $isModern  = !$isGpt5 && !$isOSeries && (bool) preg_match('/^(gpt-4o|gpt-4\.1|gpt-4-turbo)/i', $model);
+
+        $systemRole  = $isGpt5 ? 'developer' : 'system';
+        $convMessages = array_merge([['role' => $systemRole, 'content' => $systemPrompt]], $messages);
+
+        $tools = $this->buildAgentTools($orgId);
+
+        // No tools (org has neither rooms nor services) → plain completion.
+        if (empty($tools)) {
+            return $this->callProvider('openai', $systemPrompt, $messages, $model, $temperature, $maxTokens, $extra);
+        }
+
+        $maxRounds = 4;
+        for ($round = 0; $round < $maxRounds; $round++) {
+            $params = [
+                'model'       => $model,
+                'messages'    => $convMessages,
+                'tools'       => $tools,
+                'tool_choice' => 'auto',
+            ];
+
+            if ($isGpt5 || $isOSeries || $isModern) {
+                $params['max_completion_tokens'] = $maxTokens;
+            } else {
+                $params['max_tokens'] = $maxTokens;
+            }
+
+            if ($isGpt5) {
+                $effort = $extra['reasoning_effort'] ?? 'low';
+                $params['reasoning_effort'] = $effort;
+                if ($effort === 'none') {
+                    $params['temperature'] = $temperature;
+                }
+            } elseif (!$isOSeries) {
+                $params['temperature'] = $temperature;
+            }
+
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout(60)
+                ->post('https://api.openai.com/v1/chat/completions', $params);
+
+            if ($response->failed()) {
+                $status = $response->status();
+                $body = $response->json();
+                $msg = $body['error']['message'] ?? substr($response->body(), 0, 300);
+                throw new \RuntimeException("OpenAI tool-call error {$status} [{$model}]: {$msg}");
+            }
+
+            $choiceMessage = $response->json('choices.0.message');
+            if (!is_array($choiceMessage)) {
+                return '';
+            }
+
+            if (!empty($choiceMessage['tool_calls'])) {
+                // Echo the assistant tool-call turn back into the conversation
+                // exactly as the API returned it, then append a tool-result
+                // message per call.
+                $convMessages[] = [
+                    'role'       => 'assistant',
+                    'content'    => $choiceMessage['content'] ?? '',
+                    'tool_calls' => $choiceMessage['tool_calls'],
+                ];
+                foreach ($choiceMessage['tool_calls'] as $tc) {
+                    $name = $tc['function']['name'] ?? '';
+                    $args = [];
+                    try {
+                        $args = json_decode($tc['function']['arguments'] ?? '{}', true) ?: [];
+                    } catch (\Throwable) {}
+                    $result = $this->executeAgentTool($name, $args, $orgId);
+                    $convMessages[] = [
+                        'role'         => 'tool',
+                        'tool_call_id' => $tc['id'] ?? '',
+                        'content'      => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ];
+                }
+                continue;
+            }
+
+            return (string) ($choiceMessage['content'] ?? '');
+        }
+
+        return "I had trouble finishing that lookup. Could you rephrase, or shall I connect you with our team?";
+    }
+
+    /**
+     * Build the OpenAI tool schemas the widget agent can call. Only expose
+     * tools for modules the org actually has data in — no point offering
+     * service availability to a property that doesn't sell services.
+     */
+    private function buildAgentTools(int $orgId): array
+    {
+        $hasRooms = BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->exists();
+        $hasServices = \App\Models\Service::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->exists();
+
+        $tools = [];
+
+        if ($hasRooms) {
+            $tools[] = [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'check_room_availability',
+                    'description' => 'Check which rooms are bookable for a date range and party size. Call this whenever the visitor gives or implies specific dates. Returns a list of available rooms with prices and images.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'check_in'  => ['type' => 'string', 'description' => 'YYYY-MM-DD, today or later'],
+                            'check_out' => ['type' => 'string', 'description' => 'YYYY-MM-DD, strictly after check_in'],
+                            'adults'    => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20, 'description' => 'defaults to 2 if not given'],
+                            'children'  => ['type' => 'integer', 'minimum' => 0, 'maximum' => 10, 'description' => 'defaults to 0 if not given'],
+                        ],
+                        'required' => ['check_in', 'check_out'],
+                    ],
+                ],
+            ];
+        }
+
+        if ($hasServices) {
+            $tools[] = [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'list_services',
+                    'description' => 'List the services the property offers (spa, dining, activities, tours, etc.) with category, duration, price, image and available staff. Call this when the visitor asks about services, activities, spa, dining or similar.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'category' => ['type' => 'string', 'description' => 'optional case-insensitive keyword to filter by category name or slug'],
+                        ],
+                    ],
+                ],
+            ];
+            $tools[] = [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'check_service_availability',
+                    'description' => 'Return the free starting times for a specific service on a given date. Call this only after the visitor has picked a service and chosen a date.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'service_id' => ['type' => 'integer', 'description' => 'id from list_services'],
+                            'date'       => ['type' => 'string', 'description' => 'YYYY-MM-DD, today or later'],
+                            'master_id'  => ['type' => 'integer', 'description' => 'optional specific staff member id'],
+                        ],
+                        'required' => ['service_id', 'date'],
+                    ],
+                ],
+            ];
+        }
+
+        return $tools;
+    }
+
+    /**
+     * Execute a single tool call from the agent. Returns an array that will be
+     * JSON-encoded back to the model as the tool result. Errors are captured
+     * in an `error` key so the model can recover gracefully.
+     */
+    private function executeAgentTool(string $name, array $args, int $orgId): array
+    {
+        try {
+            switch ($name) {
+                case 'check_room_availability': {
+                    $checkIn  = (string) ($args['check_in'] ?? '');
+                    $checkOut = (string) ($args['check_out'] ?? '');
+                    if (!$checkIn || !$checkOut) {
+                        return ['error' => 'check_in and check_out are required (YYYY-MM-DD).'];
+                    }
+                    $available = $this->bookingContext->checkAvailability(
+                        $orgId,
+                        $checkIn,
+                        $checkOut,
+                        (int) ($args['adults'] ?? 2),
+                        (int) ($args['children'] ?? 0),
+                    );
+                    $rooms = array_map(function ($room) {
+                        return [
+                            'id'              => $room['id'] ?? null,
+                            'name'            => $room['name'] ?? '',
+                            'description'     => $room['short_description'] ?? ($room['description'] ?? ''),
+                            'price_per_night' => $room['price'] ?? ($room['base_price'] ?? null),
+                            'total_price'     => $room['total_price'] ?? null,
+                            'currency'        => $room['currency'] ?? 'EUR',
+                            'max_guests'      => $room['max_guests'] ?? null,
+                            'amenities'       => array_slice($room['amenities'] ?? [], 0, 6),
+                            'image'           => $this->absolutizeUrl($room['image'] ?? null),
+                        ];
+                    }, $available);
+                    return [
+                        'check_in'        => $checkIn,
+                        'check_out'       => $checkOut,
+                        'available_rooms' => $rooms,
+                        'count'           => count($rooms),
+                    ];
+                }
+
+                case 'list_services': {
+                    $services = \App\Models\Service::withoutGlobalScopes()
+                        ->with(['category', 'masters' => fn($q) => $q->where('service_masters.is_active', true)])
+                        ->where('organization_id', $orgId)
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->get();
+
+                    $filter = isset($args['category']) ? mb_strtolower(trim((string) $args['category'])) : '';
+                    if ($filter !== '') {
+                        $services = $services->filter(function ($s) use ($filter) {
+                            if (!$s->category) return false;
+                            return str_contains(mb_strtolower((string) $s->category->slug), $filter)
+                                || str_contains(mb_strtolower((string) $s->category->name), $filter);
+                        });
+                    }
+
+                    return [
+                        'count'    => $services->count(),
+                        'services' => $services->take(24)->map(fn($s) => [
+                            'id'               => $s->id,
+                            'name'             => $s->name,
+                            'category'         => $s->category?->name,
+                            'description'      => $s->short_description ?: $s->description,
+                            'duration_minutes' => $s->duration_minutes,
+                            'price'            => (float) $s->price,
+                            'currency'         => $s->currency ?: 'EUR',
+                            'image'            => $this->absolutizeUrl($s->image),
+                            'masters'          => $s->masters->map(fn($m) => [
+                                'id'    => $m->id,
+                                'name'  => $m->name,
+                                'title' => $m->title,
+                            ])->values()->all(),
+                        ])->values()->all(),
+                    ];
+                }
+
+                case 'check_service_availability': {
+                    $serviceId = (int) ($args['service_id'] ?? 0);
+                    $date      = (string) ($args['date'] ?? '');
+                    if (!$serviceId || !$date) {
+                        return ['error' => 'service_id and date (YYYY-MM-DD) are required.'];
+                    }
+                    $service = \App\Models\Service::withoutGlobalScopes()
+                        ->where('organization_id', $orgId)
+                        ->where('id', $serviceId)
+                        ->where('is_active', true)
+                        ->first();
+                    if (!$service) {
+                        return ['error' => 'Service not found or inactive.'];
+                    }
+                    app()->instance('current_organization_id', $orgId);
+                    $scheduler = app(\App\Services\ServiceSchedulingService::class);
+                    $leadMinutes = (int) (\App\Models\HotelSetting::withoutGlobalScopes()
+                        ->where('organization_id', $orgId)->where('key', 'services_lead_minutes')->value('value') ?: 60);
+                    $stepMinutes = (int) (\App\Models\HotelSetting::withoutGlobalScopes()
+                        ->where('organization_id', $orgId)->where('key', 'services_slot_step')->value('value') ?: 15);
+
+                    $slots = $scheduler->availableSlots(
+                        $service,
+                        $date,
+                        isset($args['master_id']) ? (int) $args['master_id'] : null,
+                        $stepMinutes,
+                        $leadMinutes,
+                    );
+
+                    // Trim to first 16 slots and strip internal fields so the
+                    // model's context stays compact.
+                    $slim = array_map(fn($s) => [
+                        'start'            => $s['start'],
+                        'time_label'       => $s['time_label'],
+                        'duration_minutes' => $s['duration_minutes'],
+                        'master_ids'       => $s['masters'] ?? [],
+                    ], array_slice($slots, 0, 16));
+
+                    return [
+                        'service_id'   => $service->id,
+                        'service_name' => $service->name,
+                        'date'         => $date,
+                        'slots'        => $slim,
+                        'count'        => count($slim),
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("Agent tool {$name} failed", ['error' => $e->getMessage(), 'args' => $args]);
+            return ['error' => 'Tool execution failed: ' . $e->getMessage()];
+        }
+
+        return ['error' => "Unknown tool: {$name}"];
+    }
+
+    /**
+     * POST /v1/widget/{widgetKey}/book-service — creates a service booking
+     * from a widget-driven confirmation. The chat agent proposes a
+     * [BOOKING_CONFIRM] card; tapping Confirm in the widget POSTs here. The
+     * org is resolved from the widget key so we never trust org_id from the
+     * client. Mirrors the slot-lock + reserveSlot flow from
+     * ServicePublicController::confirm.
+     */
+    public function bookService(Request $request, string $widgetKey): JsonResponse
+    {
+        $data = $request->validate([
+            'service_id'        => 'required|integer',
+            'service_master_id' => 'nullable|integer',
+            'start_at'          => 'required|date|after:now',
+            'party_size'        => 'nullable|integer|min:1|max:50',
+            'customer_name'     => 'required|string|max:200',
+            'customer_email'    => 'required|email|max:255',
+            'customer_phone'    => 'nullable|string|max:40',
+            'customer_notes'    => 'nullable|string|max:2000',
+        ]);
+
+        $config = $this->resolveWidget($widgetKey);
+        if (!$config) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        }
+
+        $orgId = (int) $config->organization_id;
+        app()->instance('current_organization_id', $orgId);
+
+        $service = \App\Models\Service::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('id', $data['service_id'])
+            ->where('is_active', true)
+            ->first();
+        if (!$service) {
+            return response()->json(['error' => 'Service not found'], 404);
+        }
+
+        $scheduler = app(\App\Services\ServiceSchedulingService::class);
+        $lockKey = !empty($data['service_master_id'])
+            ? "svcm:{$data['service_master_id']}"
+            : "svc:{$service->id}";
+
+        try {
+            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $service, $scheduler, $orgId, $lockKey) {
+                \Illuminate\Support\Facades\DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+
+                $reservation = $scheduler->reserveSlot(
+                    $service,
+                    $data['service_master_id'] ?? null,
+                    $data['start_at'],
+                );
+
+                $partySize = (int) ($data['party_size'] ?? 1);
+                $servicePrice = (float) $reservation['price'];
+
+                return \App\Models\ServiceBooking::create([
+                    'organization_id'   => $orgId,
+                    'service_id'        => $service->id,
+                    'service_master_id' => $reservation['master']->id,
+                    'customer_name'     => $data['customer_name'],
+                    'customer_email'    => strtolower(trim($data['customer_email'])),
+                    'customer_phone'    => $data['customer_phone'] ?? null,
+                    'party_size'        => $partySize,
+                    'start_at'          => $reservation['start'],
+                    'end_at'            => $reservation['end'],
+                    'duration_minutes'  => $reservation['duration_minutes'],
+                    'service_price'     => $servicePrice,
+                    'extras_total'      => 0,
+                    'total_amount'      => $servicePrice,
+                    'currency'          => $service->currency ?: 'EUR',
+                    'status'            => 'confirmed',
+                    'payment_status'    => 'unpaid',
+                    'source'            => 'chat_widget',
+                    'customer_notes'    => $data['customer_notes'] ?? null,
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 409);
+        } catch (\Throwable $e) {
+            \Log::error('Widget book-service failed', ['error' => $e->getMessage(), 'org' => $orgId]);
+            return response()->json(['error' => 'Failed to create booking. Please try again.'], 500);
+        }
+
+        return response()->json([
+            'booking_reference' => $booking->booking_reference,
+            'status'            => $booking->status,
+            'service_name'      => $service->name,
+            'start_at'          => $booking->start_at?->toIso8601String(),
+            'end_at'            => $booking->end_at?->toIso8601String(),
+            'total_amount'      => (float) $booking->total_amount,
+            'currency'          => $booking->currency,
+        ], 201);
+    }
+
     private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null, string $bookingContext = '', string $bookingWidgetUrl = ''): string
     {
         // System prompt is laid out in strict sections so the model attends
@@ -1339,6 +1759,43 @@ class WidgetChatController extends Controller
         $parts[] = "\n# Runtime Context";
         $parts[] = "- You are chatting with a website visitor on " . ($companyName ?: 'the hotel') . "'s public site. You do NOT have access to their loyalty account, bookings, or personal data unless they share it.";
         $parts[] = "- Today is " . now()->format('l, F j, Y') . " (" . now()->format('Y-m-d') . ").";
+
+        // ── 6b. Tools & booking-in-chat instructions ──
+        // The OpenAI provider exposes function-calling tools so the agent can
+        // check live availability and help the visitor book inside the chat.
+        $parts[] = "\n# Tools You Can Call";
+        $parts[] = "You have function-calling tools to look up LIVE data. Prefer calling tools over guessing:";
+        $parts[] = "- `check_room_availability(check_in, check_out, adults, children)` — use the moment the visitor mentions or implies dates. Never quote room availability or prices from memory.";
+        $parts[] = "- `list_services(category?)` — use when the visitor asks about spa, dining, tours, activities or any service. The result contains the real service IDs, prices, durations and staff ids you MUST reuse in later calls.";
+        $parts[] = "- `check_service_availability(service_id, date, master_id?)` — use after the visitor picks a service and gives a date. Return times in the visitor's local format (H:mm).";
+        $parts[] = "Call rules:";
+        $parts[] = "- Never fabricate tool results. If a tool returns an `error` field, apologise briefly and either retry with corrected arguments or offer to connect the visitor with a human.";
+        $parts[] = "- Never invent service_id, master_id, or prices. Reuse values from the most recent tool result.";
+        $parts[] = "- Keep the visitor in the loop while a tool runs — one short sentence like \"Let me check our calendar…\" is enough.";
+
+        $parts[] = "\n# In-Chat Booking (services only)";
+        $parts[] = "You can take a service booking from start to finish inside this chat. Rooms are NOT bookable inline — for rooms, emit a ROOM_CARD (see below) so the visitor opens the full booking widget.";
+        $parts[] = "Service booking flow:";
+        $parts[] = "1. Call `list_services` (optionally filtered). Surface 2–6 relevant options as SERVICE_CARD blocks so the visitor can pick visually.";
+        $parts[] = "2. Once a service is chosen, ask for a preferred date if not given.";
+        $parts[] = "3. Call `check_service_availability`. Offer the times naturally (e.g. \"I see 14:00, 15:30 and 17:00 on Friday\") — the visitor can reply in any format.";
+        $parts[] = "4. Collect the visitor's full name, email and phone (phone optional). Do NOT invent contact details — always ask.";
+        $parts[] = "5. When you have service_id + master_id + start (ISO8601) + name + email, emit a single BOOKING_CONFIRM block. The widget renders it as a card with a Confirm button; the visitor completes the booking by tapping Confirm.";
+        $parts[] = "6. Do NOT claim the booking is complete until the visitor taps Confirm — the widget will post a success message of its own after the server confirms.";
+
+        $parts[] = "\n## Service Card Format";
+        $parts[] = "Use this block to show a service option the visitor can explore:";
+        $parts[] = "[SERVICE_CARD]{\"id\":123,\"name\":\"Deep Tissue Massage\",\"category\":\"Spa\",\"description\":\"Short persuasive pitch\",\"duration_minutes\":60,\"price\":80,\"currency\":\"EUR\",\"image\":\"IMAGE_URL\"}[/SERVICE_CARD]";
+        $parts[] = "Rules: one card per service, real ids from list_services, no more than 6 cards per reply, always include a short text recommendation alongside.";
+
+        $parts[] = "\n## Booking Confirm Format";
+        $parts[] = "When the visitor is ready to book a service, emit exactly one BOOKING_CONFIRM block. The widget validates it and posts to the booking endpoint on tap.";
+        $parts[] = "[BOOKING_CONFIRM]{\"kind\":\"service\",\"service_id\":123,\"service_name\":\"Deep Tissue Massage\",\"service_master_id\":45,\"master_name\":\"Anna\",\"start_at\":\"2026-04-22T14:00:00+03:00\",\"duration_minutes\":60,\"price\":80,\"currency\":\"EUR\",\"party_size\":1,\"customer_name\":\"Full Name\",\"customer_email\":\"email@example.com\",\"customer_phone\":\"+371 2...\",\"customer_notes\":\"\"}[/BOOKING_CONFIRM]";
+        $parts[] = "Rules:";
+        $parts[] = "- Use ISO8601 for start_at including the offset (copy the value from check_service_availability's `start`).";
+        $parts[] = "- `service_master_id` must come from the slot's master_ids (pick the first if the visitor didn't specify). Use `master_name` from list_services.";
+        $parts[] = "- Never embed the block before you have ALL required fields. If anything is missing, ask instead.";
+        $parts[] = "- Emit at most ONE BOOKING_CONFIRM per reply. Briefly summarise the booking in words above the block.";
 
         // ── 7. Booking context ──
         if ($bookingContext) {

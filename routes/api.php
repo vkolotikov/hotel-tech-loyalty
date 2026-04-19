@@ -135,6 +135,9 @@ Route::prefix('v1')->group(function () {
         Route::get('{widgetKey}/rooms',           [WidgetChatController::class, 'getRooms']);
         Route::get('{widgetKey}/availability',    [WidgetChatController::class, 'checkAvailability'])->middleware('throttle:30,1');
         Route::get('{widgetKey}/calendar-prices', [WidgetChatController::class, 'widgetCalendarPrices'])->middleware('throttle:30,1');
+
+        // In-chat service booking — tapped from [BOOKING_CONFIRM] card
+        Route::post('{widgetKey}/book-service',   [WidgetChatController::class, 'bookService'])->middleware('throttle:10,1');
     });
 
     // ─── Public diagnostic endpoint (no auth) ────────────────────────────────

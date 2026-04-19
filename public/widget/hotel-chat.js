@@ -165,6 +165,33 @@
     .htchat-room-card-info { font-size: 10px; color: #9ca3af; }\
     .htchat-room-card-book { padding: 8px 18px; border-radius: 10px; border: none; color: white; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }\
     .htchat-room-card-book:hover { opacity: 0.85; }\
+    .htchat-service-card { display: flex; gap: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 10px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }\
+    .htchat-service-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-1px); }\
+    .htchat-service-card-img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }\
+    .htchat-service-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }\
+    .htchat-service-card-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; font-weight: 600; margin-bottom: 2px; }\
+    .htchat-service-card-name { font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.25; }\
+    .htchat-service-card-desc { font-size: 11px; color: #6b7280; line-height: 1.4; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\
+    .htchat-service-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; gap: 8px; }\
+    .htchat-service-card-meta { font-size: 11px; color: #6b7280; }\
+    .htchat-service-card-price { font-size: 14px; font-weight: 800; color: #1f2937; }\
+    .htchat-confirm-card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; margin-top: 8px; }\
+    .htchat-confirm-card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; font-weight: 600; margin-bottom: 8px; }\
+    .htchat-confirm-card-service { font-size: 15px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }\
+    .htchat-confirm-card-row { display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; padding: 3px 0; gap: 12px; }\
+    .htchat-confirm-card-row strong { color: #1f2937; font-weight: 600; text-align: right; word-break: break-word; }\
+    .htchat-confirm-card-total { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #1f2937; border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 8px; }\
+    .htchat-confirm-card-actions { display: flex; gap: 8px; margin-top: 12px; }\
+    .htchat-confirm-card-btn { flex: 1; padding: 10px 12px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.2s, background 0.2s; }\
+    .htchat-confirm-card-btn-primary { color: white; }\
+    .htchat-confirm-card-btn-primary:hover:not(:disabled) { opacity: 0.85; }\
+    .htchat-confirm-card-btn-primary:disabled { opacity: 0.6; cursor: default; }\
+    .htchat-confirm-card-btn-secondary { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }\
+    .htchat-confirm-card-btn-secondary:hover { background: #e5e7eb; }\
+    .htchat-confirm-card.done { border-color: #86efac; background: #f0fdf4; }\
+    .htchat-confirm-card.error { border-color: #fca5a5; background: #fef2f2; }\
+    .htchat-confirm-card-status { font-size: 12px; color: #16a34a; margin-top: 8px; font-weight: 600; }\
+    .htchat-confirm-card.error .htchat-confirm-card-status { color: #dc2626; }\
     .htchat-typing { display: flex; gap: 4px; padding: 4px 0; }\
     .htchat-typing span { width: 6px; height: 6px; border-radius: 50%; animation: htchat-bounce 1.4s ease-in-out infinite; }\
     .htchat-typing span:nth-child(2) { animation-delay: 0.2s; }\
@@ -965,6 +992,83 @@
       if (btn) btn.onclick = function (e) { e.stopPropagation(); window.open(url, '_blank'); };
     });
 
+    // Wire service card clicks — send a prefilled "I'd like to book X" message.
+    container.querySelectorAll('.htchat-service-card[data-service-name]').forEach(function (card) {
+      var name = card.getAttribute('data-service-name');
+      card.onclick = function () {
+        if (!name || isLoading) return;
+        sendMessage("I'd like to book " + name);
+      };
+    });
+
+    // Wire booking confirm card buttons — POST to /book-service with card payload.
+    container.querySelectorAll('.htchat-confirm-card[data-confirm-payload]').forEach(function (card) {
+      if (card.classList.contains('done') || card.classList.contains('error')) return;
+      var raw = card.getAttribute('data-confirm-payload');
+      var payload = null;
+      try { payload = JSON.parse(decodeURIComponent(raw)); } catch (e) { return; }
+      var goBtn = card.querySelector('[data-confirm-go]');
+      var cancelBtn = card.querySelector('[data-confirm-cancel]');
+      var statusEl = card.querySelector('[data-confirm-status]');
+
+      if (cancelBtn) cancelBtn.onclick = function () {
+        card.classList.add('error');
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Cancelled.'; }
+        if (goBtn) goBtn.disabled = true;
+        if (cancelBtn) cancelBtn.disabled = true;
+      };
+
+      if (goBtn) goBtn.onclick = function () {
+        if (goBtn.disabled) return;
+        goBtn.disabled = true;
+        if (cancelBtn) cancelBtn.disabled = true;
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Booking…'; }
+
+        fetch(API + '/book-service', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            service_id: payload.service_id,
+            service_master_id: payload.service_master_id || null,
+            start_at: payload.start_at,
+            customer_name: payload.customer_name,
+            customer_email: payload.customer_email,
+            customer_phone: payload.customer_phone || null,
+            customer_notes: payload.customer_notes || payload.notes || null,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+          .then(function (res) {
+            if (res.ok && res.body && res.body.booking_reference) {
+              card.classList.add('done');
+              if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.textContent = 'Booked — reference ' + res.body.booking_reference;
+              }
+              messages.push({
+                role: 'assistant',
+                content: 'Your booking is confirmed. Reference: **' + res.body.booking_reference + '**. A confirmation will be sent to ' + (payload.customer_email || 'you') + '.',
+              });
+              renderMessages();
+            } else {
+              card.classList.add('error');
+              var msg = (res.body && (res.body.message || res.body.error)) || 'Could not complete booking.';
+              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; }
+              if (goBtn) { goBtn.disabled = false; goBtn.textContent = 'Try again'; }
+              if (cancelBtn) cancelBtn.disabled = false;
+              card.classList.remove('done');
+            }
+          })
+          .catch(function () {
+            card.classList.add('error');
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Network error — please try again.'; }
+            if (goBtn) { goBtn.disabled = false; goBtn.textContent = 'Try again'; }
+            if (cancelBtn) cancelBtn.disabled = false;
+          });
+      };
+    });
+
     if (isLoading || agentTyping) {
       container.innerHTML += '<div class="htchat-msg assistant"><div class="htchat-msg-bubble"><div class="htchat-typing">' +
         '<span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span><span style="background:' + getColor() + '"></span>' +
@@ -1652,19 +1756,33 @@
     if (!text) return '';
 
     // Extract [ROOM_CARD]...[/ROOM_CARD] blocks before escaping HTML
-    var cards = [];
-    var cardRegex = /\[ROOM_CARD\]([\s\S]*?)\[\/ROOM_CARD\]/g;
-    var match;
-    while ((match = cardRegex.exec(text)) !== null) {
-      try {
-        var cardData = JSON.parse(match[1].trim());
-        cards.push(cardData);
-      } catch (e) {
-        // Malformed JSON — skip this card
-      }
+    var rooms = [];
+    var roomRegex = /\[ROOM_CARD\]([\s\S]*?)\[\/ROOM_CARD\]/g;
+    var m;
+    while ((m = roomRegex.exec(text)) !== null) {
+      try { rooms.push(JSON.parse(m[1].trim())); } catch (e) {}
     }
-    // Remove card blocks from text
-    var cleanText = text.replace(cardRegex, '').trim();
+
+    // Extract [SERVICE_CARD]...[/SERVICE_CARD] blocks
+    var services = [];
+    var serviceRegex = /\[SERVICE_CARD\]([\s\S]*?)\[\/SERVICE_CARD\]/g;
+    while ((m = serviceRegex.exec(text)) !== null) {
+      try { services.push(JSON.parse(m[1].trim())); } catch (e) {}
+    }
+
+    // Extract [BOOKING_CONFIRM]...[/BOOKING_CONFIRM] blocks
+    var confirms = [];
+    var confirmRegex = /\[BOOKING_CONFIRM\]([\s\S]*?)\[\/BOOKING_CONFIRM\]/g;
+    while ((m = confirmRegex.exec(text)) !== null) {
+      try { confirms.push(JSON.parse(m[1].trim())); } catch (e) {}
+    }
+
+    // Remove all block markers from text
+    var cleanText = text
+      .replace(roomRegex, '')
+      .replace(serviceRegex, '')
+      .replace(confirmRegex, '')
+      .trim();
 
     // Format the remaining text
     var html = escapeHtml(cleanText)
@@ -1672,16 +1790,93 @@
       .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
       .replace(/\n/g, '<br>');
 
-    // Render room cards
-    if (cards.length > 0) {
+    if (rooms.length > 0) {
       html += '<div class="htchat-room-cards">';
-      cards.forEach(function (card) {
-        html += renderRoomCard(card);
-      });
+      rooms.forEach(function (c) { html += renderRoomCard(c); });
       html += '</div>';
     }
 
+    if (services.length > 0) {
+      html += '<div class="htchat-room-cards">';
+      services.forEach(function (c) { html += renderServiceCard(c); });
+      html += '</div>';
+    }
+
+    if (confirms.length > 0) {
+      confirms.forEach(function (c) { html += renderBookingConfirm(c); });
+    }
+
     return html;
+  }
+
+  function renderServiceCard(card) {
+    var imageUrl = card.image || '';
+    if (imageUrl && imageUrl.indexOf('http') !== 0 && imageUrl.indexOf('data:') !== 0) {
+      var base = API.replace(/\/api\/v1\/widget\/[^/]+$/, '');
+      imageUrl = base + (imageUrl.indexOf('/') === 0 ? '' : '/') + imageUrl;
+    }
+    var imgHtml = imageUrl
+      ? '<img class="htchat-service-card-img" src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(card.name || '') + '" onerror="this.style.display=\'none\'" />'
+      : '<div class="htchat-service-card-img"></div>';
+
+    var priceLabel = '';
+    if (card.price) {
+      var curr = card.currency || 'EUR';
+      priceLabel = curr + ' ' + Number(card.price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    var metaBits = [];
+    if (card.duration_minutes) metaBits.push(card.duration_minutes + ' min');
+    var metaHtml = metaBits.length ? '<span class="htchat-service-card-meta">' + escapeHtml(metaBits.join(' • ')) + '</span>' : '';
+
+    var safeName = escapeHtml(card.name || 'Service');
+
+    return '<div class="htchat-service-card" data-service-name="' + safeName + '">' +
+      imgHtml +
+      '<div class="htchat-service-card-body">' +
+        (card.category ? '<div class="htchat-service-card-cat">' + escapeHtml(card.category) + '</div>' : '') +
+        '<div class="htchat-service-card-name">' + safeName + '</div>' +
+        (card.description ? '<div class="htchat-service-card-desc">' + escapeHtml(card.description) + '</div>' : '') +
+        '<div class="htchat-service-card-footer">' +
+          metaHtml +
+          (priceLabel ? '<div class="htchat-service-card-price">' + priceLabel + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderBookingConfirm(data) {
+    var color = getColor();
+    var rows = '';
+    var startLabel = data.start_at_label || data.start_at || '';
+    var serviceName = escapeHtml(data.service_name || 'Service');
+
+    if (data.master_name) rows += '<div class="htchat-confirm-card-row"><span>Specialist</span><strong>' + escapeHtml(data.master_name) + '</strong></div>';
+    if (startLabel) rows += '<div class="htchat-confirm-card-row"><span>Start</span><strong>' + escapeHtml(startLabel) + '</strong></div>';
+    if (data.duration_minutes) rows += '<div class="htchat-confirm-card-row"><span>Duration</span><strong>' + escapeHtml(data.duration_minutes + ' min') + '</strong></div>';
+    if (data.customer_name) rows += '<div class="htchat-confirm-card-row"><span>Name</span><strong>' + escapeHtml(data.customer_name) + '</strong></div>';
+    if (data.customer_email) rows += '<div class="htchat-confirm-card-row"><span>Email</span><strong>' + escapeHtml(data.customer_email) + '</strong></div>';
+    if (data.customer_phone) rows += '<div class="htchat-confirm-card-row"><span>Phone</span><strong>' + escapeHtml(data.customer_phone) + '</strong></div>';
+
+    var totalRow = '';
+    if (data.price) {
+      var curr = data.currency || 'EUR';
+      totalRow = '<div class="htchat-confirm-card-total"><span>Total</span><span>' + curr + ' ' + Number(data.price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '</span></div>';
+    }
+
+    var payload = encodeURIComponent(JSON.stringify(data));
+
+    return '<div class="htchat-confirm-card" data-confirm-payload="' + payload + '">' +
+      '<div class="htchat-confirm-card-title">Confirm booking</div>' +
+      '<div class="htchat-confirm-card-service">' + serviceName + '</div>' +
+      rows +
+      totalRow +
+      '<div class="htchat-confirm-card-actions">' +
+        '<button class="htchat-confirm-card-btn htchat-confirm-card-btn-secondary" data-confirm-cancel>Cancel</button>' +
+        '<button class="htchat-confirm-card-btn htchat-confirm-card-btn-primary" data-confirm-go style="background:' + color + '">Confirm</button>' +
+      '</div>' +
+      '<div class="htchat-confirm-card-status" data-confirm-status style="display:none"></div>' +
+    '</div>';
   }
 
   function renderRoomCard(card) {

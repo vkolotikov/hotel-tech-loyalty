@@ -37,7 +37,7 @@ class ChatbotModelConfig extends Model
             ?? new static([
                 'organization_id'   => $orgId,
                 'provider'          => 'openai',
-                'model_name'        => 'gpt-4o',
+                'model_name'        => 'gpt-5.4-mini',
                 'temperature'       => 0.70,
                 'top_p'             => 1.00,
                 'max_tokens'        => 1024,
