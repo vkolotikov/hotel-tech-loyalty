@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ChevronLeft, ChevronRight, BedDouble, Scissors, ClipboardList, X, Clock, User, Users } from 'lucide-react'
+import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 
 /* ── source theming ──────────────────────────────────────────────── */
 
@@ -206,6 +207,7 @@ export default function CalendarUnified() {
 
   return (
     <div className="space-y-5">
+      <DesktopOnlyBanner pageKey="calendar-unified" message="The unified calendar grid is best viewed on a larger screen. On mobile, the timeline requires horizontal scrolling." />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

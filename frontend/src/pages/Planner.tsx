@@ -10,6 +10,7 @@ import {
   ListChecks, AlertCircle, Flag, Tag,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
@@ -404,6 +405,7 @@ export function Planner() {
   /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
     <div className="p-6 space-y-5">
+      <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

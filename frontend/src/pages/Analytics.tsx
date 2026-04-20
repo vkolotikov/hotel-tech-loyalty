@@ -8,6 +8,7 @@ import {
 import { api } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
+import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
@@ -181,6 +182,7 @@ export function Analytics() {
 
   return (
     <div className="space-y-6">
+      <DesktopOnlyBanner pageKey="analytics" message="Analytics charts and dense tables are best viewed on a desktop or tablet. On mobile, charts may require horizontal scrolling." />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

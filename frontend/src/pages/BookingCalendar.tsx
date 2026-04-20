@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { money } from '../lib/money'
+import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 
 /* ── Unit visual theming ─────────────────────────────────────────── */
 
@@ -165,6 +166,7 @@ export function BookingCalendar() {
 
   return (
     <div className="space-y-5">
+      <DesktopOnlyBanner pageKey="booking-calendar" message="The booking calendar grid is designed for wider screens. On mobile, you'll need to scroll horizontally to see all units and dates." />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
