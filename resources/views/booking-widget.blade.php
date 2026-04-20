@@ -283,8 +283,19 @@ input,select,textarea{font-family:inherit}
 
   /* Buttons: bigger tap area */
   .btn{padding:14px 20px;font-size:15px;min-height:50px;border-radius:12px}
-  .btn-row{flex-direction:column-reverse;gap:10px}
-  .btn-row .btn{width:100%}
+
+  /* Dock the per-step .btn-row to a fixed footer CTA (Back + Continue) */
+  .btn-row{position:fixed;left:0;right:0;bottom:0;margin:0;z-index:60;flex-direction:row;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0));background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 14px rgba(0,0,0,.08)}
+  .btn-row .btn{flex:1;margin:0;padding:13px 16px;min-height:52px}
+  .btn-row .btn-outline{flex:0 0 38%}
+  .btn-row .btn:only-child{flex:1}
+  /* Reserve space so docked bar never overlaps the bottom of scrollable content */
+  body:has(.btn-row){padding-bottom:calc(92px + env(safe-area-inset-bottom,0))}
+
+  /* Hide duplicate CTAs inside the top sticky summary on mobile — the docked
+     btn-row is now the single primary action (search step has no btn-row so
+     the inline #w-search button stays in flow). */
+  .summary-card .btn{display:none}
 
   /* Forms: single column */
   .row{grid-template-columns:1fr;gap:12px}
