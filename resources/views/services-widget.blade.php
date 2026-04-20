@@ -2,7 +2,8 @@
 <html lang="{{ $lang }}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="{{ $color ?: '#2d6a4f' }}">
 <title>Book a Service</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -208,6 +209,92 @@ img{max-width:100%;display:block}
 
 /* Chip */
 .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--primary-light);color:var(--primary);border-radius:20px;font-size:11px;font-weight:600}
+
+/* ──────────────────────────────────────────────────────────
+   Mobile-first enhancements (phones only — ≤ 640px).
+   Purely additive. Desktop/tablet layout above is untouched.
+   ────────────────────────────────────────────────────────── */
+@media (max-width:640px){
+  html,body{overscroll-behavior-y:contain}
+  body{padding-bottom:env(safe-area-inset-bottom,0)}
+
+  .widget{padding:12px 12px 32px}
+  .widget-header{margin-bottom:16px;padding-bottom:12px;gap:10px}
+  .widget-header img{height:28px}
+  .widget-header .prop-name{font-size:15px}
+
+  /* Stepper: hide labels, compact circles */
+  .stepper{margin-bottom:18px;padding:0 4px}
+  .step-label{display:none}
+  .step-circle{width:28px;height:28px;font-size:12px}
+  .stepper-item:not(:last-child)::after{top:14px;left:calc(50% + 16px);right:calc(-50% + 16px)}
+
+  /* Cards */
+  .card{padding:18px 16px;margin-bottom:14px;border-radius:14px}
+  .card-title{font-size:17px}
+  .card-sub{font-size:12px;margin-bottom:16px}
+
+  /* Inputs: 16px font prevents iOS auto-zoom; larger touch targets */
+  .field input,.field select,.field textarea{font-size:16px;padding:13px 14px;min-height:48px}
+  .field textarea{min-height:88px}
+
+  /* Buttons: bigger tap area */
+  .btn{padding:14px 20px;font-size:15px;min-height:50px;border-radius:12px}
+  .btn-row{flex-direction:column-reverse;gap:10px}
+  .btn-row .btn{width:100%}
+
+  /* Forms: single column */
+  .row{grid-template-columns:1fr;gap:12px}
+
+  /* Category tiles: 2 per row on phones */
+  .cat-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .cat-thumb{height:90px}
+  .cat-body{padding:12px 10px 14px}
+  .cat-ico{width:36px;height:36px;font-size:16px;margin-top:-28px}
+  .cat-name{font-size:12px}
+
+  /* Service cards already stack at 600px via existing rule; tighten */
+  .svc-hero{min-height:160px}
+  .svc-body{padding:16px 18px}
+  .svc-name{font-size:1.3rem}
+  .svc-desc{font-size:12px;-webkit-line-clamp:3}
+  .svc-footer{flex-wrap:wrap;gap:10px}
+  .svc-btn{padding:12px 18px;min-height:46px;font-size:12px;flex:1}
+
+  /* Master provider tiles: 2 per row on phones */
+  .master-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .master-tile{padding:12px 10px}
+  .master-avatar{width:52px;height:52px;margin-bottom:8px;font-size:18px}
+  .master-name{font-size:13px}
+  .master-title{font-size:10px}
+
+  /* Time-slot grid: 3 per row (more compact, readable) */
+  .slot-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .slot-btn{padding:12px 6px;font-size:13px;min-height:48px}
+
+  /* Extras: taller touch targets */
+  .extra-card{padding:14px;gap:12px}
+  .extra-hero{width:56px;height:56px}
+
+  /* Summary: reorder to the top of mobile layout, compact + sticky while scrolling */
+  .page-layout>div:nth-child(2){order:-1}
+  .summary-card{position:sticky;top:0;z-index:40;margin:-12px -12px 14px;border-radius:0 0 16px 16px;box-shadow:0 4px 14px rgba(0,0,0,.08);border-top:none;border-left:none;border-right:none}
+  .summary-hero{display:none}
+  .summary-body{padding:14px 16px}
+  .summary-title{font-size:1rem;margin-bottom:10px;padding-bottom:8px}
+  .summary-row{font-size:12px;padding:4px 0}
+  .summary-total{margin-top:10px;padding-top:10px;font-size:14px}
+  .summary-total .val{font-size:18px}
+
+  /* Calendar: bottom-sheet style + larger day cells */
+  .cal-grid{gap:4px}
+  .cal-day{min-height:46px;font-size:14px;border-radius:8px}
+
+  /* Confirmation screen tightens */
+  .confirm-card{padding:32px 20px}
+  .confirm-title{font-size:1.6rem}
+  .confirm-sub{font-size:13px}
+}
 </style>
 </head>
 <body data-theme="">
@@ -610,7 +697,7 @@ img{max-width:100%;display:block}
         var hasImg = !!c.image
         h += '<div class="cat-tile' + (hasImg ? '' : ' no-image') + (state.categoryId === c.id ? ' active' : '') + '" data-act="cat" data-id="' + c.id + '">'
         if (hasImg) {
-          h += '<div class="cat-thumb"><img src="' + escapeHtml(resolveImg(c.image)) + '" alt="' + escapeHtml(c.name) + '"></div>'
+          h += '<div class="cat-thumb"><img src="' + escapeHtml(resolveImg(c.image)) + '" alt="' + escapeHtml(c.name) + '" loading="lazy" decoding="async"></div>'
         }
         h += '<div class="cat-body">'
         h += '<div class="cat-ico" style="' + (c.color ? 'background:color-mix(in srgb,' + c.color + ' 14%,transparent);color:' + c.color : '') + '">' + escapeHtml(ico) + '</div>'
@@ -634,7 +721,7 @@ img{max-width:100%;display:block}
         var catChip = cat ? '<span class="svc-chip" style="' + (cat.color ? 'color:' + cat.color + ';background:color-mix(in srgb,' + cat.color + ' 10%,transparent)' : '') + '">' + escapeHtml(cat.name) + '</span>' : ''
         h += '<div class="svc-card' + (state.serviceId === s.id ? ' selected' : '') + '" data-act="svc" data-id="' + s.id + '">'
         h += '<div class="svc-hero">'
-        if (s.image) h += '<img src="' + escapeHtml(resolveImg(s.image)) + '" alt="">'
+        if (s.image) h += '<img src="' + escapeHtml(resolveImg(s.image)) + '" alt="' + escapeHtml(s.name || '') + '" loading="lazy" decoding="async">'
         else h += '<div class="svc-hero-placeholder">' + escapeHtml((s.name || '?').charAt(0)) + '</div>'
         if ((s.tags || []).indexOf('featured') >= 0) h += '<div class="svc-hero-badge">Featured</div>'
         h += '</div>'
@@ -668,7 +755,7 @@ img{max-width:100%;display:block}
     masters.forEach(function (m) {
       var initial = (m.name || '?').charAt(0)
       h += '<div class="master-tile' + (state.masterId === m.id ? ' active' : '') + '" data-act="mst" data-id="' + m.id + '">'
-      h += '<div class="master-avatar">' + (m.avatar ? '<img src="' + escapeHtml(resolveImg(m.avatar)) + '" alt="">' : escapeHtml(initial)) + '</div>'
+      h += '<div class="master-avatar">' + (m.avatar ? '<img src="' + escapeHtml(resolveImg(m.avatar)) + '" alt="' + escapeHtml(m.name || '') + '" loading="lazy" decoding="async">' : escapeHtml(initial)) + '</div>'
       h += '<div class="master-name">' + escapeHtml(m.name) + '</div>'
       if (m.title) h += '<div class="master-title">' + escapeHtml(m.title) + '</div>'
       h += '</div>'
@@ -753,12 +840,12 @@ img{max-width:100%;display:block}
     var h = '<div class="card">'
     h += '<h2 class="card-title">Your details</h2><p class="card-sub">We\'ll send confirmation to the email you provide.</p>'
     h += '<div class="row">'
-    h += '<div class="field"><label>Full name *</label><input data-act="customer" data-field="name" value="' + escapeHtml(state.customer.name) + '" placeholder="Jane Doe"></div>'
-    h += '<div class="field"><label>Email *</label><input type="email" data-act="customer" data-field="email" value="' + escapeHtml(state.customer.email) + '" placeholder="jane@example.com"></div>'
+    h += '<div class="field"><label>Full name *</label><input data-act="customer" data-field="name" value="' + escapeHtml(state.customer.name) + '" placeholder="Jane Doe" autocomplete="name" autocapitalize="words" spellcheck="false"></div>'
+    h += '<div class="field"><label>Email *</label><input type="email" data-act="customer" data-field="email" value="' + escapeHtml(state.customer.email) + '" placeholder="jane@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></div>'
     h += '</div>'
     h += '<div class="row">'
-    h += '<div class="field"><label>Phone</label><input data-act="customer" data-field="phone" value="' + escapeHtml(state.customer.phone) + '" placeholder="+1 ..."></div>'
-    h += '<div class="field"><label>Party size</label><input type="number" min="1" max="20" data-act="party" value="' + state.partySize + '"></div>'
+    h += '<div class="field"><label>Phone</label><input type="tel" data-act="customer" data-field="phone" value="' + escapeHtml(state.customer.phone) + '" placeholder="+1 ..." autocomplete="tel" inputmode="tel"></div>'
+    h += '<div class="field"><label>Party size</label><input type="number" min="1" max="20" data-act="party" value="' + state.partySize + '" inputmode="numeric"></div>'
     h += '</div>'
     h += '<div class="field"><label>Notes (optional)</label><textarea data-act="customer" data-field="notes" placeholder="Anything we should know?">' + escapeHtml(state.customer.notes) + '</textarea></div>'
     h += '</div>'
@@ -769,7 +856,7 @@ img{max-width:100%;display:block}
         var checked = state.extras.some(function (e) { return e.id === x.id })
         var priceNote = x.price_type === 'per_person' ? ' / person' : ''
         h += '<div class="extra-card' + (checked ? ' checked' : '') + '" data-act="extra" data-id="' + x.id + '">'
-        if (x.image) h += '<div class="extra-hero"><img src="' + escapeHtml(resolveImg(x.image)) + '" alt=""></div>'
+        if (x.image) h += '<div class="extra-hero"><img src="' + escapeHtml(resolveImg(x.image)) + '" alt="' + escapeHtml(x.name || '') + '" loading="lazy" decoding="async"></div>'
         h += '<div class="extra-check">' + (checked ? '✓' : '') + '</div>'
         h += '<div class="extra-info"><div class="extra-name">' + escapeHtml(x.name) + '</div>'
         if (x.description) h += '<div class="extra-desc">' + escapeHtml(x.description) + '</div>'

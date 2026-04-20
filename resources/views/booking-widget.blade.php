@@ -2,7 +2,8 @@
 <html lang="{{ $lang }}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="{{ $color ?: '#2d6a4f' }}">
 <title>Book Your Stay</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -249,6 +250,90 @@ input,select,textarea{font-family:inherit}
 .cal-footer .cal-apply{padding:10px 24px;border:none;border-radius:8px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;cursor:pointer;transition:all .2s}
 .cal-footer .cal-apply:hover{opacity:.9}
 .cal-footer .cal-apply:disabled{opacity:.4;cursor:not-allowed}
+
+/* ──────────────────────────────────────────────────────────
+   Mobile-first enhancements (phones only — ≤ 640px).
+   Purely additive. Desktop/tablet layout above is untouched.
+   ────────────────────────────────────────────────────────── */
+@media (max-width:640px){
+  html,body{overscroll-behavior-y:contain}
+  body{padding-bottom:env(safe-area-inset-bottom,0)}
+
+  .widget{padding:12px 12px 32px}
+  .widget-header{margin-bottom:16px;padding-bottom:12px;gap:10px}
+  .widget-header img{height:28px}
+  .widget-header .prop-name{font-size:15px}
+
+  /* Stepper: hide labels, compact circles, even spacing */
+  .stepper{margin-bottom:18px;padding:0 4px}
+  .step-label{display:none}
+  .step-circle{width:28px;height:28px;font-size:12px}
+  .stepper-item:not(:last-child)::after{top:14px;left:calc(50% + 16px);right:calc(-50% + 16px)}
+
+  /* Cards */
+  .card{padding:18px 16px;margin-bottom:14px;border-radius:14px}
+  .card-title{font-size:17px}
+  .card-sub{font-size:12px;margin-bottom:16px}
+
+  /* Inputs: 16px font prevents iOS auto-zoom; larger touch targets */
+  .field input,.field select,.field textarea{font-size:16px;padding:13px 14px;min-height:48px}
+  .field textarea{min-height:88px}
+  .date-trigger{padding:12px 14px;min-height:58px;font-size:15px}
+  .date-trigger .date-value{font-size:15px}
+
+  /* Buttons: bigger tap area */
+  .btn{padding:14px 20px;font-size:15px;min-height:50px;border-radius:12px}
+  .btn-row{flex-direction:column-reverse;gap:10px}
+  .btn-row .btn{width:100%}
+
+  /* Forms: single column */
+  .row{grid-template-columns:1fr;gap:12px}
+
+  /* Rooms: stacked (already kicks in ≤600px; re-assert for safety) */
+  .room-card{flex-direction:column;border-width:1.5px}
+  .room-hero{width:100%;min-height:180px;height:200px}
+  .room-body{padding:16px}
+  .room-name{font-size:1.3rem}
+  .room-footer{flex-wrap:wrap;gap:10px}
+  .room-select-btn{padding:12px 20px;min-height:46px;font-size:13px;flex:1}
+
+  /* Extras */
+  .extra-card{flex-direction:column;border-width:1.5px}
+  .extra-hero{width:100%;min-height:130px}
+  .extra-body{padding:14px 16px}
+
+  /* Summary: reorder to the top of mobile layout, compact + sticky while scrolling */
+  .page-layout>.summary-sidebar{order:-1}
+  .details-grid>.summary-card{order:-1}
+  .summary-sidebar{position:static}
+  .summary-card{position:sticky;top:0;z-index:40;margin:-12px -12px 14px;border-radius:0 0 16px 16px;padding:14px 16px;box-shadow:0 4px 14px rgba(0,0,0,.08);border-top:none;border-left:none;border-right:none}
+  .summary-hero{display:none}
+  .summary-card h3{font-size:13px;margin-bottom:8px;padding-bottom:6px}
+  .summary-line{font-size:12px;padding:3px 0}
+  .summary-total{font-size:15px;padding-top:8px;margin-top:6px}
+
+  /* Calendar becomes a bottom-sheet modal */
+  .cal-overlay{padding:0;align-items:flex-end;background:rgba(0,0,0,.4)}
+  .cal-popup{width:100%;max-width:none;max-height:94vh;border-radius:20px 20px 0 0;padding:12px 14px 24px;animation:slideUpSheet .28s cubic-bezier(.2,.9,.3,1)}
+  .cal-popup::before{content:'';display:block;width:40px;height:4px;background:var(--border);border-radius:2px;margin:4px auto 14px}
+  .cal-header{margin-bottom:14px}
+  .cal-header h3{font-size:15px}
+  .cal-months{grid-template-columns:1fr;gap:18px}
+  .cal-day .day-inner{min-height:48px;padding:5px 0}
+  .cal-day .day-num{font-size:14px}
+  .cal-footer{flex-direction:column;align-items:stretch;gap:10px;padding-top:14px}
+  .cal-footer .cal-summary{text-align:center;order:2}
+  .cal-footer .cal-apply{width:100%;padding:14px 20px;font-size:15px;min-height:50px;order:1}
+
+  @keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+  /* Details two-col grid → single column (already in 780px block; reasserted) */
+  .details-grid{grid-template-columns:1fr}
+
+  /* Success screen tightens */
+  .success-wrap{padding:32px 16px}
+  .success-wrap h2{font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -860,11 +945,11 @@ function renderDetails() {
   h += '<div class="card"><div class="card-title">Guest Details</div>';
   h += '<div class="card-sub">Fill in your information to complete the reservation</div>';
   h += '<div class="row">';
-  h += field('First Name *', '<input id="w-fname" value="' + esc(state.firstName) + '" placeholder="John">');
-  h += field('Last Name *', '<input id="w-lname" value="' + esc(state.lastName) + '" placeholder="Doe">');
+  h += field('First Name *', '<input id="w-fname" value="' + esc(state.firstName) + '" placeholder="John" autocomplete="given-name" autocapitalize="words" spellcheck="false">');
+  h += field('Last Name *', '<input id="w-lname" value="' + esc(state.lastName) + '" placeholder="Doe" autocomplete="family-name" autocapitalize="words" spellcheck="false">');
   h += '</div>';
-  h += field('Email Address *', '<input type="email" id="w-email" value="' + esc(state.email) + '" placeholder="john@example.com">');
-  h += field('Phone Number', '<input type="tel" id="w-phone" value="' + esc(state.phone) + '" placeholder="+1 234 567 890">');
+  h += field('Email Address *', '<input type="email" id="w-email" value="' + esc(state.email) + '" placeholder="john@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">');
+  h += field('Phone Number', '<input type="tel" id="w-phone" value="' + esc(state.phone) + '" placeholder="+1 234 567 890" autocomplete="tel" inputmode="tel">');
   h += field('Special Requests', '<textarea id="w-requests" placeholder="Any special requirements...">' + esc(state.requests) + '</textarea>');
   h += '<div class="btn-row">';
   h += '<button class="btn btn-outline" id="w-back3">' + svgArrowLeft() + ' Back</button>';
