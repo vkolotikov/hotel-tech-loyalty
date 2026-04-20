@@ -39,3 +39,80 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #161616; }
 ::-webkit-scrollbar-thumb { background: #383838; border-radius: 3px; }
+
+/* ---------------------------------------------------------------------------
+   Mobile-only overrides (≤1023px). Desktop UI is untouched.
+   Activated by the Layout mobile drawer + bottom nav.
+   --------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  /* Prevent iOS auto-zoom on focus — inputs must be >=16px on iOS. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Safe-area padding for the scrollable main content so the bottom nav
+     never covers the final row. The Layout adds `pb-[64px]` on mobile. */
+  .mobile-safe-bottom {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Mobile bottom nav — fixed to viewport bottom, safe-area aware. */
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    background: rgb(22 22 22);
+    border-top: 1px solid rgb(44 44 44);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.35);
+  }
+  .mobile-bottom-nav > a,
+  .mobile-bottom-nav > button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 6px 4px;
+    color: rgb(142 142 147);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    position: relative;
+  }
+  .mobile-bottom-nav > a.active,
+  .mobile-bottom-nav > button.active {
+    color: rgb(var(--color-primary-400, 212 182 92));
+  }
+
+  /* Raise floating things above the bottom nav. */
+  .mobile-lift-above-nav {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Minimum 44px tap targets for interactive controls. */
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+  button.touch-target,
+  a.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile drawer backdrop — locks body scroll beneath. */
+  body.mobile-drawer-open {
+    overflow: hidden;
+  }
+}
+
+/* Slide-in animation for the mobile drawer. */
+.mobile-drawer {
+  transition: transform 300ms ease;
+}

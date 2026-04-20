@@ -12,6 +12,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
   UserCog, AlertTriangle, Zap,
+  Menu, X, MoreHorizontal,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api, resolveImage } from '../lib/api'
@@ -122,6 +123,10 @@ const SIDEBAR_KEY = 'loyalty-sidebar-collapsed'
 export function Layout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+  )
   const location = useLocation()
   const { user, staff, logout } = useAuthStore()
   const { hasFeature, hasProduct } = useSubscription()
@@ -131,6 +136,32 @@ export function Layout({ children }: { children: ReactNode }) {
   const [seenCount, setSeenCount] = useState(0)
   const notifRef = useRef<HTMLDivElement>(null)
   const unseenCount = Math.max(0, events.length - seenCount)
+
+  // Force sidebar labels visible on mobile — drawer is always expanded.
+  const displayCollapsed = isMobile ? false : collapsed
+
+  // Track viewport — below 1024px the sidebar becomes an off-canvas drawer
+  // and a bottom nav is shown. Desktop behavior is untouched.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  // Close the mobile drawer on navigation.
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  // Lock body scroll when drawer is open on mobile.
+  useEffect(() => {
+    if (isMobile && mobileOpen) {
+      document.body.classList.add('mobile-drawer-open')
+      return () => document.body.classList.remove('mobile-drawer-open')
+    }
+  }, [isMobile, mobileOpen])
 
   // Auto-expand group containing current page
   useEffect(() => {
@@ -162,7 +193,7 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   const toggleGroup = (label: string) => {
-    if (collapsed) return
+    if (displayCollapsed) return
     setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }))
   }
 
@@ -245,33 +276,56 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-dark-bg">
+      {/* Mobile drawer backdrop */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        className={clsx(
+          'fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300',
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        aria-hidden="true"
+      />
+
       {/* Sidebar */}
       <aside className={clsx(
-        'flex flex-col bg-dark-surface text-white transition-all duration-300 flex-shrink-0 border-r border-dark-border relative',
-        collapsed ? 'w-[60px]' : 'w-60'
+        'mobile-drawer flex flex-col bg-dark-surface text-white flex-shrink-0 border-r border-dark-border',
+        // Mobile: fixed off-canvas drawer, wide w-72
+        'fixed inset-y-0 left-0 z-50 w-72 transform',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        // Desktop: in-flow column, translate cleared, width based on collapsed pref
+        'lg:relative lg:z-auto lg:translate-x-0 lg:transition-all lg:duration-300',
+        collapsed ? 'lg:w-[60px]' : 'lg:w-60'
       )}>
         {/* Logo */}
-        <div className={clsx('flex items-center border-b border-dark-border h-14', collapsed ? 'justify-center px-2' : 'gap-3 px-4')}>
+        <div className={clsx('flex items-center border-b border-dark-border h-14', displayCollapsed ? 'justify-center px-2' : 'gap-3 px-4')}>
           {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className={clsx('rounded-lg object-contain flex-shrink-0', collapsed ? 'h-7 w-7 object-cover' : 'h-8 max-w-[140px]')} />
+            <img src={logoUrl} alt="Logo" className={clsx('rounded-lg object-contain flex-shrink-0', displayCollapsed ? 'h-7 w-7 object-cover' : 'h-8 max-w-[140px]')} />
           ) : (
             <>
               <div className="w-7 h-7 bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Hotel size={15} />
               </div>
-              {!collapsed && <span className="font-bold text-sm truncate">Hotel Loyalty</span>}
+              {!displayCollapsed && <span className="font-bold text-sm truncate">Hotel Loyalty</span>}
             </>
           )}
+          {/* Mobile close button */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto p-1.5 text-t-secondary hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors lg:hidden"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
           {visibleGroups.map(({ label, items }) => {
-            const isOpen = collapsed || expandedGroups[label] !== false // default open
+            const isOpen = displayCollapsed || expandedGroups[label] !== false // default open
             return (
               <div key={label} className="mb-1">
                 {/* Group header */}
-                {!collapsed ? (
+                {!displayCollapsed ? (
                   <button
                     onClick={() => toggleGroup(label)}
                     className="flex items-center justify-between w-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#636366] hover:text-t-secondary transition-colors"
@@ -293,19 +347,19 @@ export function Layout({ children }: { children: ReactNode }) {
                     <Link
                       key={path}
                       to={path}
-                      title={collapsed ? itemLabel : undefined}
+                      title={displayCollapsed ? itemLabel : undefined}
                       className={clsx(
                         'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
-                        collapsed ? 'justify-center px-0' : 'px-3',
+                        displayCollapsed ? 'justify-center px-0' : 'px-3',
                         active
                           ? 'bg-primary-600/20 text-primary-400'
                           : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
                       )}
                     >
                       <Icon size={17} className="flex-shrink-0" />
-                      {!collapsed && <span className="truncate flex-1">{itemLabel}</span>}
+                      {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
                       {badge > 0 && (
-                        collapsed ? (
+                        displayCollapsed ? (
                           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                         ) : (
                           <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
@@ -321,20 +375,20 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle — desktop only */}
         <button
           onClick={toggleSidebar}
-          className="absolute -right-3 top-16 w-6 h-6 bg-dark-surface border border-dark-border rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors z-10"
+          className="absolute -right-3 top-16 w-6 h-6 bg-dark-surface border border-dark-border rounded-full hidden lg:flex items-center justify-center text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors z-10"
         >
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
 
         {/* Plan badge */}
-        <SidebarPlanBadge collapsed={collapsed} />
+        <SidebarPlanBadge collapsed={displayCollapsed} />
 
         {/* User + logout */}
         <div className="border-t border-dark-border p-3">
-          {!collapsed && (
+          {!displayCollapsed && (
             <div className="flex items-center gap-2 mb-2.5">
               <div className="w-7 h-7 bg-primary-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                 {user?.name?.charAt(0)}
@@ -350,19 +404,35 @@ export function Layout({ children }: { children: ReactNode }) {
           )}
           <button
             onClick={handleLogout}
-            title={collapsed ? 'Logout' : undefined}
-            className={clsx('flex items-center gap-2 text-t-secondary hover:text-white text-xs transition-colors', collapsed ? 'justify-center w-full' : '')}
+            title={displayCollapsed ? 'Logout' : undefined}
+            className={clsx('flex items-center gap-2 text-t-secondary hover:text-white text-xs transition-colors', displayCollapsed ? 'justify-center w-full' : '')}
           >
             <LogOut size={15} />
-            {!collapsed && 'Logout'}
+            {!displayCollapsed && 'Logout'}
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="bg-dark-surface border-b border-dark-border px-6 h-14 flex items-center gap-4">
+        <header className="bg-dark-surface border-b border-dark-border px-4 lg:px-6 h-14 flex items-center gap-3 lg:gap-4">
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden p-1.5 -ml-1.5 text-t-secondary hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu size={22} />
+          </button>
+          {/* Mobile logo/title */}
+          <div className="lg:hidden flex items-center gap-2 min-w-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+            ) : (
+              <span className="font-semibold text-sm truncate">Hotel Loyalty</span>
+            )}
+          </div>
           <div className="flex-1" />
 
           {/* Live indicator */}
@@ -420,11 +490,76 @@ export function Layout({ children }: { children: ReactNode }) {
         <ExpiredPlanBanner />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 mobile-safe-bottom">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom nav — 5 most-used destinations */}
+      <MobileBottomNav
+        pathname={location.pathname}
+        chatUnread={chatUnread}
+        hasProduct={hasProduct}
+        onOpenDrawer={() => setMobileOpen(true)}
+      />
     </div>
+  )
+}
+
+function MobileBottomNav({
+  pathname,
+  chatUnread,
+  hasProduct,
+  onOpenDrawer,
+}: {
+  pathname: string
+  chatUnread: number
+  hasProduct: (p: string) => boolean
+  onOpenDrawer: () => void
+}) {
+  const hasBooking = hasProduct('booking')
+  const hasChat = hasProduct('chat')
+
+  const isActive = (path: string, startsWith = true) =>
+    path === '/' ? pathname === '/' : (startsWith ? pathname.startsWith(path) : pathname === path)
+
+  return (
+    <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary">
+      <Link to="/" className={clsx(isActive('/', false) && 'active')}>
+        <LayoutDashboard size={20} />
+        <span>Home</span>
+      </Link>
+      <Link to="/members" className={clsx(isActive('/members') && 'active')}>
+        <Users size={20} />
+        <span>Members</span>
+      </Link>
+      {hasBooking && (
+        <Link
+          to="/bookings"
+          className={clsx(
+            (pathname.startsWith('/bookings') || pathname.startsWith('/service-bookings') || pathname === '/calendar') && 'active'
+          )}
+        >
+          <BedDouble size={20} />
+          <span>Bookings</span>
+        </Link>
+      )}
+      {hasChat && (
+        <Link to="/chat-inbox" className={clsx('relative', pathname.startsWith('/chat-inbox') && 'active')}>
+          <Inbox size={20} />
+          <span>Inbox</span>
+          {chatUnread > 0 && (
+            <span className="absolute top-1.5 right-[calc(50%-14px)] bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
+              {chatUnread > 9 ? '9+' : chatUnread}
+            </span>
+          )}
+        </Link>
+      )}
+      <button type="button" onClick={onOpenDrawer}>
+        <MoreHorizontal size={20} />
+        <span>More</span>
+      </button>
+    </nav>
   )
 }
 
