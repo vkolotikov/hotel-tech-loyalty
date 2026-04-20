@@ -89,7 +89,7 @@ export function Setup({ onComplete }: Props) {
           {/* Choose mode */}
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-3">How would you like to start?</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setWithSample(true)}

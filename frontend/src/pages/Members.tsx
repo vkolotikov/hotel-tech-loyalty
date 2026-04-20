@@ -61,7 +61,7 @@ export function Members() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Members</h1>
           <p className="text-sm text-t-secondary mt-0.5">{(data as any)?.total ?? 0} total members</p>
@@ -69,14 +69,14 @@ export function Members() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => triggerExport('/v1/admin/members/export', { search, tier_id: tierId || undefined })}
-            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Download size={16} />
             Export
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
           >
             <Plus size={16} />
             Add Member
@@ -86,7 +86,7 @@ export function Members() {
 
       <Card>
         {/* Filters */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input
@@ -97,27 +97,79 @@ export function Members() {
               className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <select
-            value={tierId}
-            onChange={(e) => { setTierId(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">All Tiers</option>
-            {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">All Status</option>
-            <option value="1">Active</option>
-            <option value="0">Inactive</option>
-          </select>
+          <div className="flex gap-3">
+            <select
+              value={tierId}
+              onChange={(e) => { setTierId(e.target.value); setPage(1) }}
+              className="flex-1 sm:flex-none bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">All Tiers</option>
+              {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+              className="flex-1 sm:flex-none bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">All Status</option>
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+          </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile card list (≤md) */}
+        <div className="md:hidden space-y-2">
+          {isLoading ? (
+            Array(6).fill(0).map((_, i) => (
+              <div key={i} className="bg-[#1a1a1a] border border-dark-border rounded-xl p-3 animate-pulse">
+                <div className="h-4 bg-dark-surface2 rounded w-32 mb-2" />
+                <div className="h-3 bg-dark-surface2 rounded w-24" />
+              </div>
+            ))
+          ) : (data as any)?.data?.length === 0 ? (
+            <p className="text-center text-[#636366] py-8 text-sm">
+              No members yet. {search && 'Try a different search term.'}
+            </p>
+          ) : (
+            ((data as any)?.data ?? []).map((m: any) => (
+              <div
+                key={m.id}
+                onClick={() => navigate(`/members/${m.id}`)}
+                className="bg-[#1a1a1a] border border-dark-border rounded-xl p-3 active:bg-dark-surface2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {m.user?.avatar_url ? (
+                    <img
+                      src={resolveImage(m.user.avatar_url)!}
+                      alt={m.user.name}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-primary-400">{m.user?.name?.charAt(0)}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white truncate">{m.user?.name}</p>
+                    <p className="text-xs text-[#636366] truncate">{m.user?.email}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-[#636366] flex-shrink-0" />
+                </div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <TierBadge tier={m.tier?.name} color={m.tier?.color_hex} />
+                  <span className="text-xs font-semibold text-white">{m.current_points?.toLocaleString()} pts</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
+                    {m.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table (md+) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-t-secondary border-b border-dark-border">
@@ -318,7 +370,7 @@ export function Members() {
                     <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
                       AI extracted the following. Review and edit before creating the member.
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         { key: 'name', label: 'Full Name', type: 'text' },
                         { key: 'email', label: 'Email', type: 'email' },

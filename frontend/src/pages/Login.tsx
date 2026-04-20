@@ -391,7 +391,7 @@ export function Login() {
               )}
 
               {/* Code inputs */}
-              <div className="flex justify-center gap-3 mb-6" onPaste={handleCodePaste}>
+              <div className="flex justify-center gap-2 sm:gap-3 mb-6" onPaste={handleCodePaste}>
                 {codeDigits.map((digit, i) => (
                   <input
                     key={i}
@@ -402,7 +402,7 @@ export function Login() {
                     value={digit}
                     onChange={e => handleCodeChange(i, e.target.value)}
                     onKeyDown={e => handleCodeKeyDown(i, e)}
-                    className="w-12 h-14 text-center text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                     autoFocus={i === 0}
                   />
                 ))}
@@ -611,7 +611,7 @@ export function Login() {
                 <strong className="font-semibold">What you get:</strong> full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.
               </div>
               <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Your Name</label>
                     <div className="relative">
@@ -629,7 +629,7 @@ export function Login() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                     <div className="relative">
