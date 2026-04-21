@@ -119,19 +119,20 @@ function SubtaskInput({ taskId, onAdd }: { taskId: number; onAdd: (taskId: numbe
 /* ─── task row (day view) — extracted outside to prevent re-mount ── */
 const TaskRow = memo(({
   task, isExpanded, onToggleExpand, onToggleComplete, onEdit, onMove, onCopy, onDelete,
-  onToggleSubtask, onDeleteSubtask, onAddSubtask,
+  onToggleSubtask, onDeleteSubtask, onAddSubtask, onDragStart,
 }: {
   task: any; isExpanded: boolean
   onToggleExpand: () => void; onToggleComplete: () => void
   onEdit: () => void; onMove: () => void; onCopy: () => void; onDelete: () => void
   onToggleSubtask: (id: number) => void; onDeleteSubtask: (id: number) => void
   onAddSubtask: (taskId: number, title: string) => void
+  onDragStart?: (e: React.DragEvent) => void
 }) => {
   const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
   const subTotal = task.subtasks?.length ?? 0
 
   return (
-    <div className={'rounded-xl border transition-all duration-200 ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
+    <div draggable onDragStart={onDragStart} className={'rounded-xl border transition-all duration-200 cursor-move ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={onToggleExpand}>
         <button onClick={e => { e.stopPropagation(); onToggleComplete() }} className="flex-shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
           {task.completed
@@ -157,11 +158,21 @@ const TaskRow = memo(({
             {task.duration_minutes && <span className="text-xs text-gray-600">{task.duration_minutes}m</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {subTotal > 0 && (
             <span className={'flex items-center gap-1 text-xs px-2 py-1 rounded-lg ' + (subDone === subTotal ? 'bg-green-500/10 text-green-400' : 'bg-dark-surface2 text-gray-500')}>
               <ListChecks size={13} /> {subDone}/{subTotal}
             </span>
+          )}
+          {!task.completed && task.status !== 'done' && (
+            <button onClick={e => { e.stopPropagation(); onEdit() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-green-400 hover:bg-green-500/10 transition-colors text-[10px] font-bold" title="Mark Done">
+              ✓ Done
+            </button>
+          )}
+          {!task.completed && task.status !== 'blocked' && (
+            <button onClick={e => { e.stopPropagation(); onEdit() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors text-[10px] font-bold" title="Block Task">
+              ⊘ Block
+            </button>
           )}
           <button onClick={e => { e.stopPropagation(); onEdit() }} className="p-2 rounded-lg text-gray-600 hover:text-primary-400 hover:bg-dark-surface2 transition-colors" title="Edit">
             <Edit size={16} />
@@ -548,7 +559,16 @@ export function Planner() {
             </div>
 
             {/* Tasks */}
-            <div className="space-y-2">
+            <div className="space-y-2"
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+              onDrop={(e) => {
+                e.preventDefault()
+                const taskId = e.dataTransfer.getData('taskId')
+                const sourceDate = e.dataTransfer.getData('sourceDate')
+                if (taskId && sourceDate !== currentDate) {
+                  moveMutation.mutate({ id: Number(taskId), task_date: currentDate, employee_name: undefined })
+                }
+              }}>
               {tasks.length === 0 && (
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-12 text-center">
                   <CalendarDays size={40} className="mx-auto text-gray-700 mb-3" />
@@ -573,6 +593,7 @@ export function Planner() {
                   onToggleSubtask={(id) => toggleSubtaskMutation.mutate(id)}
                   onDeleteSubtask={(id) => deleteSubtaskMutation.mutate(id)}
                   onAddSubtask={handleAddSubtask}
+                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('taskId', String(task.id)); e.dataTransfer.setData('sourceDate', currentDate) }}
                 />
               ))}
             </div>
