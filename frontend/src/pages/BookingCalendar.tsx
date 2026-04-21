@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Calendar, CalendarRange } from 'lucide-react'
 import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 
@@ -54,7 +54,8 @@ export function BookingCalendar() {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
-  const [rangeView, setRangeView] = useState<'month' | 'week'>('month')
+  const [view, setView] = useState<'month' | 'week' | 'day'>('month')
+  const [cursor, setCursor] = useState<Date>(() => new Date())
   const [paymentFilter, setPaymentFilter] = useState('')
   const [unitFilter, setUnitFilter] = useState('')
 
@@ -70,18 +71,35 @@ export function BookingCalendar() {
     return { year: y, mon: m }
   }, [month])
 
+  const goToday = () => {
+    const today = new Date()
+    setCursor(today)
+    setMonth(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
+  }
+
   const nav = (d: number) => {
-    let m = mon + d, y = year
-    if (m < 1) { m = 12; y-- }
-    if (m > 12) { m = 1; y++ }
-    setMonth(`${y}-${String(m).padStart(2, '0')}`)
+    if (view === 'month') {
+      let m = mon + d, y = year
+      if (m < 1) { m = 12; y-- }
+      if (m > 12) { m = 1; y++ }
+      setMonth(`${y}-${String(m).padStart(2, '0')}`)
+    } else {
+      const next = new Date(cursor)
+      next.setDate(next.getDate() + (view === 'week' ? d * 7 : d))
+      setCursor(next)
+      setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`)
+    }
   }
 
   const days = useMemo(() => {
     const r: string[] = []
-    if (rangeView === 'week') {
-      const t = new Date(), dow = t.getDay() === 0 ? 6 : t.getDay() - 1
-      for (let i = -dow; i < 7 - dow; i++) { const d = new Date(t); d.setDate(d.getDate() + i); r.push(d.toISOString().slice(0, 10)) }
+    if (view === 'week') {
+      const dow = cursor.getDay() === 0 ? 6 : cursor.getDay() - 1
+      for (let i = -dow; i < 7 - dow; i++) {
+        const d = new Date(cursor); d.setDate(cursor.getDate() + i); r.push(d.toISOString().slice(0, 10))
+      }
+    } else if (view === 'day') {
+      r.push(cursor.toISOString().slice(0, 10))
     } else {
       const first = new Date(year, mon - 1, 1), last = new Date(year, mon, 0)
       const sDow = first.getDay() === 0 ? 6 : first.getDay() - 1
@@ -91,7 +109,7 @@ export function BookingCalendar() {
       }
     }
     return r
-  }, [year, mon, rangeView])
+  }, [year, mon, view, cursor])
 
   const units = useMemo(() => {
     const m = new Map<string, string>()
@@ -117,7 +135,11 @@ export function BookingCalendar() {
   }, [filtered])
 
   const today = new Date().toISOString().slice(0, 10)
-  const monthLabel = new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+  const viewLabel = view === 'month'
+    ? new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+    : view === 'week' && days.length === 7
+      ? `${new Date(days[0]).toLocaleDateString('en-GB', {day:'numeric',month:'short'})} – ${new Date(days[6]).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`
+      : cursor.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
   const colCount = days.length
 
   function barCols(b: any) {
@@ -176,19 +198,25 @@ export function BookingCalendar() {
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {(['month', 'week'] as const).map(v => (
-              <button key={v} onClick={() => setRangeView(v)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${rangeView === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                style={rangeView === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+            {([
+              { v: 'day', icon: CalendarDays, label: 'Day' },
+              { v: 'week', icon: Calendar, label: 'Week' },
+              { v: 'month', icon: CalendarRange, label: 'Month' },
+            ] as const).map(({ v, icon: Icon, label }) => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+                <Icon size={14} /> {label}
               </button>
             ))}
           </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
-          <span className="text-white font-semibold min-w-[170px] text-center text-sm">{monthLabel}</span>
+          <span className="text-white font-semibold min-w-[240px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+          <button onClick={() => goToday()} className="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors rounded-xl"
+            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
 
@@ -239,7 +267,79 @@ export function BookingCalendar() {
         </div>
       </div>
 
+      {/* Day View */}
+      {view === 'day' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {(() => {
+            const dayStr = cursor.toISOString().slice(0, 10)
+            const allUnits = [
+              ...unitRows,
+              ...units.filter(u => !unitRows.some(([id]) => id === u.id)).map(u => [u.id, { name: u.name, bookings: [] }] as const),
+            ]
+            return allUnits.map(([uid, udata]) => {
+              const vis = unitVisual(udata.name)
+              const dayBookings = udata.bookings.filter(b => {
+                const arr = (b.arrival_date || '').slice(0, 10)
+                const dep = (b.departure_date || '').slice(0, 10)
+                return arr <= dayStr && dayStr < dep
+              })
+              const checkIn = dayBookings.find(b => (b.arrival_date || '').slice(0, 10) === dayStr)
+              const checkOut = dayBookings.find(b => (b.departure_date || '').slice(0, 10) === dayStr)
+              const booking = dayBookings[0]
+              let status = 'Available', statusColor = 'gray', statusEmoji = '✓'
+              if (checkIn && checkOut) { status = 'Check-in & Check-out'; statusColor = 'amber'; statusEmoji = '↔' }
+              else if (checkIn) { status = 'Check-in'; statusColor = 'emerald'; statusEmoji = '✈' }
+              else if (checkOut) { status = 'Check-out'; statusColor = 'amber'; statusEmoji = '→' }
+              else if (booking) { status = 'Occupied'; statusColor = 'teal'; statusEmoji = '🛏' }
+              return (
+                <div key={uid} className="rounded-xl border border-white/[0.06] p-4 transition-all hover:border-white/[0.1]"
+                  style={{ background: 'linear-gradient(135deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', borderLeftWidth: '4px', borderLeftColor: vis.accent }}>
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: vis.accent }}>
+                      <UnitIcon type={vis.icon} size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{udata.name}</p>
+                      <div className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-full text-[11px] font-bold"
+                        style={{ background: `rgba(${statusColor === 'emerald' ? '34,197,94' : statusColor === 'amber' ? '245,158,11' : statusColor === 'teal' ? '20,184,166' : '107,114,128'},0.15)`, color: statusColor === 'emerald' ? '#22c55e' : statusColor === 'amber' ? '#f59e0b' : statusColor === 'teal' ? '#14b8a6' : '#8e8e93' }}>
+                        <span>{statusEmoji}</span> {status}
+                      </div>
+                    </div>
+                  </div>
+                  {booking ? (
+                    <Link to={`/bookings/${booking.id}`}
+                      className="block p-3 rounded-lg border border-white/[0.06] hover:border-white/[0.1] transition-colors"
+                      style={{ background: 'rgba(0,0,0,0.3)' }}>
+                      <div className="text-sm font-bold text-white mb-1">{booking.guest_name || '?'}</div>
+                      <div className="text-[11px] text-gray-400 mb-2">
+                        {new Date(booking.arrival_date).toLocaleDateString('en-GB', {month:'short',day:'numeric'})} → {new Date(booking.departure_date).toLocaleDateString('en-GB', {month:'short',day:'numeric'})}
+                      </div>
+                      <div className="text-[10px] text-gray-500 mb-2">{booking.adults} adult{booking.adults !== 1 ? 's' : ''}{booking.children ? `, ${booking.children} child${booking.children !== 1 ? 'ren' : ''}` : ''}</div>
+                      <div className="flex items-center gap-2 justify-between">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          booking.payment_status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                          booking.payment_status === 'invoice_waiting' ? 'bg-amber-500/20 text-amber-400' :
+                          booking.payment_status === 'channel_managed' ? 'bg-teal-500/20 text-teal-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {booking.payment_status === 'paid' ? 'Paid' : booking.payment_status === 'invoice_waiting' ? 'Invoice' : booking.payment_status === 'channel_managed' ? 'Channel' : 'Open'}
+                        </span>
+                        {booking.price_total && <span className="text-[11px] font-bold text-white">{money(booking.price_total)}</span>}
+                      </div>
+                    </Link>
+                  ) : (
+                    <p className="text-xs text-gray-600 py-2">No booking today</p>
+                  )}
+                </div>
+              )
+            })
+          })()}
+        </div>
+      )}
+
       {/* Timeline */}
+      {view !== 'day' && (
       <div className="rounded-2xl border border-white/[0.06] overflow-x-auto"
         style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div style={{ minWidth: colCount * 40 + 260 }}>
@@ -348,6 +448,7 @@ export function BookingCalendar() {
           })}
         </div>
       </div>
+      )}
     </div>
   )
 }
