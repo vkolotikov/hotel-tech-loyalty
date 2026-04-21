@@ -41,6 +41,12 @@ function fmtShort(t: string | null) {
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 const PRIORITY_COLOR: Record<string, string> = { Low: '#6b7280', Normal: '#3b82f6', High: '#ef4444' }
+const STATUS_COLOR: Record<string, string> = {
+  todo: 'bg-gray-500/15 text-gray-400',
+  in_progress: 'bg-blue-500/15 text-blue-400',
+  blocked: 'bg-red-500/15 text-red-400',
+  done: 'bg-green-500/15 text-green-400',
+}
 const GROUP_COLORS: Record<string, string> = {
   Housekeeping: 'bg-emerald-500/15 text-emerald-400', 'Front Desk': 'bg-blue-500/15 text-blue-400',
   'Front Office': 'bg-blue-500/15 text-blue-400', Maintenance: 'bg-amber-500/15 text-amber-400',
@@ -134,9 +140,10 @@ const TaskRow = memo(({
         </button>
         <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLOR[task.priority] ?? '#6b7280' }} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
             {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 flex-shrink-0" />}
+            {task.status && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[task.status] ?? 'bg-gray-500/15 text-gray-400'}`}>{task.status === 'in_progress' ? 'In Prog' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}</span>}
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {task.employee_name && <span className="flex items-center gap-1 text-xs text-gray-500"><User size={11} />{task.employee_name}</span>}
@@ -193,8 +200,76 @@ const TaskRow = memo(({
   )
 })
 
+/* ─── task templates ───────────────────────────────────────────────── */
+const TASK_TEMPLATES: Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> = {
+  'Guest Services': [
+    { title: 'Check-in Guest', group: 'Front Desk', duration: 15 },
+    { title: 'Check-out Guest', group: 'Front Desk', duration: 10 },
+    { title: 'Room Cleaning', group: 'Housekeeping', duration: 45 },
+    { title: 'Mini-bar Restocking', group: 'Housekeeping', duration: 20 },
+  ],
+  'Maintenance': [
+    { title: 'Equipment Check', group: 'Maintenance', duration: 30 },
+    { title: 'Facility Inspection', group: 'Maintenance', duration: 60 },
+    { title: 'Repair Request', group: 'Maintenance', category: 'Urgent' },
+  ],
+  'Admin': [
+    { title: 'Daily Briefing', group: 'Management', duration: 30 },
+    { title: 'Staff Meeting', group: 'Management', duration: 60 },
+    { title: 'Report Review', group: 'Management', duration: 45 },
+  ],
+  'Sales': [
+    { title: 'Follow-up Call', group: 'Sales', duration: 15 },
+    { title: 'Client Meeting', group: 'Sales', duration: 60 },
+    { title: 'Proposal Review', group: 'Sales', duration: 45 },
+  ],
+}
+
+function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, group?: string, category?: string, duration?: number) => void }) {
+  const currentDate = new Date().toISOString().slice(0, 10)
+  const [showTemplates, setShowTemplates] = useState(false)
+
+  return (
+    <div className="space-y-1.5 mb-3">
+      {!showTemplates ? (
+        <button onClick={() => setShowTemplates(true)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
+          <Plus size={14} /> Quick Templates
+        </button>
+      ) : (
+        <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-400">Select Template</span>
+            <button onClick={() => setShowTemplates(false)} className="p-1 rounded text-gray-600 hover:text-white transition-colors">
+              <X size={12} />
+            </button>
+          </div>
+          <div className="space-y-1 max-h-[300px] overflow-y-auto">
+            {Object.entries(TASK_TEMPLATES).map(([category, templates]) => (
+              <div key={category}>
+                <div className="text-[9px] font-bold uppercase text-gray-600 px-2 py-1 tracking-wider">{category}</div>
+                {templates.map((t, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      onCreate(t.title, currentDate, t.group, t.category, t.duration)
+                      setShowTemplates(false)
+                    }}
+                    className="w-full text-left text-xs px-3 py-1.5 rounded-md text-gray-300 hover:bg-primary-500/10 hover:text-primary-400 transition-colors flex items-center justify-between">
+                    <span>{t.title}</span>
+                    {t.duration && <span className="text-[9px] text-gray-600">{t.duration}m</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── quick-add component ────────────────────────────────────────── */
-function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, date: string) => void }) {
+function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, date: string, group?: string, category?: string, duration?: number) => void }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const ref = useRef<HTMLInputElement>(null)
@@ -203,7 +278,7 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
 
   if (!open) return (
     <button onClick={() => { setOpen(true); setTitle('') }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
-      <Plus size={14} /> Add task
+      <Plus size={14} /> Add custom task
     </button>
   )
 
@@ -382,8 +457,11 @@ export function Planner() {
     else createMutation.mutate(body)
   }
 
-  const handleQuickCreate = useCallback((title: string, date: string) => {
-    quickCreateMutation.mutate({ title, task_date: date, priority: 'Normal', employee_name: myName || undefined })
+  const handleQuickCreate = useCallback((title: string, date: string, group?: string, category?: string, duration?: number) => {
+    quickCreateMutation.mutate({
+      title, task_date: date, priority: 'Normal', employee_name: myName || undefined,
+      task_group: group || undefined, task_category: category || undefined, duration_minutes: duration || undefined
+    })
   }, [myName])
 
   /* ─── derived data ────────────────────────────────────────────── */
@@ -494,6 +572,7 @@ export function Planner() {
                 />
               ))}
             </div>
+            <TaskTemplates onCreate={handleQuickCreate} />
             <QuickAdd date={currentDate} onCreate={handleQuickCreate} />
           </div>
 
