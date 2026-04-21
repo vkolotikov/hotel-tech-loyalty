@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
+import { useAuthStore } from '../stores/authStore'
 import toast from 'react-hot-toast'
 import {
   ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
@@ -60,7 +61,7 @@ type TaskForm = {
 const EMPTY_FORM: TaskForm = {
   employee_name: '', title: '', task_date: '', start_time: '', end_time: '',
   priority: 'Normal', task_group: '', task_category: '', duration_minutes: '',
-  description: '', status: '',
+  description: '', status: 'todo',
 }
 
 /* ─── progress bar ──────────────────────────────────────────────── */
@@ -225,6 +226,8 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
 export function Planner() {
   const qc = useQueryClient()
   const settings = useSettings()
+  const { user } = useAuthStore()
+  const myName = user?.name ?? ''
   const [tab, setTab] = useState<Tab>('schedule')
   const [currentDate, setCurrentDate] = useState(() => fmtDate(new Date()))
   const [weekStart, setWeekStart] = useState(() => fmtDate(getMonday(new Date())))
@@ -349,7 +352,7 @@ export function Planner() {
 
   const openCreate = (date: string, emp?: string) => {
     setEditTask(null)
-    setForm({ ...EMPTY_FORM, task_date: date, employee_name: emp ?? '' })
+    setForm({ ...EMPTY_FORM, task_date: date, employee_name: emp ?? myName })
     setShowModal(true)
   }
 
@@ -374,14 +377,14 @@ export function Planner() {
     if (!body.end_time) body.end_time = null
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
-    ;['employee_name', 'task_group', 'task_category', 'status', 'description'].forEach(k => { if (!body[k]) body[k] = null })
+    ;['employee_name', 'task_group', 'task_category', 'description'].forEach(k => { if (!body[k]) body[k] = null })
     if (editTask) updateMutation.mutate({ id: editTask.id, ...body })
     else createMutation.mutate(body)
   }
 
   const handleQuickCreate = useCallback((title: string, date: string) => {
-    quickCreateMutation.mutate({ title, task_date: date, priority: 'Normal' })
-  }, [])
+    quickCreateMutation.mutate({ title, task_date: date, priority: 'Normal', employee_name: myName || undefined })
+  }, [myName])
 
   /* ─── derived data ────────────────────────────────────────────── */
   const weekDates = weekDatesFrom(new Date(weekStart))
@@ -851,7 +854,10 @@ export function Planner() {
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><User size={12} /> Assign To</label>
                   <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))} className={inp}>
                     <option value="">Unassigned</option>
-                    {settings.employees.map((emp: string) => <option key={emp}>{emp}</option>)}
+                    {myName && <option value={myName}>{myName} (me)</option>}
+                    {settings.employees
+                      .filter((e: string) => e !== myName)
+                      .map((emp: string) => <option key={emp}>{emp}</option>)}
                   </select>
                 </div>
                 <div>
@@ -892,14 +898,12 @@ export function Planner() {
                   <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))} placeholder="30" className={inp} />
                 </div>
               </div>
-              {editTask && (
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
-                    <option value="">None</option><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="blocked">Blocked</option><option value="done">Done</option>
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1.5 block">Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
+                  <option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="blocked">Blocked</option><option value="done">Done</option>
+                </select>
+              </div>
               <div>
                 <label className="text-xs font-medium text-gray-400 mb-1.5 block">Description</label>
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details..." className={inp + ' resize-none'} />

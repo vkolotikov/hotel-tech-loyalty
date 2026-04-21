@@ -51,6 +51,8 @@ class PlannerController extends Controller
             'description'      => 'nullable|string',
         ]);
 
+        $validated['status'] = $validated['status'] ?? 'todo';
+
         $task = PlannerTask::create($validated);
         return response()->json($task->load('subtasks'), 201);
     }
