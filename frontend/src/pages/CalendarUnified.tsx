@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
-import { ChevronLeft, ChevronRight, BedDouble, Scissors, ClipboardList, X, Clock, User, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, BedDouble, Scissors, ClipboardList, X, Clock, User, Users, Calendar, CalendarDays, CalendarRange } from 'lucide-react'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 
 /* ── source theming ──────────────────────────────────────────────── */
@@ -35,9 +35,21 @@ function fmtShortTime(hhmm: string) {
   const suffix = h >= 12 ? 'pm' : 'am'
   return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + suffix
 }
+function getMonday(d: Date): Date {
+  const date = new Date(d); const day = date.getDay()
+  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1)); return date
+}
+function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
+function weekDatesFrom(start: Date): Date[] {
+  return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
+}
+
+type View = 'month' | 'week' | 'day'
 
 export default function CalendarUnified() {
   const [params, setParams] = useSearchParams()
+  const [view, setView] = useState<View>('month')
+  const [cursor, setCursor] = useState(() => fmtDate(new Date()))
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -65,11 +77,27 @@ export default function CalendarUnified() {
     return { year: y, mon: m }
   }, [month])
 
-  const nav = (d: number) => {
-    let m = mon + d, y = year
-    if (m < 1) { m = 12; y-- }
-    if (m > 12) { m = 1; y++ }
-    setMonth(`${y}-${String(m).padStart(2, '0')}`)
+  const navigate = (d: number) => {
+    if (view === 'month') {
+      let m = mon + d, y = year
+      if (m < 1) { m = 12; y-- }
+      if (m > 12) { m = 1; y++ }
+      setMonth(`${y}-${String(m).padStart(2, '0')}`)
+    } else if (view === 'week') {
+      const newDate = new Date(cursor)
+      newDate.setDate(newDate.getDate() + d * 7)
+      setCursor(fmtDate(newDate))
+    } else {
+      const newDate = new Date(cursor)
+      newDate.setDate(newDate.getDate() + d)
+      setCursor(fmtDate(newDate))
+    }
+  }
+
+  const goToday = () => {
+    const n = new Date()
+    setCursor(fmtDate(n))
+    setMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`)
   }
 
   // 6-week Mon-first grid
@@ -94,20 +122,51 @@ export default function CalendarUnified() {
   const rangeFrom = days[0]
   const rangeTo   = days[days.length - 1]
 
+  // Calculate query params based on view
+  const queryParams = useMemo(() => {
+    if (view === 'month') {
+      return { month }
+    } else if (view === 'week') {
+      const weekStart = getMonday(new Date(cursor))
+      const weekDates = weekDatesFrom(weekStart)
+      return { from: fmtDate(weekStart), to: fmtDate(weekDates[6]) }
+    } else {
+      return { from: cursor, to: cursor }
+    }
+  }, [view, month, cursor])
+
   // Source queries — each fetches for the visible grid range.
   const roomsQ = useQuery({
-    queryKey: ['unified-calendar', 'rooms', month],
-    queryFn: () => api.get('/v1/admin/bookings/calendar', { params: { month } }).then(r => r.data),
+    queryKey: ['unified-calendar', 'rooms', view === 'month' ? month : queryParams.from],
+    queryFn: () => {
+      if (view === 'month') {
+        return api.get('/v1/admin/bookings/calendar', { params: { month } }).then(r => r.data)
+      } else {
+        return api.get('/v1/admin/bookings/calendar', { params: { from: queryParams.from, to: queryParams.to } }).then(r => r.data)
+      }
+    },
   })
 
   const servicesQ = useQuery({
-    queryKey: ['unified-calendar', 'services', month],
-    queryFn: () => api.get('/v1/admin/service-bookings/calendar', { params: { month } }).then(r => r.data),
+    queryKey: ['unified-calendar', 'services', view === 'month' ? month : queryParams.from],
+    queryFn: () => {
+      if (view === 'month') {
+        return api.get('/v1/admin/service-bookings/calendar', { params: { month } }).then(r => r.data)
+      } else {
+        return api.get('/v1/admin/service-bookings/calendar', { params: { from: queryParams.from, to: queryParams.to } }).then(r => r.data)
+      }
+    },
   })
 
   const tasksQ = useQuery({
-    queryKey: ['unified-calendar', 'tasks', rangeFrom, rangeTo],
-    queryFn: () => api.get('/v1/admin/planner/tasks', { params: { from: rangeFrom, to: rangeTo } }).then(r => r.data),
+    queryKey: ['unified-calendar', 'tasks', view === 'month' ? month : queryParams.from],
+    queryFn: () => {
+      if (view === 'month') {
+        return api.get('/v1/admin/planner/tasks', { params: { from: rangeFrom, to: rangeTo } }).then(r => r.data)
+      } else {
+        return api.get('/v1/admin/planner/tasks', { params: { from: queryParams.from, to: queryParams.to } }).then(r => r.data)
+      }
+    },
   })
 
   // Expand events to (dateKey -> events[]) respecting visibility.
@@ -218,16 +277,25 @@ export default function CalendarUnified() {
             Unified view of room bookings, service bookings, and planner tasks.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex rounded-xl border border-white/[0.06] overflow-hidden bg-dark-surface">
+            {(['day', 'week', 'month'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)} className={'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ' + (view === v ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-white')}>
+                {v === 'day' ? <CalendarDays size={14} /> : v === 'week' ? <CalendarRange size={14} /> : <Calendar size={14} />}
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
-          <span className="text-white font-semibold min-w-[170px] text-center text-sm">{monthLabel}</span>
-          <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
+          <span className="text-white font-semibold min-w-[170px] text-center text-sm">
+            {view === 'day' ? new Date(cursor + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) :
+             view === 'week' ? `Week ${new Date(getMonday(new Date(cursor)) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(fmtDate(weekDatesFrom(getMonday(new Date(cursor)))[6]) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` :
+             monthLabel}
+          </span>
+          <button onClick={() => navigate(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
-          <button onClick={() => {
-            const d = new Date()
-            setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-          }} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+          <button onClick={goToday} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
@@ -267,66 +335,162 @@ export default function CalendarUnified() {
       </div>
 
       {/* Month grid */}
-      <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
-        {/* Weekday axis */}
-        <div className="grid grid-cols-7 border-b border-white/[0.06]">
-          {weekdays.map(w => (
-            <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
-              {w}
-            </div>
-          ))}
-        </div>
+      {view === 'month' && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          {/* Weekday axis */}
+          <div className="grid grid-cols-7 border-b border-white/[0.06]">
+            {weekdays.map(w => (
+              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
+                {w}
+              </div>
+            ))}
+          </div>
 
-        {/* Day cells */}
-        <div className="grid grid-cols-7">
-          {days.map((d, idx) => {
-            const inMonth = d.startsWith(month)
-            const isToday = d === today
-            const isWe = [5, 6].includes(idx % 7)
-            const list = byDay.get(d) || []
-            const visibleChips = list.slice(0, 3)
-            const more = list.length - visibleChips.length
-            return (
-              <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
-                className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[118px] transition-colors hover:bg-white/[0.02] focus:outline-none"
-                style={{
-                  background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
-                  opacity: inMonth ? 1 : 0.35,
-                  cursor: list.length > 0 ? 'pointer' : 'default',
-                }}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
-                    {new Date(d).getDate()}
-                  </span>
-                  {list.length > 0 && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
-                      {list.length}
+          {/* Day cells */}
+          <div className="grid grid-cols-7">
+            {days.map((d, idx) => {
+              const inMonth = d.startsWith(month)
+              const isToday = d === today
+              const isWe = [5, 6].includes(idx % 7)
+              const list = byDay.get(d) || []
+              const visibleChips = list.slice(0, 3)
+              const more = list.length - visibleChips.length
+              return (
+                <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
+                  className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[118px] transition-colors hover:bg-white/[0.02] focus:outline-none"
+                  style={{
+                    background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
+                    opacity: inMonth ? 1 : 0.35,
+                    cursor: list.length > 0 ? 'pointer' : 'default',
+                  }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
+                      {new Date(d).getDate()}
                     </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {visibleChips.map(ev => {
-                    const s = SOURCE[ev.source]
-                    return (
-                      <div key={ev.key}
-                        className="text-[10px] px-1.5 py-1 rounded-md truncate flex items-center gap-1"
-                        style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}
-                        title={`${ev.timeLabel ? ev.timeLabel + ' · ' : ''}${ev.label}${ev.sublabel ? ' — ' + ev.sublabel : ''}`}>
-                        {ev.timeLabel && <span className="font-bold">{ev.timeLabel}</span>}
-                        <span className={`${ev.timeLabel ? 'opacity-85' : 'font-bold'} truncate`}>{ev.label}</span>
-                      </div>
-                    )
-                  })}
-                  {more > 0 && (
-                    <div className="text-[9px] text-gray-500 font-semibold px-1.5">+{more} more</div>
-                  )}
-                </div>
-              </button>
-            )
-          })}
+                    {list.length > 0 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
+                        {list.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {visibleChips.map(ev => {
+                      const s = SOURCE[ev.source]
+                      return (
+                        <div key={ev.key}
+                          className="text-[10px] px-1.5 py-1 rounded-md truncate flex items-center gap-1"
+                          style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}
+                          title={`${ev.timeLabel ? ev.timeLabel + ' · ' : ''}${ev.label}${ev.sublabel ? ' — ' + ev.sublabel : ''}`}>
+                          {ev.timeLabel && <span className="font-bold">{ev.timeLabel}</span>}
+                          <span className={`${ev.timeLabel ? 'opacity-85' : 'font-bold'} truncate`}>{ev.label}</span>
+                        </div>
+                      )
+                    })}
+                    {more > 0 && (
+                      <div className="text-[9px] text-gray-500 font-semibold px-1.5">+{more} more</div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Week view */}
+      {view === 'week' && (() => {
+        const weekStart = getMonday(new Date(cursor))
+        const weekDates = weekDatesFrom(weekStart)
+        return (
+          <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+            style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+            <div className="grid grid-cols-7 border-b border-white/[0.06]">
+              {weekDates.map((d, i) => {
+                const isToday = fmtDate(d) === today
+                return (
+                  <div key={i} className="py-3 px-2 text-center border-r border-white/[0.04] last:border-r-0">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{weekdays[i]}</div>
+                    <div className={`text-sm font-bold mt-1 ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>{d.getDate()}</div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="grid grid-cols-7">
+              {weekDates.map((d, i) => {
+                const dateStr = fmtDate(d)
+                const isToday = dateStr === today
+                const list = byDay.get(dateStr) || []
+                return (
+                  <div key={i} className="border-r border-white/[0.04] last:border-r-0 p-2 min-h-[300px]"
+                    style={{ background: isToday ? 'rgba(116,200,149,0.05)' : 'transparent' }}>
+                    <div className="space-y-1.5">
+                      {list.map(ev => {
+                        const s = SOURCE[ev.source]
+                        return (
+                          <Link key={ev.key} to={ev.href}
+                            className="block text-[11px] px-2 py-1.5 rounded-md truncate transition-all hover:opacity-80"
+                            style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}
+                            title={`${ev.timeLabel ? ev.timeLabel + ' · ' : ''}${ev.label}${ev.sublabel ? ' — ' + ev.sublabel : ''}`}>
+                            {ev.timeLabel && <span className="font-bold block">{ev.timeLabel}</span>}
+                            <span className="font-bold truncate">{ev.label}</span>
+                            {ev.sublabel && <span className="opacity-75 text-[10px] block truncate">{ev.sublabel}</span>}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Day view */}
+      {view === 'day' && (() => {
+        const dayEvents = byDay.get(cursor) || []
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-3">
+                <div className="rounded-xl border border-white/[0.06] p-4"
+                  style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+                  <h2 className="font-semibold text-white mb-2">{dayEvents.length} item{dayEvents.length !== 1 ? 's' : ''}</h2>
+                  <div className="space-y-2">
+                    {dayEvents.length === 0 ? (
+                      <p className="text-xs text-gray-600">Nothing scheduled for this day</p>
+                    ) : (
+                      dayEvents.map(ev => {
+                        const s = SOURCE[ev.source]
+                        const Icon = s.Icon
+                        return (
+                          <Link key={ev.key} to={ev.href}
+                            className="block rounded-lg border border-white/[0.08] p-3 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Icon size={13} style={{ color: s.accent }} />
+                                {ev.timeLabel && <span className="text-xs font-bold text-white">{ev.timeLabel}</span>}
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                                  style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}>
+                                  {s.label}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-sm font-semibold text-white">{ev.label}</div>
+                            {ev.sublabel && <div className="text-xs text-gray-400 mt-1">{ev.sublabel}</div>}
+                          </Link>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-1" />
+            </div>
+          </div>
+        )
+      })()}
 
       {isLoading && (
         <div className="text-center text-xs text-gray-600 py-4">Loading calendar…</div>
