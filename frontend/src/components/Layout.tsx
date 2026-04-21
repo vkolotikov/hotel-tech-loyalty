@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
@@ -11,7 +11,7 @@ import {
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
-  UserCog, AlertTriangle, Zap,
+  UserCog, AlertTriangle,
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -243,6 +243,14 @@ export function Layout({ children }: { children: ReactNode }) {
     img.onerror = () => {}
     img.src = orig
   }, [chatUnread])
+
+  // Listen for 403 subscription:expired events from API interceptor — refresh subscription status
+  const qc = useQueryClient()
+  useEffect(() => {
+    const handler = () => qc.invalidateQueries({ queryKey: ['subscription-status'] })
+    window.addEventListener('subscription:expired', handler)
+    return () => window.removeEventListener('subscription:expired', handler)
+  }, [qc])
 
   const logoUrl = (() => {
     const groups = settingsData?.settings
@@ -486,8 +494,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Expired plan banner — unmissable prompt to renew */}
-        <ExpiredPlanBanner />
+        {/* Subscription wall — locks out access when trial expires */}
+        <SubscriptionWall />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 mobile-safe-bottom">
@@ -622,58 +630,93 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-function ExpiredPlanBanner() {
-  const { status } = useSubscription()
+function SubscriptionWall() {
+  const { status, isLoading } = useSubscription()
   const { staff } = useAuthStore()
   const location = useLocation()
 
-  if (status !== 'EXPIRED' && status !== 'NO_PLAN') return null
+  // Don't render while loading
+  if (isLoading || status === 'LOADING') return null
+
+  // No wall for active/trialing subscriptions
+  if (status === 'ACTIVE' || status === 'TRIALING' || status === 'LOCAL') return null
+
+  // Always allow access to billing page
   if (location.pathname === '/billing') return null
 
+  // Super admin bypass
+  if (staff?.role === 'super_admin') return null
+
+  // Show wall for EXPIRED or NO_PLAN
+  const isExpired = status === 'EXPIRED'
   const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
-  const expired = status === 'EXPIRED'
 
   return (
-    <div className={clsx(
-      'border-b px-6 py-3 flex items-center gap-4',
-      expired
-        ? 'bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/30'
-        : 'bg-gradient-to-r from-primary-500/10 to-primary-600/10 border-primary-500/30'
-    )}>
-      <div className={clsx(
-        'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-        expired ? 'bg-orange-500/20' : 'bg-primary-500/20'
-      )}>
-        {expired
-          ? <AlertTriangle size={18} className="text-orange-400" />
-          : <Zap size={18} className="text-primary-400" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className={clsx('text-sm font-semibold', expired ? 'text-orange-200' : 'text-primary-200')}>
-          {expired ? 'Your subscription has expired' : 'Choose a plan to activate your workspace'}
-        </p>
-        <p className="text-xs text-t-secondary mt-0.5">
-          {isAdmin
-            ? (expired
-                ? 'Renew now to restore access to loyalty, bookings, chat and AI features.'
-                : 'Start your free trial in one click — no credit card required.')
-            : 'Please ask your workspace administrator to renew the plan to restore full access.'}
-        </p>
-      </div>
-      {isAdmin && (
+    <div className="fixed inset-0 bg-dark-bg/95 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center text-center max-w-2xl gap-6">
+        {/* Lock Icon */}
+        <div className="w-20 h-20 rounded-2xl bg-orange-500/20 flex items-center justify-center">
+          <AlertTriangle size={40} className="text-orange-400" />
+        </div>
+
+        {/* Heading */}
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            {isExpired ? 'Your trial has ended' : 'Subscription required'}
+          </h1>
+          <p className="text-gray-300 text-base">
+            {isExpired
+              ? 'Your free trial has expired. Subscribe to restore access to all features.'
+              : 'Choose a plan to activate your workspace and start using the platform.'}
+          </p>
+        </div>
+
+        {/* Plan Cards for Admins */}
+        {isAdmin ? (
+          <div className="w-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {[
+                { name: 'Starter', price: '$149', desc: 'For small teams' },
+                { name: 'Growth', price: '$269', desc: 'For growing hotels' },
+                { name: 'Enterprise', price: 'Custom', desc: 'For large chains' },
+              ].map((plan) => (
+                <Link
+                  key={plan.name}
+                  to="/billing"
+                  className="border border-dark-border rounded-xl p-5 bg-dark-surface hover:bg-dark-surface2 hover:border-primary-500/50 transition-all group"
+                >
+                  <h3 className="font-semibold text-white mb-1 group-hover:text-primary-300 transition-colors">{plan.name}</h3>
+                  <p className="text-sm text-gray-400 mb-3">{plan.desc}</p>
+                  <p className="text-xl font-bold text-primary-400">{plan.price}</p>
+                  <p className="text-xs text-gray-600 mt-3">/month</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 max-w-md w-full text-center">
+            <p className="text-gray-300">Contact your workspace administrator to renew the subscription and restore access.</p>
+          </div>
+        )}
+
+        {/* CTA Button */}
         <Link
           to="/billing"
-          className={clsx(
-            'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 transition-colors shadow-lg',
-            expired
-              ? 'bg-orange-500 hover:bg-orange-400 text-black shadow-orange-500/30'
-              : 'bg-primary-500 hover:bg-primary-400 text-black shadow-primary-500/30'
-          )}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
         >
-          <CreditCard size={14} />
-          {expired ? 'Renew Plan' : 'Choose Plan'}
+          <CreditCard size={16} />
+          Go to Billing
+          <ChevronRight size={16} />
         </Link>
-      )}
+
+        {/* Logout button */}
+        <button
+          onClick={() => { localStorage.removeItem('auth_token'); window.location.href = '/login' }}
+          className="text-sm text-gray-400 hover:text-gray-200 transition-colors mt-2"
+        >
+          Or sign out
+        </button>
+      </div>
     </div>
   )
 }

@@ -41,6 +41,7 @@ api.interceptors.request.use((config) => {
 
 // Handle 401 globally — but don't redirect for billing/subscription endpoints
 // (those return 401 when the SaaS token can't be obtained, not when the user session is invalid)
+// Also dispatch 403 subscription_required events to trigger lockout UI
 api.interceptors.response.use(
   (res) => res,
   (error) => {
@@ -51,6 +52,10 @@ api.interceptors.response.use(
         localStorage.removeItem('auth_token')
         window.location.href = `${APP_BASE}/login`
       }
+    }
+    if (error.response?.status === 403 &&
+        error.response?.data?.error === 'subscription_required') {
+      window.dispatchEvent(new CustomEvent('subscription:expired'))
     }
     return Promise.reject(error)
   }

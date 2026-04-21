@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CreditCard, Check, ArrowRight, X,
@@ -83,6 +84,7 @@ const FALLBACK_PLANS: PlanData[] = [
 type BillingInterval = 'monthly' | 'yearly'
 
 export function Billing() {
+  const navigate = useNavigate()
   const { data: sub, status } = useSubscription()
   const isSuperAdmin = !!(sub as any)?.isSuperAdmin
   const queryClient = useQueryClient()
@@ -114,11 +116,13 @@ export function Billing() {
       toast.success('Payment successful! Your subscription is now active.')
       queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
       window.history.replaceState({}, '', window.location.pathname)
+      // Navigate home so the subscription wall is gone
+      setTimeout(() => navigate('/'), 1000)
     } else if (params.get('canceled') === '1') {
       toast('Checkout was canceled. No charges were made.')
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [queryClient])
+  }, [queryClient, navigate])
 
   // Switch plan / start trial — backend auto-registers on SaaS if needed
   const handleCheckout = async (planSlug: string) => {
