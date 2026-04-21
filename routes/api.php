@@ -473,6 +473,8 @@ Route::prefix('v1')->group(function () {
             Route::delete('planner/tasks/{task}',         [PlannerController::class, 'destroyTask']);
             Route::patch('planner/tasks/{task}/move',     [PlannerController::class, 'moveTask']);
             Route::post('planner/tasks/{task}/copy',      [PlannerController::class, 'copyTask']);
+            Route::patch('planner/tasks/{task}/complete', [PlannerController::class, 'toggleComplete']);
+            Route::patch('planner/tasks/{task}/status',   [PlannerController::class, 'quickStatus']);
             Route::post('planner/tasks/{task}/subtasks',  [PlannerController::class, 'storeSubtask']);
             Route::patch('planner/subtasks/{subtask}/toggle', [PlannerController::class, 'toggleSubtask']);
             Route::delete('planner/subtasks/{subtask}',   [PlannerController::class, 'destroySubtask']);

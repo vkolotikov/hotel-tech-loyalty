@@ -164,6 +164,28 @@ class PlannerController extends Controller
         return response()->json($copy->load('subtasks'), 201);
     }
 
+    public function toggleComplete(PlannerTask $task): JsonResponse
+    {
+        $newCompleted = !$task->completed;
+        $task->update([
+            'completed' => $newCompleted,
+            'status'    => $newCompleted ? 'done' : 'todo',
+        ]);
+        return response()->json($task->fresh()->load('subtasks'));
+    }
+
+    public function quickStatus(Request $request, PlannerTask $task): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:todo,in_progress,blocked,done',
+        ]);
+        $task->update([
+            'status'    => $validated['status'],
+            'completed' => $validated['status'] === 'done',
+        ]);
+        return response()->json($task->fresh()->load('subtasks'));
+    }
+
     public function stats(Request $request): JsonResponse
     {
         $from = $request->get('from', now()->startOfMonth()->toDateString());

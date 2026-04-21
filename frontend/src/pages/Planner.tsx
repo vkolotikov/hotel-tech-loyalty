@@ -53,6 +53,12 @@ const GROUP_COLORS: Record<string, string> = {
   'F&B': 'bg-purple-500/15 text-purple-400', Management: 'bg-red-500/15 text-red-400',
   Sales: 'bg-cyan-500/15 text-cyan-400', Events: 'bg-pink-500/15 text-pink-400',
 }
+const STATUS_BORDER: Record<string, string> = {
+  todo: 'border-l-gray-600',
+  in_progress: 'border-l-blue-500',
+  blocked: 'border-l-red-500',
+  done: 'border-l-green-500',
+}
 const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 8, fontSize: 12 }
 
 const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
@@ -119,7 +125,7 @@ function SubtaskInput({ taskId, onAdd }: { taskId: number; onAdd: (taskId: numbe
 /* ─── task row (day view) — extracted outside to prevent re-mount ── */
 const TaskRow = memo(({
   task, isExpanded, onToggleExpand, onToggleComplete, onEdit, onMove, onCopy, onDelete,
-  onToggleSubtask, onDeleteSubtask, onAddSubtask, onDragStart,
+  onToggleSubtask, onDeleteSubtask, onAddSubtask, onDragStart, onMarkDone, onMarkBlocked,
 }: {
   task: any; isExpanded: boolean
   onToggleExpand: () => void; onToggleComplete: () => void
@@ -127,6 +133,7 @@ const TaskRow = memo(({
   onToggleSubtask: (id: number) => void; onDeleteSubtask: (id: number) => void
   onAddSubtask: (taskId: number, title: string) => void
   onDragStart?: (e: React.DragEvent) => void
+  onMarkDone: () => void; onMarkBlocked: () => void
 }) => {
   const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
   const subTotal = task.subtasks?.length ?? 0
@@ -165,12 +172,12 @@ const TaskRow = memo(({
             </span>
           )}
           {!task.completed && task.status !== 'done' && (
-            <button onClick={e => { e.stopPropagation(); onEdit() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-green-400 hover:bg-green-500/10 transition-colors text-[10px] font-bold" title="Mark Done">
+            <button onClick={e => { e.stopPropagation(); onMarkDone() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-green-400 hover:bg-green-500/10 transition-colors text-[10px] font-bold" title="Mark Done">
               ✓ Done
             </button>
           )}
           {!task.completed && task.status !== 'blocked' && (
-            <button onClick={e => { e.stopPropagation(); onEdit() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors text-[10px] font-bold" title="Block Task">
+            <button onClick={e => { e.stopPropagation(); onMarkBlocked() }} className="px-1.5 py-1 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors text-[10px] font-bold" title="Block Task">
               ⊘ Block
             </button>
           )}
@@ -450,6 +457,8 @@ export function Planner() {
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
   const today = fmtDate(new Date())
 
@@ -492,7 +501,14 @@ export function Planner() {
   const updateMutation = useMutation({
     mutationFn: ({ id, ...body }: any) => api.put('/v1/admin/planner/tasks/' + id, body),
     onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }); toast.success('Task updated') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
+    onError: (e: any) => {
+      if (e.response?.status === 404) {
+        toast.error('Task not found – refreshing list')
+        invalidate()
+      } else {
+        toast.error(e.response?.data?.message || 'Error')
+      }
+    },
   })
 
   const toggleMutation = useMutation({
@@ -540,6 +556,19 @@ export function Planner() {
     onSuccess: invalidate,
   })
 
+  const completeMutation = useMutation({
+    mutationFn: (id: number) => api.patch('/v1/admin/planner/tasks/' + id + '/complete', {}),
+    onSuccess: () => { invalidate(); toast.success('Updated') },
+    onError: () => { toast.error('Could not update task'); invalidate() },
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      api.patch('/v1/admin/planner/tasks/' + id + '/status', { status }),
+    onSuccess: () => { invalidate(); toast.success('Status updated') },
+    onError: () => { toast.error('Could not update status'); invalidate() },
+  })
+
   const upsertNoteMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/day-note', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['planner-day-note'] }),
@@ -560,12 +589,25 @@ export function Planner() {
 
   const openCreate = (date: string, emp?: string) => {
     setEditTask(null)
+    setShowTemplatePicker(false)
     setForm({ ...EMPTY_FORM, task_date: date, employee_name: emp ?? myName })
     setShowModal(true)
   }
 
+  const applyTemplate = useCallback((t: { title: string; group?: string; category?: string; duration?: number }) => {
+    setForm(f => ({
+      ...f,
+      title: t.title,
+      task_group: t.group ?? f.task_group,
+      task_category: t.category ?? f.task_category,
+      duration_minutes: t.duration ? String(t.duration) : f.duration_minutes,
+    }))
+    setShowTemplatePicker(false)
+  }, [])
+
   const openEdit = (task: any) => {
     setEditTask(task)
+    setShowTemplatePicker(false)
     setForm({
       employee_name: task.employee_name ?? '', title: task.title ?? '',
       task_date: (task.task_date ?? '').slice(0, 10),
@@ -727,10 +769,13 @@ export function Planner() {
             )}
 
             {/* Tasks */}
-            <div className="space-y-2"
+            <div className={'space-y-2 transition-all rounded-xl p-2 ' + (dragOverDate === currentDate ? 'ring-2 ring-primary-500/40 bg-primary-500/5' : '')}
+              onDragEnter={() => setDragOverDate(currentDate)}
+              onDragLeave={() => setDragOverDate(null)}
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
               onDrop={(e) => {
                 e.preventDefault()
+                setDragOverDate(null)
                 const taskId = e.dataTransfer.getData('taskId')
                 const sourceDate = e.dataTransfer.getData('sourceDate')
                 if (taskId && sourceDate !== currentDate) {
@@ -762,6 +807,8 @@ export function Planner() {
                   onDeleteSubtask={(id) => deleteSubtaskMutation.mutate(id)}
                   onAddSubtask={handleAddSubtask}
                   onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('taskId', String(task.id)); e.dataTransfer.setData('sourceDate', currentDate) }}
+                  onMarkDone={() => statusMutation.mutate({ id: task.id, status: 'done' })}
+                  onMarkBlocked={() => statusMutation.mutate({ id: task.id, status: 'blocked' })}
                 />
               ))}
             </div>
@@ -891,32 +938,42 @@ export function Planner() {
                         ) : (
                           <div className="space-y-1">
                             {cellTasks.map((task: any) => (
-                              <button key={task.id} onClick={() => openEdit(task)}
-                                className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/40 ' +
-                                  (task.completed ? 'bg-green-500/10 hover:bg-green-500/15' : 'bg-primary-500/10 hover:bg-primary-500/15')}>
-                                {(task.start_time || task.end_time) && (
-                                  <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-primary-400')}>
-                                    {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
+                              <div key={task.id} className="relative group">
+                                <button onClick={() => openEdit(task)}
+                                  className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/40 border-l-2 ' +
+                                    (task.completed ? 'bg-green-500/10 border-green-500 hover:bg-green-500/15' : (STATUS_BORDER[task.status] ?? 'border-gray-600') + ' bg-primary-500/10 hover:bg-primary-500/15')}>
+                                  {(task.start_time || task.end_time) && (
+                                    <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-primary-400')}>
+                                      {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
+                                    </div>
+                                  )}
+                                  <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>
+                                    {task.title}
                                   </div>
-                                )}
-                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>
-                                  {task.title}
-                                </div>
-                                {task.subtasks?.length > 0 && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <ListChecks size={10} className="text-gray-600" />
-                                    <span className={'text-[10px] ' + (task.subtasks.every((s: any) => s.is_done) ? 'text-green-400' : 'text-gray-600')}>
-                                      {task.subtasks.filter((s: any) => s.is_done).length}/{task.subtasks.length}
-                                    </span>
-                                  </div>
-                                )}
-                                {task.priority === 'High' && (
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                    <span className="text-[10px] text-red-400">High</span>
-                                  </div>
-                                )}
-                              </button>
+                                  {task.subtasks?.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <ListChecks size={10} className="text-gray-600" />
+                                      <span className={'text-[10px] ' + (task.subtasks.every((s: any) => s.is_done) ? 'text-green-400' : 'text-gray-600')}>
+                                        {task.subtasks.filter((s: any) => s.is_done).length}/{task.subtasks.length}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {task.priority === 'High' && (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                      <span className="text-[10px] text-red-400">High</span>
+                                    </div>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
+                                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
+                                  title={task.completed ? 'Mark undone' : 'Mark done'}>
+                                  {task.completed
+                                    ? <CheckCircle2 size={14} className="text-green-400" />
+                                    : <Circle size={14} className="text-gray-600 hover:text-green-400" />}
+                                </button>
+                              </div>
                             ))}
                             <button onClick={() => openCreate(dateStr, emp)}
                               className="w-full flex items-center justify-center py-1 rounded text-gray-700 hover:text-gray-500 transition-colors">
@@ -955,13 +1012,24 @@ export function Planner() {
                         ) : (
                           <div className="space-y-1">
                             {cellTasks.map((task: any) => (
-                              <button key={task.id} onClick={() => openEdit(task)}
-                                className="w-full text-left p-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/15 transition-all hover:ring-1 hover:ring-gray-500/40">
-                                {(task.start_time || task.end_time) && (
-                                  <div className="text-xs font-semibold text-gray-400">{fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}</div>
-                                )}
-                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</div>
-                              </button>
+                              <div key={task.id} className="relative group">
+                                <button onClick={() => openEdit(task)}
+                                  className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-gray-500/40 border-l-2 ' +
+                                    (task.completed ? 'bg-green-500/10 border-green-500 hover:bg-green-500/15' : (STATUS_BORDER[task.status] ?? 'border-gray-600') + ' bg-gray-500/10 hover:bg-gray-500/15')}>
+                                  {(task.start_time || task.end_time) && (
+                                    <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-gray-400')}>{fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}</div>
+                                  )}
+                                  <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</div>
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
+                                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
+                                  title={task.completed ? 'Mark undone' : 'Mark done'}>
+                                  {task.completed
+                                    ? <CheckCircle2 size={14} className="text-green-400" />
+                                    : <Circle size={14} className="text-gray-600 hover:text-green-400" />}
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}
@@ -1117,6 +1185,33 @@ export function Planner() {
               <button onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-dark-surface2 transition-colors"><X size={18} /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="space-y-4">
+              {!editTask && (
+                <div className="mb-3">
+                  <button type="button" onClick={() => setShowTemplatePicker(v => !v)}
+                    className="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors mb-2">
+                    <FileText size={12} />
+                    {showTemplatePicker ? 'Hide templates' : 'Use a template'}
+                    <ChevronDown size={11} className={'transition-transform ' + (showTemplatePicker ? 'rotate-180' : '')} />
+                  </button>
+                  {showTemplatePicker && (
+                    <div className="border border-dark-border rounded-xl overflow-hidden mb-3 max-h-52 overflow-y-auto">
+                      {Object.entries(getTemplates()).map(([cat, items]) => (
+                        <div key={cat}>
+                          <div className="px-3 py-1.5 bg-dark-surface text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-dark-border/50">{cat}</div>
+                          <div className="flex flex-wrap gap-1 p-2 bg-dark-surface2/30">
+                            {(items as any[]).map((t, i) => (
+                              <button type="button" key={i} onClick={() => applyTemplate(t)}
+                                className="px-2.5 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all">
+                                {t.title}{t.duration ? <span className="ml-1 text-gray-600 text-[10px]">{t.duration}m</span> : null}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Title *</label>
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What needs to be done?" className={inp} autoFocus />
