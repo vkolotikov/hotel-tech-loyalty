@@ -425,6 +425,56 @@ class MemberAdminController extends Controller
         ]);
     }
 
+    public function deactivate(int $id): JsonResponse
+    {
+        $member = LoyaltyMember::findOrFail($id);
+        $oldIsActive = $member->is_active;
+        $newIsActive = !$oldIsActive;
+
+        $member->update(['is_active' => $newIsActive]);
+
+        AuditLog::record(
+            $newIsActive ? 'member_reactivated' : 'member_deactivated',
+            $member,
+            ['is_active' => $newIsActive],
+            ['is_active' => $oldIsActive],
+            \Auth::user(),
+            "Member #{$member->member_number} " . ($newIsActive ? 'reactivated' : 'deactivated')
+        );
+
+        AnalyticsService::clearDashboardCache();
+
+        return response()->json(['success' => true, 'is_active' => $newIsActive]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $member = LoyaltyMember::findOrFail($id);
+        $memberNumber = $member->member_number;
+        $email = $member->user?->email;
+        $name = $member->user?->name;
+
+        AuditLog::record(
+            'member_deleted',
+            $member,
+            [],
+            ['member_number' => $memberNumber, 'email' => $email, 'name' => $name],
+            \Auth::user(),
+            "Member #{$memberNumber} ({$email}) permanently deleted"
+        );
+
+        // Deleting the User cascades to LoyaltyMember via FK
+        if ($member->user) {
+            $member->user->delete();
+        } else {
+            $member->delete();
+        }
+
+        AnalyticsService::clearDashboardCache();
+
+        return response()->json(['success' => true, 'message' => 'Member deleted']);
+    }
+
     public function awardPoints(Request $request): JsonResponse
     {
         $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();

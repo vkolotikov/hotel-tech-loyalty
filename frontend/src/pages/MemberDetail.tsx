@@ -148,6 +148,26 @@ export function MemberDetail() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Could not send email'),
   })
 
+  const deactivateMutation = useMutation({
+    mutationFn: () => api.patch(`/v1/admin/members/${id}/deactivate`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['member', id] })
+      qc.invalidateQueries({ queryKey: ['admin-members'] })
+      toast.success(member?.is_active ? 'Member deactivated' : 'Member reactivated')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not update member status'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/v1/admin/members/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-members'] })
+      toast.success('Member deleted')
+      navigate('/members')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not delete member'),
+  })
+
   const redeemMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/points/redeem', {
       member_id: Number(id),
@@ -442,6 +462,53 @@ export function MemberDetail() {
               >
                 {resendWelcomeMutation.isPending ? 'Sending...' : 'Resend Welcome Email'}
               </button>
+            </div>
+          )}
+
+          {/* Account Status */}
+          {isAdmin && member && (
+            <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+              <h3 className="text-sm font-semibold text-white mb-3">Account Status</h3>
+
+              {/* Deactivate / Reactivate */}
+              <button
+                onClick={() => deactivateMutation.mutate()}
+                disabled={deactivateMutation.isPending}
+                className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors mb-3 ${
+                  member.is_active
+                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30'
+                    : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/30'
+                }`}
+              >
+                {deactivateMutation.isPending
+                  ? 'Updating...'
+                  : member.is_active ? '⊘ Deactivate Member' : '✓ Reactivate Member'}
+              </button>
+
+              {/* Status indicator */}
+              <p className="text-xs text-gray-500 mb-4">
+                {member.is_active
+                  ? 'Member can log in to the mobile app and earn points.'
+                  : 'Member is inactive. They cannot log in or earn points.'}
+              </p>
+
+              {/* Divider */}
+              <div className="border-t border-dark-border/50 pt-4">
+                <p className="text-xs text-red-400/70 mb-3">
+                  Danger zone — this action is permanent and cannot be undone.
+                </p>
+                <button
+                  onClick={() => {
+                    if (confirm(`Permanently delete ${member.user?.name ?? 'this member'}? All their data will be removed.`)) {
+                      deleteMutation.mutate()
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/30 transition-colors"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : '🗑 Delete Member Permanently'}
+                </button>
+              </div>
             </div>
           )}
 

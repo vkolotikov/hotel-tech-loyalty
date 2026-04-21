@@ -230,6 +230,8 @@ Route::prefix('v1')->group(function () {
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);
             Route::get('members/{id}/ai-insights',[MemberAdminController::class, 'aiInsights']);
             Route::post('members/{id}/resend-welcome', [MemberAdminController::class, 'resendWelcomeEmail']);
+            Route::patch('members/{id}/deactivate', [MemberAdminController::class, 'deactivate']);
+            Route::delete('members/{id}',        [MemberAdminController::class, 'destroy']);
             Route::get('members/{id}/qr',         [MemberController::class, 'memberQr']);
             Route::post('points/award',           [MemberAdminController::class, 'awardPoints']);
             Route::post('points/redeem',          [MemberAdminController::class, 'redeemPoints']);
