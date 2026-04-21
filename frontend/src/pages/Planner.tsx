@@ -453,6 +453,10 @@ export function Planner() {
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
     ;['employee_name', 'task_group', 'task_category', 'description'].forEach(k => { if (!body[k]) body[k] = null })
+    // For status, ensure it's always a valid value or null
+    if (!body.status || !['todo', 'in_progress', 'blocked', 'done'].includes(body.status)) {
+      body.status = editTask ? editTask.status : 'todo'
+    }
     if (editTask) updateMutation.mutate({ id: editTask.id, ...body })
     else createMutation.mutate(body)
   }
