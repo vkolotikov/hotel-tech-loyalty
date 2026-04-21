@@ -212,7 +212,7 @@ const TaskRow = memo(({
 })
 
 /* ─── task templates ───────────────────────────────────────────────── */
-const TASK_TEMPLATES: Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> = {
+const DEFAULT_TEMPLATES: Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> = {
   'Guest Services': [
     { title: 'Check-in Guest', group: 'Front Desk', duration: 15 },
     { title: 'Check-out Guest', group: 'Front Desk', duration: 10 },
@@ -236,6 +236,15 @@ const TASK_TEMPLATES: Record<string, Array<{ title: string; group?: string; cate
   ],
 }
 
+function getTemplates(): Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> {
+  try {
+    const custom = localStorage.getItem('planner-custom-templates')
+    return custom ? JSON.parse(custom) : DEFAULT_TEMPLATES
+  } catch {
+    return DEFAULT_TEMPLATES
+  }
+}
+
 function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, group?: string, category?: string, duration?: number) => void }) {
   const currentDate = new Date().toISOString().slice(0, 10)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -255,7 +264,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
             </button>
           </div>
           <div className="space-y-1 max-h-[300px] overflow-y-auto">
-            {Object.entries(TASK_TEMPLATES).map(([category, templates]) => (
+            {Object.entries(getTemplates()).map(([category, templates]) => (
               <div key={category}>
                 <div className="text-[9px] font-bold uppercase text-gray-600 px-2 py-1 tracking-wider">{category}</div>
                 {templates.map((t, i) => (
