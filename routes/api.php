@@ -180,6 +180,16 @@ Route::prefix('v1')->group(function () {
             // Reuses the public widget controller — tenant middleware has already
             // bound the org so bindOrg() is a no-op and returns the same shape.
             Route::get('services',          [ServicePublicController::class, 'config']);
+            // Member-initiated service booking — customer fields auto-filled
+            // from user, status defaults to pending so staff confirms.
+            Route::post('service-bookings', [\App\Http\Controllers\Api\V1\Member\MemberServiceBookingController::class, 'store']);
+            // Member-initiated Contact Hotel chat — landings appear in the
+            // staff Inbox alongside visitor widget conversations, tagged with
+            // the member's tier.
+            Route::get('chat',                [\App\Http\Controllers\Api\V1\Member\MemberChatController::class, 'current']);
+            Route::post('chat/start',         [\App\Http\Controllers\Api\V1\Member\MemberChatController::class, 'start']);
+            Route::get('chat/{id}/messages',  [\App\Http\Controllers\Api\V1\Member\MemberChatController::class, 'messages']);
+            Route::post('chat/{id}/messages', [\App\Http\Controllers\Api\V1\Member\MemberChatController::class, 'send']);
             Route::get('notifications',             [MemberNotificationController::class, 'index']);
             Route::post('notifications/read-all',  [MemberNotificationController::class, 'markAllRead']);
             Route::post('notifications/{id}/read', [MemberNotificationController::class, 'markRead']);
