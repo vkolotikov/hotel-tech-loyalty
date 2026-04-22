@@ -40,8 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
                         'errors'  => $e->errors(),
                     ], $e->status);
                 }
-                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                    return response()->json(['error' => 'Not found', 'message' => 'Resource not found.'], 404);
+                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException
+                    || ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+                        && $e->getPrevious() instanceof \Illuminate\Database\Eloquent\ModelNotFoundException)) {
+                    return response()->json(['error' => 'Not found', 'message' => 'This item no longer exists.'], 404);
                 }
                 if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
                     return response()->json(['error' => 'Forbidden', 'message' => $e->getMessage() ?: 'Forbidden.'], 403);
