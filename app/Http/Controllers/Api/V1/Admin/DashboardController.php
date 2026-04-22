@@ -156,35 +156,92 @@ class DashboardController extends Controller
         return response()->json($data);
     }
 
+    /**
+     * Recent activity feed for the Dashboard + /notifications screen.
+     *
+     * Broadened from inquiries+reservations only to cover the full operational
+     * surface — points awards, member registrations, offer creations, service
+     * bookings, chat lead captures, and check-in/out events. Limit per source
+     * is kept small (5-8 each) so the merged feed reflects a mix; final cap
+     * is 20 for mobile perf.
+     */
     public function recentActivity(): JsonResponse
     {
         $inquiries = Inquiry::with('guest:id,full_name')
-            ->latest()
-            ->limit(10)
-            ->get()
+            ->latest()->limit(8)->get()
             ->map(fn($i) => [
                 'id'          => 'i-' . $i->id,
                 'type'        => 'inquiry',
-                'message'     => "New {$i->inquiry_type} inquiry from {$i->guest?->full_name}",
-                'description' => "New {$i->inquiry_type} inquiry from {$i->guest?->full_name}",
+                'message'     => "New {$i->inquiry_type} inquiry from " . ($i->guest?->full_name ?? 'unknown'),
+                'description' => "New {$i->inquiry_type} inquiry from " . ($i->guest?->full_name ?? 'unknown'),
                 'created_at'  => $i->created_at,
                 'time_ago'    => $i->created_at?->diffForHumans(),
             ]);
 
         $reservations = Reservation::with('guest:id,full_name')
-            ->latest()
-            ->limit(10)
-            ->get()
+            ->latest()->limit(8)->get()
             ->map(fn($r) => [
                 'id'          => 'r-' . $r->id,
                 'type'        => 'booking',
-                'message'     => "Reservation {$r->confirmation_no} for {$r->guest?->full_name} ({$r->status})",
-                'description' => "Reservation {$r->confirmation_no} for {$r->guest?->full_name} ({$r->status})",
+                'message'     => "Reservation {$r->confirmation_no} for " . ($r->guest?->full_name ?? 'unknown') . " ({$r->status})",
+                'description' => "Reservation {$r->confirmation_no} for " . ($r->guest?->full_name ?? 'unknown') . " ({$r->status})",
                 'created_at'  => $r->created_at,
                 'time_ago'    => $r->created_at?->diffForHumans(),
             ]);
 
-        $merged = $inquiries->concat($reservations)->sortByDesc('created_at')->take(15)->values();
+        $points = PointsTransaction::with('member.user:id,name')
+            ->latest()->limit(8)->get()
+            ->map(function ($p) {
+                $memberName = $p->member?->user?->name ?? 'Member';
+                $verb = match ($p->type) {
+                    'award', 'earn', 'bonus' => '+' . $p->points . ' pts awarded to',
+                    'redeem'                 => '-' . abs($p->points) . ' pts redeemed by',
+                    'expire'                 => abs($p->points) . ' pts expired for',
+                    default                  => $p->points . ' pts adjusted for',
+                };
+                return [
+                    'id'          => 'p-' . $p->id,
+                    'type'        => 'points',
+                    'message'     => "{$verb} {$memberName}",
+                    'description' => "{$verb} {$memberName}" . ($p->description ? " — {$p->description}" : ''),
+                    'created_at'  => $p->created_at,
+                    'time_ago'    => $p->created_at?->diffForHumans(),
+                ];
+            });
+
+        $newMembers = LoyaltyMember::with('user:id,name,email', 'tier:id,name')
+            ->latest()->limit(5)->get()
+            ->map(fn($m) => [
+                'id'          => 'm-' . $m->id,
+                'type'        => 'member',
+                'message'     => "New {$m->tier?->name} member: " . ($m->user?->name ?? $m->user?->email ?? "#{$m->id}"),
+                'description' => "New {$m->tier?->name} member: " . ($m->user?->name ?? $m->user?->email ?? "#{$m->id}"),
+                'created_at'  => $m->created_at,
+                'time_ago'    => $m->created_at?->diffForHumans(),
+            ]);
+
+        // Chat leads — captured from the widget via captureLead()
+        $chatLeads = ChatConversation::where('lead_captured', true)
+            ->whereNotNull('visitor_email')
+            ->latest()->limit(5)->get()
+            ->map(fn($c) => [
+                'id'          => 'c-' . $c->id,
+                'type'        => 'chat_lead',
+                'message'     => "Chat lead captured: " . ($c->visitor_name ?? $c->visitor_email ?? "#{$c->id}"),
+                'description' => "Chat lead captured: " . ($c->visitor_name ?? $c->visitor_email ?? "#{$c->id}"),
+                'created_at'  => $c->updated_at,
+                'time_ago'    => $c->updated_at?->diffForHumans(),
+            ]);
+
+        $merged = $inquiries
+            ->concat($reservations)
+            ->concat($points)
+            ->concat($newMembers)
+            ->concat($chatLeads)
+            ->sortByDesc('created_at')
+            ->take(20)
+            ->values();
+
         return response()->json($merged);
     }
 

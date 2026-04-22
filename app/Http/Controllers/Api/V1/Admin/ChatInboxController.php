@@ -51,9 +51,15 @@ class ChatInboxController extends Controller
             });
         }
 
-        // Filter by status
+        // Filter by status. Accept 'closed' as an alias for resolved+archived
+        // so the mobile/web filter chip lines up with the per-status counts
+        // returned by /stats.
         if ($request->status && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            if ($request->status === 'closed') {
+                $query->whereIn('status', ['resolved', 'archived']);
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         // Filter by assigned agent
@@ -652,13 +658,38 @@ class ChatInboxController extends Controller
 
     /**
      * Get inbox stats/alerts.
+     *
+     * Returns both the "raw" per-status totals (active / waiting / resolved /
+     * archived / total) and a scoped `active_24h` metric.
+     *
+     * Context: the raw `active` count inflates because the widget creates a
+     * chat_conversations row on page load (not first message), and stale rows
+     * never auto-close. Clients that want "active that's actually active"
+     * should prefer `active_24h`. The mobile Inbox tab-bar badge uses
+     * `unassigned` which is still the safer day-to-day trigger.
      */
     public function stats(Request $request): JsonResponse
     {
         $orgId = $request->user()->organization_id;
 
-        // Total unread visitor messages across all open conversations — this
-        // drives the red badge in the sidebar nav and the favicon dot.
+        // Single grouped query for per-status counts — was 4+ separate counts
+        $statusCounts = ChatConversation::where('organization_id', $orgId)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        // Active conversations that have actually had a message in the last 24h —
+        // excludes abandoned widget-open rows and AI-only chatter.
+        $active24h = ChatConversation::where('organization_id', $orgId)
+            ->whereIn('status', ['active', 'waiting'])
+            ->where(function ($q) {
+                $q->where('last_message_at', '>=', now()->subHours(24))
+                  ->orWhere('updated_at', '>=', now()->subHours(24));
+            })
+            ->count();
+
+        // Unread visitor messages across open conversations — drives the
+        // mobile tab bar badge and web admin favicon dot.
         $unreadMessages = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
             ->where('chat_conversations.organization_id', $orgId)
             ->whereIn('chat_conversations.status', ['active', 'waiting'])
@@ -666,11 +697,33 @@ class ChatInboxController extends Controller
             ->where('chat_messages.is_read', false)
             ->count();
 
+        $unassigned = ChatConversation::where('organization_id', $orgId)
+            ->whereIn('status', ['active', 'waiting'])
+            ->whereNull('assigned_to')
+            ->count();
+
+        $resolvedToday = ChatConversation::where('organization_id', $orgId)
+            ->where('status', 'resolved')
+            ->where('updated_at', '>=', today())
+            ->count();
+
+        $active   = (int) ($statusCounts['active']   ?? 0);
+        $waiting  = (int) ($statusCounts['waiting']  ?? 0);
+        $resolved = (int) ($statusCounts['resolved'] ?? 0);
+        $archived = (int) ($statusCounts['archived'] ?? 0);
+        $closed   = $resolved + $archived;
+        $total    = $active + $waiting + $closed;
+
         return response()->json([
-            'active' => ChatConversation::where('organization_id', $orgId)->where('status', 'active')->count(),
-            'waiting' => ChatConversation::where('organization_id', $orgId)->where('status', 'waiting')->count(),
-            'unassigned' => ChatConversation::where('organization_id', $orgId)->whereIn('status', ['active', 'waiting'])->whereNull('assigned_to')->count(),
-            'resolved_today' => ChatConversation::where('organization_id', $orgId)->where('status', 'resolved')->where('updated_at', '>=', today())->count(),
+            'active'          => $active,
+            'waiting'         => $waiting,
+            'resolved'        => $resolved,
+            'archived'        => $archived,
+            'closed'          => $closed,     // resolved + archived
+            'total'           => $total,
+            'active_24h'      => $active24h,
+            'unassigned'      => $unassigned,
+            'resolved_today'  => $resolvedToday,
             'unread_messages' => $unreadMessages,
         ]);
     }
