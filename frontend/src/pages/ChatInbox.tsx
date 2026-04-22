@@ -6,7 +6,7 @@ import {
   Search, Send, CheckCircle, Archive, MessageSquare, User, Bot, X,
   MapPin, Smile, ThumbsUp, ThumbsDown, GraduationCap, Save,
   PauseCircle, PlayCircle, ArrowRightLeft, Zap, Paperclip, Download, FileText,
-  MoreHorizontal, UserPlus, Edit3, Mic, Square, Loader2,
+  MoreHorizontal, UserPlus, Edit3, Mic, Square, Loader2, ChevronLeft,
 } from 'lucide-react'
 import { API_URL } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -309,7 +309,10 @@ export function ChatInbox() {
   // ─── Render ──────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    // Height: top header is 64px always. On mobile we also need to clear the
+    // 56px fixed bottom nav + safe-area inset; lg+ has no bottom nav so the
+    // full viewport minus the header is available.
+    <div className="flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-64px)]">
       {/* ═══ Compact Header ═══ */}
       <div className="flex items-center justify-between px-1 pb-3">
         <h1 className="text-lg font-bold text-white">Inbox</h1>
@@ -331,8 +334,12 @@ export function ChatInbox() {
 
       <div className="flex flex-1 min-h-0 gap-0 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(14,18,16,0.6)' }}>
 
-        {/* ═══ LEFT: Conversation List ═══ */}
-        <div className="w-80 flex-shrink-0 flex flex-col border-r border-white/[0.06]">
+        {/* ═══ LEFT: Conversation List ═══
+             Mobile (<md): full-width, hidden as soon as a conversation is opened.
+             md+: fixed 320px side panel, always visible alongside the detail pane.
+             This replaces the old layout where the w-80 list always took ~85%
+             of a phone screen and pushed the chat detail off-screen. */}
+        <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-80 md:flex-shrink-0 flex-col border-r border-white/[0.06]`}>
           {/* Search + Filters */}
           <div className="p-2.5 space-y-2 border-b border-white/[0.04]">
             <div className="relative">
@@ -426,8 +433,16 @@ export function ChatInbox() {
           <div className="flex-1 flex flex-col min-w-0">
             {/* ── Header ── */}
             <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex items-center gap-2">
+                {/* Mobile-only back button — returns to the conversation list */}
+                <button
+                  onClick={() => setSelectedId(null)}
+                  className="md:hidden p-1.5 -ml-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  aria-label="Back to conversations"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     conv.status === 'active' ? 'bg-emerald-500/15 text-emerald-400' :
                     conv.status === 'waiting' ? 'bg-amber-500/15 text-amber-400' :

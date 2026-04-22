@@ -494,8 +494,10 @@ export function Settings() {
   }
 
   const renderSettingRow = (setting: any) => (
-    <div key={setting.key} className="flex items-start gap-4 py-3 border-b border-white/[0.04] last:border-0">
-      <div className="flex-1 min-w-0 pt-1">
+    // Stack on mobile: 288px input next to a cramped label doesn't fit on a
+    // phone. md+ goes back to the two-column row.
+    <div key={setting.key} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-3 border-b border-white/[0.04] last:border-0">
+      <div className="flex-1 min-w-0 md:pt-1">
         <label className="block text-sm font-medium text-white">{setting.label}</label>
         {setting.description && <p className="text-xs text-gray-500 mt-0.5">{setting.description}</p>}
         {setting.source && (
@@ -509,7 +511,7 @@ export function Settings() {
           </span>
         )}
       </div>
-      <div className="w-72 flex-shrink-0">{renderField(setting)}</div>
+      <div className="w-full md:w-72 md:flex-shrink-0">{renderField(setting)}</div>
     </div>
   )
 
