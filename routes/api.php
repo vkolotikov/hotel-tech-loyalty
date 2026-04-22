@@ -171,6 +171,10 @@ Route::prefix('v1')->group(function () {
             Route::post('offers/{id}/claim',[OfferController::class, 'claim']);
             Route::get('bookings',          [BookingController::class, 'index']);
             Route::get('bookings/{id}',     [BookingController::class, 'show']);
+            // Member-initiated reservation — guest_id auto-resolved from the
+            // authenticated LoyaltyMember; status defaults to Pending so
+            // staff confirms before it's a counted booking.
+            Route::post('reservations',     [\App\Http\Controllers\Api\V1\Member\MemberReservationController::class, 'store']);
             Route::get('referral',              [ReferralController::class, 'index']);
             // Hotel Services catalog (read-only browse for member mobile app).
             // Reuses the public widget controller — tenant middleware has already
