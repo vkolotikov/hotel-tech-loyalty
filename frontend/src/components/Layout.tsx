@@ -497,6 +497,9 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Subscription wall — locks out access when trial expires */}
         <SubscriptionWall />
 
+        {/* Trial-near-expiry warning banner */}
+        <TrialExpiryBanner />
+
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 mobile-safe-bottom">
           {children}
@@ -630,8 +633,51 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
   )
 }
 
+/**
+ * Slim banner pinned under the top header that shows up while the trial is
+ * still active but ≤3 days from expiry. Gives users a clear runway to upgrade
+ * before the SubscriptionWall locks them out. Hidden on /billing so the page
+ * isn't double-prompting.
+ */
+function TrialExpiryBanner() {
+  const { data, status } = useSubscription()
+  const location = useLocation()
+  const trialEnd = data?.trialEnd ? new Date(data.trialEnd) : null
+
+  if (status !== 'TRIALING' || !trialEnd) return null
+  if (location.pathname === '/billing') return null
+
+  const msLeft = trialEnd.getTime() - Date.now()
+  const daysLeft = Math.ceil(msLeft / 86400000)
+  if (daysLeft > 3) return null  // only flag the last 3 days
+
+  const tone = daysLeft <= 1
+    ? { bg: 'bg-red-500/15', border: 'border-red-500/30', text: 'text-red-300', accent: 'text-red-400' }
+    : { bg: 'bg-amber-500/15', border: 'border-amber-500/30', text: 'text-amber-300', accent: 'text-amber-400' }
+
+  const label = daysLeft <= 0 ? 'Trial expires today'
+    : daysLeft === 1 ? 'Trial expires tomorrow'
+    : `Trial expires in ${daysLeft} days`
+
+  return (
+    <div className={`${tone.bg} border-b ${tone.border} px-4 lg:px-6 py-2`}>
+      <div className="flex items-center gap-3 text-sm">
+        <AlertTriangle size={16} className={tone.accent} />
+        <span className={tone.text}>{label} — <strong>subscribe now</strong> to keep access.</span>
+        <Link
+          to="/billing"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-md bg-white/10 hover:bg-white/15 text-white transition-colors"
+        >
+          <CreditCard size={12} />
+          Upgrade
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 function SubscriptionWall() {
-  const { status, isLoading } = useSubscription()
+  const { data, status, isLoading } = useSubscription()
   const { staff } = useAuthStore()
   const location = useLocation()
 
@@ -649,6 +695,7 @@ function SubscriptionWall() {
 
   // Show wall for EXPIRED or NO_PLAN
   const isExpired = status === 'EXPIRED'
+  const trialAlreadyUsed = !!data?.trialAlreadyUsed
   const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
 
   return (
@@ -662,11 +709,15 @@ function SubscriptionWall() {
         {/* Heading */}
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            {isExpired ? 'Your trial has ended' : 'Subscription required'}
+            {isExpired ? 'Your trial has ended'
+              : trialAlreadyUsed ? 'Free trial already used'
+              : 'Subscription required'}
           </h1>
           <p className="text-gray-300 text-base">
             {isExpired
               ? 'Your free trial has expired. Subscribe to restore access to all features.'
+              : trialAlreadyUsed
+              ? 'You\'ve already used your free trial. Pick a plan below to continue using the platform — switching plans does not restart the trial.'
               : 'Choose a plan to activate your workspace and start using the platform.'}
           </p>
         </div>

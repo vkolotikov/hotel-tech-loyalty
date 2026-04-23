@@ -11,7 +11,7 @@ class Organization extends Model
         'name', 'slug', 'saas_org_id', 'widget_token', 'legal_name', 'tax_id', 'email', 'phone',
         'address', 'country', 'currency', 'timezone', 'logo_url',
         'website', 'settings', 'is_active',
-        'plan_slug', 'subscription_status', 'trial_end', 'period_end',
+        'plan_slug', 'subscription_status', 'trial_end', 'trial_started_at', 'period_end',
         'entitled_products', 'plan_features', 'entitlements_synced_at',
         'saas_deleted_at',
     ];
@@ -32,6 +32,7 @@ class Organization extends Model
         'entitled_products'     => 'array',
         'plan_features'         => 'array',
         'trial_end'             => 'datetime',
+        'trial_started_at'      => 'datetime',
         'period_end'            => 'datetime',
         'entitlements_synced_at'=> 'datetime',
         'saas_deleted_at'       => 'datetime',

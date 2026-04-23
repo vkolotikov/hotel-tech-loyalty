@@ -507,6 +507,7 @@ class AuthController extends Controller
                         $org->subscription_status = $sub['status'] ?? 'TRIALING';
                         $org->trial_end           = $sub['trialEnd'] ?? now()->addDays($trialDays);
                         $org->period_end          = $sub['currentPeriodEnd'] ?? now()->addDays($trialDays);
+                        if (!$org->trial_started_at) $org->trial_started_at = now();
                     }
                     $org->entitled_products     = $bsData['entitled_product_slugs'] ?? [];
                     $org->plan_features         = (array) ($bsData['features'] ?? []);
@@ -525,6 +526,7 @@ class AuthController extends Controller
             $org->subscription_status = 'TRIALING';
             $org->trial_end           = now()->addDays($trialDays);
             $org->period_end          = now()->addDays($trialDays);
+            if (!$org->trial_started_at) $org->trial_started_at = now();
             $org->entitled_products   = $this->getPlanProducts($planSlug);
             $org->plan_features       = $this->getTrialFeatures($planSlug);
             $org->entitlements_synced_at = now();
@@ -664,6 +666,8 @@ class AuthController extends Controller
                     ? ['name' => ucfirst($orgForBilling->plan_slug), 'slug' => $orgForBilling->plan_slug]
                     : null,
                 'trialEnd' => $orgForBilling->trial_end?->toIso8601String(),
+                'trialStartedAt'  => $orgForBilling->trial_started_at?->toIso8601String(),
+                'trialAlreadyUsed'=> (bool) $orgForBilling->trial_started_at,
                 'periodEnd'=> $orgForBilling->period_end?->toIso8601String(),
                 'features' => $orgForBilling->plan_features ?: [],
                 'products' => $orgForBilling->entitled_products ?: [],
@@ -1290,11 +1294,24 @@ class AuthController extends Controller
             return response()->json(['error' => 'No organization found for your account'], 400);
         }
 
-        // Don't allow if already has an active or trialing subscription
-        if (in_array($org->subscription_status, ['ACTIVE', 'TRIALING'], true)) {
-            if ($org->subscription_status === 'TRIALING' && $org->trial_end && $org->trial_end->isFuture()) {
-                return response()->json(['error' => 'You already have an active trial'], 400);
-            }
+        // Already on an active subscription — nothing to start
+        if ($org->subscription_status === 'ACTIVE') {
+            return response()->json(['error' => 'You already have an active subscription'], 400);
+        }
+
+        // Active trial — don't allow re-arming on a different plan
+        if ($org->subscription_status === 'TRIALING' && $org->trial_end && $org->trial_end->isFuture()) {
+            return response()->json(['error' => 'You already have an active trial'], 400);
+        }
+
+        // Trial already used by this org (across any plan).
+        // Without this guard a user whose trial expired could call /trial again with a
+        // different plan_slug and get a fresh 7-day window — bypassing the paywall.
+        if ($org->trial_started_at) {
+            return response()->json([
+                'error'   => 'trial_already_used',
+                'message' => 'Your free trial has already been used. Please subscribe to continue using the platform.',
+            ], 403);
         }
 
         $planSlug = $request->input('plan_slug');
@@ -1343,9 +1360,14 @@ class AuthController extends Controller
             $org->subscription_status = 'TRIALING';
             $org->trial_end           = now()->addDays($trialDays);
             $org->period_end          = now()->addDays($trialDays);
+            if (!$org->trial_started_at) $org->trial_started_at = now();
             $org->entitled_products   = $this->getPlanProducts($planSlug);
             $org->plan_features       = $this->getTrialFeatures($planSlug);
             $org->entitlements_synced_at = now();
+            $org->save();
+        } else if (!$org->trial_started_at) {
+            // SaaS path succeeded but we still want to lock the trial window
+            $org->trial_started_at = now();
             $org->save();
         }
 

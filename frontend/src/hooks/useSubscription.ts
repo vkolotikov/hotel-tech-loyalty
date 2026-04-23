@@ -6,6 +6,8 @@ export interface SubscriptionData {
   status: string
   plan?: { name: string; slug: string } | null
   trialEnd?: string | null
+  trialStartedAt?: string | null
+  trialAlreadyUsed?: boolean
   periodEnd?: string | null
   features: Record<string, string>
   products: string[]
@@ -25,7 +27,19 @@ export function useSubscription() {
   const { data, isLoading } = useQuery<SubscriptionData>({
     queryKey: ['subscription-status'],
     queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
+    // Stale for 5 min in the steady-state, but refetch every 60s once the
+    // trial has ≤2 days left so the SubscriptionWall flips on within a minute
+    // of the actual trial expiry instead of up to 5 min later.
     staleTime: 5 * 60 * 1000,
+    refetchInterval: (q) => {
+      const d = q.state.data as SubscriptionData | undefined
+      if (!d?.trialEnd || d.status !== 'TRIALING') return false
+      const ms = new Date(d.trialEnd).getTime() - Date.now()
+      const days = ms / 86400000
+      if (days < 0) return 30_000        // expired but cache says trialing — push hard
+      if (days <= 2) return 60_000       // last 48h
+      return false                       // normal
+    },
     retry: false,
   })
 
