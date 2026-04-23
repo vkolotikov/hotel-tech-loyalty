@@ -135,18 +135,18 @@ export function Reservations() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{view === 'reservations' ? `${meta.total ?? 0} total` : 'Booking widget submissions log'}</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Reservations</h1>
+          <p className="text-xs md:text-sm text-t-secondary mt-0.5">{view === 'reservations' ? `${meta.total ?? 0} total` : 'Booking widget submissions log'}</p>
         </div>
         {view === 'reservations' && (
-          <div className="flex items-center gap-2">
-            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-              <Download size={14} /> Export
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-1.5 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+              <Download size={14} /> <span className="hidden sm:inline">Export</span>
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-              <Plus size={15} /> Add Reservation
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors">
+              <Plus size={15} /> <span className="hidden sm:inline">Add Reservation</span><span className="sm:hidden">Add</span>
             </button>
           </div>
         )}
@@ -168,8 +168,8 @@ export function Reservations() {
       {view === 'submissions' && <BookingSubmissions embedded />}
 
       {view === 'reservations' && <>
-      {/* Quick filters */}
-      <div className="flex gap-2">
+      {/* Quick filters — scroll horizontally on mobile if labels overflow */}
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
         {[
           { key: 'arrivals_today', label: 'Arrivals Today' },
           { key: 'departures_today', label: 'Departures Today' },
@@ -177,7 +177,7 @@ export function Reservations() {
           { key: '', label: 'All' },
         ].map(({ key, label }) => (
           <button key={label} onClick={() => setQuick(key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap flex-shrink-0 ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
             {label}
           </button>
         ))}

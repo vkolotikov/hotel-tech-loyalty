@@ -125,20 +125,21 @@ export function Inquiries() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Leads &amp; Inquiries</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Leads &amp; Inquiries</h1>
+          <p className="text-xs md:text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-sm px-3 py-2 rounded-lg transition-colors">
-            <Sparkles size={14} /> AI Capture
+        {/* Action buttons wrap on mobile, condense labels at narrow widths */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors">
+            <Sparkles size={14} /> <span className="hidden sm:inline">AI Capture</span><span className="sm:hidden">AI</span>
           </button>
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-            <Download size={14} /> Export
+          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-1.5 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+            <Download size={14} /> <span className="hidden sm:inline">Export</span>
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-            <Plus size={15} /> Add Inquiry
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors">
+            <Plus size={15} /> <span className="hidden sm:inline">Add Inquiry</span><span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>

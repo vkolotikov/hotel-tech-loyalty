@@ -681,33 +681,56 @@ export function Planner() {
 
   /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Work Schedule</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+
+      {/* Header — restructured for mobile:
+          Row 1: title + Add button
+          Row 2: tab switcher (scrolls horizontally if cramped)
+          Row 3 (if not stats): filters + date nav
+          On md+ everything packs into the original two-row flex. */}
+      <div className="space-y-3 md:space-y-0 md:flex md:items-center md:justify-between md:flex-wrap md:gap-3">
+        <div className="flex items-start justify-between md:block gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-semibold text-white">Work Schedule</h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{subtitle}</p>
+          </div>
+          {/* Mobile-only: Add button next to title to save a row */}
+          {tab !== 'stats' && (
+            <button
+              onClick={() => openCreate(tab === 'day' ? currentDate : today)}
+              className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+            >
+              <Plus size={16} /> Add
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex rounded-xl border border-dark-border overflow-hidden bg-dark-surface">
+
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+          {/* Tabs — horizontal scroll on cramped phones */}
+          <div className="flex rounded-xl border border-dark-border overflow-x-auto bg-dark-surface w-full sm:w-auto">
             {([
               ['day', CalendarDays, 'Day'],
               ['schedule', Calendar, 'Schedule'],
               ['month', CalendarRange, 'Month'],
               ['stats', BarChart2, 'Stats'],
             ] as const).map(([t, Icon, label]) => (
-              <button key={t} onClick={() => setTab(t as Tab)} className={'flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-all ' + (tab === t ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}>
-                <Icon size={15} /> {label}
+              <button
+                key={t}
+                onClick={() => setTab(t as Tab)}
+                className={'flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' + (tab === t ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
+              >
+                <Icon size={14} /> {label}
               </button>
             ))}
           </div>
+
           {tab !== 'stats' && <>
-            <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel}>
+            <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
               <option value="">All Team</option>
               {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
             </select>
-            <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className={filterSel}>
+            <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
               <option value="">All Groups</option>
               {settings.planner_groups.map((g: string) => <option key={g}>{g}</option>)}
             </select>
@@ -716,7 +739,11 @@ export function Planner() {
               <button onClick={goToday} className="px-3 py-2 rounded-lg border border-dark-border text-sm text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all font-medium">Today</button>
               <button onClick={() => navigate(1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronRight size={16} /></button>
             </div>
-            <button onClick={() => openCreate(tab === 'day' ? currentDate : today)} className="flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors">
+            {/* Desktop-only Add (mobile already has one above) */}
+            <button
+              onClick={() => openCreate(tab === 'day' ? currentDate : today)}
+              className="hidden md:flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors"
+            >
               <Plus size={16} /> Add
             </button>
           </>}
@@ -884,10 +911,13 @@ export function Planner() {
               className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none" />
           </div>
 
-          {/* Schedule Grid: employee rows × day columns */}
-          <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+          {/* Schedule Grid: employee rows × day columns
+              Outer overflow-x-auto + min-width on the grid lets the table
+              scroll horizontally on mobile instead of cramming all 8 columns
+              (employee + 7 days) into ~375px and rendering each cell unusable. */}
+          <div className="bg-dark-surface border border-dark-border rounded-xl overflow-x-auto">
             {/* Header row */}
-            <div className="grid border-b border-dark-border" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+            <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
               <div className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
                 <User size={14} className="mr-2" /> View by employee
               </div>
@@ -913,7 +943,7 @@ export function Planner() {
             {scheduleEmployees.map((emp) => {
               const empTasks = tasks.filter((t: any) => (t.employee_name || 'Unassigned') === emp)
               return (
-                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
                   {/* Employee name cell */}
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 flex-shrink-0">
@@ -993,7 +1023,7 @@ export function Planner() {
               const unassigned = tasks.filter((t: any) => !t.employee_name)
               if (unassigned.length === 0 && scheduleEmployees.length > 0) return null
               return (
-                <div className="grid border-b border-dark-border/50" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
                     <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
                     <span className="text-sm font-medium text-gray-500 italic">Unassigned</span>
@@ -1043,14 +1073,17 @@ export function Planner() {
         </div>
       )}
 
-      {/* ═══ MONTH VIEW ═══ */}
+      {/* ═══ MONTH VIEW ═══
+          Each cell needs ~90px+ to render the date number + status pill +
+          three task chips. On mobile (375 / 7 = 53px) the content overflows.
+          Wrap in horizontal scroll with min-width so cells stay readable. */}
       {tab === 'month' && (
-        <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-          <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-3 md:p-5 overflow-x-auto">
+          <div className="grid grid-cols-7 gap-1 mb-2 min-w-[700px]">
             {DAYS.map(d => <div key={d} className="text-center text-xs text-gray-500 font-semibold py-2 uppercase tracking-wider">{d}</div>)}
           </div>
           {monthWeeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1 mb-1">
+            <div key={wi} className="grid grid-cols-7 gap-1 mb-1 min-w-[700px]">
               {week.map((date, di) => {
                 if (!date) return <div key={di} className="min-h-[100px] rounded-lg bg-dark-surface2/10" />
                 const dateStr = fmtDate(date)

@@ -67,26 +67,29 @@ export function Reviews() {
   })
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Reviews</h1>
-          <p className="text-[#a0a0a0] text-sm mt-1">Collect guest feedback and route happy customers to public review sites.</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Reviews</h1>
+          <p className="text-[#a0a0a0] text-xs md:text-sm mt-1">Collect guest feedback and route happy customers to public review sites.</p>
         </div>
       </div>
 
       {stats && <StatsRow stats={stats} />}
 
-      <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm mb-4 w-fit">
-        {(['submissions', 'invitations', 'forms', 'integrations'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${tab === t ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}
-          >
-            {t}
-          </button>
-        ))}
+      {/* Tabs scroll horizontally on small viewports */}
+      <div className="overflow-x-auto -mx-1 px-1 mb-4">
+        <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit">
+          {(['submissions', 'invitations', 'forms', 'integrations'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-3 md:px-4 py-1.5 rounded-md font-semibold capitalize transition-colors whitespace-nowrap ${tab === t ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === 'submissions' && <SubmissionsTab />}

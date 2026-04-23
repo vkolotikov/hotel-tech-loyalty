@@ -190,40 +190,45 @@ export function MemberDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Back + Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/members')} className="p-2 hover:bg-dark-surface2 rounded-lg transition-colors">
-          <ArrowLeft size={20} className="text-[#a0a0a0]" />
-        </button>
-        {user?.avatar_url ? (
-          <img
-            src={resolveImage(user.avatar_url)!}
-            alt={user.name}
-            className="w-14 h-14 rounded-full object-cover border-2 border-dark-border flex-shrink-0"
-          />
-        ) : (
-          <div className="w-14 h-14 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xl font-bold text-primary-400">{user?.name?.charAt(0)}</span>
-          </div>
-        )}
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">{user?.name}</h1>
-            {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
-          </div>
-          <p className="text-sm text-t-secondary mt-0.5">{user?.email} · {member?.member_number}</p>
-        </div>
-        {member?.id && <SendReviewButton target={{ memberId: member.id }} />}
-        {(isAdmin || staff?.can_view_analytics) && (
-          <button
-            onClick={() => refetchAi()}
-            disabled={aiLoading}
-            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          >
-            <Sparkles size={15} />
-            {aiLoading ? 'Analyzing...' : 'AI Analysis'}
+      {/* Back + Header — stacks on mobile so the long name + buttons don't
+          push each other off the screen. md+ keeps the original one-row. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => navigate('/members')} className="p-2 hover:bg-dark-surface2 rounded-lg transition-colors flex-shrink-0">
+            <ArrowLeft size={20} className="text-[#a0a0a0]" />
           </button>
-        )}
+          {user?.avatar_url ? (
+            <img
+              src={resolveImage(user.avatar_url)!}
+              alt={user.name}
+              className="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-dark-border flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg md:text-xl font-bold text-primary-400">{user?.name?.charAt(0)}</span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg md:text-2xl font-bold text-white truncate">{user?.name}</h1>
+              {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
+            </div>
+            <p className="text-xs md:text-sm text-t-secondary mt-0.5 truncate">{user?.email} · {member?.member_number}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 md:ml-auto md:flex-shrink-0">
+          {member?.id && <SendReviewButton target={{ memberId: member.id }} />}
+          {(isAdmin || staff?.can_view_analytics) && (
+            <button
+              onClick={() => refetchAi()}
+              disabled={aiLoading}
+              className="flex items-center gap-2 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors flex-1 md:flex-initial justify-center"
+            >
+              <Sparkles size={15} />
+              <span className="whitespace-nowrap">{aiLoading ? 'Analyzing...' : 'AI Analysis'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
