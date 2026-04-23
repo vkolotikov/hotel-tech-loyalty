@@ -33,7 +33,11 @@ class DashboardController extends Controller
     {
         $loyaltyKpis = $this->analytics->getDashboardKpis();
 
-        $crmKpis = Cache::remember('dashboard:crm_kpis', 300, function () {
+        // Scope the cache key to the current tenant so one org's CRM KPIs
+        // don't leak into another's response. (Tenant global scope still
+        // fires inside the query — this only fixes the cache collision.)
+        $orgId = \Illuminate\Support\Facades\Auth::user()?->organization_id ?? 'anon';
+        $crmKpis = Cache::remember("dashboard:crm_kpis:{$orgId}", 300, function () use ($orgId) {
             $today = now()->toDateString();
             $monthStart = now()->startOfMonth()->toDateString();
 
@@ -57,13 +61,31 @@ class DashboardController extends Controller
             $totalInquiries = (int) $inquiryStats->total_count;
             $confirmedInquiries = (int) $inquiryStats->confirmed_count;
 
+            // Occupancy % = in-house / known room inventory. Inventory is
+            // derived from distinct apartment_id values in the PMS mirror
+            // (Smoobu sync), with a floor of in_house so the value can't
+            // exceed 100 %. Returns null when inventory is unknown so the
+            // UI can hide the KPI instead of showing a false 0 %.
+            $inHouse = (int) $reservationStats->in_house;
+            $totalUnits = (int) \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereNotNull('apartment_id')
+                ->distinct('apartment_id')
+                ->count('apartment_id');
+            $occupancyPct = null;
+            if ($totalUnits > 0) {
+                $occupancyPct = round(min(100, ($inHouse / max($totalUnits, 1)) * 100));
+            }
+
             return [
                 'total_guests'      => Guest::count(),
                 'active_inquiries'  => (int) $inquiryStats->active_count,
                 'pipeline_value'    => (float) $inquiryStats->pipeline_value,
                 'arrivals_today'    => (int) $reservationStats->arrivals_today,
                 'departures_today'  => (int) $reservationStats->departures_today,
-                'in_house_guests'   => (int) $reservationStats->in_house,
+                'in_house_guests'   => $inHouse,
+                'occupancy_pct'     => $occupancyPct,
+                'total_units'       => $totalUnits,
                 'crm_revenue_month' => (float) $reservationStats->revenue_month,
                 'avg_daily_rate'    => (float) ($reservationStats->avg_rate ?? 0),
                 'conversion_rate'   => $totalInquiries > 0 ? round(($confirmedInquiries / $totalInquiries) * 100, 1) : 0,
