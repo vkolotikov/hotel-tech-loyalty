@@ -43,9 +43,20 @@ class MemberController extends Controller
 
         $summary = $this->loyaltyService->getMemberSummary($member);
 
+        // Surface the org's widget_token so the mobile app can deep-link into
+        // the public booking / services / chat widgets (which all key off
+        // widget_token in the URL). The token isn't a secret — it appears in
+        // every embed snippet on the hotel's public site.
+        $org = \App\Models\Organization::find($user->organization_id);
+
         return response()->json([
-            'user'   => $user->only('id', 'name', 'email', 'phone', 'date_of_birth', 'nationality', 'language', 'avatar_url'),
-            'member' => $summary,
+            'user'    => $user->only('id', 'name', 'email', 'phone', 'date_of_birth', 'nationality', 'language', 'avatar_url'),
+            'member'  => $summary,
+            'org'     => $org ? [
+                'id'           => $org->id,
+                'name'         => $org->name,
+                'widget_token' => $org->widget_token,
+            ] : null,
         ]);
     }
 

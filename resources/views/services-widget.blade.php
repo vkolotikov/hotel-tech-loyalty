@@ -330,6 +330,13 @@ img{max-width:100%;display:block}
     initialColor: @json($color ?: ''),
     presetCategory: @json(request('category', '')),
     presetService: @json(request('service', '')),
+    // Prefill from query params — used when the widget is loaded inside
+    // the member mobile app's WebView, so the guest doesn't have to retype
+    // their name/email/phone. All three are optional.
+    prefillName:  @json(request('prefill_name',  '')),
+    prefillEmail: @json(request('prefill_email', '')),
+    prefillPhone: @json(request('prefill_phone', '')),
+    source:       @json(request('source', 'widget')),
   }
 
   // ─── State ────────────────────────────────────────────────────────
@@ -344,7 +351,15 @@ img{max-width:100%;display:block}
     startAt: null,          // ISO
     partySize: 1,
     extras: [],             // [{id, quantity}]
-    customer: { name: '', email: '', phone: '', notes: '' },
+    customer: {
+      name:  CFG.prefillName  || '',
+      email: CFG.prefillEmail || '',
+      phone: CFG.prefillPhone || '',
+      notes: '',
+    },
+    // Source tag — 'mobile_app' when loaded inside the member mobile app's
+    // WebView (?source=mobile_app), otherwise the default 'widget'.
+    source: CFG.source || 'widget',
     quote: null,
     availability: { date: null, slots: [], loading: false, error: null },
     calendar: { month: null, dates: {}, loading: false },
@@ -610,6 +625,7 @@ img{max-width:100%;display:block}
       customer_notes: state.customer.notes,
       extras: state.extras,
       payment_intent_id: state.paymentIntent ? state.paymentIntent.id : null,
+      source: state.source,
     }, { 'Idempotency-Key': state.idempotencyKey }).then(function (res) {
       state.submitting = false
       if (!res.ok) {

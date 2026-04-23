@@ -70,6 +70,41 @@ Route::get('/services/{token}', function (string $token) {
     ]);
 });
 
+// ─── Standalone Chat Widget Page (mobile WebView host) ────────────────────
+// Renders a full-screen chat panel using the org's ChatWidgetConfig.
+// Used by the member mobile app's Contact screen — a WebView loads this URL
+// keyed by the org's widget_token (the same token used by booking/services
+// widgets). Optional prefill_name / prefill_email / prefill_phone query
+// params auto-capture visitor identity via the /lead endpoint so the
+// conversation is tied to the member from the first message.
+Route::get('/chat-widget/{token}', function (string $token) {
+    $org = \App\Models\Organization::where('widget_token', $token)->first();
+    if (!$org) {
+        abort(404, 'Chat widget not found');
+    }
+    $cfg = \App\Models\ChatWidgetConfig::withoutGlobalScopes()
+        ->where('organization_id', $org->id)
+        ->first();
+    if (!$cfg || !$cfg->widget_key) {
+        abort(404, 'Chat widget not configured for this organization');
+    }
+    $apiBase = rtrim(url('/'), '/') . '/api/v1/widget/' . $cfg->widget_key;
+    $scriptSrc = rtrim(url('/'), '/') . '/widget/hotel-chat.js?v=' . (@filemtime(public_path('widget/hotel-chat.js')) ?: time());
+    return response()
+        ->view('chat-widget-host', [
+            'widgetKey'    => $cfg->widget_key,
+            'apiBase'      => $apiBase,
+            'scriptSrc'    => $scriptSrc,
+            'lang'         => request('lang', 'en'),
+            'color'        => $cfg->primary_color ?: '#c9a84c',
+            'prefillName'  => request('prefill_name', ''),
+            'prefillEmail' => request('prefill_email', ''),
+            'prefillPhone' => request('prefill_phone', ''),
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+});
+
 // ─── Standalone Booking Page ────────────────────────────────────────────────
 Route::get('/book/{token}', function (string $token) {
     $org = \App\Models\Organization::where('widget_token', $token)->first();
@@ -130,7 +165,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|review/).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

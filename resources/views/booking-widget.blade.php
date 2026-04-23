@@ -366,6 +366,15 @@ var LANG     = @json($lang);
 var THEME    = @json($theme ?? 'light');
 var CURRENCY = 'EUR';
 
+/* --- Prefill from query params (used when widget is loaded inside the
+       member mobile app's WebView so the guest doesn't retype contact info) */
+var PREFILL_NAME  = @json(request('prefill_name', ''));
+var PREFILL_EMAIL = @json(request('prefill_email', ''));
+var PREFILL_PHONE = @json(request('prefill_phone', ''));
+var PREFILL_FIRST = (PREFILL_NAME || '').trim().split(/\s+/)[0] || '';
+var PREFILL_LAST  = (PREFILL_NAME || '').trim().split(/\s+/).slice(1).join(' ');
+var SOURCE_TAG    = @json(request('source', ''));
+
 /* --- State --- */
 var state = {
   step: 1,
@@ -384,10 +393,11 @@ var state = {
   selectedExtras: {},
   quote: null,
   quoteLoading: false,
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
+  firstName: PREFILL_FIRST,
+  lastName: PREFILL_LAST,
+  email: PREFILL_EMAIL,
+  phone: PREFILL_PHONE,
+  source: SOURCE_TAG || 'widget',
   requests: '',
   confirming: false,
   confirmation: null,
@@ -1234,7 +1244,8 @@ function doConfirm() {
       last_name: state.lastName.trim(),
       email: state.email.trim(),
       phone: state.phone.trim()
-    }
+    },
+    source: state.source
   }).then(function(data) {
     state.confirming = false;
     if (data.error) { state.error = data.error; render(); return; }
@@ -1359,7 +1370,8 @@ function doPayAndConfirm() {
         phone: state.phone.trim()
       },
       payment_intent_id: state.paymentIntentId,
-      payment_method: 'stripe'
+      payment_method: 'stripe',
+      source: state.source
     }).then(function(data) {
       state.confirming = false;
       state.paymentProcessing = false;
