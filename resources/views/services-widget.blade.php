@@ -136,6 +136,9 @@ img{max-width:100%;display:block}
 .master-tile{border:2px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;background:var(--surface);transition:all .2s}
 .master-tile:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));transform:translateY(-1px)}
 .master-tile.active{border-color:var(--primary);background:var(--primary-light)}
+/* "Any available" tile has no avatar — center its content so it doesn't
+   look short next to provider tiles that do have an avatar above the name. */
+.master-tile-any{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .master-avatar{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;background:var(--surface-muted);overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--primary)}
 .master-avatar img{width:100%;height:100%;object-fit:cover}
 .master-name{font-size:14px;font-weight:700}
@@ -755,8 +758,8 @@ img{max-width:100%;display:block}
     var h = '<div class="card">'
     h += '<h2 class="card-title">Choose your provider</h2><p class="card-sub">Pick a specific professional, or let us pair you with the first available.</p>'
     h += '<div class="master-grid">'
-    h += '<div class="master-tile' + (state.masterId === null ? ' active' : '') + '" data-act="mst" data-id="">' +
-      '<div class="master-avatar">✨</div><div class="master-name">Any available</div>' +
+    h += '<div class="master-tile master-tile-any' + (state.masterId === null ? ' active' : '') + '" data-act="mst" data-id="">' +
+      '<div class="master-name">Any available</div>' +
       '<div class="master-title">First free slot</div></div>'
     masters.forEach(function (m) {
       var initial = (m.name || '?').charAt(0)
