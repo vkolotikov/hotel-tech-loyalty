@@ -147,6 +147,25 @@ class AnalyticsService
                 ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
                 ->first();
 
+            // Yesterday's points — needed so the Loyalty tab can render
+            // "↑ 12% vs yesterday" delta pills on the Points / Redemptions
+            // KPI cards. One query for both sums, bucketed to yesterday only.
+            $yesterdayStart = $now->copy()->subDay()->startOfDay();
+            $yesterdayPoints = PointsTransaction::where('is_reversed', false)
+                ->whereBetween('created_at', [$yesterdayStart, $todayStart])
+                ->selectRaw("SUM(CASE WHEN points > 0 THEN points ELSE 0 END) as issued")
+                ->selectRaw("SUM(CASE WHEN type = 'redeem' THEN ABS(points) ELSE 0 END) as redeemed")
+                ->first();
+
+            // New members joined yesterday — same purpose as above.
+            $newMembersYesterday = (int) LoyaltyMember::whereBetween('joined_at', [$yesterdayStart, $todayStart])->count();
+
+            // Percent-change helper. Zero-floor to avoid +∞ / NaN.
+            $pct = function ($now, $prev) {
+                if ((float) $prev <= 0) return 0;
+                return (int) round((($now - $prev) / $prev) * 100);
+            };
+
             // Batch member counts in one query.
             //
             // "engaged" here means a member who has actually done something:
@@ -183,8 +202,11 @@ class AnalyticsService
                 'points_issued_this_month'   => (int) ($monthPoints->issued ?? 0),
                 'points_redeemed_this_month' => (int) ($monthPoints->redeemed ?? 0),
                 'new_members_today'          => (int) $memberStats->new_today,
+                'new_members_delta'          => $pct((int) $memberStats->new_today, $newMembersYesterday),
                 'points_issued_today'        => (int) ($todayPoints->issued ?? 0),
+                'points_issued_delta'        => $pct((int) ($todayPoints->issued ?? 0), (int) ($yesterdayPoints->issued ?? 0)),
                 'points_redeemed_today'      => (int) ($todayPoints->redeemed ?? 0),
+                'redemptions_delta'          => $pct((int) ($todayPoints->redeemed ?? 0), (int) ($yesterdayPoints->redeemed ?? 0)),
                 'active_stays'               => Booking::where('status', 'checked_in')->count(),
                 'revenue_this_month'         => Booking::where('created_at', '>=', $monthStart)->sum('total_amount'),
                 'total_outstanding_points'   => $this->totalOutstandingPoints(),
@@ -300,19 +322,56 @@ class AnalyticsService
             $lastWeekEnd = now()->subWeek()->endOfWeek();
 
             $buildPeriod = fn($from, $to) => [
-                'new_members'     => LoyaltyMember::whereBetween('joined_at', [$from, $to])->count(),
-                'points_issued'   => PointsTransaction::where('points', '>', 0)->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum('points'),
-                'points_redeemed' => PointsTransaction::where('type', 'redeem')->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum(DB::raw('ABS(points)')),
-                'new_bookings'    => Booking::whereBetween('created_at', [$from, $to])->count(),
-                'revenue'         => Booking::whereBetween('created_at', [$from, $to])->sum('total_amount'),
+                'new_members'      => LoyaltyMember::whereBetween('joined_at', [$from, $to])->count(),
+                'points_issued'    => PointsTransaction::where('points', '>', 0)->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum('points'),
+                'points_redeemed'  => PointsTransaction::where('type', 'redeem')->where('is_reversed', false)->whereBetween('created_at', [$from, $to])->sum(DB::raw('ABS(points)')),
+                'new_bookings'     => Booking::whereBetween('created_at', [$from, $to])->count(),
+                'revenue'          => Booking::whereBetween('created_at', [$from, $to])->sum('total_amount'),
+                'service_bookings' => \App\Models\ServiceBooking::whereBetween('created_at', [$from, $to])
+                                        ->whereNotIn('status', ['cancelled', 'no_show'])
+                                        ->count(),
             ];
 
-            return [
-                'week'              => $buildPeriod($weekStart, now()),
-                'last_week'         => $buildPeriod($lastWeekStart, $lastWeekEnd),
+            $week = $buildPeriod($weekStart, now());
+            $last = $buildPeriod($lastWeekStart, $lastWeekEnd);
+
+            // Percent change helper — returns 0 if the last period was zero
+            // (no point dividing by 0; the mobile Dashboard hides the delta
+            // pill when the change is 0 anyway).
+            $pct = function ($now, $prev) {
+                $now = (float) $now;
+                $prev = (float) $prev;
+                if ($prev <= 0) return 0;
+                return round((($now - $prev) / $prev) * 100, 1);
+            };
+
+            // Flattened keys the mobile Dashboard reads directly — saves the
+            // client from hand-unwrapping `week.*` / `last_week.*` and
+            // computing deltas on every render.
+            $flat = [
+                'bookings_this_week'         => (int) $week['new_bookings'],
+                'bookings_last_week'         => (int) $last['new_bookings'],
+                'bookings_change'            => $pct($week['new_bookings'], $last['new_bookings']),
+
+                'revenue_this_week'          => (float) $week['revenue'],
+                'revenue_last_week'          => (float) $last['revenue'],
+                'revenue_change'             => $pct($week['revenue'], $last['revenue']),
+
+                'new_members_this_week'      => (int) $week['new_members'],
+                'new_members_last_week'      => (int) $last['new_members'],
+                'members_change'             => $pct($week['new_members'], $last['new_members']),
+
+                'service_bookings_this_week' => (int) $week['service_bookings'],
+                'service_bookings_last_week' => (int) $last['service_bookings'],
+                'service_bookings_change'    => $pct($week['service_bookings'], $last['service_bookings']),
+            ];
+
+            return array_merge($flat, [
+                'week'              => $week,
+                'last_week'         => $last,
                 'tier_distribution' => $this->getTierDistribution(),
                 'top_members'       => $this->getTopMembers(5),
-            ];
+            ]);
         });
     }
 
@@ -349,6 +408,25 @@ class AnalyticsService
         return Cache::remember("analytics:booking_trends:{$days}", self::TTL_SHORT, function () use ($days) {
             return Booking::selectRaw("DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue, SUM(nights) as nights")
                 ->where('created_at', '>=', now()->subDays($days))
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->toArray();
+        });
+    }
+
+    /**
+     * Daily service-booking count series, mirroring getBookingTrends shape
+     * so the mobile Dashboard's "Services" chart tab can plot it the same
+     * way as the "Bookings" tab. Cancelled / no-show rows excluded so the
+     * chart reflects actual activity, not noise.
+     */
+    public function getServiceBookingTrends(int $days = 30): array
+    {
+        return Cache::remember("analytics:service_booking_trends:{$days}", self::TTL_SHORT, function () use ($days) {
+            return \App\Models\ServiceBooking::selectRaw("DATE(start_at) as date, COUNT(*) as bookings")
+                ->where('start_at', '>=', now()->subDays($days))
+                ->whereNotIn('status', ['cancelled', 'no_show'])
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get()

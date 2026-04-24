@@ -39,6 +39,7 @@ class DashboardController extends Controller
         $orgId = \Illuminate\Support\Facades\Auth::user()?->organization_id ?? 'anon';
         $crmKpis = Cache::remember("dashboard:crm_kpis:{$orgId}", 300, function () use ($orgId) {
             $today = now()->toDateString();
+            $yesterday = now()->subDay()->toDateString();
             $monthStart = now()->startOfMonth()->toDateString();
 
             // Batch inquiry stats into one query (was 3 queries → 1)
@@ -49,22 +50,25 @@ class DashboardController extends Controller
                 COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed_count
             ")->first();
 
-            // Batch reservation stats into one query (was 5 queries → 1)
+            // Batch reservation stats — today + yesterday in one query so
+            // the mobile Dashboard can render "↑20% vs yesterday" deltas
+            // without needing a second round-trip.
             $reservationStats = Reservation::selectRaw("
-                COUNT(CASE WHEN check_in = ? AND status = 'Confirmed' THEN 1 END) as arrivals_today,
-                COUNT(CASE WHEN check_out = ? AND status = 'Checked In' THEN 1 END) as departures_today,
+                COUNT(CASE WHEN check_in = ?  AND status = 'Confirmed'   THEN 1 END) as arrivals_today,
+                COUNT(CASE WHEN check_in = ?  AND status = 'Confirmed'   THEN 1 END) as arrivals_yesterday,
+                COUNT(CASE WHEN check_out = ? AND status = 'Checked In'  THEN 1 END) as departures_today,
+                COUNT(CASE WHEN check_out = ? AND status = 'Checked In'  THEN 1 END) as departures_yesterday,
                 COUNT(CASE WHEN status = 'Checked In' THEN 1 END) as in_house,
                 COALESCE(SUM(CASE WHEN status = 'Checked Out' AND checked_out_at >= ? THEN total_amount END), 0) as revenue_month,
                 AVG(CASE WHEN status IN ('Confirmed','Checked In','Checked Out') AND check_in >= ? THEN rate_per_night END) as avg_rate
-            ", [$today, $today, $monthStart, $monthStart])->first();
+            ", [$today, $yesterday, $today, $yesterday, $monthStart, $monthStart])->first();
 
             $totalInquiries = (int) $inquiryStats->total_count;
             $confirmedInquiries = (int) $inquiryStats->confirmed_count;
 
             // Occupancy % = in-house / known room inventory. Inventory is
             // derived from distinct apartment_id values in the PMS mirror
-            // (Smoobu sync), with a floor of in_house so the value can't
-            // exceed 100 %. Returns null when inventory is unknown so the
+            // (Smoobu sync). Returns null when inventory is unknown so the
             // UI can hide the KPI instead of showing a false 0 %.
             $inHouse = (int) $reservationStats->in_house;
             $totalUnits = (int) \App\Models\BookingMirror::withoutGlobalScopes()
@@ -77,18 +81,39 @@ class DashboardController extends Controller
                 $occupancyPct = round(min(100, ($inHouse / max($totalUnits, 1)) * 100));
             }
 
+            // Service bookings today + yesterday — spa / dining / any service
+            // with a start date on that day. Excludes cancelled / no-show so
+            // the number reflects actual delivered activity.
+            $serviceStats = \App\Models\ServiceBooking::selectRaw("
+                COUNT(CASE WHEN DATE(start_at) = ? THEN 1 END) as today,
+                COUNT(CASE WHEN DATE(start_at) = ? THEN 1 END) as yesterday
+            ", [$today, $yesterday])
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->first();
+
+            // Percent-change helper. Returns 0 when the prior value is zero
+            // rather than +∞ — the mobile UI hides the delta pill on 0 anyway.
+            $pct = function ($now, $prev) {
+                if ((float) $prev <= 0) return 0;
+                return (int) round((($now - $prev) / $prev) * 100);
+            };
+
             return [
-                'total_guests'      => Guest::count(),
-                'active_inquiries'  => (int) $inquiryStats->active_count,
-                'pipeline_value'    => (float) $inquiryStats->pipeline_value,
-                'arrivals_today'    => (int) $reservationStats->arrivals_today,
-                'departures_today'  => (int) $reservationStats->departures_today,
-                'in_house_guests'   => $inHouse,
-                'occupancy_pct'     => $occupancyPct,
-                'total_units'       => $totalUnits,
-                'crm_revenue_month' => (float) $reservationStats->revenue_month,
-                'avg_daily_rate'    => (float) ($reservationStats->avg_rate ?? 0),
-                'conversion_rate'   => $totalInquiries > 0 ? round(($confirmedInquiries / $totalInquiries) * 100, 1) : 0,
+                'total_guests'             => Guest::count(),
+                'active_inquiries'         => (int) $inquiryStats->active_count,
+                'pipeline_value'           => (float) $inquiryStats->pipeline_value,
+                'arrivals_today'           => (int) $reservationStats->arrivals_today,
+                'arrivals_change'          => $pct($reservationStats->arrivals_today, $reservationStats->arrivals_yesterday),
+                'departures_today'         => (int) $reservationStats->departures_today,
+                'departures_change'        => $pct($reservationStats->departures_today, $reservationStats->departures_yesterday),
+                'in_house_guests'          => $inHouse,
+                'service_bookings_today'   => (int) $serviceStats->today,
+                'service_bookings_change'  => $pct($serviceStats->today, $serviceStats->yesterday),
+                'occupancy_pct'            => $occupancyPct,
+                'total_units'              => $totalUnits,
+                'crm_revenue_month'        => (float) $reservationStats->revenue_month,
+                'avg_daily_rate'           => (float) ($reservationStats->avg_rate ?? 0),
+                'conversion_rate'          => $totalInquiries > 0 ? round(($confirmedInquiries / $totalInquiries) * 100, 1) : 0,
             ];
         });
 
@@ -133,19 +158,34 @@ class DashboardController extends Controller
 
     public function arrivalsToday(): JsonResponse
     {
-        $arrivals = Reservation::with(['guest:id,full_name,company,vip_level,phone,email', 'property:id,name,code'])
+        // Eager-load enough to render the Dashboard / Bookings arrivals row:
+        //   guest → member → tier   (so the UI can render a TierBadge)
+        //   property                 (property name under the guest name)
+        // Both Confirmed and Checked-In are returned so the UI can show an
+        // "already checked in" state on the same list.
+        $arrivals = Reservation::with([
+                'guest:id,full_name,company,vip_level,phone,email,member_id',
+                'guest.member:id,tier_id,member_number',
+                'guest.member.tier:id,name,color_hex',
+                'property:id,name,code',
+            ])
             ->where('check_in', now()->toDateString())
-            ->whereIn('status', ['Confirmed'])
+            ->whereIn('status', ['Confirmed', 'Checked In'])
             ->orderBy('created_at')
             ->get()
             ->map(fn($r) => [
                 'id'            => $r->id,
                 'guest_name'    => $r->guest?->full_name,
                 'vip_level'     => $r->guest?->vip_level ?? 'Standard',
+                'member_tier'   => $r->guest?->member?->tier?->name,
+                'member_number' => $r->guest?->member?->member_number,
                 'room_type'     => $r->room_type,
-                'check_in_time' => '14:00',
+                'room_number'   => $r->room_number,
+                'check_in_time' => $r->check_in_time ?? '14:00',
                 'property'      => $r->property?->name ?? '',
                 'special_notes' => $r->special_requests,
+                'status'        => $r->status,
+                'checked_in'    => $r->status === 'Checked In',
             ]);
         return response()->json($arrivals);
     }
@@ -631,15 +671,16 @@ class DashboardController extends Controller
         ];
 
         return response()->json([
-            'kpis'            => $this->kpis()->getData(true),
-            'arrivals'        => $this->arrivalsToday()->getData(true),
-            'departures'      => $this->departuresToday()->getData(true),
-            'chat_stats'      => $chatStats,
-            'tasks'           => $this->tasksDue()->getData(true),
-            'inquiry_stats'   => $this->inquiriesByStatus()->getData(true),
-            'activity'        => $this->recentActivity()->getData(true),
-            'week_comparison' => $this->weekComparison()->getData(true),
-            'booking_trends'  => $this->bookingTrends($request)->getData(true),
+            'kpis'                   => $this->kpis()->getData(true),
+            'arrivals'               => $this->arrivalsToday()->getData(true),
+            'departures'             => $this->departuresToday()->getData(true),
+            'chat_stats'             => $chatStats,
+            'tasks'                  => $this->tasksDue()->getData(true),
+            'inquiry_stats'          => $this->inquiriesByStatus()->getData(true),
+            'activity'               => $this->recentActivity()->getData(true),
+            'week_comparison'        => $this->weekComparison()->getData(true),
+            'booking_trends'         => $this->bookingTrends($request)->getData(true),
+            'service_booking_trends' => $this->analytics->getServiceBookingTrends($request->get('days', 14)),
         ]);
     }
 }
