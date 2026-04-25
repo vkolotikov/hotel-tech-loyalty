@@ -153,6 +153,9 @@ class MemberAdminController extends Controller
                 \Illuminate\Support\Facades\Mail::to($member->user->email)
                     ->send(new \App\Mail\WelcomeMemberMail($member->load(['user', 'tier']), $org, $inviteCode));
                 $emailSent = true;
+                // Stamp the member so booking / service flows know not to
+                // send the welcome email again on first transaction.
+                $member->forceFill(['welcomed_at' => now()])->save();
             } catch (\Throwable $e) {
                 \Log::warning('Welcome email send failed', [
                     'member_id' => $member->id,

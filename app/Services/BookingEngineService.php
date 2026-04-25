@@ -507,7 +507,11 @@ class BookingEngineService
             ]);
         }
 
-        // 2) Membership Invitation Email — only if a member was auto-created
+        // 2) Membership Invitation Email — only on first contact.
+        //    Skip if `welcomed_at` is already set on the member record. That
+        //    flag is stamped here on first send AND backfilled from
+        //    users.email_verified_at, so a returning guest who's already
+        //    onboarded never receives a duplicate "set your password" email.
         try {
             $member = LoyaltyMember::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
@@ -515,7 +519,7 @@ class BookingEngineService
                 ->with(['user', 'tier'])
                 ->first();
 
-            if ($member) {
+            if ($member && $member->welcomed_at === null) {
                 // Generate a verification code so the guest can set their password
                 $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
@@ -534,6 +538,11 @@ class BookingEngineService
                     code: $code,
                     supportEmail: $supportEmail,
                 ));
+
+                // Stamp the welcome so subsequent bookings / service bookings
+                // skip this email — the user gets one chance to onboard, not
+                // a fresh nag every time they transact.
+                $member->forceFill(['welcomed_at' => now()])->save();
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Booking membership email failed', [

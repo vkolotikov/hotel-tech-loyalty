@@ -20,7 +20,7 @@ class LoyaltyMember extends Model
         'points_expiry_date', 'qr_code_token', 'nfc_uid', 'nfc_card_issued_at',
         'referral_code', 'referred_by', 'is_active', 'marketing_consent',
         'email_notifications', 'push_notifications', 'expo_push_token',
-        'joined_at', 'last_activity_at',
+        'joined_at', 'welcomed_at', 'last_activity_at',
     ];
 
     protected $casts = [
@@ -31,6 +31,7 @@ class LoyaltyMember extends Model
         'points_expiry_date' => 'date',
         'nfc_card_issued_at' => 'datetime',
         'joined_at' => 'datetime',
+        'welcomed_at' => 'datetime',
         'last_activity_at' => 'datetime',
         'tier_review_date' => 'date',
         'tier_effective_from' => 'date',

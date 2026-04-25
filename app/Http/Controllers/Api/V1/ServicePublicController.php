@@ -440,10 +440,139 @@ class ServicePublicController extends Controller
 
         $this->logSubmission($orgId, $idempotency, $data, $booking->id, 'success');
 
+        // ── Transactional emails ───────────────────────────────────────────
+        // 1) Service confirmation goes to every booking, no questions asked.
+        // 2) Membership-welcome only fires when the guest has no `welcomed_at`
+        //    stamp on their LoyaltyMember row — same rule the room-booking
+        //    flow uses, so a returning guest never gets a duplicate
+        //    "set your password" email after every transaction.
+        $this->sendServiceBookingEmails($booking->load(['service', 'master', 'extras']), $orgId);
+
         return response()->json([
             'booking_reference' => $booking->booking_reference,
             'booking'           => $booking->load(['service', 'master', 'extras']),
         ], 201);
+    }
+
+    /**
+     * Send confirmation + (conditional) membership welcome after a service
+     * booking is committed. Every send is wrapped in its own try/catch so
+     * a transient SMTP failure can't 500 a successful booking.
+     */
+    private function sendServiceBookingEmails(\App\Models\ServiceBooking $booking, int $orgId): void
+    {
+        $email = strtolower(trim($booking->customer_email));
+        if ($email === '') return;
+
+        $guestName = $booking->customer_name ?: 'Guest';
+        $org = \App\Models\Organization::find($orgId);
+        $hotelName = $org->name ?? 'Our Hotel';
+        $supportEmail = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'support_email')
+            ->value('value') ?: 'support@hotel-tech.ai';
+        $cancellationPolicy = \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'service_cancellation_policy')
+            ->value('value') ?: null;
+
+        // Auto-enrol the guest as a Bronze member so subsequent flows can
+        // recognise them and so the membership-welcome rule has a record
+        // to stamp. Mirrors what the room-booking flow does on every
+        // submission.
+        try {
+            $guest = \App\Models\Guest::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('email', $email)
+                ->first();
+            if (!$guest) {
+                $nameParts = explode(' ', $guestName, 2);
+                $guest = \App\Models\Guest::create([
+                    'organization_id' => $orgId,
+                    'first_name'      => $nameParts[0] ?? '',
+                    'last_name'       => $nameParts[1] ?? '',
+                    'full_name'       => $guestName,
+                    'email'           => $email,
+                    'phone'           => $booking->customer_phone,
+                    'guest_type'      => 'Individual',
+                    'lead_source'     => 'Service Widget',
+                    'last_activity_at'=> now(),
+                ]);
+                // Guest::created event hook will auto-enrol the member.
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Service booking guest auto-enrol failed', [
+                'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // 1) Confirmation email
+        try {
+            $extrasBreakdown = $booking->extras->map(fn($x) => [
+                'name'       => $x->name,
+                'quantity'   => (int) $x->quantity,
+                'line_total' => (float) $x->line_total,
+            ])->toArray();
+
+            \Illuminate\Support\Facades\Mail::to($email)
+                ->send(new \App\Mail\ServiceBookingConfirmationMail(
+                    guestName: $guestName,
+                    hotelName: $hotelName,
+                    bookingReference: $booking->booking_reference ?? '—',
+                    serviceName: $booking->service?->name ?? 'Service',
+                    masterName: $booking->master?->name,
+                    startAt: $booking->start_at?->toIso8601String() ?? '',
+                    durationMinutes: (int) $booking->duration_minutes,
+                    partySize: (int) $booking->party_size,
+                    servicePrice: (float) $booking->service_price,
+                    extrasTotal: (float) $booking->extras_total,
+                    grossTotal: (float) $booking->total_amount,
+                    currency: $booking->currency ?? 'EUR',
+                    extras: $extrasBreakdown,
+                    cancellationPolicy: $cancellationPolicy,
+                    supportEmail: $supportEmail,
+                ));
+        } catch (\Throwable $e) {
+            \Log::warning('Service booking confirmation email failed', [
+                'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // 2) Membership welcome — only on first contact (welcomed_at null).
+        try {
+            $member = \App\Models\LoyaltyMember::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereHas('user', fn($q) => $q->where('email', $email))
+                ->with(['user', 'tier'])
+                ->first();
+
+            if ($member && $member->welcomed_at === null) {
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+                \App\Models\EmailVerificationCode::create([
+                    'email'      => $email,
+                    'code'       => $code,
+                    'expires_at' => now()->addHours(48),
+                ]);
+
+                \Illuminate\Support\Facades\Mail::to($email)
+                    ->send(new \App\Mail\BookingMembershipMail(
+                        guestName: $guestName,
+                        hotelName: $hotelName,
+                        memberNumber: $member->member_number,
+                        tierName: $member->tier?->name ?? 'Bronze',
+                        email: $email,
+                        code: $code,
+                        supportEmail: $supportEmail,
+                    ));
+
+                $member->forceFill(['welcomed_at' => now()])->save();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Service booking membership email failed', [
+                'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
