@@ -52,6 +52,7 @@ img{max-width:100%;display:block}
 /* Layout */
 .widget{max-width:980px;margin:0 auto;padding:20px 16px}
 .page-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.page-layout.full-width{grid-template-columns:minmax(0,1fr)}
 @media(max-width:780px){.page-layout{grid-template-columns:1fr}}
 
 /* Header */
@@ -653,7 +654,11 @@ img{max-width:100%;display:block}
 
     var html = renderHeader()
     html += renderStepper()
-    html += '<div class="page-layout">'
+    // Steps 1 and 7 don't render the right-hand booking summary, so the
+    // service-list / confirmation page should fill the full width
+    // instead of leaving a 340pt empty column.
+    var noSummary = state.step === 1 || state.step === 7
+    html += '<div class="page-layout' + (noSummary ? ' full-width' : '') + '">'
     html += '<div>'
     switch (state.step) {
       case 1: html += renderStep1Service(); break
