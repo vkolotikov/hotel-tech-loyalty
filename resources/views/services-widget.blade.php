@@ -494,7 +494,11 @@ img{max-width:100%;display:block}
     state.date = null
     state.startAt = null
     state.extras = []
-    state.step = 2
+    // If the service has no configured masters, skip the master step
+    // entirely — without "Any available" the page would be empty otherwise.
+    var svc = getService(id)
+    state.step = mastersForService(svc).length > 0 ? 2 : 3
+    if (state.step === 3) loadCalendar()
     render()
   }
   function selectMaster(id) {
@@ -517,7 +521,9 @@ img{max-width:100%;display:block}
   }
   function selectSlot(startIso) {
     state.startAt = startIso
-    state.step = 5
+    // Auto-skip the extras step when there's nothing to add — saves the
+    // user a redundant tap through an empty page.
+    state.step = getExtrasForService().length > 0 ? 5 : 6
     refreshQuote()
     render()
   }
@@ -654,7 +660,8 @@ img{max-width:100%;display:block}
       case 2: html += renderStep2Master(); break
       case 3: html += renderStep3Date(); break
       case 4: html += renderStep4Slot(); break
-      case 5: html += renderStep5Details(); break
+      case 5: html += renderStep5Extras(); break
+      case 6: html += renderStep6Confirm(); break
       case 7: html += renderStep7Confirm(); break
     }
     html += '</div>'
@@ -688,7 +695,10 @@ img{max-width:100%;display:block}
   }
 
   function renderStepper() {
-    var steps = ['Service', 'Master', 'Date', 'Time', 'Details', 'Confirm']
+    // Step model: 1=Service · 2=Master · 3=Date · 4=Time · 5=Extras · 6=Confirm
+    // Step 7 is the post-submit "Booking confirmed" page — it visually
+    // collapses to step 6 (Confirm) on the stepper.
+    var steps = ['Service', 'Master', 'Date', 'Time', 'Extras', 'Confirm']
     var current = state.step === 7 ? 6 : state.step
     var h = '<div class="stepper">'
     steps.forEach(function (label, i) {
@@ -712,10 +722,10 @@ img{max-width:100%;display:block}
     if (cats.length > 0) {
       h += '<div class="card"><h2 class="card-title">Choose a category</h2><p class="card-sub">Pick what you\'re interested in to see available services.</p>'
       h += '<div class="cat-grid">'
-      var totalCount = state.config.services.length
-      h += '<div class="cat-tile no-image' + (state.categoryId === null ? ' active' : '') + '" data-act="cat" data-id="">' +
-        '<div class="cat-body"><div class="cat-ico">★</div><div class="cat-name">All services</div>' +
-        '<div class="cat-count">' + totalCount + ' service' + (totalCount === 1 ? '' : 's') + '</div></div></div>'
+      // "All services" tile intentionally omitted — staff requested a
+      // category-only entry point. Users pick a category, then a service
+      // from that category. If no categoryId is preset, the service list
+      // below still falls through to "all" until a category is chosen.
       cats.forEach(function (c) {
         var count = state.config.services.filter(function (s) { return s.category_id === c.id }).length
         var ico = c.icon ? escapeHtml(c.icon.slice(0, 2)) : (c.name || '?').charAt(0)
@@ -772,11 +782,20 @@ img{max-width:100%;display:block}
     if (!svc) return ''
     var masters = mastersForService(svc)
     var h = '<div class="card">'
-    h += '<h2 class="card-title">Choose your provider</h2><p class="card-sub">Pick a specific professional, or let us pair you with the first available.</p>'
+    h += '<h2 class="card-title">Choose your provider</h2><p class="card-sub">Pick a specific professional for your appointment.</p>'
+    // Edge case: service somehow has no configured masters. selectService
+    // already skips this step in that case, but if the user lands here
+    // via Back navigation we surface a helpful message instead of a void.
+    if (masters.length === 0) {
+      h += '<p class="slot-empty">No providers configured for this service yet.</p>'
+      h += '<div class="btn-row"><button class="btn btn-outline" data-act="back" data-to="1">Back</button></div>'
+      h += '</div>'
+      return h
+    }
     h += '<div class="master-grid">'
-    h += '<div class="master-tile master-tile-any' + (state.masterId === null ? ' active' : '') + '" data-act="mst" data-id="">' +
-      '<div class="master-name">Any available</div>' +
-      '<div class="master-title">First free slot</div></div>'
+    // "Any available" tile intentionally omitted — staff requested an
+    // explicit-master flow so the calendar reflects each master's real
+    // availability, not the first-free pool.
     masters.forEach(function (m) {
       var initial = (m.name || '?').charAt(0)
       h += '<div class="master-tile' + (state.masterId === m.id ? ' active' : '') + '" data-act="mst" data-id="' + m.id + '">'
@@ -859,24 +878,13 @@ img{max-width:100%;display:block}
     return h
   }
 
-  // Step 5: details + extras
-  function renderStep5Details() {
+  // Step 5: extras only — optional upgrades and add-ons.
+  function renderStep5Extras() {
     var extras = getExtrasForService()
     var h = '<div class="card">'
-    h += '<h2 class="card-title">Your details</h2><p class="card-sub">We\'ll send confirmation to the email you provide.</p>'
-    h += '<div class="row">'
-    h += '<div class="field"><label>Full name *</label><input data-act="customer" data-field="name" value="' + escapeHtml(state.customer.name) + '" placeholder="Jane Doe" autocomplete="name" autocapitalize="words" spellcheck="false"></div>'
-    h += '<div class="field"><label>Email *</label><input type="email" data-act="customer" data-field="email" value="' + escapeHtml(state.customer.email) + '" placeholder="jane@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></div>'
-    h += '</div>'
-    h += '<div class="row">'
-    h += '<div class="field"><label>Phone</label><input type="tel" data-act="customer" data-field="phone" value="' + escapeHtml(state.customer.phone) + '" placeholder="+1 ..." autocomplete="tel" inputmode="tel"></div>'
-    h += '<div class="field"><label>Party size</label><input type="number" min="1" max="20" data-act="party" value="' + state.partySize + '" inputmode="numeric"></div>'
-    h += '</div>'
-    h += '<div class="field"><label>Notes (optional)</label><textarea data-act="customer" data-field="notes" placeholder="Anything we should know?">' + escapeHtml(state.customer.notes) + '</textarea></div>'
-    h += '</div>'
-
+    h += '<h2 class="card-title">Add extras</h2>'
     if (extras.length > 0) {
-      h += '<div class="card"><h2 class="card-title">Add extras</h2><p class="card-sub">Optional upgrades and add-ons.</p>'
+      h += '<p class="card-sub">Optional upgrades and add-ons. Skip if you don\'t need any.</p>'
       extras.forEach(function (x) {
         var checked = state.extras.some(function (e) { return e.id === x.id })
         var priceNote = x.price_type === 'per_person' ? ' / person' : ''
@@ -889,11 +897,36 @@ img{max-width:100%;display:block}
         h += '<div class="extra-price">' + fmtMoney(x.price, x.currency) + '<span style="font-weight:500;color:var(--text-secondary);font-size:11px">' + priceNote + '</span></div>'
         h += '</div>'
       })
-      h += '</div>'
+    } else {
+      h += '<p class="card-sub">No extras available for this service.</p>'
     }
-
-    h += '<div class="card">'
     h += '<div class="btn-row"><button class="btn btn-outline" data-act="back" data-to="4">Back</button>'
+    h += '<button class="btn btn-primary" data-act="next" data-to="6">Continue</button></div>'
+    h += '</div>'
+    return h
+  }
+
+  // Step 6: contact details + final confirm. Combines what used to be the
+  // standalone "Details" step and the inline submit button — staff wanted
+  // the contact form to live alongside the final booking summary so the
+  // last screen before confirming is one tidy page.
+  function renderStep6Confirm() {
+    var h = '<div class="card">'
+    h += '<h2 class="card-title">Your details</h2><p class="card-sub">We\'ll send confirmation to the email you provide.</p>'
+    h += '<div class="row">'
+    h += '<div class="field"><label>Full name *</label><input data-act="customer" data-field="name" value="' + escapeHtml(state.customer.name) + '" placeholder="Jane Doe" autocomplete="name" autocapitalize="words" spellcheck="false"></div>'
+    h += '<div class="field"><label>Email *</label><input type="email" data-act="customer" data-field="email" value="' + escapeHtml(state.customer.email) + '" placeholder="jane@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></div>'
+    h += '</div>'
+    // Party size field intentionally removed — staff requested only Full
+    // Name / Email / Phone / Notes. state.partySize stays 1 by default
+    // so the backend quote/confirm payloads keep their existing shape.
+    h += '<div class="field"><label>Phone</label><input type="tel" data-act="customer" data-field="phone" value="' + escapeHtml(state.customer.phone) + '" placeholder="+1 ..." autocomplete="tel" inputmode="tel"></div>'
+    h += '<div class="field"><label>Notes (optional)</label><textarea data-act="customer" data-field="notes" placeholder="Anything we should know?">' + escapeHtml(state.customer.notes) + '</textarea></div>'
+    // Back skips step 5 when the service has no extras — users would
+    // otherwise land on an empty extras page they'd just have to skip
+    // forward through again.
+    var backTarget = getExtrasForService().length > 0 ? 5 : 4
+    h += '<div class="btn-row"><button class="btn btn-outline" data-act="back" data-to="' + backTarget + '">Back</button>'
     h += '<button class="btn btn-primary" data-act="submit"' + (state.submitting ? ' disabled' : '') + '>'
     h += (state.submitting ? 'Booking…' : 'Confirm booking') + '</button></div>'
     if (state.config.cancellation_policy) {
@@ -959,9 +992,7 @@ img{max-width:100%;display:block}
       try { t = new Date(state.startAt).toLocaleTimeString(CFG.lang || 'en', { hour:'2-digit', minute:'2-digit' }) } catch(e) {}
       h += '<div class="summary-row"><span class="lbl">Time</span><span class="val">' + escapeHtml(t) + '</span></div>'
     }
-    if (state.partySize > 1) {
-      h += '<div class="summary-row"><span class="lbl">Party size</span><span class="val">' + state.partySize + '</span></div>'
-    }
+    // Party-size summary row removed alongside the form field.
 
     var q = state.quote
     if (q) {
