@@ -132,18 +132,24 @@ img{max-width:100%;display:block}
 .svc-card.selected .svc-btn,.svc-btn:hover{background:var(--primary);color:#fff}
 @media(max-width:600px){.svc-card{flex-direction:column-reverse}.svc-hero{width:100%;min-height:180px}}
 
-/* Master cards */
-.master-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
-.master-tile{border:2px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;background:var(--surface);transition:all .2s}
-.master-tile:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));transform:translateY(-1px)}
-.master-tile.active{border-color:var(--primary);background:var(--primary-light)}
-/* "Any available" tile has no avatar — center its content so it doesn't
-   look short next to provider tiles that do have an avatar above the name. */
-.master-tile-any{display:flex;flex-direction:column;align-items:center;justify-content:center}
-.master-avatar{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;background:var(--surface-muted);overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--primary)}
-.master-avatar img{width:100%;height:100%;object-fit:cover}
-.master-name{font-size:14px;font-weight:700}
-.master-title{font-size:11px;color:var(--text-secondary);margin-top:2px}
+/* Master cards — bigger tiles with a strong photo header so the
+   provider feels selected as a person, not a thumbnail-and-label pair. */
+.master-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.master-tile{border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;background:var(--surface);transition:all .2s;display:flex;flex-direction:column}
+.master-tile:hover{border-color:color-mix(in srgb, var(--primary) 50%, var(--border));transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+.master-tile.active{border-color:var(--primary);box-shadow:0 6px 20px color-mix(in srgb, var(--primary) 20%, transparent)}
+.master-tile.active .master-body{background:var(--primary-light)}
+/* Photo header — image-led card with a large square crop. Falls back
+   to a tinted initial when no avatar is configured. */
+.master-photo{position:relative;width:100%;aspect-ratio:1/1;background:var(--surface-muted);overflow:hidden}
+.master-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.master-photo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:64px;font-weight:700;color:var(--primary);background:color-mix(in srgb, var(--primary) 10%, var(--surface-muted))}
+/* Subtle gradient at the bottom of the photo so the body card visually
+   melts into the photo instead of a hard line. */
+.master-photo::after{content:'';position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(to bottom, transparent, rgba(0,0,0,0.18));pointer-events:none}
+.master-body{padding:14px 16px;text-align:center;background:var(--surface);transition:background .2s}
+.master-name{font-size:15px;font-weight:700;line-height:1.2}
+.master-title{font-size:12px;color:var(--text-secondary);margin-top:4px}
 
 /* Calendar */
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -271,10 +277,10 @@ img{max-width:100%;display:block}
   .svc-footer{flex-wrap:wrap;gap:10px}
   .svc-btn{padding:12px 18px;min-height:46px;font-size:12px;flex:1}
 
-  /* Master provider tiles: 2 per row on phones */
-  .master-grid{grid-template-columns:repeat(2,1fr);gap:10px}
-  .master-tile{padding:12px 10px}
-  .master-avatar{width:52px;height:52px;margin-bottom:8px;font-size:18px}
+  /* Master provider tiles: 2 per row on phones, smaller fallback font */
+  .master-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .master-body{padding:12px 14px}
+  .master-photo-fallback{font-size:48px}
   .master-name{font-size:13px}
   .master-title{font-size:10px}
 
@@ -802,11 +808,21 @@ img{max-width:100%;display:block}
     // explicit-master flow so the calendar reflects each master's real
     // availability, not the first-free pool.
     masters.forEach(function (m) {
-      var initial = (m.name || '?').charAt(0)
+      var initial = (m.name || '?').charAt(0).toUpperCase()
       h += '<div class="master-tile' + (state.masterId === m.id ? ' active' : '') + '" data-act="mst" data-id="' + m.id + '">'
-      h += '<div class="master-avatar">' + (m.avatar ? '<img src="' + escapeHtml(resolveImg(m.avatar)) + '" alt="' + escapeHtml(m.name || '') + '" loading="lazy" decoding="async">' : escapeHtml(initial)) + '</div>'
+      // Photo header — 1:1 image (or initial fallback). The photo card is
+      // the dominant element of each tile per the latest design pass.
+      h += '<div class="master-photo">'
+      if (m.avatar) {
+        h += '<img src="' + escapeHtml(resolveImg(m.avatar)) + '" alt="' + escapeHtml(m.name || '') + '" loading="lazy" decoding="async">'
+      } else {
+        h += '<div class="master-photo-fallback">' + escapeHtml(initial) + '</div>'
+      }
+      h += '</div>'
+      h += '<div class="master-body">'
       h += '<div class="master-name">' + escapeHtml(m.name) + '</div>'
       if (m.title) h += '<div class="master-title">' + escapeHtml(m.title) + '</div>'
+      h += '</div>'
       h += '</div>'
     })
     h += '</div>'
