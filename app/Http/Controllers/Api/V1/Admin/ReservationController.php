@@ -3,12 +3,22 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BookingConfirmationMail;
+use App\Mail\BookingMembershipMail;
+use App\Models\EmailVerificationCode;
+use App\Models\Guest;
+use App\Models\HotelSetting;
+use App\Models\LoyaltyMember;
+use App\Models\Organization;
 use App\Models\Reservation;
 use App\Services\GuestLifecycleService;
+use App\Services\GuestMemberLinkService;
 use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReservationController extends Controller
@@ -87,14 +97,129 @@ class ReservationController extends Controller
         }
 
         $res = Reservation::create($v);
-        $res->load(['guest:id,full_name', 'property:id,name,code']);
+        $res->load(['guest', 'property:id,name,code']);
 
         $this->realtime->dispatch('reservation', 'New Reservation',
             "{$res->guest->full_name} — {$res->check_in} to {$res->check_out}",
             ['id' => $res->id, 'guest' => $res->guest->full_name, 'property' => $res->property?->name]
         );
 
+        // Mail the guest the booking confirmation. If they don't yet have a
+        // loyalty membership, auto-enrol as Bronze and send the membership-
+        // welcome email too. Returning guests (welcomed_at stamped) only
+        // get the booking confirmation. Mirrors the room-booking-widget
+        // and service-booking flows so all three creation paths converge.
+        $this->sendReservationEmails($res, $res->organization_id);
+
         return response()->json($res, 201);
+    }
+
+    /**
+     * Sends the booking confirmation email and (on first contact) the
+     * membership-welcome email. Failures are swallowed + logged — we never
+     * want a SMTP hiccup to fail the reservation create itself.
+     */
+    private function sendReservationEmails(Reservation $res, ?int $orgId): void
+    {
+        $guest = $res->guest;
+        $email = $guest?->email ? strtolower(trim($guest->email)) : null;
+        if (!$email || !$orgId) return;
+
+        $guestName = trim($guest->full_name ?: ($guest->first_name . ' ' . $guest->last_name)) ?: 'Guest';
+        $org = Organization::withoutGlobalScopes()->find($orgId);
+        $hotelName = $org?->name ?? 'Hotel';
+
+        $supportEmail = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'support_email')
+            ->value('value') ?: 'support@hotel-tech.ai';
+        $currency = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'currency')
+            ->value('value') ?: 'EUR';
+        $policiesJson = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'booking_policies')
+            ->value('value') ?: '';
+        $policies = $policiesJson ? (json_decode($policiesJson, true) ?: []) : [];
+
+        // Idempotently ensure a Bronze member exists for this guest's email.
+        // Guest::created already does this on first save, but re-running it
+        // here is cheap and protects against guests created before the hook
+        // landed (or where membership creation previously failed silently).
+        try {
+            app(GuestMemberLinkService::class)->ensureMemberForGuest($guest);
+        } catch (\Throwable $e) {
+            Log::warning('Reservation auto-enrol failed', [
+                'guest_id' => $guest->id, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        $rate   = (float) ($res->rate_per_night ?? 0);
+        $nights = (int) ($res->num_nights ?? 1);
+        $total  = (float) ($res->total_amount ?? ($rate * $nights));
+
+        // 1) Booking Confirmation
+        try {
+            Mail::to($email)->send(new BookingConfirmationMail(
+                guestName: $guestName,
+                hotelName: $hotelName,
+                bookingReference: $res->confirmation_no ?: ('R-' . $res->id),
+                unitName: $res->room_type ?: 'Room',
+                checkIn: $res->check_in?->toDateString() ?? '',
+                checkOut: $res->check_out?->toDateString() ?? '',
+                nights: $nights,
+                adults: (int) ($res->num_adults ?? 1),
+                children: (int) ($res->num_children ?? 0),
+                roomTotal: $total,
+                extrasTotal: 0,
+                grossTotal: $total,
+                currency: $currency,
+                pricePerNight: $rate,
+                extras: [],
+                policies: $policies,
+                supportEmail: $supportEmail,
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Reservation confirmation email failed', [
+                'reservation_id' => $res->id, 'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // 2) Membership Welcome — only on first contact
+        try {
+            $member = LoyaltyMember::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereHas('user', fn($q) => $q->where('email', $email))
+                ->with(['user', 'tier'])
+                ->first();
+
+            if ($member && $member->welcomed_at === null) {
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+                EmailVerificationCode::create([
+                    'email'      => $email,
+                    'code'       => $code,
+                    'expires_at' => now()->addHours(48),
+                ]);
+
+                Mail::to($email)->send(new BookingMembershipMail(
+                    guestName: $guestName,
+                    hotelName: $hotelName,
+                    memberNumber: $member->member_number,
+                    tierName: $member->tier?->name ?? 'Bronze',
+                    email: $email,
+                    code: $code,
+                    supportEmail: $supportEmail,
+                ));
+
+                $member->forceFill(['welcomed_at' => now()])->save();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Reservation membership email failed', [
+                'reservation_id' => $res->id, 'email' => $email, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function show(Reservation $reservation): JsonResponse
