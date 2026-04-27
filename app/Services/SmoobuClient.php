@@ -206,8 +206,15 @@ class SmoobuClient
     }
 
     /**
-     * GET /apartments — fetch all apartments/units from Smoobu.
-     * Returns array of apartments with id, name, rooms details.
+     * GET /apartments — fetch ALL apartments/units from Smoobu.
+     *
+     * Smoobu paginates `/apartments` (default 25 per page, max 50). The
+     * previous implementation only fetched page 1, which silently dropped
+     * any units past #25 — typically the Airbnb / Booking.com / Expedia
+     * channel-imported listings, since Smoobu lists manually-created units
+     * first. Now we walk through every page until `page_count` is reached.
+     *
+     * Returns: { "apartments": [ { id, name, rooms{maxOccupancy,bedrooms}, ... }, ... ] }
      */
     public function getApartments(): array
     {
@@ -216,23 +223,40 @@ class SmoobuClient
             return $this->mockApartments();
         }
 
-        $raw = $this->get('/apartments');
+        $all = [];
+        $page = 1;
+        $pageSize = 50; // Smoobu's max per page — fewer round-trips
+        $maxPages = 20; // safety cap (1000 units max — generous)
 
-        // Smoobu may return apartments as object keyed by ID or as an array
-        // Normalize to { "apartments": [ { "id": ..., "name": ... }, ... ] }
-        $apartments = $raw['apartments'] ?? $raw;
-        if (!is_array($apartments)) return ['apartments' => []];
+        do {
+            $raw = $this->get('/apartments', [
+                'page'      => $page,
+                'page_size' => $pageSize,
+            ]);
 
-        // If keyed by ID (object), convert to sequential array
-        $normalized = [];
-        foreach ($apartments as $key => $apt) {
-            if (is_array($apt)) {
+            $apartments = $raw['apartments'] ?? $raw;
+            if (!is_array($apartments)) break;
+
+            foreach ($apartments as $key => $apt) {
+                if (!is_array($apt)) continue;
                 if (!isset($apt['id'])) $apt['id'] = $key;
-                $normalized[] = $apt;
+                $all[] = $apt;
             }
-        }
 
-        return ['apartments' => $normalized];
+            // Smoobu returns `page_count`. If absent, fall back to
+            // "stop when this page returned fewer rows than asked for".
+            $pageCount = isset($raw['page_count']) ? (int) $raw['page_count'] : null;
+            $returned = count($apartments);
+
+            $hasMore = $pageCount !== null
+                ? $page < $pageCount
+                : $returned >= $pageSize;
+
+            if (!$hasMore) break;
+            $page++;
+        } while ($page <= $maxPages);
+
+        return ['apartments' => $all];
     }
 
     /**

@@ -80,11 +80,19 @@ class SettingsController extends Controller
         $this->ensureTenantHasDefaultSettings();
 
         $query = HotelSetting::query();
-        // Non-super-admins can only see company-scoped settings
+        // Non-super-admins:
+        //   - Only see company-scoped settings (system-scoped are platform-only).
+        //   - Don't see the entire `integrations` group AT ALL. Integration
+        //     credentials (SMTP username/from-address, Stripe keys, Twilio
+        //     SID, WhatsApp tokens etc.) include real platform/admin emails
+        //     that a regular staff user has no business knowing about.
+        //     This previously leaked the org's mail_from_address /
+        //     mail_username to anyone with the staff role.
         if (!$isSuperAdmin) {
             $query->where(function ($q) {
                 $q->where('scope', 'company')->orWhereNull('scope');
             });
+            $query->where('group', '!=', 'integrations');
         }
 
         $settings = $query->get()->groupBy('group')->map(function ($group) {
@@ -200,8 +208,15 @@ class SettingsController extends Controller
         foreach ($validated['settings'] as $item) {
             $setting = HotelSetting::where('key', $item['key'])->first();
 
-            // Non-super-admins cannot write system-scoped settings
+            // Non-super-admins cannot write system-scoped settings.
             if (!$isSuperAdmin && $setting && $setting->scope === 'system') {
+                continue;
+            }
+
+            // Non-super-admins cannot write integration settings either —
+            // matches the read-side filter and prevents staff from
+            // overwriting SMTP/Stripe/Twilio credentials.
+            if (!$isSuperAdmin && $setting && $setting->group === 'integrations') {
                 continue;
             }
 
@@ -465,6 +480,7 @@ class SettingsController extends Controller
             'twilio'    => $this->testTwilio(),
             'whatsapp'  => $this->testWhatsApp(),
             'google_maps' => $this->testGoogleMaps(),
+            'expo'      => $this->testExpoPush(),
             default     => response()->json(['success' => false, 'message' => 'Unknown integration type']),
         };
     }
@@ -540,9 +556,83 @@ class SettingsController extends Controller
         if (!$key) return response()->json(['success' => false, 'message' => 'No API key configured']);
 
         $base = rtrim($this->resolveKey('booking_smoobu_base_url', 'SMOOBU_BASE_URL') ?? 'https://login.smoobu.com/api', '/');
-        // Smoobu's list endpoint is /apartments (plural). /apartment 404s.
-        $result = $this->curlTest("{$base}/apartments", ["Api-Key: {$key}", "Content-Type: application/json"]);
-        return response()->json($result);
+
+        // Hit page 1 with the largest page_size so admins can see the
+        // ACTUAL unit total (page_count × page_size) — pre-fix the test
+        // would just say "Connected" while sync silently returned only
+        // the first 25 units.
+        try {
+            $ch = curl_init("{$base}/apartments?page=1&page_size=50");
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_HTTPHEADER     => ["Api-Key: {$key}", "Content-Type: application/json"],
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) return response()->json(['success' => false, 'message' => "Connection failed: {$error}"]);
+            if ($code < 200 || $code >= 300) return response()->json(['success' => false, 'message' => "HTTP {$code}"]);
+
+            $payload = json_decode((string) $body, true) ?: [];
+            $units   = is_array($payload['apartments'] ?? null) ? count($payload['apartments']) : 0;
+            $total   = (int) ($payload['total_items'] ?? $units);
+            $pages   = (int) ($payload['page_count'] ?? 1);
+
+            return response()->json([
+                'success' => true,
+                'message' => $total > 0 ? "Connected · {$total} unit" . ($total === 1 ? '' : 's') . ' detected' : 'Connected · no units in Smoobu yet',
+                'detail'  => [
+                    'units_total' => $total,
+                    'page_count'  => $pages,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Expo Push API smoke test. We don't need to actually send a push —
+     * just verify the access token is well-formed and reaches Expo's
+     * push-receipts endpoint without auth errors.
+     */
+    private function testExpoPush(): JsonResponse
+    {
+        $token = $this->resolveKey('expo_access_token', 'EXPO_ACCESS_TOKEN');
+        if (!$token) return response()->json(['success' => false, 'message' => 'No access token configured']);
+
+        // Expo accepts a POST to /push/getReceipts with an empty array
+        // and returns 200 + { data: {} }. Any auth/format error returns
+        // 4xx which is what we want to surface here.
+        try {
+            $ch = curl_init('https://exp.host/--/api/v2/push/getReceipts');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => json_encode(['ids' => []]),
+                CURLOPT_HTTPHEADER     => [
+                    "Authorization: Bearer {$token}",
+                    'Content-Type: application/json',
+                    'Accept-Encoding: gzip, deflate',
+                ],
+            ]);
+            curl_exec($ch);
+            $code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) return response()->json(['success' => false, 'message' => "Connection failed: {$error}"]);
+            return response()->json([
+                'success' => $code >= 200 && $code < 300,
+                'message' => $code >= 200 && $code < 300 ? 'Connected' : "HTTP {$code}",
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     private function testMail(): JsonResponse

@@ -1198,26 +1198,36 @@ export function Settings() {
   const renderIntegrations = () => {
     const intSettings = groupSettings('integrations')
 
-    type Section = { id: string; title: string; subtitle: string; icon: any; keys: string[]; testType?: string }
+    type Section = { id: string; title: string; subtitle: string; icon: any; keys: string[]; testType?: string; comingSoon?: boolean }
 
     // ── PMS / Booking Engines ──
+    // Only Smoobu has a real backend client + sync pipeline today. The
+    // others are catalogued so admins know they're on the roadmap, but
+    // marked `comingSoon: true` — credential inputs are disabled so we
+    // don't leave staff thinking they've connected something that
+    // silently does nothing.
     const pmsSections: Section[] = [
       { id: 'smoobu',           title: 'Smoobu',            subtitle: 'All-in-one vacation rental PMS & channel manager',    icon: Calendar,  keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'], testType: 'smoobu' },
-      { id: 'cloudbeds',        title: 'Cloudbeds',         subtitle: 'Hotel & hostel PMS with built-in booking engine',     icon: Calendar,  keys: ['cloudbeds_api_key', 'cloudbeds_property_id', 'cloudbeds_client_id', 'cloudbeds_client_secret'] },
-      { id: 'mews',             title: 'Mews',              subtitle: 'Modern cloud-native PMS for hotels & hostels',        icon: Calendar,  keys: ['mews_access_token', 'mews_client_token', 'mews_platform_url'] },
-      { id: 'guesty',           title: 'Guesty',            subtitle: 'Vacation rental & short-term property management',    icon: Calendar,  keys: ['guesty_api_key', 'guesty_api_secret', 'guesty_account_id'] },
-      { id: 'hostaway',         title: 'Hostaway',          subtitle: 'Vacation rental management & channel distribution',   icon: Calendar,  keys: ['hostaway_api_key', 'hostaway_account_id'] },
-      { id: 'beds24',           title: 'Beds24',            subtitle: 'Channel manager & PMS for all property types',        icon: Calendar,  keys: ['beds24_api_key', 'beds24_property_id'] },
-      { id: 'lodgify',          title: 'Lodgify',           subtitle: 'Vacation rental software with booking website',       icon: Calendar,  keys: ['lodgify_api_key', 'lodgify_property_id'] },
-      { id: 'little_hotelier',  title: 'Little Hotelier',   subtitle: 'Small hotel & B&B management system',                icon: Calendar,  keys: ['little_hotelier_api_key', 'little_hotelier_property_id'] },
-      { id: 'roomraccoon',      title: 'RoomRaccoon',       subtitle: 'Hotel management with revenue optimization',          icon: Calendar,  keys: ['roomraccoon_api_key', 'roomraccoon_property_id'] },
+      { id: 'cloudbeds',        title: 'Cloudbeds',         subtitle: 'Hotel & hostel PMS with built-in booking engine',     icon: Calendar,  keys: ['cloudbeds_api_key', 'cloudbeds_property_id', 'cloudbeds_client_id', 'cloudbeds_client_secret'], comingSoon: true },
+      { id: 'mews',             title: 'Mews',              subtitle: 'Modern cloud-native PMS for hotels & hostels',        icon: Calendar,  keys: ['mews_access_token', 'mews_client_token', 'mews_platform_url'], comingSoon: true },
+      { id: 'guesty',           title: 'Guesty',            subtitle: 'Vacation rental & short-term property management',    icon: Calendar,  keys: ['guesty_api_key', 'guesty_api_secret', 'guesty_account_id'], comingSoon: true },
+      { id: 'hostaway',         title: 'Hostaway',          subtitle: 'Vacation rental management & channel distribution',   icon: Calendar,  keys: ['hostaway_api_key', 'hostaway_account_id'], comingSoon: true },
+      { id: 'beds24',           title: 'Beds24',            subtitle: 'Channel manager & PMS for all property types',        icon: Calendar,  keys: ['beds24_api_key', 'beds24_property_id'], comingSoon: true },
+      { id: 'lodgify',          title: 'Lodgify',           subtitle: 'Vacation rental software with booking website',       icon: Calendar,  keys: ['lodgify_api_key', 'lodgify_property_id'], comingSoon: true },
+      { id: 'little_hotelier',  title: 'Little Hotelier',   subtitle: 'Small hotel & B&B management system',                icon: Calendar,  keys: ['little_hotelier_api_key', 'little_hotelier_property_id'], comingSoon: true },
+      { id: 'roomraccoon',      title: 'RoomRaccoon',       subtitle: 'Hotel management with revenue optimization',          icon: Calendar,  keys: ['roomraccoon_api_key', 'roomraccoon_property_id'], comingSoon: true },
     ]
 
     // ── OTA / Channels ──
+    // None of these have direct API integrations in our backend today —
+    // OTA reservations come in through whichever PMS (e.g. Smoobu) the
+    // hotel has connected, which already syncs them via channels. Direct
+    // OTA APIs require partner approval from each provider and are on
+    // the roadmap once the integration template stabilises.
     const channelSections: Section[] = [
-      { id: 'booking_com', title: 'Booking.com',  subtitle: 'Connectivity partner API for availability & rates', icon: Globe,    keys: ['booking_com_hotel_id', 'booking_com_api_key'] },
-      { id: 'airbnb',      title: 'Airbnb',       subtitle: 'Host API for listing & reservation sync',          icon: Globe,    keys: ['airbnb_api_key', 'airbnb_listing_ids'] },
-      { id: 'expedia',     title: 'Expedia',      subtitle: 'EPS API for rates, availability & bookings',       icon: Globe,    keys: ['expedia_api_key', 'expedia_property_id'] },
+      { id: 'booking_com', title: 'Booking.com',  subtitle: 'Direct connectivity API — reservations currently flow via your PMS', icon: Globe, keys: ['booking_com_hotel_id', 'booking_com_api_key'], comingSoon: true },
+      { id: 'airbnb',      title: 'Airbnb',       subtitle: 'Host API — reservations currently flow via your PMS',                icon: Globe, keys: ['airbnb_api_key', 'airbnb_listing_ids'], comingSoon: true },
+      { id: 'expedia',     title: 'Expedia',      subtitle: 'EPS API — reservations currently flow via your PMS',                 icon: Globe, keys: ['expedia_api_key', 'expedia_property_id'], comingSoon: true },
     ]
 
     // ── Payments & Communication ──
@@ -1226,9 +1236,9 @@ export function Settings() {
       { id: 'mail',      title: 'Email / SMTP',        subtitle: 'Transactional emails & notifications',        icon: Mail,          keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'], testType: 'mail' },
       { id: 'twilio',    title: 'Twilio',              subtitle: 'SMS notifications & booking confirmations',   icon: Phone,         keys: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number'], testType: 'twilio' },
       { id: 'whatsapp',  title: 'WhatsApp Business',   subtitle: 'Guest messaging via Meta Cloud API',          icon: MessageSquare, keys: ['whatsapp_phone_id', 'whatsapp_access_token', 'whatsapp_verify_token'], testType: 'whatsapp' },
-      { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',            icon: Smartphone,    keys: ['expo_access_token'] },
+      { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',            icon: Smartphone,    keys: ['expo_access_token'], testType: 'expo' },
       { id: 'google',    title: 'Google Services',     subtitle: 'Maps, Analytics & Tag Manager',               icon: Map,           keys: ['google_maps_api_key', 'google_analytics_id', 'google_tag_manager_id'], testType: 'google_maps' },
-      { id: 'webhooks',  title: 'Webhooks & Zapier',   subtitle: 'Outbound event notifications & automation',   icon: Link2,         keys: ['zapier_webhook_url', 'custom_webhook_url', 'custom_webhook_secret'] },
+      { id: 'webhooks',  title: 'Webhooks & Zapier',   subtitle: 'Outbound event notifications & automation',   icon: Link2,         keys: ['zapier_webhook_url', 'custom_webhook_url', 'custom_webhook_secret'], comingSoon: true },
     ]
 
     const allSections = [
@@ -1244,20 +1254,20 @@ export function Settings() {
       const result = section.testType ? testResults[section.testType] : null
       const hasAnyValue = items.some((s: any) => s.has_value)
       const enabledKey = `${section.id}_enabled`
-      // Default to enabled when the flag has never been saved — matches
-      // pre-toggle behaviour where any saved credential immediately took effect.
       const enabledRaw = getVal(enabledKey)
       const isEnabled = enabledRaw === '' ? true : enabledRaw === 'true' || enabledRaw === '1'
+      const isComingSoon = !!section.comingSoon
       const toggleEnabled = (e: React.MouseEvent) => {
         e.stopPropagation()
+        if (isComingSoon) return
         const next = !isEnabled
         setEditedSettings(prev => ({ ...prev, [enabledKey]: String(next) }))
         saveMutation.mutate([{ key: enabledKey, value: String(next) }])
       }
-      const showActive = hasAnyValue && isEnabled
+      const showActive = hasAnyValue && isEnabled && !isComingSoon
 
       return (
-        <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden transition-all"
+        <div key={section.id} className={`rounded-2xl border overflow-hidden transition-all ${isComingSoon ? 'border-white/[0.04] opacity-60' : 'border-white/[0.06]'}`}
           style={{
             background: result
               ? result.success
@@ -1266,17 +1276,23 @@ export function Settings() {
               : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
             boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
           }}>
-          <button onClick={() => toggleSection(section.id)}
-            className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.02] transition-colors">
+          <button onClick={() => isComingSoon ? null : toggleSection(section.id)}
+            disabled={isComingSoon}
+            className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isComingSoon ? 'cursor-not-allowed' : 'hover:bg-white/[0.02]'}`}>
             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ background: showActive ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
               <section.icon size={15} className={showActive ? 'text-emerald-400' : 'text-gray-500'} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${isEnabled ? 'text-white' : 'text-gray-500'}`}>{section.title}</span>
-                {showActive && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
-                {hasAnyValue && !isEnabled && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/15">Disabled</span>}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-sm font-bold ${isEnabled && !isComingSoon ? 'text-white' : 'text-gray-500'}`}>{section.title}</span>
+                {isComingSoon && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Coming Soon
+                  </span>
+                )}
+                {!isComingSoon && showActive && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">Active</span>}
+                {!isComingSoon && hasAnyValue && !isEnabled && <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/15">Disabled</span>}
                 {result && (
                   <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${result.success ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
                     {result.success ? <CheckCircle size={8} /> : <XCircle size={8} />} {result.message}
@@ -1285,16 +1301,18 @@ export function Settings() {
               </div>
               <p className="text-[11px] text-gray-500 mt-0.5">{section.subtitle}</p>
             </div>
-            {hasAnyValue && (
+            {!isComingSoon && hasAnyValue && (
               <span onClick={toggleEnabled} role="switch" aria-checked={isEnabled}
                 title={isEnabled ? 'Click to deactivate (credentials kept; data sync stops)' : 'Click to reactivate'}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 cursor-pointer ${isEnabled ? 'bg-emerald-500/70' : 'bg-gray-600/60'}`}>
                 <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
               </span>
             )}
-            <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            {!isComingSoon && (
+              <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            )}
           </button>
-          {isOpen && (
+          {!isComingSoon && isOpen && (
             <div className="px-5 pb-4 border-t border-white/[0.04]">
               {section.testType && (
                 <div className="flex items-center justify-between pt-3 pb-1">
@@ -1304,7 +1322,7 @@ export function Settings() {
                   <button onClick={() => testConnection(section.testType!)}
                     disabled={testingIntegration === section.testType || !isEnabled}
                     className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40 text-xs'}>
-                    {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test</>}
+                    {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test Connection</>}
                   </button>
                 </div>
               )}
