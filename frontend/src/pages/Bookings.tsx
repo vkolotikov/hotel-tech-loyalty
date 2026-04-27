@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ViewToggle } from '../components/ViewToggle'
@@ -236,6 +236,10 @@ export function Bookings() {
   // Daily-ops drilldown: clicking a tile in the DailyOpsBar narrows the
   // list below to that segment. Empty string = no daily filter applied.
   const [dailyFocus, setDailyFocus] = useState<'' | 'arrivals' | 'in_house' | 'departures'>('')
+  // Bulk selection — Set<id>. Cleared whenever filters change so a
+  // selection can't accidentally apply to rows the user can no longer see.
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   // Period → from/to date range. Same shape the backend dashboard uses,
   // mirrored here so the Reservations table stays in sync with the
@@ -288,6 +292,56 @@ export function Bookings() {
   const lastPage = data?.last_page ?? 1
   const units = data?.filters?.units ?? dashboard?.filters?.units ?? []
 
+  const allOnPageSelected = bookings.length > 0 && bookings.every((b: any) => selected.has(b.id))
+  const togglePageSelection = () => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (allOnPageSelected) bookings.forEach((b: any) => next.delete(b.id))
+      else                   bookings.forEach((b: any) => next.add(b.id))
+      return next
+    })
+  }
+  const toggleRow = (id: number) => setSelected(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
+  })
+
+  const runBulk = async (action: string, value?: string, confirmMsg?: string) => {
+    if (selected.size === 0) return
+    if (confirmMsg && !window.confirm(confirmMsg)) return
+    setBulkBusy(true)
+    try {
+      const { data: res } = await api.post('/v1/admin/bookings/bulk', {
+        ids: Array.from(selected), action, value,
+      })
+      toast.success(res.message || 'Updated')
+      setSelected(new Set())
+      refetch()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Bulk action failed')
+    } finally { setBulkBusy(false) }
+  }
+
+  const exportCsv = async () => {
+    setBulkBusy(true)
+    try {
+      // Selection wins; otherwise we send the live filter state so
+      // "Export all" matches what the user sees on screen.
+      const body: any = selected.size > 0
+        ? { ids: Array.from(selected) }
+        : { search, status, payment_status: paymentStatus, unit_id: unitId, from: periodRange.from, to: periodRange.to }
+      const res = await api.post('/v1/admin/bookings/export', body, { responseType: 'blob' })
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `reservations-${new Date().toISOString().slice(0,10)}.csv`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Export downloaded')
+    } catch {
+      toast.error('Export failed')
+    } finally { setBulkBusy(false) }
+  }
+
   const handleSync = async () => {
     setSyncing(true)
     try {
@@ -336,6 +390,12 @@ export function Bookings() {
           <p className="text-sm text-t-secondary mt-0.5">PMS reservations synced from your booking channels</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={exportCsv} disabled={bulkBusy}
+            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50"
+            title="Download CSV of the current filtered list (or selected rows)">
+            <Download size={16} />
+            Export CSV
+          </button>
           <Link to="/bookings/submissions"
             className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
             <FileText size={16} />
@@ -657,6 +717,10 @@ export function Bookings() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-[#636366] font-bold bg-[#1a1a1a]">
+                <th className="text-center p-4 w-10">
+                  <input type="checkbox" checked={allOnPageSelected} onChange={togglePageSelection}
+                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                </th>
                 <th className="text-left p-4">Guest</th><th className="text-left p-4">Unit</th>
                 <th className="text-left p-4">Arrival</th><th className="text-left p-4">Departure</th>
                 <th className="text-right p-4">Total</th><th className="text-right p-4">Balance</th>
@@ -666,18 +730,22 @@ export function Bookings() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={10} className="p-12 text-center text-[#636366]">
+                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">
                   <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={10} className="p-12 text-center text-[#636366]">No bookings found.</td></tr>
+                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">No bookings found.</td></tr>
               ) : bookings.map((b: any) => {
                 const payStatus = derivePaymentStatus(b)
                 const nights = b.arrival_date && b.departure_date
                   ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
                   : null
                 return (
-                <tr key={b.id} className="border-b border-dark-border hover:bg-dark-surface2/50 transition-colors">
+                <tr key={b.id} className={`border-b border-dark-border hover:bg-dark-surface2/50 transition-colors ${selected.has(b.id) ? 'bg-primary-500/[0.04]' : ''}`}>
+                  <td className="p-4 text-center">
+                    <input type="checkbox" checked={selected.has(b.id)} onChange={() => toggleRow(b.id)}
+                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                  </td>
                   <td className="p-4">
                     <div className="text-white font-medium">{b.guest_name || '—'}</div>
                     <div className="text-[#636366] text-xs">{b.guest_email || ''}</div>
@@ -736,6 +804,38 @@ export function Bookings() {
           </div>
         )}
       </Card>
+
+      {/* Bulk action floating bar — appears once any row is selected.
+          Confirmation prompts on destructive actions (cancel) since the
+          row count makes accidental clicks costly. Export uses the
+          selection if any, otherwise the live filter set. */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-dark-surface border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
+          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+          <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">
+            {selected.size} selected
+          </span>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => runBulk('mark_paid')} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
+            <CheckCheck size={13} /> Mark Paid
+          </button>
+          <button onClick={() => runBulk('cancel', undefined, `Cancel ${selected.size} reservation${selected.size === 1 ? '' : 's'}? This cannot be undone in bulk.`)}
+            disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
+            <Trash2 size={13} /> Cancel
+          </button>
+          <button onClick={exportCsv} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors">
+            <Download size={13} /> Export
+          </button>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => setSelected(new Set())} title="Clear selection"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+            <XIcon size={14} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

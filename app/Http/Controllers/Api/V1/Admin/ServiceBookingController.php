@@ -196,6 +196,111 @@ class ServiceBookingController extends Controller
         return response()->json(['bookings' => $bookings, 'month' => $month]);
     }
 
+    /**
+     * POST /v1/admin/service-bookings/bulk — apply one action to many bookings.
+     *
+     * Mirrors BookingAdminController::bulk so the spa desk has the same
+     * keyboard-saving workflow as reception. mark_complete also stamps
+     * cancelled_at=null in case it was previously cancelled and reinstated.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'    => 'required|array|min:1|max:500',
+            'ids.*'  => 'integer',
+            'action' => 'required|string|in:cancel,mark_complete,mark_paid,mark_no_show,mark_status',
+            'value'  => 'nullable|string|max:40',
+        ]);
+
+        $rows = ServiceBooking::whereIn('id', $validated['ids'])->get();
+        if ($rows->isEmpty()) return response()->json(['updated' => 0, 'message' => 'No matching bookings.']);
+
+        $updated = 0;
+        DB::transaction(function () use ($rows, $validated, &$updated) {
+            foreach ($rows as $b) {
+                $patch = match ($validated['action']) {
+                    'cancel'        => ['status' => 'cancelled', 'cancelled_at' => now()],
+                    'mark_complete' => ['status' => 'completed'],
+                    'mark_paid'     => ['payment_status' => 'paid'],
+                    'mark_no_show'  => ['status' => 'no_show'],
+                    'mark_status'   => ['status' => $validated['value'] ?? $b->status],
+                };
+                ServiceBooking::where('id', $b->id)->lockForUpdate()->update($patch);
+                $updated++;
+            }
+        });
+
+        try {
+            AuditLog::create([
+                'organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                'user_id'         => $request->user()?->id,
+                'action'          => "service_booking.bulk.{$validated['action']}",
+                'description'     => "Bulk {$validated['action']}: {$updated} service bookings",
+            ]);
+        } catch (\Throwable) {}
+
+        return response()->json([
+            'updated' => $updated,
+            'message' => "{$updated} booking" . ($updated === 1 ? '' : 's') . ' updated.',
+        ]);
+    }
+
+    /** POST /v1/admin/service-bookings/export — CSV download. */
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'ids'           => 'nullable|array',
+            'ids.*'         => 'integer',
+            'search'        => 'nullable|string',
+            'status'        => 'nullable|string',
+            'payment_status' => 'nullable|string',
+            'service_id'    => 'nullable',
+            'master_id'     => 'nullable',
+            'from'          => 'nullable|date',
+            'to'            => 'nullable|date',
+        ]);
+
+        $q = ServiceBooking::with(['service:id,name', 'master:id,name'])->orderByDesc('start_at');
+
+        if (!empty($validated['ids'])) {
+            $q->whereIn('id', $validated['ids']);
+        } else {
+            if ($s = $validated['search'] ?? null) {
+                $q->where(fn ($w) => $w
+                    ->where('customer_name', 'ilike', "%{$s}%")
+                    ->orWhere('customer_email', 'ilike', "%{$s}%")
+                    ->orWhere('booking_reference', 'ilike', "%{$s}%"));
+            }
+            if ($v = $validated['status'] ?? null)         $q->where('status', $v);
+            if ($v = $validated['payment_status'] ?? null) $q->where('payment_status', $v);
+            if ($v = $validated['service_id'] ?? null)     $q->where('service_id', $v);
+            if ($v = $validated['master_id'] ?? null)      $q->where('service_master_id', $v);
+            if ($v = $validated['from'] ?? null)           $q->where('start_at', '>=', $v);
+            if ($v = $validated['to'] ?? null)             $q->where('start_at', '<=', $v . ' 23:59:59');
+        }
+
+        $headers = ['Reference', 'Customer', 'Email', 'Phone', 'Service', 'Master',
+                    'Start', 'End', 'Duration (min)', 'Party', 'Total', 'Status', 'Payment'];
+
+        $filename = 'service-bookings-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($q, $headers) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+            $q->chunk(500, function ($chunk) use ($out) {
+                foreach ($chunk as $b) {
+                    fputcsv($out, [
+                        $b->booking_reference, $b->customer_name, $b->customer_email, $b->customer_phone,
+                        $b->service?->name, $b->master?->name,
+                        $b->start_at, $b->end_at, $b->duration_minutes, $b->party_size,
+                        $b->total_amount, $b->status, $b->payment_status,
+                    ]);
+                }
+            });
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     public function show(int $id): JsonResponse
     {
         $booking = ServiceBooking::with(['service', 'master', 'extras', 'guest', 'member'])

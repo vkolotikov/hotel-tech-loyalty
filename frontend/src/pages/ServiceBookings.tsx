@@ -6,6 +6,7 @@ import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
   CheckCircle2, AlertCircle, ChevronDown, List as ListIcon,
   CalendarClock, Clock, AlertTriangle, Sparkles,
+  Download, Trash2, CheckCheck,
 } from 'lucide-react'
 import { ViewToggle } from '../components/ViewToggle'
 import { DailyOpsBar } from '../components/DailyOpsBar'
@@ -95,6 +96,8 @@ export default function ServiceBookings() {
   const [showCreate, setShowCreate] = useState(false)
   const [active, setActive] = useState<ServiceBooking | null>(null)
   const [showTodayList, setShowTodayList] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   // Services + masters for the filter dropdowns. Cached for 5 min — these
   // change rarely and refetching on every filter render is wasted bandwidth.
@@ -162,6 +165,53 @@ export default function ServiceBookings() {
     refetchInterval: 120_000,
   })
 
+  const rows: ServiceBooking[] = data?.data ?? []
+  const allOnPageSelected = rows.length > 0 && rows.every(r => selected.has(r.id))
+  const togglePageSelection = () => setSelected(prev => {
+    const next = new Set(prev)
+    if (allOnPageSelected) rows.forEach(r => next.delete(r.id))
+    else                   rows.forEach(r => next.add(r.id))
+    return next
+  })
+  const toggleRow = (id: number) => setSelected(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
+  })
+
+  const runBulk = async (action: string, value?: string, confirmMsg?: string) => {
+    if (selected.size === 0) return
+    if (confirmMsg && !window.confirm(confirmMsg)) return
+    setBulkBusy(true)
+    try {
+      const { data: res } = await api.post('/v1/admin/service-bookings/bulk', {
+        ids: Array.from(selected), action, value,
+      })
+      toast.success(res.message || 'Updated')
+      setSelected(new Set())
+      qc.invalidateQueries({ queryKey: ['service-bookings'] })
+      qc.invalidateQueries({ queryKey: ['service-bookings-today'] })
+      qc.invalidateQueries({ queryKey: ['service-bookings-dashboard'] })
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Bulk action failed')
+    } finally { setBulkBusy(false) }
+  }
+
+  const exportCsv = async () => {
+    setBulkBusy(true)
+    try {
+      const body: any = selected.size > 0 ? { ids: Array.from(selected) } : { ...params, page: undefined }
+      const res = await api.post('/v1/admin/service-bookings/export', body, { responseType: 'blob' })
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `service-bookings-${new Date().toISOString().slice(0,10)}.csv`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Export downloaded')
+    } catch {
+      toast.error('Export failed')
+    } finally { setBulkBusy(false) }
+  }
+
   const updateStatusMut = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       api.patch(`/v1/admin/service-bookings/${id}/status`, { status }),
@@ -181,6 +231,11 @@ export default function ServiceBookings() {
           <p className="text-xs text-gray-500 mt-1">Reservations from your services widget, plus manual walk-ins.</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={exportCsv} disabled={bulkBusy}
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-300 hover:bg-white/[0.06] disabled:opacity-50 transition-all"
+            title="Download CSV (selection or current filters)">
+            <Download size={14} /> Export
+          </button>
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             <Plus size={14} /> New Booking
@@ -356,6 +411,10 @@ export default function ServiceBookings() {
           <table className="w-full text-sm">
             <thead className="text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/[0.04]">
               <tr>
+                <th className="text-center p-4 w-10">
+                  <input type="checkbox" checked={allOnPageSelected} onChange={togglePageSelection}
+                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                </th>
                 <th className="text-left p-4">Reference</th>
                 <th className="text-left p-4">Service / Master</th>
                 <th className="text-left p-4">Customer</th>
@@ -367,8 +426,12 @@ export default function ServiceBookings() {
               </tr>
             </thead>
             <tbody>
-              {(data?.data || []).map(b => (
-                <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onClick={() => setActive(b)}>
+              {rows.map(b => (
+                <tr key={b.id} className={`border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer ${selected.has(b.id) ? 'bg-primary-500/[0.04]' : ''}`} onClick={() => setActive(b)}>
+                  <td className="p-4 text-center" onClick={e => { e.stopPropagation(); toggleRow(b.id) }}>
+                    <input type="checkbox" checked={selected.has(b.id)} readOnly
+                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                  </td>
                   <td className="p-4 font-mono text-xs text-gray-400">{b.booking_reference}</td>
                   <td className="p-4">
                     <div className="text-white font-medium">{b.service?.name || '—'}</div>
@@ -417,6 +480,39 @@ export default function ServiceBookings() {
 
       {active && <BookingDetailDrawer booking={active} onClose={() => setActive(null)} onChanged={() => qc.invalidateQueries({ queryKey: ['service-bookings'] })} />}
       {showCreate && <ManualBookingForm onClose={() => setShowCreate(false)} onSaved={() => { qc.invalidateQueries({ queryKey: ['service-bookings'] }); setShowCreate(false) }} />}
+
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
+          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+          <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => runBulk('mark_complete')} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
+            <CheckCheck size={13} /> Mark Complete
+          </button>
+          <button onClick={() => runBulk('mark_paid')} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors">
+            <CheckCheck size={13} /> Mark Paid
+          </button>
+          <button onClick={() => runBulk('mark_no_show')} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 disabled:opacity-50 transition-colors">
+            <AlertTriangle size={13} /> No-show
+          </button>
+          <button onClick={() => runBulk('cancel', undefined, `Cancel ${selected.size} booking${selected.size === 1 ? '' : 's'}?`)} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
+            <Trash2 size={13} /> Cancel
+          </button>
+          <button onClick={exportCsv} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] disabled:opacity-50 transition-colors">
+            <Download size={13} /> Export
+          </button>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => setSelected(new Set())} title="Clear selection"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

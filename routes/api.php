@@ -519,6 +519,8 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/payments',               [BookingAdminController::class, 'payments']);
             Route::post('bookings/sync',                  [BookingAdminController::class, 'syncAll']);
             Route::post('bookings/sync-apartments',       [BookingAdminController::class, 'syncApartments']);
+            Route::post('bookings/bulk',                  [BookingAdminController::class, 'bulk']);
+            Route::post('bookings/export',                [BookingAdminController::class, 'export']);
             Route::get('bookings',                        [BookingAdminController::class, 'index']);
             Route::get('bookings/{id}',                   [BookingAdminController::class, 'show']);
             Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);
@@ -551,6 +553,8 @@ Route::prefix('v1')->group(function () {
             Route::get('service-bookings/calendar',       [ServiceBookingController::class, 'calendar']);
             Route::get('service-bookings/availability',   [ServiceBookingController::class, 'availability']);
             Route::get('service-bookings/submissions',    [ServiceBookingController::class, 'submissions']);
+            Route::post('service-bookings/bulk',          [ServiceBookingController::class, 'bulk']);
+            Route::post('service-bookings/export',        [ServiceBookingController::class, 'export']);
             Route::get('service-bookings',                [ServiceBookingController::class, 'index']);
             Route::post('service-bookings',               [ServiceBookingController::class, 'store']);
             Route::get('service-bookings/{id}',           [ServiceBookingController::class, 'show']);

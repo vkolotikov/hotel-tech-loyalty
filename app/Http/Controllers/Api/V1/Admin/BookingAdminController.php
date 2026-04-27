@@ -498,6 +498,123 @@ class BookingAdminController extends Controller
         ]);
     }
 
+    /**
+     * POST /v1/admin/bookings/bulk — apply one action to many reservations.
+     *
+     * Supports cancel, mark_paid (sets price_paid = price_total per row),
+     * mark_status, mark_payment_status. Each is row-locked so concurrent
+     * single-row edits from BookingDetail don't race the bulk update.
+     * Logged to AuditLog so the action shows up in the sync history /
+     * audit trail like manual edits do.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'     => 'required|array|min:1|max:500',
+            'ids.*'   => 'integer',
+            'action'  => 'required|string|in:cancel,mark_paid,mark_status,mark_payment_status',
+            'value'   => 'nullable|string|max:40',
+        ]);
+
+        $rows = BookingMirror::whereIn('id', $validated['ids'])->get();
+        if ($rows->isEmpty()) return response()->json(['updated' => 0, 'message' => 'No matching bookings.']);
+
+        $updated = 0;
+        DB::transaction(function () use ($rows, $validated, &$updated) {
+            foreach ($rows as $b) {
+                $patch = match ($validated['action']) {
+                    'cancel'              => ['booking_state' => 'cancelled', 'internal_status' => 'cancelled'],
+                    'mark_paid'           => ['payment_status' => 'paid', 'price_paid' => $b->price_total],
+                    'mark_status'         => ['internal_status' => $validated['value'] ?? $b->internal_status],
+                    'mark_payment_status' => ['payment_status'  => $validated['value'] ?? $b->payment_status],
+                };
+                BookingMirror::where('id', $b->id)->lockForUpdate()->update($patch);
+                $updated++;
+            }
+        });
+
+        try {
+            AuditLog::create([
+                'organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                'user_id'         => $request->user()?->id,
+                'action'          => "booking.bulk.{$validated['action']}",
+                'description'     => "Bulk {$validated['action']}: {$updated} reservations" . (isset($validated['value']) ? " → {$validated['value']}" : ''),
+            ]);
+        } catch (\Throwable) {}
+
+        return response()->json([
+            'updated' => $updated,
+            'message' => "{$updated} reservation" . ($updated === 1 ? '' : 's') . ' updated.',
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/bookings/export — CSV download of selected reservations
+     * (or the full filtered list if `ids` is empty). Streamed so the response
+     * starts flushing immediately on long exports.
+     */
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'ids'           => 'nullable|array',
+            'ids.*'         => 'integer',
+            'search'        => 'nullable|string',
+            'status'        => 'nullable|string',
+            'payment_status' => 'nullable|string',
+            'unit_id'       => 'nullable|string',
+            'from'          => 'nullable|date',
+            'to'            => 'nullable|date',
+        ]);
+
+        $q = BookingMirror::orderByDesc('arrival_date');
+
+        if (!empty($validated['ids'])) {
+            $q->whereIn('id', $validated['ids']);
+        } else {
+            // Mirror the same filter shape as index() so "Export all"
+            // returns exactly what the UI is currently showing.
+            if ($s = $validated['search'] ?? null) {
+                $q->where(fn ($w) => $w
+                    ->where('guest_name', 'ilike', "%{$s}%")
+                    ->orWhere('guest_email', 'ilike', "%{$s}%")
+                    ->orWhere('booking_reference', 'ilike', "%{$s}%"));
+            }
+            if ($v = $validated['status'] ?? null)         $q->where('internal_status', $v);
+            if ($v = $validated['payment_status'] ?? null) $q->where('payment_status', $v);
+            if ($v = $validated['unit_id'] ?? null)        $q->where('apartment_id', $v);
+            if ($v = $validated['from'] ?? null)           $q->where('arrival_date', '>=', $v);
+            if ($v = $validated['to'] ?? null)             $q->where('arrival_date', '<=', $v);
+        }
+
+        $headers = ['Reference', 'Guest', 'Email', 'Phone', 'Unit', 'Channel',
+                    'Arrival', 'Departure', 'Nights', 'Adults', 'Children',
+                    'Total', 'Paid', 'Balance', 'Status', 'Payment'];
+
+        $filename = 'reservations-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($q, $headers) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+            // Chunk so a 10k-row export doesn't spike memory
+            $q->chunk(500, function ($chunk) use ($out) {
+                foreach ($chunk as $b) {
+                    $nights = ($b->arrival_date && $b->departure_date)
+                        ? max(1, Carbon::parse($b->arrival_date)->diffInDays(Carbon::parse($b->departure_date))) : '';
+                    fputcsv($out, [
+                        $b->booking_reference, $b->guest_name, $b->guest_email, $b->guest_phone,
+                        $b->apartment_name, $b->channel_name,
+                        $b->arrival_date, $b->departure_date, $nights,
+                        $b->adults, $b->children,
+                        $b->price_total, $b->price_paid,
+                        round(($b->price_total ?? 0) - ($b->price_paid ?? 0), 2),
+                        $b->internal_status, $b->payment_status,
+                    ]);
+                }
+            });
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     /** POST /v1/admin/bookings/sync-apartments — fetch apartments from Smoobu and save as booking_units. */
     public function syncApartments(SmoobuClient $smoobu): JsonResponse
     {
