@@ -89,6 +89,11 @@ input,select,textarea{font-family:inherit}
 .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
 .btn-outline:hover{border-color:var(--text-secondary);background:var(--primary-light)}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+/* Per-org button-style override (data-button-style: 'outline' | 'soft' | 'filled' default) */
+[data-button-style="outline"] .btn-primary{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+[data-button-style="outline"] .btn-primary:hover{background:var(--primary-light)}
+[data-button-style="soft"] .btn-primary{background:var(--primary-light);color:var(--primary)}
+[data-button-style="soft"] .btn-primary:hover{background:color-mix(in srgb, var(--primary) 22%, transparent)}
 .btn-row{display:flex;gap:12px;margin-top:20px}
 .btn-row .btn{flex:1}
 
@@ -1538,6 +1543,20 @@ function applyStyle(cfg) {
   if (s.primary_color) root.style.setProperty('--primary', s.primary_color);
   if (s.border_radius) root.style.setProperty('--radius', s.border_radius + 'px');
   if (s.font_family) root.style.setProperty('--font', s.font_family);
+  if (s.bg_color) root.style.setProperty('--bg', s.bg_color);
+  if (s.text_color) root.style.setProperty('--text', s.text_color);
+  if (s.button_style) root.setAttribute('data-button-style', s.button_style);
+  // Inject admin-supplied custom CSS *last* so it can override any
+  // computed styles. Re-injects on every config refresh by replacing
+  // the previous tag (no leak across applyStyle calls).
+  if (s.custom_css) {
+    var prev = document.getElementById('hoteltech-custom-css');
+    if (prev) prev.remove();
+    var tag = document.createElement('style');
+    tag.id = 'hoteltech-custom-css';
+    tag.textContent = String(s.custom_css);
+    document.head.appendChild(tag);
+  }
   if (cfg.currency) CURRENCY = cfg.currency;
 }
 

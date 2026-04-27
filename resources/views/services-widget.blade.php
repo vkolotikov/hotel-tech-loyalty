@@ -84,6 +84,11 @@ img{max-width:100%;display:block}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 .btn-row{display:flex;gap:12px;margin-top:20px}
 .btn-row .btn{flex:1}
+/* Per-org button-style override */
+[data-button-style="outline"] .btn-primary{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+[data-button-style="outline"] .btn-primary:hover{background:var(--primary-light)}
+[data-button-style="soft"] .btn-primary{background:var(--primary-light);color:var(--primary)}
+[data-button-style="soft"] .btn-primary:hover{background:color-mix(in srgb, var(--primary) 22%, transparent)}
 
 /* Form fields */
 .field{margin-bottom:16px}
@@ -416,12 +421,26 @@ img{max-width:100%;display:block}
       }
       state.config = res.body
 
-      // apply theme
-      if (state.config.style && state.config.style.theme) {
-        document.body.setAttribute('data-theme', state.config.style.theme)
+      // Apply admin-configurable style. Mirrors booking-widget's
+      // applyStyle() — same setting keys, just `services_widget_*`.
+      var s = state.config.style || {}
+      var root = document.documentElement
+      if (s.theme) document.body.setAttribute('data-theme', s.theme)
+      var color = CFG.initialColor || s.primary_color || ''
+      if (color) root.style.setProperty('--primary', color)
+      if (s.border_radius) root.style.setProperty('--radius', s.border_radius + 'px')
+      if (s.font_family) root.style.setProperty('--font', s.font_family)
+      if (s.bg_color) root.style.setProperty('--bg', s.bg_color)
+      if (s.text_color) root.style.setProperty('--text', s.text_color)
+      if (s.button_style) root.setAttribute('data-button-style', s.button_style)
+      if (s.custom_css) {
+        var prev = document.getElementById('hoteltech-custom-css')
+        if (prev) prev.remove()
+        var tag = document.createElement('style')
+        tag.id = 'hoteltech-custom-css'
+        tag.textContent = String(s.custom_css)
+        document.head.appendChild(tag)
       }
-      var color = CFG.initialColor || (state.config.style && state.config.style.primary_color) || ''
-      if (color) document.documentElement.style.setProperty('--primary', color)
 
       // preselect
       if (CFG.presetCategory) state.categoryId = Number(CFG.presetCategory)
