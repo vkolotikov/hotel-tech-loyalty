@@ -71,6 +71,7 @@ class ChatbotConfigController extends Controller
             'presence_penalty'  => 'nullable|numeric|between:0,2',
             'stop_sequences'    => 'nullable|array',
             'reasoning_effort'  => 'nullable|in:none,low,medium,high,xhigh',
+            'verbosity'         => 'nullable|in:low,medium,high',
         ]);
 
         $orgId = $request->user()->organization_id;
@@ -236,6 +237,8 @@ class ChatbotConfigController extends Controller
             'presence_penalty'  => $model->presence_penalty ?? null,
             'stop_sequences'    => $model->stop_sequences ?? null,
             'reasoning_effort'  => $model->reasoning_effort ?? 'low',
+            'verbosity'         => $model->verbosity ?? 'medium',
+            'prompt_cache_key'  => "org-{$orgId}-test-chat",
         ], fn($v) => $v !== null);
 
         try {

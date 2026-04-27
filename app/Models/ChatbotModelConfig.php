@@ -20,6 +20,7 @@ class ChatbotModelConfig extends Model
         'presence_penalty',
         'stop_sequences',
         'reasoning_effort',
+        'verbosity',
     ];
 
     protected $casts = [
@@ -37,7 +38,7 @@ class ChatbotModelConfig extends Model
             ?? new static([
                 'organization_id'   => $orgId,
                 'provider'          => 'openai',
-                'model_name'        => 'gpt-5.4-mini',
+                'model_name'        => 'gpt-5.5',
                 'temperature'       => 0.70,
                 'top_p'             => 1.00,
                 'max_tokens'        => 1024,

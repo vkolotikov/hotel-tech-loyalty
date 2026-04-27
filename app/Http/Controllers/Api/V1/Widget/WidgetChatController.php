@@ -567,6 +567,8 @@ class WidgetChatController extends Controller
             'presence_penalty'  => $modelConfig->presence_penalty ?? null,
             'stop_sequences'    => $modelConfig->stop_sequences ?? null,
             'reasoning_effort'  => $modelConfig->reasoning_effort ?? 'low',
+            'verbosity'         => $modelConfig->verbosity ?? 'medium',
+            'prompt_cache_key'  => "org-{$orgId}-widget-chat",
         ], fn($v) => $v !== null);
 
         try {

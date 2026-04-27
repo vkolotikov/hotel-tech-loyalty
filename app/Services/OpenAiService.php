@@ -51,10 +51,15 @@ class OpenAiService
             'frequency_penalty' => $modelConfig->frequency_penalty ?? null,
             'presence_penalty'  => $modelConfig->presence_penalty ?? null,
             'stop_sequences'    => $modelConfig->stop_sequences ?? null,
-            // Reasoning_effort is silently ignored by non-reasoning models
-            // (the dispatcher only forwards it for gpt-5.x). Always passing
-            // it means a future reasoning model picks it up automatically.
+            // Reasoning_effort + verbosity are first-class on the Responses
+            // API (gpt-5.x). Non-Responses models silently ignore them, so
+            // always passing them means future reasoning models pick them
+            // up automatically.
             'reasoning_effort'  => $modelConfig->reasoning_effort ?? 'low',
+            'verbosity'         => $modelConfig->verbosity ?? 'medium',
+            // Stable per-org cache key — repeated traffic with the same
+            // system prompt prefix gets cache hits, cutting cost + latency.
+            'prompt_cache_key'  => 'org-' . $member->organization_id . '-member-chat',
         ], fn($v) => $v !== null);
 
         $this->lastHandoff = null;

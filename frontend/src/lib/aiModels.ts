@@ -11,6 +11,8 @@ export type Provider = 'openai' | 'anthropic' | 'google'
 export interface ModelCapabilities {
   /** Supports OpenAI-style `reasoning_effort` parameter (none/low/medium/high/xhigh). */
   reasoning?: boolean
+  /** Supports OpenAI-style `text.verbosity` parameter (low/medium/high). */
+  verbosity?: boolean
   /** Accepts image inputs in the messages array. */
   vision?: boolean
   /** Supports `response_format: json_schema` strict structured outputs. */
@@ -19,6 +21,10 @@ export interface ModelCapabilities {
   toolUse?: boolean
   /** Supports streaming response chunks. */
   streaming?: boolean
+  /** Should be dispatched via /v1/responses (true) or /v1/chat/completions (false). */
+  responsesApi?: boolean
+  /** Recommended default reasoning_effort when none configured. */
+  defaultReasoningEffort?: 'none' | 'low' | 'medium' | 'high' | 'xhigh'
 }
 
 export interface ModelEntry {
@@ -55,16 +61,21 @@ const openai: ProviderEntry = {
   label: 'OpenAI',
   defaultModel: 'gpt-4.1',
   models: [
+    // gpt-5.x models route through the Responses API per OpenAI's official
+    // guidance — Chat Completions is the wrong endpoint for these models
+    // and was the cause of "some models don't work correctly" reports.
+    { id: 'gpt-5.5',      label: 'GPT-5.5',      blurb: 'Newest — efficient reasoning, polished tone, Responses-API native',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'medium' }, recommended: true },
     { id: 'gpt-5.4-pro',  label: 'GPT-5.4 Pro',  blurb: 'Top-tier reasoning, best for luxury sales',
-      capabilities: { reasoning: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true }, recommended: true },
-    { id: 'gpt-5.4',      label: 'GPT-5.4',      blurb: 'Flagship GPT-5 model',
-      capabilities: { reasoning: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'gpt-5',        label: 'GPT-5',        blurb: 'Latest GPT-5 alias',
-      capabilities: { reasoning: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
+    { id: 'gpt-5.4',      label: 'GPT-5.4',      blurb: 'Flagship GPT-5.4',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
+    { id: 'gpt-5',        label: 'GPT-5',        blurb: 'GPT-5 alias',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
     { id: 'gpt-5-mini',   label: 'GPT-5 Mini',   blurb: 'Faster, cheaper GPT-5',
-      capabilities: { reasoning: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
     { id: 'gpt-5-nano',   label: 'GPT-5 Nano',   blurb: 'Fastest GPT-5 — low latency',
-      capabilities: { reasoning: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'none' } },
     { id: 'gpt-4.1',      label: 'GPT-4.1',      blurb: 'Stable workhorse for hospitality',
       capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
     { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', blurb: 'Fast & affordable',

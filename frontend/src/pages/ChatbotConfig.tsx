@@ -122,6 +122,7 @@ export function ChatbotConfig() {
   const selectedProvider = findProvider(mForm.provider || 'openai') ?? AI_PROVIDERS[0]
   const selectedModel = findModel(mForm.model_name)
   const supportsReasoning = !!selectedModel?.capabilities?.reasoning
+  const supportsVerbosity = !!selectedModel?.capabilities?.verbosity
   const isLoading = loadingBehavior || loadingModel
   const isSaving = saveBehavior.isPending || saveModel.isPending
 
@@ -211,7 +212,9 @@ export function ChatbotConfig() {
                 </div>
                 {selectedModel && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {selectedModel.capabilities.responsesApi && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20" title="Routes via /v1/responses (recommended for gpt-5.x)">responses API</span>}
                     {selectedModel.capabilities.reasoning && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20">reasoning</span>}
+                    {selectedModel.capabilities.verbosity && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">verbosity</span>}
                     {selectedModel.capabilities.vision && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/20">vision</span>}
                     {selectedModel.capabilities.toolUse && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">tools</span>}
                     {selectedModel.capabilities.structuredOutputs && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/20">json schema</span>}
@@ -272,6 +275,29 @@ export function ChatbotConfig() {
                       </div>
                     </div>
                   </div>
+                  {/* Verbosity — Responses-API parameter for gpt-5.x. Distinct
+                      from max_tokens: low produces shorter, punchier replies
+                      even when there's room left in the budget. The doc
+                      recommends `low` as a starting point for concise UX. */}
+                  {supportsVerbosity && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-sm text-t-secondary">Response Verbosity</label>
+                        <span title="Controls how concise vs detailed responses are, separately from token budget. Use low for chatbot-style brevity; medium is the doc default; high for thorough explanations.">
+                          <Info size={11} className="text-t-secondary cursor-help" />
+                        </span>
+                      </div>
+                      <select
+                        value={mForm.verbosity ?? 'medium'}
+                        onChange={e => updateModel('verbosity', e.target.value)}
+                        className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value="low">Low — concise, punchy replies (recommended for chat)</option>
+                        <option value="medium">Medium — balanced, the API default</option>
+                        <option value="high">High — thorough multi-paragraph answers</option>
+                      </select>
+                    </div>
+                  )}
                   {/* Reasoning effort — driven by the registry capability flag,
                       so any future reasoning model picks it up automatically. */}
                   {supportsReasoning && (
