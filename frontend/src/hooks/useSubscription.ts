@@ -27,28 +27,46 @@ export function useSubscription() {
   const { data, isLoading } = useQuery<SubscriptionData>({
     queryKey: ['subscription-status'],
     queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
-    // Stale for 5 min in the steady-state, but refetch every 60s once the
-    // trial has ≤2 days left so the SubscriptionWall flips on within a minute
-    // of the actual trial expiry instead of up to 5 min later.
-    staleTime: 5 * 60 * 1000,
+    // Tight refetch policy. Billing status is the gate that decides whether
+    // the user keeps using the product, so we want the wall to flip on
+    // within a minute of trial expiry — not the previous 5 min worst case.
+    staleTime: 60_000,
     refetchInterval: (q) => {
       const d = q.state.data as SubscriptionData | undefined
-      if (!d?.trialEnd || d.status !== 'TRIALING') return false
-      const ms = new Date(d.trialEnd).getTime() - Date.now()
-      const days = ms / 86400000
-      if (days < 0) return 30_000        // expired but cache says trialing — push hard
-      if (days <= 2) return 60_000       // last 48h
-      return false                       // normal
+      if (!d) return 60_000
+      // Once active, no need to poll aggressively.
+      if (d.status === 'ACTIVE') return 5 * 60_000
+      if (d.status === 'TRIALING') {
+        if (!d.trialEnd) return 60_000
+        const ms = new Date(d.trialEnd).getTime() - Date.now()
+        if (ms < 0) return 15_000       // expired but cache says trialing — push hard
+        if (ms <= 86_400_000) return 30_000  // last 24h: every 30s
+        return 60_000                   // earlier in trial: every 60s
+      }
+      // EXPIRED / NO_PLAN — keep polling so re-subscription auto-unlocks.
+      return 30_000
     },
+    refetchOnWindowFocus: true,
     retry: false,
   })
+
+  // Client-side fail-safe: even with no API call, treat a passed trialEnd as
+  // EXPIRED. Caps how long the user can see a stale "TRIALING" status from
+  // the cache — the wall shows immediately on the first render after the
+  // trialEnd timestamp passes, even before the next refetch lands.
+  const isClientExpired = !!(
+    data?.status === 'TRIALING' &&
+    data?.trialEnd &&
+    new Date(data.trialEnd).getTime() < Date.now()
+  )
 
   // Only grant all features in LOCAL dev mode (no SaaS configured).
   // While loading or for any real status, use the actual plan data.
   const isLocal = data?.status === 'LOCAL'
   const features = isLocal ? ALL_FEATURES : (data?.features ?? {})
   const products = isLocal ? ALL_PRODUCTS : (data?.products ?? [])
-  const status = data?.status ?? (isLoading ? 'LOADING' : 'NO_PLAN')
+  const rawStatus = data?.status ?? (isLoading ? 'LOADING' : 'NO_PLAN')
+  const status = isClientExpired ? 'EXPIRED' : rawStatus
 
   const hasFeature = (key: string): boolean => {
     // While loading, assume features are available to prevent flash of locked UI

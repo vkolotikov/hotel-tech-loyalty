@@ -24,7 +24,32 @@ class CheckSubscription
             return $next($request);
         }
 
-        // Path 1: SaaS JWT-authenticated request — check live from SaaS API
+        // ── Defence in depth: regardless of which auth path matched below,
+        // if we have a local Organization with a known TRIALING status whose
+        // trial_end is in the past, flip it to EXPIRED *before* any cache
+        // check can grant access. This was the single biggest hole — a user
+        // whose trial expired between the 5-min entitlements sync and the
+        // daily SaaS sweep would still get TRIALING from the cache. ──
+        $authedUser = $user;
+        $org = null;
+        if ($authedUser?->organization_id) {
+            $org = \App\Models\Organization::find($authedUser->organization_id);
+            if ($org
+                && $org->subscription_status === 'TRIALING'
+                && $org->trial_end
+                && $org->trial_end->isPast()
+            ) {
+                $org->update(['subscription_status' => 'EXPIRED']);
+                // Bust any cached "TRIALING" so downstream paths can't re-grant.
+                if ($org->saas_org_id) {
+                    Cache::forget("subscription_status:{$org->saas_org_id}");
+                }
+            }
+        }
+
+        // Path 1: SaaS JWT-authenticated request — check live from SaaS API.
+        // Cache reduced from 5min → 60s so a fresh upgrade or expiry is
+        // reflected within a minute, not five.
         $saasOrgId = $request->attributes->get('saas_org_id');
         if ($saasOrgId) {
             $cacheKey = "subscription_status:{$saasOrgId}";
@@ -32,10 +57,23 @@ class CheckSubscription
 
             if ($status === null) {
                 $status = $this->fetchSubscriptionStatus($saasOrgId, $request);
-                Cache::put($cacheKey, $status, now()->addMinutes(5));
+                Cache::put($cacheKey, $status, now()->addSeconds(60));
             }
 
-            if (!in_array($status['status'] ?? '', ['ACTIVE', 'TRIALING'])) {
+            // Belt-and-braces: if the SaaS payload says TRIALING but the
+            // trialEnd is in the past, treat as EXPIRED. SaaS *should* have
+            // demoted it via the daily sweep, but a stale crontab on prod
+            // would leave the status untouched indefinitely.
+            $effectiveStatus = $status['status'] ?? '';
+            $trialEnd = $status['trialEnd'] ?? null;
+            if ($effectiveStatus === 'TRIALING' && $trialEnd && strtotime($trialEnd) < time()) {
+                $effectiveStatus = 'EXPIRED';
+                $status['status'] = 'EXPIRED';
+                Cache::put($cacheKey, $status, now()->addSeconds(60));
+                if ($org) $org->update(['subscription_status' => 'EXPIRED']);
+            }
+
+            if (!in_array($effectiveStatus, ['ACTIVE', 'TRIALING'])) {
                 return response()->json([
                     'error' => 'subscription_required',
                     'message' => 'Your subscription has expired. Please renew to continue using the platform.',
@@ -43,38 +81,27 @@ class CheckSubscription
                 ], 403);
             }
 
-            $request->attributes->set('subscription_status', $status['status']);
+            $request->attributes->set('subscription_status', $effectiveStatus);
             $request->attributes->set('subscription_plan', $status['plan'] ?? null);
-            $request->attributes->set('subscription_trial_end', $status['trialEnd'] ?? null);
+            $request->attributes->set('subscription_trial_end', $trialEnd);
 
             return $next($request);
         }
 
         // Path 2: Sanctum-only auth (trial users) — check cached org entitlements
-        $user = $request->user();
-        if ($user?->organization_id) {
-            $org = \App\Models\Organization::find($user->organization_id);
-            if ($org && $org->subscription_status) {
-                // Check trial expiry
-                if ($org->subscription_status === 'TRIALING' && $org->trial_end && $org->trial_end->isPast()) {
-                    $org->update(['subscription_status' => 'EXPIRED']);
-                    return response()->json([
-                        'error' => 'subscription_required',
-                        'message' => 'Your trial has expired. Please upgrade to continue.',
-                    ], 403);
-                }
-
-                if (in_array($org->subscription_status, ['ACTIVE', 'TRIALING'], true)) {
-                    $request->attributes->set('subscription_status', $org->subscription_status);
-                    $request->attributes->set('subscription_plan', $org->plan_slug);
-                    return $next($request);
-                }
-
-                return response()->json([
-                    'error' => 'subscription_required',
-                    'message' => 'Your subscription has expired. Please renew to continue using the platform.',
-                ], 403);
+        if ($org && $org->subscription_status) {
+            if (in_array($org->subscription_status, ['ACTIVE', 'TRIALING'], true)) {
+                $request->attributes->set('subscription_status', $org->subscription_status);
+                $request->attributes->set('subscription_plan', $org->plan_slug);
+                return $next($request);
             }
+
+            return response()->json([
+                'error' => 'subscription_required',
+                'message' => $org->subscription_status === 'EXPIRED'
+                    ? 'Your trial has expired. Please upgrade to continue.'
+                    : 'Your subscription has expired. Please renew to continue using the platform.',
+            ], 403);
         }
 
         // Path 3: No SaaS config at all (pure local dev) — allow through
@@ -121,10 +148,26 @@ class CheckSubscription
                 }
                 return ['status' => 'EXPIRED'];
             }
-        } catch (\Exception $e) {
-            // On network error, allow through to avoid blocking during outages
+        } catch (\Throwable $e) {
+            // On network error, fall back to the cached org status rather
+            // than fail-open. The previous behaviour returned a synthetic
+            // "ACTIVE" which let any expired trial keep working as long as
+            // the SaaS API was unreachable — a hole big enough for an
+            // unscrupulous user to weaponise (even a brief SaaS outage
+            // would unlock everyone).
             report($e);
-            return ['status' => 'ACTIVE', 'plan' => 'fallback'];
+            $org = \App\Models\Organization::where('saas_org_id', $orgId)->first();
+            if ($org && $org->subscription_status) {
+                return [
+                    'status'   => $org->subscription_status,
+                    'plan'     => $org->plan_slug,
+                    'trialEnd' => $org->trial_end?->toIso8601String(),
+                    'periodEnd'=> $org->period_end?->toIso8601String(),
+                    'fallback' => 'cached',
+                ];
+            }
+            // No cached state to fall back on — fail closed.
+            return ['status' => 'EXPIRED', 'fallback' => 'unknown'];
         }
 
         return ['status' => 'EXPIRED'];

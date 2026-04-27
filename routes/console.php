@@ -21,6 +21,11 @@ Schedule::command('reviews:send-post-stay')->dailyAt('09:00');
 // whose SaaS company has been deleted, so orphan data doesn't accumulate.
 Schedule::command('saas:reconcile-orgs')->dailyAt('03:30');
 
+// Local trial-expiry sweep. The SaaS platform owns the canonical subscription
+// lifecycle, but loyalty caches it for synchronous middleware checks. Run an
+// hour after the SaaS sweep so SaaS has flipped first.
+Schedule::command('subscriptions:expire-trials')->dailyAt('03:00');
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes
