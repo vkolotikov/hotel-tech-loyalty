@@ -300,6 +300,10 @@ export function Bookings() {
   }
 
   const selectClass = 'bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
+  // Native <option> defaults to OS-light styling; force dark so the open
+  // dropdown matches the rest of the admin and the text stays readable.
+  const selectStyle = { colorScheme: 'dark' as const }
+  const optStyle    = { background: '#0f1c18', color: '#fff' }
 
   // Hide analytics section entirely when there is no meaningful data to plot
   const a = dashboard?.analytics
@@ -358,9 +362,9 @@ export function Bookings() {
           ))}
         </div>
         {units.length > 0 && (
-          <select value={unitId} onChange={e => { setUnitId(e.target.value); setPage(1) }} className={selectClass}>
-            <option value="">All Units</option>
-            {units.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          <select value={unitId} onChange={e => { setUnitId(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
+            <option value="" style={optStyle}>All Units</option>
+            {units.map((u: any) => <option key={u.id} value={u.id} style={optStyle}>{u.name}</option>)}
           </select>
         )}
         {dashboard?.scope && (
@@ -547,16 +551,22 @@ export function Bookings() {
               className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass}>
-            <option value="">All Statuses</option>
-            <option value="new">New</option><option value="confirmed">Confirmed</option>
-            <option value="checked-in">Checked In</option><option value="checked-out">Checked Out</option>
-            <option value="cancelled">Cancelled</option><option value="no-show">No Show</option>
+          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
+            <option value=""           style={optStyle}>All Statuses</option>
+            <option value="new"        style={optStyle}>New</option>
+            <option value="confirmed"  style={optStyle}>Confirmed</option>
+            <option value="checked-in" style={optStyle}>Checked In</option>
+            <option value="checked-out" style={optStyle}>Checked Out</option>
+            <option value="cancelled"  style={optStyle}>Cancelled</option>
+            <option value="no-show"    style={optStyle}>No Show</option>
           </select>
-          <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass}>
-            <option value="">All Payments</option>
-            <option value="open">Open</option><option value="paid">Paid</option><option value="pending">Pending</option>
-            <option value="invoice_waiting">Invoice Waiting</option><option value="channel_managed">Channel Managed</option>
+          <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
+            <option value=""        style={optStyle}>All Payments</option>
+            <option value="open"    style={optStyle}>Open</option>
+            <option value="paid"    style={optStyle}>Paid</option>
+            <option value="pending" style={optStyle}>Pending</option>
+            <option value="invoice_waiting" style={optStyle}>Invoice Waiting</option>
+            <option value="channel_managed" style={optStyle}>Channel Managed</option>
           </select>
         </div>
       </Card>

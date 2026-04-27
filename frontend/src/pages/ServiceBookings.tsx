@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, ChevronDown,
 } from 'lucide-react'
 import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
 import { money } from '../lib/money'
@@ -45,6 +45,20 @@ const STATUS_OPTIONS = [
   { value: 'no_show',     label: 'No-show' },
 ]
 
+const PAYMENT_OPTIONS = [
+  { value: '', label: 'All payments' },
+  { value: 'unpaid',   label: 'Unpaid' },
+  { value: 'paid',     label: 'Paid' },
+  { value: 'refunded', label: 'Refunded' },
+  { value: 'failed',   label: 'Failed' },
+]
+
+// Style helper for native <select><option> elements — without colorScheme:dark
+// the OS default light background bleeds through and renders the option text
+// invisible against white in the open dropdown.
+const SELECT_DARK = { colorScheme: 'dark' as const }
+const OPT_DARK = { background: '#0f1c18', color: '#fff' }
+
 const STATUS_COLOR: Record<string, string> = {
   pending:     'bg-yellow-500/15 text-yellow-400',
   confirmed:   'bg-emerald-500/15 text-emerald-400',
@@ -70,15 +84,66 @@ export default function ServiceBookings() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [paymentStatus, setPaymentStatus] = useState('')
+  const [serviceId, setServiceId] = useState<string>('')
+  const [masterId, setMasterId] = useState<string>('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [active, setActive] = useState<ServiceBooking | null>(null)
 
+  // Services + masters for the filter dropdowns. Cached for 5 min — these
+  // change rarely and refetching on every filter render is wasted bandwidth.
+  const { data: servicesData } = useQuery<any>({
+    queryKey: ['services-catalog'],
+    queryFn: () => api.get('/v1/admin/services', { params: { per_page: 200 } }).then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const services = useMemo(() => {
+    const raw = servicesData?.data ?? servicesData ?? []
+    return Array.isArray(raw) ? raw : []
+  }, [servicesData])
+
+  const { data: mastersData } = useQuery<any>({
+    queryKey: ['service-masters-catalog'],
+    queryFn: () => api.get('/v1/admin/service-masters', { params: { per_page: 200 } }).then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const masters = useMemo(() => {
+    const raw = mastersData?.data ?? mastersData ?? []
+    return Array.isArray(raw) ? raw : []
+  }, [mastersData])
+
+  // Compose all filters into a single params object so the query key tracks
+  // them in one place. Reset paging whenever any filter changes — the
+  // backend can return fewer pages and being stuck on page 5 of a now-2-
+  // page list shows an empty body.
+  const params = useMemo(() => ({
+    search: search || undefined,
+    status: status || undefined,
+    payment_status: paymentStatus || undefined,
+    service_id: serviceId || undefined,
+    master_id: masterId || undefined,
+    from: from || undefined,
+    to: to || undefined,
+    page,
+  }), [search, status, paymentStatus, serviceId, masterId, from, to, page])
+
+  const filterCount =
+    (status ? 1 : 0) + (paymentStatus ? 1 : 0) + (serviceId ? 1 : 0) +
+    (masterId ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0)
+  const hasFilters = filterCount > 0
+
+  const clearFilters = () => {
+    setStatus(''); setPaymentStatus(''); setServiceId(''); setMasterId('')
+    setFrom(''); setTo(''); setPage(1)
+  }
+
   const { data, isLoading } = useQuery<Paginated>({
-    queryKey: ['service-bookings', { search, status, page }],
-    queryFn: () => api.get('/v1/admin/service-bookings', {
-      params: { search, status, page },
-    }).then(r => r.data),
+    queryKey: ['service-bookings', params],
+    queryFn: () => api.get('/v1/admin/service-bookings', { params }).then(r => r.data),
   })
 
   const { data: dashboard } = useQuery<any>({
@@ -132,16 +197,88 @@ export default function ServiceBookings() {
       )}
 
       {/* Filters */}
-      <div className={card + ' p-3 flex items-center gap-2'} style={cardBg}>
-        <div className="relative flex-1 max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Search by name, email, reference…" className={inputCls + ' pl-9'} />
+      <div className={card} style={cardBg}>
+        <div className="p-3 flex items-center gap-2">
+          <div className="relative flex-1 max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Search by name, email, reference…" className={inputCls + ' pl-9'} />
+          </div>
+          <button onClick={() => setShowFilters(s => !s)}
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition-all border ${
+              hasFilters || showFilters
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-white/[0.03] border-white/[0.08] text-gray-400 hover:text-white'
+            }`}>
+            <Filter size={14} /> Filters
+            {filterCount > 0 && (
+              <span className="text-[10px] font-bold rounded-full bg-emerald-500 text-emerald-950 px-1.5 py-px min-w-[18px] text-center">
+                {filterCount}
+              </span>
+            )}
+            <ChevronDown size={12} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          {hasFilters && (
+            <button onClick={clearFilters} className="text-[11px] text-gray-500 hover:text-white px-2 underline-offset-2 hover:underline">
+              Clear all
+            </button>
+          )}
         </div>
-        <Filter size={14} className="text-gray-500 ml-2" />
-        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={inputCls + ' max-w-xs'}>
-          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+
+        {showFilters && (
+          <div className="px-3 pb-4 pt-1 border-t border-white/[0.04] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Status */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status</label>
+              <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK}>
+                {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value} style={OPT_DARK}>{o.label}</option>)}
+              </select>
+            </div>
+            {/* Payment status */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Payment</label>
+              <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK}>
+                {PAYMENT_OPTIONS.map(o => <option key={o.value} value={o.value} style={OPT_DARK}>{o.label}</option>)}
+              </select>
+            </div>
+            {/* Service */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Service</label>
+              <select value={serviceId} onChange={e => { setServiceId(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK}>
+                <option value="" style={OPT_DARK}>All services</option>
+                {services.map((s: any) => (
+                  <option key={s.id} value={String(s.id)} style={OPT_DARK}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            {/* Master / provider */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Master / Provider</label>
+              <select value={masterId} onChange={e => { setMasterId(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK}>
+                <option value="" style={OPT_DARK}>All masters</option>
+                {masters.map((m: any) => (
+                  <option key={m.id} value={String(m.id)} style={OPT_DARK}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            {/* Date from */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">From</label>
+              <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK} />
+            </div>
+            {/* Date to */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">To</label>
+              <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1) }}
+                className={inputCls} style={SELECT_DARK} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -300,17 +437,17 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>
-              {STATUS_OPTIONS.filter(o => o.value).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls} style={SELECT_DARK}>
+              {STATUS_OPTIONS.filter(o => o.value).map(o => <option key={o.value} value={o.value} style={OPT_DARK}>{o.label}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">Payment</label>
-            <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)} className={inputCls}>
-              <option value="unpaid">Unpaid</option>
-              <option value="paid">Paid</option>
-              <option value="refunded">Refunded</option>
-              <option value="failed">Failed</option>
+            <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)} className={inputCls} style={SELECT_DARK}>
+              <option value="unpaid"   style={OPT_DARK}>Unpaid</option>
+              <option value="paid"     style={OPT_DARK}>Paid</option>
+              <option value="refunded" style={OPT_DARK}>Refunded</option>
+              <option value="failed"   style={OPT_DARK}>Failed</option>
             </select>
           </div>
           <div>
@@ -401,16 +538,16 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Service *</label>
-              <select value={serviceId} onChange={e => { setServiceId(e.target.value ? Number(e.target.value) : ''); setSlots([]); setSlotStart('') }} className={inputCls}>
-                <option value="">Select service…</option>
-                {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              <select value={serviceId} onChange={e => { setServiceId(e.target.value ? Number(e.target.value) : ''); setSlots([]); setSlotStart('') }} className={inputCls} style={SELECT_DARK}>
+                <option value="" style={OPT_DARK}>Select service…</option>
+                {services.map(s => <option key={s.id} value={s.id} style={OPT_DARK}>{s.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Master (optional)</label>
-              <select value={masterId} onChange={e => { setMasterId(e.target.value ? Number(e.target.value) : ''); setSlots([]); setSlotStart('') }} className={inputCls}>
-                <option value="">Any available</option>
-                {masters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              <select value={masterId} onChange={e => { setMasterId(e.target.value ? Number(e.target.value) : ''); setSlots([]); setSlotStart('') }} className={inputCls} style={SELECT_DARK}>
+                <option value="" style={OPT_DARK}>Any available</option>
+                {masters.map(m => <option key={m.id} value={m.id} style={OPT_DARK}>{m.name}</option>)}
               </select>
             </div>
           </div>
