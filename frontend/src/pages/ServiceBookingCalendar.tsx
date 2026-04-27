@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { ChevronLeft, ChevronRight, Clock, User, Scissors, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, User, Scissors, X, List as ListIcon, Calendar as CalendarIcon } from 'lucide-react'
 import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
+import { ViewToggle } from '../components/ViewToggle'
 
 interface ServiceBookingLite {
   id: number
@@ -171,6 +172,13 @@ export default function ServiceBookingCalendar() {
   return (
     <div className="space-y-5">
       <DesktopOnlyBanner pageKey="service-booking-calendar" message="The service booking calendar is best viewed on a larger screen. On mobile, tap a day to see its bookings in a list." />
+
+      {/* List ↔ Calendar view toggle (mirrors /service-bookings) */}
+      <ViewToggle options={[
+        { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+        { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
+      ]} />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

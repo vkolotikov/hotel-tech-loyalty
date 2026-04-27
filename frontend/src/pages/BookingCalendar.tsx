@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CalendarDays, Calendar, CalendarRange } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Calendar, CalendarRange, List as ListIcon } from 'lucide-react'
 import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
+import { ViewToggle } from '../components/ViewToggle'
 
 /* ── Unit visual theming ─────────────────────────────────────────── */
 
@@ -192,9 +193,8 @@ export function BookingCalendar() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Calendar</div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Booking Calendar</h1>
+          <h1 className="text-2xl font-bold text-white">Reservations</h1>
+          <p className="text-sm text-t-secondary mt-0.5">Rooms × days timeline of every booking — drag horizontally for more dates.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -219,6 +219,12 @@ export function BookingCalendar() {
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
+
+      {/* List ↔ Timeline view toggle (mirrors /bookings) */}
+      <ViewToggle options={[
+        { to: '/bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+        { to: '/bookings/calendar', label: 'Timeline', icon: <CalendarRange size={12} className="-ml-0.5" /> },
+      ]} />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">

@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
-  CheckCircle2, AlertCircle, ChevronDown,
+  CheckCircle2, AlertCircle, ChevronDown, List as ListIcon,
 } from 'lucide-react'
-import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
+import { ViewToggle } from '../components/ViewToggle'
 import { money } from '../lib/money'
 
 interface ServiceBooking {
@@ -164,23 +163,26 @@ export default function ServiceBookings() {
 
   return (
     <div className="space-y-6">
-      <PairTabs tabs={BOOKINGS_TABS} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Service Bookings</h1>
           <p className="text-xs text-gray-500 mt-1">Reservations from your services widget, plus manual walk-ins.</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/service-bookings/calendar"
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-300 hover:text-white transition-all">
-            <CalendarIcon size={14} /> Calendar
-          </Link>
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             <Plus size={14} /> New Booking
           </button>
         </div>
       </div>
+
+      {/* List ↔ Calendar view toggle. The standalone "Calendar" button
+          in the header is gone — the toggle replaces it and stays
+          visible on both surfaces so staff can flip back and forth. */}
+      <ViewToggle options={[
+        { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+        { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
+      ]} />
 
       {/* KPI strip */}
       {dashboard && (

@@ -10,8 +10,8 @@ import {
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CalendarDays, CreditCard, Home, Package, Eye, Star,
-  UserCog, AlertTriangle,
+  BedDouble, CreditCard, Home, Package, Eye, Star,
+  UserCog, AlertTriangle, Scissors,
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -67,8 +67,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Bookings',
     items: [
-      { path: '/calendar',          label: 'Calendar',         icon: CalendarDays,  gate: 'all',   product: 'booking' },
-      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/service-bookings'] },
+      // Reservations & Services each surface own resource. The List ↔ Calendar
+      // toggle lives inside the page; the dropped /calendar legacy entry was
+      // a duplicate of the in-page Timeline view.
+      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
+      { path: '/service-bookings',  label: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
       { path: '/booking-rooms',     label: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
       { path: '/service-masters',   label: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
       { path: '/booking-extras',    label: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },

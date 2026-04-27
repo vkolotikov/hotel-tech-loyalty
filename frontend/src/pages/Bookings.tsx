@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { PairTabs, BOOKINGS_TABS } from '../components/PairTabs'
+import { ViewToggle } from '../components/ViewToggle'
 import { money } from '../lib/money'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -316,7 +316,6 @@ export function Bookings() {
 
   return (
     <div className="space-y-6">
-      <PairTabs tabs={BOOKINGS_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -336,6 +335,14 @@ export function Bookings() {
           </button>
         </div>
       </div>
+
+      {/* List ↔ Timeline view toggle. Both options operate on the same
+          reservations data — list is the standard table, Timeline opens
+          the rooms × days Smoobu-style grid at /bookings/calendar. */}
+      <ViewToggle options={[
+        { to: '/bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+        { to: '/bookings/calendar', label: 'Timeline', icon: <CalendarRange size={12} className="-ml-0.5" /> },
+      ]} />
 
       {/* PMS deactivated banner */}
       {dashboard?.syncHealth && dashboard.syncHealth.pmsEnabled === false && (
