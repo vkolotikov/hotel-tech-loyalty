@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CalendarDays, Calendar, CalendarRange, List as ListIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { ViewToggle } from '../components/ViewToggle'
+import { QuickCreateBookingModal } from '../components/QuickCreateBookingModal'
 
 /* ── Unit visual theming ─────────────────────────────────────────── */
 
@@ -59,10 +61,35 @@ export function BookingCalendar() {
   const [cursor, setCursor] = useState<Date>(() => new Date())
   const [paymentFilter, setPaymentFilter] = useState('')
   const [unitFilter, setUnitFilter] = useState('')
+  // Click-empty-cell quick-create
+  const [quickCreate, setQuickCreate] = useState<{ date: string; apartment_id: string; apartment_name: string } | null>(null)
+  // Drag-and-drop move state — only manual bookings can be moved.
+  const [dragging, setDragging] = useState<{ id: number; nights: number; booking_type: string | null } | null>(null)
+  const qc = useQueryClient()
 
   const { data } = useQuery({
     queryKey: ['booking-calendar', month],
     queryFn: () => api.get('/v1/admin/bookings/calendar', { params: { month } }).then(r => r.data),
+  })
+
+  const moveMut = useMutation({
+    mutationFn: (payload: { id: number; arrival_date: string; departure_date: string; apartment_id?: string; apartment_name?: string; force?: boolean }) =>
+      api.patch(`/v1/admin/bookings/${payload.id}/move`, payload),
+    onSuccess: () => {
+      toast.success('Booking moved')
+      qc.invalidateQueries({ queryKey: ['booking-calendar'] })
+    },
+    onError: (e: any) => {
+      const msg = e?.response?.data?.message || 'Move failed'
+      if (e?.response?.status === 409) {
+        // Conflict — confirm override
+        if (window.confirm(msg + '\n\nMove anyway?')) {
+          moveMut.mutate({ ...(moveMut.variables as any), force: true })
+        }
+      } else {
+        toast.error(msg)
+      }
+    },
   })
 
   const bookings: any[] = data?.bookings ?? []
@@ -194,7 +221,9 @@ export function BookingCalendar() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-sm text-t-secondary mt-0.5">Rooms × days timeline of every booking — drag horizontally for more dates.</p>
+          <p className="text-sm text-t-secondary mt-0.5">
+            Rooms × days timeline. <span className="text-emerald-400 font-medium">Click an empty cell</span> to create a direct booking; <span className="text-emerald-400 font-medium">drag a manual bar</span> to move it.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -344,6 +373,17 @@ export function BookingCalendar() {
         </div>
       )}
 
+      {/* Quick-create modal — opened by clicking an empty cell */}
+      {quickCreate && (
+        <QuickCreateBookingModal
+          initialDate={quickCreate.date}
+          initialApartmentId={quickCreate.apartment_id}
+          initialApartmentName={quickCreate.apartment_name}
+          onClose={() => setQuickCreate(null)}
+          onCreated={() => setQuickCreate(null)}
+        />
+      )}
+
       {/* Timeline */}
       {view !== 'day' && (
       <div className="rounded-2xl border border-white/[0.06] overflow-x-auto"
@@ -371,10 +411,19 @@ export function BookingCalendar() {
             </div>
           </div>
 
-          {/* Unit rows */}
-          {unitRows.length === 0 ? (
-            <div className="p-12 text-center text-gray-600">No bookings to display</div>
-          ) : unitRows.map(([uid, udata]) => {
+          {/* Unit rows — pad with known-but-empty units so quick-create
+              has a target for rooms with no bookings in this window. */}
+          {(() => {
+            const allRows = [
+              ...unitRows,
+              ...units.filter(u => !unitRows.some(([id]) => id === u.id)).map(u => [u.id, { name: u.name, bookings: [] as any[] }] as [string, { name: string; bookings: any[] }]),
+            ]
+            return allRows.length === 0 ? (
+              <div className="p-12 text-center text-gray-600">
+                <p className="mb-2">No units found yet.</p>
+                <p className="text-xs">Sync from Smoobu in Settings → Integrations, or create your first booking by clicking a date below.</p>
+              </div>
+            ) : allRows.map(([uid, udata]) => {
             const vis = unitVisual(udata.name)
             const stats = uStats(udata.bookings)
             return (
@@ -414,16 +463,49 @@ export function BookingCalendar() {
                   const areaH = rowCount * ROW_H + (rowCount - 1) * ROW_GAP + PAD * 2
                   return (
                     <div className="flex-1 relative" style={{ minHeight: Math.max(56, areaH) }}>
-                      {/* Day cell backgrounds */}
+                      {/* Day cell backgrounds — click-to-create + drop-target.
+                          Bars sit on top with z-1, so clicks on occupied days
+                          go to the bar (Link) instead of triggering create. */}
                       <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                         {days.map(d => {
                           const dt = new Date(d), isWe = dt.getDay() === 0 || dt.getDay() === 6, isToday = d === today
-                          return <div key={d} className="border-r border-white/[0.02]"
-                            style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }} />
+                          const handleDrop = (e: React.DragEvent) => {
+                            e.preventDefault()
+                            if (!dragging) return
+                            if (dragging.booking_type !== 'manual') {
+                              toast.error('PMS-synced bookings must be moved in your PMS.')
+                              setDragging(null)
+                              return
+                            }
+                            const arrival = d
+                            const dep = new Date(arrival + 'T00:00:00')
+                            dep.setDate(dep.getDate() + dragging.nights)
+                            moveMut.mutate({
+                              id: dragging.id,
+                              arrival_date: arrival,
+                              departure_date: dep.toISOString().slice(0, 10),
+                              apartment_id: uid,
+                              apartment_name: udata.name,
+                            })
+                            setDragging(null)
+                          }
+                          return <button key={d}
+                            onClick={() => setQuickCreate({ date: d, apartment_id: uid, apartment_name: udata.name })}
+                            onDragOver={e => { if (dragging) e.preventDefault() }}
+                            onDrop={handleDrop}
+                            title={`New booking · ${udata.name} · ${d}`}
+                            className="border-r border-white/[0.02] cursor-pointer hover:bg-white/[0.025] transition-colors group"
+                            style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }}>
+                            <span className="opacity-0 group-hover:opacity-40 inline-block text-emerald-400 text-[10px]">+</span>
+                          </button>
                         })}
                       </div>
 
-                      {/* Booking bars — positioned absolutely within grid columns */}
+                      {/* Booking bars — positioned absolutely within grid
+                          columns. Manual (booking_type='manual') bars are
+                          draggable to move; PMS-synced bars are read-only
+                          here since edits would silently diverge from the
+                          source PMS. */}
                       {laid.map(({ booking: b, cols, row }) => {
                         const payStatus = b.payment_status || (Number(b.price_paid || 0) >= Number(b.price_total || 1) && Number(b.price_total) > 0 ? 'paid' : 'open')
                         const s = BAR_STYLE[payStatus] || DEFAULT_BAR
@@ -431,16 +513,26 @@ export function BookingCalendar() {
                         const widthPct = ((cols.end - cols.start) / colCount) * 100
                         const arrFmt = b.arrival_date ? new Date(b.arrival_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : ''
                         const depFmt = b.departure_date ? new Date(b.departure_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : ''
+                        const isManual = b.booking_type === 'manual'
+                        const nights = b.arrival_date && b.departure_date
+                          ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
+                          : 1
+                        const isDragging = dragging?.id === b.id
                         return (
                           <Link key={b.id} to={`/bookings/${b.id}`}
-                            className="absolute flex items-center px-2 rounded-lg text-[10px] font-bold truncate z-[1] transition-all hover:brightness-110 hover:-translate-y-px"
+                            draggable={isManual}
+                            onDragStart={() => setDragging({ id: b.id, nights, booking_type: b.booking_type })}
+                            onDragEnd={() => setDragging(null)}
+                            className={`absolute flex items-center px-2 rounded-lg text-[10px] font-bold truncate z-[1] transition-all hover:brightness-110 hover:-translate-y-px ${isManual ? 'cursor-grab active:cursor-grabbing' : ''}`}
                             style={{
                               left: `${leftPct}%`, width: `${widthPct}%`,
                               top: PAD + row * (ROW_H + ROW_GAP),
                               height: ROW_H, background: s.bg, border: `1px solid ${s.border}`, color: s.text,
                               boxShadow: `0 4px 10px rgba(0,0,0,0.2)`,
+                              opacity: isDragging ? 0.4 : 1,
                             }}
-                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n${money(b.price_total)}` : ''}`}>
+                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n${money(b.price_total)}` : ''}${isManual ? '\n(drag to move)' : ''}`}>
+                            {isManual && <span className="text-[8px] opacity-70 mr-1">⋮⋮</span>}
                             {shortGuest(b.guest_name)}
                             {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">{money(b.price_total)}</span> : null}
                           </Link>
@@ -451,7 +543,8 @@ export function BookingCalendar() {
                 })()}
               </div>
             )
-          })}
+          })
+          })()}
         </div>
       </div>
       )}

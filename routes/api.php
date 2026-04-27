@@ -521,6 +521,8 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/sync-apartments',       [BookingAdminController::class, 'syncApartments']);
             Route::post('bookings/bulk',                  [BookingAdminController::class, 'bulk']);
             Route::post('bookings/export',                [BookingAdminController::class, 'export']);
+            Route::post('bookings/manual',                [BookingAdminController::class, 'manualCreate']);
+            Route::patch('bookings/{id}/move',            [BookingAdminController::class, 'move']);
             Route::get('bookings',                        [BookingAdminController::class, 'index']);
             Route::get('bookings/{id}',                   [BookingAdminController::class, 'show']);
             Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);

@@ -426,7 +426,7 @@ class BookingAdminController extends Controller
                   });
             })
             ->where('booking_state', '!=', 'cancelled')
-            ->get(['id', 'reservation_id', 'guest_name', 'apartment_id', 'apartment_name',
+            ->get(['id', 'reservation_id', 'booking_type', 'guest_name', 'apartment_id', 'apartment_name',
                    'arrival_date', 'departure_date', 'adults', 'children',
                    'internal_status', 'booking_state', 'payment_status', 'price_total', 'price_paid']);
 
@@ -613,6 +613,134 @@ class BookingAdminController extends Controller
             });
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * POST /v1/admin/bookings/manual — create a direct booking from the
+     * timeline (walk-in, phone reservation, friends-and-family).
+     *
+     * Tagged booking_type='manual' so the move endpoint can distinguish it
+     * from PMS-mirrored rows (which must be edited in the source PMS to
+     * round-trip cleanly). reservation_id is a synthetic 'manual-...' id
+     * so the unique-with-org constraint is satisfied without colliding
+     * with any PMS sequence.
+     *
+     * Conflict check: refuses if an overlapping non-cancelled booking
+     * exists in the same room. Pass `force=true` to override (used when
+     * staff intentionally double-book — e.g. shared sauna slot).
+     */
+    public function manualCreate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'guest_name'     => 'required|string|max:180',
+            'guest_email'    => 'nullable|email|max:180',
+            'guest_phone'    => 'nullable|string|max:40',
+            'apartment_id'   => 'required|string|max:20',
+            'apartment_name' => 'nullable|string|max:180',
+            'arrival_date'   => 'required|date',
+            'departure_date' => 'required|date|after:arrival_date',
+            'adults'         => 'nullable|integer|min:1|max:50',
+            'children'       => 'nullable|integer|min:0|max:50',
+            'price_total'    => 'nullable|numeric|min:0',
+            'notice'         => 'nullable|string|max:2000',
+            'force'          => 'nullable|boolean',
+        ]);
+
+        $conflict = BookingMirror::where('apartment_id', $data['apartment_id'])
+            ->where('booking_state', '!=', 'cancelled')
+            ->where('arrival_date', '<', $data['departure_date'])
+            ->where('departure_date', '>', $data['arrival_date'])
+            ->exists();
+        if ($conflict && empty($data['force'])) {
+            return response()->json([
+                'conflict' => true,
+                'message'  => 'Another booking overlaps these dates in this room. Resubmit with force=true to create anyway.',
+            ], 409);
+        }
+
+        $reservation_id = 'manual-' . \Illuminate\Support\Str::random(16);
+
+        $booking = BookingMirror::create([
+            'reservation_id'    => $reservation_id,
+            'booking_reference' => $reservation_id,
+            'booking_type'      => 'manual',
+            'booking_state'     => 'confirmed',
+            'apartment_id'      => $data['apartment_id'],
+            'apartment_name'    => $data['apartment_name'] ?? null,
+            'channel_name'      => 'Direct',
+            'guest_name'        => $data['guest_name'],
+            'guest_email'       => $data['guest_email'] ?? null,
+            'guest_phone'       => $data['guest_phone'] ?? null,
+            'arrival_date'      => $data['arrival_date'],
+            'departure_date'    => $data['departure_date'],
+            'adults'            => $data['adults']   ?? 1,
+            'children'          => $data['children'] ?? 0,
+            'price_total'       => $data['price_total'] ?? null,
+            'price_paid'        => 0,
+            'payment_status'    => 'open',
+            'internal_status'   => 'new',
+            'notice'            => $data['notice'] ?? null,
+            'source_created_at' => now(),
+        ]);
+
+        try {
+            AuditLog::create([
+                'organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                'user_id'         => $request->user()?->id,
+                'action'          => 'booking.manual_create',
+                'description'     => "Manual booking: {$data['guest_name']} · {$data['arrival_date']} → {$data['departure_date']} · " . ($data['apartment_name'] ?? $data['apartment_id']),
+            ]);
+        } catch (\Throwable) {}
+
+        return response()->json($booking, 201);
+    }
+
+    /**
+     * PATCH /v1/admin/bookings/{id}/move — change dates and/or room from the
+     * timeline. Restricted to manual bookings; PMS-synced rows are read-only
+     * here since edits would silently diverge from the source PMS.
+     */
+    public function move(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'arrival_date'   => 'required|date',
+            'departure_date' => 'required|date|after:arrival_date',
+            'apartment_id'   => 'nullable|string|max:20',
+            'apartment_name' => 'nullable|string|max:180',
+            'force'          => 'nullable|boolean',
+        ]);
+
+        $booking = BookingMirror::lockForUpdate()->findOrFail($id);
+
+        if ($booking->booking_type !== 'manual') {
+            return response()->json([
+                'message' => 'Only manual bookings can be moved from the timeline. PMS-synced bookings must be edited in your PMS to keep the two systems in sync.',
+            ], 422);
+        }
+
+        $apartmentId = $data['apartment_id'] ?? $booking->apartment_id;
+
+        $conflict = BookingMirror::where('id', '!=', $id)
+            ->where('apartment_id', $apartmentId)
+            ->where('booking_state', '!=', 'cancelled')
+            ->where('arrival_date', '<', $data['departure_date'])
+            ->where('departure_date', '>', $data['arrival_date'])
+            ->exists();
+        if ($conflict && empty($data['force'])) {
+            return response()->json([
+                'conflict' => true,
+                'message'  => 'Move would overlap another booking in this room. Resubmit with force=true to override.',
+            ], 409);
+        }
+
+        $booking->update([
+            'arrival_date'   => $data['arrival_date'],
+            'departure_date' => $data['departure_date'],
+            'apartment_id'   => $apartmentId,
+            'apartment_name' => $data['apartment_name'] ?? $booking->apartment_name,
+        ]);
+
+        return response()->json($booking->fresh());
     }
 
     /** POST /v1/admin/bookings/sync-apartments — fetch apartments from Smoobu and save as booking_units. */
