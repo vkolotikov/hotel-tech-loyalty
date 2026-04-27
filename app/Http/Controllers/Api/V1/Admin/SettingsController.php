@@ -461,6 +461,55 @@ class SettingsController extends Controller
         return response()->json(['message' => 'Logo uploaded', 'url' => $url]);
     }
 
+    /**
+     * GET /v1/admin/integrations/sync-status — per-integration sync health.
+     *
+     * Today only Smoobu sync writes to the audit log; the response shape is
+     * keyed by integration id so other PMSes can plug in without a frontend
+     * rewrite. Returning relative ("2h ago") + ISO timestamps so the UI can
+     * use either without re-formatting.
+     */
+    public function syncStatus(): JsonResponse
+    {
+        $smoobuLog = AuditLog::where('action', 'like', 'booking.sync%')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $recentHistory = AuditLog::where('action', 'like', 'booking.sync%')
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get(['id', 'action', 'description', 'created_at'])
+            ->map(fn ($a) => [
+                'id'           => $a->id,
+                'action'       => $a->action,
+                'description'  => $a->description,
+                'created_at'   => $a->created_at?->toIso8601String(),
+                'relative'     => $a->created_at?->diffForHumans(),
+                'is_error'     => str_contains((string) $a->description, 'failed') && !str_contains((string) $a->description, '0 failed'),
+            ]);
+
+        // Quick parse of the most recent description for the headline counts —
+        // the message is "PMS sync: 47 synced, 0 failed", regex pulls both
+        // numbers when present.
+        $synced = null; $errors = null;
+        if ($smoobuLog && preg_match('/(\d+)\s+synced.*?(\d+)\s+failed/i', (string) $smoobuLog->description, $m)) {
+            $synced = (int) $m[1];
+            $errors = (int) $m[2];
+        }
+
+        return response()->json([
+            'smoobu' => [
+                'last_sync_at'       => $smoobuLog?->created_at?->toIso8601String(),
+                'last_sync_relative' => $smoobuLog?->created_at?->diffForHumans(),
+                'last_message'       => $smoobuLog?->description,
+                'last_synced_count'  => $synced,
+                'last_errors_count'  => $errors,
+                'recent_history'     => $recentHistory,
+                'mirrored_count'     => \App\Models\BookingMirror::count(),
+            ],
+        ]);
+    }
+
     /** Test an integration connection (manager+ only). */
     public function testIntegration(Request $request): JsonResponse
     {

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ViewToggle } from '../components/ViewToggle'
+import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -232,6 +233,9 @@ export function Bookings() {
   const [page, setPage] = useState(1)
   const [syncing, setSyncing] = useState(false)
   const [period, setPeriod] = useState('month')
+  // Daily-ops drilldown: clicking a tile in the DailyOpsBar narrows the
+  // list below to that segment. Empty string = no daily filter applied.
+  const [dailyFocus, setDailyFocus] = useState<'' | 'arrivals' | 'in_house' | 'departures'>('')
 
   // Period → from/to date range. Same shape the backend dashboard uses,
   // mirrored here so the Reservations table stays in sync with the
@@ -269,6 +273,15 @@ export function Bookings() {
     queryKey: ['bookings-dashboard', dashParams],
     queryFn: () => api.get('/v1/admin/bookings/dashboard', { params: dashParams }).then(r => r.data),
     staleTime: 60_000,
+  })
+
+  // Front-of-house "today" snapshot — refreshes every 2 min so reception
+  // sees check-in / check-out updates without a manual reload.
+  const { data: today } = useQuery({
+    queryKey: ['bookings-today'],
+    queryFn: () => api.get('/v1/admin/bookings/today').then(r => r.data),
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   })
 
   const bookings = data?.data ?? []
@@ -343,6 +356,66 @@ export function Bookings() {
         { to: '/bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
         { to: '/bookings/calendar', label: 'Timeline', icon: <CalendarRange size={12} className="-ml-0.5" /> },
       ]} />
+
+      {/* Today — front-of-house snapshot. Distinct from the period KPIs
+          below: this is the now-shift view of who's arriving / staying /
+          leaving, plus a tomorrow preview so staff can pre-stage rooms. */}
+      {today && (
+        <DailyOpsBar
+          title="Today"
+          hint={today.date}
+          tiles={[
+            { key: 'arrivals',      label: 'Arrivals Today',  value: today.arrivals_today?.count ?? 0,   sub: today.arrivals_today?.count ? 'Click to view' : 'No check-ins',   tone: 'emerald', icon: <LogIn size={12} />,        active: dailyFocus === 'arrivals',   onClick: () => setDailyFocus(dailyFocus === 'arrivals' ? '' : 'arrivals') },
+            { key: 'in_house',      label: 'In-House',        value: today.in_house?.count ?? 0,         sub: today.in_house?.count ? 'Currently staying' : 'No guests on-site', tone: 'blue',    icon: <Hotel size={12} />,        active: dailyFocus === 'in_house',   onClick: () => setDailyFocus(dailyFocus === 'in_house' ? '' : 'in_house') },
+            { key: 'departures',    label: 'Departures Today',value: today.departures_today?.count ?? 0, sub: today.departures_today?.count ? 'Click to view' : 'No check-outs', tone: 'orange',  icon: <LogOut size={12} />,       active: dailyFocus === 'departures', onClick: () => setDailyFocus(dailyFocus === 'departures' ? '' : 'departures') },
+            { key: 'tomorrow',      label: 'Tomorrow',        value: today.arrivals_tomorrow_count ?? 0, sub: 'Arrivals — pre-stage rooms',                                       tone: 'amber',   icon: <CalendarPlus size={12} /> },
+          ]}
+        />
+      )}
+
+      {/* Drilldown panel — clicking a tile expands the matching guest list.
+          Inline rather than re-filtering the table below because the lists
+          are short (≤25 each) and reception wants them at a glance. */}
+      {today && dailyFocus && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'rgba(18,24,22,0.96)' }}>
+          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              {dailyFocus === 'arrivals' ? 'Arrivals Today' : dailyFocus === 'in_house' ? 'In-House Guests' : 'Departures Today'}
+            </span>
+            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {(dailyFocus === 'arrivals' ? today.arrivals_today?.guests
+              : dailyFocus === 'in_house' ? today.in_house?.guests
+              : today.departures_today?.guests)?.map((g: any) => (
+              <Link key={g.id} to={`/bookings/${g.id}`}
+                className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-white font-semibold truncate">{g.guest_name || '—'}</span>
+                  <span className="text-gray-500 text-xs truncate">{g.apartment_name || '—'}</span>
+                  {g.adults != null && (
+                    <span className="text-gray-600 text-xs">· {g.adults}A{g.children ? ` ${g.children}C` : ''}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <span>{fmtDateShort(g.arrival_date)} → {fmtDateShort(g.departure_date)}</span>
+                  {g.payment_status && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${PAY_PILL[derivePaymentStatus(g)] || 'bg-gray-500/10 text-gray-400'}`}>
+                      {payLabel(derivePaymentStatus(g))}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+            {!((dailyFocus === 'arrivals' ? today.arrivals_today?.guests
+                : dailyFocus === 'in_house' ? today.in_house?.guests
+                : today.departures_today?.guests)?.length) && (
+              <div className="px-4 py-6 text-center text-xs text-gray-600">No bookings in this segment.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* PMS deactivated banner */}
       {dashboard?.syncHealth && dashboard.syncHealth.pmsEnabled === false && (

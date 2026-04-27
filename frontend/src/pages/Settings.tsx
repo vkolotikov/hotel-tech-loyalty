@@ -236,6 +236,8 @@ export function Settings() {
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [syncingNow, setSyncingNow] = useState<string | null>(null)
+  const [showSyncHistory, setShowSyncHistory] = useState<Set<string>>(new Set())
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
@@ -249,6 +251,14 @@ export function Settings() {
   const { data: settingsData, isLoading: settingsLoading } = useQuery({
     queryKey: ['admin-settings'],
     queryFn: () => api.get('/v1/admin/settings').then(r => r.data),
+  })
+
+  // Per-integration sync status — last sync timestamp + recent history.
+  // Keyed by integration id (currently only smoobu writes audit entries).
+  const { data: syncStatus, refetch: refetchSync } = useQuery<any>({
+    queryKey: ['integration-sync-status'],
+    queryFn: () => api.get('/v1/admin/settings/sync-status').then(r => r.data),
+    staleTime: 30_000,
   })
 
   /* ── Mutations ───────────────────────────────────────────────────────── */
@@ -1324,6 +1334,78 @@ export function Settings() {
                     className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40 text-xs'}>
                     {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test Connection</>}
                   </button>
+                </div>
+              )}
+              {/* Sync health — surfaced for integrations that have a sync
+                  pipeline (currently Smoobu). Last sync time + counts +
+                  collapsible history mean staff can spot silent failures
+                  instead of trusting the test connection alone. */}
+              {section.id === 'smoobu' && hasAnyValue && isEnabled && syncStatus?.smoobu && (
+                <div className="mt-3 mb-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Clock size={12} />
+                        <span>Last sync:</span>
+                        <span className="text-white font-semibold">
+                          {syncStatus.smoobu.last_sync_relative ?? 'Never synced'}
+                        </span>
+                      </div>
+                      {syncStatus.smoobu.last_synced_count != null && (
+                        <span className="text-gray-500">
+                          · <span className="text-emerald-400 font-semibold tabular-nums">{syncStatus.smoobu.last_synced_count}</span> synced
+                          {syncStatus.smoobu.last_errors_count > 0 && (
+                            <>, <span className="text-red-400 font-semibold tabular-nums">{syncStatus.smoobu.last_errors_count}</span> failed</>
+                          )}
+                        </span>
+                      )}
+                      <span className="text-gray-600">· <span className="tabular-nums">{syncStatus.smoobu.mirrored_count}</span> total mirrored</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setShowSyncHistory(prev => {
+                          const next = new Set(prev)
+                          next.has(section.id) ? next.delete(section.id) : next.add(section.id)
+                          return next
+                        })}
+                        className="text-[11px] text-gray-500 hover:text-white">
+                        {showSyncHistory.has(section.id) ? 'Hide history' : 'View history'}
+                      </button>
+                      <button onClick={async () => {
+                          setSyncingNow(section.id)
+                          try {
+                            const { data: res } = await api.post('/v1/admin/bookings/sync')
+                            toast.success(res.message || 'Sync complete')
+                            refetchSync()
+                            qc.invalidateQueries({ queryKey: ['bookings-engine'] })
+                            qc.invalidateQueries({ queryKey: ['bookings-today'] })
+                          } catch {
+                            toast.error('Sync failed')
+                          } finally { setSyncingNow(null) }
+                        }}
+                        disabled={syncingNow === section.id}
+                        className={btnPrimary + ' bg-blue-500/15 text-blue-400 border border-blue-500/20 hover:bg-blue-500/25 disabled:opacity-40 text-xs'}>
+                        {syncingNow === section.id
+                          ? <><RefreshCw size={12} className="animate-spin" /> Syncing...</>
+                          : <><RefreshCw size={12} /> Sync Now</>}
+                      </button>
+                    </div>
+                  </div>
+                  {showSyncHistory.has(section.id) && (
+                    <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto">
+                      {syncStatus.smoobu.recent_history.length === 0 && (
+                        <div className="text-[11px] text-gray-600 text-center py-2">No sync history yet.</div>
+                      )}
+                      {syncStatus.smoobu.recent_history.map((h: any) => (
+                        <div key={h.id} className="flex items-start gap-2 text-[11px]">
+                          <span className={`mt-0.5 inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${h.is_error ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className={h.is_error ? 'text-red-300' : 'text-gray-300'}>{h.description}</div>
+                            <div className="text-gray-600">{h.relative} · {h.action}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {items.map((s: any) => renderSettingRow(s))}

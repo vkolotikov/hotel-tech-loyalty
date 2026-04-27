@@ -17,6 +17,48 @@ use Illuminate\Support\Facades\DB;
 
 class BookingAdminController extends Controller
 {
+    /**
+     * GET /v1/admin/bookings/today — front-desk daily operations summary.
+     *
+     * Distinct from `dashboard` which reports on a period window (week/month/year):
+     * this returns the *now* numbers reception cares about — who's arriving,
+     * who's still in the building, who's leaving — plus a tomorrow preview so
+     * staff can pre-stage rooms.
+     */
+    public function today(): JsonResponse
+    {
+        $today    = now()->toDateString();
+        $tomorrow = now()->addDay()->toDateString();
+
+        $live = fn () => BookingMirror::where('booking_state', '!=', 'cancelled');
+
+        $arrivalsToday    = $live()->where('arrival_date', $today);
+        $departuresToday  = $live()->where('departure_date', $today);
+        $inHouse          = $live()->where('arrival_date', '<=', $today)->where('departure_date', '>', $today);
+        $arrivalsTomorrow = $live()->where('arrival_date', $tomorrow);
+
+        $cols = ['id', 'guest_name', 'apartment_name', 'adults', 'children',
+                 'arrival_date', 'departure_date', 'internal_status',
+                 'payment_status', 'price_total', 'price_paid'];
+
+        return response()->json([
+            'date' => $today,
+            'arrivals_today'   => [
+                'count'  => (clone $arrivalsToday)->count(),
+                'guests' => (clone $arrivalsToday)->orderBy('check_in_time')->limit(25)->get($cols),
+            ],
+            'in_house' => [
+                'count'  => (clone $inHouse)->count(),
+                'guests' => (clone $inHouse)->orderBy('departure_date')->limit(25)->get($cols),
+            ],
+            'departures_today' => [
+                'count'  => (clone $departuresToday)->count(),
+                'guests' => (clone $departuresToday)->orderBy('check_out_time')->limit(25)->get($cols),
+            ],
+            'arrivals_tomorrow_count' => $arrivalsTomorrow->count(),
+        ]);
+    }
+
     /** GET /v1/admin/bookings/dashboard — rich booking KPIs & analytics. */
     public function dashboard(Request $request): JsonResponse
     {

@@ -108,6 +108,14 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/analytics/booking-metrics?months=12').then(r => r.data),
   })
 
+  // Hotel ops KPIs (occupancy, ADR, RevPAR) — the standard hospitality
+  // revenue-management triad. Computed off PMS booking_mirror, prorated
+  // for stays that straddle the window.
+  const { data: hotelOps } = useQuery<any>({
+    queryKey: ['analytics-hotel-ops', bookingDays],
+    queryFn: () => api.get(`/v1/admin/analytics/hotel-ops?days=${bookingDays}`).then(r => r.data),
+  })
+
   const { data: expiryForecast } = useQuery({
     queryKey: ['analytics-expiry-forecast'],
     queryFn: () => api.get('/v1/admin/analytics/expiry-forecast?months=6').then(r => r.data),
@@ -646,6 +654,45 @@ export function Analytics() {
       {/* ════════════════ BOOKINGS TAB ════════════════ */}
       {activeTab === 'bookings' && (
         <>
+          {/* Hotel ops triad — the standard hospitality revenue-management
+              metrics. Pinned at the top of the bookings tab because these
+              are what GMs and revenue managers open the dashboard for.
+              Reflects the same date range selector as the trend chart below. */}
+          {hotelOps && hotelOps.total_rooms > 0 && (
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                <div className="inline-flex p-2 rounded-lg bg-emerald-500/15 text-emerald-400 mb-3"><Hotel size={18} /></div>
+                <p className="text-2xl font-bold text-white tabular-nums">{hotelOps.occupancy_pct}%</p>
+                <p className="text-xs text-t-secondary mt-0.5">Occupancy</p>
+                <p className="text-[10px] text-gray-600 mt-1">{hotelOps.occupied_room_nights} / {hotelOps.available_room_nights} room-nights</p>
+              </div>
+              <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                <div className="inline-flex p-2 rounded-lg bg-blue-500/15 text-blue-400 mb-3"><DollarSign size={18} /></div>
+                <p className="text-2xl font-bold text-white tabular-nums">€{Math.round(hotelOps.adr).toLocaleString()}</p>
+                <p className="text-xs text-t-secondary mt-0.5">ADR <span className="text-gray-600 font-normal">— Avg Daily Rate</span></p>
+                <p className="text-[10px] text-gray-600 mt-1">Revenue per occupied night</p>
+              </div>
+              <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                <div className="inline-flex p-2 rounded-lg bg-purple-500/15 text-purple-400 mb-3"><Zap size={18} /></div>
+                <p className="text-2xl font-bold text-white tabular-nums">€{Math.round(hotelOps.revpar).toLocaleString()}</p>
+                <p className="text-xs text-t-secondary mt-0.5">RevPAR <span className="text-gray-600 font-normal">— Revenue per Available Room</span></p>
+                <p className="text-[10px] text-gray-600 mt-1">Occupancy × ADR — combined</p>
+              </div>
+              <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                <div className="inline-flex p-2 rounded-lg bg-amber-500/15 text-amber-400 mb-3"><DollarSign size={18} /></div>
+                <p className="text-2xl font-bold text-white tabular-nums">€{Math.round(hotelOps.revenue).toLocaleString()}</p>
+                <p className="text-xs text-t-secondary mt-0.5">Window Revenue</p>
+                <p className="text-[10px] text-gray-600 mt-1">{hotelOps.window_from} → {hotelOps.window_to}</p>
+              </div>
+            </div>
+          )}
+          {hotelOps && hotelOps.total_rooms === 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200">
+              <AlertTriangle size={14} className="inline -mt-0.5 mr-2" />
+              Configure your room inventory in <strong>Settings → Booking</strong> (or sync apartments from Smoobu) to see occupancy, ADR and RevPAR.
+            </div>
+          )}
+
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Revenue (Month)', value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—', icon: <DollarSign size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },

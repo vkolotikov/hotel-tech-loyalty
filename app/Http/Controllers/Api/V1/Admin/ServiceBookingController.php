@@ -17,6 +17,53 @@ use Illuminate\Support\Facades\DB;
 
 class ServiceBookingController extends Controller
 {
+    /**
+     * GET /v1/admin/service-bookings/today — front-desk "happening now" summary.
+     *
+     * Distinct from `dashboard` (period totals): this is the slot-by-slot view
+     * of today's appointments + the next-24h pipeline + a recent no-show count
+     * so the spa/wellness desk can spot a degrading attendance rate fast.
+     */
+    public function today(): JsonResponse
+    {
+        $start    = now()->startOfDay();
+        $end      = now()->endOfDay();
+        $next24h  = now()->copy()->addDay();
+
+        $todayQuery = ServiceBooking::with(['service:id,name', 'master:id,name'])
+            ->whereBetween('start_at', [$start, $end])
+            ->whereNotIn('status', ['cancelled']);
+
+        $todayList = (clone $todayQuery)->orderBy('start_at')
+            ->get(['id', 'booking_reference', 'customer_name', 'service_id',
+                   'service_master_id', 'start_at', 'end_at', 'duration_minutes',
+                   'status', 'payment_status', 'total_amount']);
+
+        $todayRevenue = $todayList->whereNotIn('status', ['no_show'])->sum('total_amount');
+
+        $next24hCount = ServiceBooking::whereBetween('start_at', [now(), $next24h])
+            ->whereNotIn('status', ['cancelled'])
+            ->count();
+
+        $pendingNext24h = ServiceBooking::where('status', 'pending')
+            ->whereBetween('start_at', [now(), $next24h])
+            ->count();
+
+        $noShows7d = ServiceBooking::where('status', 'no_show')
+            ->where('start_at', '>=', now()->subDays(7))
+            ->count();
+
+        return response()->json([
+            'date'                => $start->toDateString(),
+            'today_count'         => $todayList->count(),
+            'today_revenue'       => round($todayRevenue, 2),
+            'today_bookings'      => $todayList,
+            'next_24h_count'      => $next24hCount,
+            'pending_next_24h'    => $pendingNext24h,
+            'recent_no_shows_7d'  => $noShows7d,
+        ]);
+    }
+
     /** GET /v1/admin/service-bookings/dashboard — KPIs + analytics for service bookings. */
     public function dashboard(Request $request): JsonResponse
     {

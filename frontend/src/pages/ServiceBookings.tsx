@@ -5,8 +5,10 @@ import toast from 'react-hot-toast'
 import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
   CheckCircle2, AlertCircle, ChevronDown, List as ListIcon,
+  CalendarClock, Clock, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { ViewToggle } from '../components/ViewToggle'
+import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
 
 interface ServiceBooking {
@@ -92,6 +94,7 @@ export default function ServiceBookings() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [active, setActive] = useState<ServiceBooking | null>(null)
+  const [showTodayList, setShowTodayList] = useState(false)
 
   // Services + masters for the filter dropdowns. Cached for 5 min — these
   // change rarely and refetching on every filter render is wasted bandwidth.
@@ -150,6 +153,15 @@ export default function ServiceBookings() {
     queryFn: () => api.get('/v1/admin/service-bookings/dashboard').then(r => r.data),
   })
 
+  // "Now" snapshot for the spa/wellness desk — refresh every 2 min so
+  // a no-show or slot completion shows up without a manual reload.
+  const { data: todaySnap } = useQuery<any>({
+    queryKey: ['service-bookings-today'],
+    queryFn: () => api.get('/v1/admin/service-bookings/today').then(r => r.data),
+    staleTime: 120_000,
+    refetchInterval: 120_000,
+  })
+
   const updateStatusMut = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       api.patch(`/v1/admin/service-bookings/${id}/status`, { status }),
@@ -183,6 +195,54 @@ export default function ServiceBookings() {
         { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
         { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
       ]} />
+
+      {/* Today — the spa/wellness desk shift view. The "Today" tile is
+          click-to-expand for the slot-by-slot list; the no-show counter
+          flags a degrading attendance trend before it becomes a problem. */}
+      {todaySnap && (
+        <DailyOpsBar
+          title="Today"
+          hint={todaySnap.date}
+          tiles={[
+            { key: 'today',     label: 'Today',         value: todaySnap.today_count ?? 0,        sub: todaySnap.today_revenue ? `${money(todaySnap.today_revenue)} expected` : 'No bookings', tone: 'emerald', icon: <Sparkles size={12} />,     active: showTodayList, onClick: () => setShowTodayList(s => !s) },
+            { key: 'pending',   label: 'Pending Today', value: todaySnap.pending_next_24h ?? 0,   sub: 'Awaiting confirmation',                                                                  tone: 'amber',   icon: <Clock size={12} /> },
+            { key: 'next24h',   label: 'Next 24 h',     value: todaySnap.next_24h_count ?? 0,     sub: 'Confirmed + pending',                                                                    tone: 'blue',    icon: <CalendarClock size={12} /> },
+            { key: 'noshows',   label: 'No-shows (7d)', value: todaySnap.recent_no_shows_7d ?? 0, sub: 'Watch the trend',                                                                        tone: (todaySnap.recent_no_shows_7d ?? 0) > 2 ? 'red' : 'gray', icon: <AlertTriangle size={12} /> },
+          ]}
+        />
+      )}
+
+      {todaySnap && showTodayList && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          style={{ background: 'rgba(18,24,22,0.96)' }}>
+          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Today's Schedule</span>
+            <button onClick={() => setShowTodayList(false)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {(todaySnap.today_bookings ?? []).map((b: any) => (
+              <button key={b.id} onClick={() => setActive(b)}
+                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm text-left">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-emerald-300 font-bold tabular-nums">
+                    {new Date(b.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="text-white font-semibold truncate">{b.customer_name}</span>
+                  <span className="text-gray-500 text-xs truncate">
+                    {b.service?.name || 'Service'}{b.master?.name ? ` · ${b.master.name}` : ''}
+                  </span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${STATUS_COLOR[b.status] || 'bg-gray-500/15 text-gray-400'}`}>
+                  {b.status.replace('_', ' ')}
+                </span>
+              </button>
+            ))}
+            {!todaySnap.today_bookings?.length && (
+              <div className="px-4 py-6 text-center text-xs text-gray-600">No bookings scheduled for today.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* KPI strip */}
       {dashboard && (

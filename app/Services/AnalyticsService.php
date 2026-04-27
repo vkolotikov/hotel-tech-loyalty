@@ -538,6 +538,86 @@ class AnalyticsService
     }
 
     /**
+     * Hotel ops KPIs over a rolling window — occupancy %, ADR, RevPAR.
+     *
+     * These are the standard hospitality metrics that revenue managers care
+     * about, computed from the PMS booking_mirror table (the actual
+     * operational data) rather than the CRM Booking model used by the
+     * existing analytics — those measure stays + spend, this measures
+     * room utilisation and revenue per available room-night.
+     *
+     * Inventory denominator: prefers the configured `booking_units` setting
+     * (the catalogue admins maintain in Settings → Booking) and falls back
+     * to count(distinct apartment_id) seen in mirror data so fresh installs
+     * still get a sensible number before the catalogue is filled in.
+     *
+     * Revenue is pro-rated per booking by (nights-in-window / total-nights)
+     * — a 7-night stay that straddles the window boundary contributes only
+     * its overlap, not the full price.
+     */
+    public function getHotelOpsKpis(int $days = 30): array
+    {
+        return Cache::remember("analytics:hotel_ops:{$days}", self::TTL_SHORT, function () use ($days) {
+            $winStart = now()->subDays($days - 1)->startOfDay();
+            $winEnd   = now()->startOfDay(); // last counted *night*
+
+            // Inventory: configured units > distinct apartments seen in mirror
+            $unitsRaw = \App\Models\HotelSetting::getValue('booking_units');
+            if (is_string($unitsRaw)) $unitsRaw = json_decode($unitsRaw, true);
+            $totalRooms = is_array($unitsRaw) ? count($unitsRaw) : 0;
+            if ($totalRooms === 0) {
+                $totalRooms = (int) \App\Models\BookingMirror::whereNotNull('apartment_id')
+                    ->distinct('apartment_id')->count('apartment_id');
+            }
+
+            $availableNights = max(0, $totalRooms * ($winStart->diffInDays($winEnd) + 1));
+
+            // Bookings whose stay overlaps the window. departure_date is the
+            // checkout day (guest does NOT sleep that night), so the overlap
+            // condition uses strict-greater-than for departure_date.
+            $bookings = \App\Models\BookingMirror::where('booking_state', '!=', 'cancelled')
+                ->whereNotNull('arrival_date')->whereNotNull('departure_date')
+                ->where('arrival_date', '<=', $winEnd->toDateString())
+                ->where('departure_date', '>', $winStart->toDateString())
+                ->get(['arrival_date', 'departure_date', 'price_total']);
+
+            $occupiedNights = 0;
+            $revenue = 0.0;
+            foreach ($bookings as $b) {
+                $arr = \Carbon\Carbon::parse($b->arrival_date);
+                $dep = \Carbon\Carbon::parse($b->departure_date);
+                $totalNights = $arr->diffInDays($dep);
+                if ($totalNights <= 0) continue; // same-day, skip
+
+                $effStart   = $arr->greaterThan($winStart) ? $arr : $winStart;
+                $effEndExcl = $dep->lessThan($winEnd->copy()->addDay()) ? $dep : $winEnd->copy()->addDay();
+                $nightsInWin = $effStart->diffInDays($effEndExcl);
+                if ($nightsInWin <= 0) continue;
+
+                $occupiedNights += $nightsInWin;
+                $revenue        += ((float) ($b->price_total ?? 0)) * ($nightsInWin / $totalNights);
+            }
+
+            $occupancy = $availableNights > 0 ? ($occupiedNights / $availableNights) * 100 : 0.0;
+            $adr       = $occupiedNights > 0  ? $revenue / $occupiedNights : 0.0;
+            $revpar    = $availableNights > 0 ? $revenue / $availableNights : 0.0;
+
+            return [
+                'period_days'           => $days,
+                'window_from'           => $winStart->toDateString(),
+                'window_to'             => $winEnd->toDateString(),
+                'total_rooms'           => $totalRooms,
+                'occupied_room_nights'  => $occupiedNights,
+                'available_room_nights' => $availableNights,
+                'occupancy_pct'         => round($occupancy, 1),
+                'adr'                   => round($adr, 2),
+                'revpar'                => round($revpar, 2),
+                'revenue'               => round($revenue, 2),
+            ];
+        });
+    }
+
+    /**
      * Bust dashboard-related caches. Call after points/member/booking changes.
      */
     public static function clearDashboardCache(): void

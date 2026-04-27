@@ -72,6 +72,12 @@ class AnalyticsController extends Controller
         return response()->json($this->analytics->getBookingMetrics($request->get('months', 12)));
     }
 
+    /** GET /v1/admin/analytics/hotel-ops?days=N — occupancy/ADR/RevPAR over a window. */
+    public function hotelOps(Request $request): JsonResponse
+    {
+        return response()->json($this->analytics->getHotelOpsKpis($request->get('days', 30)));
+    }
+
     public function expiryForecast(Request $request): JsonResponse
     {
         return response()->json($this->analytics->getExpiryForecast($request->get('months', 6)));

@@ -302,6 +302,7 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/points-distribution',  [AnalyticsController::class, 'pointsDistribution']);
             Route::get('analytics/redemption-trend',     [AnalyticsController::class, 'redemptionTrend']);
             Route::get('analytics/booking-metrics',      [AnalyticsController::class, 'bookingMetrics']);
+            Route::get('analytics/hotel-ops',            [AnalyticsController::class, 'hotelOps']);
             Route::get('analytics/expiry-forecast',      [AnalyticsController::class, 'expiryForecast']);
             Route::get('analytics/crm-trends',           [AnalyticsController::class, 'crmTrends']);
             Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
@@ -354,6 +355,7 @@ Route::prefix('v1')->group(function () {
             Route::put('settings',                        [SettingsController::class, 'update']);
             Route::post('settings/logo',                  [SettingsController::class, 'uploadLogo']);
             Route::post('settings/test-integration',      [SettingsController::class, 'testIntegration']);
+            Route::get('settings/sync-status',            [SettingsController::class, 'syncStatus']);
 
             // ─── Chatbot Analytics ──────────────────────────────────────────
             Route::get('chatbot/analytics',                   [\App\Http\Controllers\Api\V1\Admin\ChatbotAnalyticsController::class, 'index']);
@@ -510,6 +512,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('venues/bookings/{venueBooking}', [VenueController::class, 'destroyBooking']);
 
             // ─── Booking Engine (Admin) ──────────────────────────────────────
+            Route::get('bookings/today',                  [BookingAdminController::class, 'today']);
             Route::get('bookings/dashboard',              [BookingAdminController::class, 'dashboard']);
             Route::get('bookings/calendar',               [BookingAdminController::class, 'calendar']);
             Route::get('bookings/submissions',            [BookingAdminController::class, 'submissions']);
@@ -543,6 +546,7 @@ Route::prefix('v1')->group(function () {
 
             Route::apiResource('service-extras',          ServiceExtraController::class);
 
+            Route::get('service-bookings/today',          [ServiceBookingController::class, 'today']);
             Route::get('service-bookings/dashboard',      [ServiceBookingController::class, 'dashboard']);
             Route::get('service-bookings/calendar',       [ServiceBookingController::class, 'calendar']);
             Route::get('service-bookings/availability',   [ServiceBookingController::class, 'availability']);
