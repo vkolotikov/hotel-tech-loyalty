@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info, CheckCircle, AlertTriangle, Wifi, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { AI_PROVIDERS, findModel, findProvider, formatModelLabel } from '../lib/aiModels'
 
 const SALES_STYLES = [
   { value: 'consultative', label: 'Consultative', desc: 'Ask questions, understand needs, then recommend' },
@@ -44,40 +45,8 @@ const LANGUAGES = [
   { value: 'uk', label: 'Ukrainian' },
 ]
 
-const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', defaultModel: 'gpt-4.1', models: [
-    { value: 'gpt-5.4-pro',      label: 'GPT-5.4 Pro — top-tier reasoning & luxury sales ★' },
-    { value: 'gpt-5.4',          label: 'GPT-5.4 — flagship GPT-5 model' },
-    { value: 'gpt-5',            label: 'GPT-5 — latest alias' },
-    { value: 'gpt-5-mini',       label: 'GPT-5 Mini — fast GPT-5' },
-    { value: 'gpt-5-nano',       label: 'GPT-5 Nano — fastest & cheapest GPT-5' },
-    { value: 'gpt-4.1',          label: 'GPT-4.1 — best stable model for hospitality' },
-    { value: 'gpt-4.1-mini',     label: 'GPT-4.1 Mini — fast & affordable' },
-    { value: 'gpt-4.1-nano',     label: 'GPT-4.1 Nano — fastest response' },
-    { value: 'gpt-4o',           label: 'GPT-4o — multimodal, highly capable' },
-    { value: 'gpt-4o-mini',      label: 'GPT-4o Mini' },
-    { value: 'o3',               label: 'o3 — deep reasoning (slow)' },
-    { value: 'o4-mini',          label: 'o4-mini — fast reasoning' },
-  ]},
-  { value: 'anthropic', label: 'Anthropic (Claude)', defaultModel: 'claude-opus-4-6', models: [
-    { value: 'claude-opus-4-6',             label: 'Claude Opus 4.6 — most intelligent ★' },
-    { value: 'claude-sonnet-4-6',           label: 'Claude Sonnet 4.6 — balanced speed & quality' },
-    { value: 'claude-haiku-4-5-20251001',   label: 'Claude Haiku 4.5 — fastest & cheapest' },
-  ]},
-  { value: 'google', label: 'Google (Gemini)', defaultModel: 'gemini-2.5-pro', models: [
-    { value: 'gemini-2.5-pro',              label: 'Gemini 2.5 Pro — best reasoning & context ★' },
-    { value: 'gemini-2.5-flash',            label: 'Gemini 2.5 Flash — fast & cost-effective' },
-    { value: 'gemini-2.5-flash-lite-preview-06-17', label: 'Gemini 2.5 Flash Lite — fastest' },
-    { value: 'gemini-2.0-flash',            label: 'Gemini 2.0 Flash' },
-  ]},
-]
-
-/** Provider → recommended model for a luxury sales agent */
-const PROVIDER_RECOMMENDED: Record<string, string> = {
-  openai: 'gpt-4.1',
-  anthropic: 'claude-opus-4-6',
-  google: 'gemini-2.5-pro',
-}
+// Model registry now lives in lib/aiModels.ts so any future model-aware UI
+// (admin AI selector, voice agent picker) shares the same source of truth.
 
 export function ChatbotConfig() {
   const qc = useQueryClient()
@@ -150,9 +119,34 @@ export function ChatbotConfig() {
   }
 
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const selectedProvider = PROVIDERS.find(p => p.value === (mForm.provider || 'openai'))
+  const selectedProvider = findProvider(mForm.provider || 'openai') ?? AI_PROVIDERS[0]
+  const selectedModel = findModel(mForm.model_name)
+  const supportsReasoning = !!selectedModel?.capabilities?.reasoning
   const isLoading = loadingBehavior || loadingModel
   const isSaving = saveBehavior.isPending || saveModel.isPending
+
+  // Probe the chosen model against the org's API key. Result clears when
+  // the model id changes; auto-runs after a 500ms debounce on switch so
+  // the admin gets immediate feedback without an explicit click.
+  const [probe, setProbe] = useState<{ status: 'idle' | 'checking' | 'ok' | 'error'; message?: string }>({ status: 'idle' })
+  const runProbe = async () => {
+    if (!mForm.model_name || !mForm.provider) return
+    setProbe({ status: 'checking' })
+    try {
+      const { data } = await api.post('/v1/admin/chatbot-config/probe-model', {
+        provider: mForm.provider, model_name: mForm.model_name,
+      })
+      setProbe({ status: data.available ? 'ok' : 'error', message: data.message })
+    } catch (e: any) {
+      setProbe({ status: 'error', message: e?.response?.data?.message || 'Probe failed' })
+    }
+  }
+  useEffect(() => {
+    setProbe({ status: 'idle' })
+    const t = setTimeout(() => { runProbe() }, 500)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mForm.provider, mForm.model_name])
 
   return (
     <div className="space-y-6">
@@ -185,24 +179,45 @@ export function ChatbotConfig() {
                   value={mForm.provider || 'openai'}
                   onChange={e => {
                     const providerKey = e.target.value
+                    const next = findProvider(providerKey)
                     updateModel('provider', providerKey)
-                    const recommended = PROVIDER_RECOMMENDED[providerKey]
-                    if (recommended) updateModel('model_name', recommended)
+                    if (next?.defaultModel) updateModel('model_name', next.defaultModel)
                   }}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
-                  {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  {AI_PROVIDERS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Model</label>
-                <select
-                  value={mForm.model_name || 'gpt-4.1'}
-                  onChange={e => updateModel('model_name', e.target.value)}
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                >
-                  {(selectedProvider?.models || []).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
+                <label className="block text-sm text-t-secondary mb-1 flex items-center gap-2">
+                  <span>Model</span>
+                  {probe.status === 'checking' && <span className="text-[10px] text-gray-500 flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> Verifying…</span>}
+                  {probe.status === 'ok'       && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle size={10} /> Available on your account</span>}
+                  {probe.status === 'error'    && <span className="text-[10px] text-amber-400 flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> Not available — {probe.message || 'check API key'}</span>}
+                </label>
+                <div className="flex items-stretch gap-2">
+                  <select
+                    value={mForm.model_name || selectedProvider.defaultModel}
+                    onChange={e => updateModel('model_name', e.target.value)}
+                    className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
+                  >
+                    {selectedProvider.models.map(m => <option key={m.id} value={m.id}>{formatModelLabel(m)}</option>)}
+                  </select>
+                  <button onClick={runProbe} type="button" disabled={probe.status === 'checking'}
+                    title="Verify the chosen model is enabled on your API key"
+                    className="px-3 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-hover disabled:opacity-40 transition-colors">
+                    <Wifi size={14} />
+                  </button>
+                </div>
+                {selectedModel && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {selectedModel.capabilities.reasoning && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20">reasoning</span>}
+                    {selectedModel.capabilities.vision && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/20">vision</span>}
+                    {selectedModel.capabilities.toolUse && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">tools</span>}
+                    {selectedModel.capabilities.structuredOutputs && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/20">json schema</span>}
+                    {selectedModel.preview && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/20">preview</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -257,8 +272,9 @@ export function ChatbotConfig() {
                       </div>
                     </div>
                   </div>
-                  {/* Reasoning effort — only relevant for GPT-5.x models */}
-                  {(mForm.model_name || '').startsWith('gpt-5') && (
+                  {/* Reasoning effort — driven by the registry capability flag,
+                      so any future reasoning model picks it up automatically. */}
+                  {supportsReasoning && (
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <label className="text-sm text-t-secondary">Reasoning Effort</label>
@@ -286,7 +302,7 @@ export function ChatbotConfig() {
                   )}
                   <p className="text-xs text-t-secondary">
                     For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.
-                    Note: o3/o4 reasoning models and GPT-5.x (with effort &gt; none) ignore temperature.
+                    {supportsReasoning && ' Reasoning models ignore temperature unless effort = none.'}
                   </p>
                 </div>
               )}

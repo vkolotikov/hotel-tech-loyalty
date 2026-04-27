@@ -83,6 +83,121 @@ class ChatbotConfigController extends Controller
     }
 
     /**
+     * POST /v1/admin/chatbot-config/probe-model — verify a model id is
+     * reachable on the org's API key BEFORE saving the config.
+     *
+     * Strategy by provider:
+     *   openai    → GET /v1/models, look for the id in the data array
+     *   anthropic → POST /v1/messages with a 1-token "ping" (cheapest valid call)
+     *   google    → GET /v1beta/models/{id}
+     *
+     * Returns `available: true` only when we got a definitive yes. Network
+     * errors return `available: false` with the underlying message so the
+     * admin can see whether it's a key issue, a typo, or a regional rollout.
+     */
+    public function probeModel(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'provider'   => 'required|in:openai,anthropic,google',
+            'model_name' => 'required|string|max:120',
+        ]);
+
+        return match ($validated['provider']) {
+            'openai'    => $this->probeOpenAi($validated['model_name']),
+            'anthropic' => $this->probeAnthropic($validated['model_name']),
+            'google'    => $this->probeGoogle($validated['model_name']),
+        };
+    }
+
+    private function probeOpenAi(string $model): JsonResponse
+    {
+        $apiKey = config('openai.api_key', env('OPENAI_API_KEY', ''));
+        if (!$apiKey) {
+            return response()->json(['available' => false, 'message' => 'No OpenAI API key configured. Set OPENAI_API_KEY in Settings → Integrations.']);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout(10)
+                ->get('https://api.openai.com/v1/models');
+
+            if ($response->failed()) {
+                return response()->json([
+                    'available' => false,
+                    'message'   => 'OpenAI API rejected the key (HTTP ' . $response->status() . ')',
+                ]);
+            }
+
+            $ids = collect($response->json('data') ?? [])->pluck('id')->all();
+            $found = in_array($model, $ids, true);
+            return response()->json([
+                'available'   => $found,
+                'message'     => $found ? 'Available' : "Not enabled on this account ({" . count($ids) . " models visible})",
+                'model_count' => count($ids),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['available' => false, 'message' => 'Probe failed: ' . $e->getMessage()]);
+        }
+    }
+
+    private function probeAnthropic(string $model): JsonResponse
+    {
+        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
+        if (!$apiKey) {
+            return response()->json(['available' => false, 'message' => 'No Anthropic API key configured.']);
+        }
+
+        try {
+            // Anthropic doesn't expose a public /models endpoint; use a
+            // 1-token messages call as a cheap reachability check. A 200
+            // means the model id was accepted; a 404 means it wasn't.
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'x-api-key'         => $apiKey,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ])->timeout(15)->post('https://api.anthropic.com/v1/messages', [
+                'model'      => $model,
+                'max_tokens' => 1,
+                'messages'   => [['role' => 'user', 'content' => 'ping']],
+            ]);
+
+            if ($response->successful()) {
+                return response()->json(['available' => true, 'message' => 'Available']);
+            }
+            $err = $response->json('error.message') ?? substr($response->body(), 0, 200);
+            return response()->json([
+                'available' => false,
+                'message'   => "HTTP {$response->status()}: {$err}",
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['available' => false, 'message' => 'Probe failed: ' . $e->getMessage()]);
+        }
+    }
+
+    private function probeGoogle(string $model): JsonResponse
+    {
+        $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
+        if (!$apiKey) {
+            return response()->json(['available' => false, 'message' => 'No Google Gemini API key configured.']);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->get("https://generativelanguage.googleapis.com/v1beta/models/{$model}?key={$apiKey}");
+
+            if ($response->successful()) {
+                return response()->json(['available' => true, 'message' => 'Available']);
+            }
+            return response()->json([
+                'available' => false,
+                'message'   => "HTTP {$response->status()}: " . substr($response->body(), 0, 200),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['available' => false, 'message' => 'Probe failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Try the AI live with the org's current behavior + model + KB so admins
      * can verify their config without going through the public widget. Reuses
      * the same prompt-building approach the widget uses.

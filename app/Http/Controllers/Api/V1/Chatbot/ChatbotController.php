@@ -66,7 +66,13 @@ class ChatbotController extends Controller
             $knowledgeContext,
         );
 
-        $messages[] = ['role' => 'assistant', 'content' => $aiResponse, 'timestamp' => now()->toIso8601String()];
+        $handoff = $this->openAi->lastHandoff;
+        $messages[] = [
+            'role' => 'assistant',
+            'content' => $aiResponse,
+            'timestamp' => now()->toIso8601String(),
+            'handoff' => $handoff,
+        ];
 
         $conversation->update([
             'messages'    => $messages,
@@ -76,6 +82,11 @@ class ChatbotController extends Controller
         return response()->json([
             'response'   => $aiResponse,
             'session_id' => $sessionId,
+            // Surfaced when the AI ended its reply with [HANDOFF:<reason>].
+            // The mobile client uses this to render a "Connect to a human"
+            // affordance instead of leaving the AI's plain-text promise of
+            // a callback as the only signal.
+            'handoff'    => $handoff,
         ]);
     }
 }

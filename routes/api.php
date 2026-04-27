@@ -366,6 +366,7 @@ Route::prefix('v1')->group(function () {
             Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
             Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
             Route::post('chatbot-config/test-chat',           [ChatbotConfigController::class, 'testChat']);
+            Route::post('chatbot-config/probe-model',         [ChatbotConfigController::class, 'probeModel']);
             Route::post('chatbot-config/suggest-keywords',    [ChatbotConfigController::class, 'suggestKeywords']);
 
             // ─── Chat Widget Configuration ───────────────────────────────────
