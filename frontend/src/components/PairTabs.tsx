@@ -14,11 +14,19 @@ interface Tab {
 export function PairTabs({ tabs }: { tabs: Tab[] }) {
   const location = useLocation()
 
+  // Longest-matching-prefix wins so /bookings/calendar lights the
+  // "Calendar" tab and not the parent "Reservations" tab. Ties (exact
+  // match) trump prefix matches.
+  const sorted = [...tabs].sort((a, b) => b.to.length - a.to.length)
+  const matched = sorted.find(t =>
+    location.pathname === t.to || location.pathname.startsWith(t.to + '/')
+  )
+
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl w-fit"
       style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
       {tabs.map(tab => {
-        const active = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/')
+        const active = matched?.to === tab.to
         return (
           <Link key={tab.to} to={tab.to}
             className="px-4 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-2"
@@ -41,8 +49,10 @@ export function PairTabs({ tabs }: { tabs: Tab[] }) {
 }
 
 export const BOOKINGS_TABS: Tab[] = [
-  { to: '/bookings',          label: 'Reservations' },
-  { to: '/service-bookings',  label: 'Service Bookings' },
+  { to: '/bookings',                  label: 'Reservations' },
+  { to: '/bookings/calendar',         label: 'Calendar' },
+  { to: '/service-bookings',          label: 'Service Bookings' },
+  { to: '/service-bookings/calendar', label: 'Service Calendar' },
 ]
 
 export const CATALOG_TABS: Tab[] = [

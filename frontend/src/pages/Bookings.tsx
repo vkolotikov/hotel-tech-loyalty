@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi } from 'lucide-react'
@@ -233,7 +233,26 @@ export function Bookings() {
   const [syncing, setSyncing] = useState(false)
   const [period, setPeriod] = useState('month')
 
-  const params: any = { page, per_page: 25 }
+  // Period → from/to date range. Same shape the backend dashboard uses,
+  // mirrored here so the Reservations table stays in sync with the
+  // KPI cards above (previously the table ignored period and stayed on
+  // "all rows" no matter what the user selected).
+  const periodRange = useMemo(() => {
+    const today = new Date()
+    const fmt = (d: Date) => d.toISOString().slice(0, 10)
+    const from = new Date(today)
+    if (period === 'week')      from.setDate(today.getDate() - 7)
+    else if (period === 'year') from.setFullYear(today.getFullYear() - 1)
+    else                        from.setMonth(today.getMonth() - 1)
+    // 'to' extends 90 days forward so future arrivals stay visible — the
+    // table is keyed on arrival_date and most useful when it shows what's
+    // *coming up* alongside what just passed.
+    const to = new Date(today)
+    to.setDate(today.getDate() + 90)
+    return { from: fmt(from), to: fmt(to) }
+  }, [period])
+
+  const params: any = { page, per_page: 25, from: periodRange.from, to: periodRange.to }
   if (search) params.search = search
   if (status) params.status = status
   if (paymentStatus) params.payment_status = paymentStatus
@@ -330,7 +349,7 @@ export function Bookings() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="inline-flex p-1 rounded-lg bg-dark-surface border border-dark-border">
           {['week', 'month', 'year'].map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
+            <button key={p} onClick={() => { setPeriod(p); setPage(1) }}
               className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${period === p
                 ? 'bg-primary-600 text-white'
                 : 'text-t-secondary hover:text-white'}`}>
