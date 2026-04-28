@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { SendReviewButton } from '../components/SendReviewButton';
+import { ContactActions } from '../components/ContactActions';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, User, Mail, Star, Calendar,
@@ -154,6 +155,7 @@ export function GuestDetail() {
                   <span className="text-gray-400 text-sm">{g.guest_type}</span>
                 )}
               </div>
+              <ContactActions email={g.email} phone={g.phone || g.mobile} />
             </div>
           </div>
           <div className="flex items-center gap-2">

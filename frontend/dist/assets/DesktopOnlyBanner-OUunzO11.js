@@ -1,0 +1,6 @@
+import{j as e}from"./vendor-query-uT6E891c.js";import{r}from"./vendor-react-DbwoY8gR.js";import{c as l,X as m}from"./index-tnluInAI.js";/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const c=[["rect",{width:"20",height:"14",x:"2",y:"3",rx:"2",key:"48i651"}],["line",{x1:"8",x2:"16",y1:"21",y2:"21",key:"1svkeh"}],["line",{x1:"12",x2:"12",y1:"17",y2:"21",key:"vw1qmm"}]],x=l("monitor",c);function u({pageKey:a,message:i}){const s=`desktop-banner-dismissed:${a}`,[o,t]=r.useState(!0);if(r.useEffect(()=>{try{t(localStorage.getItem(s)==="1")}catch{t(!1)}},[s]),o)return null;const n=()=>{try{localStorage.setItem(s,"1")}catch{}t(!0)};return e.jsxs("div",{className:"lg:hidden mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 flex items-start gap-2.5",children:[e.jsx(x,{size:16,className:"text-amber-400 flex-shrink-0 mt-0.5"}),e.jsx("div",{className:"flex-1 text-xs text-amber-100/90 leading-relaxed",children:i||"This page is best viewed on a larger screen. You can still use it on mobile, but tables and charts may require horizontal scrolling."}),e.jsx("button",{onClick:n,className:"flex-shrink-0 p-1 -m-1 text-amber-200/70 hover:text-amber-100","aria-label":"Dismiss",children:e.jsx(m,{size:14})})]})}export{u as D,x as M};

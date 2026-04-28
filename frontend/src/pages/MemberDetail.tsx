@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
+import { ContactActions } from '../components/ContactActions'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -214,6 +215,7 @@ export function MemberDetail() {
               {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
             </div>
             <p className="text-xs md:text-sm text-t-secondary mt-0.5 truncate">{user?.email} · {member?.member_number}</p>
+            <ContactActions email={user?.email} phone={user?.phone} compact />
           </div>
         </div>
         <div className="flex items-center gap-2 md:ml-auto md:flex-shrink-0">

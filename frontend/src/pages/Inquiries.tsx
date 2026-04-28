@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye } from 'lucide-react'
+import { ContactActions } from '../components/ContactActions'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -63,6 +64,16 @@ export function Inquiries() {
   const [captureLoading, setCaptureLoading] = useState(false)
   const [captureResult, setCaptureResult] = useState<any>(null)
   const [captureCreating, setCaptureCreating] = useState(false)
+  // List vs Pipeline view — pipeline is a status-column kanban with
+  // drag-to-change-status, list is the sortable table.
+  const [view, setView] = useState<'list' | 'pipeline'>('list')
+  // Inline open menus (status / action) — keyed by inquiry id so only one
+  // is open at a time on the page.
+  const [openMenu, setOpenMenu] = useState<{ id: number; type: 'status' | 'action' } | null>(null)
+  // Simplified Add Inquiry form — advanced fields are collapsed by default.
+  const [showAdvancedCreate, setShowAdvancedCreate] = useState(false)
+  // Drag state for kanban — track the dragged inquiry id.
+  const [dragging, setDragging] = useState<number | null>(null)
 
   const { data: propertiesData } = useQuery({
     queryKey: ['properties-list'],
@@ -96,6 +107,26 @@ export function Inquiries() {
   const completeMutation = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/inquiries/${id}/complete-task`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['inquiries'] }); toast.success('Task completed') },
+  })
+
+  // Quick status change — fires from the inline status-pill dropdown and
+  // from the kanban drag-drop. Setting status=Confirmed auto-creates a
+  // Reservation server-side (existing logic in InquiryController), so the
+  // "Mark Won" action piggybacks on the same code path.
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      api.put(`/v1/admin/inquiries/${id}`, { status }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      toast.success(
+        vars.status === 'Confirmed' ? 'Marked as Won — reservation created'
+        : vars.status === 'Lost'    ? 'Marked as Lost'
+        : `Status → ${vars.status}`
+      )
+      setOpenMenu(null)
+      setDragging(null)
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Status change failed'),
   })
 
   const handleExport = async () => {
@@ -144,6 +175,21 @@ export function Inquiries() {
         </div>
       </div>
 
+      {/* List ↔ Pipeline view toggle. Pipeline groups inquiries into status
+          columns with drag-to-change-status; list is the sortable table. */}
+      <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {([
+          { v: 'list', icon: ListIcon, label: 'List' },
+          { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
+        ] as const).map(({ v, icon: Icon, label }) => (
+          <button key={v} onClick={() => setView(v)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+            <Icon size={12} /> {label}
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="space-y-2">
         <div className="flex gap-3 flex-wrap">
@@ -151,10 +197,12 @@ export function Inquiries() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search guest, company..." className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
-            <option value="">All Statuses</option>
-            {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
-          </select>
+          {view === 'list' && (
+            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
+              <option value="">All Statuses</option>
+              {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
+            </select>
+          )}
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> Filters {hasFilters ? '●' : ''}
           </button>
@@ -198,7 +246,8 @@ export function Inquiries() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table — list view */}
+      {view === 'list' && (
       <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -233,6 +282,11 @@ export function Inquiries() {
                     <td className="px-4 py-3">
                       <div className="font-medium text-white whitespace-nowrap">{inq.guest?.full_name ?? '—'}</div>
                       <div className="text-xs text-[#636366]">{inq.guest?.company ?? ''}</div>
+                      {(inq.guest?.email || inq.guest?.phone) && (
+                        <div className="mt-1.5">
+                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.property?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.inquiry_type ?? '—'}</td>
@@ -250,10 +304,24 @@ export function Inquiries() {
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{nights ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{inq.num_rooms ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0]">{inq.total_value ? `${settings.currency_symbol}${Number(inq.total_value).toLocaleString()}` : '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
-                        {inq.status}
-                      </span>
+                    <td className="px-4 py-3 relative">
+                      <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' ? null : { id: inq.id, type: 'status' })}
+                        title="Click to change status"
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
+                        {inq.status} <ChevronDown size={10} />
+                      </button>
+                      {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' && (
+                        <div className="absolute top-full left-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]"
+                          onMouseLeave={() => setOpenMenu(null)}>
+                          {settings.inquiry_statuses.map(s => (
+                            <button key={s} onClick={() => statusMutation.mutate({ id: inq.id, status: s })}
+                              disabled={statusMutation.isPending || s === inq.status}
+                              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 ${s === inq.status ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
+                              {s === inq.status && '✓ '}{s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className={`px-4 py-3 text-xs font-medium ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>{inq.priority}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.assigned_to ?? '—'}</td>
@@ -270,11 +338,43 @@ export function Inquiries() {
                         <span className="text-xs text-green-400">Done</span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3">
-                      {inq.next_task_type && !inq.next_task_completed && (
-                        <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done" className="p-1.5 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
-                          <CheckCircle2 size={14} />
+                    <td className="px-4 py-3 relative">
+                      <div className="flex items-center gap-1 justify-end">
+                        {inq.next_task_type && !inq.next_task_completed && (
+                          <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done" className="p-1.5 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
+                            <CheckCircle2 size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' ? null : { id: inq.id, type: 'action' })}
+                          title="More actions" className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
+                          <MoreHorizontal size={14} />
                         </button>
+                      </div>
+                      {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' && (
+                        <div className="absolute top-full right-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]"
+                          onMouseLeave={() => setOpenMenu(null)}>
+                          <button onClick={() => statusMutation.mutate({ id: inq.id, status: 'Confirmed' })}
+                            disabled={statusMutation.isPending || inq.status === 'Confirmed'}
+                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40">
+                            <Trophy size={12} /> Mark as Won (create reservation)
+                          </button>
+                          <button onClick={() => statusMutation.mutate({ id: inq.id, status: 'Lost' })}
+                            disabled={statusMutation.isPending || inq.status === 'Lost'}
+                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-red-300 hover:bg-red-500/10 disabled:opacity-40">
+                            <XCircle size={12} /> Mark as Lost
+                          </button>
+                          <div className="border-t border-white/[0.06] my-1" />
+                          {inq.next_task_type && !inq.next_task_completed && (
+                            <button onClick={() => { completeMutation.mutate(inq.id); setOpenMenu(null) }}
+                              className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                              <CheckCircle2 size={12} /> Complete Task
+                            </button>
+                          )}
+                          <button onClick={() => { setOpenMenu(null); window.location.href = `/inquiries/${inq.id}` }}
+                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                            <Eye size={12} /> View Detail
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -284,9 +384,78 @@ export function Inquiries() {
           </table>
         </div>
       </div>
+      )}
 
-      {/* Pagination */}
-      {meta.last_page > 1 && (
+      {/* Pipeline (kanban) view — group by status, drag a card between
+          columns to move the inquiry. Confirmed / Lost are intentionally
+          shown so staff can drag a card to "won" / "lost" for closure. */}
+      {view === 'pipeline' && (
+        <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 400 }}>
+          {settings.inquiry_statuses.map((col: string) => {
+            const cards = inquiries.filter((i: any) => i.status === col)
+            return (
+              <div key={col}
+                onDragOver={e => { if (dragging !== null) e.preventDefault() }}
+                onDrop={e => {
+                  e.preventDefault()
+                  if (dragging !== null) statusMutation.mutate({ id: dragging, status: col })
+                }}
+                className="flex-shrink-0 w-[280px] rounded-2xl border border-white/[0.06] bg-dark-surface flex flex-col"
+                style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+                <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between sticky top-0 z-10"
+                  style={{ background: 'rgba(14,20,18,0.98)' }}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${STATUS_COLORS[col] ?? 'bg-gray-500/20 text-t-secondary'}`}>{col}</span>
+                  <span className="text-[10px] text-gray-500 font-bold tabular-nums">{cards.length}</span>
+                </div>
+                <div className="flex-1 p-2 space-y-2 min-h-[120px]">
+                  {cards.length === 0 && (
+                    <div className="text-center text-[10px] text-gray-700 py-4">Drop cards here</div>
+                  )}
+                  {cards.map((inq: any) => {
+                    const isDragging = dragging === inq.id
+                    return (
+                      <div key={inq.id}
+                        draggable
+                        onDragStart={() => setDragging(inq.id)}
+                        onDragEnd={() => setDragging(null)}
+                        className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:bg-white/[0.04] transition-all"
+                        style={{ opacity: isDragging ? 0.4 : 1 }}>
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[inq.priority] ?? 'text-gray-500'}`}>
+                            {inq.priority}
+                          </span>
+                        </div>
+                        {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate mb-1.5">{inq.guest.company}</div>}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-400">
+                          {inq.check_in && <span>{inq.check_in}{inq.check_out ? ` → ${inq.check_out}` : ''}</span>}
+                          {inq.num_rooms && <span>{inq.num_rooms} room{inq.num_rooms === 1 ? '' : 's'}</span>}
+                          {inq.total_value && <span className="text-emerald-400 font-semibold">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>}
+                        </div>
+                        {(inq.guest?.email || inq.guest?.phone) && (
+                          <div className="mt-2">
+                            <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
+                          </div>
+                        )}
+                        {inq.next_task_type && !inq.next_task_completed && (
+                          <div className="mt-2 flex items-center gap-1 text-[10px]">
+                            <AlertCircle size={10} className={new Date(inq.next_task_due) < new Date() ? 'text-red-400' : 'text-amber-400'} />
+                            <span className="text-gray-400">{inq.next_task_type}</span>
+                            {inq.next_task_due && <span className="text-gray-600">· {inq.next_task_due}</span>}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Pagination — only meaningful in list view */}
+      {view === 'list' && meta.last_page > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
           <div className="flex gap-2">
@@ -296,11 +465,14 @@ export function Inquiries() {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal — split Required vs Advanced. Most inquiries are
+          captured with just guest + property + dates + rooms; everything
+          else (rate negotiation, ownership, source, etc.) is collapsible. */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-white mb-4">Add Inquiry</h2>
+            <h2 className="text-lg font-bold text-white mb-1">Add Inquiry</h2>
+            <p className="text-xs text-t-secondary mb-4">Just the essentials below — open Advanced for rate, ownership, status, etc.</p>
             <form onSubmit={e => {
               e.preventDefault()
               const body: any = {
@@ -330,20 +502,6 @@ export function Inquiries() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Inquiry Type</label>
-                  <select value={form.inquiry_type} onChange={e => setForm(f => ({ ...f, inquiry_type: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
-                    {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Source</label>
-                  <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className={inp}>
-                    <option value="">-- None --</option>
-                    {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
                   <label className="block text-xs text-[#a0a0a0] mb-1">Check-in</label>
                   <input type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
                 </div>
@@ -353,42 +511,71 @@ export function Inquiries() {
                 </div>
                 <div>
                   <label className="block text-xs text-[#a0a0a0] mb-1">Rooms</label>
-                  <input type="number" value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
+                  <input type="number" min={1} value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
-                  <select value={form.room_type_requested} onChange={e => setForm(f => ({ ...f, room_type_requested: e.target.value }))} className={inp}>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">Inquiry Type</label>
+                  <select value={form.inquiry_type} onChange={e => setForm(f => ({ ...f, inquiry_type: e.target.value }))} className={inp}>
                     <option value="">-- Select --</option>
-                    {settings.room_types.map(t => <option key={t}>{t}</option>)}
+                    {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Rate ({settings.currency_symbol})</label>
-                  <input type="number" step="0.01" value={form.rate_offered} onChange={e => setForm(f => ({ ...f, rate_offered: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Total Value ({settings.currency_symbol})</label>
-                  <input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
-                    {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
-                    {settings.priorities.map(p => <option key={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Assigned To</label>
-                  <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={inp}>
-                    <option value="">-- None --</option>
-                    {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </div>
+              </div>
+
+              {/* Advanced — collapsed by default. Lead source, rate, status,
+                  ownership are all useful when known but rarely available
+                  during the initial intake call. */}
+              <div className="border-t border-dark-border pt-3">
+                <button type="button" onClick={() => setShowAdvancedCreate(v => !v)}
+                  className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors">
+                  <ChevronDown size={12} className={`transition-transform ${showAdvancedCreate ? 'rotate-180' : ''}`} />
+                  Advanced ({showAdvancedCreate ? 'hide' : 'rate, ownership, status…'})
+                </button>
+                {showAdvancedCreate && (
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Source</label>
+                      <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className={inp}>
+                        <option value="">-- None --</option>
+                        {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
+                      <select value={form.room_type_requested} onChange={e => setForm(f => ({ ...f, room_type_requested: e.target.value }))} className={inp}>
+                        <option value="">-- Select --</option>
+                        {settings.room_types.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Rate ({settings.currency_symbol})</label>
+                      <input type="number" step="0.01" value={form.rate_offered} onChange={e => setForm(f => ({ ...f, rate_offered: e.target.value }))} className={inp} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Total Value ({settings.currency_symbol})</label>
+                      <input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} className={inp} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Status</label>
+                      <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
+                        {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Priority</label>
+                      <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
+                        {settings.priorities.map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">Assigned To</label>
+                      <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={inp}>
+                        <option value="">-- None --</option>
+                        {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {showMice && (
