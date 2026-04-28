@@ -134,6 +134,13 @@
     .htchat-suggestions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center; }\
     .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 6px 14px; font-size: 11.5px; color: #4b5563; text-align: center; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }\
     .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #f9fafb; }\
+    .htchat-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-left: 4px; }\
+    .htchat-action { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 18px; padding: 6px 12px; font-size: 12px; color: #1f2937; cursor: pointer; transition: all 0.15s; font-weight: 500; text-decoration: none; }\
+    .htchat-action:hover { border-color: currentColor; color: #111827; background: #f9fafb; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }\
+    .htchat-action-icon { font-size: 13px; line-height: 1; }\
+    .htchat-followups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 4px; }\
+    .htchat-followup { background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 5px 11px; font-size: 11.5px; color: #4b5563; cursor: pointer; transition: all 0.15s; }\
+    .htchat-followup:hover { background: white; border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }\
     #htchat-input-area { padding: 12px; border-top: 1px solid #e5e7eb; background: white; flex-shrink: 0; }\
     #htchat-input-row { display: flex; gap: 8px; align-items: flex-end; }\
     #htchat-input { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; min-height: 40px; max-height: 80px; transition: border-color 0.2s; }\
@@ -972,7 +979,29 @@
           attachmentHtml = '<div style="margin-top:6px"><a href="' + url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;font-size:12px">📎 ' + escapeHtml(m.content || 'Download file') + '</a></div>';
         }
       }
-      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + (m.attachment_url && m.attachment_type === 'image' ? '' : formatText(m.content)) + attachmentHtml + '</div></div>';
+      // Structured-reply addons — action buttons (tel/mail/sms/WA/url)
+      // and follow-up chips. Both render outside the bubble so they
+      // visually feel like UI affordances rather than part of the text.
+      var actionsHtml = '';
+      if (m.role === 'assistant' && Array.isArray(m.actions) && m.actions.length) {
+        actionsHtml = '<div class="htchat-actions">' + m.actions.map(function (a, ai) {
+          var icon = a.type === 'call' ? '📞' : a.type === 'whatsapp' ? '💬' : a.type === 'email' ? '✉️' : a.type === 'sms' ? '📲' : '🔗';
+          var label = escapeHtml(a.label || a.value || a.type || 'Open');
+          return '<button class="htchat-action" data-msg="' + idx + '" data-action="' + ai + '" type="button">' +
+            '<span class="htchat-action-icon">' + icon + '</span>' +
+            '<span>' + label + '</span>' +
+            '</button>';
+        }).join('') + '</div>';
+      }
+      var followHtml = '';
+      if (m.role === 'assistant' && Array.isArray(m.follow_ups) && m.follow_ups.length) {
+        followHtml = '<div class="htchat-followups">' + m.follow_ups.map(function (f, fi) {
+          return '<button class="htchat-followup" data-msg="' + idx + '" data-follow="' + fi + '" type="button">' +
+            escapeHtml(f.label || f.prompt || '') +
+            '</button>';
+        }).join('') + '</div>';
+      }
+      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + (m.attachment_url && m.attachment_type === 'image' ? '' : formatText(m.content)) + attachmentHtml + '</div>' + actionsHtml + followHtml + '</div>';
     }).join('');
 
     // Wire star clicks to submitRating.
@@ -980,6 +1009,59 @@
       btn.onclick = function () {
         var r = parseInt(btn.getAttribute('data-rating'), 10);
         if (r) submitRating(r);
+      };
+    });
+
+    // Wire follow-up chips: clicking one fires the prompt as if the
+    // visitor typed it. Disable while a request is already in-flight
+    // so a fast click can't double-send.
+    container.querySelectorAll('.htchat-followup[data-msg]').forEach(function (btn) {
+      btn.onclick = function () {
+        if (isLoading) return;
+        var mi = parseInt(btn.getAttribute('data-msg'), 10);
+        var fi = parseInt(btn.getAttribute('data-follow'), 10);
+        var src = messages[mi];
+        if (!src || !Array.isArray(src.follow_ups)) return;
+        var entry = src.follow_ups[fi];
+        if (!entry || !entry.prompt) return;
+        sendMessage(entry.prompt);
+      };
+    });
+
+    // Wire action buttons: open the contact channel based on type.
+    // Phone-shaped values are normalised to digits-only (with leading
+    // + preserved) because tel:, sms:, and wa.me all reject spaces /
+    // parentheses / dashes.
+    container.querySelectorAll('.htchat-action[data-msg]').forEach(function (btn) {
+      btn.onclick = function () {
+        var mi = parseInt(btn.getAttribute('data-msg'), 10);
+        var ai = parseInt(btn.getAttribute('data-action'), 10);
+        var src = messages[mi];
+        if (!src || !Array.isArray(src.actions)) return;
+        var act = src.actions[ai];
+        if (!act || !act.value) return;
+        var v = String(act.value).trim();
+        var href = v;
+        var external = false;
+        if (act.type === 'call') {
+          href = 'tel:' + v.replace(/[^\d+]/g, '');
+        } else if (act.type === 'sms') {
+          href = 'sms:' + v.replace(/[^\d+]/g, '');
+        } else if (act.type === 'whatsapp') {
+          href = 'https://wa.me/' + v.replace(/[^\d+]/g, '').replace(/^\+/, '');
+          external = true;
+        } else if (act.type === 'email') {
+          href = 'mailto:' + v;
+        } else if (act.type === 'url') {
+          if (!/^https?:\/\//i.test(v)) href = 'https://' + v;
+          external = true;
+        }
+        var a = document.createElement('a');
+        a.href = href;
+        if (external) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       };
     });
 
@@ -1110,7 +1192,16 @@
           return;
         }
         var reply = data.response || data.message || 'Sorry, I could not process that.';
-        messages.push({ role: 'assistant', content: reply });
+        // Structured-reply additions: quick-reply chips (follow_ups) and
+        // tap-to-act buttons (actions). Both are optional — if the
+        // backend / model didn't supply them we render the bubble exactly
+        // like before.
+        messages.push({
+          role: 'assistant',
+          content: reply,
+          follow_ups: Array.isArray(data.follow_ups) ? data.follow_ups : [],
+          actions:    Array.isArray(data.actions)    ? data.actions    : [],
+        });
         // Mark this AI message as already-rendered so the poller skips it,
         // and advance the poll cursor past it.
         if (data.ai_message_id) {

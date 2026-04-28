@@ -571,6 +571,8 @@ class WidgetChatController extends Controller
             'prompt_cache_key'  => "org-{$orgId}-widget-chat",
         ], fn($v) => $v !== null);
 
+        $aiFollowUps = [];
+        $aiActions   = [];
         try {
             // OpenAI provider gets the agent tool-calling loop so the model can
             // check room/service availability itself and propose bookings. Other
@@ -582,6 +584,18 @@ class WidgetChatController extends Controller
                 );
             } else {
                 $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
+            }
+
+            // Structured-reply parse. The Responses-API path is constrained
+            // by a JSON schema, so for gpt-5.x the body should be a clean
+            // JSON object. Other providers / paths return plain text — we
+            // try to parse anyway in case the model volunteered JSON, and
+            // fall back to treating the whole body as the visible message.
+            $parsed = json_decode(trim((string) $aiResponse), true);
+            if (is_array($parsed) && isset($parsed['message']) && is_string($parsed['message'])) {
+                $aiResponse  = $parsed['message'];
+                $aiFollowUps = is_array($parsed['follow_ups'] ?? null) ? array_slice($parsed['follow_ups'], 0, 4) : [];
+                $aiActions   = is_array($parsed['actions']    ?? null) ? array_slice($parsed['actions'],    0, 4) : [];
             }
         } catch (\Throwable $e) {
             // Verbose log so we can diagnose chats failing in prod. The
@@ -668,6 +682,11 @@ class WidgetChatController extends Controller
             'response'      => $aiResponse,
             'session_id'    => $request->session_id,
             'ai_message_id' => $aiMessageId,
+            // Optional UX hints from the structured reply schema. The
+            // widget renders follow_ups as quick-reply chips and
+            // actions as buttons (call/whatsapp/email/sms/url).
+            'follow_ups'    => $aiFollowUps,
+            'actions'       => $aiActions,
         ]);
     }
 
@@ -1396,6 +1415,50 @@ class WidgetChatController extends Controller
         $effort = $extra['reasoning_effort'] ?? $defaultEffort;
         $verbosity = $extra['verbosity'] ?? 'medium';
 
+        // Structured reply schema — every final message is a JSON
+        // object containing the visible text plus optional follow-up
+        // chips and action buttons. Tool-call rounds bypass the schema
+        // (only the final `message` item is bound). The widget parses
+        // the JSON and renders the chips/buttons under the bubble.
+        $replyFormat = [
+            'type'   => 'json_schema',
+            'name'   => 'chat_reply',
+            'strict' => true,
+            'schema' => [
+                'type' => 'object',
+                'additionalProperties' => false,
+                'required' => ['message', 'follow_ups', 'actions'],
+                'properties' => [
+                    'message' => ['type' => 'string'],
+                    'follow_ups' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['label', 'prompt'],
+                            'properties' => [
+                                'label'  => ['type' => 'string'],
+                                'prompt' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                    'actions' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['type', 'label', 'value'],
+                            'properties' => [
+                                'type'  => ['type' => 'string', 'enum' => ['call', 'whatsapp', 'email', 'sms', 'url']],
+                                'label' => ['type' => 'string'],
+                                'value' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
         $maxRounds = 4;
         for ($round = 0; $round < $maxRounds; $round++) {
             $params = [
@@ -1406,7 +1469,10 @@ class WidgetChatController extends Controller
                 'tool_choice'       => 'auto',
                 'max_output_tokens' => $maxTokens,
                 'reasoning'         => ['effort' => $effort],
-                'text'              => ['verbosity' => $verbosity],
+                'text'              => [
+                    'verbosity' => $verbosity,
+                    'format'    => $replyFormat,
+                ],
                 'store'             => false,
             ];
             if (!empty($extra['prompt_cache_key'])) {
@@ -1984,6 +2050,21 @@ class WidgetChatController extends Controller
         foreach ($finalReminders as $i => $r) {
             $parts[] = ($i + 1) . ". {$r}";
         }
+
+        // Structured-reply guidance. The Responses API path constrains
+        // the FINAL message to a json_schema with `message`,
+        // `follow_ups`, and `actions`. We tell the model how to use
+        // each so the buttons in the widget feel deliberate, not noise.
+        $parts[] = "\n# Structured Reply Format (gpt-5.x — Responses API)";
+        $parts[] = "Your final reply is a JSON object with three fields: `message` (the visible text), `follow_ups` (1–3 quick-reply chips), and `actions` (0–3 contact buttons).";
+        $parts[] = "- `message` carries the human-readable reply. Use the same Style + Length rules above.";
+        $parts[] = "- `follow_ups` is an array of `{label, prompt}` objects. The label is what the visitor sees on a chip (≤30 chars, action-shaped: \"Show suites\", \"Check Friday\", \"Book a room\"). The prompt is the message we send back as if the visitor typed it. Include 1–3 follow-ups when there's an obvious next step the visitor is likely to want — never include filler chips like \"Yes\" / \"No\" / \"Tell me more\". Empty array is fine when no clear next step exists.";
+        $parts[] = "- `actions` is an array of `{type, label, value}` objects. `type` is one of `call` | `whatsapp` | `email` | `sms` | `url`. Add an action ONLY when:";
+        $parts[] = "    • You're recommending the visitor contact someone (always offer the channel as a button).";
+        $parts[] = "    • You want them to open a specific URL (booking page, location map, menu, signed PDF).";
+        $parts[] = "    • A direct phone number, email, or WhatsApp link would help and is verified by the Knowledge Base above.";
+        $parts[] = "  Use the EXACT phone / email / URL from the Knowledge Base or Runtime Context. Never invent contact details. The widget will render each action as a tap-to-act button — so don't repeat the same URL/number inside `message` as a plain link.";
+        $parts[] = "- Empty arrays for `follow_ups` and `actions` are perfectly valid when none apply. Don't pad.";
 
         return implode("\n", $parts);
     }
