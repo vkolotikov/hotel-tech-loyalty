@@ -5,6 +5,7 @@ import { api, resolveImage } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import { ContactActions } from '../components/ContactActions'
 import { ActivityTimeline } from '../components/ActivityTimeline'
+import { JourneyTimeline } from '../components/JourneyTimeline'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -251,6 +252,24 @@ export function MemberDetail() {
               </div>
             ))}
           </div>
+
+          {/* Customer Journey — chronological merge of every touchpoint
+              (calls/emails/notes, inquiries, reservations, stays) so
+              staff see the full picture at a glance instead of jumping
+              between three separate sections. */}
+          {data?.linked_guest && (
+            <div className="bg-dark-surface rounded-xl border border-dark-border p-4 md:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-white">Customer Journey</h2>
+              </div>
+              <JourneyTimeline
+                activities={data.linked_guest.activities ?? []}
+                inquiries={data.linked_guest.inquiries ?? []}
+                reservations={data.linked_guest.reservations ?? []}
+                bookings={data.linked_guest.bookings ?? []}
+              />
+            </div>
+          )}
 
           {/* Recent Transactions */}
           <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">

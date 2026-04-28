@@ -460,6 +460,8 @@ Route::prefix('v1')->group(function () {
             Route::post('guests/{guest}/tags',            [GuestController::class, 'syncTags']);
 
             // ─── CRM: Inquiries (Sales Pipeline) ─────────────────────────────
+            Route::get('inquiries/today',                 [InquiryController::class, 'today']);
+            Route::post('inquiries/bulk',                 [InquiryController::class, 'bulk']);
             Route::get('inquiries',                       [InquiryController::class, 'index']);
             Route::post('inquiries',                      [InquiryController::class, 'store']);
             Route::get('inquiries/export',                [InquiryController::class, 'export']);

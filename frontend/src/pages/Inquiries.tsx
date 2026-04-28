@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
+import { DailyOpsBar } from '../components/DailyOpsBar'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -80,6 +81,12 @@ export function Inquiries() {
   // pipeline as Leads (just-arrived) vs Active Deals (being worked) vs
   // Closed (won/lost). Pure client-side slice so we don't touch the API.
   const [stageGroup, setStageGroup] = useState<'all' | 'leads' | 'deals' | 'closed'>('all')
+  // Daily-ops drilldown focus — clicking an ops tile opens a panel
+  // with the matching task list inline.
+  const [dailyFocus, setDailyFocus] = useState<'' | 'overdue' | 'today' | 'soon' | 'new_leads'>('')
+  // Bulk selection — checkboxes on the list view.
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const { data: propertiesData } = useQuery({
     queryKey: ['properties-list'],
@@ -102,6 +109,15 @@ export function Inquiries() {
   const { data, isLoading } = useQuery({
     queryKey: ['inquiries', params],
     queryFn: () => api.get('/v1/admin/inquiries', { params }).then(r => r.data),
+  })
+
+  // Daily ops snapshot — refreshes every 2 min so an overdue task
+  // popping up doesn't require a manual reload.
+  const { data: today } = useQuery<any>({
+    queryKey: ['inquiries-today'],
+    queryFn: () => api.get('/v1/admin/inquiries/today').then(r => r.data),
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   })
 
   const createMutation = useMutation({
@@ -152,6 +168,25 @@ export function Inquiries() {
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Task save failed'),
   })
+
+  // Bulk action runner — same shape as the bookings bulk path so future
+  // surfaces can copy it. Confirms destructive actions inline.
+  const runBulk = async (action: string, value?: string, confirmMsg?: string) => {
+    if (selected.size === 0) return
+    if (confirmMsg && !window.confirm(confirmMsg)) return
+    setBulkBusy(true)
+    try {
+      const { data: res } = await api.post('/v1/admin/inquiries/bulk', {
+        ids: Array.from(selected), action, value,
+      })
+      toast.success(res.message || 'Updated')
+      setSelected(new Set())
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Bulk action failed')
+    } finally { setBulkBusy(false) }
+  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -220,6 +255,66 @@ export function Inquiries() {
           </button>
         </div>
       </div>
+
+      {/* Today snapshot — the morning-of view: what's overdue, what's
+          due today, what's coming up, and the freshest leads. Click a
+          tile to expand the matching list inline. */}
+      {today && (
+        <DailyOpsBar
+          title="Today"
+          hint={today.date}
+          tiles={[
+            { key: 'overdue',   label: 'Overdue',   value: today.overdue?.count ?? 0,   sub: today.overdue?.count ? 'Click to view' : 'All caught up',         tone: (today.overdue?.count ?? 0) > 0 ? 'red' : 'gray', icon: <AlertCircle size={12} />, active: dailyFocus === 'overdue',   onClick: () => setDailyFocus(dailyFocus === 'overdue' ? '' : 'overdue') },
+            { key: 'today',     label: 'Due Today', value: today.today?.count ?? 0,     sub: today.today?.count ? 'Tasks scheduled' : 'Nothing due today',     tone: 'amber',  icon: <Clock size={12} />,         active: dailyFocus === 'today',     onClick: () => setDailyFocus(dailyFocus === 'today' ? '' : 'today') },
+            { key: 'soon',      label: 'Due Soon',  value: today.soon?.count ?? 0,      sub: 'Next 3 days',                                                    tone: 'blue',   icon: <CalendarIcon size={12} />,  active: dailyFocus === 'soon',      onClick: () => setDailyFocus(dailyFocus === 'soon' ? '' : 'soon') },
+            { key: 'new_leads', label: 'New Leads', value: today.new_leads?.count ?? 0, sub: 'Last 24 h',                                                      tone: 'emerald', icon: <Sparkles size={12} />,     active: dailyFocus === 'new_leads', onClick: () => setDailyFocus(dailyFocus === 'new_leads' ? '' : 'new_leads') },
+          ]}
+        />
+      )}
+
+      {today && dailyFocus && (
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
+          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              {dailyFocus === 'overdue' ? 'Overdue Tasks' : dailyFocus === 'today' ? "Today's Tasks" : dailyFocus === 'soon' ? 'Due Soon (3 days)' : 'New Leads (24 h)'}
+            </span>
+            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {(() => {
+              const items = dailyFocus === 'new_leads'
+                ? (today.new_leads?.leads ?? [])
+                : (today[dailyFocus]?.tasks ?? [])
+              if (items.length === 0) {
+                return <div className="px-4 py-6 text-center text-xs text-gray-600">Nothing here right now.</div>
+              }
+              return items.map((inq: any) => (
+                <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="text-white font-semibold truncate">{inq.guest?.full_name ?? '—'}</span>
+                    {inq.guest?.company && <span className="text-gray-500 text-xs truncate">· {inq.guest.company}</span>}
+                    {dailyFocus !== 'new_leads' && inq.next_task_type && (
+                      <span className="text-amber-400 text-xs truncate">· {inq.next_task_type}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    {inq.next_task_due && dailyFocus !== 'new_leads' && (
+                      <span className={dailyFocus === 'overdue' ? 'text-red-400' : 'text-gray-400'}>{inq.next_task_due}</span>
+                    )}
+                    <ContactActions email={inq.guest?.email} phone={inq.guest?.phone} compact />
+                    {inq.next_task_type && !inq.next_task_completed && dailyFocus !== 'new_leads' && (
+                      <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done"
+                        className="p-1 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
+                        <CheckCircle2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Stage-group + view toggles. Stage groups slice the pipeline into
           Leads / Active Deals / Closed so staff can focus on one bucket
@@ -317,6 +412,18 @@ export function Inquiries() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border">
+                <th className="text-center px-3 py-3 w-8">
+                  <input type="checkbox"
+                    checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
+                    onChange={() => setSelected(prev => {
+                      const next = new Set(prev)
+                      const allOn = inquiries.length > 0 && inquiries.every((i: any) => prev.has(i.id))
+                      if (allOn) inquiries.forEach((i: any) => next.delete(i.id))
+                      else       inquiries.forEach((i: any) => next.add(i.id))
+                      return next
+                    })}
+                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Property</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Type</th>
@@ -334,15 +441,22 @@ export function Inquiries() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={14} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={14} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
+              {isLoading && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && inquiries.length === 0 && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                 const nights = inq.check_in && inq.check_out
                   ? Math.max(0, Math.round((new Date(inq.check_out).getTime() - new Date(inq.check_in).getTime()) / 86400000))
                   : null
                 return (
-                  <tr key={inq.id} className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''}`}>
+                  <tr key={inq.id} className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''}`}>
+                    <td className="px-3 py-3 text-center">
+                      <input type="checkbox" checked={selected.has(inq.id)}
+                        onChange={() => setSelected(prev => {
+                          const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
+                        })}
+                        className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-white whitespace-nowrap">{inq.guest?.full_name ?? '—'}</div>
                       <div className="text-xs text-[#636366]">{inq.guest?.company ?? ''}</div>
@@ -759,6 +873,59 @@ export function Inquiries() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bulk action floating bar — appears once any row is selected.
+          Owner reassignment uses the per-org lead_owners list from
+          settings; status changes go through the same hook that
+          auto-creates a reservation when status flips to Confirmed. */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur flex-wrap"
+          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+          <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => runBulk('mark_won')} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
+            <Trophy size={13} /> Mark Won
+          </button>
+          <button onClick={() => runBulk('mark_lost', undefined, `Mark ${selected.size} inquir${selected.size === 1 ? 'y' : 'ies'} as Lost?`)} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
+            <XCircle size={13} /> Mark Lost
+          </button>
+          {/* Owner reassignment via select — submitting fires the bulk
+              call. The select intentionally has an empty option so
+              "Unassign" is one click away. */}
+          <select onChange={e => {
+              const v = e.target.value
+              if (v === '') return
+              if (v === '__clear__') runBulk('set_assigned_to', '')
+              else runBulk('set_assigned_to', v)
+              e.currentTarget.value = ''
+            }} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors cursor-pointer"
+            style={{ colorScheme: 'dark' }}
+            defaultValue="">
+            <option value="" disabled>Assign to…</option>
+            <option value="__clear__" style={{ background: '#0f1c18', color: '#fff' }}>Unassign</option>
+            {settings.lead_owners.map(o => <option key={o} value={o} style={{ background: '#0f1c18', color: '#fff' }}>{o}</option>)}
+          </select>
+          <select onChange={e => {
+              if (!e.target.value) return
+              runBulk('set_priority', e.target.value)
+              e.currentTarget.value = ''
+            }} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 disabled:opacity-50 transition-colors cursor-pointer"
+            style={{ colorScheme: 'dark' }}
+            defaultValue="">
+            <option value="" disabled>Priority…</option>
+            {settings.priorities.map(p => <option key={p} value={p} style={{ background: '#0f1c18', color: '#fff' }}>{p}</option>)}
+          </select>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => setSelected(new Set())} title="Clear selection"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+            <XIcon size={14} />
+          </button>
         </div>
       )}
 

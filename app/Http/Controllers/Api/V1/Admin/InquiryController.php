@@ -185,6 +185,87 @@ class InquiryController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * GET /v1/admin/inquiries/today — sales daily-ops snapshot.
+     *
+     * Distinct from `dashboard` (period totals): this is what reps need
+     * to see when they open the page in the morning — overdue + due-today
+     * + due-soon tasks, plus the freshest leads from the last 24h.
+     */
+    public function today(): JsonResponse
+    {
+        $todayStr = now()->toDateString();
+        $threeDaysOut = now()->addDays(3)->toDateString();
+
+        $base = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name,code'])
+            ->whereNotIn('status', ['Confirmed', 'Lost'])
+            ->where('next_task_completed', false)
+            ->whereNotNull('next_task_due');
+
+        $overdue = (clone $base)->where('next_task_due', '<', $todayStr)
+            ->orderBy('next_task_due')->limit(25)->get();
+        $today = (clone $base)->where('next_task_due', $todayStr)
+            ->orderBy('next_task_due')->limit(25)->get();
+        $soon = (clone $base)
+            ->whereBetween('next_task_due', [now()->addDay()->toDateString(), $threeDaysOut])
+            ->orderBy('next_task_due')->limit(25)->get();
+
+        $newLeads = Inquiry::with(['guest:id,full_name,company', 'property:id,name'])
+            ->where('created_at', '>=', now()->subDay())
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get();
+
+        return response()->json([
+            'date'        => $todayStr,
+            'overdue'     => ['count' => $overdue->count(), 'tasks' => $overdue],
+            'today'       => ['count' => $today->count(),   'tasks' => $today],
+            'soon'        => ['count' => $soon->count(),    'tasks' => $soon],
+            'new_leads'   => ['count' => $newLeads->count(), 'leads' => $newLeads],
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/inquiries/bulk — apply one action to many inquiries.
+     *
+     * Supports status changes (including the auto-reservation-on-Confirmed
+     * path that Inquiry::saving handles), priority change, owner reassign.
+     * Each row updated individually so model events fire — keeps the
+     * inquiry → reservation conversion working in bulk too.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'    => 'required|array|min:1|max:500',
+            'ids.*'  => 'integer',
+            'action' => 'required|string|in:set_status,set_priority,set_assigned_to,mark_won,mark_lost',
+            'value'  => 'nullable|string|max:150',
+        ]);
+
+        $rows = Inquiry::whereIn('id', $validated['ids'])->get();
+        if ($rows->isEmpty()) return response()->json(['updated' => 0, 'message' => 'No matching inquiries.']);
+
+        $updated = 0;
+        foreach ($rows as $r) {
+            $patch = match ($validated['action']) {
+                'set_status'      => ['status' => $validated['value'] ?? $r->status],
+                'set_priority'    => ['priority' => $validated['value'] ?? $r->priority],
+                'set_assigned_to' => ['assigned_to' => $validated['value']],
+                'mark_won'        => ['status' => 'Confirmed'],
+                'mark_lost'       => ['status' => 'Lost'],
+            };
+            // update() (not raw query) so the model's saving hook still
+            // creates a reservation when status flips to Confirmed.
+            $r->update($patch);
+            $updated++;
+        }
+
+        return response()->json([
+            'updated' => $updated,
+            'message' => "{$updated} inquir" . ($updated === 1 ? 'y' : 'ies') . ' updated.',
+        ]);
+    }
+
     public function export(Request $request): StreamedResponse
     {
         $query = Inquiry::with(['guest:id,full_name,company', 'property:id,name']);
