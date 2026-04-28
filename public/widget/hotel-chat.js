@@ -136,13 +136,15 @@
     .htchat-suggestions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center; }\
     .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 6px 14px; font-size: 11.5px; color: #4b5563; text-align: center; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }\
     .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #f9fafb; }\
-    .htchat-actions { display: flex; flex-wrap: wrap; gap: 4px; }\
-    .htchat-action { display: inline-flex; align-items: center; gap: 5px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 4px 10px; font-size: 11.5px; color: #374151; cursor: pointer; transition: all 0.15s; font-weight: 500; line-height: 1.3; white-space: nowrap; }\
-    .htchat-action:hover { border-color: currentColor; color: #111827; background: #f9fafb; }\
-    .htchat-action-icon { font-size: 12px; line-height: 1; }\
-    .htchat-followups { display: flex; flex-wrap: wrap; gap: 4px; }\
-    .htchat-followup { background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 4px 9px; font-size: 11px; color: #4b5563; cursor: pointer; transition: all 0.15s; line-height: 1.3; white-space: nowrap; }\
-    .htchat-followup:hover { background: white; border-color: currentColor; color: #1f2937; }\
+    .htchat-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }\
+    .htchat-action { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.08); border-radius: 999px; padding: 5px 12px 5px 10px; font-size: 11.5px; color: #1f2937; cursor: pointer; transition: all 0.18s ease; font-weight: 500; line-height: 1; white-space: nowrap; text-decoration: none; }\
+    .htchat-action:hover { background: white; border-color: currentColor; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }\
+    .htchat-action svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.85; }\
+    .htchat-action-whatsapp { color: #047857; border-color: rgba(4,120,87,0.22); background: rgba(4,120,87,0.06); }\
+    .htchat-action-whatsapp:hover { background: rgba(4,120,87,0.12); border-color: #059669; }\
+    .htchat-followups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }\
+    .htchat-followup { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); border-radius: 999px; padding: 5px 11px; font-size: 11.5px; color: #4b5563; cursor: pointer; transition: all 0.18s ease; line-height: 1; white-space: nowrap; font-weight: 500; }\
+    .htchat-followup:hover { background: white; border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }\
     #htchat-input-area { padding: 12px; border-top: 1px solid #e5e7eb; background: white; flex-shrink: 0; }\
     #htchat-input-row { display: flex; gap: 8px; align-items: flex-end; }\
     #htchat-input { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; min-height: 40px; max-height: 80px; transition: border-color 0.2s; }\
@@ -276,6 +278,10 @@
     #htchat-panel.htchat-tpl-onyx_gold .htchat-welcome h3 { color: #f5e8c6 !important; letter-spacing: 0.01em; }\
     #htchat-panel.htchat-tpl-onyx_gold .htchat-welcome p { color: rgba(245,232,198,0.7) !important; }\
     #htchat-panel.htchat-tpl-onyx_gold .htchat-suggestion { background: rgba(201,168,76,0.08) !important; border-color: rgba(201,168,76,0.3) !important; color: #e6d49a !important; }\
+    #htchat-panel.htchat-tpl-onyx_gold .htchat-action { background: rgba(201,168,76,0.08) !important; border-color: rgba(201,168,76,0.28) !important; color: #e6d49a !important; }\
+    #htchat-panel.htchat-tpl-onyx_gold .htchat-action:hover { background: rgba(201,168,76,0.18) !important; border-color: #c9a84c !important; }\
+    #htchat-panel.htchat-tpl-onyx_gold .htchat-followup { background: rgba(201,168,76,0.05) !important; border-color: rgba(201,168,76,0.18) !important; color: rgba(245,232,198,0.8) !important; }\
+    #htchat-panel.htchat-tpl-onyx_gold .htchat-followup:hover { background: rgba(201,168,76,0.12) !important; color: #f5e8c6 !important; }\
     #htchat-launcher.htchat-tpl-onyx_gold { background: linear-gradient(135deg, #c9a84c 0%, #8a6f2d 100%) !important; box-shadow: 0 8px 32px rgba(201,168,76,0.4), inset 0 1px 0 rgba(255,255,255,0.25) !important; }\
     #htchat-launcher.htchat-tpl-onyx_gold::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2) 50%, transparent 60%); animation: htchat-shimmer 3.5s ease-in-out infinite; pointer-events: none; }\
     @keyframes htchat-shimmer { 0%, 100% { transform: translateX(-100%); opacity: 0; } 50% { transform: translateX(100%); opacity: 1; } }\
@@ -302,6 +308,10 @@
     #htchat-panel.htchat-tpl-midnight_glass .htchat-welcome h3 { color: #e0e7ff !important; }\
     #htchat-panel.htchat-tpl-midnight_glass .htchat-welcome p { color: rgba(224,231,255,0.7) !important; }\
     #htchat-panel.htchat-tpl-midnight_glass .htchat-suggestion { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.35) !important; color: #c7d2fe !important; }\
+    #htchat-panel.htchat-tpl-midnight_glass .htchat-action { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.32) !important; color: #c7d2fe !important; }\
+    #htchat-panel.htchat-tpl-midnight_glass .htchat-action:hover { background: rgba(99,102,241,0.22) !important; border-color: #818cf8 !important; }\
+    #htchat-panel.htchat-tpl-midnight_glass .htchat-followup { background: rgba(99,102,241,0.06) !important; border-color: rgba(99,102,241,0.2) !important; color: rgba(199,210,254,0.8) !important; }\
+    #htchat-panel.htchat-tpl-midnight_glass .htchat-followup:hover { background: rgba(99,102,241,0.16) !important; color: #e0e7ff !important; }\
     #htchat-launcher.htchat-tpl-midnight_glass { background: linear-gradient(135deg, #6366f1 0%, #3730a3 100%) !important; box-shadow: 0 0 0 0 rgba(99,102,241,0.5), 0 10px 30px rgba(99,102,241,0.5) !important; animation: htchat-neon-pulse 2.6s ease-in-out infinite; }\
     @keyframes htchat-neon-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.5), 0 10px 30px rgba(99,102,241,0.5); } 50% { box-shadow: 0 0 0 10px rgba(99,102,241,0), 0 14px 40px rgba(99,102,241,0.65); } }\
     \
@@ -326,6 +336,10 @@
     #htchat-panel.htchat-tpl-concierge .htchat-welcome h3 { color: #fde68a !important; }\
     #htchat-panel.htchat-tpl-concierge .htchat-welcome p { color: rgba(253,230,138,0.72) !important; }\
     #htchat-panel.htchat-tpl-concierge .htchat-suggestion { background: rgba(217,119,6,0.1) !important; border-color: rgba(217,119,6,0.35) !important; color: #fcd34d !important; }\
+    #htchat-panel.htchat-tpl-concierge .htchat-action { background: rgba(217,119,6,0.1) !important; border-color: rgba(217,119,6,0.32) !important; color: #fcd34d !important; }\
+    #htchat-panel.htchat-tpl-concierge .htchat-action:hover { background: rgba(217,119,6,0.2) !important; border-color: #f59e0b !important; }\
+    #htchat-panel.htchat-tpl-concierge .htchat-followup { background: rgba(217,119,6,0.06) !important; border-color: rgba(217,119,6,0.18) !important; color: rgba(252,211,77,0.85) !important; }\
+    #htchat-panel.htchat-tpl-concierge .htchat-followup:hover { background: rgba(217,119,6,0.16) !important; color: #fde68a !important; }\
     #htchat-launcher.htchat-tpl-concierge { background: linear-gradient(135deg, #d97706 0%, #92400e 100%) !important; box-shadow: 0 10px 30px rgba(217,119,6,0.45), inset 0 1px 0 rgba(255,255,255,0.15) !important; }\
     \
     /* Opening animation — all non-classic templates get a polished slide-up-fade */\
@@ -354,6 +368,8 @@
     sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.91 5.63L20 10.5l-4.69 3.19L16.82 20 12 16.5 7.18 20l1.51-6.31L4 10.5l6.09-1.87z"/></svg>',
     phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
     phoneOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+    whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>',
+    external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
   };
 
   // ── Init ──
@@ -987,10 +1003,17 @@
       var actionsHtml = '';
       if (m.role === 'assistant' && Array.isArray(m.actions) && m.actions.length) {
         actionsHtml = '<div class="htchat-actions">' + m.actions.map(function (a, ai) {
-          var icon = a.type === 'call' ? '📞' : a.type === 'whatsapp' ? '💬' : a.type === 'email' ? '✉️' : a.type === 'sms' ? '📲' : '🔗';
+          // Channel-specific icons for cleaner visual scan.  url-type
+          // gets the external-link glyph; the rest reuse purpose-built
+          // SVGs so emoji rendering quirks across OS/browsers are gone.
+          var icon = a.type === 'call' ? ICONS.phone
+            : a.type === 'whatsapp' ? ICONS.whatsapp
+            : a.type === 'email' ? ICONS.message
+            : a.type === 'sms' ? ICONS.message
+            : ICONS.external;
           var label = escapeHtml(a.label || a.value || a.type || 'Open');
-          return '<button class="htchat-action" data-msg="' + idx + '" data-action="' + ai + '" type="button">' +
-            '<span class="htchat-action-icon">' + icon + '</span>' +
+          return '<button class="htchat-action htchat-action-' + a.type + '" data-msg="' + idx + '" data-action="' + ai + '" type="button">' +
+            icon +
             '<span>' + label + '</span>' +
             '</button>';
         }).join('') + '</div>';
