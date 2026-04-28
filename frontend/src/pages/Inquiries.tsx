@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
+import { PipelineInsights } from '../components/PipelineInsights'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -88,6 +89,33 @@ export function Inquiries() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
 
+  // Global Escape closes any open modal/menu. Handles all three modals
+  // and both row dropdowns in one place so we don't miss any. Click-
+  // away on dropdowns: when the user clicks anywhere outside a
+  // .menu-container, the inline menu closes — fixes the audit's
+  // "dropdown stays open on scroll/focus loss" issue.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (taskFor)        setTaskFor(null)
+      else if (showCreate) setShowCreate(false)
+      else if (showCapture) setShowCapture(false)
+      else if (openMenu)   setOpenMenu(null)
+      else if (dailyFocus) setDailyFocus('')
+    }
+    const onClick = (e: MouseEvent) => {
+      if (!openMenu) return
+      const t = e.target as Element | null
+      if (t && t.closest && !t.closest('[data-menu-root]')) setOpenMenu(null)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('mousedown', onClick)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('mousedown', onClick)
+    }
+  }, [taskFor, showCreate, showCapture, openMenu, dailyFocus])
+
   const { data: propertiesData } = useQuery({
     queryKey: ['properties-list'],
     queryFn: () => api.get('/v1/admin/properties', { params: { per_page: 200 } }).then(r => r.data),
@@ -140,6 +168,8 @@ export function Inquiries() {
       api.put(`/v1/admin/inquiries/${id}`, { status }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['inquiries'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
       toast.success(
         vars.status === 'Confirmed' ? 'Marked as Won — reservation created'
         : vars.status === 'Lost'    ? 'Marked as Lost'
@@ -183,6 +213,7 @@ export function Inquiries() {
       setSelected(new Set())
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Bulk action failed')
     } finally { setBulkBusy(false) }
@@ -271,6 +302,8 @@ export function Inquiries() {
           ]}
         />
       )}
+
+      <PipelineInsights currencySymbol={settings.currency_symbol} />
 
       {today && dailyFocus && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
@@ -482,15 +515,14 @@ export function Inquiries() {
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{nights ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{inq.num_rooms ?? '—'}</td>
                     <td className="px-4 py-3 text-[#a0a0a0]">{inq.total_value ? `${settings.currency_symbol}${Number(inq.total_value).toLocaleString()}` : '—'}</td>
-                    <td className="px-4 py-3 relative">
+                    <td className="px-4 py-3 relative" data-menu-root>
                       <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' ? null : { id: inq.id, type: 'status' })}
                         title="Click to change status"
                         className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
                         {inq.status} <ChevronDown size={10} />
                       </button>
                       {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' && (
-                        <div className="absolute top-full left-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]"
-                          onMouseLeave={() => setOpenMenu(null)}>
+                        <div className="absolute top-full left-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
                           {settings.inquiry_statuses.map(s => (
                             <button key={s} onClick={() => statusMutation.mutate({ id: inq.id, status: s })}
                               disabled={statusMutation.isPending || s === inq.status}
@@ -516,7 +548,7 @@ export function Inquiries() {
                         <span className="text-xs text-green-400">Done</span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 relative">
+                    <td className="px-4 py-3 relative" data-menu-root>
                       <div className="flex items-center gap-1 justify-end">
                         {inq.next_task_type && !inq.next_task_completed && (
                           <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done" className="p-1.5 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
@@ -529,8 +561,7 @@ export function Inquiries() {
                         </button>
                       </div>
                       {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' && (
-                        <div className="absolute top-full right-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]"
-                          onMouseLeave={() => setOpenMenu(null)}>
+                        <div className="absolute top-full right-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
                           <button onClick={() => statusMutation.mutate({ id: inq.id, status: 'Confirmed' })}
                             disabled={statusMutation.isPending || inq.status === 'Confirmed'}
                             className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40">

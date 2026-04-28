@@ -306,6 +306,7 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/expiry-forecast',      [AnalyticsController::class, 'expiryForecast']);
             Route::get('analytics/crm-trends',           [AnalyticsController::class, 'crmTrends']);
             Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
+            Route::get('analytics/inquiry-funnel',       [AnalyticsController::class, 'inquiryFunnel']);
             Route::get('analytics/booking-channels',     [AnalyticsController::class, 'bookingChannels']);
             Route::get('analytics/revenue-comparison',   [AnalyticsController::class, 'revenueComparison']);
             Route::get('analytics/occupancy',            [AnalyticsController::class, 'occupancyTrend']);
@@ -461,6 +462,7 @@ Route::prefix('v1')->group(function () {
 
             // ─── CRM: Inquiries (Sales Pipeline) ─────────────────────────────
             Route::get('inquiries/today',                 [InquiryController::class, 'today']);
+            Route::get('inquiries/insights',              [InquiryController::class, 'insights']);
             Route::post('inquiries/bulk',                 [InquiryController::class, 'bulk']);
             Route::get('inquiries',                       [InquiryController::class, 'index']);
             Route::post('inquiries',                      [InquiryController::class, 'store']);

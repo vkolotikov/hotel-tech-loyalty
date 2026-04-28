@@ -186,6 +186,72 @@ class InquiryController extends Controller
     }
 
     /**
+     * GET /v1/admin/inquiries/insights — deterministic pipeline signals.
+     *
+     * These are the four "where is your team losing money?" buckets a
+     * sales manager actually wants surfaced. Pure SQL, no AI: the
+     * signals matter precisely BECAUSE they're explainable. Each
+     * category includes a short sample list so the panel doesn't need
+     * a second round-trip to render guests.
+     *
+     *   1. Going cold      — open & no activity 7+ days
+     *   2. High value      — top 5 by total_value, not closed
+     *   3. Unassigned      — open, 3+ days old, no assigned_to
+     *   4. Stuck           — same status for 14+ days, not closed
+     */
+    public function insights(): JsonResponse
+    {
+        $sevenDaysAgo    = now()->subDays(7);
+        $threeDaysAgo    = now()->subDays(3);
+        $fourteenDaysAgo = now()->subDays(14);
+
+        $openScope = fn ($q) => $q->whereNotIn('status', ['Confirmed', 'Lost']);
+        $cols = ['id', 'guest_id', 'property_id', 'status', 'priority',
+                 'check_in', 'check_out', 'num_rooms', 'total_value',
+                 'assigned_to', 'last_contacted_at', 'updated_at', 'created_at'];
+
+        // 1. Going cold
+        $coldQ = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name'])
+            ->where($openScope)
+            ->where(function ($q) use ($sevenDaysAgo) {
+                $q->whereNull('last_contacted_at')->where('created_at', '<', $sevenDaysAgo);
+                $q->orWhere('last_contacted_at', '<', $sevenDaysAgo);
+            });
+        $coldCount = (clone $coldQ)->count();
+        $coldSample = (clone $coldQ)->orderBy('updated_at')->limit(8)->get($cols);
+
+        // 2. High-value at risk
+        $hiValQ = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name'])
+            ->where($openScope)
+            ->whereNotNull('total_value')
+            ->where('total_value', '>', 0);
+        $hiValSample = (clone $hiValQ)->orderByDesc('total_value')->limit(5)->get($cols);
+        $hiValSum = (clone $hiValQ)->sum('total_value');
+
+        // 3. Unassigned
+        $unassignedQ = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name'])
+            ->where($openScope)
+            ->whereNull('assigned_to')
+            ->where('created_at', '<', $threeDaysAgo);
+        $unassignedCount = (clone $unassignedQ)->count();
+        $unassignedSample = (clone $unassignedQ)->orderBy('created_at')->limit(8)->get($cols);
+
+        // 4. Stuck — not updated in 14+ days
+        $stuckQ = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name'])
+            ->where($openScope)
+            ->where('updated_at', '<', $fourteenDaysAgo);
+        $stuckCount = (clone $stuckQ)->count();
+        $stuckSample = (clone $stuckQ)->orderBy('updated_at')->limit(8)->get($cols);
+
+        return response()->json([
+            'cold'       => ['count' => $coldCount,       'sample' => $coldSample],
+            'high_value' => ['total' => round((float) $hiValSum, 2), 'sample' => $hiValSample],
+            'unassigned' => ['count' => $unassignedCount, 'sample' => $unassignedSample],
+            'stuck'      => ['count' => $stuckCount,      'sample' => $stuckSample],
+        ]);
+    }
+
+    /**
      * GET /v1/admin/inquiries/today — sales daily-ops snapshot.
      *
      * Distinct from `dashboard` (period totals): this is what reps need
@@ -242,22 +308,31 @@ class InquiryController extends Controller
             'value'  => 'nullable|string|max:150',
         ]);
 
-        $rows = Inquiry::whereIn('id', $validated['ids'])->get();
-        if ($rows->isEmpty()) return response()->json(['updated' => 0, 'message' => 'No matching inquiries.']);
-
         $updated = 0;
-        foreach ($rows as $r) {
-            $patch = match ($validated['action']) {
-                'set_status'      => ['status' => $validated['value'] ?? $r->status],
-                'set_priority'    => ['priority' => $validated['value'] ?? $r->priority],
-                'set_assigned_to' => ['assigned_to' => $validated['value']],
-                'mark_won'        => ['status' => 'Confirmed'],
-                'mark_lost'       => ['status' => 'Lost'],
-            };
-            // update() (not raw query) so the model's saving hook still
-            // creates a reservation when status flips to Confirmed.
-            $r->update($patch);
-            $updated++;
+        // Wrap in a transaction with per-row locks so two concurrent
+        // bulk runs targeting overlapping IDs serialise instead of
+        // racing. Each row is re-fetched inside the transaction to
+        // ensure model events fire on a fresh instance.
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, &$updated) {
+            foreach ($validated['ids'] as $id) {
+                $r = Inquiry::lockForUpdate()->find($id);
+                if (!$r) continue;
+                $patch = match ($validated['action']) {
+                    'set_status'      => ['status' => $validated['value'] ?? $r->status],
+                    'set_priority'    => ['priority' => $validated['value'] ?? $r->priority],
+                    'set_assigned_to' => ['assigned_to' => $validated['value']],
+                    'mark_won'        => ['status' => 'Confirmed'],
+                    'mark_lost'       => ['status' => 'Lost'],
+                };
+                // update() (not raw query) so the model's saving hook
+                // still creates a reservation when status flips to Confirmed.
+                $r->update($patch);
+                $updated++;
+            }
+        });
+
+        if ($updated === 0) {
+            return response()->json(['updated' => 0, 'message' => 'No matching inquiries.']);
         }
 
         return response()->json([

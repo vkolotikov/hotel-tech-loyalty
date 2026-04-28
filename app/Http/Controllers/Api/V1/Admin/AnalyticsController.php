@@ -139,6 +139,87 @@ class AnalyticsController extends Controller
         return response()->json($data);
     }
 
+    /**
+     * GET /v1/admin/analytics/inquiry-funnel — ordered conversion funnel.
+     *
+     * Distinct from `inquiryPipeline` (status counts as a pie):
+     * this returns stages in pipeline order with the conversion rate
+     * from the previous stage. Win-rate is computed as
+     * Confirmed / (Confirmed + Lost) so abandoned inquiries don't
+     * dilute the metric.
+     */
+    public function inquiryFunnel(Request $request): JsonResponse
+    {
+        $months = (int) $request->get('months', 6);
+        $since = now()->subMonths($months);
+
+        // Stage order — matches the visual pipeline. Status names that
+        // a tenant has renamed will simply not appear in the funnel,
+        // which is the right failure mode (better than mis-grouping).
+        $stages = ['New', 'Responded', 'Site Visit', 'Proposal Sent', 'Negotiating', 'Tentative', 'Confirmed'];
+
+        $rows = Inquiry::select('status', DB::raw('count(*) as count'), DB::raw('coalesce(sum(total_value),0) as value'))
+            ->where('created_at', '>=', $since)
+            ->whereIn('status', array_merge($stages, ['Lost']))
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $confirmed = (int) ($rows['Confirmed']->count ?? 0);
+        $lost      = (int) ($rows['Lost']->count ?? 0);
+        $winRate   = ($confirmed + $lost) > 0 ? round($confirmed / ($confirmed + $lost) * 100, 1) : 0;
+
+        // The funnel walks forward through the stage list. At each
+        // stage the count is "everyone who reached this stage OR
+        // beyond" — modelled by summing this stage's count + all
+        // downstream counts. That matches how managers think: of
+        // 100 New inquiries, 60 Responded, 30 reached Proposal Sent,
+        // etc. Without this rollup the pie would mislead because
+        // bookings that already converted leave the New bucket.
+        $funnel = [];
+        $cumulativeForward = 0;
+        $stageRollups = [];
+        foreach (array_reverse($stages) as $stage) {
+            $cumulativeForward += (int) ($rows[$stage]->count ?? 0);
+            $stageRollups[$stage] = $cumulativeForward;
+        }
+
+        $first = $stageRollups[$stages[0]] ?? 0;
+        foreach ($stages as $i => $stage) {
+            $reachedHere = $stageRollups[$stage] ?? 0;
+            $reachedPrev = $i === 0 ? $reachedHere : ($stageRollups[$stages[$i - 1]] ?? $reachedHere);
+            $stepRate = $reachedPrev > 0 ? round($reachedHere / $reachedPrev * 100, 1) : 0;
+            $overall  = $first > 0 ? round($reachedHere / $first * 100, 1) : 0;
+            $funnel[] = [
+                'stage'           => $stage,
+                'count'           => $reachedHere,
+                'value'           => (float) ($rows[$stage]->value ?? 0),
+                'rate_from_prev'  => $stepRate,
+                'rate_from_start' => $overall,
+            ];
+        }
+
+        // Avg days from creation to Confirmed — the time-to-close metric
+        // sales managers obsess over. Lost inquiries excluded; only
+        // those that closed-won contribute to the average.
+        $avgClose = Inquiry::where('status', 'Confirmed')
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('updated_at')
+            ->get(['created_at', 'updated_at'])
+            ->map(fn ($r) => $r->created_at->diffInDays($r->updated_at))
+            ->filter(fn ($d) => $d >= 0)
+            ->avg();
+
+        return response()->json([
+            'months'              => $months,
+            'stages'              => $funnel,
+            'won'                 => $confirmed,
+            'lost'                => $lost,
+            'win_rate_pct'        => $winRate,
+            'avg_days_to_close'   => $avgClose !== null ? round($avgClose, 1) : null,
+        ]);
+    }
+
     public function bookingChannels(): JsonResponse
     {
         $data = Reservation::select('booking_channel', DB::raw('count(*) as count'), DB::raw('coalesce(sum(total_amount),0) as revenue'))

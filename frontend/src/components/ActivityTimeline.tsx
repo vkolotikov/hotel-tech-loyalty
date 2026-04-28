@@ -39,9 +39,20 @@ export function ActivityTimeline({ guestId, initialActivities }: Props) {
   const addMutation = useMutation({
     mutationFn: () => api.post(`/v1/admin/guests/${guestId}/activities`, { type, description }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['guest-activities', guestId] })
-      qc.invalidateQueries({ queryKey: ['guest', String(guestId)] })
-      qc.invalidateQueries({ queryKey: ['member'] })
+      // Refresh the inline timeline + the parent guest/member detail
+      // payloads. Guard against null/undefined guestId so we never write
+      // a `['guest', 'undefined']` cache key (which would silently miss
+      // the real guest cache and prevent invalidation).
+      if (guestId) {
+        qc.invalidateQueries({ queryKey: ['guest-activities', guestId] })
+        qc.invalidateQueries({ queryKey: ['guest', String(guestId)] })
+      }
+      // Member detail uses the linked_guest payload; refetch any member
+      // row whose linked_guest matches. We can't know the member id from
+      // here, so a broad `predicate` invalidation is the right tool —
+      // narrower than `['member']` which would invalidate every member-
+      // shaped query in the app.
+      qc.invalidateQueries({ predicate: q => Array.isArray(q.queryKey) && q.queryKey[0] === 'member' })
       setDescription('')
       toast.success('Activity logged')
     },

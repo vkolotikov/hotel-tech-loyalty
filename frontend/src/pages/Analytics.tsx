@@ -116,6 +116,14 @@ export function Analytics() {
     queryFn: () => api.get(`/v1/admin/analytics/hotel-ops?days=${bookingDays}`).then(r => r.data),
   })
 
+  // Conversion funnel — stage-by-stage rollup with conversion rates
+  // and time-to-close. Cheap to render so we leave it always-fetched.
+  const { data: inquiryFunnel } = useQuery<any>({
+    queryKey: ['analytics-inquiry-funnel'],
+    queryFn: () => api.get('/v1/admin/analytics/inquiry-funnel?months=6').then(r => r.data),
+    enabled: activeTab === 'pipeline',
+  })
+
   const { data: expiryForecast } = useQuery({
     queryKey: ['analytics-expiry-forecast'],
     queryFn: () => api.get('/v1/admin/analytics/expiry-forecast?months=6').then(r => r.data),
@@ -839,6 +847,68 @@ export function Analytics() {
               </AreaChart>
             </ResponsiveContainer>
           </Card>
+
+          {/* Conversion Funnel — stage-by-stage rollup with conversion
+              rates between adjacent stages, plus win rate and avg
+              time-to-close. Honest metric: New is the widest bar
+              (everyone who entered) and each subsequent stage rolls
+              up everyone who reached it OR beyond, so a closed deal
+              still counts toward earlier stages it passed through. */}
+          {inquiryFunnel && (
+            <Card>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                    <Briefcase size={16} className="text-purple-400" /> Conversion Funnel
+                  </h3>
+                  <p className="text-xs text-[#636366] mt-0.5">Last {inquiryFunnel.months} months · {inquiryFunnel.won} won, {inquiryFunnel.lost} lost</p>
+                </div>
+                <div className="flex gap-6 text-right">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[#636366]">Win Rate</p>
+                    <p className="text-2xl font-bold text-emerald-400 tabular-nums">{inquiryFunnel.win_rate_pct}%</p>
+                  </div>
+                  {inquiryFunnel.avg_days_to_close !== null && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-[#636366]">Avg Days to Close</p>
+                      <p className="text-2xl font-bold text-blue-400 tabular-nums">{inquiryFunnel.avg_days_to_close}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                {(inquiryFunnel.stages ?? []).map((s: any, i: number) => {
+                  const max = inquiryFunnel.stages[0]?.count || 1
+                  const widthPct = max > 0 ? Math.max(2, (s.count / max) * 100) : 2
+                  const isWin = s.stage === 'Confirmed'
+                  return (
+                    <div key={s.stage} className="flex items-center gap-3">
+                      <div className="w-32 text-xs text-t-secondary truncate">{s.stage}</div>
+                      <div className="flex-1 relative h-7 bg-dark-surface2 rounded-lg overflow-hidden">
+                        <div className="h-full rounded-lg flex items-center justify-end px-2"
+                          style={{
+                            width: `${widthPct}%`,
+                            background: isWin
+                              ? 'linear-gradient(90deg, rgba(34,197,94,0.4), rgba(34,197,94,0.7))'
+                              : `linear-gradient(90deg, rgba(99,102,241,${0.3 + (s.stages?.length ? 0 : i * 0.05)}), rgba(168,85,247,${0.5 + i * 0.05}))`,
+                          }}>
+                          <span className="text-[11px] font-bold text-white tabular-nums">{s.count}</span>
+                        </div>
+                      </div>
+                      <div className="w-24 text-right text-xs">
+                        {i > 0 && (
+                          <span className={`tabular-nums font-semibold ${s.rate_from_prev >= 60 ? 'text-emerald-400' : s.rate_from_prev >= 30 ? 'text-amber-400' : 'text-red-400'}`}>
+                            {s.rate_from_prev}%
+                          </span>
+                        )}
+                        {i === 0 && <span className="text-[#636366]">start</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Inquiry Pipeline + Booking Channels */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
