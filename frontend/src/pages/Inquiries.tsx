@@ -74,6 +74,12 @@ export function Inquiries() {
   const [showAdvancedCreate, setShowAdvancedCreate] = useState(false)
   // Drag state for kanban — track the dragged inquiry id.
   const [dragging, setDragging] = useState<number | null>(null)
+  // Inline task editor — open the modal for a specific inquiry id.
+  const [taskFor, setTaskFor] = useState<{ id: number; type: string; due: string; notes: string } | null>(null)
+  // Pipeline stage grouping — gives staff a quick way to think about the
+  // pipeline as Leads (just-arrived) vs Active Deals (being worked) vs
+  // Closed (won/lost). Pure client-side slice so we don't touch the API.
+  const [stageGroup, setStageGroup] = useState<'all' | 'leads' | 'deals' | 'closed'>('all')
 
   const { data: propertiesData } = useQuery({
     queryKey: ['properties-list'],
@@ -129,14 +135,52 @@ export function Inquiries() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Status change failed'),
   })
 
+  // Task save — sets/clears next_task_* on the inquiry. Submitting an
+  // empty type clears the task (back-end accepts nullable).
+  const taskMutation = useMutation({
+    mutationFn: ({ id, type, due, notes }: { id: number; type: string | null; due: string | null; notes: string | null }) =>
+      api.put(`/v1/admin/inquiries/${id}`, {
+        next_task_type: type || null,
+        next_task_due: due || null,
+        next_task_notes: notes || null,
+        next_task_completed: false,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      toast.success('Task saved')
+      setTaskFor(null)
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Task save failed'),
+  })
+
   const handleExport = async () => {
     setExporting(true)
     try { await triggerExport('/v1/admin/inquiries/export', params) }
     catch { toast.error('Export failed') } finally { setExporting(false) }
   }
 
-  const inquiries = data?.data ?? []
+  const allInquiries = data?.data ?? []
   const meta = data?.meta ?? {}
+
+  // Stage-group classifier. The status names below match what the
+  // backend ships in settings.inquiry_statuses; if a tenant has renamed
+  // one of these it falls into the implicit "deals" middle bucket.
+  const STAGE_GROUPS: Record<string, string[]> = {
+    leads:  ['New', 'Responded'],
+    deals:  ['Site Visit', 'Proposal Sent', 'Negotiating', 'Tentative'],
+    closed: ['Confirmed', 'Lost'],
+  }
+  const inquiries = stageGroup === 'all'
+    ? allInquiries
+    : allInquiries.filter((i: any) => (STAGE_GROUPS[stageGroup] || []).includes(i.status))
+
+  const stageCounts = {
+    all:    allInquiries.length,
+    leads:  allInquiries.filter((i: any) => STAGE_GROUPS.leads.includes(i.status)).length,
+    deals:  allInquiries.filter((i: any) => STAGE_GROUPS.deals.includes(i.status)).length,
+    closed: allInquiries.filter((i: any) => STAGE_GROUPS.closed.includes(i.status)).length,
+  }
+
   const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly
 
   const toggleSort = (col: string) => {
@@ -158,8 +202,10 @@ export function Inquiries() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">Leads &amp; Inquiries</h1>
-          <p className="text-xs md:text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Sales Pipeline</h1>
+          <p className="text-xs md:text-sm text-t-secondary mt-0.5">
+            {meta.total ?? 0} total · <span className="text-blue-400">{stageCounts.leads} leads</span> · <span className="text-amber-400">{stageCounts.deals} active deals</span> · <span className="text-emerald-400">{stageCounts.closed} closed</span>
+          </p>
         </div>
         {/* Action buttons wrap on mobile, condense labels at narrow widths */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -175,19 +221,37 @@ export function Inquiries() {
         </div>
       </div>
 
-      {/* List ↔ Pipeline view toggle. Pipeline groups inquiries into status
-          columns with drag-to-change-status; list is the sortable table. */}
-      <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        {([
-          { v: 'list', icon: ListIcon, label: 'List' },
-          { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
-        ] as const).map(({ v, icon: Icon, label }) => (
-          <button key={v} onClick={() => setView(v)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
-            <Icon size={12} /> {label}
-          </button>
-        ))}
+      {/* Stage-group + view toggles. Stage groups slice the pipeline into
+          Leads / Active Deals / Closed so staff can focus on one bucket
+          without composing a multi-status filter manually. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex p-1 rounded-2xl gap-0.5" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {([
+            { v: 'all',    label: 'All',          tone: 'from-gray-500 to-gray-600' },
+            { v: 'leads',  label: 'Leads',        tone: 'from-blue-500 to-indigo-500' },
+            { v: 'deals',  label: 'Active Deals', tone: 'from-amber-500 to-orange-500' },
+            { v: 'closed', label: 'Closed',       tone: 'from-emerald-500 to-teal-500' },
+          ] as const).map(({ v, label, tone }) => (
+            <button key={v} onClick={() => setStageGroup(v)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${stageGroup === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              style={stageGroup === v ? { backgroundImage: `linear-gradient(135deg, var(--tw-gradient-stops))`, boxShadow: '0 6px 14px rgba(0,0,0,0.2)' } : {}}>
+              <span className={stageGroup === v ? `bg-gradient-to-r ${tone} bg-clip-text text-transparent` : ''}>{label}</span>
+              <span className="text-[10px] tabular-nums opacity-70">{stageCounts[v]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {([
+            { v: 'list', icon: ListIcon, label: 'List' },
+            { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
+          ] as const).map(({ v, icon: Icon, label }) => (
+            <button key={v} onClick={() => setView(v)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+              <Icon size={12} /> {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Filters */}
@@ -370,6 +434,18 @@ export function Inquiries() {
                               <CheckCircle2 size={12} /> Complete Task
                             </button>
                           )}
+                          <button onClick={() => {
+                              setTaskFor({
+                                id: inq.id,
+                                type: inq.next_task_type || '',
+                                due: inq.next_task_due || '',
+                                notes: inq.next_task_notes || '',
+                              })
+                              setOpenMenu(null)
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                            <AlertCircle size={12} /> {inq.next_task_type ? 'Edit Task' : 'Set Task'}
+                          </button>
                           <button onClick={() => { setOpenMenu(null); window.location.href = `/inquiries/${inq.id}` }}
                             className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
                             <Eye size={12} /> View Detail
@@ -391,7 +467,10 @@ export function Inquiries() {
           shown so staff can drag a card to "won" / "lost" for closure. */}
       {view === 'pipeline' && (
         <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 400 }}>
-          {settings.inquiry_statuses.map((col: string) => {
+          {(stageGroup === 'all'
+            ? settings.inquiry_statuses
+            : settings.inquiry_statuses.filter(s => (STAGE_GROUPS[stageGroup] || []).includes(s))
+          ).map((col: string) => {
             const cards = inquiries.filter((i: any) => i.status === col)
             return (
               <div key={col}
@@ -626,6 +705,59 @@ export function Inquiries() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Task editor — triggered from the row action menu. Saves
+          next_task_* via PUT /inquiries/{id}; "Clear" wipes them so a
+          stale follow-up doesn't keep flagging the row as overdue. */}
+      {taskFor && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setTaskFor(null)}>
+          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-white mb-1">{taskFor.type ? 'Edit Task' : 'Set Task'}</h2>
+            <p className="text-xs text-t-secondary mb-4">Track the next thing to do on this inquiry — call, follow-up email, send proposal, etc.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-[#a0a0a0] mb-1">Task Type</label>
+                <select value={taskFor.type} onChange={e => setTaskFor(t => t && { ...t, type: e.target.value })} className={inp}>
+                  <option value="">-- None --</option>
+                  <option value="Call">Call</option>
+                  <option value="Email">Email</option>
+                  <option value="Follow-up">Follow-up</option>
+                  <option value="Send Proposal">Send Proposal</option>
+                  <option value="Site Visit">Site Visit</option>
+                  <option value="Negotiation">Negotiation</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-[#a0a0a0] mb-1">Due Date</label>
+                <input type="date" value={taskFor.due} onChange={e => setTaskFor(t => t && { ...t, due: e.target.value })} className={inp} style={{ colorScheme: 'dark' }} />
+              </div>
+              <div>
+                <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                <textarea rows={3} value={taskFor.notes} onChange={e => setTaskFor(t => t && { ...t, notes: e.target.value })}
+                  placeholder="What needs to happen, any context staff should know"
+                  className={`${inp} resize-none`} />
+              </div>
+            </div>
+            <div className="flex justify-between items-center mt-4">
+              <button onClick={() => taskMutation.mutate({ id: taskFor.id, type: null, due: null, notes: null })}
+                disabled={taskMutation.isPending}
+                className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40">
+                Clear task
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setTaskFor(null)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                <button onClick={() => taskFor && taskMutation.mutate({ id: taskFor.id, type: taskFor.type || null, due: taskFor.due || null, notes: taskFor.notes || null })}
+                  disabled={taskMutation.isPending || !taskFor.type}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
+                  {taskMutation.isPending ? 'Saving…' : 'Save Task'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

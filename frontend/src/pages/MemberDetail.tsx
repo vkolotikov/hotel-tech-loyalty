@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import { ContactActions } from '../components/ContactActions'
+import { ActivityTimeline } from '../components/ActivityTimeline'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -371,25 +372,13 @@ export function MemberDetail() {
                   </div>
                 )}
 
-                {/* Recent Activities */}
-                {(data.linked_guest.activities?.length ?? 0) > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
-                      <Activity size={13} /> Recent Activity
-                    </h3>
-                    <div className="space-y-1.5">
-                      {data.linked_guest.activities.slice(0, 5).map((a: any) => (
-                        <div key={a.id} className="flex items-start justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-white font-medium">{a.activity_type || a.type || 'Activity'}</span>
-                            {a.description && <p className="text-[#636366] mt-0.5 truncate">{a.description}</p>}
-                          </div>
-                          <span className="text-[#636366] ml-2 whitespace-nowrap">{new Date(a.created_at).toLocaleDateString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Activity timeline — log calls/emails/notes inline. */}
+                <div>
+                  <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
+                    <Activity size={13} /> Activity Log
+                  </h3>
+                  <ActivityTimeline guestId={data.linked_guest.id} initialActivities={data.linked_guest.activities} />
+                </div>
 
                 {/* Reservations */}
                 {(data.linked_guest.reservations?.length ?? 0) > 0 && (

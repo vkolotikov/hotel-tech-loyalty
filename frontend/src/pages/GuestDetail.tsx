@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { SendReviewButton } from '../components/SendReviewButton';
 import { ContactActions } from '../components/ContactActions';
+import { ActivityTimeline } from '../components/ActivityTimeline';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, User, Mail, Star, Calendar,
@@ -210,7 +211,9 @@ export function GuestDetail() {
         )}
         {activeTab === 'inquiries' && <InquiriesTab data={inquiries} />}
         {activeTab === 'reservations' && <ReservationsTab data={reservations} />}
-        {activeTab === 'activities' && <ActivitiesTab data={activities} />}
+        {activeTab === 'activities' && (
+          <ActivityTimeline guestId={Number(id)} initialActivities={(activities as any)?.data ?? activities} />
+        )}
       </div>
     </div>
   );
@@ -442,27 +445,6 @@ function ReservationsTab({ data }: { data: any }) {
   );
 }
 
-function ActivitiesTab({ data }: { data: any }) {
-  const items = data?.data ?? data ?? [];
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return <EmptyState text="No activities recorded." />;
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((a: any, i: number) => (
-        <div key={i} className="flex gap-4 bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
-          <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0" />
-          <div>
-            <p className="text-white text-sm">{a.description || a.action || a.type || 'Activity'}</p>
-            {a.created_at && <p className="text-gray-500 text-xs mt-1">{a.created_at}</p>}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function EmptyState({ text }: { text: string }) {
   return (

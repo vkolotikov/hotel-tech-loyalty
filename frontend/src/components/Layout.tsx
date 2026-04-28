@@ -82,7 +82,7 @@ const navGroups: NavGroup[] = [
     label: 'CRM & Marketing',
     items: [
       { path: '/inquiries',     label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
-      { path: '/corporate',     label: 'Corporate',         icon: Briefcase, gate: 'admin' },
+      { path: '/corporate',     label: 'Companies',         icon: Briefcase, gate: 'admin' },
       { path: '/notifications', label: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
       { path: '/reviews',       label: 'Reviews',           icon: Star,      gate: 'admin' },
     ],
