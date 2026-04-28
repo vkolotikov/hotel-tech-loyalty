@@ -186,6 +186,60 @@ class InquiryController extends Controller
     }
 
     /**
+     * POST /v1/admin/inquiries/{inquiry}/log-contact — record an outbound
+     * touch on the inquiry.
+     *
+     * Increments the per-channel counter where one exists
+     * (phone_calls_made / emails_sent), always bumps last_contacted_at,
+     * and writes a row to guest_activities for the linked guest so the
+     * activity timeline + journey view both pick it up. Channels:
+     * call | email | sms | whatsapp.
+     */
+    public function logContact(Request $request, Inquiry $inquiry): JsonResponse
+    {
+        $validated = $request->validate([
+            'channel' => 'required|string|in:call,email,sms,whatsapp',
+            'note'    => 'nullable|string|max:500',
+        ]);
+
+        $patch = ['last_contacted_at' => now()];
+        if (!empty($validated['note'])) $patch['last_contact_comment'] = $validated['note'];
+
+        if ($validated['channel'] === 'call') {
+            $patch['phone_calls_made'] = (int) ($inquiry->phone_calls_made ?? 0) + 1;
+        }
+        if ($validated['channel'] === 'email') {
+            $patch['emails_sent'] = (int) ($inquiry->emails_sent ?? 0) + 1;
+        }
+        $inquiry->update($patch);
+
+        // Mirror to the guest's activity log so reception, the journey
+        // timeline, and any future per-guest analytics all see the same
+        // event. Best-effort: a missing guest just skips the log instead
+        // of failing the contact bump.
+        if ($inquiry->guest_id) {
+            try {
+                \App\Models\GuestActivity::create([
+                    'guest_id'     => $inquiry->guest_id,
+                    'type'         => $validated['channel'],
+                    'description'  => "Logged from inquiry #{$inquiry->id}" . (!empty($validated['note']) ? " — {$validated['note']}" : ''),
+                    'performed_by' => $request->user()?->name,
+                ]);
+                \App\Models\Guest::where('id', $inquiry->guest_id)->update(['last_activity_at' => now()]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('logContact: activity mirror failed', ['error' => $e->getMessage(), 'inquiry_id' => $inquiry->id]);
+            }
+        }
+
+        return response()->json([
+            'success'            => true,
+            'phone_calls_made'   => $inquiry->fresh()->phone_calls_made,
+            'emails_sent'        => $inquiry->fresh()->emails_sent,
+            'last_contacted_at'  => $inquiry->fresh()->last_contacted_at,
+        ]);
+    }
+
+    /**
      * GET /v1/admin/inquiries/insights — deterministic pipeline signals.
      *
      * These are the four "where is your team losing money?" buckets a

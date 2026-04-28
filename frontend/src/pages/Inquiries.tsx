@@ -7,6 +7,7 @@ import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter
 import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
+import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -226,7 +227,15 @@ export function Inquiries() {
   }
 
   const allInquiries = data?.data ?? []
-  const meta = data?.meta ?? {}
+  // Laravel paginate() returns total/last_page/current_page at the
+  // TOP level of the response, not under a `meta` key. The previous
+  // `data?.meta?.total` always returned undefined and the header
+  // counted "0 total" even with rows present.
+  const meta = {
+    total: data?.total ?? 0,
+    current_page: data?.current_page ?? 1,
+    last_page: data?.last_page ?? 1,
+  }
 
   // Stage-group classifier. The status names below match what the
   // backend ships in settings.inquiry_statuses; if a tenant has renamed
@@ -458,29 +467,25 @@ export function Inquiries() {
                     className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Property</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Source</th>
-                <SortHeader col="check_in" label="Check-in" />
-                <SortHeader col="check_out" label="Check-out" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Nights</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Rooms</th>
-                <SortHeader col="total_value" label="Total Value" />
+                <SortHeader col="check_in" label="Stay" />
+                <SortHeader col="total_value" label="Value" />
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Priority</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Assigned</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Owner</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Touches</th>
                 <SortHeader col="next_task_due" label="Next Task" />
-                <th className="px-4 py-3" />
+                <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Actions</th>
+                <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
+              {isLoading && <tr><td colSpan={10} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && inquiries.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                 const nights = inq.check_in && inq.check_out
                   ? Math.max(0, Math.round((new Date(inq.check_out).getTime() - new Date(inq.check_in).getTime()) / 86400000))
                   : null
+                const fmtShort = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                 return (
                   <tr key={inq.id} className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''}`}>
                     <td className="px-3 py-3 text-center">
@@ -490,37 +495,68 @@ export function Inquiries() {
                         })}
                         className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-white whitespace-nowrap">{inq.guest?.full_name ?? '—'}</div>
-                      <div className="text-xs text-[#636366]">{inq.guest?.company ?? ''}</div>
+
+                    {/* Guest cell — name, company, property + source pills,
+                        contact links. Heavy lifting in this cell so the
+                        rest of the row stays narrow. */}
+                    <td className="px-4 py-3 max-w-[260px]">
+                      <div className="font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                      {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {inq.property?.name && (
+                          <span className="text-[10px] text-gray-500">{inq.property.name}</span>
+                        )}
+                        {inq.inquiry_type && (
+                          <span className="text-[10px] text-gray-600">· {inq.inquiry_type}</span>
+                        )}
+                        {inq.source && SOURCE_BADGES[inq.source] && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
+                        )}
+                        {inq.source && !SOURCE_BADGES[inq.source] && (
+                          <span className="text-[10px] text-gray-600">· {inq.source}</span>
+                        )}
+                      </div>
                       {(inq.guest?.email || inq.guest?.phone) && (
                         <div className="mt-1.5">
                           <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.property?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.inquiry_type ?? '—'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {inq.source ? (
-                        SOURCE_BADGES[inq.source] ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
-                        ) : (
-                          <span className="text-xs text-[#a0a0a0]">{inq.source}</span>
-                        )
-                      ) : <span className="text-xs text-[#636366]">—</span>}
+
+                    {/* Stay — single cell merging dates, nights, rooms */}
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {inq.check_in || inq.check_out ? (
+                        <>
+                          <div className="text-gray-300">
+                            {inq.check_in ? fmtShort(inq.check_in) : '—'} → {inq.check_out ? fmtShort(inq.check_out) : '—'}
+                          </div>
+                          <div className="text-[10px] text-gray-600">
+                            {nights !== null && `${nights}n`}{nights !== null && inq.num_rooms ? ' · ' : ''}
+                            {inq.num_rooms ? `${inq.num_rooms} room${inq.num_rooms === 1 ? '' : 's'}` : ''}
+                            {inq.room_type_requested && (nights !== null || inq.num_rooms) ? ' · ' : ''}
+                            {inq.room_type_requested ?? ''}
+                          </div>
+                        </>
+                      ) : <span className="text-gray-700">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.check_in ?? '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.check_out ?? '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{nights ?? '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs text-center">{inq.num_rooms ?? '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0]">{inq.total_value ? `${settings.currency_symbol}${Number(inq.total_value).toLocaleString()}` : '—'}</td>
+
+                    {/* Value */}
+                    <td className="px-4 py-3 text-sm font-semibold tabular-nums whitespace-nowrap">
+                      {inq.total_value
+                        ? <span className="text-emerald-400">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>
+                        : <span className="text-gray-700 text-xs">—</span>}
+                    </td>
+
+                    {/* Status pill — clickable to change inline */}
                     <td className="px-4 py-3 relative" data-menu-root>
                       <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' ? null : { id: inq.id, type: 'status' })}
                         title="Click to change status"
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
-                        {inq.status} <ChevronDown size={10} />
+                        className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
+                        {inq.status} <ChevronDown size={9} />
                       </button>
+                      <div className={`text-[10px] mt-0.5 font-bold ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>
+                        {inq.priority}
+                      </div>
                       {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' && (
                         <div className="absolute top-full left-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
                           {settings.inquiry_statuses.map(s => (
@@ -533,46 +569,47 @@ export function Inquiries() {
                         </div>
                       )}
                     </td>
-                    <td className={`px-4 py-3 text-xs font-medium ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>{inq.priority}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">{inq.assigned_to ?? '—'}</td>
+
+                    {/* Owner */}
+                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+                      {inq.assigned_to || <span className="text-gray-700">unassigned</span>}
+                    </td>
+
+                    {/* Touches — call/email counters + relative last contact */}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <InquiryTouchSummary inquiry={inq} />
+                    </td>
+
+                    {/* Next Task */}
                     <td className="px-4 py-3">
                       {inq.next_task_type && !inq.next_task_completed ? (
                         <div className="flex items-center gap-1">
                           {isOverdue && <AlertCircle size={11} className="text-red-400 flex-shrink-0" />}
                           <div>
                             <div className="text-xs text-gray-300 whitespace-nowrap">{inq.next_task_type}</div>
-                            {inq.next_task_due && <div className={`text-xs ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
+                            {inq.next_task_due && <div className={`text-[10px] ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
                           </div>
                         </div>
                       ) : inq.next_task_completed ? (
                         <span className="text-xs text-green-400">Done</span>
-                      ) : '—'}
+                      ) : <span className="text-xs text-gray-700">—</span>}
                     </td>
-                    <td className="px-4 py-3 relative" data-menu-root>
-                      <div className="flex items-center gap-1 justify-end">
-                        {inq.next_task_type && !inq.next_task_completed && (
-                          <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done" className="p-1.5 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
-                            <CheckCircle2 size={14} />
-                          </button>
-                        )}
-                        <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' ? null : { id: inq.id, type: 'action' })}
-                          title="More actions" className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
+
+                    {/* Inline quick actions — call, email, whatsapp, sms,
+                        won, lost — all single-click and self-logging. */}
+                    <td className="px-4 py-3 text-right">
+                      <InquiryQuickActions inquiry={inq}
+                        onStatus={(id, status) => statusMutation.mutate({ id, status })} />
+                    </td>
+
+                    {/* Overflow menu — task editor + view detail */}
+                    <td className="px-2 py-3 relative" data-menu-root>
+                      <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' ? null : { id: inq.id, type: 'action' })}
+                        title="More" className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
+                        <MoreHorizontal size={14} />
+                      </button>
                       {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' && (
-                        <div className="absolute top-full right-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
-                          <button onClick={() => statusMutation.mutate({ id: inq.id, status: 'Confirmed' })}
-                            disabled={statusMutation.isPending || inq.status === 'Confirmed'}
-                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40">
-                            <Trophy size={12} /> Mark as Won (create reservation)
-                          </button>
-                          <button onClick={() => statusMutation.mutate({ id: inq.id, status: 'Lost' })}
-                            disabled={statusMutation.isPending || inq.status === 'Lost'}
-                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-red-300 hover:bg-red-500/10 disabled:opacity-40">
-                            <XCircle size={12} /> Mark as Lost
-                          </button>
-                          <div className="border-t border-white/[0.06] my-1" />
+                        <div className="absolute top-full right-2 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
                           {inq.next_task_type && !inq.next_task_completed && (
                             <button onClick={() => { completeMutation.mutate(inq.id); setOpenMenu(null) }}
                               className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">

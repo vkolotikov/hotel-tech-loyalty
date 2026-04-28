@@ -471,6 +471,7 @@ Route::prefix('v1')->group(function () {
             Route::put('inquiries/{inquiry}',             [InquiryController::class, 'update']);
             Route::delete('inquiries/{inquiry}',          [InquiryController::class, 'destroy']);
             Route::post('inquiries/{inquiry}/complete-task', [InquiryController::class, 'completeTask']);
+            Route::post('inquiries/{inquiry}/log-contact',   [InquiryController::class, 'logContact']);
 
             // ─── CRM: Reservations ────────────────────────────────────────────
             Route::get('reservations',                       [ReservationController::class, 'index']);
