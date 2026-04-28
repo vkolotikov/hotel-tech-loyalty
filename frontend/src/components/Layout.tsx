@@ -34,12 +34,17 @@ interface NavItem {
 
 interface NavGroup {
   label: string
+  /** Per-group accent — drives the colored dot in the header + the
+   *  tinted active-item background. Keeps groups visually distinct
+   *  without making the sidebar look cartoony. */
+  accent: string
   items: NavItem[]
 }
 
 const navGroups: NavGroup[] = [
   {
     label: 'Overview',
+    accent: '#60a5fa', // blue
     items: [
       { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
       { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics', feature: 'ai_insights' },
@@ -48,6 +53,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'AI Chat',
+    accent: '#a78bfa', // violet
     items: [
       { path: '/chat-inbox',     label: 'Inbox',         icon: Inbox, gate: 'all',   product: 'chat' },
       { path: '/visitors',       label: 'Visitors',      icon: Eye,   gate: 'all',   product: 'chat' },
@@ -56,6 +62,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Members & Loyalty',
+    accent: '#fbbf24', // gold
     items: [
       { path: '/members',            label: 'Members',    icon: Users,     gate: 'all' },
       { path: '/members/duplicates', label: 'Duplicates', icon: ArrowLeftRight, gate: 'admin' },
@@ -66,6 +73,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Bookings',
+    accent: '#34d399', // emerald
     items: [
       // Reservations & Services each surface own resource. The List ↔ Calendar
       // toggle lives inside the page; the dropped /calendar legacy entry was
@@ -80,6 +88,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'CRM & Marketing',
+    accent: '#f472b6', // pink
     items: [
       { path: '/inquiries',     label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
       { path: '/corporate',     label: 'Companies',         icon: Briefcase, gate: 'admin' },
@@ -89,6 +98,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Operations',
+    accent: '#22d3ee', // cyan
     items: [
       { path: '/planner',    label: 'Planner',    icon: ClipboardList, gate: 'all' },
       { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
@@ -97,6 +107,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'System',
+    accent: '#9ca3af', // slate
     items: [
       { path: '/billing',   label: 'Billing',   icon: CreditCard, gate: 'admin' },
       { path: '/audit-log', label: 'Audit Log', icon: ScrollText, gate: 'admin' },
@@ -331,21 +342,35 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
-          {visibleGroups.map(({ label, items }) => {
+          {visibleGroups.map(({ label, items, accent }) => {
             const isOpen = displayCollapsed || expandedGroups[label] !== false // default open
+            // hex8 helper — convert "#rrggbb" to rgba with the supplied alpha.
+            // Used for the active-state tint so each group's highlight
+            // colour reads as a translucent wash of the accent.
+            const tint = (a: number) => {
+              const hex = accent.replace('#', '')
+              const r = parseInt(hex.slice(0, 2), 16)
+              const g = parseInt(hex.slice(2, 4), 16)
+              const b = parseInt(hex.slice(4, 6), 16)
+              return `rgba(${r},${g},${b},${a})`
+            }
             return (
-              <div key={label} className="mb-1">
-                {/* Group header */}
+              <div key={label} className="mb-3 last:mb-1">
+                {/* Group header — colored dot + bolder label so the
+                    seven sections read as distinct sections at a glance.
+                    Collapsed sidebar shows only a thin accent line. */}
                 {!displayCollapsed ? (
                   <button
                     onClick={() => toggleGroup(label)}
-                    className="flex items-center justify-between w-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#636366] hover:text-t-secondary transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/[0.02] rounded-lg transition-colors group"
+                    style={{ color: tint(0.9) }}
                   >
-                    <span>{label}</span>
-                    <ChevronDown size={12} className={clsx('transition-transform', isOpen ? '' : '-rotate-90')} />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
+                    <span className="flex-1 text-left">{label}</span>
+                    <ChevronDown size={11} className={clsx('transition-transform opacity-50 group-hover:opacity-100', isOpen ? '' : '-rotate-90')} />
                   </button>
                 ) : (
-                  <div className="h-px bg-dark-border mx-2 my-1.5" />
+                  <div className="h-0.5 mx-3 my-2 rounded-full" style={{ background: tint(0.4) }} />
                 )}
 
                 {/* Group items */}
@@ -362,10 +387,13 @@ export function Layout({ children }: { children: ReactNode }) {
                       className={clsx(
                         'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                         displayCollapsed ? 'justify-center px-0' : 'px-3',
-                        active
-                          ? 'bg-primary-600/20 text-primary-400'
-                          : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
+                        !active && 'text-t-secondary hover:text-white hover:bg-dark-surface2',
                       )}
+                      style={active ? {
+                        background: tint(0.16),
+                        color: accent,
+                        boxShadow: `inset 2px 0 0 ${accent}`,
+                      } : undefined}
                     >
                       <Icon size={17} className="flex-shrink-0" />
                       {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
