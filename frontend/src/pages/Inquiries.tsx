@@ -71,8 +71,10 @@ export function Inquiries() {
   // drag-to-change-status, list is the sortable table.
   const [view, setView] = useState<'list' | 'pipeline'>('list')
   // Inline open menus (status / action) — keyed by inquiry id so only one
-  // is open at a time on the page.
-  const [openMenu, setOpenMenu] = useState<{ id: number; type: 'status' | 'action' } | null>(null)
+  // is open at a time on the page. The anchor rect is captured on click
+  // so we can render the menu via position:fixed (escaping the table's
+  // overflow:hidden, which was clipping the dropdown out of view).
+  const [openMenu, setOpenMenu] = useState<{ id: number; type: 'status' | 'action'; anchor: DOMRect } | null>(null)
   // Simplified Add Inquiry form — advanced fields are collapsed by default.
   const [showAdvancedCreate, setShowAdvancedCreate] = useState(false)
   // Drag state for kanban — track the dragged inquiry id.
@@ -548,8 +550,13 @@ export function Inquiries() {
                     </td>
 
                     {/* Status pill — clickable to change inline */}
-                    <td className="px-4 py-3 relative" data-menu-root>
-                      <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' ? null : { id: inq.id, type: 'status' })}
+                    <td className="px-4 py-3" data-menu-root>
+                      <button onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status'
+                            ? null
+                            : { id: inq.id, type: 'status', anchor: rect })
+                        }}
                         title="Click to change status"
                         className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
                         {inq.status} <ChevronDown size={9} />
@@ -557,17 +564,6 @@ export function Inquiries() {
                       <div className={`text-[10px] mt-0.5 font-bold ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>
                         {inq.priority}
                       </div>
-                      {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status' && (
-                        <div className="absolute top-full left-4 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
-                          {settings.inquiry_statuses.map(s => (
-                            <button key={s} onClick={() => statusMutation.mutate({ id: inq.id, status: s })}
-                              disabled={statusMutation.isPending || s === inq.status}
-                              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 ${s === inq.status ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
-                              {s === inq.status && '✓ '}{s}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </td>
 
                     {/* Owner */}
@@ -603,37 +599,16 @@ export function Inquiries() {
                     </td>
 
                     {/* Overflow menu — task editor + view detail */}
-                    <td className="px-2 py-3 relative" data-menu-root>
-                      <button onClick={() => setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' ? null : { id: inq.id, type: 'action' })}
+                    <td className="px-2 py-3" data-menu-root>
+                      <button onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action'
+                            ? null
+                            : { id: inq.id, type: 'action', anchor: rect })
+                        }}
                         title="More" className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
                         <MoreHorizontal size={14} />
                       </button>
-                      {openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action' && (
-                        <div className="absolute top-full right-2 mt-1 z-30 bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
-                          {inq.next_task_type && !inq.next_task_completed && (
-                            <button onClick={() => { completeMutation.mutate(inq.id); setOpenMenu(null) }}
-                              className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
-                              <CheckCircle2 size={12} /> Complete Task
-                            </button>
-                          )}
-                          <button onClick={() => {
-                              setTaskFor({
-                                id: inq.id,
-                                type: inq.next_task_type || '',
-                                due: inq.next_task_due || '',
-                                notes: inq.next_task_notes || '',
-                              })
-                              setOpenMenu(null)
-                            }}
-                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
-                            <AlertCircle size={12} /> {inq.next_task_type ? 'Edit Task' : 'Set Task'}
-                          </button>
-                          <button onClick={() => { setOpenMenu(null); window.location.href = `/inquiries/${inq.id}` }}
-                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
-                            <Eye size={12} /> View Detail
-                          </button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 )
@@ -943,6 +918,62 @@ export function Inquiries() {
           </div>
         </div>
       )}
+
+      {/* Global inline menus rendered with position:fixed so they escape
+          the table's overflow:hidden / overflow-x-auto containers. The
+          anchor rect is captured at click time and used to position
+          relative to the viewport. */}
+      {openMenu && (() => {
+        const inq = inquiries.find((i: any) => i.id === openMenu.id)
+        if (!inq) return null
+        // Default below the trigger, flipped above when there's no
+        // room (within 240px of the bottom of the viewport).
+        const flipUp = openMenu.anchor.bottom + 240 > window.innerHeight
+        const top = flipUp
+          ? Math.max(8, openMenu.anchor.top - 8 - 240)
+          : openMenu.anchor.bottom + 4
+        const right = openMenu.type === 'action' ? window.innerWidth - openMenu.anchor.right : undefined
+        const left  = openMenu.type === 'status' ? openMenu.anchor.left : undefined
+        return (
+          <div data-menu-root
+            style={{ position: 'fixed', top, left, right, zIndex: 60 }}
+            className="bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
+            {openMenu.type === 'status' && settings.inquiry_statuses.map(s => (
+              <button key={s} onClick={() => statusMutation.mutate({ id: openMenu.id, status: s })}
+                disabled={statusMutation.isPending || s === inq.status}
+                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 ${s === inq.status ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
+                {s === inq.status && '✓ '}{s}
+              </button>
+            ))}
+            {openMenu.type === 'action' && (
+              <>
+                {inq.next_task_type && !inq.next_task_completed && (
+                  <button onClick={() => { completeMutation.mutate(openMenu.id); setOpenMenu(null) }}
+                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                    <CheckCircle2 size={12} /> Complete Task
+                  </button>
+                )}
+                <button onClick={() => {
+                    setTaskFor({
+                      id: openMenu.id,
+                      type: inq.next_task_type || '',
+                      due: inq.next_task_due || '',
+                      notes: inq.next_task_notes || '',
+                    })
+                    setOpenMenu(null)
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                  <AlertCircle size={12} /> {inq.next_task_type ? 'Edit Task' : 'Set Task'}
+                </button>
+                <button onClick={() => { setOpenMenu(null); window.location.href = `/inquiries/${openMenu.id}` }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                  <Eye size={12} /> View Detail
+                </button>
+              </>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Bulk action floating bar — appears once any row is selected.
           Owner reassignment uses the per-org lead_owners list from
