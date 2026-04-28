@@ -594,8 +594,11 @@ class WidgetChatController extends Controller
             $parsed = json_decode(trim((string) $aiResponse), true);
             if (is_array($parsed) && isset($parsed['message']) && is_string($parsed['message'])) {
                 $aiResponse  = $parsed['message'];
-                $aiFollowUps = is_array($parsed['follow_ups'] ?? null) ? array_slice($parsed['follow_ups'], 0, 4) : [];
-                $aiActions   = is_array($parsed['actions']    ?? null) ? array_slice($parsed['actions'],    0, 4) : [];
+                // Hard caps regardless of what the model returned —
+                // 3 chips and 2 actions is the most a chat bubble can
+                // carry without becoming visual noise.
+                $aiFollowUps = is_array($parsed['follow_ups'] ?? null) ? array_slice($parsed['follow_ups'], 0, 3) : [];
+                $aiActions   = is_array($parsed['actions']    ?? null) ? array_slice($parsed['actions'],    0, 2) : [];
             }
         } catch (\Throwable $e) {
             // Verbose log so we can diagnose chats failing in prod. The
@@ -2053,18 +2056,28 @@ class WidgetChatController extends Controller
 
         // Structured-reply guidance. The Responses API path constrains
         // the FINAL message to a json_schema with `message`,
-        // `follow_ups`, and `actions`. We tell the model how to use
-        // each so the buttons in the widget feel deliberate, not noise.
+        // `follow_ups`, and `actions`. The bar for emitting either
+        // array is HIGH on purpose — empty is the default, the
+        // visitor's screen real estate is limited, and a noisy widget
+        // erodes trust faster than a quiet one.
         $parts[] = "\n# Structured Reply Format (gpt-5.x — Responses API)";
-        $parts[] = "Your final reply is a JSON object with three fields: `message` (the visible text), `follow_ups` (1–3 quick-reply chips), and `actions` (0–3 contact buttons).";
-        $parts[] = "- `message` carries the human-readable reply. Use the same Style + Length rules above.";
-        $parts[] = "- `follow_ups` is an array of `{label, prompt}` objects. The label is what the visitor sees on a chip (≤30 chars, action-shaped: \"Show suites\", \"Check Friday\", \"Book a room\"). The prompt is the message we send back as if the visitor typed it. Include 1–3 follow-ups when there's an obvious next step the visitor is likely to want — never include filler chips like \"Yes\" / \"No\" / \"Tell me more\". Empty array is fine when no clear next step exists.";
-        $parts[] = "- `actions` is an array of `{type, label, value}` objects. `type` is one of `call` | `whatsapp` | `email` | `sms` | `url`. Add an action ONLY when:";
-        $parts[] = "    • You're recommending the visitor contact someone (always offer the channel as a button).";
-        $parts[] = "    • You want them to open a specific URL (booking page, location map, menu, signed PDF).";
-        $parts[] = "    • A direct phone number, email, or WhatsApp link would help and is verified by the Knowledge Base above.";
-        $parts[] = "  Use the EXACT phone / email / URL from the Knowledge Base or Runtime Context. Never invent contact details. The widget will render each action as a tap-to-act button — so don't repeat the same URL/number inside `message` as a plain link.";
-        $parts[] = "- Empty arrays for `follow_ups` and `actions` are perfectly valid when none apply. Don't pad.";
+        $parts[] = "Your final reply is a JSON object: `{message, follow_ups, actions}`. Empty arrays are the DEFAULT for follow_ups and actions — only populate them when there's a real reason.";
+        $parts[] = "";
+        $parts[] = "## `message` (always required)";
+        $parts[] = "The conversational reply. Style + Length rules above apply. Critically: when `actions` is non-empty, the message must NOT also list those phone numbers / emails / URLs in plain text — the buttons replace the listing. A reply with both \"📞 Phone: +44 …\" in the text AND a Call action button is duplicate. Lead with conversation (\"Yes, you can reach the team directly.\") and let the buttons carry the contact details.";
+        $parts[] = "";
+        $parts[] = "## `follow_ups` — quick-reply chips (default: empty)";
+        $parts[] = "Array of `{label, prompt}` objects. Max 3. Include only when there's an obvious, specific next step the visitor is likely to want (\"Show suites\", \"Check Friday\", \"See spa packages\"). Forbidden chips: anything generic like \"Yes\" / \"No\" / \"Tell me more\" / \"Continue\" / \"More info\" — those are filler and reduce trust. Label ≤30 chars, action-shaped. If you can't think of a chip that's clearly more valuable than empty space, leave the array empty.";
+        $parts[] = "";
+        $parts[] = "## `actions` — tap-to-act buttons (default: empty)";
+        $parts[] = "Array of `{type, label, value}` objects where `type` ∈ `call|whatsapp|email|sms|url`. Cap at 2 actions per reply — three or four is overload. Pick the SINGLE most appropriate channel for the situation. Heuristics:";
+        $parts[] = "    • Visitor explicitly asked to contact / speak to / book directly → 1 action for the channel they suggested or the property's preferred channel";
+        $parts[] = "    • Visitor needs a complex booking that the chat can't complete → 1 action: WhatsApp OR a booking URL, not both";
+        $parts[] = "    • You can't answer and need to escalate → 1 action: whichever single channel the property prefers";
+        $parts[] = "    • Visitor asked for a URL (menu, location, brochure) → 1 url action";
+        $parts[] = "    • Otherwise (most replies) → empty array";
+        $parts[] = "Use ONLY values from the Knowledge Base or Runtime Context. Never invent phone numbers, emails, or URLs. If the property only published an email in the KB, don't guess a phone.";
+        $parts[] = "Action labels: ≤22 chars, plain (\"Email us\", \"Call front desk\", \"Open booking page\", \"WhatsApp the team\"). Don't shout (\"📞📞 CALL NOW!\"). The widget already supplies the icon.";
 
         return implode("\n", $parts);
     }

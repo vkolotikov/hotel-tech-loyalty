@@ -122,7 +122,9 @@
     #htchat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; background: #f9fafb; }\
     .htchat-msg { margin-bottom: 12px; display: flex; gap: 8px; }\
     .htchat-msg.user { justify-content: flex-end; }\
-    .htchat-msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.5; word-wrap: break-word; }\
+    .htchat-msg-col { display: flex; flex-direction: column; gap: 6px; max-width: 80%; min-width: 0; }\
+    .htchat-msg.user .htchat-msg-col { align-items: flex-end; }\
+    .htchat-msg-bubble { padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.5; word-wrap: break-word; }\
     .htchat-msg.assistant .htchat-msg-bubble { background: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }\
     .htchat-msg.user .htchat-msg-bubble { color: white; border-bottom-right-radius: 4px; }\
     .htchat-msg-bubble strong { font-weight: 600; }\
@@ -134,13 +136,13 @@
     .htchat-suggestions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center; }\
     .htchat-suggestion { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 6px 14px; font-size: 11.5px; color: #4b5563; text-align: center; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }\
     .htchat-suggestion:hover { border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #f9fafb; }\
-    .htchat-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-left: 4px; }\
-    .htchat-action { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 18px; padding: 6px 12px; font-size: 12px; color: #1f2937; cursor: pointer; transition: all 0.15s; font-weight: 500; text-decoration: none; }\
-    .htchat-action:hover { border-color: currentColor; color: #111827; background: #f9fafb; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }\
-    .htchat-action-icon { font-size: 13px; line-height: 1; }\
-    .htchat-followups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 4px; }\
-    .htchat-followup { background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 5px 11px; font-size: 11.5px; color: #4b5563; cursor: pointer; transition: all 0.15s; }\
-    .htchat-followup:hover { background: white; border-color: currentColor; color: #1f2937; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }\
+    .htchat-actions { display: flex; flex-wrap: wrap; gap: 4px; }\
+    .htchat-action { display: inline-flex; align-items: center; gap: 5px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 4px 10px; font-size: 11.5px; color: #374151; cursor: pointer; transition: all 0.15s; font-weight: 500; line-height: 1.3; white-space: nowrap; }\
+    .htchat-action:hover { border-color: currentColor; color: #111827; background: #f9fafb; }\
+    .htchat-action-icon { font-size: 12px; line-height: 1; }\
+    .htchat-followups { display: flex; flex-wrap: wrap; gap: 4px; }\
+    .htchat-followup { background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 4px 9px; font-size: 11px; color: #4b5563; cursor: pointer; transition: all 0.15s; line-height: 1.3; white-space: nowrap; }\
+    .htchat-followup:hover { background: white; border-color: currentColor; color: #1f2937; }\
     #htchat-input-area { padding: 12px; border-top: 1px solid #e5e7eb; background: white; flex-shrink: 0; }\
     #htchat-input-row { display: flex; gap: 8px; align-items: flex-end; }\
     #htchat-input { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; min-height: 40px; max-height: 80px; transition: border-color 0.2s; }\
@@ -1001,7 +1003,15 @@
             '</button>';
         }).join('') + '</div>';
       }
-      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + (m.attachment_url && m.attachment_type === 'image' ? '' : formatText(m.content)) + attachmentHtml + '</div>' + actionsHtml + followHtml + '</div>';
+      // Wrap bubble + extras in a column container so the action chips
+      // and follow-up pills stack BELOW the bubble. Without this, the
+      // outer .htchat-msg flex-row layout pushed them to the right of
+      // the bubble as siblings — they ended up looking like big stacked
+      // cards next to the message.
+      return '<div class="htchat-msg ' + m.role + '"><div class="htchat-msg-col">' +
+        '<div class="htchat-msg-bubble" style="' + bubbleStyle + '">' + (m.attachment_url && m.attachment_type === 'image' ? '' : formatText(m.content)) + attachmentHtml + '</div>' +
+        actionsHtml + followHtml +
+        '</div></div>';
     }).join('');
 
     // Wire star clicks to submitRating.
