@@ -584,7 +584,24 @@ class WidgetChatController extends Controller
                 $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
             }
         } catch (\Throwable $e) {
-            \Log::error("Widget chat error [{$provider}/{$model}]: " . $e->getMessage());
+            // Verbose log so we can diagnose chats failing in prod. The
+            // generic fallback message is what visitors see; the underlying
+            // reason is captured in laravel.log + AuditLog so an admin can
+            // find it without needing the staff console.
+            $reason = $e->getMessage();
+            \Log::error("Widget chat error [{$provider}/{$model}]: {$reason}", [
+                'org_id'  => $orgId,
+                'session' => $sessionId ?? null,
+                'trace'   => substr($e->getTraceAsString(), 0, 1000),
+            ]);
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'widget.chat.error',
+                    'description'     => "[{$provider}/{$model}] " . substr($reason, 0, 500),
+                ]);
+            } catch (\Throwable) {}
+
             $aiResponse = $behaviorConfig->fallback_message
                 ?? "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
         }
@@ -1252,19 +1269,37 @@ class WidgetChatController extends Controller
             throw new \RuntimeException('OpenAI API key not configured.');
         }
 
-        $isGpt5    = (bool) preg_match('/^gpt-5/i', $model);
-        $isOSeries = !$isGpt5 && (bool) preg_match('/^(o1|o3|o4)/i', $model);
-        $isModern  = !$isGpt5 && !$isOSeries && (bool) preg_match('/^(gpt-4o|gpt-4\.1|gpt-4-turbo)/i', $model);
-
-        $systemRole  = $isGpt5 ? 'developer' : 'system';
-        $convMessages = array_merge([['role' => $systemRole, 'content' => $systemPrompt]], $messages);
-
         $tools = $this->buildAgentTools($orgId);
 
-        // No tools (org has neither rooms nor services) → plain completion.
+        // No tools (org has neither rooms nor services) → plain completion
+        // via the shared dispatcher (which already routes gpt-5.x to the
+        // Responses API).
         if (empty($tools)) {
             return $this->callProvider('openai', $systemPrompt, $messages, $model, $temperature, $maxTokens, $extra);
         }
+
+        // gpt-5.x belongs on /v1/responses per OpenAI's official guidance.
+        // Calling Chat Completions + tools + reasoning_effort against
+        // gpt-5.5 was throwing on every message and the catch-all in
+        // message() was returning the fallback for every guest reply.
+        if (preg_match('/^gpt-5/i', $model)) {
+            return $this->callOpenAiWithToolsResponses($apiKey, $systemPrompt, $messages, $model, $maxTokens, $extra, $orgId, $tools);
+        }
+        return $this->callOpenAiWithToolsChatCompletions($apiKey, $systemPrompt, $messages, $model, $temperature, $maxTokens, $extra, $orgId, $tools);
+    }
+
+    /**
+     * Chat Completions tool-calling loop — original code path, kept for
+     * gpt-4.x / o-series / gpt-4o which all work fine here.
+     */
+    private function callOpenAiWithToolsChatCompletions(
+        string $apiKey, string $systemPrompt, array $messages, string $model,
+        float $temperature, int $maxTokens, array $extra, int $orgId, array $tools,
+    ): string {
+        $isOSeries = (bool) preg_match('/^(o1|o3|o4)/i', $model);
+        $isModern  = !$isOSeries && (bool) preg_match('/^(gpt-4o|gpt-4\.1|gpt-4-turbo)/i', $model);
+
+        $convMessages = array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages);
 
         $maxRounds = 4;
         for ($round = 0; $round < $maxRounds; $round++) {
@@ -1274,22 +1309,12 @@ class WidgetChatController extends Controller
                 'tools'       => $tools,
                 'tool_choice' => 'auto',
             ];
-
-            if ($isGpt5 || $isOSeries || $isModern) {
+            if ($isOSeries || $isModern) {
                 $params['max_completion_tokens'] = $maxTokens;
             } else {
                 $params['max_tokens'] = $maxTokens;
             }
-
-            if ($isGpt5) {
-                $effort = $extra['reasoning_effort'] ?? 'low';
-                $params['reasoning_effort'] = $effort;
-                if ($effort === 'none') {
-                    $params['temperature'] = $temperature;
-                }
-            } elseif (!$isOSeries) {
-                $params['temperature'] = $temperature;
-            }
+            if (!$isOSeries) $params['temperature'] = $temperature;
 
             $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
                 ->timeout(60)
@@ -1303,14 +1328,9 @@ class WidgetChatController extends Controller
             }
 
             $choiceMessage = $response->json('choices.0.message');
-            if (!is_array($choiceMessage)) {
-                return '';
-            }
+            if (!is_array($choiceMessage)) return '';
 
             if (!empty($choiceMessage['tool_calls'])) {
-                // Echo the assistant tool-call turn back into the conversation
-                // exactly as the API returned it, then append a tool-result
-                // message per call.
                 $convMessages[] = [
                     'role'       => 'assistant',
                     'content'    => $choiceMessage['content'] ?? '',
@@ -1333,6 +1353,126 @@ class WidgetChatController extends Controller
             }
 
             return (string) ($choiceMessage['content'] ?? '');
+        }
+
+        return "I had trouble finishing that lookup. Could you rephrase, or shall I connect you with our team?";
+    }
+
+    /**
+     * Responses API tool-calling loop — required for gpt-5.x.
+     *
+     * Shape differences vs Chat Completions:
+     *  - Tools use a flat shape: { type:'function', name, description,
+     *    parameters }, not nested under a `function` key.
+     *  - Output is `output[]` of typed items: `function_call` items
+     *    carry the model's request, `output_text` / `message` items
+     *    carry final text, `reasoning` items are passed through.
+     *  - To return tool results we append `function_call_output` items
+     *    to `input` keyed by the call's `call_id`.
+     */
+    private function callOpenAiWithToolsResponses(
+        string $apiKey, string $systemPrompt, array $messages, string $model,
+        int $maxTokens, array $extra, int $orgId, array $tools,
+    ): string {
+        // Translate Chat-Completions-shaped tools to Responses shape.
+        $rTools = array_map(fn ($t) => [
+            'type'        => 'function',
+            'name'        => $t['function']['name'] ?? '',
+            'description' => $t['function']['description'] ?? '',
+            'parameters'  => $t['function']['parameters'] ?? ['type' => 'object', 'properties' => (object) []],
+            'strict'      => false,
+        ], $tools);
+
+        // Seed `input` with the conversation history. Each user/assistant
+        // message becomes a regular role-shaped item; tool calls + results
+        // are appended below as the loop iterates.
+        $input = array_map(fn ($m) => [
+            'role'    => $m['role'],
+            'content' => $m['content'],
+        ], $messages);
+
+        // gpt-5.5 default reasoning effort is 'medium' per OpenAI's docs.
+        $defaultEffort = (bool) preg_match('/^gpt-5\.5/i', $model) ? 'medium' : 'low';
+        $effort = $extra['reasoning_effort'] ?? $defaultEffort;
+        $verbosity = $extra['verbosity'] ?? 'medium';
+
+        $maxRounds = 4;
+        for ($round = 0; $round < $maxRounds; $round++) {
+            $params = [
+                'model'             => $model,
+                'instructions'      => $systemPrompt,
+                'input'             => $input,
+                'tools'             => $rTools,
+                'tool_choice'       => 'auto',
+                'max_output_tokens' => $maxTokens,
+                'reasoning'         => ['effort' => $effort],
+                'text'              => ['verbosity' => $verbosity],
+                'store'             => false,
+            ];
+            if (!empty($extra['prompt_cache_key'])) {
+                $params['prompt_cache_key'] = (string) $extra['prompt_cache_key'];
+            }
+
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout(60)
+                ->post('https://api.openai.com/v1/responses', $params);
+
+            if ($response->failed()) {
+                $status = $response->status();
+                $body = $response->json();
+                $msg = $body['error']['message'] ?? substr($response->body(), 0, 300);
+                throw new \RuntimeException("OpenAI Responses tool-call error {$status} [{$model}]: {$msg}");
+            }
+
+            $output = $response->json('output') ?: [];
+
+            // Walk the output items. Two outcomes possible:
+            //  - `function_call` items present → execute each, append a
+            //    `function_call_output` to input, loop another round.
+            //  - No function calls → take the assistant text and return.
+            $functionCalls = array_values(array_filter($output, fn ($i) => ($i['type'] ?? '') === 'function_call'));
+
+            if (!empty($functionCalls)) {
+                // Carry the assistant's planning items forward so the model
+                // sees its own function_call turn on the next round.
+                foreach ($output as $item) {
+                    if (in_array($item['type'] ?? '', ['function_call', 'reasoning', 'message'], true)) {
+                        $input[] = $item;
+                    }
+                }
+                foreach ($functionCalls as $fc) {
+                    $args = [];
+                    try {
+                        $args = json_decode($fc['arguments'] ?? '{}', true) ?: [];
+                    } catch (\Throwable) {}
+                    $result = $this->executeAgentTool((string) ($fc['name'] ?? ''), $args, $orgId);
+                    $input[] = [
+                        'type'    => 'function_call_output',
+                        'call_id' => $fc['call_id'] ?? ($fc['id'] ?? ''),
+                        'output'  => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ];
+                }
+                continue;
+            }
+
+            // No tool calls — extract final text. Prefer the SDK convenience
+            // aggregator if present, else walk message.content for output_text.
+            $body = $response->json();
+            if (!empty($body['output_text'])) {
+                return (string) $body['output_text'];
+            }
+            $text = '';
+            foreach ($output as $item) {
+                if (($item['type'] ?? '') !== 'message') continue;
+                foreach ($item['content'] ?? [] as $c) {
+                    if (($c['type'] ?? '') === 'output_text' && isset($c['text'])) {
+                        $text .= $c['text'];
+                    } elseif (($c['type'] ?? '') === 'refusal' && isset($c['refusal'])) {
+                        $text .= $c['refusal'];
+                    }
+                }
+            }
+            if ($text !== '') return $text;
         }
 
         return "I had trouble finishing that lookup. Could you rephrase, or shall I connect you with our team?";
