@@ -30,6 +30,10 @@ class ServiceExtraController extends Controller
             'price'            => 'nullable|numeric|min:0',
             'price_type'       => 'nullable|string|in:per_booking,per_person',
             'duration_minutes' => 'nullable|integer|min:0|max:240',
+            // Hotel needs at least this many hours' notice before the
+            // service starts before this extra can be added. 0 = no
+            // restriction; 168 (one week) is the upper bound.
+            'lead_time_hours'  => 'nullable|integer|min:0|max:168',
             'currency'         => 'nullable|string|max:10',
             'image'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon'             => 'nullable|string|max:50',
@@ -58,6 +62,10 @@ class ServiceExtraController extends Controller
             'price'            => 'nullable|numeric|min:0',
             'price_type'       => 'nullable|string|in:per_booking,per_person',
             'duration_minutes' => 'nullable|integer|min:0|max:240',
+            // Hotel needs at least this many hours' notice before the
+            // service starts before this extra can be added. 0 = no
+            // restriction; 168 (one week) is the upper bound.
+            'lead_time_hours'  => 'nullable|integer|min:0|max:168',
             'currency'         => 'nullable|string|max:10',
             'image'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon'             => 'nullable|string|max:50',

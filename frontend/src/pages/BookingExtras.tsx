@@ -12,6 +12,7 @@ interface Extra {
   description: string | null
   price: number
   price_type: string
+  lead_time_hours?: number
   currency: string
   image: string | null
   icon: string | null
@@ -162,6 +163,9 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
   const [description, setDescription] = useState(extra?.description || '')
   const [price, setPrice] = useState<string>(extra?.price != null ? String(extra.price) : '')
   const [priceType, setPriceType] = useState(extra?.price_type || 'per_stay')
+  const [leadTimeHours, setLeadTimeHours] = useState<string>(
+    extra?.lead_time_hours != null ? String(extra.lead_time_hours) : '0'
+  )
   const [category, setCategory] = useState(extra?.category || '')
   const [icon] = useState(extra?.icon || '')
   const [isActive, setIsActive] = useState(extra?.is_active ?? true)
@@ -177,6 +181,7 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
     fd.append('description', description)
     fd.append('price', String(Number(price) || 0))
     fd.append('price_type', priceType)
+    fd.append('lead_time_hours', String(Math.max(0, Math.min(168, Number(leadTimeHours) || 0))))
     fd.append('category', category)
     fd.append('icon', icon)
     fd.append('is_active', isActive ? '1' : '0')
@@ -227,6 +232,25 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
                 {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: '#0f1c18', color: '#fff' }}>{pt.label}</option>)}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              Min. advance booking (hours)
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={leadTimeHours}
+              onChange={e => setLeadTimeHours(e.target.value)}
+              min={0}
+              max={168}
+              step={1}
+              className={inputCls}
+            />
+            <p className="text-[11px] text-gray-500 mt-1">
+              Hours of preparation needed before check-in. Guests booking with less notice won't see this extra. <span className="text-gray-400">0 = always available</span>.
+            </p>
           </div>
 
           <div>

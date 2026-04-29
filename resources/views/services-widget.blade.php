@@ -474,7 +474,18 @@ img{max-width:100%;display:block}
   }
   function getExtrasForService() {
     if (!state.config) return []
-    return state.config.extras
+    var all = state.config.extras || []
+    // Filter out extras whose preparation lead time can't be met before
+    // the chosen slot. Hotel sets `lead_time_hours` per extra in admin;
+    // here we hide anything that needs more notice than the start time
+    // allows. Server-side /quote and /confirm refuse the same set.
+    if (!state.startAt) return all
+    var startTs = new Date(state.startAt).getTime()
+    var hoursUntilStart = Math.max(0, Math.floor((startTs - Date.now()) / 3600000))
+    return all.filter(function (ex) {
+      var lead = parseInt(ex.lead_time_hours || 0, 10) || 0
+      return lead === 0 || hoursUntilStart >= lead
+    })
   }
   function servicesInCategory(catId) {
     if (!state.config) return []

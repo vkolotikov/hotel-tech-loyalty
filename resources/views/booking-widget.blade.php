@@ -921,7 +921,28 @@ function renderSummary() {
 
 /* --- Step 3: Extras --- */
 function renderExtras() {
-  var extras = (state.config && state.config.extras) || [];
+  var allExtras = (state.config && state.config.extras) || [];
+  // Filter out extras whose preparation lead time can't be met before
+  // check-in. The hotel sets `lead_time_hours` per extra in admin; here
+  // we hide anything that needs more notice than the chosen check-in
+  // date allows. Server-side validation in /quote and /confirm refuses
+  // the same set so a manipulated client can't sneak through.
+  var extras = allExtras;
+  if (state.checkIn) {
+    var checkInTs = new Date(state.checkIn + 'T00:00:00').getTime();
+    var hoursUntilCheckIn = Math.max(0, Math.floor((checkInTs - Date.now()) / 3600000));
+    extras = allExtras.filter(function (ex) {
+      var lead = parseInt(ex.lead_time_hours || 0, 10) || 0;
+      return lead === 0 || hoursUntilCheckIn >= lead;
+    });
+    // Drop any selected extras that just got filtered out — keeps the
+    // summary in sync with what's renderable.
+    Object.keys(state.selectedExtras).forEach(function (id) {
+      if (!extras.some(function (e) { return String(e.id) === String(id); })) {
+        delete state.selectedExtras[id];
+      }
+    });
+  }
   var h = '<div class="page-layout">';
   h += '<div>';
   h += '<div class="card">';
@@ -929,7 +950,10 @@ function renderExtras() {
   h += '<div class="card-sub">Add optional extras to make your visit even better</div>';
 
   if (extras.length === 0) {
-    h += '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:14px">No extras available for this booking.</div>';
+    var note = allExtras.length > 0
+      ? 'No extras available — your check-in is too soon to prepare them. Pick a later date to see add-ons.'
+      : 'No extras available for this booking.';
+    h += '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:14px">' + note + '</div>';
   } else {
     extras.forEach(function(ex) {
       var checked = !!state.selectedExtras[ex.id];

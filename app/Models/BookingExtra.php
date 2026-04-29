@@ -11,11 +11,13 @@ class BookingExtra extends Model
 
     protected $fillable = [
         'organization_id', 'name', 'description', 'price', 'price_type',
+        'lead_time_hours',
         'currency', 'image', 'icon', 'category', 'sort_order', 'is_active',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'price'     => 'decimal:2',
+        'is_active'       => 'boolean',
+        'price'           => 'decimal:2',
+        'lead_time_hours' => 'integer',
     ];
 }

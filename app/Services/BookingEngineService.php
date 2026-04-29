@@ -48,6 +48,14 @@ class BookingEngineService
 
         $nights      = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
         $roomTotal   = $rates['price'] ?? ($rates['price_per_night'] ?? 0) * $nights;
+
+        // Reject any extra whose preparation lead time can't be met before
+        // check-in. The widget hides these client-side; we block them
+        // again here so a manipulated request can't sneak one through.
+        // Using check_in 00:00 as the deadline is intentionally strict —
+        // the hotel needs the lead time IN FULL before arrival.
+        $this->assertExtrasMeetLeadTime($extras, $checkIn);
+
         $extrasTotal = $this->calcExtras($extras, $adults);
         $grossTotal  = $roomTotal + $extrasTotal;
 
@@ -744,6 +752,45 @@ class BookingEngineService
             if (is_array($decoded)) return $decoded;
         }
         return config('booking.extras', []);
+    }
+
+    /**
+     * Reject the request if any selected extra's `lead_time_hours` is
+     * larger than (check_in − now). The DB is the source of truth here
+     * — the JSON-fallback codepath never had per-extra lead time, so it
+     * implicitly returns 0 (no restriction).
+     *
+     * Throws InvalidArgumentException with the offending extra's name in
+     * the message so the widget can surface a clear error to the guest.
+     */
+    private function assertExtrasMeetLeadTime(array $selected, string $checkIn): void
+    {
+        if (empty($selected)) return;
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $ids = collect($selected)->pluck('id')->filter()->map(fn ($id) => (string) $id)->all();
+        if (empty($ids)) return;
+
+        // Catalog rows. Cast to string so a numeric or stringified id
+        // both line up against `$ids`.
+        $rows = \App\Models\BookingExtra::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->whereIn('id', $ids)
+            ->get(['id', 'name', 'lead_time_hours']);
+
+        if ($rows->isEmpty()) return;
+
+        $checkInTs = strtotime($checkIn . ' 00:00:00');
+        $hoursUntilCheckIn = max(0, (int) (($checkInTs - time()) / 3600));
+
+        foreach ($rows as $row) {
+            $required = (int) ($row->lead_time_hours ?? 0);
+            if ($required > 0 && $hoursUntilCheckIn < $required) {
+                throw new \InvalidArgumentException(
+                    "\"{$row->name}\" requires at least {$required}h notice before check-in. Please remove it or pick a later date."
+                );
+            }
+        }
     }
 
     private function calcExtras(array $extras, int $adults): float

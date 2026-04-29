@@ -65,6 +65,12 @@ class BookingPublicController extends Controller
             ? $dbExtras->map(fn($e) => [
                 'id' => (string) $e->id, 'name' => $e->name, 'description' => $e->description,
                 'price' => (float) $e->price, 'price_type' => $e->price_type,
+                // `lead_time_hours` lets the widget hide extras that
+                // can't be prepared in time for the chosen check-in
+                // date. The server enforces the same on the quote/
+                // confirm path so a manipulated request can't sneak
+                // an under-prepared extra through.
+                'lead_time_hours' => (int) ($e->lead_time_hours ?? 0),
                 'image' => $e->image, 'icon' => $e->icon, 'category' => $e->category,
             ])->values()->toArray()
             : $this->getJsonSetting($orgId, 'booking_extras', []);

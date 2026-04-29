@@ -12,6 +12,7 @@ interface Extra {
   price: number
   price_type: string
   duration_minutes: number
+  lead_time_hours?: number
   currency: string
   image: string | null
   icon: string | null
@@ -121,6 +122,9 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
   const [priceType, setPriceType] = useState(extra?.price_type || 'per_booking')
   const [currency, setCurrency] = useState(extra?.currency || 'EUR')
   const [duration, setDuration] = useState<string>(extra?.duration_minutes != null ? String(extra.duration_minutes) : '')
+  const [leadTimeHours, setLeadTimeHours] = useState<string>(
+    extra?.lead_time_hours != null ? String(extra.lead_time_hours) : '0'
+  )
   const [category, setCategory] = useState(extra?.category || '')
   const [isActive, setIsActive] = useState(extra?.is_active ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -138,6 +142,7 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
     fd.append('price_type', priceType)
     fd.append('currency', currency)
     fd.append('duration_minutes', String(Number(duration) || 0))
+    fd.append('lead_time_hours', String(Math.max(0, Math.min(168, Number(leadTimeHours) || 0))))
     fd.append('category', category)
     fd.append('is_active', isActive ? '1' : '0')
     if (imageFile) fd.append('image', imageFile)
@@ -217,6 +222,25 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Category (optional)</label>
               <input value={category} onChange={e => setCategory(e.target.value)} className={inputCls} placeholder="aromatherapy" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              Min. advance booking (hours)
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={leadTimeHours}
+              onChange={e => setLeadTimeHours(e.target.value)}
+              min={0}
+              max={168}
+              step={1}
+              className={inputCls}
+            />
+            <p className="text-[11px] text-gray-500 mt-1">
+              Hours of preparation needed before the service starts. Guests booking with less notice won't see this extra. <span className="text-gray-400">0 = always available</span>.
+            </p>
           </div>
 
           <div className="flex items-center justify-between py-2">

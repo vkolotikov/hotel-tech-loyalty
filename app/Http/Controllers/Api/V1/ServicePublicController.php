@@ -83,7 +83,10 @@ class ServicePublicController extends Controller
             ->where('organization_id', $orgId)
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->get(['id', 'name', 'description', 'price', 'price_type', 'duration_minutes', 'image', 'icon', 'category', 'currency']);
+            // `lead_time_hours` lets the widget hide extras that need
+            // more notice than the chosen service start time allows.
+            // Server enforces the same on quote()/confirm().
+            ->get(['id', 'name', 'description', 'price', 'price_type', 'duration_minutes', 'lead_time_hours', 'image', 'icon', 'category', 'currency']);
 
         $brandPrimary = $this->getStringSetting($orgId, 'primary_color', '#2d6a4f');
         $brandLogo    = $this->getStringSetting($orgId, 'company_logo', '');
@@ -205,6 +208,24 @@ class ServicePublicController extends Controller
         if (!empty($data['extras'])) {
             $extraIds = collect($data['extras'])->pluck('id')->all();
             $extras = ServiceExtra::whereIn('id', $extraIds)->get()->keyBy('id');
+
+            // Reject any extra whose preparation lead time can't be met
+            // before the chosen slot. The widget hides these client-side;
+            // we block them again here so a manipulated request can't
+            // sneak through.
+            $startTs = $reservation['start']->getTimestamp();
+            $hoursUntilStart = max(0, (int) (($startTs - time()) / 3600));
+            foreach ($data['extras'] as $line) {
+                $extra = $extras->get($line['id']);
+                if (!$extra) continue;
+                $required = (int) ($extra->lead_time_hours ?? 0);
+                if ($required > 0 && $hoursUntilStart < $required) {
+                    return response()->json([
+                        'error' => "\"{$extra->name}\" requires at least {$required}h notice. Please remove it or pick a later slot.",
+                    ], 422);
+                }
+            }
+
             foreach ($data['extras'] as $line) {
                 $extra = $extras->get($line['id']);
                 if (!$extra) continue;
@@ -382,6 +403,23 @@ class ServicePublicController extends Controller
                 if (!empty($data['extras'])) {
                     $extraIds = collect($data['extras'])->pluck('id')->all();
                     $extraModels = ServiceExtra::whereIn('id', $extraIds)->get()->keyBy('id');
+
+                    // Same lead-time guard as quote() — if a guest skipped
+                    // quote (or quote was issued earlier than the lead
+                    // window now permits) we still refuse to book.
+                    $startTs = $reservation['start']->getTimestamp();
+                    $hoursUntilStart = max(0, (int) (($startTs - time()) / 3600));
+                    foreach ($data['extras'] as $line) {
+                        $extra = $extraModels->get($line['id']);
+                        if (!$extra) continue;
+                        $required = (int) ($extra->lead_time_hours ?? 0);
+                        if ($required > 0 && $hoursUntilStart < $required) {
+                            throw new \RuntimeException(
+                                "\"{$extra->name}\" requires at least {$required}h notice before the service starts."
+                            );
+                        }
+                    }
+
                     foreach ($data['extras'] as $line) {
                         $extra = $extraModels->get($line['id']);
                         if (!$extra) continue;

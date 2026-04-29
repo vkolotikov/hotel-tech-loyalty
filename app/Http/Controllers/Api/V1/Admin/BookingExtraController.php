@@ -28,6 +28,11 @@ class BookingExtraController extends Controller
             'description' => 'nullable|string|max:1000',
             'price'       => 'nullable|numeric|min:0',
             'price_type'  => 'nullable|string|in:per_stay,per_night,per_person,per_person_night',
+            // Hotel needs at least this many hours' notice before check-in
+            // before this extra can be added. 0 = available up to the
+            // moment of booking; 168 (one week) is the upper bound to
+            // catch obvious mistakes.
+            'lead_time_hours' => 'nullable|integer|min:0|max:168',
             'currency'    => 'nullable|string|max:10',
             // mimes/max validated explicitly so we get a clear 422 instead of a
             // silent server-side failure deep inside MediaService.
@@ -64,6 +69,11 @@ class BookingExtraController extends Controller
             'description' => 'nullable|string|max:1000',
             'price'       => 'nullable|numeric|min:0',
             'price_type'  => 'nullable|string|in:per_stay,per_night,per_person,per_person_night',
+            // Hotel needs at least this many hours' notice before check-in
+            // before this extra can be added. 0 = available up to the
+            // moment of booking; 168 (one week) is the upper bound to
+            // catch obvious mistakes.
+            'lead_time_hours' => 'nullable|integer|min:0|max:168',
             'currency'    => 'nullable|string|max:10',
             'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon'        => 'nullable|string|max:50',
