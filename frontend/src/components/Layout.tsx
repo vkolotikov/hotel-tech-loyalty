@@ -47,7 +47,13 @@ const navGroups: NavGroup[] = [
     accent: '#60a5fa', // blue
     items: [
       { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
-      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics', feature: 'ai_insights' },
+      // Analytics is plain charts/KPIs (no LLM) so it gates only on the
+      // staff `can_view_analytics` flag, not on the `ai_insights` plan
+      // feature. Previously admins on a plan without the AI feature were
+      // hidden from Analytics even though that page does no AI work.
+      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
+      // AI Insights does call the LLM (CrmAiService) — the ai_insights
+      // feature flag stays here, so plans without AI don't see it.
       { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
     ],
   },

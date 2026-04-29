@@ -60,17 +60,32 @@ Route::prefix('v1')->group(function () {
     // ─── Public ──────────────────────────────────────────────────────────────────
     Route::get('theme', [SettingsController::class, 'theme']);
 
-    // Auth routes — rate-limited to prevent brute-force
-    Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
+    // Auth routes — rate-limited to prevent brute-force.
+    //
+    // Outer throttle covers the whole prefix; inner throttles tighten the
+    // specifically-abusable verbs. The previous 10/min/IP shared bucket
+    // tripped legit users: a normal signup hits register + send-code +
+    // verify-code + activate (4 calls), and a single typo'd login retry
+    // burned through the rest. Behind a corporate NAT or family wifi a
+    // real user would see "Too Many Attempts" without doing anything wrong.
+    //
+    // New shape:
+    //   - 60/min/IP outer: room for normal flows + a few retries.
+    //   - login / claim: 8/min — brute-force surface, kept tight.
+    //   - forgot-password / reset-password: 5/min — same.
+    //   - everything else (register, trial, send-code, verify-code, activate):
+    //     uses just the outer 60/min, since they all require a fresh email
+    //     code or are idempotent and don't expose credentials.
+    Route::prefix('auth')->middleware('throttle:60,1')->group(function () {
         Route::post('register',    [AuthController::class, 'register']);
-        Route::post('login',       [AuthController::class, 'login']);
+        Route::post('login',       [AuthController::class, 'login'])->middleware('throttle:8,1');
         Route::post('trial',       [AuthController::class, 'startTrial']);
         Route::post('send-code',        [AuthController::class, 'sendVerificationCode']);
         Route::post('verify-code',      [AuthController::class, 'verifyCode']);
-        Route::post('forgot-password',  [AuthController::class, 'forgotPassword']);
-        Route::post('reset-password',   [AuthController::class, 'resetPassword']);
+        Route::post('forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+        Route::post('reset-password',   [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
         Route::post('activate',         [AuthController::class, 'activateAccount']);
-        Route::post('claim',            [AuthController::class, 'claimAccount']);
+        Route::post('claim',            [AuthController::class, 'claimAccount'])->middleware('throttle:8,1');
     });
 
     // Public: fetch available plans from SaaS
