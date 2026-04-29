@@ -1277,6 +1277,44 @@ class WidgetChatController extends Controller
      * data. Loops up to 4 rounds so the model can chain calls (e.g. list
      * services → check a specific service's slots).
      */
+    /**
+     * POST to OpenAI with bounded retries for transient errors. Retries on
+     * 429 (rate-limit) and 5xx with exponential backoff (1s, 2s). Permanent
+     * 4xx errors return immediately so callers can surface them.
+     *
+     * The widget chat used to fail on a single transient hiccup (the user
+     * sees "I'm having trouble responding right now") — most OpenAI rate
+     * limits resolve within a second so a 1-2 retry buys a much more
+     * reliable user experience for the cost of a tiny latency increase
+     * on retried requests.
+     */
+    private function postWithRetry(string $apiKey, array $params, string $url): \Illuminate\Http\Client\Response
+    {
+        $maxAttempts = 3;
+        $response = null;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->timeout(60)
+                ->post($url, $params);
+
+            if (!$response->failed()) {
+                return $response;
+            }
+
+            $status = $response->status();
+            $isTransient = $status === 429 || ($status >= 500 && $status < 600);
+            if (!$isTransient || $attempt === $maxAttempts) {
+                return $response;
+            }
+
+            // Backoff: 1s, 2s. OpenAI's Retry-After header takes precedence.
+            $retryAfter = (int) ($response->header('retry-after') ?: 0);
+            $delaySec = $retryAfter > 0 ? min($retryAfter, 5) : (1 << ($attempt - 1));
+            usleep($delaySec * 1_000_000);
+        }
+        return $response;
+    }
+
     private function callOpenAiWithTools(
         string $systemPrompt,
         array $messages,
@@ -1338,14 +1376,17 @@ class WidgetChatController extends Controller
             }
             if (!$isOSeries) $params['temperature'] = $temperature;
 
-            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
-                ->timeout(60)
-                ->post('https://api.openai.com/v1/chat/completions', $params);
+            $response = $this->postWithRetry($apiKey, $params, 'https://api.openai.com/v1/chat/completions');
 
             if ($response->failed()) {
                 $status = $response->status();
                 $body = $response->json();
                 $msg = $body['error']['message'] ?? substr($response->body(), 0, 300);
+                \Log::error("OpenAI Chat tool-call failed [{$model}] round {$round}", [
+                    'status'   => $status,
+                    'error'    => $msg,
+                    'response' => substr((string) $response->body(), 0, 2000),
+                ]);
                 throw new \RuntimeException("OpenAI tool-call error {$status} [{$model}]: {$msg}");
             }
 
@@ -1462,6 +1503,14 @@ class WidgetChatController extends Controller
             ],
         ];
 
+        // Token budget for reasoning + JSON-formatted final message + tool-call
+        // arguments. The widget UI's `max_tokens` setting is tuned for plain
+        // chat (1024 is fine), but gpt-5.x reasoning + structured output blow
+        // through that easily, especially on round 2+ when the model has to
+        // produce schema-compliant JSON AFTER consuming a reasoning budget.
+        // Floor at 4096 for the Responses path; the model uses what it needs.
+        $effectiveMaxTokens = max($maxTokens, 4096);
+
         $maxRounds = 4;
         for ($round = 0; $round < $maxRounds; $round++) {
             $params = [
@@ -1470,26 +1519,44 @@ class WidgetChatController extends Controller
                 'input'             => $input,
                 'tools'             => $rTools,
                 'tool_choice'       => 'auto',
-                'max_output_tokens' => $maxTokens,
+                'max_output_tokens' => $effectiveMaxTokens,
                 'reasoning'         => ['effort' => $effort],
                 'text'              => [
                     'verbosity' => $verbosity,
                     'format'    => $replyFormat,
                 ],
+                // Stateless mode (we don't store conversations server-side at
+                // OpenAI). With `store:false` AND reasoning models, OpenAI
+                // does NOT return the encrypted reasoning chain by default —
+                // the next round's `input` would carry a stripped reasoning
+                // item, the API rejects it with 400, and the catch block in
+                // sendMessage() shows the user "I'm having trouble responding
+                // right now". Asking for `reasoning.encrypted_content` keeps
+                // the chain intact across tool-call rounds.
                 'store'             => false,
+                'include'           => ['reasoning.encrypted_content'],
             ];
             if (!empty($extra['prompt_cache_key'])) {
                 $params['prompt_cache_key'] = (string) $extra['prompt_cache_key'];
             }
 
-            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
-                ->timeout(60)
-                ->post('https://api.openai.com/v1/responses', $params);
+            // Retry transient failures (429 rate limit, 5xx) up to 2 times
+            // with exponential backoff. Permanent 4xx (400, 401, 404) bubble
+            // up immediately so we don't waste latency retrying a bad request.
+            $response = $this->postWithRetry($apiKey, $params, 'https://api.openai.com/v1/responses');
 
             if ($response->failed()) {
                 $status = $response->status();
                 $body = $response->json();
                 $msg = $body['error']['message'] ?? substr($response->body(), 0, 300);
+                // Capture the full body in laravel.log so admins can see
+                // exactly what OpenAI complained about (param name, schema
+                // mismatch, etc.) without needing to add ad-hoc logging.
+                \Log::error("OpenAI Responses failed [{$model}] round {$round}", [
+                    'status'   => $status,
+                    'error'    => $msg,
+                    'response' => substr((string) $response->body(), 0, 2000),
+                ]);
                 throw new \RuntimeException("OpenAI Responses tool-call error {$status} [{$model}]: {$msg}");
             }
 
