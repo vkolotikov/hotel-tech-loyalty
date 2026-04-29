@@ -143,7 +143,18 @@ export function Layout({ children }: { children: ReactNode }) {
   )
   const location = useLocation()
   const { user, staff, logout } = useAuthStore()
-  const { hasFeature, hasProduct } = useSubscription()
+  const { hasFeature, hasProduct, status: subStatus } = useSubscription()
+  // Hard-block: when subscription is EXPIRED / NO_PLAN, the wall used to
+  // render as an overlay only — the page content underneath kept rendering
+  // and firing API calls (queries, polls, websocket reconnects). On a long
+  // session that meant the user could navigate around with broken
+  // dashboards instead of seeing a clear "trial ended" screen, AND we
+  // billed OpenAI / hit the DB for someone who shouldn't have access.
+  // The /billing page is exempt so a user can still complete checkout to
+  // restore access.
+  const blockForSub = (subStatus === 'EXPIRED' || subStatus === 'NO_PLAN')
+    && location.pathname !== '/billing'
+    && staff?.role !== 'super_admin'
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
   const { connected, events } = useRealtimeEvents()
   const [showNotifPanel, setShowNotifPanel] = useState(false)
@@ -531,9 +542,14 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Trial-near-expiry warning banner */}
         <TrialExpiryBanner />
 
-        {/* Page content */}
+        {/* Page content. Skipped entirely when the wall is showing so
+            that no background queries fire for a tenant whose trial has
+            ended. This is intentional — without this gate, every page's
+            React Query hooks kept polling endpoints that all return
+            403, generating log spam and a flicker of broken UI behind
+            the wall. */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 mobile-safe-bottom">
-          {children}
+          {blockForSub ? null : children}
         </main>
       </div>
 

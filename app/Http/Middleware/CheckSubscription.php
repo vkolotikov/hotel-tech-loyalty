@@ -25,25 +25,42 @@ class CheckSubscription
         }
 
         // ── Defence in depth: regardless of which auth path matched below,
-        // if we have a local Organization with a known TRIALING status whose
-        // trial_end is in the past, flip it to EXPIRED *before* any cache
-        // check can grant access. This was the single biggest hole — a user
-        // whose trial expired between the 5-min entitlements sync and the
-        // daily SaaS sweep would still get TRIALING from the cache. ──
+        // if we have a local Organization whose `trial_end` is in the past
+        // and the cached status hasn't been demoted yet, flip it to EXPIRED
+        // *before* any cache check can grant access.
+        //
+        // Previously this only fired when subscription_status was the literal
+        // string 'TRIALING'. That left a hole: when SaaS expired the trial
+        // and bootstrap returned no subscription, maybeSyncEntitlements set
+        // local subscription_status to NULL (line 120 of SaasAuthMiddleware
+        // does `$sub['status'] ?? null`). The defence then skipped, the
+        // cached trial-status row in the SaaS-side cache could still answer
+        // ACTIVE/TRIALING, and the user kept working. Widening the trigger
+        // to "trial_end in the past AND not already EXPIRED" closes that.
+        //
+        // We resolve the org from BOTH sources of truth: the authed user's
+        // organization_id (Sanctum path) and the saas_org_id attribute set
+        // by SaasAuthMiddleware (JWT path). Either one suffices.
         $authedUser = $user;
         $org = null;
         if ($authedUser?->organization_id) {
             $org = \App\Models\Organization::find($authedUser->organization_id);
-            if ($org
-                && $org->subscription_status === 'TRIALING'
-                && $org->trial_end
-                && $org->trial_end->isPast()
-            ) {
-                $org->update(['subscription_status' => 'EXPIRED']);
-                // Bust any cached "TRIALING" so downstream paths can't re-grant.
-                if ($org->saas_org_id) {
-                    Cache::forget("subscription_status:{$org->saas_org_id}");
-                }
+        }
+        $saasOrgIdAttr = $request->attributes->get('saas_org_id');
+        if (!$org && $saasOrgIdAttr) {
+            $org = \App\Models\Organization::where('saas_org_id', $saasOrgIdAttr)->first();
+        }
+
+        if ($org
+            && $org->trial_end
+            && $org->trial_end->isPast()
+            && $org->subscription_status !== 'EXPIRED'
+            && $org->subscription_status !== 'ACTIVE' // paid plan, not on trial — ignore
+        ) {
+            $org->update(['subscription_status' => 'EXPIRED']);
+            // Bust any cached "TRIALING"/"ACTIVE" so downstream paths can't re-grant.
+            if ($org->saas_org_id) {
+                Cache::forget("subscription_status:{$org->saas_org_id}");
             }
         }
 

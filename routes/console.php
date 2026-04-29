@@ -22,9 +22,19 @@ Schedule::command('reviews:send-post-stay')->dailyAt('09:00');
 Schedule::command('saas:reconcile-orgs')->dailyAt('03:30');
 
 // Local trial-expiry sweep. The SaaS platform owns the canonical subscription
-// lifecycle, but loyalty caches it for synchronous middleware checks. Run an
-// hour after the SaaS sweep so SaaS has flipped first.
-Schedule::command('subscriptions:expire-trials')->dailyAt('03:00');
+// lifecycle, but loyalty caches it for synchronous middleware checks.
+//
+// Cadence used to be daily at 03:00 — that meant a tenant whose trial
+// expired at midnight could keep working until 03:00 because the local
+// status row still said TRIALING. The CheckSubscription middleware does
+// have a defence-in-depth date check, but it only fires on requests that
+// touch /v1/admin/* — pages cached client-side or open in another tab
+// would coast on stale state. Running every 10 min closes that gap to
+// at most a 10-minute window even before the per-request check kicks in.
+Schedule::command('subscriptions:expire-trials')
+    ->everyTenMinutes()
+    ->withoutOverlapping(5)
+    ->runInBackground();
 
 // Smoobu booking sync — durability backstop for the webhook. The
 // webhook handler is the primary real-time path; this cron pulls the
