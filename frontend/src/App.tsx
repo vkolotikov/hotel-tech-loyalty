@@ -129,7 +129,14 @@ export default function App() {
           <Route path="/members/duplicates" element={<LazyRoute gate="admin"><MemberDuplicates /></LazyRoute>} />
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
-          <Route path="/analytics" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><Analytics /></LazyRoute>} />
+          {/* Analytics is plain charts/KPIs (no LLM) so we gate on the
+              staff `can_view_analytics` flag only. Previously this route
+              also required the `ai_insights` plan feature, which made
+              GatedRoute redirect users on plans without AI back to /
+              the moment they clicked Analytics — looking like a page
+              refresh. AI Insights (/ai) keeps the feature gate because
+              that page actually calls the LLM. */}
+          <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><AiInsights /></LazyRoute>} />
           <Route path="/chatbot-setup" element={<LazyRoute gate="admin" product="chat"><ChatbotSetup /></LazyRoute>} />
           {/* Legacy chatbot routes — folded into the unified Chatbot Setup tabs. */}
