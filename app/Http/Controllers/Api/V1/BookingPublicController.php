@@ -386,22 +386,89 @@ class BookingPublicController extends Controller
         return response()->json(['received' => true]);
     }
 
-    /** POST /v1/booking/webhooks/smoobu — Smoobu webhook receiver. */
-    public function webhook(Request $request): JsonResponse
+    /**
+     * POST /v1/booking/webhooks/smoobu — Smoobu webhook receiver.
+     *
+     * Previously this endpoint only logged the payload to audit log and
+     * returned OK — bookings created/updated in Smoobu were NOT
+     * ingested in real time. The cron sync would eventually catch up,
+     * but staff could double-book a unit in the gap.
+     *
+     * The handler now actually upserts the booking. Smoobu's webhook
+     * payload uses `data.id` for the reservation id; we re-fetch the
+     * full reservation from the API for safety (the webhook payload
+     * shape can drift between Smoobu releases) and run it through
+     * the same `upsertBookingFromData` path the bulk sync uses.
+     *
+     * Org binding: this app currently runs Smoobu against a single
+     * tenant, so we look up the org that has a Smoobu API key
+     * configured. If multiple orgs ever share Smoobu we'll need
+     * per-org webhook URLs (e.g. /webhooks/smoobu/{orgToken}).
+     */
+    public function webhook(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
         $secret = config('services.smoobu.webhook_secret');
         if (!$secret || !hash_equals($secret, (string) $request->header('X-Webhook-Secret', ''))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        $payload = $request->all();
+        $action  = $payload['action'] ?? null;
+        $data    = $payload['data'] ?? $payload;
+        $reservationId = $data['id'] ?? $data['reservation_id'] ?? null;
+
+        // Resolve a single org with Smoobu configured. The webhook is
+        // unauthenticated so we have no JWT/Sanctum context to fall back
+        // on — bind the org explicitly here.
+        $orgId = HotelSetting::withoutGlobalScopes()
+            ->where('key', 'booking_smoobu_api_key')
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->orderBy('organization_id')
+            ->value('organization_id');
+
+        if (!$orgId) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu webhook received but no org has API key configured', ['action' => $action]);
+            return response()->json(['ok' => true, 'note' => 'no org configured']);
+        }
+
+        app()->instance('current_organization_id', $orgId);
+
         \App\Models\AuditLog::create([
-            'action'      => 'booking.webhook.received',
-            'subject_type'=> 'booking_mirror',
-            'details'     => json_encode($request->all()),
-            'ip_address'  => $request->ip(),
+            'organization_id' => $orgId,
+            'action'          => 'booking.webhook.received',
+            'subject_type'    => 'booking_mirror',
+            'subject_id'      => $reservationId,
+            'description'     => "Webhook: {$action}" . ($reservationId ? " · res #{$reservationId}" : ''),
+            'ip_address'      => $request->ip(),
         ]);
 
-        return response()->json(['ok' => true]);
+        if (!$reservationId) {
+            return response()->json(['ok' => true, 'note' => 'no reservation id in payload']);
+        }
+
+        try {
+            // Re-fetch the full reservation from Smoobu API. The webhook
+            // payload shape isn't versioned and missing fields would
+            // partially update the mirror; the GET is canonical.
+            $full = $smoobu->getReservation((string) $reservationId);
+            if (!empty($full['id'])) {
+                $service->upsertBookingFromData($full);
+            } elseif (!empty($data['id'])) {
+                // Fall back to webhook payload if the GET returned empty
+                // (rare — happens on cancellations Smoobu may purge).
+                $service->upsertBookingFromData($data);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Smoobu webhook upsert failed', [
+                'reservation_id' => $reservationId,
+                'action'         => $action,
+                'error'          => $e->getMessage(),
+            ]);
+            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true, 'reservation_id' => $reservationId, 'action' => $action]);
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────

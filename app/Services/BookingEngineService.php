@@ -320,6 +320,74 @@ class BookingEngineService
     }
 
     /**
+     * Pull every reservation from the Smoobu API in the given window and
+     * upsert it into `booking_mirrors`. Pages until Smoobu reports no
+     * more pages — there is NO hard 10-page cap any more (the previous
+     * cap silently dropped any booking past #1000 in the window, which
+     * is what caused the calendar to look "missing" entire apartments
+     * for hotels with a busy season).
+     *
+     * The 200-page safety net only exists so a runaway Smoobu response
+     * can't loop forever — at 100/page that's still 20 000 reservations,
+     * comfortably above any sane window for one tenant.
+     *
+     * Returns ['synced' => N, 'errors' => N, 'pages' => N, 'page_count' => N].
+     */
+    public function syncReservationsFromPms(?string $from = null, ?string $to = null): array
+    {
+        $from = $from ?? now()->subMonths(3)->format('Y-m-d');
+        // Bookings can be made far in advance — we want a year-out window
+        // so a guest who booked today for next summer is reflected in the
+        // mirror immediately, not only after the next calendar tick.
+        $to   = $to   ?? now()->addMonths(12)->format('Y-m-d');
+
+        $page = 1;
+        $synced = 0;
+        $errors = 0;
+        $pageCount = 1;
+        $maxPages = 200; // safety net only — see docblock
+
+        while ($page <= $maxPages) {
+            $response = $this->smoobu->listReservations([
+                'from'     => $from,
+                'to'       => $to,
+                'page'     => $page,
+                'pageSize' => 100,
+            ]);
+
+            $bookings = $response['bookings'] ?? [];
+            $pageCount = (int) ($response['page_count'] ?? 1);
+
+            if (empty($bookings)) break;
+
+            foreach ($bookings as $b) {
+                try {
+                    $this->upsertBookingFromData($b);
+                    $synced++;
+                } catch (\Throwable $e) {
+                    $errors++;
+                    \Illuminate\Support\Facades\Log::warning('Sync reservation failed', [
+                        'id'    => $b['id'] ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($page >= $pageCount) break;
+            $page++;
+        }
+
+        return [
+            'synced'     => $synced,
+            'errors'     => $errors,
+            'pages'      => $page,
+            'page_count' => $pageCount,
+            'from'       => $from,
+            'to'         => $to,
+        ];
+    }
+
+    /**
      * Upsert a booking mirror from already-fetched Smoobu data (no extra API call).
      */
     public function upsertBookingFromData(array $data): ?BookingMirror

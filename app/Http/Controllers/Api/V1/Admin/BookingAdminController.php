@@ -345,8 +345,17 @@ class BookingAdminController extends Controller
     {
         $activePms = app(PmsResolver::class)->activePms();
 
-        // Always sync apartments (works in both mock and live mode)
-        try { $this->syncApartments($smoobu); } catch (\Throwable) {}
+        // Refresh apartments first so any newly-added units in Smoobu are
+        // tracked before we start ingesting bookings against them.
+        // Surface failures rather than silently swallowing them — staff
+        // need to know if their unit list is stale.
+        $apartmentWarning = null;
+        try {
+            $this->syncApartments($smoobu);
+        } catch (\Throwable $e) {
+            $apartmentWarning = "Apartment refresh failed: {$e->getMessage()}";
+            \Illuminate\Support\Facades\Log::error('Apartment sync failed during full sync', ['error' => $e->getMessage()]);
+        }
 
         if (!$activePms) {
             return response()->json(['message' => 'No PMS integration configured. Connect a provider in Settings → Integrations to sync bookings.', 'synced' => 0]);
@@ -361,33 +370,17 @@ class BookingAdminController extends Controller
         }
 
         try {
-            $from = $request->input('from', now()->subMonths(3)->format('Y-m-d'));
-            $to   = $request->input('to', now()->addMonths(3)->format('Y-m-d'));
+            $result = $service->syncReservationsFromPms(
+                $request->input('from'),
+                $request->input('to'),
+            );
 
-            $page = 1; $synced = 0; $errors = 0; $maxPages = 10;
-
-            while ($page <= $maxPages) {
-                $response = $smoobu->listReservations(['from' => $from, 'to' => $to, 'page' => $page, 'pageSize' => 100]);
-                $bookings = $response['bookings'] ?? [];
-                if (empty($bookings)) break;
-
-                foreach ($bookings as $b) {
-                    try {
-                        // Use data from list response directly — no extra API call per booking
-                        $service->upsertBookingFromData($b);
-                        $synced++;
-                    } catch (\Throwable $e) {
-                        $errors++;
-                        \Illuminate\Support\Facades\Log::warning('Sync reservation failed', ['id' => $b['id'] ?? null, 'error' => $e->getMessage()]);
-                    }
-                }
-
-                if ($page >= ($response['page_count'] ?? 1)) break;
-                $page++;
-            }
+            $synced = $result['synced'];
+            $errors = $result['errors'];
 
             $msg = "Synced {$synced} reservations.";
-            if ($errors) $msg .= " {$errors} failed.";
+            if ($errors)            $msg .= " {$errors} failed.";
+            if ($apartmentWarning)  $msg .= " ({$apartmentWarning})";
 
             // Log sync event for dashboard "Last Sync"
             try {
