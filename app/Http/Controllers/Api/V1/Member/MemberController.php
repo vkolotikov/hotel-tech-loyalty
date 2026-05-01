@@ -145,16 +145,30 @@ class MemberController extends Controller
 
         // Static QR encodes the member_number — permanent, scannable by staff.
         // Member number is unique per org and safe to encode (not a secret).
+        //
+        // We try PNG first (renders directly via the mobile <Image>) but PNG
+        // requires the GD or Imagick PHP extension. On servers without it the
+        // PngWriter throws — fall back to SVG (pure PHP, no extension) so the
+        // mobile app always has something to render. The mobile side prefers
+        // qr_svg when present and falls back to qr_image.
         $qrImage = null;
         try {
             $qrImage = 'data:image/png;base64,' . $this->qrService->generateStaticQr($member->member_number);
         } catch (\Throwable $e) {
-            // GD extension may not be available — skip image
+            \Log::info('QR PNG generation failed, falling back to SVG', ['error' => $e->getMessage()]);
+        }
+
+        $qrSvg = null;
+        try {
+            $qrSvg = $this->qrService->generateStaticQrSvg($member->member_number);
+        } catch (\Throwable $e) {
+            \Log::warning('QR SVG generation failed', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
             'member_number' => $member->member_number,
             'qr_image'      => $qrImage,
+            'qr_svg'        => $qrSvg,
             'nfc_uid'       => $member->nfc_uid,
             'tier'          => $member->tier,
             'current_points'=> $member->current_points,

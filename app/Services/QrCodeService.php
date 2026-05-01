@@ -8,6 +8,7 @@ use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Support\Str;
 
 class QrCodeService
@@ -34,13 +35,17 @@ class QrCodeService
      */
     public function generateStaticQr(string $memberNumber): string
     {
-        $payload = json_encode([
-            'type'          => 'hotel_loyalty',
-            'member_number' => $memberNumber,
-            'version'       => 2,
-        ]);
+        return $this->buildQrPng($this->staticQrPayload($memberNumber));
+    }
 
-        return $this->buildQrPng($payload);
+    /**
+     * Generate a static QR code as raw SVG (pure-PHP, no GD dependency).
+     * Used as a fallback when the production server doesn't have the GD or
+     * Imagick PHP extension installed and PngWriter throws.
+     */
+    public function generateStaticQrSvg(string $memberNumber): string
+    {
+        return $this->buildQrSvg($this->staticQrPayload($memberNumber));
     }
 
     /**
@@ -58,6 +63,15 @@ class QrCodeService
         return $this->buildQrPng($payload);
     }
 
+    private function staticQrPayload(string $memberNumber): string
+    {
+        return json_encode([
+            'type'          => 'hotel_loyalty',
+            'member_number' => $memberNumber,
+            'version'       => 2,
+        ]);
+    }
+
     private function buildQrPng(string $data): string
     {
         $result = Builder::create()
@@ -72,6 +86,22 @@ class QrCodeService
             ->build();
 
         return base64_encode($result->getString());
+    }
+
+    private function buildQrSvg(string $data): string
+    {
+        $result = Builder::create()
+            ->writer(new SvgWriter())
+            ->writerOptions([])
+            ->data($data)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(300)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->build();
+
+        return $result->getString();
     }
 
     /**
