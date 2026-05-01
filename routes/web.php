@@ -158,6 +158,13 @@ Route::get('/review/{id}', function (int $id, \Illuminate\Http\Request $request)
         ->header('Content-Security-Policy', "frame-ancestors *");
 })->where('id', '[0-9]+');
 
+// ─── Public Privacy Policy ──────────────────────────────────────────────────
+// Linked from the App Store + Google Play store listings and from the
+// in-app footers. Must stay reachable without auth and with a stable URL —
+// Apple's reviewers fetch it during App Review, and changing the URL would
+// break the link in the App Store entry.
+Route::get('/privacy', fn () => view('privacy'));
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -165,7 +172,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|privacy).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
