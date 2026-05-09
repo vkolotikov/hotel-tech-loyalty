@@ -119,10 +119,19 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
     refetchInterval: open ? 8_000 : false,
   })
 
-  // Conversation detail (only when there is one)
+  // Conversation detail (only when there is one). The /chat-inbox/{id}
+  // endpoint returns { conversation, messages, siblings, visitor_typing }
+  // at the top level — messages is NOT nested under conversation, so we
+  // merge it in here. Defaulting messages to [] guards against any future
+  // payload shape change so the drawer renders rather than blanking out.
   const { data: convDetail, refetch: refetchConv } = useQuery<{ conversation: ConversationDetail }>({
     queryKey: ['engagement-drawer', 'conversation', conversationId],
-    queryFn: () => api.get(`/v1/admin/chat-inbox/${conversationId}`).then(r => ({ conversation: r.data.conversation ?? r.data })),
+    queryFn: () => api.get(`/v1/admin/chat-inbox/${conversationId}`).then(r => ({
+      conversation: {
+        ...(r.data.conversation ?? r.data),
+        messages: r.data.messages ?? r.data.conversation?.messages ?? [],
+      },
+    })),
     enabled: open && conversationId !== null,
     refetchInterval: open ? 5_000 : false,
   })
@@ -443,11 +452,12 @@ function ConversationTab({
 
   return (
     <>
-      {/* Messages */}
+      {/* Messages — guard against undefined in case the endpoint shape
+          shifts again. Empty array == "no messages yet" UI. */}
       <div ref={messagesScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2.5">
-        {conv.messages.length === 0 ? (
+        {(conv.messages ?? []).length === 0 ? (
           <div className="text-center text-t-secondary text-sm py-8">No messages yet.</div>
-        ) : conv.messages.map(m => <MessageBubble key={m.id} message={m} />)}
+        ) : (conv.messages ?? []).map(m => <MessageBubble key={m.id} message={m} />)}
       </div>
 
       {/* Composer — only enabled when AI is OFF (otherwise the agent should
