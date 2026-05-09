@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class KnowledgeDocument extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
         'organization_id',
+        'brand_id',
         'file_name',
         'file_path',
         'mime_type',

@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Send, Bot, User, Sparkles } from 'lucide-react'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
+import { BrandRequired } from '../components/BrandRequired'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -38,6 +39,7 @@ export function ChatbotTestAi() {
   }
 
   return (
+    <BrandRequired feature="the AI test playground">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 bg-dark-surface border border-dark-border rounded-xl flex flex-col" style={{ height: '70vh' }}>
         <div className="p-3 border-b border-dark-border flex items-center justify-between">
@@ -105,5 +107,6 @@ export function ChatbotTestAi() {
         )}
       </div>
     </div>
+    </BrandRequired>
   )
 }

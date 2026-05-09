@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Organization extends Model
 {
@@ -47,6 +48,26 @@ class Organization extends Model
     public function properties(): HasMany
     {
         return $this->hasMany(Property::class);
+    }
+
+    /**
+     * All brands under this organization. See MULTI_BRAND_PLAN.md for the
+     * conceptual model — chatbot, widget, booking, knowledge live at brand;
+     * CRM and loyalty live at org.
+     */
+    public function brands(): HasMany
+    {
+        return $this->hasMany(Brand::class);
+    }
+
+    /**
+     * The org's default brand. Every organization has exactly one (DB-enforced
+     * via partial unique index). Brand-scoped code that lacks an explicit
+     * brand context falls back to this.
+     */
+    public function defaultBrand(): HasOne
+    {
+        return $this->hasOne(Brand::class)->where('is_default', true);
     }
 
     // ─── Plan / entitlement helpers ───────────────────────────

@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class ChatWidgetConfig extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
         'organization_id',
+        'brand_id',
         'widget_key',
         'api_key',
         'company_name',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -33,6 +34,19 @@ class User extends Authenticatable
     public function staff()
     {
         return $this->hasOne(Staff::class);
+    }
+
+    /**
+     * Brands this staff user can access. A user with NO rows in the pivot is
+     * implicitly granted access to every brand in their organization (legacy
+     * behaviour — no surprise downgrades for existing staff). The
+     * BrandMiddleware honours this rule when resolving the current brand.
+     */
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Brand::class)
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function isStaff(): bool

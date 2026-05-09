@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
 use App\Services\KnowledgeService;
@@ -43,9 +44,10 @@ class ChatbotConfigController extends Controller
         ]);
 
         $orgId = $request->user()->organization_id;
-        $config = ChatbotBehaviorConfig::updateOrCreate(
-            ['organization_id' => $orgId],
-            array_merge($validated, ['organization_id' => $orgId])
+        $brandId = Brand::currentOrDefaultIdForOrg($orgId);
+        $config = ChatbotBehaviorConfig::withoutGlobalScopes()->updateOrCreate(
+            ['organization_id' => $orgId, 'brand_id' => $brandId],
+            array_merge($validated, ['organization_id' => $orgId, 'brand_id' => $brandId])
         );
 
         return response()->json($config);
@@ -75,9 +77,10 @@ class ChatbotConfigController extends Controller
         ]);
 
         $orgId = $request->user()->organization_id;
-        $config = ChatbotModelConfig::updateOrCreate(
-            ['organization_id' => $orgId],
-            array_merge($validated, ['organization_id' => $orgId])
+        $brandId = Brand::currentOrDefaultIdForOrg($orgId);
+        $config = ChatbotModelConfig::withoutGlobalScopes()->updateOrCreate(
+            ['organization_id' => $orgId, 'brand_id' => $brandId],
+            array_merge($validated, ['organization_id' => $orgId, 'brand_id' => $brandId])
         );
 
         return response()->json($config);
@@ -211,8 +214,18 @@ class ChatbotConfigController extends Controller
         ]);
 
         $orgId = $request->user()->organization_id;
-        $behavior = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
-        $model = ChatbotModelConfig::where('organization_id', $orgId)->first();
+        $brandId = Brand::currentOrDefaultIdForOrg($orgId);
+        // BelongsToBrand global scope already filters by current_brand_id
+        // when bound — these are explicit so the testChat endpoint behaves
+        // identically when called from within a brand context vs. without.
+        $behavior = ChatbotBehaviorConfig::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('brand_id', $brandId)
+            ->first();
+        $model = ChatbotModelConfig::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('brand_id', $brandId)
+            ->first();
 
         $kbContext = '';
         try {

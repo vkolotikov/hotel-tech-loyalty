@@ -7,6 +7,7 @@ import {
   Send, Phone, X, MessageCircle, Headphones, HelpCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { BrandRequired } from '../components/BrandRequired'
 
 type SubTab = 'appearance' | 'copy' | 'behavior' | 'voice' | 'install'
 
@@ -997,6 +998,7 @@ export function ChatbotWidget() {
   const showPreview = tab !== 'install'
 
   return (
+    <BrandRequired feature="the chat widget">
     <div className="space-y-5">
       {/* Sub-tab nav */}
       <div className="flex gap-1 border-b border-dark-border overflow-x-auto">
@@ -1045,6 +1047,7 @@ export function ChatbotWidget() {
         )}
       </div>
     </div>
+    </BrandRequired>
   )
 }
 

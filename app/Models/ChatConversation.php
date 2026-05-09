@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class ChatConversation extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
         'organization_id',
+        'brand_id',
         'member_id',
         'visitor_id',
         'visitor_name',

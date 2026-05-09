@@ -36,6 +36,7 @@ const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ 
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const Benefits = lazy(() => import('./pages/Benefits').then(m => ({ default: m.Benefits })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
+const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const Tiers = lazy(() => import('./pages/Tiers').then(m => ({ default: m.Tiers })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
@@ -157,6 +158,7 @@ export default function App() {
           <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />
           <Route path="/benefits" element={<LazyRoute gate="admin" product="loyalty"><Benefits /></LazyRoute>} />
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
+          <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
           {/* Guests + CRM Reservations consolidated — redirect list pages
               to the unified ones, but keep deep-link detail routes alive. */}
           <Route path="/guests" element={<Navigate to="/members" replace />} />

@@ -36,6 +36,29 @@ api.interceptors.request.use((config) => {
     delete (config.headers as Record<string, unknown>)['content-type']
   }
 
+  // Auto-inject the current brand selection on every request so the backend
+  // BrandMiddleware sees it without each call site remembering to pass it.
+  // Read directly from the persisted localStorage snapshot to avoid pulling
+  // a zustand subscription into this module (api.ts is imported very early,
+  // before the store is initialized in some code paths). The shape mirrors
+  // brandStore.ts's `partialize`: { state: { currentBrandId: number|null } }.
+  if (config.url && !/[?&]brand_id=/.test(config.url)) {
+    try {
+      const raw = localStorage.getItem('loyalty-brand')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const id = parsed?.state?.currentBrandId
+        config.params = {
+          ...(config.params || {}),
+          brand_id: id == null ? 'all' : id,
+        }
+      }
+    } catch {
+      // Corrupted localStorage — request continues unscoped (backend defaults
+      // to "all brands" mode), no point in failing the call.
+    }
+  }
+
   return config
 })
 

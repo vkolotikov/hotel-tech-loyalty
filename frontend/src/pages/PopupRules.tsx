@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Zap, Plus, Pencil, Trash2, Save, X, Eye, MousePointer } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { BrandRequired } from '../components/BrandRequired'
 
 const TRIGGER_TYPES = [
   { value: 'page_load', label: 'Page Load', desc: 'Triggers when the page loads' },
@@ -83,6 +84,7 @@ export function PopupRules() {
   const triggerLabel = (type: string) => TRIGGER_TYPES.find(t => t.value === type)?.label || type
 
   return (
+    <BrandRequired feature="popup rules">
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -261,5 +263,6 @@ export function PopupRules() {
         </div>
       )}
     </div>
+    </BrandRequired>
   )
 }

@@ -44,10 +44,14 @@ Route::get('/services-widget', function (\Illuminate\Http\Request $request) {
 
 // ─── Standalone Services Booking Page ──────────────────────────────────────
 Route::get('/services/{token}', function (string $token) {
-    $org = \App\Models\Organization::where('widget_token', $token)->first();
-    if (!$org) {
+    // Resolve token via brands first; falls back to legacy orgs.widget_token.
+    // Side-effect: binds current_organization_id + current_brand_id so any
+    // brand-scoped models (ChatWidgetConfig, KB, etc.) auto-filter correctly.
+    $brand = \App\Models\Brand::resolveByToken($token);
+    if (!$brand) {
         abort(404, 'Services booking page not found');
     }
+    $org = $brand->organization;
     $color = request('color', '');
     if (!$color) {
         $color = \App\Models\HotelSetting::withoutGlobalScopes()
@@ -78,13 +82,22 @@ Route::get('/services/{token}', function (string $token) {
 // params auto-capture visitor identity via the /lead endpoint so the
 // conversation is tied to the member from the first message.
 Route::get('/chat-widget/{token}', function (string $token) {
-    $org = \App\Models\Organization::where('widget_token', $token)->first();
-    if (!$org) {
+    // Resolve to a brand (binds org + brand context for downstream lookups).
+    $brand = \App\Models\Brand::resolveByToken($token);
+    if (!$brand) {
         abort(404, 'Chat widget not found');
     }
+    $org = $brand->organization;
+    // Pick the brand-scoped widget config when one exists, otherwise the
+    // org's first config (covers the transition period before per-brand
+    // configs are created).
     $cfg = \App\Models\ChatWidgetConfig::withoutGlobalScopes()
         ->where('organization_id', $org->id)
-        ->first();
+        ->where('brand_id', $brand->id)
+        ->first()
+        ?? \App\Models\ChatWidgetConfig::withoutGlobalScopes()
+            ->where('organization_id', $org->id)
+            ->first();
     if (!$cfg || !$cfg->widget_key) {
         abort(404, 'Chat widget not configured for this organization');
     }
@@ -107,10 +120,11 @@ Route::get('/chat-widget/{token}', function (string $token) {
 
 // ─── Standalone Booking Page ────────────────────────────────────────────────
 Route::get('/book/{token}', function (string $token) {
-    $org = \App\Models\Organization::where('widget_token', $token)->first();
-    if (!$org) {
+    $brand = \App\Models\Brand::resolveByToken($token);
+    if (!$brand) {
         abort(404, 'Booking page not found');
     }
+    $org = $brand->organization;
     // Resolve brand color from appearance settings
     $color = request('color', '');
     if (!$color) {

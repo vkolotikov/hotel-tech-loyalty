@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info, CheckCircle, AlertTriangle, Wifi, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { AI_PROVIDERS, findModel, findProvider, formatModelLabel } from '../lib/aiModels'
+import { BrandRequired } from '../components/BrandRequired'
 
 const SALES_STYLES = [
   { value: 'consultative', label: 'Consultative', desc: 'Ask questions, understand needs, then recommend' },
@@ -150,6 +151,7 @@ export function ChatbotConfig() {
   }, [mForm.provider, mForm.model_name])
 
   return (
+    <BrandRequired feature="the chatbot configuration">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -527,5 +529,6 @@ export function ChatbotConfig() {
         </div>
       )}
     </div>
+    </BrandRequired>
   )
 }

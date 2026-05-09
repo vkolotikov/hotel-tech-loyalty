@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Admin\SetupController;
 use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\Admin\BookingRoomController;
 use App\Http\Controllers\Api\V1\Admin\BookingExtraController;
+use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\ServiceCategoryController;
 use App\Http\Controllers\Api\V1\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Api\V1\Admin\ServiceMasterController;
@@ -160,7 +161,7 @@ Route::prefix('v1')->group(function () {
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
-    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'throttle:120,1'])->group(function () {
+    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'brand', 'throttle:120,1'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);
@@ -219,6 +220,14 @@ Route::prefix('v1')->group(function () {
             // Organization setup
             Route::get('setup/status',       [SetupController::class, 'status']);
             Route::post('setup/initialize',  [SetupController::class, 'initialize']);
+
+            // ─── Brands (multi-brand portfolio) ────────────────────────────────
+            // Phase 1 of the multi-brand rollout. Single-brand orgs keep one
+            // auto-created default brand; admins use these endpoints to add a
+            // second brand and the SPA brand switcher appears in the header.
+            // See apps/loyalty/MULTI_BRAND_PLAN.md.
+            Route::post('brands/{id}/set-default', [BrandController::class, 'setDefault']);
+            Route::apiResource('brands',           BrandController::class);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);

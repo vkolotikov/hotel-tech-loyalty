@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'saas.auth'          => \App\Http\Middleware\SaasAuthMiddleware::class,
             'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
             'tenant'             => \App\Http\Middleware\TenantMiddleware::class,
+            'brand'              => \App\Http\Middleware\BrandMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
         ]);

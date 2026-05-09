@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { BookOpen, Plus, Pencil, Trash2, Upload, FileText, FolderOpen, Search, X, Save, RotateCcw, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { BrandRequired } from '../components/BrandRequired'
 
 type Tab = 'items' | 'categories' | 'documents'
 
@@ -186,6 +187,7 @@ export function KnowledgeBase() {
   }
 
   return (
+    <BrandRequired feature="the knowledge base">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -608,5 +610,6 @@ export function KnowledgeBase() {
         </div>
       )}
     </div>
+    </BrandRequired>
   )
 }

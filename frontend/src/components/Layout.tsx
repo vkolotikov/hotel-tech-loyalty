@@ -15,9 +15,11 @@ import {
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSubscription } from '../hooks/useSubscription'
+import { BrandSwitcher } from './BrandSwitcher'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -107,6 +109,7 @@ const navGroups: NavGroup[] = [
     accent: '#22d3ee', // cyan
     items: [
       { path: '/planner',    label: 'Planner',    icon: ClipboardList, gate: 'all' },
+      { path: '/brands',     label: 'Brands',     icon: Briefcase,     gate: 'admin' },
       { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
       { path: '/scan',       label: 'Scan',       icon: Scan,          gate: 'all' },
     ],
@@ -170,6 +173,21 @@ export function Layout({ children }: { children: ReactNode }) {
 
   // Force sidebar labels visible on mobile — drawer is always expanded.
   const displayCollapsed = isMobile ? false : collapsed
+
+  // Hydrate the brand store on app load. Single-brand orgs still benefit:
+  // the BrandSwitcher hides itself when brands.length <= 1, but having the
+  // brand list lets pages like Settings → Brands render without a flash.
+  const setBrands = useBrandStore(s => s.setBrands)
+  useQuery({
+    queryKey: ['brands'],
+    queryFn: () => api.get<{ data: BrandSummary[] }>('/v1/admin/brands').then(r => r.data),
+    enabled: !!staff,
+    staleTime: 60_000,
+    select: (d) => {
+      setBrands(d.data ?? [])
+      return d
+    },
+  })
 
   // Track viewport — below 1024px the sidebar becomes an off-canvas drawer
   // and a bottom nav is shown. Desktop behavior is untouched.
@@ -490,6 +508,9 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
           </div>
           <div className="flex-1" />
+
+          {/* Brand switcher — auto-hides when org has only one brand */}
+          <BrandSwitcher />
 
           {/* Live indicator */}
           <div className="flex items-center gap-1.5 text-xs text-t-secondary">
