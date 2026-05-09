@@ -5,14 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
 class Venue extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'property_id', 'name', 'venue_type', 'capacity',
+        'organization_id', 'brand_id', 'property_id', 'name', 'venue_type', 'capacity',
         'hourly_rate', 'half_day_rate', 'full_day_rate',
         'amenities', 'floor', 'area_sqm', 'is_active', 'description',
     ];

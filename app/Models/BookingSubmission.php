@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BookingSubmission extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'request_id', 'idempotency_key', 'outcome',
+        'organization_id', 'brand_id', 'request_id', 'idempotency_key', 'outcome',
         'failure_code', 'failure_message', 'booking_reference', 'reservation_id',
         'guest_id', 'guest_name', 'guest_email', 'guest_phone',
         'unit_id', 'unit_name', 'check_in', 'check_out',

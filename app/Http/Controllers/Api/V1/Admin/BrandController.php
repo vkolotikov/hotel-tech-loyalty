@@ -58,6 +58,10 @@ class BrandController extends Controller
             'description'   => 'nullable|string|max:1000',
             'primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo'          => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:5120',
+            // Per-brand PMS (Phase 3). Optional — when blank, falls back to
+            // org-level hotel_settings inside SmoobuClient.
+            'pms_smoobu_api_key'    => 'nullable|string|max:200',
+            'pms_smoobu_channel_id' => 'nullable|string|max:100',
         ]);
 
         // Strip non-model file from $data so it doesn't leak to model assignment.
@@ -97,6 +101,8 @@ class BrandController extends Controller
             'primary_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo'          => 'sometimes|image|mimes:jpeg,png,jpg,webp,svg|max:5120',
             'sort_order'    => 'sometimes|integer|min:0|max:9999',
+            'pms_smoobu_api_key'    => 'sometimes|nullable|string|max:200',
+            'pms_smoobu_channel_id' => 'sometimes|nullable|string|max:100',
         ]);
 
         unset($data['logo']);

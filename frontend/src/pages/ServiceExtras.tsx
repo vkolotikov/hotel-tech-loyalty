@@ -4,6 +4,7 @@ import { api, resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, X, Save, RefreshCw, Upload, Sparkles } from 'lucide-react'
 import { PairTabs, EXTRAS_TABS } from '../components/PairTabs'
+import { BrandRequired } from '../components/BrandRequired'
 
 interface Extra {
   id: number
@@ -48,6 +49,7 @@ export default function ServiceExtras() {
   })
 
   return (
+    <BrandRequired feature="service extras">
     <div className="space-y-6">
       <PairTabs tabs={EXTRAS_TABS} />
       <div className="flex items-center justify-between">
@@ -112,6 +114,7 @@ export default function ServiceExtras() {
           onSaved={() => { qc.invalidateQueries({ queryKey: ['service-extras'] }); setShowForm(false); setEditing(null) }} />
       )}
     </div>
+    </BrandRequired>
   )
 }
 

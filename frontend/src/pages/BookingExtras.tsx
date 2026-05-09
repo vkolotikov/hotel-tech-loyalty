@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { Plus, Trash2, Pencil, X, Save, RefreshCw, Upload, Sparkles } from 'lucide-react'
 import { PairTabs, EXTRAS_TABS } from '../components/PairTabs'
 import { money } from '../lib/money'
+import { BrandRequired } from '../components/BrandRequired'
 
 interface Extra {
   id: number
@@ -75,6 +76,7 @@ export default function BookingExtras() {
   const uncategorized = extras.filter(e => !e.category || !CATEGORIES.find(c => c.value === e.category))
 
   return (
+    <BrandRequired feature="booking extras">
     <div className="space-y-6">
       <PairTabs tabs={EXTRAS_TABS} />
       <div className="flex items-center justify-between">
@@ -122,6 +124,7 @@ export default function BookingExtras() {
 
       {showForm && <ExtraForm extra={editing} onClose={() => { setShowForm(false); setEditing(null) }} onSave={fd => saveMut.mutate(fd)} saving={saveMut.isPending} />}
     </div>
+    </BrandRequired>
   )
 }
 

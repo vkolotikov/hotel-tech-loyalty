@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,10 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceMaster extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'user_id', 'name', 'title', 'bio',
+        'organization_id', 'brand_id', 'user_id', 'name', 'title', 'bio',
         'email', 'phone', 'avatar', 'specialties', 'sort_order', 'is_active',
     ];
 

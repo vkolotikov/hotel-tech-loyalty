@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,10 +11,10 @@ use Illuminate\Support\Str;
 
 class ServiceBooking extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'booking_reference',
+        'organization_id', 'brand_id', 'booking_reference',
         'service_id', 'service_master_id', 'guest_id', 'member_id',
         'customer_name', 'customer_email', 'customer_phone', 'party_size',
         'start_at', 'end_at', 'duration_minutes',

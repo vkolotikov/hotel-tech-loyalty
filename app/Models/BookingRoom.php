@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class BookingRoom extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'pms_id', 'name', 'slug', 'description', 'short_description',
+        'organization_id', 'brand_id', 'pms_id', 'name', 'slug', 'description', 'short_description',
         'max_guests', 'bedrooms', 'bed_type', 'base_price', 'inventory_count', 'currency',
         'image', 'gallery', 'amenities', 'tags', 'size',
         'sort_order', 'is_active', 'meta',

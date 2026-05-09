@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
 import { money } from '../lib/money'
+import { BrandRequired } from '../components/BrandRequired'
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface Room {
@@ -108,6 +109,7 @@ export default function BookingRooms() {
   const openNew = () => { setEditingRoom(null); setShowForm(true) }
 
   return (
+    <BrandRequired feature="rooms">
     <div className="space-y-6">
       <PairTabs tabs={CATALOG_TABS} />
       {/* Header */}
@@ -252,6 +254,7 @@ export default function BookingRooms() {
         saving={saveMut.isPending}
       />}
     </div>
+    </BrandRequired>
   )
 }
 

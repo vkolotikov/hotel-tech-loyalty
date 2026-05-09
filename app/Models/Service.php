@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,10 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'category_id', 'name', 'slug', 'description', 'short_description',
+        'organization_id', 'brand_id', 'category_id', 'name', 'slug', 'description', 'short_description',
         'duration_minutes', 'buffer_after_minutes', 'price', 'currency',
         'image', 'gallery', 'tags', 'sort_order', 'is_active', 'meta',
     ];

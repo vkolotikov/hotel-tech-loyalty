@@ -5,14 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
 class Property extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'name', 'code', 'property_type', 'email', 'phone',
+        'organization_id', 'brand_id', 'name', 'code', 'property_type', 'email', 'phone',
         'website', 'gm_name', 'image_url',
         'address', 'city', 'country', 'timezone', 'currency', 'star_rating',
         'room_count', 'pms_type', 'pms_property_id', 'settings', 'is_active',

@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 
 class ServiceExtra extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'name', 'description', 'price', 'price_type',
+        'organization_id', 'brand_id', 'name', 'description', 'price', 'price_type',
         'duration_minutes', 'lead_time_hours',
         'currency', 'image', 'icon', 'category', 'sort_order', 'is_active',
     ];

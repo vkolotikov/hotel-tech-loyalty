@@ -27,12 +27,13 @@ use Illuminate\Support\Facades\Log;
  */
 class SmoobuClient
 {
-    private ?string $baseUrl   = null;
-    private ?string $apiKey    = null;
-    private ?string $channelId = null;
-    private int $timeout       = 30;
-    private ?bool $isMock      = null;
-    private ?int $loadedForOrg = null;
+    private ?string $baseUrl     = null;
+    private ?string $apiKey      = null;
+    private ?string $channelId   = null;
+    private int $timeout         = 30;
+    private ?bool $isMock        = null;
+    private ?int $loadedForOrg   = null;
+    private ?int $loadedForBrand = null;
 
     public function __construct()
     {
@@ -47,18 +48,37 @@ class SmoobuClient
      */
     private function boot(): void
     {
-        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0;
-        if ($this->isMock !== null && $this->loadedForOrg === $orgId) {
+        $orgId   = app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0;
+        $brandId = app()->bound('current_brand_id')        ? (int) app('current_brand_id')        : 0;
+        if ($this->isMock !== null && $this->loadedForOrg === $orgId && $this->loadedForBrand === $brandId) {
             return;
         }
 
         $this->baseUrl   = rtrim($this->setting('booking_smoobu_base_url', config('services.smoobu.base_url', 'https://login.smoobu.com/api/')), '/');
-        // Per-org API key is authoritative. Only fall back to global env key
-        // when there is NO tenant context (e.g. artisan commands, queue jobs).
-        // This prevents org A's Smoobu rooms from leaking to org B when B has
-        // no key configured and the global env key belongs to A.
+
+        // Phase 3: per-brand Smoobu credentials. The brand-stamped key on the
+        // brands table wins when present. Falls through to the org-level
+        // hotel_settings entry, then finally to the global env var (only when
+        // there is no tenant context at all). This lets a corporate group run
+        // separate Smoobu accounts per sub-brand without forking SmoobuClient.
+        $perBrandKey = '';
+        $perBrandChannelId = '';
+        if ($brandId) {
+            try {
+                $brand = \App\Models\Brand::withoutGlobalScopes()->find($brandId);
+                if ($brand) {
+                    $perBrandKey = (string) ($brand->pms_smoobu_api_key ?? '');
+                    $perBrandChannelId = (string) ($brand->pms_smoobu_channel_id ?? '');
+                }
+            } catch (\Throwable $e) {
+                // Defensive — if the brand lookup fails for any reason, fall
+                // through to org-level creds rather than break PMS sync.
+                Log::warning('SmoobuClient brand lookup failed: ' . $e->getMessage());
+            }
+        }
+
         $perOrgKey       = $this->setting('booking_smoobu_api_key', '');
-        $this->apiKey    = $perOrgKey ?: ($orgId ? '' : config('services.smoobu.api_key', ''));
+        $this->apiKey    = $perBrandKey ?: ($perOrgKey ?: ($orgId ? '' : config('services.smoobu.api_key', '')));
         $provider        = $this->setting('booking_smoobu_provider', config('services.smoobu.provider', 'mock'));
         // Admin can deactivate the integration without removing credentials.
         // When disabled, behave as if no key is configured: serve mock data,
@@ -66,9 +86,11 @@ class SmoobuClient
         $disabled        = !IntegrationStatus::isEnabled('smoobu');
         // Auto-detect: if API key is present AND not disabled, treat as live.
         $this->isMock    = $disabled || (empty($this->apiKey) && $provider === 'mock');
-        $this->channelId = $this->setting('booking_smoobu_channel_id', config('services.smoobu.channel_id', ''));
+        $this->channelId = $perBrandChannelId
+            ?: $this->setting('booking_smoobu_channel_id', config('services.smoobu.channel_id', ''));
         $this->timeout   = (int) config('services.smoobu.timeout', 30);
-        $this->loadedForOrg = $orgId;
+        $this->loadedForOrg   = $orgId;
+        $this->loadedForBrand = $brandId;
 
         if ($this->isMock) {
             Log::info('SmoobuClient running in MOCK mode', [

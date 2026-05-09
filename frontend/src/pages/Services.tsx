@@ -7,6 +7,7 @@ import {
   Clock, Tag, FolderTree, Search,
 } from 'lucide-react'
 import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
+import { BrandRequired } from '../components/BrandRequired'
 
 interface ServiceCategory {
   id: number
@@ -55,6 +56,7 @@ export default function Services() {
   const [tab, setTab] = useState<'services' | 'categories'>('services')
 
   return (
+    <BrandRequired feature="services & categories">
     <div className="space-y-6">
       <PairTabs tabs={CATALOG_TABS} />
       <div className="flex items-center justify-between">
@@ -75,6 +77,7 @@ export default function Services() {
 
       {tab === 'services' ? <ServicesList /> : <CategoriesList />}
     </div>
+    </BrandRequired>
   )
 }
 

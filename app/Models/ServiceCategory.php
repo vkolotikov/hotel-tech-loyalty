@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceCategory extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'name', 'slug', 'description',
+        'organization_id', 'brand_id', 'name', 'slug', 'description',
         'icon', 'image', 'color', 'sort_order', 'is_active',
     ];
 
