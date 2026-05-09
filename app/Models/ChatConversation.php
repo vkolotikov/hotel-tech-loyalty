@@ -40,6 +40,10 @@ class ChatConversation extends Model
         'active_agent_name',
         'active_agent_avatar',
         'rating_requested',
+        // Engagement Hub Phase 3 — see ENGAGEMENT_HUB_PLAN.md
+        'intent_tag',
+        'ai_brief',
+        'ai_brief_at',
     ];
 
     protected $casts = [
@@ -51,6 +55,7 @@ class ChatConversation extends Model
         'visitor_typing_until' => 'datetime',
         'agent_typing_until' => 'datetime',
         'rating_requested' => 'boolean',
+        'ai_brief_at' => 'datetime',
     ];
 
     public function messages()

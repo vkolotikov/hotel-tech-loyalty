@@ -6,6 +6,7 @@ import {
   AlertCircle, Bot, Wifi, MapPin,
 } from 'lucide-react'
 import { api } from '../lib/api'
+import { INTENT_META } from '../lib/intentMeta'
 import { useBrandStore } from '../stores/brandStore'
 import { BrandBadge } from '../components/BrandBadge'
 import { EngagementDrawer } from '../components/EngagementDrawer'
@@ -18,7 +19,10 @@ import { EngagementDrawer } from '../components/EngagementDrawer'
  * Detail drawer + quick actions land in Phase 2.
  */
 
-type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat' | 'hot_lead' | 'anonymous' | 'resolved'
+type FilterKey =
+  | 'priority' | 'online' | 'has_contact' | 'active_chat' | 'hot_lead'
+  | 'anonymous' | 'resolved'
+  | 'booking_inquiry' | 'info_request' | 'complaint' | 'cancellation' | 'support'
 
 interface EngagementRow {
   id: number
@@ -51,7 +55,9 @@ interface EngagementRow {
     ai_enabled: boolean
     assigned_to: number | null
     unread_admin_count: number
+    intent_tag: string | null
   } | null
+  is_hot_lead: boolean
   priority_score: number
 }
 
@@ -72,9 +78,17 @@ const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
   { key: 'online',      label: 'Online',       icon: Wifi,  tone: 'green'     },
   { key: 'has_contact', label: 'Has contact',  icon: Mail                     },
   { key: 'active_chat', label: 'Active chat',  icon: MessageSquare            },
-  { key: 'hot_lead',    label: 'Hot leads',    icon: Star,  tone: 'amber'     },
+  { key: 'hot_lead',    label: 'Hot leads',    icon: Sparkles, tone: 'amber'  },
   { key: 'anonymous',   label: 'Anonymous',    icon: Eye                      },
   { key: 'resolved',    label: 'Resolved',     icon: InboxIcon                },
+]
+
+const INTENT_FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'booking_inquiry', label: 'Booking' },
+  { key: 'info_request',    label: 'Info' },
+  { key: 'complaint',       label: 'Complaint' },
+  { key: 'cancellation',    label: 'Cancellation' },
+  { key: 'support',         label: 'Support' },
 ]
 
 export function Engagement() {
@@ -214,6 +228,35 @@ export function Engagement() {
                 style={{ height: 32 }}
               >
                 <f.icon size={12} className={active ? '' : tone} />
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Intent filter row — narrows the feed to a single AI-classified
+            intent. Only AI-tagged conversations appear here, so a brand-new
+            org may see empty results until the chats accumulate. */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ flexShrink: 0 }}>
+          <span className="text-[9px] uppercase tracking-wide font-bold text-t-secondary whitespace-nowrap pl-1 pr-1">
+            By intent
+          </span>
+          {INTENT_FILTERS.map(f => {
+            const active = filter === f.key
+            const meta = INTENT_META[f.key]
+            const Ic = meta?.icon ?? Sparkles
+            return (
+              <button
+                key={f.key}
+                onClick={() => { setFilter(f.key); setPage(1) }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  active
+                    ? `${meta?.cls ?? ''} border-current`
+                    : 'bg-dark-bg text-t-secondary hover:text-white hover:bg-dark-surface2'
+                }`}
+                style={{ height: 28 }}
+              >
+                <Ic size={11} />
                 {f.label}
               </button>
             )
@@ -365,9 +408,23 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             {flag && <span className="text-[11px]">{flag}</span>}
             {r.has_email && <Mail size={11} className="text-blue-400" />}
             {r.has_phone && <Phone size={11} className="text-emerald-400" />}
-            {r.is_lead && (
+            {r.is_hot_lead && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/40 animate-pulse">
+                <Sparkles size={9} /> HOT
+              </span>
+            )}
+            {r.is_lead && !r.is_hot_lead && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
                 <Star size={9} /> LEAD
+              </span>
+            )}
+            {r.conversation?.intent_tag && INTENT_META[r.conversation.intent_tag] && (
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${INTENT_META[r.conversation.intent_tag].cls}`}>
+                {(() => {
+                  const Ic = INTENT_META[r.conversation.intent_tag].icon
+                  return <Ic size={9} />
+                })()}
+                {INTENT_META[r.conversation.intent_tag].label}
               </span>
             )}
             {r.conversation?.unread_admin_count ? (
@@ -430,13 +487,18 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
 
 function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFilter: boolean }) {
   const messages: Record<FilterKey, { title: string; sub: string }> = {
-    priority:    { title: 'Nothing needs attention',  sub: 'No online visitors, leads, or active chats right now.' },
-    online:      { title: 'No one is online',          sub: 'Visitors will appear here in real time when they hit the chat widget.' },
-    has_contact: { title: 'No leads captured yet',     sub: 'Anyone who leaves an email or phone number lands here.' },
-    active_chat: { title: 'No active chats',           sub: 'Open conversations will appear here.' },
-    hot_lead:    { title: 'No hot leads right now',    sub: 'Online + lead-captured visitors surface here.' },
-    anonymous:   { title: 'No anonymous browsers',     sub: 'Visitors without contact info, hidden from the priority view, surface here.' },
-    resolved:    { title: 'No resolved conversations', sub: 'Closed chats land here for reference.' },
+    priority:        { title: 'Nothing needs attention',     sub: 'No online visitors, leads, or active chats right now.' },
+    online:          { title: 'No one is online',             sub: 'Visitors will appear here in real time when they hit the chat widget.' },
+    has_contact:     { title: 'No leads captured yet',        sub: 'Anyone who leaves an email or phone number lands here.' },
+    active_chat:     { title: 'No active chats',              sub: 'Open conversations will appear here.' },
+    hot_lead:        { title: 'No hot leads right now',       sub: 'Visitors with a captured contact + a strong buying signal (booking page visit, 3+ messages, online now) surface here.' },
+    anonymous:       { title: 'No anonymous browsers',        sub: 'Visitors without contact info, hidden from the priority view, surface here.' },
+    resolved:        { title: 'No resolved conversations',    sub: 'Closed chats land here for reference.' },
+    booking_inquiry: { title: 'No booking inquiries',         sub: 'Conversations the AI tagged as booking-related land here. Tags appear after 3+ messages.' },
+    info_request:    { title: 'No info requests',             sub: 'Visitors asking general questions surface here once their chat has been AI-tagged.' },
+    complaint:       { title: 'No complaints',                sub: 'Issues raised by visitors land here once tagged.' },
+    cancellation:    { title: 'No cancellation requests',     sub: 'Visitors asking to cancel a booking surface here once tagged.' },
+    support:         { title: 'No support requests',          sub: 'General support conversations land here once tagged.' },
   }
   const m = messages[filter]
   return (

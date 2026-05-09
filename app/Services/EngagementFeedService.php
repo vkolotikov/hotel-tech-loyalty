@@ -52,7 +52,10 @@ class EngagementFeedService
                 'guest:id,full_name,email,phone,lifecycle_status',
                 'conversations' => fn ($q) => $q
                     ->select(['id', 'visitor_id', 'status', 'last_message_at',
-                              'lead_captured', 'ai_enabled', 'assigned_to', 'messages_count'])
+                              'lead_captured', 'ai_enabled', 'assigned_to', 'messages_count',
+                              // Phase 3 — surface the cached AI tag on the row so
+                              // admins can see/filter it without opening the drawer.
+                              'intent_tag'])
                     ->latest('last_message_at')
                     ->limit(1)
                     ->with(['messages' => fn ($qq) => $qq
@@ -186,9 +189,33 @@ class EngagementFeedService
                 $query->whereHas('conversations', fn ($q) => $q->whereIn('status', ['active', 'waiting']));
                 break;
             case 'hot_lead':
-                // Phase 3 will wire a richer "hot lead" rule. For Phase 1 this
-                // is a leads + online combo as a useful approximation.
-                $query->where('is_lead', true)->where('last_seen_at', '>=', $threshold);
+                // Hot lead = signals strong enough that an agent should look NOW.
+                // Captured contact AND (online OR active conversation OR
+                // strong-intent tag OR booking-page visit). Mirrors the
+                // PHP-side scoreHotLead() rule below.
+                $query->where(function ($q) use ($threshold) {
+                    $q->where(function ($qq) {
+                        $qq->whereNotNull('email')->orWhereNotNull('phone')->orWhere('is_lead', true);
+                    })->where(function ($qq) use ($threshold) {
+                        $qq->where('last_seen_at', '>=', $threshold)
+                           ->orWhere(function ($current) {
+                               $current->where('current_page', 'ILIKE', '%/book%')
+                                       ->orWhere('current_page', 'ILIKE', '%/rooms%')
+                                       ->orWhere('current_page', 'ILIKE', '%/services%');
+                           })
+                           ->orWhereHas('conversations', fn ($c) => $c
+                               ->whereIn('status', ['active', 'waiting'])
+                               ->orWhere('intent_tag', 'booking_inquiry'));
+                    });
+                });
+                break;
+            case 'booking_inquiry':
+            case 'complaint':
+            case 'support':
+            case 'cancellation':
+            case 'info_request':
+                // Filter rows by intent_tag of their latest conversation.
+                $query->whereHas('conversations', fn ($c) => $c->where('intent_tag', $filter));
                 break;
             case 'anonymous':
                 $query->whereNull('email')->whereNull('phone')->where('is_lead', false);
@@ -247,6 +274,15 @@ class EngagementFeedService
             && $lastMessage?->sender_type === 'visitor'
             && $conversation->ai_enabled === false;
 
+        $isHotLead = $this->scoreHotLead(
+            isOnline:     $isOnline,
+            hasContact:   $hasContact,
+            currentPage:  $v->current_page,
+            visitCount:   (int) $v->visit_count,
+            messagesCount:(int) $v->messages_count,
+            conversation: $conversation,
+        );
+
         $score = $this->scoreRow(
             isOnline:        $isOnline,
             hasContact:      $hasContact,
@@ -256,6 +292,7 @@ class EngagementFeedService
             lastSeenAt:      $v->last_seen_at,
             conversation:    $conversation,
             lastMessage:     $lastMessage,
+            isHotLead:       $isHotLead,
         );
 
         return [
@@ -295,9 +332,48 @@ class EngagementFeedService
                 'ai_enabled'           => (bool) $conversation->ai_enabled,
                 'assigned_to'          => $conversation->assigned_to,
                 'unread_admin_count'   => (int) $unreadCount,
+                'intent_tag'           => $conversation->intent_tag,
             ] : null,
+            'is_hot_lead'         => $isHotLead,
             'priority_score'      => $score,
         ];
+    }
+
+    /**
+     * Hot-lead heuristic — uses only data already on the visitor + latest
+     * conversation row (no DB extra hits, no OpenAI). A row is "hot" when
+     * the agent should look at it now. Rules per ENGAGEMENT_HUB_PLAN.md:
+     *   - has captured contact OR is_lead, AND
+     *   - any of: currently online, viewing booking/room/service page,
+     *     active/waiting conversation, returning visitor, intent_tag
+     *     classified as booking_inquiry, 3+ messages exchanged.
+     * Strict enough that the "Hot leads" filter never floods.
+     */
+    private function scoreHotLead(
+        bool $isOnline,
+        bool $hasContact,
+        ?string $currentPage,
+        int $visitCount,
+        int $messagesCount,
+        ?ChatConversation $conversation,
+    ): bool {
+        if (!$hasContact) return false;
+
+        $onBookingPath = $currentPage && (
+            str_contains($currentPage, '/book')
+            || str_contains($currentPage, '/rooms')
+            || str_contains($currentPage, '/services')
+        );
+
+        $strongIntent = $conversation?->intent_tag === 'booking_inquiry';
+        $activeChat = $conversation && in_array($conversation->status, ['active', 'waiting'], true);
+
+        return $isOnline
+            || $onBookingPath
+            || $activeChat
+            || $strongIntent
+            || $visitCount >= 2
+            || $messagesCount >= 3;
     }
 
     /**
@@ -322,6 +398,7 @@ class EngagementFeedService
         ?\Carbon\Carbon $lastSeenAt,
         ?ChatConversation $conversation,
         ?\App\Models\ChatMessage $lastMessage,
+        bool $isHotLead = false,
     ): int {
         $base = 0;
 
@@ -350,6 +427,12 @@ class EngagementFeedService
         // Boost: any activity within 24h gets a small lift over completely cold rows
         if ($lastSeenAt && $lastSeenAt->gt(now()->subHours(self::RECENT_ACTIVITY_HOURS))) {
             $base += 50;
+        }
+
+        // Phase 3: hot leads get a sizeable lift so they always surface above
+        // ordinary leads in the priority sort, even when not currently online.
+        if ($isHotLead) {
+            $base += 250;
         }
 
         return $base;

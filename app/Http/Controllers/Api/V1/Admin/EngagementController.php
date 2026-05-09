@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatConversation;
+use App\Services\EngagementAiService;
 use App\Services\EngagementFeedService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,12 +25,13 @@ class EngagementController extends Controller
 {
     public function __construct(
         protected EngagementFeedService $feedService,
+        protected EngagementAiService $aiService,
     ) {}
 
     public function feed(Request $request): JsonResponse
     {
         $params = $request->validate([
-            'filter'   => 'nullable|string|in:priority,all,online,has_contact,active_chat,hot_lead,anonymous,resolved',
+            'filter'   => 'nullable|string|in:priority,all,online,has_contact,active_chat,hot_lead,anonymous,resolved,booking_inquiry,info_request,complaint,cancellation,support',
             'sort'     => 'nullable|string|in:priority,recent,engagement',
             'search'   => 'nullable|string|max:200',
             'page'     => 'nullable|integer|min:1',
@@ -53,5 +56,24 @@ class EngagementController extends Controller
     {
         $orgId = (int) app('current_organization_id');
         return response()->json(['data' => $this->feedService->kpis($orgId)]);
+    }
+
+    /**
+     * GET /v1/admin/engagement/conversations/{id}/brief
+     *
+     * Lazy-loaded by the drawer's "AI brief" tab. Cached on the conversation
+     * row for 5 min — see EngagementAiService::briefForConversation. Pass
+     * `?refresh=1` to force a fresh OpenAI call (used by the "Regenerate"
+     * button on the brief tab).
+     */
+    public function brief(Request $request, int $id): JsonResponse
+    {
+        // BelongsToOrganization global scope ensures this 404s for cross-tenant ids.
+        $conversation = ChatConversation::findOrFail($id);
+
+        $forceRefresh = $request->boolean('refresh');
+        return response()->json([
+            'data' => $this->aiService->briefForConversation($conversation, $forceRefresh),
+        ]);
     }
 }

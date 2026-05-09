@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X, User, MessageSquare, Map, FileText, Send, Bot, CheckCircle2, UserPlus,
   Mail, Phone, MapPin, Clock, Eye, Globe, Briefcase, ExternalLink, Star,
+  Sparkles, RefreshCw,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { INTENT_META } from '../lib/intentMeta'
 import { useBrandStore } from '../stores/brandStore'
 
 /**
@@ -23,7 +25,7 @@ import { useBrandStore } from '../stores/brandStore'
  * preferred experience inside /engagement.
  */
 
-type TabKey = 'profile' | 'conversation' | 'journey' | 'notes'
+type TabKey = 'profile' | 'conversation' | 'journey' | 'notes' | 'brief'
 
 interface VisitorDetail {
   visitor: {
@@ -63,6 +65,7 @@ interface ConversationDetail {
   visitor_email: string | null
   visitor_phone: string | null
   agent_notes: string | null
+  intent_tag?: string | null
   messages: Array<{
     id: number
     sender_type: 'visitor' | 'agent' | 'ai' | 'system'
@@ -70,6 +73,14 @@ interface ConversationDetail {
     created_at: string
     sender_user?: { id: number; name: string } | null
   }>
+}
+
+interface AiBrief {
+  brief: string | null
+  intent_tag: string | null
+  generated_at: string | null
+  cached: boolean
+  error?: string
 }
 
 interface Props {
@@ -115,6 +126,28 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
     enabled: open && conversationId !== null,
     refetchInterval: open ? 5_000 : false,
   })
+
+  // AI brief — only fetched when the brief tab is active so the OpenAI
+  // call doesn't fire on every drawer open. Caches for 5 min server-side.
+  const { data: briefData, isLoading: briefLoading, isFetching: briefFetching } = useQuery<{ data: AiBrief }>({
+    queryKey: ['engagement-drawer', 'brief', conversationId],
+    queryFn: () => api.get(`/v1/admin/engagement/conversations/${conversationId}/brief`).then(r => r.data),
+    enabled: open && conversationId !== null && tab === 'brief',
+    staleTime: 60_000,
+  })
+
+  const refreshBrief = async () => {
+    if (!conversationId) return
+    try {
+      const r = await api.get(`/v1/admin/engagement/conversations/${conversationId}/brief`, { params: { refresh: 1 } })
+      qc.setQueryData(['engagement-drawer', 'brief', conversationId], r.data)
+      // Conversation refetch picks up the new intent_tag.
+      refetchConv()
+      qc.invalidateQueries({ queryKey: ['engagement', 'feed'] })
+    } catch {
+      toast.error('Could not regenerate brief')
+    }
+  }
 
   // Sync notes draft once the conversation loads.
   useEffect(() => {
@@ -286,9 +319,10 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
         </div>
 
         {/* Tab strip */}
-        <div className="flex border-b border-dark-border bg-dark-surface" style={{ flexShrink: 0 }}>
+        <div className="flex border-b border-dark-border bg-dark-surface overflow-x-auto" style={{ flexShrink: 0 }}>
           <TabBtn active={tab === 'profile'}      onClick={() => setTab('profile')}      icon={User}          label="Profile" />
-          <TabBtn active={tab === 'conversation'} onClick={() => setTab('conversation')} icon={MessageSquare} label="Conversation" disabled={!conv} />
+          <TabBtn active={tab === 'conversation'} onClick={() => setTab('conversation')} icon={MessageSquare} label="Chat" disabled={!conv} />
+          <TabBtn active={tab === 'brief'}        onClick={() => setTab('brief')}        icon={Sparkles}      label="AI brief" disabled={!conv} />
           <TabBtn active={tab === 'journey'}      onClick={() => setTab('journey')}      icon={Map}           label="Journey" />
           <TabBtn active={tab === 'notes'}        onClick={() => setTab('notes')}        icon={FileText}      label="Notes" disabled={!conv} />
         </div>
@@ -304,6 +338,13 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
               setReply={setReply}
               onSend={() => reply.trim() && sendReply.mutate()}
               sending={sendReply.isPending}
+            />
+          )}
+          {tab === 'brief'        && (
+            <BriefTab
+              brief={briefData?.data}
+              loading={briefLoading || briefFetching}
+              onRefresh={refreshBrief}
             />
           )}
           {tab === 'journey'      && <JourneyTab pageViews={visitorDetail?.page_views ?? []} />}
@@ -504,6 +545,66 @@ function JourneyTab({ pageViews }: { pageViews: VisitorDetail['page_views'] }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function BriefTab({
+  brief, loading, onRefresh,
+}: {
+  brief: AiBrief | undefined; loading: boolean; onRefresh: () => void
+}) {
+  if (loading && !brief) return <Loading />
+
+  const intent = brief?.intent_tag
+  const intentMeta = intent ? INTENT_META[intent] : null
+
+  return (
+    <div className="overflow-y-auto p-4 space-y-4">
+      {/* Intent classification */}
+      {intentMeta && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${intentMeta.cls}`}>
+          <intentMeta.icon size={14} />
+          <span className="text-xs font-bold uppercase tracking-wide">{intentMeta.label}</span>
+        </div>
+      )}
+
+      {/* Brief copy */}
+      <div className="bg-purple-500/5 border border-purple-500/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] uppercase tracking-wide font-bold text-purple-300 flex items-center gap-1.5">
+            <Sparkles size={11} />
+            AI brief
+          </p>
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="text-[10px] text-t-secondary hover:text-white flex items-center gap-1 disabled:opacity-50"
+            title="Force regeneration (bypasses 5-min cache)"
+          >
+            <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+            Regenerate
+          </button>
+        </div>
+        {brief?.brief ? (
+          <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">{brief.brief}</p>
+        ) : brief?.error ? (
+          <p className="text-sm text-amber-300">{brief.error}</p>
+        ) : (
+          <p className="text-sm text-t-secondary italic">Brief unavailable.</p>
+        )}
+        {brief?.generated_at && (
+          <p className="text-[10px] text-t-secondary mt-3">
+            {brief.cached ? 'Cached · ' : 'Generated · '}{relativeTime(brief.generated_at)}
+          </p>
+        )}
+      </div>
+
+      <p className="text-[11px] text-t-secondary leading-relaxed">
+        Generated by AI from the conversation, page journey, and visitor profile.
+        Cached for 5 minutes so quick re-opens don't re-spend tokens. Click Regenerate
+        to force a fresh summary after major new context arrives.
+      </p>
     </div>
   )
 }

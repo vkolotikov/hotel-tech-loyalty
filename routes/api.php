@@ -238,6 +238,7 @@ Route::prefix('v1')->group(function () {
             // apps/loyalty/ENGAGEMENT_HUB_PLAN.md.
             Route::get('engagement/feed',           [EngagementController::class, 'feed']);
             Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
+            Route::get('engagement/conversations/{id}/brief', [EngagementController::class, 'brief']);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);
