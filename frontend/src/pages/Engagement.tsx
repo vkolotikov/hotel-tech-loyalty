@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
@@ -9,6 +8,7 @@ import {
 import { api } from '../lib/api'
 import { useBrandStore } from '../stores/brandStore'
 import { BrandBadge } from '../components/BrandBadge'
+import { EngagementDrawer } from '../components/EngagementDrawer'
 
 /**
  * Engagement Hub — replaces the Inbox + Visitors split with a single
@@ -79,12 +79,34 @@ const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
 
 export function Engagement() {
   const qc = useQueryClient()
-  const navigate = useNavigate()
   const { brands } = useBrandStore()
 
   const [filter, setFilter] = useState<FilterKey>('priority')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // Drawer state — visitorId !== null means it's open. conversationId is
+  // optional; when set, the Conversation tab is auto-selected.
+  const [drawerVisitorId, setDrawerVisitorId] = useState<number | null>(null)
+  const [drawerConvId, setDrawerConvId] = useState<number | null>(null)
+  const openDrawer = (visitorId: number, conversationId: number | null) => {
+    setDrawerVisitorId(visitorId)
+    setDrawerConvId(conversationId)
+  }
+  const closeDrawer = () => {
+    setDrawerVisitorId(null)
+    setDrawerConvId(null)
+  }
+  // The drawer can ask the page to re-open with a new conversation id (e.g.
+  // after "Start chat" creates one). Listen for that event.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ visitorId: number; conversationId: number }>).detail
+      if (detail?.visitorId) openDrawer(detail.visitorId, detail.conversationId ?? null)
+    }
+    window.addEventListener('engagement:open', handler as EventListener)
+    return () => window.removeEventListener('engagement:open', handler as EventListener)
+  }, [])
 
   // KPI cards — refetched every 30s; will be replaced by websocket push in Phase 4.
   const { data: kpis } = useQuery<{ data: KpiResp }>({
@@ -215,9 +237,16 @@ export function Engagement() {
         <EmptyState filter={filter} hasBrandFilter={brands.length > 1} />
       ) : (
         <div className="space-y-1.5">
-          {rows.map(r => <Row key={r.id} row={r} navigate={navigate} />)}
+          {rows.map(r => <Row key={r.id} row={r} onOpen={openDrawer} />)}
         </div>
       )}
+
+      {/* Detail drawer — visitorId !== null means open */}
+      <EngagementDrawer
+        visitorId={drawerVisitorId}
+        conversationId={drawerConvId}
+        onClose={closeDrawer}
+      />
 
       {/* Pagination */}
       {meta && meta.last_page > 1 && (
@@ -280,7 +309,7 @@ function KpiTile({
   )
 }
 
-function Row({ row: r, navigate }: { row: EngagementRow; navigate: ReturnType<typeof useNavigate> }) {
+function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: number, conversationId: number | null) => void }) {
   const isWaiting = r.conversation
     && r.conversation.status === 'active'
     && !r.conversation.assigned_to
@@ -302,15 +331,11 @@ function Row({ row: r, navigate }: { row: EngagementRow; navigate: ReturnType<ty
   }, [r])
 
   const onClick = () => {
-    // Phase 1: navigate to the existing detail screens. /chat-inbox accepts
-    // ?id=N to preselect a conversation; /legacy/visitors holds the old
-    // visitor profile + page-journey view. Phase 2 replaces this hop with
-    // an in-page drawer so the click never leaves /engagement.
-    if (r.conversation) {
-      navigate(`/chat-inbox?id=${r.conversation.id}`)
-    } else {
-      navigate('/legacy/visitors')
-    }
+    // Phase 2: open the in-page drawer. The drawer auto-selects the
+    // Conversation tab when a conversation id is provided; otherwise the
+    // Profile tab. The full /chat-inbox screen stays accessible via the
+    // drawer's "Open full inbox" link for any user who prefers it.
+    onOpen(r.id, r.conversation?.id ?? null)
   }
 
   const flag = r.country ? countryFlag(r.country) : null
