@@ -1,15 +1,16 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
-  AlertCircle, Bot, Wifi, MapPin,
+  AlertCircle, Bot, Wifi, MapPin, BellRing, BellOff, Bell, X,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
 import { useBrandStore } from '../stores/brandStore'
 import { BrandBadge } from '../components/BrandBadge'
 import { EngagementDrawer } from '../components/EngagementDrawer'
+import { useHotLeadAlert, useNotificationPermission, type HotLeadInfo } from '../hooks/useHotLeadAlert'
 
 /**
  * Engagement Hub — replaces the Inbox + Visitors split with a single
@@ -122,16 +123,18 @@ export function Engagement() {
     return () => window.removeEventListener('engagement:open', handler as EventListener)
   }, [])
 
-  // KPI cards — refetched every 30s; will be replaced by websocket push in Phase 4.
+  // KPI cards — Phase 4 tightens to 15s. React-query auto-pauses polling
+  // when the browser tab is hidden so we don't spend API quota on a tab
+  // nobody is looking at.
   const { data: kpis } = useQuery<{ data: KpiResp }>({
     queryKey: ['engagement', 'kpis'],
     queryFn: () => api.get('/v1/admin/engagement/kpis').then(r => r.data),
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   })
 
-  // Feed — refetched every 10s on this page so a new visitor / message is
-  // visible without an explicit refresh. Phase 4 swaps the poll for a
-  // websocket push and only repaints the affected row.
+  // Feed — Phase 4 tightens to 5s when the tab is visible. Combined with
+  // useHotLeadAlert below this gives a near-realtime "hot lead arrived"
+  // signal without per-row backend events.
   const { data: feed, isLoading, refetch, isFetching } = useQuery<{
     data: EngagementRow[]
     meta: { current_page: number; last_page: number; total: number; per_page: number }
@@ -140,12 +143,41 @@ export function Engagement() {
     queryFn: () => api.get('/v1/admin/engagement/feed', {
       params: { filter, search, page, per_page: 50, sort: 'priority' },
     }).then(r => r.data),
-    refetchInterval: 10_000,
+    refetchInterval: 5_000,
     placeholderData: (prev) => prev,
   })
 
   const rows = feed?.data ?? []
   const meta = feed?.meta
+
+  // Phase 4 — hot-lead arrival alerts. We feed the hook the list of ids
+  // that the backend marked is_hot_lead=true on the current page, plus a
+  // lookup that resolves the row's display name + a short context line.
+  // The hook diffs against the previous snapshot and fires a toast +
+  // (when permission is granted) a browser notification for each newly-hot
+  // visitor, rate-limited at one alert per visitor per 30s.
+  const hotIds = useMemo(() => rows.filter(r => r.is_hot_lead).map(r => r.id), [rows])
+  const lookupRow = useCallback((id: number): HotLeadInfo | undefined => {
+    const r = rows.find(x => x.id === id)
+    if (!r) return undefined
+    const context = r.is_online && r.current_page
+      ? `Browsing ${r.current_page}`
+      : r.conversation?.last_message_preview
+      ? r.conversation.last_message_preview
+      : r.is_online
+      ? 'Online now'
+      : undefined
+    return { id, name: r.effective_name, context }
+  }, [rows])
+  useHotLeadAlert(hotIds, lookupRow)
+
+  // Browser notification permission state — drives the small banner at
+  // the top of the page that nudges the agent to enable notifications
+  // once. Auto-hides when permission is granted or denied.
+  const { permission, request: requestPermission } = useNotificationPermission()
+  const [permBannerDismissed, setPermBannerDismissed] = useState(
+    () => typeof window !== 'undefined' && sessionStorage.getItem('engagement-perm-dismissed') === '1'
+  )
 
   return (
     <div className="space-y-5">
@@ -160,17 +192,68 @@ export function Engagement() {
             Visitors and conversations in one place — sorted so the rows that need attention surface first.
           </p>
         </div>
-        <button
-          onClick={() => {
-            qc.invalidateQueries({ queryKey: ['engagement'] })
-            refetch()
-          }}
-          className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors self-start"
-        >
-          <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          {/* Notification permission status chip — clickable when default */}
+          {permission === 'granted' && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-500/10 border border-green-500/40 rounded-lg text-xs text-green-400" title="Browser notifications enabled — you'll be pinged when a hot lead arrives">
+              <BellRing size={13} />
+              Alerts on
+            </div>
+          )}
+          {permission === 'denied' && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/40 rounded-lg text-xs text-red-400" title="Notifications were blocked. Re-enable in your browser site settings.">
+              <BellOff size={13} />
+              Alerts blocked
+            </div>
+          )}
+          <button
+            onClick={() => {
+              qc.invalidateQueries({ queryKey: ['engagement'] })
+              refetch()
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors"
+          >
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* One-time prompt to enable browser notifications. Auto-hides once
+          the user picks (granted/denied) OR explicitly dismisses. Lives
+          above the KPI strip so it's hard to miss without being modal. */}
+      {permission === 'default' && !permBannerDismissed && (
+        <div className="flex items-center gap-3 bg-dark-surface border border-amber-500/40 rounded-xl px-4 py-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+            <Bell size={15} className="text-amber-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Get pinged the moment a hot lead arrives</p>
+            <p className="text-xs text-t-secondary mt-0.5">
+              Enable browser notifications and we'll alert you even when this tab isn't focused — perfect for catching booking-page visitors.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              const r = await requestPermission()
+              if (r === 'denied') sessionStorage.setItem('engagement-perm-dismissed', '1')
+            }}
+            className="bg-accent text-black font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-accent/90 transition-colors"
+          >
+            Enable
+          </button>
+          <button
+            onClick={() => {
+              sessionStorage.setItem('engagement-perm-dismissed', '1')
+              setPermBannerDismissed(true)
+            }}
+            className="p-1 text-t-secondary hover:text-white"
+            aria-label="Dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
