@@ -86,6 +86,26 @@ class DocumentationController extends Controller
                 ],
             ],
             [
+                'slug' => 'brands',
+                'title' => 'Brands (Multi-brand portfolio)',
+                'icon' => 'Briefcase',
+                'description' => 'A brand is a marketing/operational sub-division inside an organization. Each brand owns its own AI chatbot, knowledge base, chat widget, booking engine and theme. CRM (guests, inquiries, reservations) and the loyalty program (members, points, tiers) stay unified at the organization level.',
+                'articles' => [
+                    [
+                        'title' => 'When to use brands',
+                        'content' => "Most hotels run as a single brand and never need this feature — the platform auto-creates one default brand per organization and the brand switcher stays hidden.\n\nThe brand layer is for hotel groups that operate **multiple sub-brands** under one corporate parent — think Marriott Bonvoy with Westin, St. Regis, W. Each brand has its own website, marketing voice, booking inventory, and AI chatbot persona, but the parent group keeps a single guest CRM and one unified loyalty program across all brands.\n\nCreate a second brand when you need to:\n- Run a separate AI chatbot voice / knowledge base for a different brand\n- Issue a different chat widget embed token for a different domain\n- Configure a separate Smoobu PMS account per brand\n- Show different theme colours / logo per booking widget",
+                    ],
+                    [
+                        'title' => 'What stays unified vs scoped',
+                        'content' => "**Brand-scoped** (each brand has its own):\n- AI chatbot behaviour + model config\n- Knowledge base (categories, items, documents)\n- Chat widget appearance + embed token\n- Popup rules\n- Booking engine (rooms, extras, services, properties, PMS credentials)\n- Theme overrides + email templates\n\n**Org-level (shared across all brands)**:\n- Guests / member profiles — one record per person, regardless of which brand they interacted with\n- Loyalty members / points / tiers — unified card, balance and tier ladder\n- Corporate accounts\n- Staff users (with optional per-brand permissions)\n- Audit log\n\n**Org-level with brand attribution** (rows are stamped with `brand_id` for reporting but not isolated):\n- Inquiries — which brand drove the lead\n- Reservations — which brand the stay was at\n- Points transactions — which brand earned the points\n- Special offers + notification campaigns — `brand_id IS NULL` means \"applies to all brands\"\n- Email templates",
+                    ],
+                    [
+                        'title' => 'Managing brands',
+                        'content' => "Settings → Brands lists every brand in your organization. From there an admin can:\n- Create a new brand (uploads a logo, picks a primary colour)\n- Set a brand as the default (used as the fallback for legacy URLs and unscoped queries)\n- Edit a brand's name, slug, description, colour, or logo\n- Configure per-brand Smoobu PMS credentials\n- Delete a brand (the default brand is protected — designate another default first)\n\nThe top-bar **brand switcher** appears once you have 2+ brands. Switching changes the context for chatbot config, knowledge base, booking config and widget pages. Org-level pages (Guests, Members, Inquiries, Reservations) keep showing everything in 'All brands' mode and apply a brand filter when a specific brand is selected.\n\nPublic widget URLs use each brand's `widget_token` — `/widget/{token}`, `/book/{token}`, `/services/{token}`, `/chat-widget/{token}` all work for any brand. Legacy organization-level tokens redirect to the default brand for backward compat.",
+                    ],
+                ],
+            ],
+            [
                 'slug' => 'crm',
                 'title' => 'CRM & Guest Management',
                 'icon' => 'Users',

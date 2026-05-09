@@ -1,10 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { Briefcase, Plus, Pencil, Trash2, X, Upload, Check, Star, Globe } from 'lucide-react'
+import { Briefcase, Plus, Pencil, Trash2, X, Upload, Check, Star, Globe, MessageSquare, Calendar, Inbox } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, resolveImage } from '../lib/api'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
+
+interface BrandStats {
+  inquiries: number
+  bookings: number
+  chats: number
+}
+
+function BrandStat({ icon: Icon, value, label }: { icon: any; value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-center">
+      <div className="flex items-center gap-1 text-t-secondary">
+        <Icon size={11} />
+        <span className="text-[9px] uppercase tracking-wide font-bold">{label}</span>
+      </div>
+      <div className="text-base font-bold text-white">{value}</div>
+    </div>
+  )
+}
 
 /**
  * Settings → Brands
@@ -33,7 +51,14 @@ export function Brands() {
     queryFn: () => api.get<{ data: BrandSummary[] }>('/v1/admin/brands').then(r => r.data),
   })
 
+  const { data: statsData } = useQuery({
+    queryKey: ['admin-brand-stats'],
+    queryFn: () => api.get<{ data: Record<number, BrandStats> }>('/v1/admin/brands/stats').then(r => r.data),
+    staleTime: 60_000,
+  })
+
   const brands: BrandSummary[] = data?.data ?? []
+  const stats: Record<number, BrandStats> = statsData?.data ?? {}
 
   // Keep the global brand store in sync so the top-bar switcher reflects
   // creates/renames/deletes immediately without a separate refetch.
@@ -332,6 +357,15 @@ export function Brands() {
                   </div>
                 </div>
               </div>
+
+              {/* Last-30-day activity strip */}
+              {stats[b.id] && (
+                <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-dark-border">
+                  <BrandStat icon={Inbox} value={stats[b.id].inquiries} label="Inquiries" />
+                  <BrandStat icon={Calendar} value={stats[b.id].bookings} label="Bookings" />
+                  <BrandStat icon={MessageSquare} value={stats[b.id].chats} label="Chats" />
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dark-border">

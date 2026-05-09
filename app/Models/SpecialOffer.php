@@ -3,14 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
 class SpecialOffer extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
+    /**
+     * brand_id semantics: NULL = "applies to all brands in the org"
+     * (the offer is org-wide), specific id = brand-targeted offer.
+     * Controllers wanting both rows can opt out of the BrandScope via
+     * `withoutGlobalScope(BrandScope::class)`.
+     */
     protected $fillable = [
-        'organization_id', 'title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date',
+        'organization_id', 'brand_id', 'title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date',
         'usage_limit', 'times_used', 'per_member_limit', 'image_url', 'terms_conditions',
         'is_active', 'is_featured', 'ai_generated', 'created_by',
     ];

@@ -226,6 +226,7 @@ Route::prefix('v1')->group(function () {
             // auto-created default brand; admins use these endpoints to add a
             // second brand and the SPA brand switcher appears in the header.
             // See apps/loyalty/MULTI_BRAND_PLAN.md.
+            Route::get('brands/stats',              [BrandController::class, 'stats']);
             Route::post('brands/{id}/set-default', [BrandController::class, 'setDefault']);
             Route::apiResource('brands',           BrandController::class);
 

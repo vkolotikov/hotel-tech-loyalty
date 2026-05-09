@@ -4,14 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
 class EmailTemplate extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToOrganization, BelongsToBrand;
 
     protected $fillable = [
-        'organization_id', 'name', 'subject', 'html_body', 'merge_tags',
+        'organization_id', 'brand_id', 'name', 'subject', 'html_body', 'merge_tags',
         'category', 'is_active', 'created_by',
     ];
 

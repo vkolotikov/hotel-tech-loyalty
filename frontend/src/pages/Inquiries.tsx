@@ -8,6 +8,7 @@ import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
 import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
+import { BrandBadge } from '../components/BrandBadge'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -517,6 +518,7 @@ export function Inquiries() {
                         {inq.source && !SOURCE_BADGES[inq.source] && (
                           <span className="text-[10px] text-gray-600">· {inq.source}</span>
                         )}
+                        <BrandBadge brandId={inq.brand_id} />
                       </div>
                       {(inq.guest?.email || inq.guest?.phone) && (
                         <div className="mt-1.5">

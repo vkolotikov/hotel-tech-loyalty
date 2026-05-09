@@ -31,12 +31,70 @@ class BrandController extends Controller
     {
         $brands = Brand::orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'description', 'logo_url', 'primary_color', 'widget_token', 'is_default', 'sort_order', 'created_at']);
+            ->get([
+                'id', 'name', 'slug', 'description', 'logo_url', 'primary_color',
+                'widget_token', 'is_default', 'sort_order', 'created_at',
+                // Phase 3: per-brand PMS columns. Surface to the admin SPA so the
+                // Brands page can show the integration status. The value itself is
+                // safe to expose — admins are the only callers.
+                'pms_smoobu_api_key', 'pms_smoobu_channel_id',
+            ])
+            ->map(function ($brand) {
+                // Strip the actual secret but keep a "configured" flag so the
+                // UI can render a green dot without leaking the key. Admins
+                // can still set/replace it via the update endpoint.
+                $hasKey = !empty($brand->pms_smoobu_api_key);
+                $brand->offsetUnset('pms_smoobu_api_key');
+                $brand->setAttribute('has_pms_smoobu_key', $hasKey);
+                return $brand;
+            });
 
         return response()->json([
-            'data' => $brands,
+            'data'  => $brands,
             'count' => $brands->count(),
         ]);
+    }
+
+    /**
+     * GET /v1/admin/brands/stats
+     *
+     * Per-brand activity counts — last 30 days, used by the Brands settings
+     * page to render usage badges on each brand card. Stats are computed in
+     * a single roundtrip with three grouped COUNTs to avoid N+1 lookups.
+     *
+     * Returns a map keyed by brand_id with `inquiries`, `bookings`, `chats`
+     * counts. Brands with zero rows in any category get explicit `0` so
+     * the frontend doesn't have to coalesce nulls.
+     */
+    public function stats(): JsonResponse
+    {
+        $orgId = app('current_organization_id');
+        $since = now()->subDays(30);
+
+        $brandIds = Brand::pluck('id')->all();
+        $base = array_fill_keys($brandIds, ['inquiries' => 0, 'bookings' => 0, 'chats' => 0]);
+
+        $hydrate = function (string $table, string $key) use ($orgId, $since, &$base) {
+            if (!\Schema::hasTable($table) || !\Schema::hasColumn($table, 'brand_id')) {
+                return;
+            }
+            $rows = DB::table($table)
+                ->select('brand_id', DB::raw('count(*) as c'))
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $since)
+                ->whereNotNull('brand_id')
+                ->groupBy('brand_id')
+                ->pluck('c', 'brand_id');
+            foreach ($rows as $brandId => $c) {
+                if (isset($base[$brandId])) $base[$brandId][$key] = (int) $c;
+            }
+        };
+
+        $hydrate('inquiries',           'inquiries');
+        $hydrate('booking_submissions', 'bookings');
+        $hydrate('chat_conversations',  'chats');
+
+        return response()->json(['data' => $base]);
     }
 
     public function show(int $id): JsonResponse

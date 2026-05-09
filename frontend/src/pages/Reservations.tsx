@@ -5,6 +5,7 @@ import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import { Search, ChevronLeft, ChevronRight, Plus, Download, Filter, LogIn, LogOut } from 'lucide-react'
 import { BookingSubmissions } from './BookingSubmissions'
+import { BrandBadge } from '../components/BrandBadge'
 
 const STATUS_COLORS: Record<string, string> = {
   Confirmed: 'bg-blue-500/20 text-blue-400',
@@ -258,7 +259,10 @@ export function Reservations() {
               <tr key={r.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
                 <td className="px-4 py-3 text-primary-400 font-medium text-xs">{r.confirmation_no ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-white text-sm">{r.guest?.full_name ?? '—'}</div>
+                  <div className="font-medium text-white text-sm flex items-center gap-1.5 flex-wrap">
+                    {r.guest?.full_name ?? '—'}
+                    <BrandBadge brandId={r.brand_id} />
+                  </div>
                   <div className="text-xs text-[#636366]">{r.guest?.company ?? ''}</div>
                 </td>
                 <td className="px-4 py-3 text-[#a0a0a0] text-xs">{r.property?.name ?? '—'}</td>
