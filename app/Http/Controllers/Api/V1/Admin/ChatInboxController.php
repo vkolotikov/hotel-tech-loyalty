@@ -796,6 +796,30 @@ class ChatInboxController extends Controller
                 ]);
         }
 
+        // Engagement Hub Phase 4 v2 — fan out a realtime hot_lead event so
+        // every admin's global poll picks it up regardless of which page
+        // they're on. Wrapped so a realtime failure never blocks the
+        // capture itself. The 10-min auto-purge in RealtimeEventService
+        // keeps the table small.
+        try {
+            $contactBits = array_filter([$guest->email, $guest->phone]);
+            app(\App\Services\RealtimeEventService::class)->dispatch(
+                'hot_lead',
+                'Hot lead: ' . ($guest->full_name ?: $conversation->visitor_name ?: 'Visitor'),
+                $contactBits ? 'New contact: ' . implode(' · ', $contactBits) : 'Lead captured from chat',
+                [
+                    'visitor_id'      => $conversation->visitor_id,
+                    'conversation_id' => $conversation->id,
+                    'guest_id'        => $guest->id,
+                    'action_url'      => '/engagement',
+                ],
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('hot_lead realtime dispatch failed (admin capture): ' . $e->getMessage(), [
+                'conversation_id' => $conversation->id,
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'inquiry_id' => $inquiry->id,

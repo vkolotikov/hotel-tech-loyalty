@@ -775,6 +775,29 @@ class WidgetChatController extends Controller
                 'phone'    => $visitor->phone ?: $phone,
             ]);
         }
+
+        // Engagement Hub Phase 4 v2 — fire the realtime alert for the
+        // auto-capture path too. This is the highest-value path: a visitor
+        // typed their email/phone mid-conversation without filling the
+        // explicit lead form, and an agent should look NOW.
+        try {
+            $contactBits = array_filter([$email, $phone]);
+            app(\App\Services\RealtimeEventService::class)->dispatch(
+                'hot_lead',
+                'Hot lead: ' . ($guest->full_name ?: 'Visitor'),
+                $contactBits ? 'Mid-chat contact: ' . implode(' · ', $contactBits) : 'Auto-captured from message',
+                [
+                    'visitor_id'      => $visitor?->id,
+                    'conversation_id' => $conv->id,
+                    'guest_id'        => $guest->id,
+                    'action_url'      => '/engagement',
+                ],
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('hot_lead realtime dispatch failed (widget auto-capture): ' . $e->getMessage(), [
+                'conversation_id' => $conv->id,
+            ]);
+        }
     }
 
     /**
@@ -858,6 +881,33 @@ class WidgetChatController extends Controller
             }
         } catch (\Throwable $e) {
             \Log::warning('Widget lead visitor link failed: ' . $e->getMessage());
+        }
+
+        // Engagement Hub Phase 4 v2 — fan out a realtime hot_lead event so
+        // admins are pinged the moment a visitor leaves contact info, even
+        // when they're not on /engagement. The org context is bound by
+        // resolveWidget() above, so RealtimeEvent::created auto-fills
+        // organization_id correctly. Wrapped so realtime failure never
+        // blocks the visitor's lead-capture confirmation.
+        try {
+            $convId = !empty($validated['session_id'])
+                ? ChatConversation::where('session_id', $validated['session_id'])->value('id')
+                : null;
+            $contactBits = array_filter([$validated['email'] ?? null, $validated['phone'] ?? null]);
+
+            app(\App\Services\RealtimeEventService::class)->dispatch(
+                'hot_lead',
+                'Hot lead: ' . ($validated['name'] ?? 'Anonymous'),
+                $contactBits ? 'New contact: ' . implode(' · ', $contactBits) : 'Captured from chat widget',
+                [
+                    'visitor_id'      => $visitor?->id ?? null,
+                    'conversation_id' => $convId,
+                    'guest_id'        => $guest->id,
+                    'action_url'      => '/engagement',
+                ],
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('hot_lead realtime dispatch failed (widget capture): ' . $e->getMessage());
         }
 
         return response()->json([
