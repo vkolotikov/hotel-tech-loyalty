@@ -10,7 +10,7 @@ import {
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CreditCard, Home, Package, Eye, Star,
+  BedDouble, CreditCard, Home, Package, Star,
   UserCog, AlertTriangle, Scissors,
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
@@ -63,8 +63,8 @@ const navGroups: NavGroup[] = [
     label: 'AI Chat',
     accent: '#a78bfa', // violet
     items: [
-      { path: '/chat-inbox',     label: 'Inbox',         icon: Inbox, gate: 'all',   product: 'chat' },
-      { path: '/visitors',       label: 'Visitors',      icon: Eye,   gate: 'all',   product: 'chat' },
+      { path: '/engagement',     label: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat',
+        altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
       { path: '/chatbot-setup',  label: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat' },
     ],
   },
@@ -413,7 +413,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   const active = path === '/'
                     ? location.pathname === '/'
                     : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p)))
-                  const badge = path === '/chat-inbox' && chatUnread > 0 ? chatUnread : 0
+                  const badge = path === '/engagement' && chatUnread > 0 ? chatUnread : 0
                   return (
                     <Link
                       key={path}
@@ -630,7 +630,7 @@ function MobileBottomNav({
         </Link>
       )}
       {hasChat && (
-        <Link to="/chat-inbox" className={clsx('relative', pathname.startsWith('/chat-inbox') && 'active')}>
+        <Link to="/engagement" className={clsx('relative', (pathname.startsWith('/engagement') || pathname.startsWith('/chat-inbox') || pathname === '/inbox' || pathname.startsWith('/visitors')) && 'active')}>
           <Inbox size={20} />
           <span>Inbox</span>
           {chatUnread > 0 && (

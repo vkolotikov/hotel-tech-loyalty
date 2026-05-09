@@ -27,6 +27,7 @@ const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default:
 const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ default: m.ChatbotSetup })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
+const Engagement = lazy(() => import('./pages/Engagement').then(m => ({ default: m.Engagement })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ default: m.CampaignDetail })))
 const Reviews = lazy(() => import('./pages/Reviews').then(m => ({ default: m.Reviews })))
@@ -148,7 +149,16 @@ export default function App() {
           <Route path="/widget-builder" element={<Navigate to="/chatbot-setup" replace />} />
           {/* Direct routes still mounted for the embedded tab loader to import. */}
           <Route path="/chat-inbox" element={<LazyRoute gate="all" product="chat"><ChatInbox /></LazyRoute>} />
-          <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
+          {/* Engagement Hub — unified replacement for Inbox + Visitors. The
+              old /chat-inbox and /visitors routes stay live so bookmarks
+              keep working (decision #8 in ENGAGEMENT_HUB_PLAN.md). */}
+          <Route path="/engagement" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
+          <Route path="/inbox" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
+          <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
+          {/* Legacy detail-page kept under explicit paths so links from old
+              external tools / emails / CRM notes that still point to the
+              full visitor or chat-inbox view continue to render. */}
+          <Route path="/legacy/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
           <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
           <Route path="/notifications/:id" element={<LazyRoute gate="admin" feature="push_notifications"><CampaignDetail /></LazyRoute>} />
           <Route path="/reviews" element={<LazyRoute gate="admin"><Reviews /></LazyRoute>} />

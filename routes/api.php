@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\V1\Admin\BookingAdminController;
 use App\Http\Controllers\Api\V1\Admin\BookingRoomController;
 use App\Http\Controllers\Api\V1\Admin\BookingExtraController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
+use App\Http\Controllers\Api\V1\Admin\EngagementController;
 use App\Http\Controllers\Api\V1\Admin\ServiceCategoryController;
 use App\Http\Controllers\Api\V1\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Api\V1\Admin\ServiceMasterController;
@@ -229,6 +230,14 @@ Route::prefix('v1')->group(function () {
             Route::get('brands/stats',              [BrandController::class, 'stats']);
             Route::post('brands/{id}/set-default', [BrandController::class, 'setDefault']);
             Route::apiResource('brands',           BrandController::class);
+
+            // ─── Engagement Hub (unified Inbox + Visitors) ─────────────────────
+            // Backs the new admin SPA /engagement page. Old /v1/admin/visitors
+            // and /v1/admin/conversations endpoints stay live — they power the
+            // detail drawer and any deep conversation actions. See
+            // apps/loyalty/ENGAGEMENT_HUB_PLAN.md.
+            Route::get('engagement/feed',           [EngagementController::class, 'feed']);
+            Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);
