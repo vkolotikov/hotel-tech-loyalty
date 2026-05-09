@@ -48,6 +48,17 @@ Schedule::command('bookings:sync-pms')
     ->withoutOverlapping(10)
     ->runInBackground();
 
+// Engagement Hub daily summary email. Hourly cron — the command itself
+// gates on each org's local 8am (so a Tokyo org and a New York org both
+// get their summary at 8am local) and dedupes via
+// users.daily_summary_last_sent_at. Hourly + per-org-timezone is the
+// simplest pattern that gives every customer a local-morning send
+// without the cron knowing about timezones in routes/console.php.
+Schedule::command('engagement:send-daily-summary')
+    ->hourly()
+    ->withoutOverlapping(10)
+    ->runInBackground();
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes

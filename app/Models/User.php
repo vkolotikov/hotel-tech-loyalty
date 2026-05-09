@@ -16,6 +16,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'phone', 'date_of_birth',
         'nationality', 'language', 'avatar_url', 'user_type', 'organization_id',
+        'wants_daily_summary',
     ];
 
     protected $hidden = ['password', 'remember_token', 'email_verified_at', 'organization_id'];
@@ -24,6 +25,8 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',
         'password' => 'hashed',
+        'wants_daily_summary' => 'boolean',
+        'daily_summary_last_sent_at' => 'datetime',
     ];
 
     public function loyaltyMember()

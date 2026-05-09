@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Admin\BookingRoomController;
 use App\Http\Controllers\Api\V1\Admin\BookingExtraController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\EngagementController;
+use App\Http\Controllers\Api\V1\Admin\MeController;
 use App\Http\Controllers\Api\V1\Admin\ServiceCategoryController;
 use App\Http\Controllers\Api\V1\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Api\V1\Admin\ServiceMasterController;
@@ -239,6 +240,10 @@ Route::prefix('v1')->group(function () {
             Route::get('engagement/feed',           [EngagementController::class, 'feed']);
             Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
             Route::get('engagement/conversations/{id}/brief', [EngagementController::class, 'brief']);
+
+            // ─── Per-user preferences (Engagement daily summary opt-in, etc.) ──
+            Route::get('me/preferences',            [MeController::class, 'preferences']);
+            Route::put('me/preferences',            [MeController::class, 'updatePreferences']);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);

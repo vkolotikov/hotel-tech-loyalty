@@ -28,6 +28,7 @@ const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ defa
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const Engagement = lazy(() => import('./pages/Engagement').then(m => ({ default: m.Engagement })))
+const EngagementLive = lazy(() => import('./pages/EngagementLive').then(m => ({ default: m.EngagementLive })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ default: m.CampaignDetail })))
 const Reviews = lazy(() => import('./pages/Reviews').then(m => ({ default: m.Reviews })))
@@ -113,6 +114,22 @@ function LazyRoute({ children, gate, product, feature }: { children: React.React
   )
 }
 
+/**
+ * Same auth + product + feature gates as LazyRoute, but renders WITHOUT
+ * the admin Layout (sidebar / header chrome). Used by the live-wall
+ * fullscreen view that's designed for back-office monitors — no nav
+ * chrome to steal pixels from the live data.
+ */
+function FullscreenRoute({ children, gate, product, feature }: { children: React.ReactNode; gate?: NavGate; product?: string; feature?: string }) {
+  const { token } = useAuthStore()
+  if (!token) return <Navigate to="/login" replace />
+  return (
+    <GatedRoute gate={gate} product={product} feature={feature}>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </GatedRoute>
+  )
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -153,6 +170,9 @@ export default function App() {
               old /chat-inbox and /visitors routes stay live so bookmarks
               keep working (decision #8 in ENGAGEMENT_HUB_PLAN.md). */}
           <Route path="/engagement" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
+          {/* Live wall renders fullscreen for back-office monitors — skips
+              the Layout chrome via FullscreenRoute. */}
+          <Route path="/engagement/live" element={<FullscreenRoute gate="all" product="chat"><EngagementLive /></FullscreenRoute>} />
           <Route path="/inbox" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
           <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
           {/* Legacy detail-page kept under explicit paths so links from old

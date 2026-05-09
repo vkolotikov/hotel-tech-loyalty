@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
-  AlertCircle, Bot, Wifi, MapPin, BellRing, BellOff, Bell, X,
+  AlertCircle, Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -179,6 +181,21 @@ export function Engagement() {
     () => typeof window !== 'undefined' && sessionStorage.getItem('engagement-perm-dismissed') === '1'
   )
 
+  // Phase 4 v3 — per-user opt-in for the daily summary email.
+  const { data: prefs } = useQuery<{ wants_daily_summary: boolean }>({
+    queryKey: ['me', 'preferences'],
+    queryFn: () => api.get('/v1/admin/me/preferences').then(r => r.data),
+    staleTime: 60_000,
+  })
+  const setDailySummary = useMutation({
+    mutationFn: (enabled: boolean) => api.put('/v1/admin/me/preferences', { wants_daily_summary: enabled }),
+    onSuccess: (_data, enabled) => {
+      qc.invalidateQueries({ queryKey: ['me', 'preferences'] })
+      toast.success(enabled ? 'Daily summary email turned on' : 'Daily summary email turned off')
+    },
+    onError: () => toast.error('Failed to update preference'),
+  })
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -206,6 +223,30 @@ export function Engagement() {
               Alerts blocked
             </div>
           )}
+          {/* Phase 4 v3 — daily summary email toggle */}
+          <button
+            onClick={() => setDailySummary.mutate(!prefs?.wants_daily_summary)}
+            disabled={setDailySummary.isPending}
+            title={prefs?.wants_daily_summary
+              ? 'Daily summary email is on. Click to turn off.'
+              : 'Get a morning email summary every day at 8am local time. Click to enable.'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+              prefs?.wants_daily_summary
+                ? 'bg-blue-500/10 border border-blue-500/40 text-blue-400'
+                : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white'
+            }`}
+          >
+            <Mail size={13} />
+            {prefs?.wants_daily_summary ? 'Daily email on' : 'Daily email'}
+          </button>
+          <Link
+            to="/engagement/live"
+            className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors"
+            title="Open the live wall — fullscreen monitor view"
+          >
+            <Monitor size={14} />
+            Live wall
+          </Link>
           <button
             onClick={() => {
               qc.invalidateQueries({ queryKey: ['engagement'] })
