@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -82,6 +82,11 @@ export function LeadForms() {
   const { data: forms, isLoading } = useQuery<LeadForm[]>({
     queryKey: ['lead-forms'],
     queryFn: () => api.get('/v1/admin/lead-forms').then(r => r.data),
+    // Always refetch on mount — the list is small (one query, all forms
+    // for the org) and seeing a stale row that's been deleted in
+    // another tab is a confusing trap. Cheap to refresh.
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const createMut = useMutation({
@@ -315,6 +320,17 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
   })
 
   const notFound = (error as any)?.response?.status === 404
+
+  // 404 means the editor opened against a stale id (form was deleted
+  // in another tab / by another user). Auto-close + refresh the list
+  // so the user doesn't have to click Refresh themselves. The toast
+  // tells them what happened.
+  useEffect(() => {
+    if (!notFound) return
+    toast.error('That form no longer exists — refreshed the list.')
+    qc.invalidateQueries({ queryKey: ['lead-forms'] })
+    onClose()
+  }, [notFound, qc, onClose])
 
   // Editor saves silently on every change (debounced via React Query
   // mutation queue) — toast on every keystroke would be noise. Failures
