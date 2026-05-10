@@ -49,6 +49,10 @@ const EMPTY_FORM = {
 export function Inquiries() {
   const qc = useQueryClient()
   const settings = useSettings()
+  // Field-visibility config — admin toggles in Settings → Pipeline Layout
+  // pick which Add Inquiry fields and which list columns are shown.
+  // useSettings deep-merges with defaults so missing keys are safe.
+  const fieldCfg = settings.inquiry_fields
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
@@ -511,25 +515,27 @@ export function Inquiries() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border">
-                <th className="text-center px-3 py-3 w-8">
-                  <input type="checkbox"
-                    checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
-                    onChange={() => setSelected(prev => {
-                      const next = new Set(prev)
-                      const allOn = inquiries.length > 0 && inquiries.every((i: any) => prev.has(i.id))
-                      if (allOn) inquiries.forEach((i: any) => next.delete(i.id))
-                      else       inquiries.forEach((i: any) => next.add(i.id))
-                      return next
-                    })}
-                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                </th>
+                {fieldCfg.list.bulk_select && (
+                  <th className="text-center px-3 py-3 w-8">
+                    <input type="checkbox"
+                      checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
+                      onChange={() => setSelected(prev => {
+                        const next = new Set(prev)
+                        const allOn = inquiries.length > 0 && inquiries.every((i: any) => prev.has(i.id))
+                        if (allOn) inquiries.forEach((i: any) => next.delete(i.id))
+                        else       inquiries.forEach((i: any) => next.add(i.id))
+                        return next
+                      })}
+                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
-                <SortHeader col="check_in" label="Stay" />
-                <SortHeader col="total_value" label="Value" />
+                {fieldCfg.list.stay && <SortHeader col="check_in" label="Stay" />}
+                {fieldCfg.list.value && <SortHeader col="total_value" label="Value" />}
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Owner</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Touches</th>
-                <SortHeader col="next_task_due" label="Next Task" />
+                {fieldCfg.list.owner && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Owner</th>}
+                {fieldCfg.list.touches && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Touches</th>}
+                {fieldCfg.list.next_task && <SortHeader col="next_task_due" label="Next Task" />}
                 <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Actions</th>
                 <th className="px-2 py-3 w-10" />
               </tr>
@@ -545,13 +551,15 @@ export function Inquiries() {
                 const fmtShort = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                 return (
                   <tr key={inq.id} className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''}`}>
-                    <td className="px-3 py-3 text-center">
-                      <input type="checkbox" checked={selected.has(inq.id)}
-                        onChange={() => setSelected(prev => {
-                          const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
-                        })}
-                        className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                    </td>
+                    {fieldCfg.list.bulk_select && (
+                      <td className="px-3 py-3 text-center">
+                        <input type="checkbox" checked={selected.has(inq.id)}
+                          onChange={() => setSelected(prev => {
+                            const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
+                          })}
+                          className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                      </td>
+                    )}
 
                     {/* Guest cell — name, company, property + source pills,
                         contact links. Heavy lifting in this cell so the
@@ -587,29 +595,31 @@ export function Inquiries() {
                       )}
                     </td>
 
-                    {/* Stay — single cell merging dates, nights, rooms */}
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      {inq.check_in || inq.check_out ? (
-                        <>
-                          <div className="text-gray-300">
-                            {inq.check_in ? fmtShort(inq.check_in) : '—'} → {inq.check_out ? fmtShort(inq.check_out) : '—'}
-                          </div>
-                          <div className="text-[10px] text-gray-600">
-                            {nights !== null && `${nights}n`}{nights !== null && inq.num_rooms ? ' · ' : ''}
-                            {inq.num_rooms ? `${inq.num_rooms} room${inq.num_rooms === 1 ? '' : 's'}` : ''}
-                            {inq.room_type_requested && (nights !== null || inq.num_rooms) ? ' · ' : ''}
-                            {inq.room_type_requested ?? ''}
-                          </div>
-                        </>
-                      ) : <span className="text-gray-700">—</span>}
-                    </td>
+                    {fieldCfg.list.stay && (
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {inq.check_in || inq.check_out ? (
+                          <>
+                            <div className="text-gray-300">
+                              {inq.check_in ? fmtShort(inq.check_in) : '—'} → {inq.check_out ? fmtShort(inq.check_out) : '—'}
+                            </div>
+                            <div className="text-[10px] text-gray-600">
+                              {nights !== null && `${nights}n`}{nights !== null && inq.num_rooms ? ' · ' : ''}
+                              {inq.num_rooms ? `${inq.num_rooms} room${inq.num_rooms === 1 ? '' : 's'}` : ''}
+                              {inq.room_type_requested && (nights !== null || inq.num_rooms) ? ' · ' : ''}
+                              {inq.room_type_requested ?? ''}
+                            </div>
+                          </>
+                        ) : <span className="text-gray-700">—</span>}
+                      </td>
+                    )}
 
-                    {/* Value */}
-                    <td className="px-4 py-3 text-sm font-semibold tabular-nums whitespace-nowrap">
-                      {inq.total_value
-                        ? <span className="text-emerald-400">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>
-                        : <span className="text-gray-700 text-xs">—</span>}
-                    </td>
+                    {fieldCfg.list.value && (
+                      <td className="px-4 py-3 text-sm font-semibold tabular-nums whitespace-nowrap">
+                        {inq.total_value
+                          ? <span className="text-emerald-400">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>
+                          : <span className="text-gray-700 text-xs">—</span>}
+                      </td>
+                    )}
 
                     {/* Status pill — clickable to change inline. Phase 6
                         polish: prefer the live pipeline_stage's color
@@ -653,30 +663,33 @@ export function Inquiries() {
                       </button>
                     </td>
 
-                    {/* Owner */}
-                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                      {inq.assigned_to || <span className="text-gray-700">unassigned</span>}
-                    </td>
+                    {fieldCfg.list.owner && (
+                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+                        {inq.assigned_to || <span className="text-gray-700">unassigned</span>}
+                      </td>
+                    )}
 
-                    {/* Touches — call/email counters + relative last contact */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <InquiryTouchSummary inquiry={inq} />
-                    </td>
+                    {fieldCfg.list.touches && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <InquiryTouchSummary inquiry={inq} />
+                      </td>
+                    )}
 
-                    {/* Next Task */}
-                    <td className="px-4 py-3">
-                      {inq.next_task_type && !inq.next_task_completed ? (
-                        <div className="flex items-center gap-1">
-                          {isOverdue && <AlertCircle size={11} className="text-red-400 flex-shrink-0" />}
-                          <div>
-                            <div className="text-xs text-gray-300 whitespace-nowrap">{inq.next_task_type}</div>
-                            {inq.next_task_due && <div className={`text-[10px] ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
+                    {fieldCfg.list.next_task && (
+                      <td className="px-4 py-3">
+                        {inq.next_task_type && !inq.next_task_completed ? (
+                          <div className="flex items-center gap-1">
+                            {isOverdue && <AlertCircle size={11} className="text-red-400 flex-shrink-0" />}
+                            <div>
+                              <div className="text-xs text-gray-300 whitespace-nowrap">{inq.next_task_type}</div>
+                              {inq.next_task_due && <div className={`text-[10px] ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
+                            </div>
                           </div>
-                        </div>
-                      ) : inq.next_task_completed ? (
-                        <span className="text-xs text-green-400">Done</span>
-                      ) : <span className="text-xs text-gray-700">—</span>}
-                    </td>
+                        ) : inq.next_task_completed ? (
+                          <span className="text-xs text-green-400">Done</span>
+                        ) : <span className="text-xs text-gray-700">—</span>}
+                      </td>
+                    )}
 
                     {/* Inline quick actions — call, email, whatsapp, sms,
                         won, lost — all single-click and self-logging. */}
@@ -824,82 +837,111 @@ export function Inquiries() {
                     {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Check-in</label>
-                  <input type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Check-out</label>
-                  <input type="date" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Rooms</label>
-                  <input type="number" min={1} value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Inquiry Type</label>
-                  <select value={form.inquiry_type} onChange={e => setForm(f => ({ ...f, inquiry_type: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
-                    {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Advanced — collapsed by default. Lead source, rate, status,
-                  ownership are all useful when known but rarely available
-                  during the initial intake call. */}
-              <div className="border-t border-dark-border pt-3">
-                <button type="button" onClick={() => setShowAdvancedCreate(v => !v)}
-                  className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors">
-                  <ChevronDown size={12} className={`transition-transform ${showAdvancedCreate ? 'rotate-180' : ''}`} />
-                  Advanced ({showAdvancedCreate ? 'hide' : 'rate, ownership, status…'})
-                </button>
-                {showAdvancedCreate && (
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Source</label>
-                      <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className={inp}>
-                        <option value="">-- None --</option>
-                        {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
-                      <select value={form.room_type_requested} onChange={e => setForm(f => ({ ...f, room_type_requested: e.target.value }))} className={inp}>
-                        <option value="">-- Select --</option>
-                        {settings.room_types.map(t => <option key={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Rate ({settings.currency_symbol})</label>
-                      <input type="number" step="0.01" value={form.rate_offered} onChange={e => setForm(f => ({ ...f, rate_offered: e.target.value }))} className={inp} />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Total Value ({settings.currency_symbol})</label>
-                      <input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} className={inp} />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Status</label>
-                      <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
-                        {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Priority</label>
-                      <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
-                        {settings.priorities.map(p => <option key={p}>{p}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Assigned To</label>
-                      <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={inp}>
-                        <option value="">-- None --</option>
-                        {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
-                      </select>
-                    </div>
+                {fieldCfg.form.check_in && (
+                  <div>
+                    <label className="block text-xs text-[#a0a0a0] mb-1">Check-in</label>
+                    <input type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
+                  </div>
+                )}
+                {fieldCfg.form.check_out && (
+                  <div>
+                    <label className="block text-xs text-[#a0a0a0] mb-1">Check-out</label>
+                    <input type="date" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className={inp} />
+                  </div>
+                )}
+                {fieldCfg.form.num_rooms && (
+                  <div>
+                    <label className="block text-xs text-[#a0a0a0] mb-1">Rooms</label>
+                    <input type="number" min={1} value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
+                  </div>
+                )}
+                {fieldCfg.form.inquiry_type && (
+                  <div>
+                    <label className="block text-xs text-[#a0a0a0] mb-1">Inquiry Type</label>
+                    <select value={form.inquiry_type} onChange={e => setForm(f => ({ ...f, inquiry_type: e.target.value }))} className={inp}>
+                      <option value="">-- Select --</option>
+                      {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
+                    </select>
                   </div>
                 )}
               </div>
+
+              {/* Advanced — collapsed by default. Each field below is
+                  individually toggleable from Settings → Pipeline Layout
+                  so an org that doesn't quote rates inline can hide
+                  Rate / Total Value entirely. The whole Advanced block
+                  hides itself when every field inside is disabled. */}
+              {(fieldCfg.form.source || fieldCfg.form.room_type
+                || fieldCfg.form.rate_offered || fieldCfg.form.total_value
+                || fieldCfg.form.status || fieldCfg.form.priority
+                || fieldCfg.form.assigned_to) && (
+                <div className="border-t border-dark-border pt-3">
+                  <button type="button" onClick={() => setShowAdvancedCreate(v => !v)}
+                    className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors">
+                    <ChevronDown size={12} className={`transition-transform ${showAdvancedCreate ? 'rotate-180' : ''}`} />
+                    Advanced ({showAdvancedCreate ? 'hide' : 'rate, ownership, status…'})
+                  </button>
+                  {showAdvancedCreate && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      {fieldCfg.form.source && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Source</label>
+                          <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className={inp}>
+                            <option value="">-- None --</option>
+                            {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {fieldCfg.form.room_type && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
+                          <select value={form.room_type_requested} onChange={e => setForm(f => ({ ...f, room_type_requested: e.target.value }))} className={inp}>
+                            <option value="">-- Select --</option>
+                            {settings.room_types.map(t => <option key={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {fieldCfg.form.rate_offered && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Rate ({settings.currency_symbol})</label>
+                          <input type="number" step="0.01" value={form.rate_offered} onChange={e => setForm(f => ({ ...f, rate_offered: e.target.value }))} className={inp} />
+                        </div>
+                      )}
+                      {fieldCfg.form.total_value && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Total Value ({settings.currency_symbol})</label>
+                          <input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} className={inp} />
+                        </div>
+                      )}
+                      {fieldCfg.form.status && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Status</label>
+                          <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
+                            {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {fieldCfg.form.priority && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Priority</label>
+                          <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
+                            {settings.priorities.map(p => <option key={p}>{p}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {fieldCfg.form.assigned_to && (
+                        <div>
+                          <label className="block text-xs text-[#a0a0a0] mb-1">Assigned To</label>
+                          <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={inp}>
+                            <option value="">-- None --</option>
+                            {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {showMice && (
                 <div className="border border-purple-500/20 rounded-lg p-3 space-y-3">
@@ -934,14 +976,18 @@ export function Inquiries() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Special Requests</label>
-                <textarea value={form.special_requests} onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))} rows={2} className={`${inp} resize-none`} />
-              </div>
-              <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
-                <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
-              </div>
+              {fieldCfg.form.special_requests && (
+                <div>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">Special Requests</label>
+                  <textarea value={form.special_requests} onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))} rows={2} className={`${inp} resize-none`} />
+                </div>
+              )}
+              {fieldCfg.form.notes && (
+                <div>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                  <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
+                </div>
+              )}
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
@@ -1274,9 +1320,19 @@ export function Inquiries() {
   )
 }
 
+/**
+ * Guest picker for the Add Inquiry modal. Phase 6.5: when no existing
+ * guest matches the search term, an inline "Create new guest" form
+ * lets the user create the contact + auto-select it without leaving
+ * the inquiry form. Splits the search input into name vs email
+ * detection — anything with an "@" pre-fills the email field.
+ */
 function GuestPicker({ value, onChange, className }: { value: string; onChange: (v: string) => void; className: string }) {
+  const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newGuest, setNewGuest] = useState({ full_name: '', email: '', phone: '' })
 
   const { data } = useQuery({
     queryKey: ['guest-picker', search],
@@ -1290,6 +1346,42 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
     queryFn: () => api.get(`/v1/admin/guests/${value}`).then(r => r.data),
     enabled: !!value,
   })
+
+  const create = useMutation({
+    mutationFn: () => api.post('/v1/admin/guests', {
+      full_name: newGuest.full_name.trim(),
+      email: newGuest.email.trim() || null,
+      phone: newGuest.phone.trim() || null,
+    }),
+    onSuccess: (res) => {
+      const g = res.data
+      qc.invalidateQueries({ queryKey: ['guest-picker'] })
+      onChange(String(g.id))
+      toast.success(`Created ${g.full_name}`)
+      setCreating(false)
+      setNewGuest({ full_name: '', email: '', phone: '' })
+      setSearch('')
+      setOpen(false)
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Could not create guest'
+      toast.error(msg)
+    },
+  })
+
+  const startCreate = () => {
+    // Pre-fill from the search term — email if it looks like one,
+    // otherwise treat as name. Avoids re-typing what the agent
+    // already typed.
+    const term = search.trim()
+    const isEmail = term.includes('@')
+    setNewGuest({
+      full_name: isEmail ? '' : term,
+      email: isEmail ? term : '',
+      phone: '',
+    })
+    setCreating(true)
+  }
 
   return (
     <div className="relative">
@@ -1309,8 +1401,8 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
           className={className}
         />
       )}
-      {open && guests.length > 0 && !value && (
-        <div className="absolute z-10 mt-1 w-full bg-dark-surface border border-dark-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+      {open && !value && search.length >= 2 && (
+        <div className="absolute z-10 mt-1 w-full bg-dark-surface border border-dark-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
           {guests.map((g: any) => (
             <button
               key={g.id}
@@ -1322,6 +1414,80 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
               {g.email && <span className="text-xs text-[#636366] ml-2">{g.email}</span>}
             </button>
           ))}
+          {/* Always offer the "create new" option at the bottom of the
+              dropdown, even when there are matches — sometimes the
+              search term partial-matches an existing guest the agent
+              didn't mean. */}
+          <button
+            type="button"
+            onClick={startCreate}
+            className="w-full text-left px-3 py-2 text-sm text-accent hover:bg-accent/10 border-t border-dark-border flex items-center gap-2"
+          >
+            <Plus size={12} />
+            {guests.length === 0
+              ? <>Create <span className="font-bold">"{search}"</span> as new guest</>
+              : <>Create new guest…</>
+            }
+          </button>
+        </div>
+      )}
+
+      {creating && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={() => setCreating(false)}>
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <Plus size={14} className="text-accent" /> New guest
+            </h3>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1">Full name *</label>
+                <input
+                  autoFocus
+                  value={newGuest.full_name}
+                  onChange={e => setNewGuest(g => ({ ...g, full_name: e.target.value }))}
+                  className={className}
+                  placeholder="e.g. Jane Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newGuest.email}
+                  onChange={e => setNewGuest(g => ({ ...g, email: e.target.value }))}
+                  className={className}
+                  placeholder="jane@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newGuest.phone}
+                  onChange={e => setNewGuest(g => ({ ...g, phone: e.target.value }))}
+                  className={className}
+                  placeholder="+49 …"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setCreating(false)}
+                className="px-3 py-1.5 text-xs text-t-secondary hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => create.mutate()}
+                disabled={!newGuest.full_name.trim() || create.isPending}
+                className="bg-accent text-black font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50 hover:bg-accent/90"
+              >
+                {create.isPending ? 'Creating…' : 'Create + select'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

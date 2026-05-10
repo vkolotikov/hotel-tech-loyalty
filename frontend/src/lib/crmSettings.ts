@@ -1,6 +1,54 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, API_BASE } from './api'
 
+/**
+ * Field-visibility config for the Sales Pipeline. Stored under the
+ * `inquiry_fields` key in crm_settings. Lets admins hide fields from
+ * the Add Inquiry form and columns from the leads list without
+ * touching code. Required-to-create fields (`guest`, `property`) are
+ * always shown; only optional fields are toggleable.
+ */
+export interface InquiryFieldConfig {
+  form: {
+    check_in: boolean
+    check_out: boolean
+    num_rooms: boolean
+    inquiry_type: boolean
+    source: boolean
+    room_type: boolean
+    rate_offered: boolean
+    total_value: boolean
+    status: boolean
+    priority: boolean
+    assigned_to: boolean
+    special_requests: boolean
+    notes: boolean
+  }
+  list: {
+    stay: boolean
+    value: boolean
+    owner: boolean
+    touches: boolean
+    next_task: boolean
+    bulk_select: boolean
+  }
+}
+
+export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
+  form: {
+    check_in: true, check_out: true, num_rooms: true,
+    inquiry_type: true, source: true, room_type: true,
+    rate_offered: true, total_value: true,
+    status: true, priority: true, assigned_to: true,
+    special_requests: true, notes: true,
+  },
+  list: {
+    stay: true, value: true, owner: true,
+    touches: true, next_task: true,
+    bulk_select: false, // hidden by default — admins opt in
+  },
+}
+
 export interface CrmSettings {
   employees: string[]
   lead_owners: string[]
@@ -35,6 +83,7 @@ export interface CrmSettings {
   currency_symbol: string
   company_name: string
   date_format: string
+  inquiry_fields: InquiryFieldConfig
 }
 
 const DEFAULTS: CrmSettings = {
@@ -69,6 +118,7 @@ const DEFAULTS: CrmSettings = {
   currency_symbol: '€',
   company_name: 'Hotel Group',
   date_format: 'Y-m-d',
+  inquiry_fields: DEFAULT_INQUIRY_FIELDS,
 }
 
 export function useSettings(): CrmSettings {
@@ -103,6 +153,19 @@ export function useSettings(): CrmSettings {
     }
     merged[key] = parsed
   }
+
+  // Deep-merge inquiry_fields so adding a new toggleable field in code
+  // doesn't break orgs that saved a partial config before the field
+  // existed. Server value wins where present; defaults fill the gaps.
+  if (merged.inquiry_fields && typeof merged.inquiry_fields === 'object') {
+    merged.inquiry_fields = {
+      form: { ...DEFAULT_INQUIRY_FIELDS.form, ...(merged.inquiry_fields.form ?? {}) },
+      list: { ...DEFAULT_INQUIRY_FIELDS.list, ...(merged.inquiry_fields.list ?? {}) },
+    }
+  } else {
+    merged.inquiry_fields = DEFAULT_INQUIRY_FIELDS
+  }
+
   return merged
 }
 
