@@ -23,7 +23,17 @@ class InquiryController extends Controller
     ) {}
     public function index(Request $request): JsonResponse
     {
-        $query = Inquiry::with(['guest:id,full_name,company,vip_level,nationality', 'property:id,name,code', 'corporateAccount:id,company_name']);
+        // CRM Phase 6 polish: include pipelineStage on list rows so the
+        // status pill in the table can color itself from the actual
+        // stage's `color` field instead of the hardcoded STATUS_COLORS
+        // map. Falls back to the legacy mapping when no stage is bound
+        // (legacy or imported rows).
+        $query = Inquiry::with([
+            'guest:id,full_name,company,vip_level,nationality',
+            'property:id,name,code',
+            'corporateAccount:id,company_name',
+            'pipelineStage:id,name,color,kind',
+        ]);
 
         if ($s = $request->get('search')) {
             $query->where(function ($q) use ($s) {

@@ -19,6 +19,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
 import { BrandSwitcher } from './BrandSwitcher'
 
@@ -169,6 +170,12 @@ export function Layout({ children }: { children: ReactNode }) {
     && staff?.role !== 'super_admin'
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
   const { connected, events } = useRealtimeEvents()
+  // CRM Phase 6: poll the tasks list every minute and fire a browser
+  // notification when a task is 5 min from due / due now. Disabled
+  // during the subscription wall so we don't hit the API for blocked
+  // users. Permission state is owned by the user — see Engagement
+  // Hub's "Enable notifications" prompt for the request UX.
+  useTaskReminders(!blockForSub && !!user)
   const [showNotifPanel, setShowNotifPanel] = useState(false)
   const [seenCount, setSeenCount] = useState(0)
   const notifRef = useRef<HTMLDivElement>(null)

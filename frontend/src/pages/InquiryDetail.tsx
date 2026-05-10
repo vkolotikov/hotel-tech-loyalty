@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { BrandBadge } from '../components/BrandBadge'
+import { TaskDrawer } from '../components/TaskDrawer'
 
 /**
  * Lead Detail page — `/inquiries/:id`. Three-column layout
@@ -729,6 +730,9 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
   tasks: Task[]
   onCompleteTask: (taskId: number) => void
 }) {
+  const qc = useQueryClient()
+  const [adding, setAdding] = useState(false)
+
   return (
     <div className="space-y-4 self-start">
       <SmartPanel inq={inq} />
@@ -738,7 +742,11 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
             <Clock size={11} /> Open tasks ({tasks.length})
           </div>
-          <button className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" title="Add task (Phase 3)">
+          <button
+            onClick={() => setAdding(true)}
+            className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+            title="Add task"
+          >
             <Plus size={13} />
           </button>
         </div>
@@ -750,6 +758,19 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
           </div>
         )}
       </div>
+
+      {adding && (
+        <TaskDrawer
+          task={null}
+          defaultInquiryId={inq.id}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ['inquiry', String(inq.id)] })
+            qc.invalidateQueries({ queryKey: ['tasks-list'] })
+            setAdding(false)
+          }}
+        />
+      )}
     </div>
   )
 }

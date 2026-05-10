@@ -77,7 +77,7 @@ export function Inquiries() {
   // is open at a time on the page. The anchor rect is captured on click
   // so we can render the menu via position:fixed (escaping the table's
   // overflow:hidden, which was clipping the dropdown out of view).
-  const [openMenu, setOpenMenu] = useState<{ id: number; type: 'status' | 'action'; anchor: DOMRect } | null>(null)
+  const [openMenu, setOpenMenu] = useState<{ id: number; type: 'status' | 'action' | 'priority'; anchor: DOMRect } | null>(null)
   // Simplified Add Inquiry form — advanced fields are collapsed by default.
   const [showAdvancedCreate, setShowAdvancedCreate] = useState(false)
   // Drag state for kanban — track the dragged inquiry id.
@@ -185,6 +185,19 @@ export function Inquiries() {
       setDragging(null)
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Status change failed'),
+  })
+
+  // Phase 6 — inline priority edit, mirrors statusMutation. Used by the
+  // priority chip popover on each row.
+  const priorityMutation = useMutation({
+    mutationFn: ({ id, priority }: { id: number; priority: string }) =>
+      api.put(`/v1/admin/inquiries/${id}`, { priority }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      toast.success(`Priority → ${vars.priority}`)
+      setOpenMenu(null)
+    },
+    onError: () => toast.error('Priority change failed'),
   })
 
   // Task save — sets/clears next_task_* on the inquiry. Submitting an
@@ -303,19 +316,40 @@ export function Inquiries() {
 
       {/* Today snapshot — the morning-of view: what's overdue, what's
           due today, what's coming up, and the freshest leads. Click a
-          tile to expand the matching list inline. */}
-      {today && (
-        <DailyOpsBar
-          title="Today"
-          hint={today.date}
-          tiles={[
-            { key: 'overdue',   label: 'Overdue',   value: today.overdue?.count ?? 0,   sub: today.overdue?.count ? 'Click to view' : 'All caught up',         tone: (today.overdue?.count ?? 0) > 0 ? 'red' : 'gray', icon: <AlertCircle size={12} />, active: dailyFocus === 'overdue',   onClick: () => setDailyFocus(dailyFocus === 'overdue' ? '' : 'overdue') },
-            { key: 'today',     label: 'Due Today', value: today.today?.count ?? 0,     sub: today.today?.count ? 'Tasks scheduled' : 'Nothing due today',     tone: 'amber',  icon: <Clock size={12} />,         active: dailyFocus === 'today',     onClick: () => setDailyFocus(dailyFocus === 'today' ? '' : 'today') },
-            { key: 'soon',      label: 'Due Soon',  value: today.soon?.count ?? 0,      sub: 'Next 3 days',                                                    tone: 'blue',   icon: <CalendarIcon size={12} />,  active: dailyFocus === 'soon',      onClick: () => setDailyFocus(dailyFocus === 'soon' ? '' : 'soon') },
-            { key: 'new_leads', label: 'New Leads', value: today.new_leads?.count ?? 0, sub: 'Last 24 h',                                                      tone: 'emerald', icon: <Sparkles size={12} />,     active: dailyFocus === 'new_leads', onClick: () => setDailyFocus(dailyFocus === 'new_leads' ? '' : 'new_leads') },
-          ]}
-        />
-      )}
+          tile to expand the matching list inline.
+
+          CRM Phase 6 polish: when every counter is zero, collapse the
+          full bar to a single quiet status line. The four-tile grid
+          eats vertical real estate when there's literally nothing on
+          fire. */}
+      {today && (() => {
+        const totalToday = (today.overdue?.count ?? 0)
+          + (today.today?.count ?? 0)
+          + (today.soon?.count ?? 0)
+          + (today.new_leads?.count ?? 0)
+        if (totalToday === 0) {
+          return (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2.5 flex items-center gap-3 text-xs">
+              <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
+              <span className="text-emerald-300 font-bold uppercase tracking-wider text-[10px]">Today</span>
+              <span className="text-gray-300">All caught up — no overdue, no tasks due today, no new leads in the last 24h.</span>
+              <span className="ml-auto text-[10px] text-gray-600">{today.date}</span>
+            </div>
+          )
+        }
+        return (
+          <DailyOpsBar
+            title="Today"
+            hint={today.date}
+            tiles={[
+              { key: 'overdue',   label: 'Overdue',   value: today.overdue?.count ?? 0,   sub: today.overdue?.count ? 'Click to view' : 'All caught up',         tone: (today.overdue?.count ?? 0) > 0 ? 'red' : 'gray', icon: <AlertCircle size={12} />, active: dailyFocus === 'overdue',   onClick: () => setDailyFocus(dailyFocus === 'overdue' ? '' : 'overdue') },
+              { key: 'today',     label: 'Due Today', value: today.today?.count ?? 0,     sub: today.today?.count ? 'Tasks scheduled' : 'Nothing due today',     tone: 'amber',  icon: <Clock size={12} />,         active: dailyFocus === 'today',     onClick: () => setDailyFocus(dailyFocus === 'today' ? '' : 'today') },
+              { key: 'soon',      label: 'Due Soon',  value: today.soon?.count ?? 0,      sub: 'Next 3 days',                                                    tone: 'blue',   icon: <CalendarIcon size={12} />,  active: dailyFocus === 'soon',      onClick: () => setDailyFocus(dailyFocus === 'soon' ? '' : 'soon') },
+              { key: 'new_leads', label: 'New Leads', value: today.new_leads?.count ?? 0, sub: 'Last 24 h',                                                      tone: 'emerald', icon: <Sparkles size={12} />,     active: dailyFocus === 'new_leads', onClick: () => setDailyFocus(dailyFocus === 'new_leads' ? '' : 'new_leads') },
+            ]}
+          />
+        )
+      })()}
 
       <PipelineInsights currencySymbol={settings.currency_symbol} />
 
@@ -577,21 +611,46 @@ export function Inquiries() {
                         : <span className="text-gray-700 text-xs">—</span>}
                     </td>
 
-                    {/* Status pill — clickable to change inline */}
+                    {/* Status pill — clickable to change inline. Phase 6
+                        polish: prefer the live pipeline_stage's color
+                        when available (custom pipelines, renamed stages),
+                        falling back to STATUS_COLORS for legacy rows.
+                        Priority chip below is now inline-editable too. */}
                     <td className="px-4 py-3" data-menu-root>
-                      <button onClick={(e) => {
+                      {(() => {
+                        const stageColor = inq.pipeline_stage?.color
+                        const stageStyle: React.CSSProperties = stageColor
+                          ? { background: stageColor + '20', color: stageColor, border: `1px solid ${stageColor}40` }
+                          : {}
+                        const stageClass = stageColor
+                          ? 'border'
+                          : (STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary')
+                        return (
+                          <button onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status'
+                                ? null
+                                : { id: inq.id, type: 'status', anchor: rect })
+                            }}
+                            title="Click to change status"
+                            style={stageStyle}
+                            className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${stageClass}`}>
+                            {inq.status} <ChevronDown size={9} />
+                          </button>
+                        )
+                      })()}
+                      <button
+                        onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect()
-                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status'
+                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'priority'
                             ? null
-                            : { id: inq.id, type: 'status', anchor: rect })
+                            : { id: inq.id, type: 'priority', anchor: rect })
                         }}
-                        title="Click to change status"
-                        className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
-                        {inq.status} <ChevronDown size={9} />
+                        title="Click to change priority"
+                        className={`block text-[10px] mt-1 font-bold hover:underline ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}
+                      >
+                        {inq.priority ?? '—'}
                       </button>
-                      <div className={`text-[10px] mt-0.5 font-bold ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}>
-                        {inq.priority}
-                      </div>
                     </td>
 
                     {/* Owner */}
@@ -961,11 +1020,11 @@ export function Inquiries() {
           ? Math.max(8, openMenu.anchor.top - 8 - 240)
           : openMenu.anchor.bottom + 4
         const right = openMenu.type === 'action' ? window.innerWidth - openMenu.anchor.right : undefined
-        const left  = openMenu.type === 'status' ? openMenu.anchor.left : undefined
+        const left  = openMenu.type === 'status' || openMenu.type === 'priority' ? openMenu.anchor.left : undefined
         return (
           <div data-menu-root
             style={{ position: 'fixed', top, left, right, zIndex: 60 }}
-            className="bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px]">
+            className="bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
             {openMenu.type === 'status' && settings.inquiry_statuses.map(s => (
               <button key={s} onClick={() => statusMutation.mutate({ id: openMenu.id, status: s })}
                 disabled={statusMutation.isPending || s === inq.status}
@@ -973,6 +1032,16 @@ export function Inquiries() {
                 {s === inq.status && '✓ '}{s}
               </button>
             ))}
+            {openMenu.type === 'priority' && settings.priorities.map(p => {
+              const cls = PRIORITY_COLORS[p] ?? 'text-gray-300'
+              return (
+                <button key={p} onClick={() => priorityMutation.mutate({ id: openMenu.id, priority: p })}
+                  disabled={priorityMutation.isPending || p === inq.priority}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 font-bold ${cls}`}>
+                  {p === inq.priority && '✓ '}{p}
+                </button>
+              )
+            })}
             {openMenu.type === 'action' && (
               <>
                 {inq.next_task_type && !inq.next_task_completed && (
