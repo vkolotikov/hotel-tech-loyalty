@@ -624,6 +624,7 @@ Route::prefix('v1')->group(function () {
             // ─── CRM: Planner ─────────────────────────────────────────────────
             Route::get('planner/tasks',                   [PlannerController::class, 'tasks']);
             Route::post('planner/tasks',                  [PlannerController::class, 'storeTask']);
+            Route::post('planner/tasks/bulk',             [PlannerController::class, 'bulk']);
             Route::put('planner/tasks/{task}',            [PlannerController::class, 'updateTask']);
             Route::delete('planner/tasks/{task}',         [PlannerController::class, 'destroyTask']);
             Route::patch('planner/tasks/{task}/move',     [PlannerController::class, 'moveTask']);
@@ -636,6 +637,12 @@ Route::prefix('v1')->group(function () {
             Route::get('planner/day-note',                [PlannerController::class, 'dayNote']);
             Route::post('planner/day-note',               [PlannerController::class, 'upsertDayNote']);
             Route::get('planner/stats',                   [PlannerController::class, 'stats']);
+
+            // ─── Planner v2: org-wide task templates ──────────────────────
+            Route::get('planner/templates',                [PlannerController::class, 'templates']);
+            Route::post('planner/templates',               [PlannerController::class, 'storeTemplate']);
+            Route::put('planner/templates/{template}',     [PlannerController::class, 'updateTemplate']);
+            Route::delete('planner/templates/{template}',  [PlannerController::class, 'destroyTemplate']);
 
             // ─── CRM: Venues & Event Bookings ─────────────────────────────────
             Route::get('venues',                          [VenueController::class, 'indexVenues']);

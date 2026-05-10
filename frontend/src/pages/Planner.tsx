@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
-  ListChecks, AlertCircle, Flag, Tag,
+  ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
@@ -152,6 +152,15 @@ const TaskRow = memo(({
             <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
             {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 flex-shrink-0" />}
             {task.status && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[task.status] ?? 'bg-gray-500/15 text-gray-400'}`}>{task.status === 'in_progress' ? 'In Prog' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}</span>}
+            {(task.recurring || task.recurring_parent_id) && (
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300"
+                title={task.recurring ? `Recurring (${task.recurring})` : 'Part of a recurring series'}
+              >
+                <Repeat size={9} />
+                {task.recurring ? task.recurring : 'in series'}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {task.employee_name && <span className="flex items-center gap-1 text-xs text-gray-500"><User size={11} />{task.employee_name}</span>}
@@ -218,192 +227,271 @@ const TaskRow = memo(({
   )
 })
 
-/* ─── task templates ───────────────────────────────────────────────── */
-const DEFAULT_TEMPLATES: Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> = {
-  'Guest Services': [
-    { title: 'Check-in Guest', group: 'Front Desk', duration: 15 },
-    { title: 'Check-out Guest', group: 'Front Desk', duration: 10 },
-    { title: 'Room Cleaning', group: 'Housekeeping', duration: 45 },
-    { title: 'Mini-bar Restocking', group: 'Housekeeping', duration: 20 },
-  ],
-  'Maintenance': [
-    { title: 'Equipment Check', group: 'Maintenance', duration: 30 },
-    { title: 'Facility Inspection', group: 'Maintenance', duration: 60 },
-    { title: 'Repair Request', group: 'Maintenance', category: 'Urgent' },
-  ],
-  'Admin': [
-    { title: 'Daily Briefing', group: 'Management', duration: 30 },
-    { title: 'Staff Meeting', group: 'Management', duration: 60 },
-    { title: 'Report Review', group: 'Management', duration: 45 },
-  ],
-  'Sales': [
-    { title: 'Follow-up Call', group: 'Sales', duration: 15 },
-    { title: 'Client Meeting', group: 'Sales', duration: 60 },
-    { title: 'Proposal Review', group: 'Sales', duration: 45 },
-  ],
+/* ─── task templates (Planner v2 — server-side, org-wide) ─────────── */
+
+interface ServerTemplate {
+  id: number
+  name: string
+  title: string
+  category: string
+  task_group: string | null
+  task_category: string | null
+  priority: string
+  duration_minutes: number | null
+  description: string | null
+  sort_order: number
 }
 
-function getTemplates(): Record<string, Array<{ title: string; group?: string; category?: string; duration?: number }>> {
-  try {
-    const custom = localStorage.getItem('planner-custom-templates')
-    return custom ? JSON.parse(custom) : DEFAULT_TEMPLATES
-  } catch {
-    return DEFAULT_TEMPLATES
-  }
-}
+/**
+ * Suggested starter templates the admin can one-click seed if their
+ * org has none yet. Hand-curated for hospitality but generic enough
+ * to be useful for service businesses too.
+ */
+const SUGGESTED_TEMPLATES: Array<Omit<ServerTemplate, 'id' | 'sort_order'>> = [
+  { name: 'Check-in guest',      title: 'Check-in guest',       category: 'Front Office',  task_group: 'Front Desk',   task_category: null, priority: 'Medium', duration_minutes: 15, description: null },
+  { name: 'Check-out guest',     title: 'Check-out guest',      category: 'Front Office',  task_group: 'Front Desk',   task_category: null, priority: 'Medium', duration_minutes: 10, description: null },
+  { name: 'Room cleaning',       title: 'Room cleaning',        category: 'Housekeeping',  task_group: 'Housekeeping', task_category: null, priority: 'Medium', duration_minutes: 45, description: null },
+  { name: 'Mini-bar restock',    title: 'Mini-bar restocking',  category: 'Housekeeping',  task_group: 'Housekeeping', task_category: null, priority: 'Low',    duration_minutes: 20, description: null },
+  { name: 'Equipment check',     title: 'Equipment check',      category: 'Maintenance',   task_group: 'Maintenance',  task_category: null, priority: 'Medium', duration_minutes: 30, description: null },
+  { name: 'Facility inspection', title: 'Facility inspection',  category: 'Maintenance',   task_group: 'Maintenance',  task_category: null, priority: 'Medium', duration_minutes: 60, description: null },
+  { name: 'Daily briefing',      title: 'Daily briefing',       category: 'Management',    task_group: 'Management',   task_category: null, priority: 'High',   duration_minutes: 30, description: null },
+  { name: 'Staff meeting',       title: 'Staff meeting',        category: 'Management',    task_group: 'Management',   task_category: null, priority: 'Medium', duration_minutes: 60, description: null },
+  { name: 'Follow-up call',      title: 'Follow-up call',       category: 'Sales',         task_group: 'Sales',        task_category: null, priority: 'Medium', duration_minutes: 15, description: null },
+  { name: 'Client meeting',      title: 'Client meeting',       category: 'Sales',         task_group: 'Sales',        task_category: null, priority: 'High',   duration_minutes: 60, description: null },
+]
 
 function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, group?: string, category?: string, duration?: number) => void }) {
+  const qc = useQueryClient()
   const currentDate = fmtDate(new Date())
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [showAddTemplate, setShowAddTemplate] = useState(false)
-  const [showManage, setShowManage] = useState(false)
-  const [newTemplate, setNewTemplate] = useState({ category: 'Custom', title: '', group: '', duration: '' })
-  const [templates, setTemplates] = useState(getTemplates())
+  const [mode, setMode] = useState<'closed' | 'pick' | 'add' | 'manage'>('closed')
+  const [editing, setEditing] = useState<ServerTemplate | null>(null)
 
-  const addCustomTemplate = () => {
-    if (!newTemplate.title.trim()) return
-    const updated = { ...templates }
-    if (!updated[newTemplate.category]) updated[newTemplate.category] = []
-    updated[newTemplate.category].push({
-      title: newTemplate.title,
-      group: newTemplate.group || undefined,
-      duration: newTemplate.duration ? Number(newTemplate.duration) : undefined,
-    })
-    localStorage.setItem('planner-custom-templates', JSON.stringify(updated))
-    setTemplates(updated)
-    setNewTemplate({ category: 'Custom', title: '', group: '', duration: '' })
-    setShowAddTemplate(false)
-  }
+  const { data: templates = [], isLoading } = useQuery<ServerTemplate[]>({
+    queryKey: ['planner-templates'],
+    queryFn: () => api.get('/v1/admin/planner/templates').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
 
-  const deleteTemplate = (category: string, index: number) => {
-    const updated = { ...templates }
-    updated[category] = updated[category].filter((_, i) => i !== index)
-    if (updated[category].length === 0) delete updated[category]
-    localStorage.setItem('planner-custom-templates', JSON.stringify(updated))
-    setTemplates(updated)
-  }
+  const grouped = templates.reduce<Record<string, ServerTemplate[]>>((acc, t) => {
+    const cat = t.category || 'General'
+    ;(acc[cat] ||= []).push(t)
+    return acc
+  }, {})
 
-  const exportTemplates = () => {
-    const data = JSON.stringify(templates, null, 2)
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `task-templates-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const createMut = useMutation({
+    mutationFn: (body: Partial<ServerTemplate>) => api.post('/v1/admin/planner/templates', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['planner-templates'] }); toast.success('Template added') },
+    onError: () => toast.error('Save failed'),
+  })
 
-  const importTemplates = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const imported = JSON.parse(event.target?.result as string)
-        localStorage.setItem('planner-custom-templates', JSON.stringify(imported))
-        setTemplates(imported)
-      } catch {
-        alert('Invalid JSON file')
-      }
+  const updateMut = useMutation({
+    mutationFn: ({ id, ...body }: Partial<ServerTemplate> & { id: number }) =>
+      api.put('/v1/admin/planner/templates/' + id, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['planner-templates'] }); toast.success('Template updated'); setEditing(null) },
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => api.delete('/v1/admin/planner/templates/' + id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['planner-templates'] }); toast.success('Template deleted') },
+  })
+
+  // First-run seeding — saves the admin from typing 10 templates by
+  // hand. Idempotent: only runs when the list is empty + the user
+  // clicks the suggestion. Server-side dedup isn't enforced (admins
+  // can create dupes), so we only offer this when there are none.
+  const seedSuggested = async () => {
+    for (const tpl of SUGGESTED_TEMPLATES) {
+      // eslint-disable-next-line no-await-in-loop
+      await api.post('/v1/admin/planner/templates', tpl)
     }
-    reader.readAsText(file)
+    qc.invalidateQueries({ queryKey: ['planner-templates'] })
+    toast.success(`${SUGGESTED_TEMPLATES.length} starter templates added`)
   }
 
   return (
     <div className="space-y-1.5 mb-3">
-      {!showTemplates && !showAddTemplate && !showManage ? (
+      {mode === 'closed' && (
         <div className="flex gap-1.5">
-          <button onClick={() => setShowTemplates(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
-            <Plus size={14} /> Templates
+          <button
+            onClick={() => setMode('pick')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs"
+          >
+            <Plus size={14} /> Templates {templates.length > 0 && <span className="text-[10px] opacity-60">({templates.length})</span>}
           </button>
-          <button onClick={() => setShowManage(true)} className="px-3 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs font-medium" title="Manage templates">
+          <button
+            onClick={() => setMode('manage')}
+            className="px-3 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs font-medium"
+            title="Manage templates"
+          >
             ⚙
           </button>
         </div>
-      ) : showManage ? (
-        <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50 space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-400">Manage Templates</span>
-            <button onClick={() => setShowManage(false)} className="p-1 rounded text-gray-600 hover:text-white transition-colors">
-              <X size={12} />
-            </button>
-          </div>
-          <div className="space-y-1 max-h-[250px] overflow-y-auto mb-2">
-            {Object.entries(templates).filter(([cat]) => cat !== 'Guest Services' && cat !== 'Maintenance' && cat !== 'Admin' && cat !== 'Sales').map(([cat, tmps]) => (
-              <div key={cat}>
-                <div className="text-[9px] font-bold uppercase text-gray-500 px-2 py-1">{cat}</div>
-                {tmps.map((t, i) => (
-                  <div key={i} className="flex items-center justify-between gap-1 px-2 py-1 text-xs text-gray-400 bg-dark-surface/50 rounded">
-                    <span>{t.title}</span>
-                    <button onClick={() => deleteTemplate(cat, i)} className="p-0.5 text-red-500 hover:text-red-400 transition-colors">
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-1">
-            <button onClick={() => { setShowManage(false); setShowAddTemplate(true) }} className="flex-1 text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500 transition-colors">
-              + Add
-            </button>
-            <button onClick={exportTemplates} className="flex-1 text-xs py-1.5 rounded bg-blue-600 text-white font-medium hover:bg-blue-500 transition-colors">
-              Export
-            </button>
-            <label className="flex-1">
-              <input type="file" accept=".json" onChange={importTemplates} className="hidden" />
-              <span className="block text-xs py-1.5 rounded bg-green-600 text-white font-medium hover:bg-green-500 transition-colors text-center cursor-pointer">
-                Import
-              </span>
-            </label>
-          </div>
-        </div>
-      ) : showAddTemplate ? (
-        <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50 space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-400">New Template</span>
-            <button onClick={() => setShowAddTemplate(false)} className="p-1 rounded text-gray-600 hover:text-white transition-colors">
-              <X size={12} />
-            </button>
-          </div>
-          <input value={newTemplate.title} onChange={e => setNewTemplate(p => ({ ...p, title: e.target.value }))} placeholder="Task title" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-          <input value={newTemplate.group} onChange={e => setNewTemplate(p => ({ ...p, group: e.target.value }))} placeholder="Task group (e.g. Housekeeping)" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-          <input value={newTemplate.category} onChange={e => setNewTemplate(p => ({ ...p, category: e.target.value }))} placeholder="Category" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-          <input value={newTemplate.duration} onChange={e => setNewTemplate(p => ({ ...p, duration: e.target.value }))} placeholder="Duration (min)" type="number" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-          <button onClick={addCustomTemplate} disabled={!newTemplate.title.trim()} className="w-full text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500 disabled:opacity-40 transition-colors">
-            Save Template
-          </button>
-        </div>
-      ) : (
+      )}
+
+      {mode === 'pick' && (
         <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-400">Select Template</span>
-            <button onClick={() => setShowTemplates(false)} className="p-1 rounded text-gray-600 hover:text-white transition-colors">
+            <span className="text-xs font-semibold text-gray-400">Pick a template</span>
+            <button onClick={() => setMode('closed')} className="p-1 rounded text-gray-600 hover:text-white">
               <X size={12} />
             </button>
           </div>
           <div className="space-y-1 max-h-[300px] overflow-y-auto">
-            {Object.entries(templates).map(([cat, tmps]) => (
-              <div key={cat}>
-                <div className="text-[9px] font-bold uppercase text-gray-600 px-2 py-1 tracking-wider">{cat}</div>
-                {tmps.map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      onCreate(t.title, currentDate, t.group, t.category, t.duration)
-                      setShowTemplates(false)
-                    }}
-                    className="w-full text-left text-xs px-3 py-1.5 rounded-md text-gray-300 hover:bg-primary-500/10 hover:text-primary-400 transition-colors flex items-center justify-between">
-                    <span>{t.title}</span>
-                    {t.duration && <span className="text-[9px] text-gray-600">{t.duration}m</span>}
-                  </button>
-                ))}
+            {isLoading ? (
+              <p className="text-xs text-gray-600 text-center py-4">Loading…</p>
+            ) : templates.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-gray-500 mb-2">No templates yet — start with our suggestions:</p>
+                <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-white font-medium hover:bg-primary-500">
+                  + Seed {SUGGESTED_TEMPLATES.length} starter templates
+                </button>
               </div>
-            ))}
+            ) : (
+              Object.entries(grouped).map(([cat, tmps]) => (
+                <div key={cat}>
+                  <div className="text-[9px] font-bold uppercase text-gray-600 px-2 py-1 tracking-wider">{cat}</div>
+                  {tmps.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        onCreate(t.title, currentDate, t.task_group ?? undefined, t.task_category ?? undefined, t.duration_minutes ?? undefined)
+                        setMode('closed')
+                      }}
+                      className="w-full text-left text-xs px-3 py-1.5 rounded-md text-gray-300 hover:bg-primary-500/10 hover:text-primary-400 transition-colors flex items-center justify-between"
+                    >
+                      <span className="truncate">{t.name}</span>
+                      {t.duration_minutes && <span className="text-[9px] text-gray-600 flex-shrink-0">{t.duration_minutes}m</span>}
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
+
+      {mode === 'manage' && (
+        <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-400">Manage templates</span>
+            <button onClick={() => { setMode('closed'); setEditing(null) }} className="p-1 rounded text-gray-600 hover:text-white">
+              <X size={12} />
+            </button>
+          </div>
+          <div className="space-y-1 max-h-[280px] overflow-y-auto mb-2">
+            {templates.length === 0 ? (
+              <p className="text-xs text-gray-600 italic text-center py-4">
+                No templates yet. Click + Add below to create your first one.
+              </p>
+            ) : (
+              Object.entries(grouped).map(([cat, tmps]) => (
+                <div key={cat}>
+                  <div className="text-[9px] font-bold uppercase text-gray-500 px-2 py-1">{cat}</div>
+                  {tmps.map(t => (
+                    <div key={t.id} className="flex items-center justify-between gap-1 px-2 py-1 text-xs text-gray-400 bg-dark-surface/50 rounded group">
+                      <div className="min-w-0 flex-1 truncate">
+                        <span>{t.name}</span>
+                        {t.duration_minutes && <span className="text-[9px] text-gray-600 ml-2">{t.duration_minutes}m</span>}
+                      </div>
+                      <button
+                        onClick={() => setEditing(t)}
+                        className="p-0.5 text-gray-500 hover:text-primary-400 opacity-0 group-hover:opacity-100"
+                        title="Edit"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete template "${t.name}"?`)) deleteMut.mutate(t.id)
+                        }}
+                        className="p-0.5 text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                        title="Delete"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+          <button
+            onClick={() => setMode('add')}
+            className="w-full text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500"
+          >
+            + Add new template
+          </button>
+        </div>
+      )}
+
+      {(mode === 'add' || editing) && (
+        <TemplateForm
+          initial={editing}
+          onCancel={() => { setMode('manage'); setEditing(null) }}
+          onSave={(data) => {
+            if (editing) updateMut.mutate({ id: editing.id, ...data })
+            else createMut.mutate(data)
+            setMode('manage')
+          }}
+          busy={createMut.isPending || updateMut.isPending}
+        />
+      )}
+    </div>
+  )
+}
+
+function TemplateForm({ initial, onCancel, onSave, busy }: {
+  initial: ServerTemplate | null
+  onCancel: () => void
+  onSave: (body: Partial<ServerTemplate>) => void
+  busy: boolean
+}) {
+  const [name, setName] = useState(initial?.name ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [category, setCategory] = useState(initial?.category ?? 'General')
+  const [taskGroup, setTaskGroup] = useState(initial?.task_group ?? '')
+  const [priority, setPriority] = useState(initial?.priority ?? 'Medium')
+  const [duration, setDuration] = useState(initial?.duration_minutes ? String(initial.duration_minutes) : '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+
+  return (
+    <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50 space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold text-gray-400">{initial ? 'Edit template' : 'New template'}</span>
+        <button onClick={onCancel} className="p-1 rounded text-gray-600 hover:text-white">
+          <X size={12} />
+        </button>
+      </div>
+      <input value={name} onChange={e => setName(e.target.value)} placeholder="Template name (e.g. Morning briefing)" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title (what shows on the task)" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+      <div className="grid grid-cols-2 gap-1.5">
+        <input value={category} onChange={e => setCategory(e.target.value)} placeholder="Category" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+        <input value={taskGroup} onChange={e => setTaskGroup(e.target.value)} placeholder="Group" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        <select value={priority} onChange={e => setPriority(e.target.value)} className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white">
+          <option>Low</option><option>Medium</option><option>High</option><option>Urgent</option>
+        </select>
+        <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="Duration (min)" type="number" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+      </div>
+      <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600 resize-none" />
+      <button
+        onClick={() => {
+          if (!name.trim() || !title.trim()) return
+          onSave({
+            name: name.trim(), title: title.trim(),
+            category: category.trim() || 'General',
+            task_group: taskGroup.trim() || null,
+            priority,
+            duration_minutes: duration ? Number(duration) : null,
+            description: description.trim() || null,
+          })
+        }}
+        disabled={busy || !name.trim() || !title.trim()}
+        className="w-full text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500 disabled:opacity-40"
+      >
+        {busy ? 'Saving…' : initial ? 'Update' : 'Save template'}
+      </button>
     </div>
   )
 }
@@ -518,9 +606,34 @@ export function Planner() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete('/v1/admin/planner/tasks/' + id),
+    mutationFn: ({ id, scope }: { id: number; scope?: 'just_this' | 'all_future' | 'whole_series' }) =>
+      api.delete('/v1/admin/planner/tasks/' + id + (scope ? '?scope=' + scope : '')),
     onSuccess: () => { invalidate(); setExpandedTask(null); toast.success('Deleted') },
   })
+
+  /**
+   * For recurring tasks, prompt the user to pick the scope before
+   * deleting: just this occurrence, all future occurrences, or the
+   * whole series. Standalone tasks bypass the prompt.
+   */
+  const deleteWithScope = useCallback((task: any) => {
+    const isRecurring = task.recurring || task.recurring_parent_id
+    if (!isRecurring) {
+      if (confirm('Delete this task?')) deleteMutation.mutate({ id: task.id })
+      return
+    }
+    const choice = window.prompt(
+      'This task is part of a recurring series.\n\n'
+      + 'Type 1 to delete just this occurrence,\n'
+      + 'Type 2 to delete this + all future occurrences,\n'
+      + 'Type 3 to delete the WHOLE series.\n\n'
+      + 'Cancel to keep all.',
+      '1',
+    )
+    if (choice === '1') deleteMutation.mutate({ id: task.id, scope: 'just_this' })
+    else if (choice === '2') deleteMutation.mutate({ id: task.id, scope: 'all_future' })
+    else if (choice === '3') deleteMutation.mutate({ id: task.id, scope: 'whole_series' })
+  }, [deleteMutation])
 
   const copyMutation = useMutation({
     mutationFn: ({ id, task_date, employee_name }: any) => api.post('/v1/admin/planner/tasks/' + id + '/copy', { task_date, employee_name }),
@@ -594,16 +707,32 @@ export function Planner() {
     setShowModal(true)
   }
 
-  const applyTemplate = useCallback((t: { title: string; group?: string; category?: string; duration?: number }) => {
+  /**
+   * Apply a server-side template to the form. Replaces the title +
+   * group + category + duration + priority + description fields with
+   * the template's pre-filled values. Date / employee / time stay
+   * whatever the user already had.
+   */
+  const applyTemplate = useCallback((t: ServerTemplate) => {
     setForm(f => ({
       ...f,
       title: t.title,
-      task_group: t.group ?? f.task_group,
-      task_category: t.category ?? f.task_category,
-      duration_minutes: t.duration ? String(t.duration) : f.duration_minutes,
+      task_group: t.task_group ?? f.task_group,
+      task_category: t.task_category ?? f.task_category,
+      priority: t.priority ?? f.priority,
+      duration_minutes: t.duration_minutes ? String(t.duration_minutes) : f.duration_minutes,
+      description: t.description ?? f.description,
     }))
     setShowTemplatePicker(false)
   }, [])
+
+  // Fetch server-side templates for the in-form picker (same data as
+  // TaskTemplates uses; React Query dedupes the request).
+  const { data: formTemplates = [] } = useQuery<ServerTemplate[]>({
+    queryKey: ['planner-templates'],
+    queryFn: () => api.get('/v1/admin/planner/templates').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const openEdit = (task: any) => {
     setEditTask(task)
@@ -633,23 +762,25 @@ export function Planner() {
       body.status = editTask ? editTask.status : 'todo'
     }
 
-    // Handle recurring tasks
+    // Recurring tasks — Planner v2: one POST, backend expands the
+    // series. The old code fired N mutations client-side which was
+    // racy + wasteful. Map the form's `recurring_end_date` field to
+    // the backend's `recurring_until` column.
     if (!editTask && body.recurring && body.recurring !== 'none') {
-      const startDate = new Date(body.task_date)
-      const endDate = body.recurring_end_date ? new Date(body.recurring_end_date) : null
-      const increment = body.recurring === 'daily' ? 1 : body.recurring === 'weekly' ? 7 : 30
-
-      let currentDate = new Date(startDate)
-      while (!endDate || currentDate <= endDate) {
-        const dateStr = fmtDate(currentDate)
-        createMutation.mutate({ ...body, task_date: dateStr, recurring: undefined, recurring_end_date: undefined })
-        currentDate.setDate(currentDate.getDate() + increment)
-        if (endDate && currentDate > endDate) break
-        if (currentDate.getTime() - startDate.getTime() > 365 * 24 * 60 * 60 * 1000) break // Max 1 year
-      }
+      const payload: Record<string, unknown> = { ...body }
+      payload.recurring_until = body.recurring_end_date || null
+      delete payload.recurring_end_date
+      createMutation.mutate(payload)
     } else {
-      if (editTask) updateMutation.mutate({ id: editTask.id, ...body })
-      else createMutation.mutate(body)
+      // Strip recurring fields on standalone create — the backend
+      // accepts them but normalises 'none' → null anyway, so we keep
+      // the wire payload tidy.
+      const payload: Record<string, unknown> = { ...body }
+      if (payload.recurring === 'none') delete payload.recurring
+      delete payload.recurring_end_date
+
+      if (editTask) updateMutation.mutate({ id: editTask.id, ...payload })
+      else createMutation.mutate(payload)
     }
   }
 
@@ -829,7 +960,7 @@ export function Planner() {
                   onEdit={() => openEdit(task)}
                   onMove={() => setMoveTarget({ taskId: task.id, date: currentDate })}
                   onCopy={() => setCopyTarget({ taskId: task.id, date: currentDate })}
-                  onDelete={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task.id) }}
+                  onDelete={() => deleteWithScope(task)}
                   onToggleSubtask={(id) => toggleSubtaskMutation.mutate(id)}
                   onDeleteSubtask={(id) => deleteSubtaskMutation.mutate(id)}
                   onAddSubtask={handleAddSubtask}
@@ -1228,19 +1359,36 @@ export function Planner() {
                   </button>
                   {showTemplatePicker && (
                     <div className="border border-dark-border rounded-xl overflow-hidden mb-3 max-h-52 overflow-y-auto">
-                      {Object.entries(getTemplates()).map(([cat, items]) => (
-                        <div key={cat}>
-                          <div className="px-3 py-1.5 bg-dark-surface text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-dark-border/50">{cat}</div>
-                          <div className="flex flex-wrap gap-1 p-2 bg-dark-surface2/30">
-                            {(items as any[]).map((t, i) => (
-                              <button type="button" key={i} onClick={() => applyTemplate(t)}
-                                className="px-2.5 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all">
-                                {t.title}{t.duration ? <span className="ml-1 text-gray-600 text-[10px]">{t.duration}m</span> : null}
-                              </button>
-                            ))}
-                          </div>
+                      {formTemplates.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-xs text-gray-500 italic">
+                          No templates yet — create some via the side panel's ⚙ Manage button.
                         </div>
-                      ))}
+                      ) : (
+                        Object.entries(
+                          formTemplates.reduce<Record<string, ServerTemplate[]>>((acc, t) => {
+                            const k = t.category || 'General'
+                            ;(acc[k] ||= []).push(t)
+                            return acc
+                          }, {})
+                        ).map(([cat, items]) => (
+                          <div key={cat}>
+                            <div className="px-3 py-1.5 bg-dark-surface text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-dark-border/50">{cat}</div>
+                            <div className="flex flex-wrap gap-1 p-2 bg-dark-surface2/30">
+                              {items.map(t => (
+                                <button
+                                  type="button"
+                                  key={t.id}
+                                  onClick={() => applyTemplate(t)}
+                                  className="px-2.5 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all"
+                                >
+                                  {t.name}
+                                  {t.duration_minutes ? <span className="ml-1 text-gray-600 text-[10px]">{t.duration_minutes}m</span> : null}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
