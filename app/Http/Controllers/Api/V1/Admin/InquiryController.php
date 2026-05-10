@@ -687,4 +687,25 @@ class InquiryController extends Controller
 
         return response()->json($reasons);
     }
+
+    /**
+     * POST /v1/admin/inquiries/{inquiry}/guess-lost-reason — AI guesser
+     * the Lost modal calls when the rep clicks "Suggest from timeline".
+     * Returns the matched lost_reason_id + label + confidence + a one-
+     * sentence rationale showing what evidence the model picked up on.
+     */
+    public function guessLostReason(Inquiry $inquiry): JsonResponse
+    {
+        return response()->json($this->ai->guessLostReason($inquiry));
+    }
+
+    /**
+     * POST /v1/admin/inquiries/{inquiry}/draft-proposal — drafts a
+     * subject + body the agent can paste into an email composer or
+     * the activity timeline. CRM Phase 5.
+     */
+    public function draftProposal(Inquiry $inquiry): JsonResponse
+    {
+        return response()->json($this->ai->draftProposal($inquiry));
+    }
 }

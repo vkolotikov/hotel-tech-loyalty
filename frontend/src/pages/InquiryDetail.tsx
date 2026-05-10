@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, MessageSquare, Phone, Mail, Calendar as CalendarIcon, FileText,
   Sparkles, Clock, User, Building2, ChevronDown, Send, CheckCircle2, Plus,
   Tag, MapPin, AlertCircle, RefreshCw, Trophy, X, ArrowRight, Snowflake,
-  Flame,
+  Flame, Wand2, Mic, Square, Loader2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -195,6 +195,10 @@ export function InquiryDetail() {
   // Stage transitions: kind=won → Won modal; kind=lost → Lost picker
   const [pendingWon, setPendingWon] = useState<Stage | null>(null)
   const [pendingLost, setPendingLost] = useState<Stage | null>(null)
+  const [draftingProposal, setDraftingProposal] = useState(false)
+  // Pre-populate the activity composer when "Use as email draft" is clicked
+  // on the proposal modal. Cleared on next open.
+  const [composerSeed, setComposerSeed] = useState<{ type: string; subject?: string; body: string } | null>(null)
 
   const handleStagePick = (stage: Stage) => {
     if (stage.kind === 'won')  { setPendingWon(stage);  return }
@@ -226,6 +230,7 @@ export function InquiryDetail() {
         stages={stages}
         onBack={() => navigate(-1)}
         onPickStage={handleStagePick}
+        onDraftProposal={() => setDraftingProposal(true)}
         changing={changeStage.isPending}
       />
 
@@ -235,6 +240,8 @@ export function InquiryDetail() {
           activities={inq.activities ?? []}
           onAdd={(payload) => addActivity.mutate(payload)}
           adding={addActivity.isPending}
+          seed={composerSeed}
+          onSeedConsumed={() => setComposerSeed(null)}
         />
         <SmartPanelCol
           inq={inq}
@@ -259,17 +266,29 @@ export function InquiryDetail() {
           onSuccess={() => { setPendingLost(null) }}
         />
       )}
+      {draftingProposal && (
+        <ProposalModal
+          inq={inq}
+          onClose={() => setDraftingProposal(false)}
+          onUseAsEmail={(draft) => {
+            setComposerSeed({ type: 'email', subject: draft.subject, body: draft.body })
+            setDraftingProposal(false)
+            toast.success('Draft loaded into composer')
+          }}
+        />
+      )}
     </div>
   )
 }
 
 /* ── Header ──────────────────────────────────────────────────── */
 
-function Header({ inq, stages, onBack, onPickStage, changing }: {
+function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }: {
   inq: InquiryDetail
   stages: Stage[]
   onBack: () => void
   onPickStage: (stage: Stage) => void
+  onDraftProposal: () => void
   changing: boolean
 }) {
   const [stageOpen, setStageOpen] = useState(false)
@@ -308,50 +327,61 @@ function Header({ inq, stages, onBack, onPickStage, changing }: {
           </div>
         </div>
 
-        <div className="relative">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setStageOpen(s => !s)}
-            disabled={changing}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold disabled:opacity-50"
-            style={{
-              borderColor: stageColor + '60',
-              background: stageColor + '15',
-              color: stageColor,
-            }}
+            onClick={onDraftProposal}
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/15 hover:text-purple-200 text-xs font-bold"
+            title="AI: draft proposal email from this inquiry"
           >
-            {stage?.name ?? inq.status}
-            <ChevronDown size={14} />
+            <Wand2 size={13} />
+            Draft proposal
           </button>
 
-          {stageOpen && (
-            <div
-              className="absolute right-0 top-full mt-1.5 w-60 bg-dark-surface border border-dark-border rounded-xl shadow-2xl overflow-hidden z-30"
-              onMouseLeave={() => setStageOpen(false)}
+          <div className="relative">
+            <button
+              onClick={() => setStageOpen(s => !s)}
+              disabled={changing}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold disabled:opacity-50"
+              style={{
+                borderColor: stageColor + '60',
+                background: stageColor + '15',
+                color: stageColor,
+              }}
             >
-              {stages.map(s => {
-                const isWon = s.kind === 'won'
-                const isLost = s.kind === 'lost'
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => { onPickStage(s); setStageOpen(false) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-left text-sm"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: s.color }}
-                    />
-                    <span className="flex-1 text-white">{s.name}</span>
-                    {isWon && <Trophy size={11} className="text-emerald-400" />}
-                    {isLost && <X size={11} className="text-red-400" />}
-                    {!isWon && !isLost && (
-                      <ArrowRight size={10} className="text-t-secondary opacity-0 group-hover:opacity-100" />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          )}
+              {stage?.name ?? inq.status}
+              <ChevronDown size={14} />
+            </button>
+
+            {stageOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 w-60 bg-dark-surface border border-dark-border rounded-xl shadow-2xl overflow-hidden z-30"
+                onMouseLeave={() => setStageOpen(false)}
+              >
+                {stages.map(s => {
+                  const isWon = s.kind === 'won'
+                  const isLost = s.kind === 'lost'
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => { onPickStage(s); setStageOpen(false) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-left text-sm"
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: s.color }}
+                      />
+                      <span className="flex-1 text-white">{s.name}</span>
+                      {isWon && <Trophy size={11} className="text-emerald-400" />}
+                      {isLost && <X size={11} className="text-red-400" />}
+                      {!isWon && !isLost && (
+                        <ArrowRight size={10} className="text-t-secondary opacity-0 group-hover:opacity-100" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -430,10 +460,12 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
 
 /* ── Centre: Activity Timeline ──────────────────────────────── */
 
-function TimelineCol({ activities, onAdd, adding }: {
+function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
   activities: Activity[]
   onAdd: (payload: { type: string; subject?: string; body: string; duration_minutes?: number }) => void
   adding: boolean
+  seed: { type: string; subject?: string; body: string } | null
+  onSeedConsumed: () => void
 }) {
   const [filter, setFilter] = useState<string>('all')
   const filtered = useMemo(
@@ -475,7 +507,12 @@ function TimelineCol({ activities, onAdd, adding }: {
         )}
       </div>
 
-      <ActivityComposer onSubmit={onAdd} disabled={adding} />
+      <ActivityComposer
+        onSubmit={onAdd}
+        disabled={adding}
+        seed={seed}
+        onSeedConsumed={onSeedConsumed}
+      />
     </div>
   )
 }
@@ -515,14 +552,32 @@ function ActivityRow({ activity }: { activity: Activity }) {
   )
 }
 
-function ActivityComposer({ onSubmit, disabled }: {
+function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
   onSubmit: (p: { type: string; subject?: string; body: string; duration_minutes?: number }) => void
   disabled: boolean
+  seed: { type: string; subject?: string; body: string } | null
+  onSeedConsumed: () => void
 }) {
   const [type, setType] = useState<'note' | 'call' | 'email' | 'meeting'>('note')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [duration, setDuration] = useState('')
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<BlobPart[]>([])
+
+  // Apply a programmatic seed (e.g. from the AI proposal modal) once,
+  // then notify the parent so future opens don't reapply the same blob.
+  useEffect(() => {
+    if (!seed) return
+    if (seed.type === 'email' || seed.type === 'note' || seed.type === 'call' || seed.type === 'meeting') {
+      setType(seed.type)
+    }
+    setSubject(seed.subject ?? '')
+    setBody(seed.body)
+    onSeedConsumed()
+  }, [seed, onSeedConsumed])
 
   const submit = () => {
     if (!body.trim()) return
@@ -533,6 +588,57 @@ function ActivityComposer({ onSubmit, disabled }: {
       duration_minutes: (type === 'call' || type === 'meeting') && duration ? parseInt(duration) : undefined,
     })
     setBody(''); setSubject(''); setDuration('')
+  }
+
+  // CRM Phase 5 — Whisper voice notes. MediaRecorder records the agent's
+  // mic, then we POST the blob to the existing /chat-inbox/transcribe
+  // endpoint (already wired to gpt-4o-transcribe with whisper-1
+  // fallback). The returned text is APPENDED to the body so users can
+  // dictate multiple segments without losing previous content.
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      chunksRef.current = []
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        if (blob.size === 0) {
+          setTranscribing(false)
+          return
+        }
+        setTranscribing(true)
+        try {
+          const fd = new FormData()
+          fd.append('audio', blob, 'voice-note.webm')
+          fd.append('language', navigator.language || 'auto')
+          const res = await api.post('/v1/admin/chat-inbox/transcribe', fd)
+          const text = (res.data?.text ?? '').trim()
+          if (text) {
+            setBody(prev => prev ? `${prev}\n${text}` : text)
+            toast.success('Transcribed')
+          } else {
+            toast.error('Heard nothing — try again')
+          }
+        } catch {
+          toast.error('Transcription failed')
+        } finally {
+          setTranscribing(false)
+        }
+      }
+      recorder.start()
+      recorderRef.current = recorder
+      setRecording(true)
+    } catch {
+      toast.error('Microphone permission denied')
+    }
+  }
+
+  const stopRecording = () => {
+    recorderRef.current?.stop()
+    recorderRef.current = null
+    setRecording(false)
   }
 
   const tabs: ('note' | 'call' | 'email' | 'meeting')[] = ['note', 'call', 'email', 'meeting']
@@ -588,6 +694,18 @@ function ActivityComposer({ onSubmit, disabled }: {
           />
         )}
         <button
+          onClick={recording ? stopRecording : startRecording}
+          disabled={transcribing || disabled}
+          className={`rounded-md px-3 disabled:opacity-50 ${
+            recording
+              ? 'bg-red-500 text-white animate-pulse hover:bg-red-400'
+              : 'bg-dark-bg border border-dark-border text-t-secondary hover:text-white hover:border-accent/50'
+          }`}
+          title={recording ? 'Stop recording' : 'Voice note (Whisper)'}
+        >
+          {transcribing ? <Loader2 size={14} className="animate-spin" /> : recording ? <Square size={14} /> : <Mic size={14} />}
+        </button>
+        <button
           onClick={submit}
           disabled={!body.trim() || disabled}
           className="bg-accent text-black font-bold rounded-md px-3 disabled:opacity-50 hover:bg-accent/90"
@@ -595,7 +713,11 @@ function ActivityComposer({ onSubmit, disabled }: {
           <Send size={14} />
         </button>
       </div>
-      <p className="text-[10px] text-t-secondary mt-1.5">⌘/Ctrl + Enter to send</p>
+      <p className="text-[10px] text-t-secondary mt-1.5">
+        ⌘/Ctrl + Enter to send
+        {recording && <span className="text-red-400 font-bold ml-2">● Recording — click stop when done</span>}
+        {transcribing && <span className="text-accent ml-2">Transcribing…</span>}
+      </p>
     </div>
   )
 }
@@ -876,6 +998,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
   const qc = useQueryClient()
   const [reasonId, setReasonId] = useState<number | null>(null)
   const [note, setNote] = useState('')
+  const [aiGuess, setAiGuess] = useState<{ confidence: string; reasoning: string | null } | null>(null)
 
   const { data: reasons } = useQuery<LostReason[]>({
     queryKey: ['inquiry-lost-reasons'],
@@ -887,6 +1010,24 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
   useEffect(() => {
     if (reasonId === null && inq.lost_reason_id) setReasonId(inq.lost_reason_id)
   }, [inq.lost_reason_id, reasonId])
+
+  // CRM Phase 5 — AI lost-reason guesser. Reads the timeline + stay
+  // context, returns the most likely match from the seeded taxonomy
+  // plus a one-sentence rationale. Pre-selects the picker so the rep
+  // only has to confirm, not pick from scratch.
+  const guess = useMutation({
+    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/guess-lost-reason`).then(r => r.data),
+    onSuccess: (data) => {
+      if (data.lost_reason_id) {
+        setReasonId(data.lost_reason_id)
+        setAiGuess({ confidence: data.confidence, reasoning: data.reasoning })
+        toast.success(`Suggested: ${data.label}`)
+      } else {
+        toast.error(data.error ?? 'No clear signal — pick manually')
+      }
+    },
+    onError: () => toast.error('Could not guess'),
+  })
 
   const submit = useMutation({
     mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/lost`, {
@@ -908,10 +1049,30 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         <X size={20} className="text-red-400" />
         <h2 className="text-lg font-bold text-white">Mark as Lost</h2>
       </div>
-      <p className="text-sm text-t-secondary mb-4">
+      <p className="text-sm text-t-secondary mb-3">
         Closing this lead in <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
         Pick the reason — it powers the loss-reason breakdown on the funnel report.
       </p>
+
+      <button
+        onClick={() => guess.mutate()}
+        disabled={guess.isPending}
+        className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-2 rounded-md text-xs font-bold border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/15 disabled:opacity-50"
+      >
+        {guess.isPending
+          ? <><Loader2 size={12} className="animate-spin" /> Reading timeline…</>
+          : <><Wand2 size={12} /> Suggest from timeline</>
+        }
+      </button>
+
+      {aiGuess && (
+        <div className="bg-purple-500/5 border border-purple-500/20 rounded-md px-3 py-2 mb-3 text-xs">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-purple-300 mb-0.5">
+            <Sparkles size={9} /> AI suggestion · {aiGuess.confidence} confidence
+          </div>
+          {aiGuess.reasoning && <p className="text-white/80">{aiGuess.reasoning}</p>}
+        </div>
+      )}
 
       <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto">
         {reasons?.map(r => (
@@ -962,6 +1123,120 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         </button>
       </div>
     </Modal>
+  )
+}
+
+function ProposalModal({ inq, onClose, onUseAsEmail }: {
+  inq: InquiryDetail
+  onClose: () => void
+  onUseAsEmail: (draft: { subject: string; body: string }) => void
+}) {
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+
+  // Phase 5 — kick off the draft on mount, plus a refresh button for
+  // when the agent wants a different angle. Editable fields so the
+  // human can tighten before pasting into the composer.
+  const draft = useMutation({
+    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal`).then(r => r.data),
+    onSuccess: (data) => {
+      if (data.error) {
+        toast.error(data.error)
+        return
+      }
+      setSubject(data.subject ?? '')
+      setBody(data.body ?? '')
+    },
+    onError: () => toast.error('Could not draft proposal'),
+  })
+
+  useEffect(() => {
+    draft.mutate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-surface border border-dark-border rounded-xl p-5 w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Wand2 size={18} className="text-purple-400" />
+            <h2 className="text-lg font-bold text-white">AI proposal draft</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+        <p className="text-xs text-t-secondary mb-3">
+          Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.
+        </p>
+
+        {draft.isPending && !body ? (
+          <div className="py-12 text-center text-t-secondary text-sm flex flex-col items-center gap-2">
+            <Loader2 size={20} className="animate-spin text-purple-400" />
+            Drafting…
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto space-y-3">
+            <div>
+              <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
+                Subject
+              </label>
+              <input
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
+                Body
+              </label>
+              <textarea
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                rows={14}
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center gap-2 pt-3 mt-3 border-t border-dark-border">
+          <button
+            onClick={() => draft.mutate()}
+            disabled={draft.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-t-secondary hover:text-white disabled:opacity-50"
+            title="Try a different draft"
+          >
+            <RefreshCw size={12} className={draft.isPending ? 'animate-spin' : ''} />
+            Regenerate
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-t-secondary hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onUseAsEmail({ subject, body })}
+              disabled={!body.trim()}
+              className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 hover:bg-accent/90 flex items-center gap-2"
+            >
+              <Mail size={14} />
+              Use as email draft
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

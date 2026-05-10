@@ -524,6 +524,10 @@ Route::prefix('v1')->group(function () {
             Route::post('inquiries/{inquiry}/lost',       [InquiryController::class, 'markLost']);
             Route::get('inquiry-lost-reasons',            [InquiryController::class, 'lostReasons']);
 
+            // ─── CRM Phase 5: AI velocity ─────────────────────────────────
+            Route::post('inquiries/{inquiry}/guess-lost-reason', [InquiryController::class, 'guessLostReason']);
+            Route::post('inquiries/{inquiry}/draft-proposal',    [InquiryController::class, 'draftProposal']);
+
             // ─── CRM Phase 1: Activities (timeline) sub-resource ────────
             Route::get('inquiries/{inquiry}/activities',  [ActivityController::class, 'index']);
             Route::post('inquiries/{inquiry}/activities', [ActivityController::class, 'store']);
