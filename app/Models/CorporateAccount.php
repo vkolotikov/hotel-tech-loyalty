@@ -16,6 +16,8 @@ class CorporateAccount extends Model
         'contract_start', 'contract_end', 'negotiated_rate', 'rate_type',
         'discount_percentage', 'annual_room_nights_target', 'annual_room_nights_actual',
         'annual_revenue', 'payment_terms', 'credit_limit', 'status', 'notes',
+        // CRM Phase 7 — admin-defined custom fields (entity='corporate_account').
+        'custom_data',
     ];
 
     protected $casts = [
@@ -25,6 +27,7 @@ class CorporateAccount extends Model
         'discount_percentage' => 'decimal:2',
         'annual_revenue'      => 'decimal:2',
         'credit_limit'        => 'decimal:2',
+        'custom_data'         => 'array',
     ];
 
     public function inquiries(): HasMany

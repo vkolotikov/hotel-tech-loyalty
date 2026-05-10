@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Admin\TaskController;
 use App\Http\Controllers\Api\V1\Admin\PipelineController;
 use App\Http\Controllers\Api\V1\Admin\ReportingController;
 use App\Http\Controllers\Api\V1\Admin\SavedViewController;
+use App\Http\Controllers\Api\V1\Admin\CustomFieldController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
@@ -561,6 +562,15 @@ Route::prefix('v1')->group(function () {
             Route::post('saved-views',                                 [SavedViewController::class, 'store']);
             Route::put('saved-views/{view}',                           [SavedViewController::class, 'update']);
             Route::delete('saved-views/{view}',                        [SavedViewController::class, 'destroy']);
+
+            // ─── CRM Phase 7: Custom fields (per-entity, per-org) ─────────
+            Route::get('custom-fields',                 [CustomFieldController::class, 'index']);
+            Route::post('custom-fields',                [CustomFieldController::class, 'store']);
+            Route::put('custom-fields/{field}',         [CustomFieldController::class, 'update']);
+            Route::delete('custom-fields/{field}',      [CustomFieldController::class, 'destroy']);
+            Route::post('custom-fields/reorder',        [CustomFieldController::class, 'reorder']);
+            Route::post('custom-fields/apply-preset',   [CustomFieldController::class, 'applyPreset']);
+            Route::get('custom-fields/presets',         [CustomFieldController::class, 'presets']);
 
             // ─── CRM Phase 4: Reporting ───────────────────────────────────
             Route::get('reporting/forecast',            [ReportingController::class, 'forecast']);

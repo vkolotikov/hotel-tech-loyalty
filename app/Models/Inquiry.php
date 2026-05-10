@@ -26,6 +26,9 @@ class Inquiry extends Model
         'pipeline_id', 'pipeline_stage_id', 'lost_reason_id',
         'ai_brief', 'ai_brief_at', 'ai_intent',
         'ai_win_probability', 'ai_going_cold_risk', 'ai_suggested_action',
+        // CRM Phase 7 — admin-defined custom fields, stored as jsonb.
+        // Schema lives in the custom_fields table (entity='inquiry').
+        'custom_data',
     ];
 
     protected $casts = [
@@ -41,6 +44,7 @@ class Inquiry extends Model
         // CRM Phase 1 casts
         'ai_brief_at'         => 'datetime',
         'ai_win_probability'  => 'integer',
+        'custom_data'         => 'array',
     ];
 
     public function guest(): BelongsTo

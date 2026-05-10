@@ -8,6 +8,7 @@ use App\Models\Inquiry;
 use App\Models\InquiryLostReason;
 use App\Models\PipelineStage;
 use App\Models\Reservation;
+use App\Services\CustomFieldService;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class InquiryController extends Controller
     public function __construct(
         protected RealtimeEventService $realtime,
         protected InquiryAiService $ai,
+        protected CustomFieldService $customFields,
     ) {}
     public function index(Request $request): JsonResponse
     {
@@ -99,11 +101,15 @@ class InquiryController extends Controller
             'next_task_due'        => 'nullable|date',
             'next_task_notes'      => 'nullable|string',
             'notes'                => 'nullable|string',
+            'custom_data'          => 'nullable|array',
         ]);
 
         if (!empty($v['check_in']) && !empty($v['check_out'])) {
             $v['num_nights'] = (int) date_diff(date_create($v['check_in']), date_create($v['check_out']))->days;
         }
+
+        // CRM Phase 7 — sanitize custom fields against the active schema.
+        $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data'] ?? null);
 
         $inquiry = Inquiry::create($v);
         $inquiry->load(['guest:id,full_name', 'property:id,name,code']);
@@ -176,12 +182,17 @@ class InquiryController extends Controller
             'next_task_notes'      => 'nullable|string',
             'next_task_completed'  => 'nullable|boolean',
             'notes'                => 'nullable|string',
+            'custom_data'          => 'nullable|array',
         ]);
 
         $checkIn  = $v['check_in'] ?? $inquiry->check_in?->toDateString();
         $checkOut = $v['check_out'] ?? $inquiry->check_out?->toDateString();
         if ($checkIn && $checkOut) {
             $v['num_nights'] = (int) date_diff(date_create($checkIn), date_create($checkOut))->days;
+        }
+
+        if (array_key_exists('custom_data', $v)) {
+            $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data']);
         }
 
         $inquiry->update($v);

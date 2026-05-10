@@ -23,6 +23,8 @@ class Guest extends Model
         'total_stays', 'total_nights', 'total_revenue', 'avg_daily_rate',
         'first_stay_date', 'last_stay_date', 'last_activity_at',
         'external_source', 'external_ref', 'email_key', 'phone_key', 'notes',
+        // CRM Phase 7 — admin-defined custom fields (entity='guest').
+        'custom_data',
     ];
 
     protected $hidden = ['passport_no', 'id_number'];
@@ -39,6 +41,7 @@ class Guest extends Model
         'last_stay_date'   => 'date',
         'total_revenue'    => 'decimal:2',
         'avg_daily_rate'   => 'decimal:2',
+        'custom_data'      => 'array',
     ];
 
     public function getPassportMaskedAttribute(): ?string

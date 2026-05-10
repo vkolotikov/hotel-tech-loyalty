@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CorporateAccount;
+use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CorporateAccountController extends Controller
 {
+    public function __construct(protected CustomFieldService $customFields) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = CorporateAccount::query();
@@ -50,7 +53,10 @@ class CorporateAccountController extends Controller
             'payment_terms'             => 'nullable|string|max:50',
             'credit_limit'              => 'nullable|numeric|min:0',
             'notes'                     => 'nullable|string',
+            'custom_data'               => 'nullable|array',
         ]);
+
+        $v['custom_data'] = $this->customFields->validate('corporate_account', $v['custom_data'] ?? null);
 
         return response()->json(CorporateAccount::create($v), 201);
     }
@@ -163,7 +169,12 @@ class CorporateAccountController extends Controller
             'credit_limit'              => 'nullable|numeric|min:0',
             'status'                    => 'nullable|string|max:30',
             'notes'                     => 'nullable|string',
+            'custom_data'               => 'nullable|array',
         ]);
+
+        if (array_key_exists('custom_data', $v)) {
+            $v['custom_data'] = $this->customFields->validate('corporate_account', $v['custom_data']);
+        }
 
         $corporateAccount->update($v);
         return response()->json($corporateAccount);

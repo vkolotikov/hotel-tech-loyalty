@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { CustomFieldsForm } from './CustomFields'
 
 /**
  * Shared task editor drawer. Used by:
@@ -31,6 +32,7 @@ export interface TaskDrawerTask {
   description: string | null
   due_at: string | null
   inquiry_id: number | null
+  custom_data?: Record<string, any> | null
 }
 
 interface Props {
@@ -56,6 +58,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
   const [dueAt, setDueAt] = useState(task?.due_at ? task.due_at.slice(0, 16) : '')
+  const [customData, setCustomData] = useState<Record<string, any>>(task?.custom_data ?? {})
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -70,6 +73,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
         title,
         description: description || null,
         due_at: dueAt || null,
+        custom_data: customData,
       }
       if (isNew && defaultInquiryId) payload.inquiry_id = defaultInquiryId
       return isNew
@@ -181,6 +185,14 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
               ))}
             </div>
           </div>
+
+          <CustomFieldsForm
+            entity="task"
+            values={customData}
+            onChange={setCustomData}
+            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent"
+            layout="stack"
+          />
 
           {(task?.inquiry_id ?? defaultInquiryId) && (
             <div className="bg-dark-bg border border-dark-border rounded-md p-3 text-xs text-t-secondary">

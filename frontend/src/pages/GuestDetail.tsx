@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { SendReviewButton } from '../components/SendReviewButton';
 import { ContactActions } from '../components/ContactActions';
 import { ActivityTimeline } from '../components/ActivityTimeline';
+import { CustomFieldsForm, CustomFieldsDisplay } from '../components/CustomFields';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, User, Mail, Star, Calendar,
@@ -58,6 +59,7 @@ export function GuestDetail() {
         dietary_preferences: g.dietary_preferences ?? '',
         lead_source: g.lead_source ?? '',
         notes: g.notes ?? '',
+        custom_data: g.custom_data ?? {},
       });
     }
   }, [guest, editing]);
@@ -335,6 +337,21 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
           <p className="text-gray-300 text-sm whitespace-pre-wrap">
             {g.notes || 'No notes yet.'}
           </p>
+        )}
+      </div>
+
+      {/* Custom fields — admin-defined per industry. Renders nothing
+          if no custom fields are configured for guests. */}
+      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5 md:col-span-2">
+        {editing ? (
+          <CustomFieldsForm
+            entity="guest"
+            values={form.custom_data ?? {}}
+            onChange={(next) => set('custom_data', next)}
+            inputClassName={inp}
+          />
+        ) : (
+          <CustomFieldsDisplay entity="guest" values={g.custom_data} />
         )}
       </div>
 

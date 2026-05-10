@@ -31,12 +31,15 @@ class Task extends Model
         'type', 'title', 'description',
         'due_at', 'assigned_to', 'created_by',
         'completed_at', 'outcome', 'recurring_rule',
+        // CRM Phase 7 — admin-defined custom fields (entity='task').
+        'custom_data',
     ];
 
     protected $casts = [
         'due_at'         => 'datetime',
         'completed_at'   => 'datetime',
         'recurring_rule' => 'array',
+        'custom_data'    => 'array',
     ];
 
     public function inquiry(): BelongsTo

@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import { Plus, Search, ChevronLeft, ChevronRight, Trash2, Download, Filter, Sparkles, Loader2, Link2, RefreshCw } from 'lucide-react'
+import { CustomFieldsForm } from '../components/CustomFields'
 
 const VIP_COLORS: Record<string, string> = {
   Standard: 'bg-gray-500/20 text-gray-400',
@@ -36,6 +37,7 @@ const LIFECYCLE_COLORS: Record<string, string> = {
 const EMPTY_FORM = {
   salutation: '', first_name: '', last_name: '', full_name: '', email: '', phone: '', mobile: '',
   company: '', nationality: '', country: '', guest_type: '', vip_level: 'Standard', lead_source: '', notes: '',
+  custom_data: {} as Record<string, any>,
 }
 
 export function Guests() {
@@ -370,6 +372,12 @@ export function Guests() {
                 <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
+              <CustomFieldsForm
+                entity="guest"
+                values={form.custom_data}
+                onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
+                inputClassName={inp}
+              />
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">

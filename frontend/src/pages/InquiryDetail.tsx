@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
+import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields } from '../components/CustomFields'
 
 /**
  * Lead Detail page — `/inquiries/:id`. Three-column layout
@@ -58,6 +59,7 @@ interface InquiryDetail {
   ai_win_probability: number | null
   ai_going_cold_risk: string | null
   ai_suggested_action: string | null
+  custom_data: Record<string, any> | null
   guest?: { id: number; full_name: string; email: string | null; phone: string | null; company: string | null }
   property?: { id: number; name: string }
   corporate_account?: { id: number; name: string }
@@ -441,10 +443,85 @@ function ProfileCol({ inq }: { inq: InquiryDetail }) {
         </>
       )}
 
+      <CustomFieldsSection inq={inq} />
+
       {inq.guest_id && (
         <Link to={`/guest/${inq.guest_id}`} className="block text-xs text-accent hover:underline pt-2 border-t border-dark-border">
           Open guest profile →
         </Link>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Read-only display + Edit pencil. Opens an inline form drawer that
+ * PATCHes /v1/admin/inquiries/{id} with a fresh custom_data object.
+ * Only renders when the org has at least one active custom field for
+ * the inquiry entity — no field defs, no section.
+ */
+function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
+  const qc = useQueryClient()
+  const { data: fields } = useCustomFields('inquiry')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<Record<string, any>>({})
+
+  const save = useMutation({
+    mutationFn: () => api.put(`/v1/admin/inquiries/${inq.id}`, { custom_data: draft }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiry', String(inq.id)] })
+      qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
+      toast.success('Saved')
+      setEditing(false)
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Save failed'
+      toast.error(msg)
+    },
+  })
+
+  if (!fields || fields.length === 0) return null
+
+  const start = () => {
+    setDraft(inq.custom_data ?? {})
+    setEditing(true)
+  }
+
+  return (
+    <div className="border-t border-dark-border pt-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-purple-300">
+          <Sparkles size={11} /> Custom fields
+        </div>
+        {!editing && (
+          <button onClick={start} className="text-[10px] text-t-secondary hover:text-accent flex items-center gap-1">
+            Edit
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <>
+          <CustomFieldsForm
+            entity="inquiry"
+            values={draft}
+            onChange={setDraft}
+            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm placeholder-t-secondary outline-none focus:border-accent"
+            layout="stack"
+          />
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={() => setEditing(false)} className="px-3 py-1 text-xs text-t-secondary hover:text-white">Cancel</button>
+            <button
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+              className="bg-accent text-black font-bold rounded-md px-3 py-1 text-xs disabled:opacity-50"
+            >
+              {save.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <CustomFieldsDisplay entity="inquiry" values={inq.custom_data} dense />
       )}
     </div>
   )

@@ -8,6 +8,7 @@ use App\Models\GuestActivity;
 use App\Models\GuestImportRun;
 use App\Models\GuestSegment;
 use App\Models\GuestTag;
+use App\Services\CustomFieldService;
 use App\Services\GuestMemberLinkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class GuestController extends Controller
 {
     public function __construct(
         protected GuestMemberLinkService $linkService,
+        protected CustomFieldService $customFields,
     ) {}
     public function index(Request $request): JsonResponse
     {
@@ -67,10 +69,14 @@ class GuestController extends Controller
             'importance'         => 'nullable|string|max:30',
             'member_id'          => 'nullable|integer|exists:loyalty_members,id',
             'notes'              => 'nullable|string',
+            'custom_data'        => 'nullable|array',
         ]);
 
         if (!empty($v['email'])) $v['email_key'] = Guest::normalizeEmailKey($v['email']);
         if (!empty($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
+
+        // CRM Phase 7 — sanitize against the active custom-field schema.
+        $v['custom_data'] = $this->customFields->validate('guest', $v['custom_data'] ?? null);
 
         // Strip nulls so DB column defaults (e.g. guest_type='Individual',
         // vip_level='Standard') apply instead of Postgres rejecting explicit
@@ -214,15 +220,23 @@ class GuestController extends Controller
             'importance'         => 'nullable|string|max:30',
             'member_id'          => 'nullable|integer|exists:loyalty_members,id',
             'notes'              => 'nullable|string',
+            'custom_data'        => 'nullable|array',
         ]);
 
         if (isset($v['email'])) $v['email_key'] = Guest::normalizeEmailKey($v['email']);
         if (isset($v['phone'])) $v['phone_key'] = Guest::normalizePhoneKey($v['phone']);
 
+        // CRM Phase 7 — sanitize custom fields. Capture before array_filter
+        // so an explicit empty/null custom_data still goes through the
+        // validator (allows the user to clear all custom values).
+        $hasCustom = array_key_exists('custom_data', $v);
+        $custom = $hasCustom ? $this->customFields->validate('guest', $v['custom_data']) : null;
+
         // Strip nulls so DB column defaults (guest_type, vip_level,
         // lifecycle_status, importance, etc.) aren't violated and existing
         // values aren't wiped by an empty edit form field.
         $v = array_filter($v, fn($val) => $val !== null);
+        if ($hasCustom) $v['custom_data'] = $custom;
 
         try {
             $guest->update($v);

@@ -7,6 +7,7 @@ import {
   Trophy, X, Flag, Save, LayoutGrid, Eye, EyeOff,
 } from 'lucide-react'
 import { useSettings, DEFAULT_INQUIRY_FIELDS, type InquiryFieldConfig } from '../lib/crmSettings'
+import { CustomFieldsAdmin } from './CustomFieldsAdmin'
 
 /**
  * Settings → Pipelines tab. Manages:
@@ -172,6 +173,11 @@ export function PipelinesAdmin() {
       {/* Field visibility — admin picks which fields show on the Add
           Inquiry form and which columns appear in the leads list. */}
       <FieldLayoutEditor />
+
+      {/* Custom fields — admin-defined per entity. Multi-industry: a
+          beauty salon adds skin_type / allergies to Guest, a clinic
+          adds DOB + insurance, etc. Industry presets at the top. */}
+      <CustomFieldsAdmin />
     </div>
   )
 }

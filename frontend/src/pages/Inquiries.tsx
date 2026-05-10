@@ -11,6 +11,7 @@ import { PipelineInsights } from '../components/PipelineInsights'
 import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
 import { BrandBadge } from '../components/BrandBadge'
 import { SavedViews } from '../components/SavedViews'
+import { CustomFieldsForm } from '../components/CustomFields'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -44,6 +45,8 @@ const EMPTY_FORM = {
   rate_offered: '', total_value: '', status: 'New', priority: 'Medium',
   assigned_to: '', source: '', special_requests: '', notes: '',
   event_name: '', event_pax: '', function_space: '', catering_required: false, av_required: false,
+  // CRM Phase 7 — admin-defined custom fields, posted as a sub-object.
+  custom_data: {} as Record<string, any>,
 }
 
 export function Inquiries() {
@@ -988,6 +991,16 @@ export function Inquiries() {
                   <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
                 </div>
               )}
+
+              {/* CRM Phase 7 — admin-defined custom fields. Renders nothing
+                  if no fields are configured for the inquiry entity. */}
+              <CustomFieldsForm
+                entity="inquiry"
+                values={form.custom_data}
+                onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
+                inputClassName={inp}
+              />
+
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">

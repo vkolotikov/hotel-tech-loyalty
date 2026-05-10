@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Task;
+use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,6 +21,8 @@ use Illuminate\Http\Request;
  */
 class TaskController extends Controller
 {
+    public function __construct(protected CustomFieldService $customFields) {}
+
     public function index(Request $request): JsonResponse
     {
         $params = $request->validate([
@@ -71,11 +74,13 @@ class TaskController extends Controller
             'description'          => 'nullable|string|max:4000',
             'due_at'               => 'nullable|date',
             'assigned_to'          => 'nullable|integer|exists:users,id',
+            'custom_data'          => 'nullable|array',
         ]);
 
         $data['type']        = $data['type'] ?? 'follow_up';
         $data['created_by']  = $request->user()->id;
         $data['assigned_to'] = $data['assigned_to'] ?? $request->user()->id;
+        $data['custom_data'] = $this->customFields->validate('task', $data['custom_data'] ?? null);
 
         $task = Task::create($data);
         $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
@@ -91,7 +96,12 @@ class TaskController extends Controller
             'description' => 'sometimes|nullable|string|max:4000',
             'due_at'      => 'sometimes|nullable|date',
             'assigned_to' => 'sometimes|nullable|integer|exists:users,id',
+            'custom_data' => 'sometimes|nullable|array',
         ]);
+
+        if (array_key_exists('custom_data', $data)) {
+            $data['custom_data'] = $this->customFields->validate('task', $data['custom_data']);
+        }
 
         $task->fill($data)->save();
         $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);

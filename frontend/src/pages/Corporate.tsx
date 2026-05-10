@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react'
+import { CustomFieldsForm, CustomFieldsDisplay } from '../components/CustomFields'
 
 const STATUS_COLORS: Record<string, string> = {
   Active: 'bg-green-500/20 text-green-400',
@@ -20,6 +21,7 @@ const EMPTY_FORM = {
   rate_type: '', discount_percentage: '', annual_room_nights_target: '',
   payment_terms: '', credit_limit: '', billing_address: '', billing_email: '',
   tax_id: '', notes: '',
+  custom_data: {} as Record<string, any>,
 }
 
 export function Corporate() {
@@ -226,6 +228,12 @@ export function Corporate() {
                   <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
                     className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                 </div>
+                <CustomFieldsForm
+                  entity="corporate_account"
+                  values={form.custom_data}
+                  onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
+                  inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">Cancel</button>
                   <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
@@ -407,6 +415,8 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
       </div>
       {info.billing_address && <div><span className="text-xs text-t-secondary">Billing Address</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
       {info.notes && <div><span className="text-xs text-t-secondary">Notes</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
+
+      <CustomFieldsDisplay entity="corporate_account" values={info.custom_data} />
 
       {detail?.recent_inquiries?.length > 0 && (
         <div>
