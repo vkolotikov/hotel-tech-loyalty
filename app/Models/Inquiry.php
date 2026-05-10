@@ -29,6 +29,9 @@ class Inquiry extends Model
         // CRM Phase 7 — admin-defined custom fields, stored as jsonb.
         // Schema lives in the custom_fields table (entity='inquiry').
         'custom_data',
+        // CRM Phase 10 — link to the lead-capture form that created
+        // this inquiry, so the funnel report can attribute leads.
+        'lead_form_id',
     ];
 
     protected $casts = [

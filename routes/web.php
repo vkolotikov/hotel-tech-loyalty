@@ -172,6 +172,49 @@ Route::get('/review/{id}', function (int $id, \Illuminate\Http\Request $request)
         ->header('Content-Security-Policy', "frame-ancestors *");
 })->where('id', '[0-9]+');
 
+// ─── Public Lead-Capture Form (CRM Phase 10) ───────────────────────────────
+// Embeddable form rendered as a standalone HTML page. The customer's
+// website embeds it via <iframe src="/form/{embed_key}">. The form
+// posts to /api/v1/public/lead-forms/{key}/submit which creates a
+// Guest + Inquiry in the CRM.
+Route::get('/form/{embedKey}', function (string $embedKey) {
+    $form = \App\Models\LeadForm::withoutGlobalScopes()
+        ->where('embed_key', $embedKey)
+        ->where('is_active', true)
+        ->first();
+    if (!$form) abort(404, 'Form not found.');
+
+    $design = $form->design ?: \App\Models\LeadForm::defaultDesign();
+    $isDark = ($design['theme'] ?? 'light') === 'dark';
+    $fields = $form->fields ?: \App\Models\LeadForm::defaultFields();
+
+    // Resolve dropdown options from the org's CRM settings (e.g.
+    // inquiry_types) for any field that has options_source set. This
+    // keeps the public form in sync with the admin's lists.
+    $visibleFields = collect($fields)
+        ->filter(fn ($f) => !empty($f['enabled']))
+        ->map(function ($f) use ($form) {
+            if (($f['options_source'] ?? null) === 'inquiry_types') {
+                $val = \App\Models\CrmSetting::withoutGlobalScopes()
+                    ->where('organization_id', $form->organization_id)
+                    ->where('key', 'inquiry_types')
+                    ->value('value');
+                $f['options'] = is_array($val) ? array_values($val)
+                    : (is_string($val) ? (json_decode($val, true) ?: []) : []);
+            }
+            return $f;
+        })
+        ->values()
+        ->all();
+
+    $submitUrl = rtrim(url('/'), '/') . "/api/v1/public/lead-forms/{$form->embed_key}/submit";
+
+    return response()
+        ->view('lead-form', compact('form', 'design', 'fields', 'visibleFields', 'submitUrl', 'isDark'))
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+});
+
 // ─── Public Privacy Policy ──────────────────────────────────────────────────
 // Linked from the App Store + Google Play store listings and from the
 // in-app footers. Must stay reachable without auth and with a stable URL —
@@ -186,7 +229,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|privacy).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|form/|privacy).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

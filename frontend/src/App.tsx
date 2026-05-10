@@ -45,6 +45,7 @@ const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ defaul
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })))
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })))
+const LeadForms = lazy(() => import('./pages/LeadForms').then(m => ({ default: m.LeadForms })))
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
@@ -200,6 +201,7 @@ export default function App() {
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
           <Route path="/tasks" element={<LazyRoute><Tasks /></LazyRoute>} />
           <Route path="/reports" element={<LazyRoute><Reports /></LazyRoute>} />
+          <Route path="/lead-forms" element={<LazyRoute><LeadForms /></LazyRoute>} />
           <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />

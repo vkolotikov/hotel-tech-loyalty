@@ -33,6 +33,8 @@ use App\Http\Controllers\Api\V1\Admin\ReportingController;
 use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\CustomFieldController;
 use App\Http\Controllers\Api\V1\Admin\IndustryPresetController;
+use App\Http\Controllers\Api\V1\Admin\LeadFormController;
+use App\Http\Controllers\Api\V1\Public\LeadFormPublicController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
@@ -163,6 +165,15 @@ Route::prefix('v1')->group(function () {
 
         // In-chat service booking — tapped from [BOOKING_CONFIRM] card
         Route::post('{widgetKey}/book-service',   [WidgetChatController::class, 'bookService'])->middleware('throttle:10,1');
+    });
+
+    // ─── Public Lead-Capture Forms (CRM Phase 10) ──────────────────────
+    // Throttle is generous on read (the iframe page hits config) but
+    // strict on submit to keep spam in check. embed_key is the only
+    // gate — admins regenerate it from the editor when leaked.
+    Route::prefix('public/lead-forms')->middleware('throttle:200,1')->group(function () {
+        Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
+        Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1');
     });
 
     // ─── Public diagnostic endpoint (no auth) ────────────────────────────────
@@ -576,6 +587,15 @@ Route::prefix('v1')->group(function () {
             // ─── CRM Phase 9: One-click industry setup ────────────────────
             Route::get('industry-presets',              [IndustryPresetController::class, 'index']);
             Route::post('industry-presets/apply',       [IndustryPresetController::class, 'apply']);
+
+            // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
+            Route::get('lead-forms',                            [LeadFormController::class, 'index']);
+            Route::post('lead-forms',                           [LeadFormController::class, 'store']);
+            Route::get('lead-forms/{leadForm}',                 [LeadFormController::class, 'show']);
+            Route::put('lead-forms/{leadForm}',                 [LeadFormController::class, 'update']);
+            Route::delete('lead-forms/{leadForm}',              [LeadFormController::class, 'destroy']);
+            Route::post('lead-forms/{leadForm}/regenerate-key', [LeadFormController::class, 'regenerateKey']);
+            Route::get('lead-forms/{leadForm}/submissions',     [LeadFormController::class, 'submissions']);
 
             // ─── CRM Phase 4: Reporting ───────────────────────────────────
             Route::get('reporting/forecast',            [ReportingController::class, 'forecast']);
