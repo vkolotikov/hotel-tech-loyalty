@@ -102,7 +102,31 @@ class InquiryController extends Controller
 
     public function show(Inquiry $inquiry): JsonResponse
     {
-        $inquiry->load(['guest', 'property', 'corporateAccount', 'reservations' => fn($q) => $q->latest()]);
+        // CRM Phase 1: extra eager loads for the full lead-detail page
+        // (pipeline + stage + lost-reason for the header chip + status
+        // dropdown, activities/openTasks for the timeline + sidebar).
+        // The legacy minimal payload still works because we're only
+        // adding nested data, not reshaping the top-level response.
+        $inquiry->load([
+            'guest',
+            'property',
+            'corporateAccount',
+            'reservations'  => fn($q) => $q->latest(),
+            // Phase 1 — eager-load the whole pipeline + its stages in one
+            // go so the lead-detail page can render the stage dropdown
+            // without a second roundtrip. Stage list is small (≤ ~10 rows
+            // per pipeline) so the over-fetch is cheaper than the extra
+            // request.
+            'pipeline:id,name',
+            'pipeline.stages:id,pipeline_id,name,slug,color,kind,sort_order,default_win_probability',
+            'pipelineStage:id,pipeline_id,name,slug,color,kind,sort_order,default_win_probability',
+            'lostReason:id,label',
+            'activities' => fn($q) => $q
+                ->with('creator:id,name,email')
+                ->latest('occurred_at')
+                ->limit(50),
+            'openTasks'  => fn($q) => $q->with('assignee:id,name'),
+        ]);
         return response()->json($inquiry);
     }
 

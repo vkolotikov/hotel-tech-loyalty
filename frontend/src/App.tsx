@@ -29,6 +29,7 @@ const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const Engagement = lazy(() => import('./pages/Engagement').then(m => ({ default: m.Engagement })))
 const EngagementLive = lazy(() => import('./pages/EngagementLive').then(m => ({ default: m.EngagementLive })))
+const InquiryDetail = lazy(() => import('./pages/InquiryDetail').then(m => ({ default: m.InquiryDetail })))
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
 const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ default: m.CampaignDetail })))
 const Reviews = lazy(() => import('./pages/Reviews').then(m => ({ default: m.Reviews })))
@@ -194,6 +195,7 @@ export default function App() {
           <Route path="/guests" element={<Navigate to="/members" replace />} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
+          <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
           <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />

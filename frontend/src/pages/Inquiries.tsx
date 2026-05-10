@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
@@ -501,9 +502,15 @@ export function Inquiries() {
 
                     {/* Guest cell — name, company, property + source pills,
                         contact links. Heavy lifting in this cell so the
-                        rest of the row stays narrow. */}
+                        rest of the row stays narrow. CRM Phase 1: name
+                        is a Link to the new lead detail page. */}
                     <td className="px-4 py-3 max-w-[260px]">
-                      <div className="font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                      <Link
+                        to={`/inquiries/${inq.id}`}
+                        className="font-semibold text-white hover:text-accent truncate block transition-colors"
+                      >
+                        {inq.guest?.full_name ?? '—'}
+                      </Link>
                       {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {inq.property?.name && (

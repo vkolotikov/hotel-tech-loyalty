@@ -26,6 +26,8 @@ use App\Http\Controllers\Api\V1\Admin\CampaignSegmentController;
 use App\Http\Controllers\Api\V1\Admin\EmailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\GuestController;
 use App\Http\Controllers\Api\V1\Admin\InquiryController;
+use App\Http\Controllers\Api\V1\Admin\ActivityController;
+use App\Http\Controllers\Api\V1\Admin\TaskController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
@@ -512,6 +514,18 @@ Route::prefix('v1')->group(function () {
             Route::delete('inquiries/{inquiry}',          [InquiryController::class, 'destroy']);
             Route::post('inquiries/{inquiry}/complete-task', [InquiryController::class, 'completeTask']);
             Route::post('inquiries/{inquiry}/log-contact',   [InquiryController::class, 'logContact']);
+
+            // ─── CRM Phase 1: Activities (timeline) sub-resource ────────
+            Route::get('inquiries/{inquiry}/activities',  [ActivityController::class, 'index']);
+            Route::post('inquiries/{inquiry}/activities', [ActivityController::class, 'store']);
+
+            // ─── CRM Phase 1: Tasks ──────────────────────────────────────
+            Route::get('tasks',                 [TaskController::class, 'index']);
+            Route::post('tasks',                [TaskController::class, 'store']);
+            Route::put('tasks/{task}',          [TaskController::class, 'update']);
+            Route::post('tasks/{task}/complete',[TaskController::class, 'complete']);
+            Route::post('tasks/{task}/reopen',  [TaskController::class, 'reopen']);
+            Route::delete('tasks/{task}',       [TaskController::class, 'destroy']);
 
             // ─── CRM: Reservations ────────────────────────────────────────────
             Route::get('reservations',                       [ReservationController::class, 'index']);
