@@ -1851,7 +1851,11 @@ export function Planner() {
           setForm(f => ({ ...f, task_date: fmtDate(d) }))
         }
 
-        const groups = ['Housekeeping', 'Front Desk', 'Maintenance', 'F&B', 'Events', 'Sales', 'Management', 'Custom']
+        // Pull the live group list from settings so the drawer
+        // mirrors whatever the admin configured in Settings → Planner.
+        // Always include "Custom" as the bottom-row fallback for tasks
+        // that don't fit a configured group.
+        const groups = [...(settings.planner_groups || []), 'Custom']
         const activeMeta = TASK_GROUP_META[form.task_group] ?? CUSTOM_GROUP_META
 
         return (

@@ -10,12 +10,13 @@ import {
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck,
-  BookOpen, Search, HelpCircle, FileText, GitBranch,
+  BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSubscription } from '../hooks/useSubscription'
 import { BookingTab } from '../components/settings/BookingTab'
 import { PipelinesAdmin } from '../components/PipelinesAdmin'
+import { PlannerSettings } from '../components/PlannerSettings'
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -220,6 +221,7 @@ const TABS: Tab[] = [
   { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
   { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true, product: 'booking' },
   { id: 'pipelines',     label: 'Pipelines',       icon: GitBranch,  desc: 'CRM pipelines, stages & lost reasons', custom: true },
+  { id: 'planner',       label: 'Planner',         icon: ClipboardList, desc: 'Task groups, templates & industry presets', custom: true },
   { id: 'mobile_app',    label: 'Mobile App',      icon: Smartphone, desc: 'Loyalty mobile app appearance & preview', groups: ['mobile_app'], custom: true, product: 'loyalty' },
   { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
@@ -1732,6 +1734,7 @@ export function Settings() {
       case 'integrations': return renderIntegrations()
       case 'booking': return renderBooking()
       case 'pipelines': return <PipelinesAdmin />
+      case 'planner': return <PlannerSettings />
       case 'mobile_app': return renderMobileApp()
       case 'documentation': return renderDocumentation()
       case 'ai_system': return renderAiSystem()

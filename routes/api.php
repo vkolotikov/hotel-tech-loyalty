@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\V1\Public\LeadFormPublicController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
+use App\Http\Controllers\Api\V1\Admin\PlannerPresetController;
 use App\Http\Controllers\Api\V1\Admin\VenueController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
@@ -587,6 +588,10 @@ Route::prefix('v1')->group(function () {
             // ─── CRM Phase 9: One-click industry setup ────────────────────
             Route::get('industry-presets',              [IndustryPresetController::class, 'index']);
             Route::post('industry-presets/apply',       [IndustryPresetController::class, 'apply']);
+
+            // ─── Planner industry presets (groups + templates) ────────────
+            Route::get('planner-presets',               [PlannerPresetController::class, 'index']);
+            Route::post('planner-presets/apply',        [PlannerPresetController::class, 'apply']);
 
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);
