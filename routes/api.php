@@ -515,6 +515,12 @@ Route::prefix('v1')->group(function () {
             Route::post('inquiries/{inquiry}/complete-task', [InquiryController::class, 'completeTask']);
             Route::post('inquiries/{inquiry}/log-contact',   [InquiryController::class, 'logContact']);
 
+            // ─── CRM Phase 2: Smart Panel + Won/Lost flows ──────────────
+            Route::post('inquiries/{inquiry}/ai-brief',   [InquiryController::class, 'aiBrief']);
+            Route::post('inquiries/{inquiry}/won',        [InquiryController::class, 'markWon']);
+            Route::post('inquiries/{inquiry}/lost',       [InquiryController::class, 'markLost']);
+            Route::get('inquiry-lost-reasons',            [InquiryController::class, 'lostReasons']);
+
             // ─── CRM Phase 1: Activities (timeline) sub-resource ────────
             Route::get('inquiries/{inquiry}/activities',  [ActivityController::class, 'index']);
             Route::post('inquiries/{inquiry}/activities', [ActivityController::class, 'store']);

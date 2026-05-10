@@ -3,17 +3,23 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Activity;
 use App\Models\Inquiry;
+use App\Models\InquiryLostReason;
+use App\Models\PipelineStage;
 use App\Models\Reservation;
+use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InquiryController extends Controller
 {
     public function __construct(
         protected RealtimeEventService $realtime,
+        protected InquiryAiService $ai,
     ) {}
     public function index(Request $request): JsonResponse
     {
@@ -467,5 +473,170 @@ class InquiryController extends Controller
             });
             fclose($out);
         }, 'inquiries-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * POST /v1/admin/inquiries/{inquiry}/ai-brief — fetch or refresh
+     * the Smart Panel brief. Cached on the inquiry row for 15 min;
+     * `?refresh=1` (or body `force_refresh=true`) forces a new
+     * OpenAI call.
+     */
+    public function aiBrief(Request $request, Inquiry $inquiry): JsonResponse
+    {
+        $force = (bool) ($request->get('refresh') ?? $request->get('force_refresh'));
+        return response()->json($this->ai->briefForInquiry($inquiry, $force));
+    }
+
+    /**
+     * POST /v1/admin/inquiries/{inquiry}/won — close the inquiry as won.
+     *
+     * Moves the inquiry to the pipeline's won stage, mirrors the legacy
+     * `status` to "Confirmed", logs a status_change activity, and (when
+     * the org has property + dates) auto-creates a draft Reservation.
+     * Idempotent — returns the existing reservation if one is already
+     * linked.
+     */
+    public function markWon(Request $request, Inquiry $inquiry): JsonResponse
+    {
+        $request->validate([
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        $wonStage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
+            ->where('kind', 'won')
+            ->orderBy('sort_order')
+            ->first();
+
+        $reservation = DB::transaction(function () use ($inquiry, $wonStage, $request) {
+            $previousStage = $inquiry->pipelineStage?->name ?? $inquiry->status;
+
+            $inquiry->forceFill([
+                'status'            => 'Confirmed',
+                'pipeline_stage_id' => $wonStage?->id ?? $inquiry->pipeline_stage_id,
+                'lost_reason_id'    => null, // Clear any prior Lost selection.
+            ])->save();
+
+            // Log the transition on the timeline.
+            Activity::create([
+                'inquiry_id' => $inquiry->id,
+                'guest_id'   => $inquiry->guest_id,
+                'type'       => 'status_change',
+                'subject'    => 'Marked Won',
+                'body'       => trim(
+                    "Stage: {$previousStage} → " . ($wonStage?->name ?? 'Confirmed')
+                    . ($request->note ? "\n\n{$request->note}" : '')
+                ),
+                'created_by' => $request->user()?->id,
+                'occurred_at' => now(),
+                'metadata'   => ['kind' => 'won'],
+            ]);
+
+            // Auto-create a draft reservation if one isn't already linked
+            // and we have enough info to seed it (property + dates).
+            $reservation = $inquiry->reservations()->first();
+            if (!$reservation && $inquiry->property_id && $inquiry->check_in && $inquiry->check_out) {
+                $confNo = strtoupper($inquiry->property?->code ?? 'HTL') . '-' . str_pad((string) $inquiry->id, 5, '0', STR_PAD_LEFT);
+                $reservation = Reservation::create([
+                    'guest_id'             => $inquiry->guest_id,
+                    'inquiry_id'           => $inquiry->id,
+                    'corporate_account_id' => $inquiry->corporate_account_id,
+                    'property_id'          => $inquiry->property_id,
+                    'confirmation_no'      => $confNo,
+                    'check_in'             => $inquiry->check_in,
+                    'check_out'            => $inquiry->check_out,
+                    'num_nights'           => $inquiry->num_nights,
+                    'num_rooms'            => $inquiry->num_rooms,
+                    'num_adults'           => $inquiry->num_adults,
+                    'num_children'         => $inquiry->num_children,
+                    'room_type'            => $inquiry->room_type_requested,
+                    'rate_per_night'       => $inquiry->rate_offered,
+                    'total_amount'         => $inquiry->total_value,
+                    'source'               => $inquiry->source,
+                    'special_requests'     => $inquiry->special_requests,
+                    'status'               => 'Confirmed',
+                    'payment_status'       => 'Pending',
+                ]);
+            }
+
+            return $reservation;
+        });
+
+        return response()->json([
+            'success'     => true,
+            'inquiry'     => $inquiry->fresh()->load(['pipelineStage', 'guest:id,full_name']),
+            'reservation' => $reservation,
+            'message'     => $reservation
+                ? 'Marked won — draft reservation created.'
+                : 'Marked won.',
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/inquiries/{inquiry}/lost — close the inquiry as lost.
+     *
+     * Requires a `lost_reason_id` from the org's seeded taxonomy so
+     * pipeline reporting (Phase 4) gets explainable funnel-leak
+     * data. Optional free-text note appended to the activity row.
+     */
+    public function markLost(Request $request, Inquiry $inquiry): JsonResponse
+    {
+        $validated = $request->validate([
+            'lost_reason_id' => 'required|integer|exists:inquiry_lost_reasons,id',
+            'note'           => 'nullable|string|max:1000',
+        ]);
+
+        $lostStage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
+            ->where('kind', 'lost')
+            ->orderBy('sort_order')
+            ->first();
+
+        $reason = InquiryLostReason::find($validated['lost_reason_id']);
+
+        DB::transaction(function () use ($inquiry, $lostStage, $reason, $validated, $request) {
+            $previousStage = $inquiry->pipelineStage?->name ?? $inquiry->status;
+
+            $inquiry->forceFill([
+                'status'            => 'Lost',
+                'pipeline_stage_id' => $lostStage?->id ?? $inquiry->pipeline_stage_id,
+                'lost_reason_id'    => $reason?->id,
+            ])->save();
+
+            Activity::create([
+                'inquiry_id' => $inquiry->id,
+                'guest_id'   => $inquiry->guest_id,
+                'type'       => 'status_change',
+                'subject'    => 'Marked Lost — ' . ($reason?->label ?? 'Unspecified'),
+                'body'       => trim(
+                    "Stage: {$previousStage} → " . ($lostStage?->name ?? 'Lost')
+                    . (!empty($validated['note']) ? "\n\n{$validated['note']}" : '')
+                ),
+                'created_by' => $request->user()?->id,
+                'occurred_at' => now(),
+                'metadata'   => [
+                    'kind'           => 'lost',
+                    'lost_reason_id' => $reason?->id,
+                    'lost_reason'    => $reason?->label,
+                ],
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'inquiry' => $inquiry->fresh()->load(['pipelineStage', 'lostReason']),
+            'message' => 'Marked lost — ' . ($reason?->label ?? 'reason recorded') . '.',
+        ]);
+    }
+
+    /**
+     * GET /v1/admin/inquiry-lost-reasons — taxonomy for the Lost
+     * picker. Returns active reasons in display order.
+     */
+    public function lostReasons(): JsonResponse
+    {
+        $reasons = InquiryLostReason::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'label', 'slug', 'sort_order']);
+
+        return response()->json($reasons);
     }
 }
