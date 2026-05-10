@@ -9,6 +9,7 @@ import {
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat,
+  Wrench, Coffee, Briefcase, BedDouble, PartyPopper, ConciergeBell, Sparkles, Phone,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
@@ -58,6 +59,68 @@ const STATUS_BORDER: Record<string, string> = {
   in_progress: 'border-l-blue-500',
   blocked: 'border-l-red-500',
   done: 'border-l-green-500',
+}
+
+/**
+ * Icon + accent color per task group. Drives the icon-grid "Type"
+ * picker at the top of the New/Edit Task drawer. Falls back to the
+ * Custom tile for any group not listed here, so non-hotel orgs that
+ * defined their own groups still get a usable picker.
+ */
+const TASK_GROUP_META: Record<string, { icon: any; color: string }> = {
+  Housekeeping:   { icon: BedDouble,      color: '#10b981' },
+  'Front Desk':   { icon: ConciergeBell,  color: '#3b82f6' },
+  'Front Office': { icon: ConciergeBell,  color: '#3b82f6' },
+  Maintenance:    { icon: Wrench,         color: '#f59e0b' },
+  'F&B':          { icon: Coffee,         color: '#a855f7' },
+  Management:     { icon: Briefcase,      color: '#ef4444' },
+  Sales:          { icon: Phone,          color: '#06b6d4' },
+  Events:         { icon: PartyPopper,    color: '#ec4899' },
+}
+const CUSTOM_GROUP_META = { icon: Sparkles, color: '#94a3b8' }
+
+/**
+ * Half-hour time slots from 06:00 to 22:00. Drives the start-time
+ * scroll-picker in the drawer. We render every slot but auto-scroll
+ * to the currently-selected one on open. 30-min granularity matches
+ * how hotel staff schedule shifts in practice.
+ */
+const TIME_SLOTS: string[] = (() => {
+  const out: string[] = []
+  for (let h = 6; h <= 22; h++) {
+    out.push(String(h).padStart(2, '0') + ':00')
+    out.push(String(h).padStart(2, '0') + ':30')
+  }
+  return out
+})()
+
+/**
+ * Duration quick-picks. Backend stores `duration_minutes` as int;
+ * picking a chip just sets the form value to the integer. Custom
+ * durations still work via the underlying free-form fallback.
+ */
+const DURATION_CHIPS: Array<{ minutes: number; label: string }> = [
+  { minutes: 15,  label: '15m' },
+  { minutes: 30,  label: '30m' },
+  { minutes: 45,  label: '45m' },
+  { minutes: 60,  label: '1h' },
+  { minutes: 90,  label: '1.5h' },
+  { minutes: 120, label: '2h' },
+  { minutes: 240, label: '4h' },
+]
+
+/**
+ * Computes `end_time = start_time + duration_minutes`. Returns
+ * empty string if either input is missing. We use this to auto-fill
+ * the end_time so users picking a 30-min slot + a 45-min duration
+ * don't need to mentally compute "ends at 11:15".
+ */
+function addMinutes(timeHHMM: string, minutes: number): string {
+  if (!timeHHMM || !minutes) return ''
+  const [h, m] = timeHHMM.split(':').map(Number)
+  const total = h * 60 + m + minutes
+  if (total >= 24 * 60) return ''
+  return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0')
 }
 const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 8, fontSize: 12 }
 
@@ -1640,146 +1703,281 @@ export function Planner() {
       )}
 
       {/* ═══ CREATE/EDIT MODAL ═══ */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }}>
-          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-white">{editTask ? 'Edit Task' : 'New Task'}</h2>
-              <button onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-dark-surface2 transition-colors"><X size={18} /></button>
+      {showModal && (() => {
+        /**
+         * New layout: side drawer mirroring the CRM TaskDrawer
+         * pattern — type icon-grid → title → assign → date/priority →
+         * time slots + duration chips → recurring → notes. Fewer
+         * dropdowns and chunky chips so a non-expert can compose a
+         * fully-specified task in <10 seconds.
+         */
+        const close = () => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }
+
+        const setDuration = (mins: number) => {
+          setForm(f => ({
+            ...f,
+            duration_minutes: String(mins),
+            // Auto-compute end_time if a start_time is set. Otherwise
+            // leave it blank — user might be back-filling the end.
+            end_time: f.start_time ? addMinutes(f.start_time, mins) : f.end_time,
+          }))
+        }
+        const setStartTime = (t: string) => {
+          setForm(f => ({
+            ...f,
+            start_time: t,
+            // Keep end_time consistent with duration when a duration
+            // is already chosen — staff almost never need to picker
+            // both start AND end manually.
+            end_time: f.duration_minutes ? addMinutes(t, Number(f.duration_minutes)) : f.end_time,
+          }))
+        }
+        const setDateQuick = (offset: number) => {
+          const d = new Date(); d.setDate(d.getDate() + offset)
+          setForm(f => ({ ...f, task_date: fmtDate(d) }))
+        }
+
+        const groups = ['Housekeeping', 'Front Desk', 'Maintenance', 'F&B', 'Events', 'Sales', 'Management', 'Custom']
+        const activeMeta = TASK_GROUP_META[form.task_group] ?? CUSTOM_GROUP_META
+
+        return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
+          <div className="bg-dark-surface border-l border-dark-border w-full max-w-md h-full flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-dark-border">
+              <h2 className="text-lg font-bold text-white">{editTask ? 'Edit task' : 'New task'}</h2>
+              <button onClick={close} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="space-y-4">
-              {!editTask && (
-                <div className="mb-3">
+
+            <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Type / Group icon grid */}
+              <div>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Type</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {groups.map(g => {
+                    const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
+                    const active = (form.task_group || 'Custom') === g
+                    const Icon = meta.icon
+                    return (
+                      <button key={g} type="button"
+                        onClick={() => setForm(f => ({ ...f, task_group: g === 'Custom' ? '' : g }))}
+                        className={'flex flex-col items-center gap-1 p-2 rounded-md border text-[11px] font-bold transition ' +
+                          (active ? 'text-black' : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
+                        style={active ? { background: meta.color, borderColor: meta.color } : {}}>
+                        <Icon size={14} />
+                        {g}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Template picker — collapsed by default */}
+              {!editTask && formTemplates.length > 0 && (
+                <div>
                   <button type="button" onClick={() => setShowTemplatePicker(v => !v)}
-                    className="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors mb-2">
+                    className="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors">
                     <FileText size={12} />
                     {showTemplatePicker ? 'Hide templates' : 'Use a template'}
                     <ChevronDown size={11} className={'transition-transform ' + (showTemplatePicker ? 'rotate-180' : '')} />
                   </button>
                   {showTemplatePicker && (
-                    <div className="border border-dark-border rounded-xl overflow-hidden mb-3 max-h-52 overflow-y-auto">
-                      {formTemplates.length === 0 ? (
-                        <div className="px-3 py-4 text-center text-xs text-gray-500 italic">
-                          No templates yet — create some via the side panel's ⚙ Manage button.
-                        </div>
-                      ) : (
-                        Object.entries(
-                          formTemplates.reduce<Record<string, ServerTemplate[]>>((acc, t) => {
-                            const k = t.category || 'General'
-                            ;(acc[k] ||= []).push(t)
-                            return acc
-                          }, {})
-                        ).map(([cat, items]) => (
-                          <div key={cat}>
-                            <div className="px-3 py-1.5 bg-dark-surface text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-dark-border/50">{cat}</div>
-                            <div className="flex flex-wrap gap-1 p-2 bg-dark-surface2/30">
-                              {items.map(t => (
-                                <button
-                                  type="button"
-                                  key={t.id}
-                                  onClick={() => applyTemplate(t)}
-                                  className="px-2.5 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all"
-                                >
-                                  {t.name}
-                                  {t.duration_minutes ? <span className="ml-1 text-gray-600 text-[10px]">{t.duration_minutes}m</span> : null}
-                                </button>
-                              ))}
-                            </div>
+                    <div className="mt-2 border border-dark-border rounded-md overflow-hidden max-h-40 overflow-y-auto">
+                      {Object.entries(
+                        formTemplates.reduce<Record<string, ServerTemplate[]>>((acc, t) => {
+                          const k = t.category || 'General'
+                          ;(acc[k] ||= []).push(t)
+                          return acc
+                        }, {})
+                      ).map(([cat, items]) => (
+                        <div key={cat}>
+                          <div className="px-2 py-1 bg-dark-surface text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-dark-border/50">{cat}</div>
+                          <div className="flex flex-wrap gap-1 p-1.5 bg-dark-surface2/30">
+                            {items.map(t => (
+                              <button type="button" key={t.id} onClick={() => applyTemplate(t)}
+                                className="px-2 py-0.5 rounded bg-dark-surface border border-dark-border text-[11px] text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all">
+                                {t.name}
+                                {t.duration_minutes ? <span className="ml-1 text-gray-600">{t.duration_minutes}m</span> : null}
+                              </button>
+                            ))}
                           </div>
-                        ))
-                      )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               )}
+
+              {/* Title */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Title *</label>
-                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What needs to be done?" className={inp} autoFocus />
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Title</label>
+                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="What needs to be done?"
+                  autoFocus={!editTask}
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* Assign + Priority chip rows */}
+              <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><User size={12} /> Assign To</label>
-                  <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))} className={inp}>
+                  <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><User size={11} /> Assign to</label>
+                  <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))}
+                    className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500">
                     <option value="">Unassigned</option>
                     {myName && <option value={myName}>{myName} (me)</option>}
-                    {settings.employees
-                      .filter((e: string) => e !== myName)
-                      .map((emp: string) => <option key={emp}>{emp}</option>)}
+                    {settings.employees.filter((e: string) => e !== myName).map((emp: string) => <option key={emp}>{emp}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Flag size={12} /> Priority</label>
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
-                    {['Low', 'Normal', 'High'].map(p => <option key={p}>{p}</option>)}
-                  </select>
+                  <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Flag size={11} /> Priority</label>
+                  <div className="flex gap-1.5">
+                    {['Low', 'Normal', 'High'].map(p => {
+                      const active = form.priority === p
+                      return (
+                        <button key={p} type="button" onClick={() => setForm(f => ({ ...f, priority: p }))}
+                          className={'flex-1 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ' +
+                            (active
+                              ? p === 'High' ? 'bg-red-500/20 border-red-500/60 text-red-300'
+                                : p === 'Low' ? 'bg-gray-500/20 border-gray-500/60 text-gray-300'
+                                : 'bg-blue-500/20 border-blue-500/60 text-blue-300'
+                              : 'border-dark-border text-gray-500 hover:text-white hover:bg-dark-surface2')}>
+                          {p}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Calendar size={12} /> Date</label>
-                  <input type="date" value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))} className={inp} required />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Clock size={12} /> Start</label>
-                  <input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} className={inp} />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Clock size={12} /> End</label>
-                  <input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inp} />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-1.5"><Tag size={12} /> Group</label>
-                  <select value={form.task_group} onChange={e => setForm(f => ({ ...f, task_group: e.target.value }))} className={inp}>
-                    <option value="">None</option>
-                    {settings.planner_groups.map((g: string) => <option key={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Category</label>
-                  <input value={form.task_category} onChange={e => setForm(f => ({ ...f, task_category: e.target.value }))} placeholder="e.g. Check-in" className={inp} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Duration (min)</label>
-                  <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))} placeholder="30" className={inp} />
+
+              {/* Date with quick chips */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Calendar size={11} /> Date</label>
+                <input type="date" required value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {[{ off: 0, lbl: 'Today' }, { off: 1, lbl: 'Tomorrow' }, { off: 2, lbl: 'In 2 days' }, { off: 7, lbl: 'Next week' }].map(d => (
+                    <button key={d.lbl} type="button" onClick={() => setDateQuick(d.off)}
+                      className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-500 hover:text-white hover:border-dark-border/80">
+                      {d.lbl}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
-                    <option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="blocked">Blocked</option><option value="done">Done</option>
-                  </select>
+
+              {/* Start time — 30min slots */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Clock size={11} /> Start time</label>
+                <div className="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto p-1 bg-dark-bg border border-dark-border rounded-md">
+                  {TIME_SLOTS.map(t => {
+                    const active = form.start_time && form.start_time.slice(0, 5) === t
+                    return (
+                      <button key={t} type="button" onClick={() => setStartTime(t)}
+                        className={'px-1.5 py-1 rounded text-[11px] font-mono transition-colors ' +
+                          (active ? 'bg-primary-500 text-white' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+                        {fmtShort(t)}
+                      </button>
+                    )
+                  })}
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Repeat</label>
-                  <select value={form.recurring || 'none'} onChange={e => setForm(f => ({ ...f, recurring: e.target.value }))} className={inp}>
-                    <option value="none">No repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-                  </select>
-                </div>
+                {form.start_time && (
+                  <button type="button" onClick={() => setForm(f => ({ ...f, start_time: '', end_time: '' }))}
+                    className="mt-1 text-[10px] text-gray-600 hover:text-gray-400">
+                    Clear time
+                  </button>
+                )}
               </div>
-              {(form.recurring && form.recurring !== 'none') && (
+
+              {/* Duration chips */}
+              <div>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Duration</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DURATION_CHIPS.map(d => {
+                    const active = Number(form.duration_minutes) === d.minutes
+                    return (
+                      <button key={d.minutes} type="button" onClick={() => setDuration(d.minutes)}
+                        className={'px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ' +
+                          (active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-border text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+                        {d.label}
+                      </button>
+                    )
+                  })}
+                  <button type="button" onClick={() => setForm(f => ({ ...f, duration_minutes: '', end_time: '' }))}
+                    className="px-2 py-1.5 rounded-md text-[11px] text-gray-600 hover:text-gray-400">
+                    Clear
+                  </button>
+                </div>
+                {form.start_time && form.end_time && (
+                  <div className="mt-2 text-[11px] text-gray-500 flex items-center gap-1.5">
+                    <activeMeta.icon size={11} style={{ color: activeMeta.color }} />
+                    {fmtShort(form.start_time)} — {fmtShort(form.end_time)}
+                  </div>
+                )}
+              </div>
+
+              {/* Recurring */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Repeat size={11} /> Repeat</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {[{ k: 'none', l: 'No repeat' }, { k: 'daily', l: 'Daily' }, { k: 'weekly', l: 'Weekly' }, { k: 'monthly', l: 'Monthly' }].map(r => {
+                    const active = (form.recurring || 'none') === r.k
+                    return (
+                      <button key={r.k} type="button" onClick={() => setForm(f => ({ ...f, recurring: r.k }))}
+                        className={'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ' +
+                          (active ? 'bg-primary-500/20 border-primary-500/60 text-primary-300' : 'border-dark-border text-gray-500 hover:text-white hover:bg-dark-surface2')}>
+                        {r.l}
+                      </button>
+                    )
+                  })}
+                </div>
+                {form.recurring && form.recurring !== 'none' && (
+                  <div className="mt-2">
+                    <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Repeat until (optional)</label>
+                    <input type="date" value={form.recurring_end_date || ''}
+                      onChange={e => setForm(f => ({ ...f, recurring_end_date: e.target.value }))}
+                      className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Notes (optional)</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  rows={3} placeholder="Anything the staff picking this up should know."
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500 resize-none" />
+              </div>
+
+              {/* Status — collapsed in edit mode only since new tasks default to "todo" */}
+              {editTask && (
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1.5 block">Repeat Until (optional)</label>
-                  <input type="date" value={form.recurring_end_date || ''} onChange={e => setForm(f => ({ ...f, recurring_end_date: e.target.value }))} className={inp} />
+                  <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Status</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[{ k: 'todo', l: 'To Do' }, { k: 'in_progress', l: 'In Progress' }, { k: 'blocked', l: 'Blocked' }, { k: 'done', l: 'Done' }].map(s => {
+                      const active = form.status === s.k
+                      return (
+                        <button key={s.k} type="button" onClick={() => setForm(f => ({ ...f, status: s.k }))}
+                          className={'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ' +
+                            (active ? 'bg-dark-surface2 border-primary-500/60 text-white' : 'border-dark-border text-gray-500 hover:text-white')}>
+                          {s.l}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
-              <div>
-                <label className="text-xs font-medium text-gray-400 mb-1.5 block">Description</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details..." className={inp + ' resize-none'} />
-              </div>
-              <div className="flex justify-end gap-3 pt-2 border-t border-dark-border/50">
-                <button type="button" onClick={() => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
-                <button type="submit" disabled={createMutation.isPending || updateMutation.isPending}
-                  className="px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
-                  {(createMutation.isPending || updateMutation.isPending) ? 'Saving...' : editTask ? 'Update Task' : 'Create Task'}
-                </button>
-              </div>
             </form>
+
+            <div className="border-t border-dark-border p-4 flex justify-end gap-2">
+              <button onClick={close} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
+              <button onClick={handleSubmit}
+                disabled={createMutation.isPending || updateMutation.isPending || !form.title.trim()}
+                className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 transition-colors">
+                {(createMutation.isPending || updateMutation.isPending) ? 'Saving…' : editTask ? 'Update task' : 'Create task'}
+              </button>
+            </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {taskPopover && (
         <TaskPopover
