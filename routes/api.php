@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\Admin\PipelineController;
 use App\Http\Controllers\Api\V1\Admin\ReportingController;
 use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\CustomFieldController;
+use App\Http\Controllers\Api\V1\Admin\IndustryPresetController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
@@ -571,6 +572,10 @@ Route::prefix('v1')->group(function () {
             Route::post('custom-fields/reorder',        [CustomFieldController::class, 'reorder']);
             Route::post('custom-fields/apply-preset',   [CustomFieldController::class, 'applyPreset']);
             Route::get('custom-fields/presets',         [CustomFieldController::class, 'presets']);
+
+            // ─── CRM Phase 9: One-click industry setup ────────────────────
+            Route::get('industry-presets',              [IndustryPresetController::class, 'index']);
+            Route::post('industry-presets/apply',       [IndustryPresetController::class, 'apply']);
 
             // ─── CRM Phase 4: Reporting ───────────────────────────────────
             Route::get('reporting/forecast',            [ReportingController::class, 'forecast']);

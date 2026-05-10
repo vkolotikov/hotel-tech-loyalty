@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useSettings, DEFAULT_INQUIRY_FIELDS, type InquiryFieldConfig } from '../lib/crmSettings'
 import { CustomFieldsAdmin } from './CustomFieldsAdmin'
+import { IndustryPresetPicker } from './IndustryPresetPicker'
 
 /**
  * Settings → Pipelines tab. Manages:
@@ -103,6 +104,11 @@ export function PipelinesAdmin() {
 
   return (
     <div className="space-y-6">
+      {/* CRM Phase 9 — one-click industry setup. Reshapes pipeline +
+          lost reasons + layout + custom fields together. Sits at the
+          top so non-experts hit it first. */}
+      <IndustryPresetPicker />
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -110,8 +116,8 @@ export function PipelinesAdmin() {
               <GitBranch size={16} className="text-accent" /> Pipelines
             </h2>
             <p className="text-xs text-t-secondary mt-1">
-              Each pipeline is a named sequence of stages deals progress through. Most hotels need one ("Sales");
-              groups running MICE / corporate sales add a second.
+              Stages your deals progress through. The industry preset above sets a sensible default —
+              tweak names, colors and order here.
             </p>
           </div>
           <button

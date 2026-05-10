@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
-  Plus, Trash2, Edit3, Sparkles, Stethoscope, Scale, Home,
-  GraduationCap, Dumbbell, Utensils, Briefcase,
+  Plus, Trash2, Edit3, Sparkles,
   Type, AlignLeft, Hash, Calendar, ChevronDown, ListChecks,
   CheckSquare, Mail, Phone, Globe, ChevronUp, Eye, EyeOff,
   Cake, AlertTriangle, MessageSquare, Tag, MapPin,
@@ -45,12 +44,6 @@ const FIELD_TYPES: FieldTypeMeta[] = [
   { value: 'phone',       label: 'Phone',        short: 'Phone',    example: 'e.g. +49 30 1234 5678',         icon: Phone,        supportsOptions: false },
   { value: 'url',         label: 'Web link',     short: 'URL',      example: 'e.g. https://example.com',      icon: Globe,        supportsOptions: false },
 ]
-
-const PRESET_ICONS: Record<string, any> = {
-  sparkles: Sparkles, stethoscope: Stethoscope, scale: Scale,
-  home: Home, 'graduation-cap': GraduationCap,
-  dumbbell: Dumbbell, utensils: Utensils, briefcase: Briefcase,
-}
 
 /**
  * One-click quick-add chips. Saves a non-expert from picking a type
@@ -98,14 +91,6 @@ interface CustomFieldRow {
   sort_order: number
 }
 
-interface PresetMeta {
-  key: string
-  label: string
-  description: string
-  field_count: number
-  icon: string
-}
-
 export function CustomFieldsAdmin() {
   const qc = useQueryClient()
   const [entity, setEntity] = useState<typeof ENTITY_TABS[number]['key']>('inquiry')
@@ -114,11 +99,6 @@ export function CustomFieldsAdmin() {
   const { data: fields, isLoading } = useQuery<CustomFieldRow[]>({
     queryKey: ['custom-fields-admin', entity],
     queryFn: () => api.get('/v1/admin/custom-fields', { params: { entity } }).then(r => r.data),
-  })
-
-  const { data: presets } = useQuery<PresetMeta[]>({
-    queryKey: ['custom-field-presets'],
-    queryFn: () => api.get('/v1/admin/custom-fields/presets').then(r => r.data),
   })
 
   // Per-entity counts so the tabs show "Leads (3)" without an extra fetch.
@@ -130,17 +110,6 @@ export function CustomFieldsAdmin() {
     acc[f.entity] = (acc[f.entity] ?? 0) + 1
     return acc
   }, {})
-
-  const applyPreset = useMutation({
-    mutationFn: (key: string) => api.post('/v1/admin/custom-fields/apply-preset', { preset: key }),
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ['custom-fields-admin'] })
-      qc.invalidateQueries({ queryKey: ['custom-fields-admin-all'] })
-      qc.invalidateQueries({ queryKey: ['custom-fields'] })
-      toast.success(res.data?.message ?? 'Preset applied')
-    },
-    onError: () => toast.error('Could not apply preset'),
-  })
 
   const remove = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/custom-fields/${id}`),
@@ -223,48 +192,11 @@ export function CustomFieldsAdmin() {
             <Sparkles size={16} className="text-purple-400" /> Custom fields
           </h2>
           <p className="text-xs text-t-secondary mt-1 max-w-2xl">
-            Make this CRM fit your business. Pick an industry preset to get started fast, or add fields one
-            at a time. Saved values stay safe even if you rename or delete a field.
+            Add or tweak the fields the industry preset above gave you, or build from scratch. Saved
+            values stay safe even if you rename or delete a field.
           </p>
         </div>
       </div>
-
-      {/* Industry presets — visual cards. The first thing a non-expert
-          should see, with a clear "click here to get started" CTA. */}
-      {presets && presets.length > 0 && (
-        <div className="bg-purple-500/[0.04] border border-purple-500/20 rounded-lg p-3 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] uppercase tracking-wide font-bold text-purple-300">Quick start by industry</span>
-            <span className="text-[10px] text-t-secondary">— pick one to seed a starter field set, then adjust.</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {presets.map(p => {
-              const Icon = PRESET_ICONS[p.icon] ?? Briefcase
-              return (
-                <button
-                  key={p.key}
-                  onClick={() => {
-                    if (window.confirm(`Add the ${p.label} preset (${p.field_count} fields)? Existing keys are skipped — safe to re-apply.`)) {
-                      applyPreset.mutate(p.key)
-                    }
-                  }}
-                  disabled={applyPreset.isPending}
-                  className="text-left bg-dark-bg border border-dark-border rounded-md p-3 hover:border-purple-500/50 hover:bg-purple-500/[0.04] transition disabled:opacity-50 group"
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-7 h-7 rounded-md bg-purple-500/15 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition">
-                      <Icon size={14} className="text-purple-300" />
-                    </div>
-                    <p className="text-sm font-bold text-white truncate">{p.label}</p>
-                  </div>
-                  <p className="text-[11px] text-t-secondary leading-snug line-clamp-2">{p.description}</p>
-                  <p className="text-[10px] text-purple-300 mt-1.5 font-bold">+ {p.field_count} fields</p>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Entity tabs */}
       <div className="flex items-center gap-1 mb-3 overflow-x-auto">
