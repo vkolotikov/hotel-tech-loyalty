@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
-import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields } from '../components/CustomFields'
+import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 
 /**
  * Lead Detail page — `/inquiries/:id`. Three-column layout
@@ -465,6 +465,7 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
   const { data: fields } = useCustomFields('inquiry')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
+  const [cfErrors, setCfErrors] = useState<Record<string, string[]>>({})
 
   const save = useMutation({
     mutationFn: () => api.put(`/v1/admin/inquiries/${inq.id}`, { custom_data: draft }),
@@ -473,10 +474,16 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
       qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
       toast.success('Saved')
       setEditing(false)
+      setCfErrors({})
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Save failed'
-      toast.error(msg)
+      const fe = extractCustomFieldErrors(err)
+      setCfErrors(fe)
+      if (Object.keys(fe).length === 0) {
+        toast.error(err?.response?.data?.message ?? 'Save failed')
+      } else {
+        toast.error('Please fix the highlighted fields.')
+      }
     },
   })
 
@@ -506,6 +513,7 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
             entity="inquiry"
             values={draft}
             onChange={setDraft}
+            errors={cfErrors}
             inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm placeholder-t-secondary outline-none focus:border-accent"
             layout="stack"
           />

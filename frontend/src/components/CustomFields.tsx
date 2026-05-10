@@ -54,12 +54,20 @@ export function CustomFieldsForm({
   entity,
   values,
   onChange,
+  errors,
   inputClassName = '',
   layout = 'grid',
 }: {
   entity: Entity
   values: Record<string, any>
   onChange: (next: Record<string, any>) => void
+  /**
+   * Per-field validation errors from the backend, keyed by field key.
+   * Comes from a 422 response shaped `{ errors: { 'custom_data.allergies': ['Required'] } }`
+   * — strip the `custom_data.` prefix when extracting. See
+   * `extractCustomFieldErrors()` below.
+   */
+  errors?: Record<string, string[]>
   inputClassName?: string
   /** 'grid' = 2-col responsive grid for create/edit forms; 'stack' = single column for narrow drawers. */
   layout?: 'grid' | 'stack'
@@ -80,25 +88,51 @@ export function CustomFieldsForm({
         <span className="text-[10px] uppercase tracking-wide font-bold text-purple-300">Custom fields</span>
       </div>
       <div className={wrapperClass}>
-        {fields.map(f => (
-          <div key={f.id} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
-            <label className="block text-xs text-[#a0a0a0] mb-1">
-              {f.label}{f.required && ' *'}
-            </label>
-            <FieldInput
-              field={f}
-              value={values[f.key]}
-              onChange={(v) => setVal(f.key, v)}
-              className={inputClassName}
-            />
-            {f.help_text && (
-              <p className="text-[10px] text-[#636366] mt-0.5 leading-snug">{f.help_text}</p>
-            )}
-          </div>
-        ))}
+        {fields.map(f => {
+          const fieldErrors = errors?.[f.key]
+          const hasError = !!fieldErrors?.length
+          return (
+            <div key={f.id} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
+              <label className="block text-xs text-[#a0a0a0] mb-1">
+                {f.label}{f.required && <span className="text-red-400 ml-0.5">*</span>}
+              </label>
+              <FieldInput
+                field={f}
+                value={values[f.key]}
+                onChange={(v) => setVal(f.key, v)}
+                className={`${inputClassName} ${hasError ? 'border-red-500/60 focus:border-red-500' : ''}`}
+              />
+              {hasError ? (
+                <p className="text-[10px] text-red-400 mt-0.5 font-semibold leading-snug">{fieldErrors[0]}</p>
+              ) : f.help_text ? (
+                <p className="text-[10px] text-[#636366] mt-0.5 leading-snug">{f.help_text}</p>
+              ) : null}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
+}
+
+/**
+ * Pull custom-field errors out of a Laravel 422 response. Returns a
+ * map of `{ field_key: ['error'] }` ready to feed into
+ * <CustomFieldsForm errors=... />.
+ *
+ * Usage:
+ *   onError: (err) => setCfErrors(extractCustomFieldErrors(err))
+ */
+export function extractCustomFieldErrors(err: any): Record<string, string[]> {
+  const raw = err?.response?.data?.errors
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, string[]> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.startsWith('custom_data.') && Array.isArray(v)) {
+      out[k.slice('custom_data.'.length)] = v as string[]
+    }
+  }
+  return out
 }
 
 function FieldInput({ field, value, onChange, className }: {

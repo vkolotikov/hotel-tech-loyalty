@@ -190,7 +190,9 @@ class CustomFieldService
     /**
      * Industry-specific starter sets. Hotel orgs already have all the
      * built-in fields they need — no preset for hotel since it's the
-     * baseline. Beauty + Medical were the user-requested launch set.
+     * baseline. Each preset is hand-tuned for its industry's typical
+     * intake form: only the fields a non-technical user from that
+     * industry would actually want, ordered by frequency-of-use.
      */
     public const PRESETS = [
         'beauty' => [
@@ -225,6 +227,87 @@ class CustomFieldService
                 ['key' => 'urgency',            'label' => 'Urgency',            'type' => 'select',     'config' => ['options' => ['Routine', 'Soon', 'Urgent', 'Emergency']]],
                 ['key' => 'referring_doctor',   'label' => 'Referring doctor',   'type' => 'text'],
                 ['key' => 'consent_to_contact', 'label' => 'Consent to contact', 'type' => 'checkbox',   'help_text' => 'Phone / SMS / email reminders.'],
+            ],
+        ],
+        'legal' => [
+            'guest' => [
+                ['key' => 'matter_type',        'label' => 'Matter type',        'type' => 'select',     'config' => ['options' => ['Civil', 'Commercial', 'Family', 'Criminal', 'Property', 'Tax', 'Immigration', 'Other']]],
+                ['key' => 'date_of_birth',      'label' => 'Date of birth',      'type' => 'date'],
+                ['key' => 'id_number',          'label' => 'ID / Passport',      'type' => 'text'],
+                ['key' => 'occupation',         'label' => 'Occupation',         'type' => 'text'],
+                ['key' => 'conflict_check',     'label' => 'Conflict check done','type' => 'checkbox',   'help_text' => 'Have you cleared this client against current cases?'],
+            ],
+            'inquiry' => [
+                ['key' => 'case_type',          'label' => 'Case type',          'type' => 'select',     'config' => ['options' => ['Litigation', 'Advisory', 'Contract review', 'Negotiation', 'Document drafting']]],
+                ['key' => 'opposing_party',     'label' => 'Opposing party',     'type' => 'text'],
+                ['key' => 'court_or_jurisdiction','label' => 'Court / jurisdiction', 'type' => 'text'],
+                ['key' => 'key_deadline',       'label' => 'Key deadline',       'type' => 'date',       'help_text' => 'Statute of limitations, filing date, hearing.'],
+                ['key' => 'retainer_amount',    'label' => 'Retainer amount',    'type' => 'number'],
+                ['key' => 'fee_arrangement',    'label' => 'Fee arrangement',    'type' => 'select',     'config' => ['options' => ['Hourly', 'Flat fee', 'Contingency', 'Retainer + hourly']]],
+            ],
+        ],
+        'real_estate' => [
+            'guest' => [
+                ['key' => 'buyer_or_seller',    'label' => 'Buyer or seller',    'type' => 'select',     'config' => ['options' => ['Buyer', 'Seller', 'Both', 'Renter', 'Landlord']]],
+                ['key' => 'pre_approval',       'label' => 'Mortgage pre-approval','type' => 'checkbox'],
+                ['key' => 'preferred_areas',    'label' => 'Preferred areas',    'type' => 'textarea',   'help_text' => 'Neighbourhoods / postcodes / proximity needs.'],
+            ],
+            'inquiry' => [
+                ['key' => 'property_type',      'label' => 'Property type',      'type' => 'multiselect','config' => ['options' => ['Apartment', 'House', 'Townhouse', 'Land', 'Commercial', 'Industrial']]],
+                ['key' => 'budget_min',         'label' => 'Budget — min',       'type' => 'number'],
+                ['key' => 'budget_max',         'label' => 'Budget — max',       'type' => 'number'],
+                ['key' => 'bedrooms',           'label' => 'Bedrooms',           'type' => 'number'],
+                ['key' => 'bathrooms',          'label' => 'Bathrooms',          'type' => 'number'],
+                ['key' => 'must_haves',         'label' => 'Must-haves',         'type' => 'textarea',   'help_text' => 'Garage, garden, balcony, lift, school district…'],
+                ['key' => 'financing_type',     'label' => 'Financing',          'type' => 'select',     'config' => ['options' => ['Cash', 'Mortgage', 'Pre-approved mortgage', 'Investor financing']]],
+                ['key' => 'decision_timeline',  'label' => 'Decision timeline',  'type' => 'select',     'config' => ['options' => ['Now', '1–3 months', '3–6 months', '6–12 months', 'Just looking']]],
+            ],
+        ],
+        'education' => [
+            'guest' => [
+                ['key' => 'date_of_birth',      'label' => 'Date of birth',      'type' => 'date'],
+                ['key' => 'parent_name',        'label' => 'Parent / guardian',  'type' => 'text',       'help_text' => 'For minors only.'],
+                ['key' => 'parent_phone',       'label' => 'Parent phone',       'type' => 'phone'],
+                ['key' => 'prior_education',    'label' => 'Prior education',    'type' => 'textarea'],
+                ['key' => 'language_native',    'label' => 'Native language',    'type' => 'text'],
+            ],
+            'inquiry' => [
+                ['key' => 'program_interest',   'label' => 'Program / course',   'type' => 'text',       'required' => true],
+                ['key' => 'start_term',         'label' => 'Preferred start',    'type' => 'select',     'config' => ['options' => ['ASAP', 'Next month', 'Next term', 'Next year', 'Not sure']]],
+                ['key' => 'study_format',       'label' => 'Format',             'type' => 'select',     'config' => ['options' => ['In-person', 'Online', 'Hybrid', 'Either']]],
+                ['key' => 'level',              'label' => 'Level',              'type' => 'select',     'config' => ['options' => ['Beginner', 'Intermediate', 'Advanced', 'Certification', 'Diploma', 'Degree']]],
+                ['key' => 'how_did_you_hear',   'label' => 'How did you hear?',  'type' => 'text'],
+            ],
+        ],
+        'fitness' => [
+            'guest' => [
+                ['key' => 'fitness_goal',       'label' => 'Primary goal',       'type' => 'select',     'config' => ['options' => ['Weight loss', 'Muscle gain', 'Endurance', 'Flexibility', 'General health', 'Rehab', 'Sport-specific']]],
+                ['key' => 'experience_level',   'label' => 'Experience level',   'type' => 'select',     'config' => ['options' => ['Beginner', 'Intermediate', 'Advanced']]],
+                ['key' => 'injuries',           'label' => 'Injuries / conditions','type' => 'textarea', 'help_text' => 'Anything trainers should work around.'],
+                ['key' => 'preferred_trainer',  'label' => 'Preferred trainer',  'type' => 'text'],
+                ['key' => 'membership_tier',    'label' => 'Membership tier',    'type' => 'select',     'config' => ['options' => ['Drop-in', 'Monthly', 'Quarterly', 'Annual', 'Personal training', 'VIP']]],
+                ['key' => 'medical_clearance',  'label' => 'Medical clearance',  'type' => 'checkbox',   'help_text' => 'Required if 50+ or with health conditions.'],
+            ],
+            'inquiry' => [
+                ['key' => 'service_interest',   'label' => 'Service interest',   'type' => 'multiselect','config' => ['options' => ['Gym access', 'Personal training', 'Group classes', 'Nutrition coaching', 'Physiotherapy']]],
+                ['key' => 'sessions_per_week',  'label' => 'Sessions / week',    'type' => 'number'],
+                ['key' => 'preferred_time',     'label' => 'Preferred time',     'type' => 'select',     'config' => ['options' => ['Early morning', 'Morning', 'Lunch', 'Afternoon', 'Evening']]],
+            ],
+        ],
+        'restaurant' => [
+            'guest' => [
+                ['key' => 'dietary',            'label' => 'Dietary preferences','type' => 'multiselect','config' => ['options' => ['Vegetarian', 'Vegan', 'Gluten-free', 'Lactose-free', 'Halal', 'Kosher', 'Pescatarian', 'Nut-free']]],
+                ['key' => 'allergies',          'label' => 'Allergies',          'type' => 'textarea',   'help_text' => 'CRITICAL for kitchen — list ALL.'],
+                ['key' => 'favourite_table',    'label' => 'Favourite table',    'type' => 'text',       'help_text' => 'e.g. Window table, Booth 4, Quiet corner.'],
+                ['key' => 'wine_preferences',   'label' => 'Wine preferences',   'type' => 'textarea'],
+                ['key' => 'birthday',           'label' => 'Birthday',           'type' => 'date'],
+                ['key' => 'anniversary',        'label' => 'Anniversary',        'type' => 'date'],
+            ],
+            'inquiry' => [
+                ['key' => 'occasion',           'label' => 'Occasion',           'type' => 'select',     'config' => ['options' => ['Birthday', 'Anniversary', 'Business', 'Date', 'Family gathering', 'Celebration', 'Other']]],
+                ['key' => 'party_size',         'label' => 'Party size',         'type' => 'number'],
+                ['key' => 'seating_preference', 'label' => 'Seating',            'type' => 'select',     'config' => ['options' => ['Indoor', 'Outdoor / terrace', 'Bar', 'Private room', 'No preference']]],
+                ['key' => 'special_setup',      'label' => 'Special setup',      'type' => 'textarea',   'help_text' => 'Cake, flowers, surprise — anything the team should prep.'],
             ],
         ],
     ];

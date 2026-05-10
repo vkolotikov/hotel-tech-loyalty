@@ -11,7 +11,7 @@ import { PipelineInsights } from '../components/PipelineInsights'
 import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
 import { BrandBadge } from '../components/BrandBadge'
 import { SavedViews } from '../components/SavedViews'
-import { CustomFieldsForm } from '../components/CustomFields'
+import { CustomFieldsForm, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -37,6 +37,34 @@ const SOURCE_BADGES: Record<string, { label: string; cls: string }> = {
 }
 const SYSTEM_SOURCES = Object.keys(SOURCE_BADGES)
 
+/**
+ * Renders a custom-field value as a leads-list table cell. Type-aware
+ * so the cell looks right whether it's a date / number / select tag
+ * etc. Used by `listColumns` rendering on the Inquiries page.
+ */
+function renderCustomListValue(type: string, v: any): React.ReactNode {
+  if (v === null || v === undefined || v === '') return <span className="text-gray-700">—</span>
+  if (type === 'checkbox') return v ? <span className="text-emerald-400">Yes</span> : <span className="text-gray-500">No</span>
+  if (type === 'date') {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
+  }
+  if (type === 'multiselect' && Array.isArray(v)) {
+    if (v.length === 0) return <span className="text-gray-700">—</span>
+    return (
+      <div className="flex flex-wrap gap-1 max-w-[200px]">
+        {v.slice(0, 3).map((item, i) => (
+          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-dark-bg border border-dark-border">{item}</span>
+        ))}
+        {v.length > 3 && <span className="text-[10px] text-t-secondary">+{v.length - 3}</span>}
+      </div>
+    )
+  }
+  if (type === 'url') return <span className="text-accent truncate block max-w-[180px]">{String(v)}</span>
+  if (type === 'textarea') return <span className="truncate block max-w-[200px]" title={String(v)}>{String(v)}</span>
+  return String(v)
+}
+
 const MICE_TYPES = ['Event/MICE', 'Conference', 'Wedding']
 
 const EMPTY_FORM = {
@@ -56,6 +84,11 @@ export function Inquiries() {
   // pick which Add Inquiry fields and which list columns are shown.
   // useSettings deep-merges with defaults so missing keys are safe.
   const fieldCfg = settings.inquiry_fields
+  // Custom fields flagged show_in_list become extra columns in the
+  // leads table. Filtered to active fields only — toggling a field off
+  // hides it from the list without losing the column config.
+  const { data: customFieldDefs } = useCustomFields('inquiry')
+  const listColumns = (customFieldDefs ?? []).filter(f => f.show_in_list)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
@@ -161,10 +194,30 @@ export function Inquiries() {
     refetchInterval: 120_000,
   })
 
+  // Per-custom-field validation errors from the backend, surfaced
+  // inline beneath the relevant input. Cleared on next submit.
+  const [cfErrors, setCfErrors] = useState<Record<string, string[]>>({})
+
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/inquiries', body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['inquiries'] }); setShowCreate(false); setForm({ ...EMPTY_FORM }); toast.success('Inquiry created') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      setShowCreate(false)
+      setForm({ ...EMPTY_FORM })
+      setCfErrors({})
+      toast.success('Inquiry created')
+    },
+    onError: (e: any) => {
+      const fieldErrors = extractCustomFieldErrors(e)
+      setCfErrors(fieldErrors)
+      // If only custom-field errors, the inline messages explain it.
+      // Otherwise show the top-level message in a toast.
+      if (Object.keys(fieldErrors).length === 0) {
+        toast.error(e.response?.data?.message || 'Error')
+      } else {
+        toast.error('Please fix the highlighted custom fields.')
+      }
+    },
   })
 
   const completeMutation = useMutation({
@@ -539,13 +592,18 @@ export function Inquiries() {
                 {fieldCfg.list.owner && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Owner</th>}
                 {fieldCfg.list.touches && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Touches</th>}
                 {fieldCfg.list.next_task && <SortHeader col="next_task_due" label="Next Task" />}
+                {listColumns.map(col => (
+                  <th key={col.id} className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap" title={col.help_text ?? undefined}>
+                    {col.label}
+                  </th>
+                ))}
                 <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Actions</th>
                 <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={10} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
+              {isLoading && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
+              {!isLoading && inquiries.length === 0 && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                 const nights = inq.check_in && inq.check_out
@@ -693,6 +751,19 @@ export function Inquiries() {
                         ) : <span className="text-xs text-gray-700">—</span>}
                       </td>
                     )}
+
+                    {/* Custom-field columns — only the ones flagged
+                        show_in_list. Cell renderer is type-aware so
+                        booleans show as Yes/No, dates as locale, multi-
+                        selects as comma-joined chips. */}
+                    {listColumns.map(col => {
+                      const v = inq.custom_data?.[col.key]
+                      return (
+                        <td key={col.id} className="px-4 py-3 text-xs whitespace-nowrap text-gray-300">
+                          {renderCustomListValue(col.type, v)}
+                        </td>
+                      )
+                    })}
 
                     {/* Inline quick actions — call, email, whatsapp, sms,
                         won, lost — all single-click and self-logging. */}
@@ -998,6 +1069,7 @@ export function Inquiries() {
                 entity="inquiry"
                 values={form.custom_data}
                 onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
+                errors={cfErrors}
                 inputClassName={inp}
               />
 
