@@ -86,8 +86,28 @@ class PlannerController extends Controller
         return response()->json($parent->load('subtasks'), 201);
     }
 
-    public function updateTask(Request $request, PlannerTask $task): JsonResponse
+    /**
+     * Resolve a task by id, scoped through the BelongsToOrganization
+     * global scope. We use explicit binding here instead of Laravel's
+     * implicit route-model binding because implicit binding has been
+     * a recurring source of mysterious 404s on this codebase (lead-
+     * forms hit the same wall in Phase 10) — likely a Laravel Cloud
+     * route-cache + binding-resolution interaction. Explicit lookup
+     * bypasses the entire mechanism.
+     */
+    private function resolveTask(int $id): PlannerTask
     {
+        return PlannerTask::findOrFail($id);
+    }
+
+    private function resolveSubtask(int $id): PlannerSubtask
+    {
+        return PlannerSubtask::findOrFail($id);
+    }
+
+    public function updateTask(Request $request, int $task): JsonResponse
+    {
+        $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
             'employee_name'        => 'nullable|string|max:150',
             'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
@@ -104,49 +124,52 @@ class PlannerController extends Controller
             'description'          => 'nullable|string',
         ]);
 
-        $task->update($validated);
-        return response()->json($task->fresh()->load('subtasks'));
+        $taskModel->update($validated);
+        return response()->json($taskModel->fresh()->load('subtasks'));
     }
 
-    public function destroyTask(Request $request, PlannerTask $task): JsonResponse
+    public function destroyTask(Request $request, int $task): JsonResponse
     {
+        $taskModel = $this->resolveTask($task);
         $scope = $request->get('scope', 'just_this'); // just_this | all_future | whole_series
 
-        if ($scope === 'all_future' && ($task->recurring_parent_id || $task->recurring)) {
-            $parentId = $task->recurring_parent_id ?? $task->id;
+        if ($scope === 'all_future' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
+            $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
             PlannerTask::where('id', $parentId)
                 ->orWhere('recurring_parent_id', $parentId)
-                ->where('task_date', '>=', $task->task_date)
+                ->where('task_date', '>=', $taskModel->task_date)
                 ->delete();
             return response()->json(['message' => 'Future occurrences deleted']);
         }
 
-        if ($scope === 'whole_series' && ($task->recurring_parent_id || $task->recurring)) {
-            $parentId = $task->recurring_parent_id ?? $task->id;
+        if ($scope === 'whole_series' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
+            $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
             PlannerTask::where('id', $parentId)
                 ->orWhere('recurring_parent_id', $parentId)
                 ->delete();
             return response()->json(['message' => 'Whole series deleted']);
         }
 
-        $task->delete();
+        $taskModel->delete();
         return response()->json(['message' => 'Task deleted']);
     }
 
-    public function moveTask(Request $request, PlannerTask $task): JsonResponse
+    public function moveTask(Request $request, int $task): JsonResponse
     {
+        $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
             'task_date'            => 'required|date',
             'employee_name'        => 'nullable|string|max:150',
             'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
         ]);
 
-        $task->update($validated);
+        $taskModel->update($validated);
         return response()->json(['success' => true]);
     }
 
-    public function copyTask(Request $request, PlannerTask $task): JsonResponse
+    public function copyTask(Request $request, int $task): JsonResponse
     {
+        $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
             'task_date'            => 'required|date',
             'employee_name'        => 'nullable|string|max:150',
@@ -156,16 +179,16 @@ class PlannerController extends Controller
         // replicate() doesn't copy timestamps. We exclude completed +
         // recurring fields so a duplicate isn't accidentally part of
         // the original recurring series.
-        $copy = $task->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id']);
+        $copy = $taskModel->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id']);
         $copy->task_date     = $validated['task_date'];
-        $copy->employee_name = $validated['employee_name'] ?? $task->employee_name;
+        $copy->employee_name = $validated['employee_name'] ?? $taskModel->employee_name;
         if (array_key_exists('assigned_to_user_id', $validated)) {
             $copy->assigned_to_user_id = $validated['assigned_to_user_id'];
         }
         $copy->completed = false;
         $copy->save();
 
-        foreach ($task->subtasks as $sub) {
+        foreach ($taskModel->subtasks as $sub) {
             PlannerSubtask::create([
                 'task_id' => $copy->id,
                 'title'   => $sub->title,
@@ -176,26 +199,28 @@ class PlannerController extends Controller
         return response()->json($copy->load('subtasks'), 201);
     }
 
-    public function toggleComplete(PlannerTask $task): JsonResponse
+    public function toggleComplete(int $task): JsonResponse
     {
-        $newCompleted = !$task->completed;
-        $task->update([
+        $taskModel = $this->resolveTask($task);
+        $newCompleted = !$taskModel->completed;
+        $taskModel->update([
             'completed' => $newCompleted,
             'status'    => $newCompleted ? 'done' : 'todo',
         ]);
-        return response()->json($task->fresh()->load('subtasks'));
+        return response()->json($taskModel->fresh()->load('subtasks'));
     }
 
-    public function quickStatus(Request $request, PlannerTask $task): JsonResponse
+    public function quickStatus(Request $request, int $task): JsonResponse
     {
+        $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
             'status' => 'required|string|in:todo,in_progress,blocked,done',
         ]);
-        $task->update([
+        $taskModel->update([
             'status'    => $validated['status'],
             'completed' => $validated['status'] === 'done',
         ]);
-        return response()->json($task->fresh()->load('subtasks'));
+        return response()->json($taskModel->fresh()->load('subtasks'));
     }
 
     /**
@@ -249,26 +274,29 @@ class PlannerController extends Controller
 
     /* ─── Subtasks ─────────────────────────────────────────────── */
 
-    public function storeSubtask(Request $request, PlannerTask $task): JsonResponse
+    public function storeSubtask(Request $request, int $task): JsonResponse
     {
+        $taskModel = $this->resolveTask($task);
         $validated = $request->validate(['title' => 'required|string|max:200']);
         $subtask = PlannerSubtask::create([
-            'task_id'    => $task->id,
+            'task_id'    => $taskModel->id,
             'title'      => $validated['title'],
             'created_at' => now(),
         ]);
         return response()->json($subtask, 201);
     }
 
-    public function toggleSubtask(PlannerSubtask $subtask): JsonResponse
+    public function toggleSubtask(int $subtask): JsonResponse
     {
-        $subtask->update(['is_done' => !$subtask->is_done]);
-        return response()->json($subtask);
+        $subtaskModel = $this->resolveSubtask($subtask);
+        $subtaskModel->update(['is_done' => !$subtaskModel->is_done]);
+        return response()->json($subtaskModel);
     }
 
-    public function destroySubtask(PlannerSubtask $subtask): JsonResponse
+    public function destroySubtask(int $subtask): JsonResponse
     {
-        $subtask->delete();
+        $subtaskModel = $this->resolveSubtask($subtask);
+        $subtaskModel->delete();
         return response()->json(['message' => 'Subtask deleted']);
     }
 
@@ -358,8 +386,9 @@ class PlannerController extends Controller
         return response()->json($tpl, 201);
     }
 
-    public function updateTemplate(Request $request, PlannerTemplate $template): JsonResponse
+    public function updateTemplate(Request $request, int $template): JsonResponse
     {
+        $tpl = PlannerTemplate::findOrFail($template);
         $validated = $request->validate([
             'name'             => 'sometimes|string|max:120',
             'title'            => 'sometimes|string|max:200',
@@ -372,13 +401,14 @@ class PlannerController extends Controller
             'sort_order'       => 'sometimes|integer',
         ]);
 
-        $template->fill($validated)->save();
-        return response()->json($template->fresh());
+        $tpl->fill($validated)->save();
+        return response()->json($tpl->fresh());
     }
 
-    public function destroyTemplate(PlannerTemplate $template): JsonResponse
+    public function destroyTemplate(int $template): JsonResponse
     {
-        $template->delete();
+        $tpl = PlannerTemplate::findOrFail($template);
+        $tpl->delete();
         return response()->json(['message' => 'Template deleted']);
     }
 

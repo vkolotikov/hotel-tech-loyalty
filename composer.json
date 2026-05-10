@@ -44,9 +44,7 @@
             "@php artisan package:discover --ansi"
         ],
         "post-install-cmd": [
-            "@php artisan config:clear --ansi",
-            "@php artisan route:clear --ansi",
-            "@php artisan event:clear --ansi"
+            "@php artisan optimize:clear --ansi"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
