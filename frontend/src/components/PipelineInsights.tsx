@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Snowflake, DollarSign, UserMinus, AlarmClock, ChevronDown, Sparkles } from 'lucide-react'
+import { Snowflake, DollarSign, UserMinus, AlarmClock, ChevronDown, Sparkles, Flame } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { ContactActions } from './ContactActions'
 
 interface SignalCard {
@@ -24,6 +25,7 @@ interface SignalCard {
  * about deals that are quietly slipping through the cracks.
  */
 export function PipelineInsights({ currencySymbol }: { currencySymbol: string }) {
+  const qc = useQueryClient()
   const { data } = useQuery<any>({
     queryKey: ['inquiries-insights'],
     queryFn: () => api.get('/v1/admin/inquiries/insights').then(r => r.data),
@@ -32,6 +34,24 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
   })
 
   const [open, setOpen] = useState<SignalCard['key'] | null>(null)
+
+  // CRM Phase 4: bulk re-engagement on the Going Cold list. Queues a
+  // follow-up task for tomorrow 9am on every cold inquiry shown and
+  // logs an activity. Does not actually send email — that's a Phase
+  // 4.5 add once the template-pick UX is in.
+  const reengage = useMutation({
+    mutationFn: (ids: number[]) => api.post('/v1/admin/inquiries/bulk', {
+      ids,
+      action: 'mark_for_reengagement',
+    }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
+      qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
+      qc.invalidateQueries({ queryKey: ['tasks-list'] })
+      toast.success(res.data?.message ?? 'Tasks queued')
+    },
+    onError: () => toast.error('Could not queue re-engagement'),
+  })
 
   if (!data) return null
 
@@ -108,9 +128,26 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
 
       {activeCard && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
-          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{activeCard.label}</span>
-            <button onClick={() => setOpen(null)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+            <div className="flex items-center gap-2">
+              {activeCard.key === 'cold' && activeCard.sample.length > 0 && (
+                <button
+                  onClick={() => {
+                    const ids = activeCard.sample.map((i: any) => i.id)
+                    if (window.confirm(`Queue re-engagement tasks for ${ids.length} cold lead${ids.length === 1 ? '' : 's'} (due tomorrow 9am)?`)) {
+                      reengage.mutate(ids)
+                    }
+                  }}
+                  disabled={reengage.isPending}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-orange-500/15 border border-orange-500/30 text-orange-300 hover:bg-orange-500/25 hover:text-orange-200 disabled:opacity-50"
+                >
+                  <Flame size={11} />
+                  {reengage.isPending ? 'Queuing…' : `Re-engage all (${activeCard.sample.length})`}
+                </button>
+              )}
+              <button onClick={() => setOpen(null)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+            </div>
           </div>
           <div className="divide-y divide-white/[0.04]">
             {activeCard.sample.length === 0 ? (

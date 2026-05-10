@@ -60,9 +60,85 @@ class CorporateAccountController extends Controller
         $corporateAccount->loadCount(['inquiries', 'reservations']);
         $corporateAccount->load([
             'reservations' => fn($q) => $q->latest('check_in')->limit(10),
-            'inquiries'    => fn($q) => $q->latest()->limit(10),
+            'inquiries'    => fn($q) => $q->latest()->limit(10)->with('guest:id,full_name'),
         ]);
-        return response()->json($corporateAccount);
+
+        // CRM Phase 4: rolled-up account vitals for the expanded detail panel.
+        // - confirmed_revenue: lifetime sum of confirmed reservation totals.
+        //   This is the LTV figure shown on the Companies list.
+        // - open_pipeline_value / count: deals still in flight, not closed.
+        // - last_contact_at: most recent activity touch on any of the
+        //   account's inquiries — drives the "going cold" signal at the
+        //   account level (different from the per-inquiry one).
+        // - credit_used / credit_pct: against the configured credit limit.
+        //   We approximate "outstanding" as confirmed-but-not-checked-out
+        //   reservations plus quoted open inquiries — close enough until
+        //   we wire real invoice tracking (Phase 5+).
+        $confirmedRevenue = (float) \App\Models\Reservation::where('corporate_account_id', $corporateAccount->id)
+            ->where('status', 'Confirmed')
+            ->sum('total_amount');
+
+        $openInquiries = \App\Models\Inquiry::where('corporate_account_id', $corporateAccount->id)
+            ->whereNotIn('status', ['Confirmed', 'Lost']);
+        $openPipelineValue = (float) (clone $openInquiries)->sum('total_value');
+        $openPipelineCount = (int) (clone $openInquiries)->count();
+
+        $outstanding = (float) \App\Models\Reservation::where('corporate_account_id', $corporateAccount->id)
+            ->where('status', 'Confirmed')
+            ->whereNull('checked_out_at')
+            ->sum('total_amount');
+
+        $lastContact = \App\Models\Activity::whereIn(
+                'inquiry_id',
+                \App\Models\Inquiry::where('corporate_account_id', $corporateAccount->id)->pluck('id')
+            )
+            ->orderByDesc('occurred_at')
+            ->value('occurred_at');
+
+        $creditLimit = $corporateAccount->credit_limit ? (float) $corporateAccount->credit_limit : null;
+        $creditPct = $creditLimit && $creditLimit > 0
+            ? min(100, round($outstanding / $creditLimit * 100, 1))
+            : null;
+
+        $contractEnd = $corporateAccount->contract_end;
+        $renewalSoon = $contractEnd
+            && $contractEnd->isFuture()
+            && $contractEnd->lte(now()->addDays(60));
+
+        $payload = $corporateAccount->toArray();
+        $payload['ltv'] = [
+            'confirmed_revenue'    => round($confirmedRevenue, 2),
+            'open_pipeline_value'  => round($openPipelineValue, 2),
+            'open_pipeline_count'  => $openPipelineCount,
+            'outstanding'          => round($outstanding, 2),
+            'credit_pct'           => $creditPct,
+            'last_contact_at'      => $lastContact,
+            'renewal_soon'         => $renewalSoon,
+        ];
+
+        // Reshape recent items into the lighter format the frontend
+        // already reads. Keeping the existing keys means no breaking
+        // change for the current detail panel.
+        $payload['recent_reservations'] = $corporateAccount->reservations->map(fn($r) => [
+            'id'            => $r->id,
+            'reference'     => $r->confirmation_no,
+            'check_in'      => optional($r->check_in)->toDateString(),
+            'check_out'     => optional($r->check_out)->toDateString(),
+            'total'         => $r->total_amount,
+            'status'        => $r->status,
+        ])->all();
+
+        $payload['recent_inquiries'] = $corporateAccount->inquiries->map(fn($i) => [
+            'id'            => $i->id,
+            'guest_name'    => $i->guest?->full_name,
+            'inquiry_type'  => $i->inquiry_type,
+            'check_in'      => optional($i->check_in)->toDateString(),
+            'total_value'   => $i->total_value,
+            'status'        => $i->status,
+            'created_at'    => optional($i->created_at)->toIso8601String(),
+        ])->all();
+
+        return response()->json($payload);
     }
 
     public function update(Request $request, CorporateAccount $corporateAccount): JsonResponse

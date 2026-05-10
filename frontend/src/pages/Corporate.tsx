@@ -362,19 +362,78 @@ export function Corporate() {
 function DetailPanel({ account, detail, currencySymbol }: { account: any; detail: any; currencySymbol: string }) {
   const fmt = (v: any) => v != null ? `${currencySymbol}${Number(v).toLocaleString()}` : '—'
   const info = detail ?? account
+  const ltv = detail?.ltv
+
+  // CRM Phase 4: vitals strip pulls together LTV / open-pipeline / credit
+  // utilization / last contact + renewal-soon chip into one glance.
   return (
     <div className="space-y-4">
+      {ltv && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Vital label="Lifetime revenue" value={fmt(ltv.confirmed_revenue)} valueClass="text-emerald-400" />
+          <Vital
+            label={`Open pipeline · ${ltv.open_pipeline_count}`}
+            value={fmt(ltv.open_pipeline_value)}
+            valueClass="text-cyan-400"
+          />
+          <CreditMeter
+            outstanding={ltv.outstanding}
+            limit={info.credit_limit}
+            pct={ltv.credit_pct}
+            currencySymbol={currencySymbol}
+          />
+          <Vital
+            label="Last contact"
+            value={ltv.last_contact_at
+              ? new Date(ltv.last_contact_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : 'No activity yet'}
+            valueClass={ltv.last_contact_at ? 'text-white' : 'text-amber-400'}
+          />
+        </div>
+      )}
+
+      {ltv?.renewal_soon && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-amber-200 flex items-center gap-2">
+          <span className="font-bold uppercase tracking-wide text-amber-300">Renewal soon</span>
+          <span>Contract ends {info.contract_end} — within 60 days.</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InfoBlock label="Credit Limit" value={fmt(info.credit_limit)} />
         <InfoBlock label="Billing Email" value={info.billing_email || '—'} />
         <InfoBlock label="Tax ID" value={info.tax_id || '—'} />
         <InfoBlock label="Rate Type" value={info.rate_type || '—'} />
+        <InfoBlock label="Payment Terms" value={info.payment_terms || '—'} />
       </div>
       {info.billing_address && <div><span className="text-xs text-t-secondary">Billing Address</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
       {info.notes && <div><span className="text-xs text-t-secondary">Notes</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
+
+      {detail?.recent_inquiries?.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Linked deals</h4>
+          <div className="space-y-1">
+            {detail.recent_inquiries.map((i: any) => (
+              <a
+                key={i.id}
+                href={`/inquiries/${i.id}`}
+                className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs hover:bg-dark-surface transition"
+              >
+                <span className="text-gray-300 flex-1 truncate">
+                  {i.guest_name ?? `Inquiry #${i.id}`}
+                  {i.inquiry_type && <span className="text-[#636366]"> · {i.inquiry_type}</span>}
+                </span>
+                <span className="text-[#636366] mr-3">{i.check_in ?? '—'}</span>
+                <span className="text-primary-400 mr-3">{fmt(i.total_value)}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${i.status === 'Confirmed' ? 'bg-green-500/20 text-green-400' : i.status === 'Lost' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{i.status}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {detail?.recent_reservations?.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Recent Reservations</h4>
+          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Recent reservations</h4>
           <div className="space-y-1">
             {detail.recent_reservations.map((r: any) => (
               <div key={r.id} className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs">
@@ -390,6 +449,42 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
       {detail && !detail.recent_reservations?.length && !detail.recent_inquiries?.length && (
         <p className="text-xs text-[#636366]">No recent reservations or inquiries for this account.</p>
       )}
+    </div>
+  )
+}
+
+function Vital({ label, value, valueClass = 'text-white' }: { label: string; value: any; valueClass?: string }) {
+  return (
+    <div className="bg-dark-bg border border-dark-border rounded-md p-2.5">
+      <p className="text-[10px] uppercase tracking-wide font-bold text-t-secondary">{label}</p>
+      <p className={`text-sm font-bold tabular-nums mt-0.5 ${valueClass}`}>{value}</p>
+    </div>
+  )
+}
+
+function CreditMeter({ outstanding, limit, pct, currencySymbol }: {
+  outstanding: number
+  limit: number | null
+  pct: number | null
+  currencySymbol: string
+}) {
+  const fmt = (v: any) => v != null ? `${currencySymbol}${Number(v).toLocaleString()}` : '—'
+  if (!limit || limit <= 0) {
+    return <Vital label="Credit usage" value="No limit set" valueClass="text-t-secondary" />
+  }
+  const barColor = pct! >= 90 ? '#ef4444' : pct! >= 75 ? '#f59e0b' : '#10b981'
+  return (
+    <div className="bg-dark-bg border border-dark-border rounded-md p-2.5">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wide font-bold text-t-secondary">
+        <span>Credit · {pct}%</span>
+        <span className="text-white tabular-nums normal-case">{fmt(outstanding)} / {fmt(limit)}</span>
+      </div>
+      <div className="mt-1.5 h-1.5 bg-dark-surface2 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: barColor }}
+        />
+      </div>
     </div>
   )
 }

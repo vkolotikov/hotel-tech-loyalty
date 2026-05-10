@@ -388,7 +388,7 @@ class InquiryController extends Controller
         $validated = $request->validate([
             'ids'    => 'required|array|min:1|max:500',
             'ids.*'  => 'integer',
-            'action' => 'required|string|in:set_status,set_priority,set_assigned_to,mark_won,mark_lost',
+            'action' => 'required|string|in:set_status,set_priority,set_assigned_to,mark_won,mark_lost,mark_for_reengagement',
             'value'  => 'nullable|string|max:150',
         ]);
 
@@ -397,7 +397,50 @@ class InquiryController extends Controller
         // bulk runs targeting overlapping IDs serialise instead of
         // racing. Each row is re-fetched inside the transaction to
         // ensure model events fire on a fresh instance.
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, &$updated) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, &$updated, $request) {
+            // CRM Phase 4: Going-cold re-engagement — for each selected
+            // inquiry, queue a follow-up Task (due tomorrow 9am) and log
+            // an Activity (type=note) marking the deal as flagged.
+            // Doesn't actually SEND an email yet (deferred — needs
+            // template-pick UX); this gets the deal back on the rep's
+            // radar, which is 80% of the value.
+            if ($validated['action'] === 'mark_for_reengagement') {
+                $userId = $request->user()?->id;
+                $dueAt = now()->addDay()->setTime(9, 0);
+
+                foreach ($validated['ids'] as $id) {
+                    $inq = Inquiry::lockForUpdate()->find($id);
+                    if (!$inq) continue;
+
+                    \App\Models\Task::create([
+                        'inquiry_id'  => $inq->id,
+                        'guest_id'    => $inq->guest_id,
+                        'type'        => 'email',
+                        'title'       => 'Re-engage cold lead — '
+                            . ($inq->guest?->full_name ?? "Inquiry #{$inq->id}"),
+                        'description' => 'Bulk-flagged from the Going Cold panel. Last touch: '
+                            . ($inq->last_contacted_at?->diffForHumans() ?? 'never logged') . '.',
+                        'due_at'      => $dueAt,
+                        'assigned_to' => $userId,
+                        'created_by'  => $userId,
+                    ]);
+
+                    \App\Models\Activity::create([
+                        'inquiry_id'  => $inq->id,
+                        'guest_id'    => $inq->guest_id,
+                        'type'        => 'note',
+                        'subject'     => 'Re-engagement task queued',
+                        'body'        => 'Bulk action from Going Cold panel — task scheduled for tomorrow 9am.',
+                        'metadata'    => ['kind' => 'reengagement'],
+                        'created_by'  => $userId,
+                        'occurred_at' => now(),
+                    ]);
+
+                    $updated++;
+                }
+                return;
+            }
+
             foreach ($validated['ids'] as $id) {
                 $r = Inquiry::lockForUpdate()->find($id);
                 if (!$r) continue;
@@ -419,9 +462,14 @@ class InquiryController extends Controller
             return response()->json(['updated' => 0, 'message' => 'No matching inquiries.']);
         }
 
+        $message = match ($validated['action']) {
+            'mark_for_reengagement' => "{$updated} re-engagement task" . ($updated === 1 ? '' : 's') . ' queued for tomorrow 9am.',
+            default                 => "{$updated} inquir" . ($updated === 1 ? 'y' : 'ies') . ' updated.',
+        };
+
         return response()->json([
             'updated' => $updated,
-            'message' => "{$updated} inquir" . ($updated === 1 ? 'y' : 'ies') . ' updated.',
+            'message' => $message,
         ]);
     }
 

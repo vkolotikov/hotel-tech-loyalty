@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Admin\InquiryController;
 use App\Http\Controllers\Api\V1\Admin\ActivityController;
 use App\Http\Controllers\Api\V1\Admin\TaskController;
 use App\Http\Controllers\Api\V1\Admin\PipelineController;
+use App\Http\Controllers\Api\V1\Admin\ReportingController;
 use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
@@ -556,6 +557,13 @@ Route::prefix('v1')->group(function () {
             Route::post('saved-views',                                 [SavedViewController::class, 'store']);
             Route::put('saved-views/{view}',                           [SavedViewController::class, 'update']);
             Route::delete('saved-views/{view}',                        [SavedViewController::class, 'destroy']);
+
+            // ─── CRM Phase 4: Reporting ───────────────────────────────────
+            Route::get('reporting/forecast',            [ReportingController::class, 'forecast']);
+            Route::get('reporting/lost-reasons',        [ReportingController::class, 'lostReasons']);
+            Route::get('reporting/source-attribution',  [ReportingController::class, 'sourceAttribution']);
+            Route::get('reporting/owner-activity',      [ReportingController::class, 'ownerActivity']);
+            Route::get('reporting/company-ltv',         [ReportingController::class, 'companyLtv']);
 
             // ─── CRM: Reservations ────────────────────────────────────────────
             Route::get('reservations',                       [ReservationController::class, 'index']);

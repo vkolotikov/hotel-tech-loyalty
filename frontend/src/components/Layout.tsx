@@ -9,7 +9,7 @@ import {
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight,
   Crown, Award, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
-  ListChecks,
+  ListChecks, TrendingUp,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package, Star,
   UserCog, AlertTriangle, Scissors,
@@ -101,6 +101,7 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/inquiries',     label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
       { path: '/tasks',         label: 'Tasks',             icon: ListChecks, gate: 'all' },
+      { path: '/reports',       label: 'Reports',           icon: TrendingUp, gate: 'admin' },
       { path: '/corporate',     label: 'Companies',         icon: Briefcase, gate: 'admin' },
       { path: '/notifications', label: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
       { path: '/reviews',       label: 'Reviews',           icon: Star,      gate: 'admin' },
