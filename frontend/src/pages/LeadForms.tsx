@@ -319,7 +319,10 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
     },
   })
 
-  const notFound = (error as any)?.response?.status === 404
+  const errStatus: number | undefined = (error as any)?.response?.status
+  const notFound = errStatus === 404
+  const subscriptionBlocked = errStatus === 403
+    && (error as any)?.response?.data?.error === 'subscription_required'
 
   // 404 means the editor opened against a stale id (form was deleted
   // in another tab / by another user). Auto-close + refresh the list
@@ -331,6 +334,16 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
     qc.invalidateQueries({ queryKey: ['lead-forms'] })
     onClose()
   }, [notFound, qc, onClose])
+
+  // Subscription-expired is the OTHER common reason a fetch fails on
+  // CRM endpoints. The Layout's subscription wall handles the page-
+  // level UX; for the drawer just give a clear message + close so the
+  // wall is visible underneath.
+  useEffect(() => {
+    if (!subscriptionBlocked) return
+    toast.error('Your trial has expired. Please renew to use lead forms.')
+    onClose()
+  }, [subscriptionBlocked, onClose])
 
   // Editor saves silently on every change (debounced via React Query
   // mutation queue) — toast on every keystroke would be noise. Failures
