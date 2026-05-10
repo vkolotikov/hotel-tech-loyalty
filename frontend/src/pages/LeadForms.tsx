@@ -300,10 +300,21 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
   const qc = useQueryClient()
   const [tab, setTab] = useState<'fields' | 'design' | 'embed'>('fields')
 
-  const { data: form, isLoading } = useQuery<LeadForm>({
+  // Surface a 404 gracefully — happens when the editor is opened from
+  // a stale list cache (form was deleted in another tab / by another
+  // user). Don't retry on 4xx so the user gets the friendly empty
+  // state immediately instead of three retries of failed requests.
+  const { data: form, isLoading, error } = useQuery<LeadForm>({
     queryKey: ['lead-form', formId],
     queryFn: () => api.get(`/v1/admin/lead-forms/${formId}`).then(r => r.data),
+    retry: (failureCount, err: any) => {
+      const status = err?.response?.status
+      if (status === 404 || status === 403) return false
+      return failureCount < 2
+    },
   })
+
+  const notFound = (error as any)?.response?.status === 404
 
   // Editor saves silently on every change (debounced via React Query
   // mutation queue) — toast on every keystroke would be noise. Failures
@@ -357,7 +368,24 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {isLoading || !form ? (
+          {notFound ? (
+            <div className="text-center py-16 px-6">
+              <X size={28} className="text-red-400/60 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-white mb-1">Form not found</h3>
+              <p className="text-sm text-t-secondary mb-4 max-w-xs mx-auto">
+                This form may have been deleted in another tab. Refresh the list and try again.
+              </p>
+              <button
+                onClick={() => {
+                  qc.invalidateQueries({ queryKey: ['lead-forms'] })
+                  onClose()
+                }}
+                className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm hover:bg-accent/90"
+              >
+                Refresh list
+              </button>
+            </div>
+          ) : isLoading || !form ? (
             <p className="text-center text-sm text-t-secondary py-12">Loading…</p>
           ) : tab === 'fields' ? (
             <FieldsTab form={form} onUpdate={update.mutate} />
