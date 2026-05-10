@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\V1\Admin\GuestController;
 use App\Http\Controllers\Api\V1\Admin\InquiryController;
 use App\Http\Controllers\Api\V1\Admin\ActivityController;
 use App\Http\Controllers\Api\V1\Admin\TaskController;
+use App\Http\Controllers\Api\V1\Admin\PipelineController;
+use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
@@ -532,6 +534,28 @@ Route::prefix('v1')->group(function () {
             Route::post('tasks/{task}/complete',[TaskController::class, 'complete']);
             Route::post('tasks/{task}/reopen',  [TaskController::class, 'reopen']);
             Route::delete('tasks/{task}',       [TaskController::class, 'destroy']);
+
+            // ─── CRM Phase 3: Pipelines + stages + lost reasons admin ─────
+            Route::get('pipelines',                                    [PipelineController::class, 'index']);
+            Route::post('pipelines',                                   [PipelineController::class, 'store']);
+            Route::put('pipelines/{pipeline}',                         [PipelineController::class, 'update']);
+            Route::delete('pipelines/{pipeline}',                      [PipelineController::class, 'destroy']);
+            Route::post('pipelines/{pipeline}/set-default',            [PipelineController::class, 'setDefault']);
+            Route::post('pipelines/{pipeline}/stages',                 [PipelineController::class, 'storeStage']);
+            Route::post('pipelines/{pipeline}/stages/reorder',         [PipelineController::class, 'reorderStages']);
+            Route::put('pipeline-stages/{stage}',                      [PipelineController::class, 'updateStage']);
+            Route::delete('pipeline-stages/{stage}',                   [PipelineController::class, 'destroyStage']);
+
+            Route::get('inquiry-lost-reasons-admin',                   [PipelineController::class, 'indexLostReasons']);
+            Route::post('inquiry-lost-reasons',                        [PipelineController::class, 'storeLostReason']);
+            Route::put('inquiry-lost-reasons/{reason}',                [PipelineController::class, 'updateLostReason']);
+            Route::delete('inquiry-lost-reasons/{reason}',             [PipelineController::class, 'destroyLostReason']);
+
+            // ─── CRM Phase 3: Saved views (per-user, per-page) ────────────
+            Route::get('saved-views',                                  [SavedViewController::class, 'index']);
+            Route::post('saved-views',                                 [SavedViewController::class, 'store']);
+            Route::put('saved-views/{view}',                           [SavedViewController::class, 'update']);
+            Route::delete('saved-views/{view}',                        [SavedViewController::class, 'destroy']);
 
             // ─── CRM: Reservations ────────────────────────────────────────────
             Route::get('reservations',                       [ReservationController::class, 'index']);

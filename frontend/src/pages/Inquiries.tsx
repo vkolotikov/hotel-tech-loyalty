@@ -10,6 +10,7 @@ import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
 import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
 import { BrandBadge } from '../components/BrandBadge'
+import { SavedViews } from '../components/SavedViews'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -394,6 +395,24 @@ export function Inquiries() {
           ))}
         </div>
       </div>
+
+      {/* Saved views — pinned filter combos for the current user. */}
+      <SavedViews
+        page="inquiries"
+        currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue, activeOnly }}
+        hasActiveFilters={!!hasFilters}
+        onApply={(f: any) => {
+          setStatus(f.status ?? '')
+          setPriority(f.priority ?? '')
+          setInquiryType(f.inquiryType ?? '')
+          setPropertyId(f.propertyId ?? '')
+          setAssignedTo(f.assignedTo ?? '')
+          setSource(f.source ?? '')
+          setTaskDue(f.taskDue ?? '')
+          setActiveOnly(!!f.activeOnly)
+          setPage(1)
+        }}
+      />
 
       {/* Filters */}
       <div className="space-y-2">
