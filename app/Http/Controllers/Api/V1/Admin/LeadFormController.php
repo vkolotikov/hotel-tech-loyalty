@@ -45,13 +45,16 @@ class LeadFormController extends Controller
         return response()->json($form, 201);
     }
 
-    public function show(LeadForm $leadForm): JsonResponse
+    public function show(int $leadForm): JsonResponse
     {
-        return response()->json($leadForm);
+        $form = $this->resolveForm($leadForm);
+        return response()->json($form);
     }
 
-    public function update(Request $request, LeadForm $leadForm): JsonResponse
+    public function update(Request $request, int $leadForm): JsonResponse
     {
+        $form = $this->resolveForm($leadForm);
+
         $data = $request->validate([
             'name'                  => 'sometimes|string|max:120',
             'description'           => 'sometimes|nullable|string|max:500',
@@ -64,13 +67,14 @@ class LeadFormController extends Controller
             'is_active'             => 'sometimes|boolean',
         ]);
 
-        $leadForm->fill($data)->save();
-        return response()->json($leadForm->fresh());
+        $form->fill($data)->save();
+        return response()->json($form->fresh());
     }
 
-    public function destroy(LeadForm $leadForm): JsonResponse
+    public function destroy(int $leadForm): JsonResponse
     {
-        $leadForm->delete();
+        $form = $this->resolveForm($leadForm);
+        $form->delete();
         return response()->json(['success' => true]);
     }
 
@@ -78,22 +82,46 @@ class LeadFormController extends Controller
      * Mint a new embed_key. Existing iframes will break — that's the
      * point: this is the "lock out" lever when a form is being spammed.
      */
-    public function regenerateKey(LeadForm $leadForm): JsonResponse
+    public function regenerateKey(int $leadForm): JsonResponse
     {
-        $leadForm->forceFill(['embed_key' => LeadForm::newEmbedKey()])->save();
-        return response()->json(['embed_key' => $leadForm->embed_key]);
+        $form = $this->resolveForm($leadForm);
+        $form->forceFill(['embed_key' => LeadForm::newEmbedKey()])->save();
+        return response()->json(['embed_key' => $form->embed_key]);
     }
 
     /**
      * GET /v1/admin/lead-forms/{form}/submissions — paginated list of
      * raw submissions for the inspect modal. Limited to recent ones.
      */
-    public function submissions(LeadForm $leadForm): JsonResponse
+    public function submissions(int $leadForm): JsonResponse
     {
-        $rows = $leadForm->submissions()
+        $form = $this->resolveForm($leadForm);
+        $rows = $form->submissions()
             ->with(['guest:id,full_name,email,phone', 'inquiry:id,status,total_value'])
             ->latest()
             ->paginate(25);
         return response()->json($rows);
+    }
+
+    /**
+     * Explicit lookup instead of Laravel's implicit route model binding.
+     * Hit a Phase 10 deploy bug on production where implicit binding
+     * 404'd despite the row existing in the right org — explicit lookup
+     * with a clear failure path keeps the failure mode obvious.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+     */
+    private function resolveForm(int $id): LeadForm
+    {
+        $form = LeadForm::find($id);
+        if (!$form) {
+            // Belt-and-braces: surface the cross-tenant case clearly so
+            // future debugging doesn't bounce around looking at routes.
+            $existsInOtherOrg = LeadForm::withoutGlobalScopes()->where('id', $id)->exists();
+            abort(404, $existsInOtherOrg
+                ? 'Lead form belongs to a different organization.'
+                : 'Lead form not found.');
+        }
+        return $form;
     }
 }
