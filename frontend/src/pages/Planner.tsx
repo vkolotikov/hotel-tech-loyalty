@@ -48,18 +48,6 @@ const STATUS_COLOR: Record<string, string> = {
   blocked: 'bg-red-500/15 text-red-400',
   done: 'bg-green-500/15 text-green-400',
 }
-const GROUP_COLORS: Record<string, string> = {
-  Housekeeping: 'bg-emerald-500/15 text-emerald-400', 'Front Desk': 'bg-blue-500/15 text-blue-400',
-  'Front Office': 'bg-blue-500/15 text-blue-400', Maintenance: 'bg-amber-500/15 text-amber-400',
-  'F&B': 'bg-purple-500/15 text-purple-400', Management: 'bg-red-500/15 text-red-400',
-  Sales: 'bg-cyan-500/15 text-cyan-400', Events: 'bg-pink-500/15 text-pink-400',
-}
-const STATUS_BORDER: Record<string, string> = {
-  todo: 'border-l-gray-600',
-  in_progress: 'border-l-blue-500',
-  blocked: 'border-l-red-500',
-  done: 'border-l-green-500',
-}
 
 /**
  * Icon + accent color per task group. Drives the icon-grid "Type"
@@ -200,16 +188,23 @@ const TaskRow = memo(({
 }) => {
   const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
   const subTotal = task.subtasks?.length ?? 0
+  const groupMeta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+  const GroupIcon = groupMeta.icon
 
   return (
-    <div draggable onDragStart={onDragStart} className={'rounded-xl border transition-all duration-200 cursor-move ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
+    <div draggable onDragStart={onDragStart}
+      style={!isExpanded && !task.completed ? { borderLeftColor: groupMeta.color, borderLeftWidth: 3 } : {}}
+      className={'rounded-xl border transition-all duration-200 cursor-move ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={onToggleExpand}>
         <button onClick={e => { e.stopPropagation(); onToggleComplete() }} className="flex-shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
           {task.completed
             ? <CheckCircle2 size={22} className="text-green-400" />
             : <Circle size={22} className="text-gray-600 hover:text-gray-400" />}
         </button>
-        <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLOR[task.priority] ?? '#6b7280' }} />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: groupMeta.color + '20', color: groupMeta.color }}>
+          <GroupIcon size={15} />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
@@ -232,7 +227,12 @@ const TaskRow = memo(({
                 <Clock size={11} />{fmtTime(task.start_time)}{task.end_time && ` — ${fmtTime(task.end_time)}`}
               </span>
             )}
-            {task.task_group && <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${GROUP_COLORS[task.task_group] ?? 'bg-gray-500/15 text-gray-400'}`}>{task.task_group}</span>}
+            {task.task_group && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{ backgroundColor: groupMeta.color + '20', color: groupMeta.color }}>
+                {task.task_group}
+              </span>
+            )}
             {task.task_category && <span className="flex items-center gap-1 text-xs text-gray-600"><Tag size={10} />{task.task_category}</span>}
             {task.duration_minutes && <span className="text-xs text-gray-600">{task.duration_minutes}m</span>}
           </div>
@@ -586,6 +586,62 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
 }
 
 /**
+ * Horizontally scrollable icon-tab bar for filtering planner tasks
+ * by group. Replaces the old `<select>` dropdown — staff scan the
+ * row of icons + counts much faster than they parse a closed dropdown.
+ *
+ * Renders an "All" tab + one tab per configured planner_group. Each
+ * tab shows the group icon, label, and a live count of tasks in the
+ * current scope (the parent already filters tasks by date / employee
+ * for the active view). Active tab fills with the group's accent
+ * color so the rest of the page picks up the visual cue.
+ *
+ * `tasks` is the unfiltered slice for the current scope — we count
+ * locally so the badge counts are correct even before the server
+ * round-trip lands.
+ */
+function GroupFilterTabs({ groups, value, onChange, tasks }: {
+  groups: string[]
+  value: string
+  onChange: (g: string) => void
+  tasks: any[]
+}) {
+  const countFor = (g: string) => g === '' ? tasks.length : tasks.filter((t: any) => (t.task_group || '') === g).length
+  const allTab = { key: '', label: 'All', icon: ListChecks, color: '#9ca3af' }
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-1.5 overflow-x-auto">
+      <div className="flex gap-1 min-w-min">
+        {[allTab, ...groups.map(g => {
+          const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
+          return { key: g, label: g, icon: meta.icon, color: meta.color }
+        })].map(tab => {
+          const active = value === tab.key
+          const Icon = tab.icon
+          const n = countFor(tab.key)
+          return (
+            <button
+              key={tab.key}
+              onClick={() => onChange(tab.key)}
+              className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ' +
+                (active ? 'text-white border-transparent' : 'text-gray-400 border-transparent hover:bg-dark-surface2 hover:text-white')}
+              style={active ? { backgroundColor: tab.color + '30', borderColor: tab.color + '60', color: tab.color } : {}}>
+              <Icon size={13} />
+              {tab.label}
+              {n > 0 && (
+                <span className={'ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ' +
+                  (active ? 'bg-white/15' : 'bg-dark-surface2 text-gray-500')}>
+                  {n}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
  * Tiny inline input used inside Schedule + Month cells. Replaces the
  * old "click empty cell → open big modal" flow for the common case of
  * "I just want to jot a one-line task on this day for this person".
@@ -760,7 +816,10 @@ export function Planner() {
   const today = fmtDate(new Date())
 
   /* ─── queries ─────────────────────────────────────────────────── */
-  const queryParams: any = { employee: employee || undefined, task_group: groupFilter || undefined }
+  // task_group filter is applied client-side (see allTasks → tasks
+  // below) so the GroupFilterTabs counts stay accurate as the user
+  // flips between tabs without an extra round trip per click.
+  const queryParams: any = { employee: employee || undefined }
   if (tab === 'day') queryParams.date = currentDate
   else if (tab === 'schedule') queryParams.week_start = weekStart
   else if (tab === 'month') {
@@ -769,11 +828,14 @@ export function Planner() {
     queryParams.to = `${monthYear.year}-${String(monthYear.month + 1).padStart(2, '0')}-${String(ld).padStart(2, '0')}`
   }
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'schedule' ? weekStart : monthYear, employee, groupFilter],
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'schedule' ? weekStart : monthYear, employee],
     queryFn: () => api.get('/v1/admin/planner/tasks', { params: queryParams }).then(r => r.data),
     enabled: tab !== 'stats',
   })
+  const tasks = groupFilter
+    ? allTasks.filter((t: any) => (t.task_group || '') === groupFilter)
+    : allTasks
 
   const { data: dayNote } = useQuery({
     queryKey: ['planner-day-note', tab === 'day' ? currentDate : today],
@@ -1109,10 +1171,6 @@ export function Planner() {
               <option value="">All Team</option>
               {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
             </select>
-            <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
-              <option value="">All Groups</option>
-              {settings.planner_groups.map((g: string) => <option key={g}>{g}</option>)}
-            </select>
             <div className="flex items-center gap-1">
               <button onClick={() => navigate(-1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronLeft size={16} /></button>
               <button onClick={goToday} className="px-3 py-2 rounded-lg border border-dark-border text-sm text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all font-medium">Today</button>
@@ -1128,6 +1186,18 @@ export function Planner() {
           </>}
         </div>
       </div>
+
+      {/* Group filter tabs — shared across Day / Schedule / Month */}
+      {tab !== 'stats' && (settings.planner_groups?.length ?? 0) > 0 && (
+        <div className="mb-4">
+          <GroupFilterTabs
+            groups={settings.planner_groups}
+            value={groupFilter}
+            onChange={setGroupFilter}
+            tasks={allTasks}
+          />
+        </div>
+      )}
 
       {/* ═══ DAY VIEW ═══ */}
       {tab === 'day' && (
@@ -1148,26 +1218,34 @@ export function Planner() {
             {/* Timeline */}
             {tasks.some((t: any) => t.start_time) && (
               <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-white mb-3">Timeline</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">Timeline</h3>
+                  <span className="text-[10px] text-gray-500">Width = task duration</span>
+                </div>
                 <div className="space-y-2">
                   {[...tasks].filter((t: any) => t.start_time).sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? '')).map((task: any) => {
                     const duration = task.duration_minutes || 30
                     const width = Math.min((duration / 480) * 100, 100) // 480 = 8 hours
+                    const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                    const Icon = meta.icon
                     return (
-                      <div key={task.id} className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold text-gray-500 min-w-[45px]">{fmtTime(task.start_time)}</span>
-                        <div className="flex-1 h-6 rounded-md bg-dark-surface2/50 border border-dark-border/50 relative overflow-hidden" title={task.title}>
+                      <button key={task.id}
+                        onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
+                        className="w-full flex items-center gap-2 hover:bg-dark-surface2/50 rounded-lg p-1 transition-colors">
+                        <span className="text-[10px] font-mono text-gray-500 min-w-[50px] text-right">{fmtShort(task.start_time)}</span>
+                        <div className="flex-1 h-7 rounded-md bg-dark-surface2/40 border border-dark-border/40 relative overflow-hidden" title={task.title}>
                           <div className="h-full rounded-md transition-all" style={{
                             width: `${width}%`,
-                            backgroundColor: STATUS_COLOR[task.status]?.split(' ')[1] || '#3b82f6',
-                            opacity: 0.7,
+                            backgroundColor: meta.color,
+                            opacity: task.completed ? 0.35 : 0.6,
                           }} />
-                          <span className="absolute inset-0 flex items-center px-2 text-[9px] font-semibold text-white truncate pointer-events-none">
-                            {task.title}
+                          <span className="absolute inset-0 flex items-center gap-1.5 px-2 text-[10px] font-semibold text-white pointer-events-none">
+                            <Icon size={10} className="flex-shrink-0" />
+                            <span className={'truncate ' + (task.completed ? 'line-through' : '')}>{task.title}</span>
                           </span>
                         </div>
-                        <span className="text-[10px] text-gray-600 min-w-[30px] text-right">{duration}m</span>
-                      </div>
+                        <span className="text-[10px] text-gray-600 min-w-[34px] text-right">{duration}m</span>
+                      </button>
                     )
                   })}
                 </div>
@@ -1372,33 +1450,53 @@ export function Planner() {
                                 e.dataTransfer.setData('sourceEmp', emp === 'Unassigned' ? '' : emp)
                               }}
                               className="relative group cursor-grab active:cursor-grabbing">
-                              <button
-                                onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/40 border-l-2 ' +
-                                  (task.completed ? 'bg-green-500/10 border-green-500 hover:bg-green-500/15' : (STATUS_BORDER[task.status] ?? 'border-gray-600') + ' bg-primary-500/10 hover:bg-primary-500/15')}>
-                                {(task.start_time || task.end_time) && (
-                                  <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-primary-400')}>
-                                    {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
-                                  </div>
-                                )}
-                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>
-                                  {task.title}
-                                </div>
-                                {task.subtasks?.length > 0 && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <ListChecks size={10} className="text-gray-600" />
-                                    <span className={'text-[10px] ' + (task.subtasks.every((s: any) => s.is_done) ? 'text-green-400' : 'text-gray-600')}>
-                                      {task.subtasks.filter((s: any) => s.is_done).length}/{task.subtasks.length}
-                                    </span>
-                                  </div>
-                                )}
-                                {task.priority === 'High' && (
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                    <span className="text-[10px] text-red-400">High</span>
-                                  </div>
-                                )}
-                              </button>
+                              {(() => {
+                                /**
+                                 * Color the chip by task group: subtle tinted background +
+                                 * accent left-border. This is what makes a week-at-a-glance
+                                 * scan readable — staff see the visual cluster of housekeeping
+                                 * vs maintenance vs F&B before they read any text.
+                                 */
+                                const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                                const Icon = meta.icon
+                                return (
+                                  <button
+                                    onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
+                                    style={task.completed ? {} : { borderLeftColor: meta.color, backgroundColor: meta.color + '18' }}
+                                    className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 border-l-[3px] ' +
+                                      (task.completed
+                                        ? 'bg-green-500/10 border-green-500 hover:bg-green-500/15 hover:ring-green-500/30'
+                                        : 'hover:ring-white/20 hover:brightness-125')}>
+                                    {(task.start_time || task.end_time) && (
+                                      <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : '')}
+                                        style={task.completed ? {} : { color: meta.color }}>
+                                        {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
+                                      </div>
+                                    )}
+                                    <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
+                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
+                                      <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>
+                                        {task.title}
+                                      </span>
+                                    </div>
+                                    {(task.subtasks?.length > 0 || task.priority === 'High') && (
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {task.subtasks?.length > 0 && (
+                                          <span className={'inline-flex items-center gap-0.5 text-[10px] ' + (task.subtasks.every((s: any) => s.is_done) ? 'text-green-400' : 'text-gray-500')}>
+                                            <ListChecks size={9} />
+                                            {task.subtasks.filter((s: any) => s.is_done).length}/{task.subtasks.length}
+                                          </span>
+                                        )}
+                                        {task.priority === 'High' && (
+                                          <span className="inline-flex items-center gap-0.5 text-[10px] text-red-400">
+                                            <Flag size={9} /> High
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </button>
+                                )
+                              })()}
                               <button
                                 onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
                                 className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
@@ -1475,15 +1573,28 @@ export function Planner() {
                                 e.dataTransfer.setData('sourceEmp', '')
                               }}
                               className="relative group cursor-grab active:cursor-grabbing">
-                              <button
-                                onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                className={'w-full text-left p-2 rounded-lg transition-all hover:ring-1 hover:ring-gray-500/40 border-l-2 ' +
-                                  (task.completed ? 'bg-green-500/10 border-green-500 hover:bg-green-500/15' : (STATUS_BORDER[task.status] ?? 'border-gray-600') + ' bg-gray-500/10 hover:bg-gray-500/15')}>
-                                {(task.start_time || task.end_time) && (
-                                  <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : 'text-gray-400')}>{fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}</div>
-                                )}
-                                <div className={'text-xs mt-0.5 truncate ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</div>
-                              </button>
+                              {(() => {
+                                const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                                const Icon = meta.icon
+                                return (
+                                  <button
+                                    onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
+                                    style={task.completed ? {} : { borderLeftColor: meta.color, backgroundColor: meta.color + '18' }}
+                                    className={'w-full text-left p-2 rounded-lg transition-all border-l-[3px] hover:ring-1 hover:ring-white/20 ' +
+                                      (task.completed ? 'bg-green-500/10 border-green-500' : '')}>
+                                    {(task.start_time || task.end_time) && (
+                                      <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : '')}
+                                        style={task.completed ? {} : { color: meta.color }}>
+                                        {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
+                                      </div>
+                                    )}
+                                    <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
+                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
+                                      <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>{task.title}</span>
+                                    </div>
+                                  </button>
+                                )
+                              })()}
                               <button
                                 onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
                                 className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
@@ -1577,26 +1688,29 @@ export function Planner() {
                       </div>
                     ) : (
                       <div className="space-y-0.5">
-                        {dayTasks.slice(0, 3).map((t: any) => (
-                          <div
-                            key={t.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.stopPropagation()
-                              e.dataTransfer.effectAllowed = 'move'
-                              e.dataTransfer.setData('taskId', String(t.id))
-                              e.dataTransfer.setData('sourceDate', dateStr)
-                              e.dataTransfer.setData('sourceEmp', t.employee_name || '')
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })
-                            }}
-                            className="flex items-center gap-1 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing hover:bg-primary-500/15 transition-colors">
-                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLOR[t.priority] ?? '#6b7280' }} />
-                            <span className={'text-[10px] truncate ' + (t.completed ? 'text-gray-600 line-through' : 'text-gray-300')}>{t.title}</span>
-                          </div>
-                        ))}
+                        {dayTasks.slice(0, 3).map((t: any) => {
+                          const tMeta = TASK_GROUP_META[t.task_group] ?? CUSTOM_GROUP_META
+                          return (
+                            <div
+                              key={t.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation()
+                                e.dataTransfer.effectAllowed = 'move'
+                                e.dataTransfer.setData('taskId', String(t.id))
+                                e.dataTransfer.setData('sourceDate', dateStr)
+                                e.dataTransfer.setData('sourceEmp', t.employee_name || '')
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })
+                              }}
+                              className="flex items-center gap-1 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing hover:bg-primary-500/15 transition-colors"
+                              style={{ borderLeft: `2px solid ${tMeta.color}`, paddingLeft: 4 }}>
+                              <span className={'text-[10px] truncate ' + (t.completed ? 'text-gray-600 line-through' : 'text-gray-300')}>{t.title}</span>
+                            </div>
+                          )
+                        })}
                         {dayTasks.length > 3 && <div className="text-[10px] text-gray-600 pl-3">+{dayTasks.length - 3} more</div>}
                       </div>
                     )}
