@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\BenefitDefinition;
+use App\Models\ChatbotBehaviorConfig;
+use App\Models\ChatWidgetConfig;
+use App\Models\CrmSetting;
 use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
@@ -18,6 +21,217 @@ use Illuminate\Support\Str;
 
 class OrganizationSetupService
 {
+    public function __construct(
+        protected IndustryPresetService $crmPreset,
+        protected PlannerPresetService $plannerPreset,
+    ) {}
+
+    /**
+     * Map of toggleable left-sidebar group label → list of feature
+     * keys the wizard ticks for that group. Inverted at the end of
+     * onboardWithIndustry() to compute hidden_nav_groups (every
+     * group whose features key is NOT in the user's selection).
+     *
+     * Overview + System are intentionally not toggleable — see
+     * MenuSettings.tsx.
+     */
+    private const FEATURE_TO_GROUP = [
+        'ai_chat'    => 'AI Chat',
+        'loyalty'    => 'Members & Loyalty',
+        'bookings'   => 'Bookings',
+        'crm'        => 'CRM & Marketing',
+        'operations' => 'Operations',
+    ];
+
+    /**
+     * One-shot onboarding orchestrator. Takes the wizard payload and
+     * preconfigures every product the user said they want, applies
+     * an industry preset to both CRM and Planner, hides the menu
+     * groups they unchecked, and seeds basic property + chatbot
+     * defaults so the dashboard is immediately useful.
+     *
+     * Idempotent: re-running with the same payload produces the same
+     * end state — both preset services skip-existing for their
+     * starter content and updateOrCreate is used for settings.
+     *
+     * @param Organization $org    The org to configure (current_organization_id is bound).
+     * @param array        $data   Validated payload from SetupController::initialize.
+     * @return array{steps:array<string,bool>,errors:array<int,string>}
+     */
+    public function onboardWithIndustry(Organization $org, array $data): array
+    {
+        app()->instance('current_organization_id', $org->id);
+
+        $steps  = [];
+        $errors = [];
+
+        // 1. Org-level identity. The org name lands on every widget
+        //    + email template + invoice. Phone/country are stored on
+        //    Organization directly (already columns).
+        $orgPatch = [];
+        if (!empty($data['company_name'])) $orgPatch['name']    = $data['company_name'];
+        if (!empty($data['phone']))        $orgPatch['phone']   = $data['phone'];
+        if (!empty($data['country']))      $orgPatch['country'] = $data['country'];
+        if ($orgPatch) { $org->update($orgPatch); }
+        $steps['org_info'] = true;
+
+        // 2. Industry presets — apply both the CRM (pipeline /
+        //    stages / lost reasons / form / custom fields) and the
+        //    Planner (groups + starter templates) preset for the
+        //    chosen vertical. Both services are atomic and idempotent.
+        $industry = $data['industry'] ?? 'hotel';
+        try {
+            $this->crmPreset->apply($industry);
+            $steps['crm_preset'] = true;
+        } catch (\Throwable $e) {
+            $errors[] = 'CRM preset: ' . $e->getMessage();
+            $steps['crm_preset'] = false;
+        }
+        try {
+            $this->plannerPreset->apply($industry);
+            $steps['planner_preset'] = true;
+        } catch (\Throwable $e) {
+            $errors[] = 'Planner preset: ' . $e->getMessage();
+            $steps['planner_preset'] = false;
+        }
+
+        // 3. Menu visibility — compute the inverse of the feature
+        //    selection. The user picked which features they want;
+        //    we store which menu groups to hide so MenuSettings.tsx
+        //    and Layout.tsx pick it up immediately.
+        $selectedFeatures = is_array($data['features'] ?? null) ? $data['features'] : array_keys(self::FEATURE_TO_GROUP);
+        $hidden = [];
+        foreach (self::FEATURE_TO_GROUP as $key => $groupLabel) {
+            if (!in_array($key, $selectedFeatures, true)) {
+                $hidden[] = $groupLabel;
+            }
+        }
+        CrmSetting::updateOrCreate(
+            ['key' => 'hidden_nav_groups'],
+            ['value' => json_encode($hidden)],
+        );
+        $steps['nav_visibility'] = true;
+
+        // 4. Default tiers + benefits + hotel settings, even when
+        //    loyalty isn't in the selected features — it's cheap and
+        //    means the user can enable Members & Loyalty later from
+        //    Settings → Menu without re-running setup.
+        try {
+            $this->setupDefaults($org);
+            $steps['defaults'] = true;
+        } catch (\Throwable $e) {
+            $errors[] = 'Defaults: ' . $e->getMessage();
+            $steps['defaults'] = false;
+        }
+
+        // 5. Property records. The first property is created by
+        //    setupDefaults() above; if the user said they have N
+        //    locations, top up to N total. Each gets a numbered
+        //    suffix on both the name and the globally-unique code.
+        $count = max(1, (int) ($data['property_count'] ?? 1));
+        if ($count > 1) {
+            $existing = Property::withoutGlobalScopes()
+                ->where('organization_id', $org->id)
+                ->count();
+            if ($existing < $count) {
+                $base = Str::upper(Str::substr($org->slug ?? 'HTL', 0, 5));
+                for ($i = $existing + 1; $i <= $count; $i++) {
+                    $code = $base . str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+                    while (Property::withoutGlobalScopes()->where('code', $code)->exists()) {
+                        $code = $base . str_pad((string) (++$i), 2, '0', STR_PAD_LEFT);
+                    }
+                    Property::withoutGlobalScopes()->create([
+                        'organization_id' => $org->id,
+                        'code'            => $code,
+                        'name'            => $org->name . ' Location ' . $i,
+                        'city'            => '',
+                        'country'         => $org->country ?? '',
+                    ]);
+                }
+            }
+            $steps['properties'] = true;
+        }
+
+        // 6. Chatbot — only customise if AI Chat is in the selected
+        //    features. We seed the widget welcome message (what
+        //    visitors see when the widget opens) and the assistant
+        //    behavior identity (what the AI knows about itself).
+        if (in_array('ai_chat', $selectedFeatures, true)) {
+            try {
+                $welcome = trim($data['welcome_message'] ?? '');
+                if ($welcome !== '') {
+                    $widget = ChatWidgetConfig::firstOrNew(['organization_id' => $org->id]);
+                    // chat_widget_configs.widget_key + .api_key are NOT NULL
+                    // — generate on first create (existing rows skip these).
+                    if (!$widget->widget_key) $widget->widget_key = (string) Str::uuid();
+                    if (!$widget->api_key)    $widget->api_key    = Str::random(48);
+                    $widget->welcome_message = $welcome;
+                    if (!$widget->company_name) $widget->company_name = $org->name;
+                    if (!$widget->header_title) $widget->header_title = $org->name;
+                    $widget->save();
+                }
+
+                // Seed an assistant identity from the industry + company
+                // name so the first chat doesn't feel generic.
+                $identity = $this->defaultIdentityFor($industry, $org->name);
+                $behavior = ChatbotBehaviorConfig::firstOrNew(['organization_id' => $org->id]);
+                if (!$behavior->identity)       $behavior->identity = $identity;
+                if (!$behavior->assistant_name) $behavior->assistant_name = $org->name . ' Assistant';
+                $behavior->is_active = true;
+                $behavior->save();
+                $steps['chatbot'] = true;
+            } catch (\Throwable $e) {
+                $errors[] = 'Chatbot: ' . $e->getMessage();
+                $steps['chatbot'] = false;
+            }
+        }
+
+        // 7. Optional sample data — kept opt-in because new users on
+        //    a "real" account often don't want demo rows polluting
+        //    their CRM. Wrapped in its own try so a failure here
+        //    doesn't roll back the actual setup above.
+        if (!empty($data['with_sample_data'])) {
+            try {
+                $this->seedSampleData($org);
+                $steps['sample_data'] = true;
+            } catch (\Throwable $e) {
+                $errors[] = 'Sample data: ' . $e->getMessage();
+                $steps['sample_data'] = false;
+            }
+        }
+
+        // 8. Mark the wizard as completed so the Setup gate in
+        //    App.tsx doesn't show it again. Stored alongside the
+        //    industry choice for the "Currently:" badge in the
+        //    settings UI.
+        CrmSetting::updateOrCreate(
+            ['key' => 'onboarding_completed_at'],
+            ['value' => json_encode(now()->toIso8601String())],
+        );
+
+        return ['steps' => $steps, 'errors' => $errors];
+    }
+
+    /**
+     * Short, industry-flavored identity blurb for the AI assistant.
+     * Plugged into ChatbotBehaviorConfig.identity so the first chat
+     * already sounds appropriate to the vertical. Admins can rewrite
+     * it any time from Settings → AI Chat.
+     */
+    private function defaultIdentityFor(string $industry, string $orgName): string
+    {
+        return match ($industry) {
+            'beauty'      => "You are the AI assistant for {$orgName}, a beauty & spa salon. Help visitors with treatment info, pricing, and booking. Friendly, warm tone.",
+            'medical'     => "You are the AI assistant for {$orgName}, a medical practice. Help visitors with appointment info, services, and intake. Professional, reassuring tone. Never provide medical diagnoses.",
+            'legal'       => "You are the AI assistant for {$orgName}, a law firm. Help visitors understand services and request consultations. Professional tone. Never provide legal advice.",
+            'real_estate' => "You are the AI assistant for {$orgName}, a real-estate office. Help visitors with listings, viewings, and agent contact. Knowledgeable, responsive tone.",
+            'education'   => "You are the AI assistant for {$orgName}, an education provider. Help visitors with course info, schedules, and enrolment. Encouraging, clear tone.",
+            'fitness'     => "You are the AI assistant for {$orgName}, a fitness studio. Help visitors with classes, memberships, and trial bookings. Energetic, motivating tone.",
+            'restaurant'  => "You are the AI assistant for {$orgName}, a restaurant. Help visitors with reservations, menu, and special events. Hospitable, food-loving tone.",
+            default       => "You are the AI assistant for {$orgName}. Help visitors with bookings, info, and inquiries. Professional, welcoming tone.",
+        };
+    }
+
     /**
      * Set up a new organization with default tiers and settings.
      * Idempotent — safe to call multiple times (uses firstOrCreate).

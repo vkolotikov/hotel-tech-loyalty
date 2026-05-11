@@ -82,20 +82,33 @@ function ThemeLoader() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore()
   const [setupDone, setSetupDone] = useState<boolean | null>(null)
+  // `?rerun_setup=1` forces the wizard to show again even for an
+  // already-initialised org. Set by the "Re-run setup wizard" button
+  // in Settings → Menu. Cleared from the URL after onComplete().
+  const forceRerun = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('rerun_setup')
 
   useEffect(() => {
     if (!token || user?.user_type !== 'staff') {
       setSetupDone(true) // members skip setup check
       return
     }
+    if (forceRerun) { setSetupDone(false); return }
     api.get('/v1/admin/setup/status')
       .then(r => setSetupDone(r.data.setup_complete))
       .catch(() => setSetupDone(true)) // fail open
-  }, [token, user])
+  }, [token, user, forceRerun])
 
   if (!token) return <Navigate to="/login" replace />
   if (setupDone === null) return <PageLoader />
-  if (!setupDone) return <Setup onComplete={() => setSetupDone(true)} />
+  if (!setupDone) return <Setup onComplete={() => {
+    // Strip the rerun flag so the wizard doesn't open again on the
+    // next reload after the user just finished it.
+    if (forceRerun && typeof window !== 'undefined') {
+      const u = new URL(window.location.href); u.searchParams.delete('rerun_setup')
+      window.history.replaceState({}, '', u.toString())
+    }
+    setSetupDone(true)
+  }} />
   return <Layout>{children}</Layout>
 }
 

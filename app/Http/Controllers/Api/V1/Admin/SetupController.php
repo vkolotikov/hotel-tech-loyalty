@@ -15,7 +15,13 @@ class SetupController extends Controller
 
     /**
      * GET /v1/admin/setup/status
-     * Check if the current organization has been set up.
+     * Check if the current organization has been set up. Combines two
+     * signals so a re-run from Settings can always re-open the wizard:
+     *   - `setup_complete`: has the org been initialised at all?
+     *     Used by App.tsx to decide whether to gate the rest of the
+     *     SPA behind the wizard.
+     *   - `onboarding_completed_at`: timestamp from the new orchestrator
+     *     so the wizard knows whether to pre-fill from previous answers.
      */
     public function status(Request $request): JsonResponse
     {
@@ -26,22 +32,43 @@ class SetupController extends Controller
         }
 
         $hasTiers = LoyaltyTier::where('organization_id', $orgId)->exists();
+        $onboarded = \App\Models\CrmSetting::where('key', 'onboarding_completed_at')->first();
 
         return response()->json([
-            'setup_complete' => $hasTiers,
-            'organization_id' => $orgId,
+            'setup_complete'           => $hasTiers,
+            'organization_id'          => $orgId,
+            'onboarding_completed_at'  => $onboarded ? trim((string) $onboarded->value, '"') : null,
         ]);
     }
 
     /**
      * POST /v1/admin/setup/initialize
-     * Initialize the organization with defaults + optional sample data.
+     * Initialize the organization with the wizard's full payload, or
+     * (legacy path) just hotel_name + with_sample_data when called from
+     * an older client.
+     *
+     * The richer shape goes through OrganizationSetupService::
+     * onboardWithIndustry which orchestrates industry presets +
+     * planner presets + nav visibility + property seed + chatbot.
+     * The old shape stays supported so any in-flight client during
+     * the rollout doesn't break.
      */
     public function initialize(Request $request): JsonResponse
     {
         $request->validate([
-            'with_sample_data' => 'nullable|boolean',
+            // Legacy fields (still accepted)
             'hotel_name'       => 'nullable|string|max:255',
+            'with_sample_data' => 'nullable|boolean',
+
+            // New wizard payload
+            'company_name'     => 'nullable|string|max:255',
+            'industry'         => 'nullable|string|in:hotel,beauty,medical,legal,real_estate,education,fitness,restaurant',
+            'phone'            => 'nullable|string|max:50',
+            'country'          => 'nullable|string|max:80',
+            'features'         => 'nullable|array',
+            'features.*'       => 'string|in:ai_chat,loyalty,bookings,crm,operations',
+            'property_count'   => 'nullable|integer|min:1|max:20',
+            'welcome_message'  => 'nullable|string|max:500',
         ]);
 
         $orgId = app('current_organization_id');
@@ -51,23 +78,42 @@ class SetupController extends Controller
 
         $org = Organization::findOrFail($orgId);
 
-        // Update org name if provided
-        if ($request->filled('hotel_name')) {
-            $org->update(['name' => $request->input('hotel_name')]);
-        }
+        // Pick branch: if the new fields are present, run the full
+        // orchestrator. Otherwise fall back to the legacy two-step.
+        $hasWizardPayload = $request->filled('industry') || $request->filled('features') || $request->filled('company_name');
 
         try {
-            // Set up defaults (tiers, benefits, settings) — idempotent
-            $this->setup->setupDefaults($org);
+            if ($hasWizardPayload) {
+                $payload = $request->only([
+                    'company_name', 'industry', 'phone', 'country',
+                    'features', 'property_count', 'welcome_message', 'with_sample_data',
+                ]);
+                // Legacy alias — wizard ships "company_name" but
+                // some integration tests use the older "hotel_name".
+                if (!isset($payload['company_name']) && $request->filled('hotel_name')) {
+                    $payload['company_name'] = $request->input('hotel_name');
+                }
+                $result = $this->setup->onboardWithIndustry($org, $payload);
 
-            // Optionally seed sample data (wrapped in its own transaction)
+                return response()->json([
+                    'message' => 'Organization onboarded',
+                    'organization' => $org->fresh(),
+                    'result' => $result,
+                ]);
+            }
+
+            // ── Legacy path ───────────────────────────────────────
+            if ($request->filled('hotel_name')) {
+                $org->update(['name' => $request->input('hotel_name')]);
+            }
+            $this->setup->setupDefaults($org);
             if ($request->boolean('with_sample_data')) {
                 $this->setup->seedSampleData($org);
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Setup initialize failed', [
                 'org_id' => $org->id,
-                'with_sample_data' => $request->boolean('with_sample_data'),
+                'wizard' => $hasWizardPayload,
                 'error'  => $e->getMessage(),
                 'file'   => $e->getFile() . ':' . $e->getLine(),
             ]);

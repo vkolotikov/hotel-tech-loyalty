@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Bot, Users, BedDouble, FileText, ClipboardList, LayoutDashboard, Settings as SettingsIcon,
-  Eye, EyeOff, Save, Info,
+  Eye, EyeOff, Save, Info, Zap, ArrowRight,
 } from 'lucide-react'
 
 /**
@@ -104,6 +104,9 @@ export function MenuSettings() {
         </div>
       </div>
 
+      <RerunWizardCard />
+
+
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
         <h3 className="text-sm font-bold text-white mb-1">Toggleable groups</h3>
         <p className="text-[11px] text-gray-500 mb-3">Click a row to toggle visibility. The change previews instantly here; click Save to apply org-wide.</p>
@@ -153,7 +156,7 @@ export function MenuSettings() {
       </div>
 
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-        <h3 className="text-sm font-bold text-white mb-1">Always visible</h3>
+        <h3 className="text-sm font-bold text-white mb-1">Always visible (locked)</h3>
         <p className="text-[11px] text-gray-500 mb-3">These groups can't be hidden — they hold load-bearing pages.</p>
 
         <div className="space-y-1.5">
@@ -174,6 +177,63 @@ export function MenuSettings() {
               </div>
             )
           })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * "Re-run setup wizard" card. Wipes the `onboarding_completed_at`
+ * marker via the same crm-settings endpoint, then refreshes the
+ * page. App.tsx polls /setup/status on mount, finds the org has no
+ * loyalty tiers + no marker, and renders the wizard again.
+ *
+ * Lives in MenuSettings because that's where admins go to reshape
+ * what their team sees — re-running the wizard is the natural way
+ * to re-pick features without manually toggling each row.
+ */
+function RerunWizardCard() {
+  const [confirming, setConfirming] = useState(false)
+  const [running, setRunning] = useState(false)
+  const reset = async () => {
+    setRunning(true)
+    try {
+      // The wizard gate (App.tsx) uses /setup/status which reads
+      // both `setup_complete` (tiers) and `onboarding_completed_at`.
+      // We clear the marker by writing an empty string; the wizard
+      // will reset it on its next successful Launch.
+      await api.put('/v1/admin/crm-settings/onboarding_completed_at', { value: 'null' })
+      window.location.href = '/?rerun_setup=1'
+    } catch {
+      toast.error('Could not reset onboarding state')
+      setRunning(false)
+    }
+  }
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center flex-shrink-0">
+          <Zap size={16} className="text-amber-300" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-white">Re-run setup wizard</h3>
+          <p className="text-[11px] text-gray-500 mt-0.5">Picks industry, features, and personal touches again. Existing data stays — switching the industry preset migrates inquiries by stage kind (no losses).</p>
+          {!confirming ? (
+            <button onClick={() => setConfirming(true)}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-semibold">
+              Open wizard <ArrowRight size={12} />
+            </button>
+          ) : (
+            <div className="mt-3 flex items-center gap-2">
+              <button onClick={reset} disabled={running}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50">
+                {running ? 'Opening…' : 'Yes, open wizard'}
+              </button>
+              <button onClick={() => setConfirming(false)} disabled={running}
+                className="text-xs text-gray-500 hover:text-white">Cancel</button>
+            </div>
+          )}
         </div>
       </div>
     </div>
