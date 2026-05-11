@@ -211,15 +211,23 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
     },
   })
 
+  // Whole-row click target. Pre-fix only the tiny 14px chevron
+  // expanded the row, which most users missed entirely — they
+  // clicked "Sales" / the row body and nothing happened. Action
+  // buttons (rename / set default / delete) stopPropagation so
+  // clicking them does NOT also toggle the accordion.
   return (
     <div className="bg-dark-bg border border-dark-border rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 p-3">
-        <button onClick={onToggle} className="p-0.5 text-t-secondary hover:text-white">
+      <div
+        onClick={renaming ? undefined : onToggle}
+        className={'flex items-center gap-2 p-3 select-none ' + (renaming ? '' : 'cursor-pointer hover:bg-dark-surface/30')}
+      >
+        <span className="p-0.5 text-t-secondary">
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
+        </span>
 
         {renaming ? (
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
@@ -249,7 +257,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
               </span>
             ) : (
               <button
-                onClick={onSetDefault}
+                onClick={e => { e.stopPropagation(); onSetDefault() }}
                 className="text-[10px] uppercase tracking-wide font-bold text-t-secondary hover:text-amber-300 px-2 py-0.5 rounded border border-dark-border hover:border-amber-500/30"
                 title="Make default"
               >
@@ -260,7 +268,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
               {pipeline.stages.length} stages · {pipeline.inquiries_count} deals
             </span>
             <button
-              onClick={() => setRenaming(true)}
+              onClick={e => { e.stopPropagation(); setRenaming(true) }}
               className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
               title="Rename"
             >
@@ -268,7 +276,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
             </button>
             {!pipeline.is_default && (
               <button
-                onClick={onDelete}
+                onClick={e => { e.stopPropagation(); onDelete() }}
                 className="p-1.5 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
                 title="Delete pipeline"
               >
