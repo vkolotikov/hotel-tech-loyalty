@@ -21,6 +21,7 @@ import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
+import { useSettings } from '../lib/crmSettings'
 import { BrandSwitcher } from './BrandSwitcher'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
@@ -158,6 +159,14 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const { user, staff, logout } = useAuthStore()
   const { hasFeature, hasProduct, status: subStatus } = useSubscription()
+  const settings = useSettings()
+  /**
+   * Admin-configured per-org sidebar visibility (Settings → Menu).
+   * Hides whole nav groups for non-power-users. Overview + System
+   * are never in this list — they're locked visible in the UI so
+   * the user can always reach the Dashboard and Settings itself.
+   */
+  const hiddenNavGroups: string[] = Array.isArray(settings.hidden_nav_groups) ? settings.hidden_nav_groups : []
   // Hard-block: when subscription is EXPIRED / NO_PLAN, the wall used to
   // render as an overlay only — the page content underneath kept rendering
   // and firing API calls (queries, polls, websocket reconnects). On a long
@@ -329,8 +338,13 @@ export function Layout({ children }: { children: ReactNode }) {
     window.location.href = `${APP_BASE}/login`
   }
 
-  // Filter groups: role gate + product/feature gate
+  // Filter groups: role gate + product/feature gate + admin's
+  // org-wide visibility preferences (Settings → Menu). Overview +
+  // System are always considered visible — settings page lives in
+  // System and the dashboard in Overview.
+  const ALWAYS_VISIBLE = new Set(['Overview', 'System'])
   const visibleGroups = navGroups
+    .filter(group => ALWAYS_VISIBLE.has(group.label) || !hiddenNavGroups.includes(group.label))
     .map(group => ({
       ...group,
       items: group.items.filter(item => {

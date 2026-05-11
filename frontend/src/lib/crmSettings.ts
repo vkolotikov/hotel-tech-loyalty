@@ -74,6 +74,8 @@ export interface CrmSettings {
   task_urgencies: string[]
   priorities: string[]
   planner_groups: string[]
+  /** Sidebar group labels the admin has hidden via Settings → Menu. */
+  hidden_nav_groups: string[]
   event_types: string[]
   function_spaces: string[]
   industries: string[]
@@ -109,6 +111,7 @@ const DEFAULTS: CrmSettings = {
   task_urgencies: ['Low', 'Medium', 'High', 'Urgent'],
   priorities: ['Low', 'Medium', 'High'],
   planner_groups: ['Front Office', 'Housekeeping', 'F&B', 'Sales', 'Events', 'Maintenance'],
+  hidden_nav_groups: [],
   event_types: ['Meeting', 'Conference', 'Wedding', 'Gala Dinner', 'Corporate Retreat'],
   function_spaces: ['Grand Ballroom', 'Conference Room 1', 'Meeting Room', 'Terrace'],
   industries: ['Technology', 'Finance', 'Consulting', 'Pharmaceutical', 'Automotive'],
