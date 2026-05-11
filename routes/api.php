@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
 use App\Http\Controllers\Api\V1\Admin\PlannerPresetController;
+use App\Http\Controllers\Api\V1\Admin\LoyaltyPresetController;
 use App\Http\Controllers\Api\V1\Admin\VenueController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
@@ -592,6 +593,11 @@ Route::prefix('v1')->group(function () {
             // ─── Planner industry presets (groups + templates) ────────────
             Route::get('planner-presets',               [PlannerPresetController::class, 'index']);
             Route::post('planner-presets/apply',        [PlannerPresetController::class, 'apply']);
+
+            // ─── Loyalty / Membership presets (tiers + benefits) ──────────
+            Route::get('loyalty-presets',               [LoyaltyPresetController::class, 'index']);
+            Route::post('loyalty-presets/apply',        [LoyaltyPresetController::class, 'apply']);
+            Route::post('loyalty-presets/skip',         [LoyaltyPresetController::class, 'skip']);
 
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);

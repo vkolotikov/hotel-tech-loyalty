@@ -8,8 +8,23 @@ import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { MembersOnboarding } from '../components/MembersOnboarding'
 
 export function Members() {
+  /**
+   * First-visit onboarding gate. We check crm_settings for a marker
+   * that the admin either applied a preset or explicitly skipped.
+   * Until that marker exists, the wizard takes over the page so
+   * fresh installs land on a guided setup instead of an empty
+   * members table.
+   */
+  const { data: rawSettings, isLoading: settingsLoading } = useQuery<Record<string, any>>({
+    queryKey: ['crm-settings'],
+    queryFn: () => api.get('/v1/admin/crm-settings').then(r => r.data),
+  })
+  const onboardingDone = !!rawSettings?.members_onboarding_completed_at
+  const [wizardDismissed, setWizardDismissed] = useState(false)
+
   const [search, setSearch] = useState('')
   const [tierId, setTierId] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -22,6 +37,13 @@ export function Members() {
   const [captureResult, setCaptureResult] = useState<any>(null)
   const navigate = useNavigate()
   const qc = useQueryClient()
+
+  // Gate render: while we don't know yet, show nothing; once we
+  // know, either show the wizard or fall through to the real page.
+  if (settingsLoading) return null
+  if (!onboardingDone && !wizardDismissed) {
+    return <MembersOnboarding onComplete={() => setWizardDismissed(true)} />
+  }
 
   const { data: tiersData } = useQuery({
     queryKey: ['admin-tiers'],
