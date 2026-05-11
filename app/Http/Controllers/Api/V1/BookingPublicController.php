@@ -395,21 +395,28 @@ class BookingPublicController extends Controller
     /**
      * POST /v1/booking/webhooks/smoobu — Smoobu webhook receiver.
      *
-     * Previously this endpoint only logged the payload to audit log and
-     * returned OK — bookings created/updated in Smoobu were NOT
-     * ingested in real time. The cron sync would eventually catch up,
-     * but staff could double-book a unit in the gap.
+     * Routes the webhook to the right tenant. Smoobu's webhook is
+     * unauthenticated and shared across all customers, so we have
+     * to figure out WHICH org / brand the reservation belongs to
+     * before upserting. Three resolution paths, in order:
      *
-     * The handler now actually upserts the booking. Smoobu's webhook
-     * payload uses `data.id` for the reservation id; we re-fetch the
-     * full reservation from the API for safety (the webhook payload
-     * shape can drift between Smoobu releases) and run it through
-     * the same `upsertBookingFromData` path the bulk sync uses.
+     *   1. Existing mirror — if we already have this reservation_id
+     *      in `booking_mirrors`, use its org_id + brand_id. Fast
+     *      path for updates / cancellations.
      *
-     * Org binding: this app currently runs Smoobu against a single
-     * tenant, so we look up the org that has a Smoobu API key
-     * configured. If multiple orgs ever share Smoobu we'll need
-     * per-org webhook URLs (e.g. /webhooks/smoobu/{orgToken}).
+     *   2. Probe each configured Smoobu account — bind the
+     *      target's credentials, call getReservation. The account
+     *      that returns the reservation owns it.
+     *
+     *   3. Final fallback — the legacy "first org with a key wins"
+     *      behaviour. Only fires when both paths above miss; logged
+     *      so we can spot mis-routing if it ever happens.
+     *
+     * Pre-fix the handler always picked path 3, which silently
+     * routed brand B's webhooks to brand A in any multi-brand or
+     * multi-tenant deployment — causing exactly the "sync only
+     * catches part of bookings" symptom the bulk cron now also
+     * fixes.
      */
     public function webhook(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
@@ -423,22 +430,78 @@ class BookingPublicController extends Controller
         $data    = $payload['data'] ?? $payload;
         $reservationId = $data['id'] ?? $data['reservation_id'] ?? null;
 
-        // Resolve a single org with Smoobu configured. The webhook is
-        // unauthenticated so we have no JWT/Sanctum context to fall back
-        // on — bind the org explicitly here.
-        $orgId = HotelSetting::withoutGlobalScopes()
-            ->where('key', 'booking_smoobu_api_key')
-            ->whereNotNull('value')
-            ->where('value', '!=', '')
-            ->orderBy('organization_id')
-            ->value('organization_id');
-
-        if (!$orgId) {
-            \Illuminate\Support\Facades\Log::warning('Smoobu webhook received but no org has API key configured', ['action' => $action]);
-            return response()->json(['ok' => true, 'note' => 'no org configured']);
+        // Build the list of (org_id, brand_id) candidates with a
+        // configured Smoobu key. Same shape as the cron's
+        // syncTargets so a brand-scoped Smoobu account is reachable.
+        $candidates = $this->smoobuTargets();
+        if (empty($candidates)) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu webhook received but no org/brand has API key configured', ['action' => $action]);
+            return response()->json(['ok' => true, 'note' => 'no smoobu target configured']);
         }
 
+        // Path 1: existing mirror lookup. If we already know this
+        // reservation, route to its owner. Bypass scopes so we can
+        // see across tenants.
+        $resolved = null;
+        if ($reservationId) {
+            $existing = \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('reservation_id', (string) $reservationId)
+                ->first(['organization_id']);
+            if ($existing) {
+                foreach ($candidates as $c) {
+                    if ($c['org_id'] === (int) $existing->organization_id) {
+                        $resolved = $c;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Path 2: probe each candidate account by calling
+        // getReservation. The one that returns a non-empty body
+        // owns the reservation. Skipped if we already found it via
+        // path 1 or there's only one candidate (saves an API call
+        // in the common single-tenant case).
+        if (!$resolved && $reservationId && count($candidates) > 1) {
+            foreach ($candidates as $c) {
+                app()->instance('current_organization_id', $c['org_id']);
+                if (!empty($c['brand_id'])) {
+                    app()->instance('current_brand_id', $c['brand_id']);
+                } else {
+                    app()->forgetInstance('current_brand_id');
+                }
+                try {
+                    $probe = $smoobu->getReservation((string) $reservationId);
+                    if (!empty($probe['id'])) {
+                        $resolved = $c;
+                        break;
+                    }
+                } catch (\Throwable) {
+                    // 404 / auth fail = wrong account, keep going.
+                    continue;
+                }
+            }
+        }
+
+        // Path 3: single-candidate fast path or legacy fallback.
+        if (!$resolved) {
+            $resolved = $candidates[0];
+            if (count($candidates) > 1) {
+                \Illuminate\Support\Facades\Log::warning('Smoobu webhook fell back to first candidate — reservation not found in any configured account', [
+                    'action'         => $action,
+                    'reservation_id' => $reservationId,
+                    'candidates'     => count($candidates),
+                ]);
+            }
+        }
+
+        $orgId = $resolved['org_id'];
         app()->instance('current_organization_id', $orgId);
+        if (!empty($resolved['brand_id'])) {
+            app()->instance('current_brand_id', $resolved['brand_id']);
+        } else {
+            app()->forgetInstance('current_brand_id');
+        }
 
         \App\Models\AuditLog::create([
             'organization_id' => $orgId,
@@ -475,6 +538,48 @@ class BookingPublicController extends Controller
         }
 
         return response()->json(['ok' => true, 'reservation_id' => $reservationId, 'action' => $action]);
+    }
+
+    /**
+     * Enumerate every (org_id, brand_id) pair that has a Smoobu API key
+     * configured. Mirrors SyncSmoobuBookings::syncTargets() so the
+     * webhook handler can probe across multi-brand portfolios.
+     *
+     * @return array<int, array{org_id:int, brand_id:?int}>
+     */
+    private function smoobuTargets(): array
+    {
+        $targets = [];
+
+        $orgIds = HotelSetting::withoutGlobalScopes()
+            ->where('key', 'booking_smoobu_api_key')
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->pluck('organization_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        foreach ($orgIds as $orgId) {
+            $targets[] = ['org_id' => (int) $orgId, 'brand_id' => null];
+        }
+
+        try {
+            $brands = \App\Models\Brand::withoutGlobalScopes()
+                ->whereNotNull('pms_smoobu_api_key')
+                ->where('pms_smoobu_api_key', '!=', '')
+                ->get(['id', 'organization_id']);
+            foreach ($brands as $brand) {
+                $targets[] = [
+                    'org_id'   => (int) $brand->organization_id,
+                    'brand_id' => (int) $brand->id,
+                ];
+            }
+        } catch (\Throwable) {
+            // Brands table missing in legacy installs — ignore.
+        }
+
+        return $targets;
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────

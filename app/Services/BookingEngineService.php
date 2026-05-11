@@ -328,40 +328,120 @@ class BookingEngineService
     }
 
     /**
-     * Pull every reservation from the Smoobu API in the given window and
-     * upsert it into `booking_mirrors`. Pages until Smoobu reports no
-     * more pages — there is NO hard 10-page cap any more (the previous
-     * cap silently dropped any booking past #1000 in the window, which
-     * is what caused the calendar to look "missing" entire apartments
-     * for hotels with a busy season).
+     * Pull every reservation from the Smoobu API and upsert it into
+     * `booking_mirrors`. Runs TWO passes:
      *
-     * The 200-page safety net only exists so a runaway Smoobu response
-     * can't loop forever — at 100/page that's still 20 000 reservations,
-     * comfortably above any sane window for one tenant.
+     *   Pass 1 — Arrival window. Uses Smoobu's `from`/`to` (arrival
+     *   date range). Covers the obvious "what's coming up + what
+     *   just happened" majority of bookings.
      *
-     * Returns ['synced' => N, 'errors' => N, 'pages' => N, 'page_count' => N].
+     *   Pass 2 — Modified-recently. Uses Smoobu's `modifiedFrom`
+     *   to catch any booking that was created or updated in the
+     *   last 30 days REGARDLESS of arrival date. This is the fix
+     *   for the recurring "sync misses bookings even after retries"
+     *   bug: a guest who checks out 4 months ago and pays today,
+     *   or who books today for 18 months from now, falls outside
+     *   the arrival window but inside `modifiedFrom`.
+     *
+     * Both passes ride the same upsert path so duplicates are
+     * harmless (updateOrCreate by reservation_id).
+     *
+     * Extra parameters per the official Smoobu /reservations docs:
+     *   - `showCancellation=1` — cancellations are EXCLUDED by
+     *     default. Without this, a cancellation in Smoobu would
+     *     leave our mirror showing the booking as "confirmed"
+     *     forever, which is how rooms got double-booked. We need
+     *     to see the cancellation so we can flip state.
+     *   - `includePriceElements=1` — Smoobu's list endpoint omits
+     *     price elements unless asked. Without them, our payment
+     *     status detection fall back to the bare `price`/`price-paid`
+     *     fields and miss partial payments.
+     *
+     * Pagination contract: Smoobu returns `page_count` in the
+     * response and accepts `page` + `pageSize` (camelCase, max
+     * 100). The 200-page safety net stops a runaway loop, but at
+     * 100/page that still walks 20 000 reservations per pass.
+     *
+     * Returns counts + the windows used so the cron / admin
+     * "Sync now" button can surface what happened.
      */
     public function syncReservationsFromPms(?string $from = null, ?string $to = null): array
     {
-        $from = $from ?? now()->subMonths(3)->format('Y-m-d');
-        // Bookings can be made far in advance — we want a year-out window
-        // so a guest who booked today for next summer is reflected in the
-        // mirror immediately, not only after the next calendar tick.
-        $to   = $to   ?? now()->addMonths(12)->format('Y-m-d');
+        // Arrival window — widened from the old ±3/+12 to ±12/+18.
+        // The ±12 lower bound is mostly belt-and-braces; modifiedFrom
+        // pass 2 is the real safety net for stale updates.
+        $from = $from ?? now()->subMonths(12)->format('Y-m-d');
+        $to   = $to   ?? now()->addMonths(18)->format('Y-m-d');
 
+        // Pass 2 looks at everything modified in the last 30 days.
+        // Cron runs every 10 min so this is generous — but a longer
+        // window costs nothing (pagination still stops at empty).
+        $modifiedFrom = now()->subDays(30)->format('Y-m-d');
+
+        $synced = 0;
+        $errors = 0;
+        $passesSummary = [];
+
+        // ── Pass 1: arrival window ──────────────────────────────
+        $r1 = $this->runSyncPass([
+            'from'                 => $from,
+            'to'                   => $to,
+            'showCancellation'     => 1,
+            'includePriceElements' => 1,
+        ]);
+        $synced += $r1['synced'];
+        $errors += $r1['errors'];
+        $passesSummary['arrival_window'] = $r1;
+
+        // ── Pass 2: anything modified in the last 30 days ───────
+        // This catches bookings whose ARRIVAL falls outside the
+        // window above but were touched recently — e.g. payment
+        // status changes on past stays, cancellations of long-lead
+        // future bookings.
+        $r2 = $this->runSyncPass([
+            'modifiedFrom'         => $modifiedFrom,
+            'showCancellation'     => 1,
+            'includePriceElements' => 1,
+        ]);
+        $synced += $r2['synced'];
+        $errors += $r2['errors'];
+        $passesSummary['modified_recent'] = $r2;
+
+        return [
+            'synced'        => $synced,
+            'errors'        => $errors,
+            'pages'         => $r1['pages'] + $r2['pages'],
+            'page_count'    => $r1['page_count'] + $r2['page_count'],
+            'from'          => $from,
+            'to'            => $to,
+            'modified_from' => $modifiedFrom,
+            'passes'        => $passesSummary,
+        ];
+    }
+
+    /**
+     * One pass of the Smoobu reservations list with the given filter
+     * params. Pulled out of syncReservationsFromPms so we can run
+     * the two strategies through the same pagination + error handler.
+     *
+     * @param array $baseParams the filter params (from/to or
+     *                          modifiedFrom + flags). `page` and
+     *                          `pageSize` are added per iteration.
+     * @return array{synced:int,errors:int,pages:int,page_count:int}
+     */
+    private function runSyncPass(array $baseParams): array
+    {
         $page = 1;
         $synced = 0;
         $errors = 0;
         $pageCount = 1;
-        $maxPages = 200; // safety net only — see docblock
+        $maxPages = 200; // safety net — 20 000 rows per pass at 100/page
 
         while ($page <= $maxPages) {
-            $response = $this->smoobu->listReservations([
-                'from'     => $from,
-                'to'       => $to,
+            $response = $this->smoobu->listReservations(array_merge($baseParams, [
                 'page'     => $page,
                 'pageSize' => 100,
-            ]);
+            ]));
 
             $bookings = $response['bookings'] ?? [];
             $pageCount = (int) ($response['page_count'] ?? 1);
@@ -390,8 +470,6 @@ class BookingEngineService
             'errors'     => $errors,
             'pages'      => $page,
             'page_count' => $pageCount,
-            'from'       => $from,
-            'to'         => $to,
         ];
     }
 

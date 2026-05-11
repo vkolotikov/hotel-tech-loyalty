@@ -36,25 +36,34 @@ class SyncSmoobuBookings extends Command
             return self::SUCCESS;
         }
 
-        $orgIds = $this->orgsWithSmoobu();
-        if (empty($orgIds)) {
-            $this->info('No organizations with Smoobu API key configured.');
+        $targets = $this->syncTargets();
+        if (empty($targets)) {
+            $this->info('No organizations or brands with Smoobu API key configured.');
             return self::SUCCESS;
         }
 
         $totalSynced = 0;
         $totalErrors = 0;
-        $orgCount = 0;
+        $targetCount = 0;
 
-        foreach ($orgIds as $orgId) {
-            // Bind tenant context so SmoobuClient::boot() resolves the
-            // per-org API key. The client re-boots when the bound org
-            // changes mid-process so iterating is safe.
-            app()->instance('current_organization_id', $orgId);
+        foreach ($targets as $target) {
+            // Bind BOTH the org and the brand (when present). The
+            // SmoobuClient resolves per-brand key first, then falls
+            // back to org-level — but only if `current_brand_id` is
+            // bound. Without this, brand-scoped Smoobu accounts
+            // silently never synced and the calendar drifted.
+            app()->instance('current_organization_id', $target['org_id']);
+            if (!empty($target['brand_id'])) {
+                app()->instance('current_brand_id', $target['brand_id']);
+            }
+
+            $label = $target['brand_id']
+                ? "Org {$target['org_id']} / Brand {$target['brand_id']}"
+                : "Org {$target['org_id']}";
 
             try {
                 if ($smoobu->isMock()) {
-                    $this->warn("Org {$orgId}: Smoobu in mock mode, skipping.");
+                    $this->warn("{$label}: Smoobu in mock mode, skipping.");
                     continue;
                 }
 
@@ -65,46 +74,62 @@ class SyncSmoobuBookings extends Command
 
                 $totalSynced += $result['synced'];
                 $totalErrors += $result['errors'];
-                $orgCount++;
+                $targetCount++;
 
+                $arr = $result['passes']['arrival_window'] ?? null;
+                $mod = $result['passes']['modified_recent'] ?? null;
                 $this->info(sprintf(
-                    'Org %d: %d synced, %d errors across %d/%d pages (%s → %s).',
-                    $orgId,
+                    '%s: %d synced (arr:%d mod:%d), %d errors. Window %s → %s, modified ≥ %s.',
+                    $label,
                     $result['synced'],
+                    $arr['synced'] ?? 0,
+                    $mod['synced'] ?? 0,
                     $result['errors'],
-                    $result['pages'],
-                    $result['page_count'],
                     $result['from'],
                     $result['to'],
+                    $result['modified_from'] ?? 'n/a',
                 ));
             } catch (\Throwable $e) {
                 Log::error('Scheduled Smoobu sync failed', [
-                    'org_id' => $orgId,
-                    'error'  => $e->getMessage(),
+                    'org_id'   => $target['org_id'],
+                    'brand_id' => $target['brand_id'] ?? null,
+                    'error'    => $e->getMessage(),
                 ]);
-                $this->error("Org {$orgId}: {$e->getMessage()}");
+                $this->error("{$label}: {$e->getMessage()}");
             } finally {
                 app()->forgetInstance('current_organization_id');
+                app()->forgetInstance('current_brand_id');
             }
         }
 
-        $this->info("Done. Total: {$totalSynced} synced, {$totalErrors} errors across {$orgCount} org(s).");
+        $this->info("Done. Total: {$totalSynced} synced, {$totalErrors} errors across {$targetCount} target(s).");
         return self::SUCCESS;
     }
 
     /**
-     * Return organization ids that have a non-empty Smoobu API key set
-     * (or just the --org id when explicitly scoped).
+     * Build the list of sync targets. Each target is `[org_id, brand_id]`
+     * where brand_id may be null (org-level Smoobu key) or set (brand-
+     * level key on the `brands` table).
      *
-     * @return array<int, int>
+     * Why this matters: pre-fix, the cron only walked
+     * `hotel_settings.booking_smoobu_api_key`, so any brand with its
+     * OWN `brands.pms_smoobu_api_key` was invisible to the cron and
+     * never synced. Multi-brand customers reported "sync only catches
+     * part of bookings even after retries" — the missing part was
+     * always the brand-scoped half of their portfolio.
+     *
+     * @return array<int, array{org_id:int, brand_id:?int}>
      */
-    private function orgsWithSmoobu(): array
+    private function syncTargets(): array
     {
         if ($explicit = $this->option('org')) {
-            return [(int) $explicit];
+            return [['org_id' => (int) $explicit, 'brand_id' => null]];
         }
 
-        return HotelSetting::withoutGlobalScopes()
+        $targets = [];
+
+        // 1. Orgs with an org-level Smoobu key.
+        $orgIds = HotelSetting::withoutGlobalScopes()
             ->where('key', 'booking_smoobu_api_key')
             ->whereNotNull('value')
             ->where('value', '!=', '')
@@ -113,5 +138,29 @@ class SyncSmoobuBookings extends Command
             ->unique()
             ->values()
             ->all();
+        foreach ($orgIds as $orgId) {
+            $targets[] = ['org_id' => (int) $orgId, 'brand_id' => null];
+        }
+
+        // 2. Brands with a per-brand Smoobu key. Each gets its own
+        //    pass so SmoobuClient picks the brand-scoped credentials.
+        try {
+            $brands = \App\Models\Brand::withoutGlobalScopes()
+                ->whereNotNull('pms_smoobu_api_key')
+                ->where('pms_smoobu_api_key', '!=', '')
+                ->get(['id', 'organization_id', 'pms_smoobu_api_key']);
+            foreach ($brands as $brand) {
+                $targets[] = [
+                    'org_id'   => (int) $brand->organization_id,
+                    'brand_id' => (int) $brand->id,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Defensive — brands table might not exist on a legacy
+            // org. Don't let it kill the cron entirely.
+            Log::warning('Smoobu cron could not enumerate brands: ' . $e->getMessage());
+        }
+
+        return $targets;
     }
 }
