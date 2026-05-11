@@ -7,6 +7,7 @@ import { useAuthStore } from './stores/authStore'
 import { APP_BASE, api } from './lib/api'
 import { Layout, canAccess } from './components/Layout'
 import type { NavGate } from './components/Layout'
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { useTheme } from './hooks/useTheme'
 import { useSubscription } from './hooks/useSubscription'
 
@@ -122,10 +123,18 @@ function GatedRoute({ gate, product, feature, children }: { gate?: NavGate; prod
 }
 
 function LazyRoute({ children, gate, product, feature }: { children: React.ReactNode; gate?: NavGate; product?: string; feature?: string }) {
+  // ChunkErrorBoundary wraps Suspense so a stale-chunk fetch
+  // failure (user has the dashboard open during a deploy, clicks
+  // a route with a hashed JS chunk that no longer exists) triggers
+  // an auto-reload instead of leaving them on a blank screen with
+  // a changed URL. Was the cause of the intermittent "View button
+  // doesn't open the page" report on /bookings.
   return (
     <ProtectedRoute>
       <GatedRoute gate={gate} product={product} feature={feature}>
-        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+        <ChunkErrorBoundary>
+          <Suspense fallback={<PageLoader />}>{children}</Suspense>
+        </ChunkErrorBoundary>
       </GatedRoute>
     </ProtectedRoute>
   )
@@ -142,7 +151,9 @@ function FullscreenRoute({ children, gate, product, feature }: { children: React
   if (!token) return <Navigate to="/login" replace />
   return (
     <GatedRoute gate={gate} product={product} feature={feature}>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      <ChunkErrorBoundary>
+        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      </ChunkErrorBoundary>
     </GatedRoute>
   )
 }
