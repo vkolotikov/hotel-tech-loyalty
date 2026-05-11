@@ -454,10 +454,25 @@ class BookingEngineService
                     $synced++;
                 } catch (\Throwable $e) {
                     $errors++;
-                    \Illuminate\Support\Facades\Log::warning('Sync reservation failed', [
-                        'id'    => $b['id'] ?? null,
-                        'error' => $e->getMessage(),
-                    ]);
+                    // Richer log so we can diagnose the next wave of
+                    // failures without staring at audit-log counts.
+                    // Includes the SQL state when this is a database
+                    // error, plus the smallest data snapshot that's
+                    // useful for triage.
+                    $context = [
+                        'id'        => $b['id'] ?? null,
+                        'type'      => $b['type'] ?? null,
+                        'arrival'   => $b['arrival'] ?? null,
+                        'departure' => $b['departure'] ?? null,
+                        'channel'   => $b['channel']['name'] ?? null,
+                        'apartment' => $b['apartment']['id'] ?? null,
+                        'error'     => $e->getMessage(),
+                    ];
+                    if ($e instanceof \Illuminate\Database\QueryException) {
+                        $context['sql_state'] = $e->errorInfo[0] ?? null;
+                        $context['sql_code']  = $e->errorInfo[1] ?? null;
+                    }
+                    \Illuminate\Support\Facades\Log::warning('Sync reservation failed', $context);
                 }
             }
 
@@ -492,15 +507,56 @@ class BookingEngineService
             $guestId = $guest?->id;
         }
 
-        // Helper: Smoobu returns "Yes"/"No"/"YES" strings for paid statuses
-        $toBool = fn($v) => is_string($v) ? strtolower($v) === 'yes' : (bool) $v;
+        // ── Sanitization helpers ─────────────────────────────────────
+        // Postgres rejects EMPTY STRINGS on typed columns (date / time /
+        // decimal / timestamp). Smoobu's API is inconsistent about empty
+        // values — channel-imported bookings (Airbnb / Booking.com) and
+        // blocked-bookings frequently return `""` for fields a manually-
+        // created Smoobu booking would return null for. Without these
+        // guards, ~50% of upserts can fail with `invalid input syntax
+        // for type X: ""` on certain Smoobu accounts. Reported as the
+        // "PMS sync: 721 synced, 665 failed" symptom.
+        $strOrNull   = fn($v) => (is_string($v) && trim($v) === '') ? null : $v;
+        $intOrNull   = fn($v) => $v === null || $v === '' ? null : (int) $v;
+        $floatOrNull = fn($v) => $v === null || $v === '' ? null : (float) $v;
+        $dateOrNull  = function($v) {
+            $v = is_string($v) ? trim($v) : $v;
+            if (!$v) return null;
+            // Smoobu returns 'YYYY-MM-DD'. Reject zero-dates ('0000-00-00')
+            // and anything else Postgres won't parse.
+            if (is_string($v) && !preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) return null;
+            if (is_string($v) && str_starts_with($v, '0000')) return null;
+            return $v;
+        };
+        $timeOrNull  = function($v) {
+            $v = is_string($v) ? trim($v) : $v;
+            if (!$v) return null;
+            // Accept HH:MM or HH:MM:SS. Smoobu sometimes returns "00:00"
+            // for "not set" — pass it through, Postgres accepts it.
+            return is_string($v) && preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $v) ? $v : null;
+        };
+        $tsOrNull    = function($v) {
+            $v = is_string($v) ? trim($v) : $v;
+            if (!$v) return null;
+            // Common Smoobu timestamp shapes: 'YYYY-MM-DD HH:MM:SS' or
+            // ISO 8601. Reject anything else — better null than crash.
+            if (is_string($v) && !preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) return null;
+            if (is_string($v) && str_starts_with($v, '0000')) return null;
+            return $v;
+        };
+        // Truncate string-with-length to the column's max length so
+        // long channel-imported IDs don't blow up the INSERT.
+        $clip = fn($v, int $max) => is_string($v) ? mb_substr($v, 0, $max) : $v;
 
-        // Smoobu price-paid is "Yes"/"No" → convert to numeric (full price if paid, 0 if not)
+        // ── Smoobu bool: "Yes"/"No"/"YES"/"yes" ──────────────────────
+        $toBool = fn($v) => is_string($v) ? strtolower(trim($v)) === 'yes' : (bool) $v;
+
+        // ── Money: tolerate strings like "120.50" and empty ─────────
+        $priceTotal = $floatOrNull($data['price'] ?? null) ?? 0.0;
         $pricePaidRaw = $data['price-paid'] ?? null;
-        $priceTotal = $data['price'] ?? 0;
-        $pricePaid = ($pricePaidRaw && $toBool($pricePaidRaw)) ? $priceTotal : 0;
+        $pricePaid = ($pricePaidRaw && $toBool($pricePaidRaw)) ? $priceTotal : 0.0;
 
-        // Derive payment status from Smoobu data
+        // ── Payment status ──────────────────────────────────────────
         $isBlocked = $data['is-blocked-booking'] ?? false;
         if ($isBlocked) {
             $paymentStatus = null;
@@ -512,7 +568,7 @@ class BookingEngineService
             $paymentStatus = 'open';
         }
 
-        // Smoobu list uses 'type' field (reservation/cancellation), not numeric 'status'
+        // Smoobu list uses 'type' field (reservation/cancellation)
         $type = $data['type'] ?? 'reservation';
         $bookingState = match ($type) {
             'cancellation'            => 'cancelled',
@@ -520,9 +576,9 @@ class BookingEngineService
             default                   => 'confirmed',
         };
 
-        // Derive internal_status from booking state + dates
-        $arrivalDate = $data['arrival'] ?? null;
-        $departureDate = $data['departure'] ?? null;
+        // ── Dates + internal status ─────────────────────────────────
+        $arrivalDate   = $dateOrNull($data['arrival'] ?? null);
+        $departureDate = $dateOrNull($data['departure'] ?? null);
         $today = now()->toDateString();
         if ($type === 'cancellation') {
             $internalStatus = 'cancelled';
@@ -534,39 +590,47 @@ class BookingEngineService
             $internalStatus = 'confirmed';
         }
 
+        // ── Defensive nested-array access ───────────────────────────
+        // Some channel-imported bookings ship with `apartment: null` or
+        // `channel: null`. PHP 8's null-coalesce + array-offset combo
+        // mostly tolerates that, but we belt-and-braces it here so the
+        // whole upsert doesn't fail on one weird payload.
+        $apartment = is_array($data['apartment'] ?? null) ? $data['apartment'] : [];
+        $channel   = is_array($data['channel']   ?? null) ? $data['channel']   : [];
+
         $mirror = BookingMirror::updateOrCreate(
-            ['organization_id' => $orgId, 'reservation_id' => (string) $data['id']],
+            ['organization_id' => $orgId, 'reservation_id' => $clip((string) $data['id'], 30)],
             [
-                'booking_reference'  => $data['reference-id'] ?? null,
-                'booking_type'       => $type,
-                'booking_state'      => $bookingState,
-                'apartment_id'       => $data['apartment']['id'] ?? null,
-                'apartment_name'     => $data['apartment']['name'] ?? null,
-                'channel_id'         => $data['channel']['id'] ?? null,
-                'channel_name'       => $data['channel']['name'] ?? null,
+                'booking_reference'  => $clip($strOrNull($data['reference-id'] ?? null), 60),
+                'booking_type'       => $clip($type, 40),
+                'booking_state'      => $clip($bookingState, 40),
+                'apartment_id'       => $clip($strOrNull($apartment['id'] ?? null), 20),
+                'apartment_name'     => $clip($strOrNull($apartment['name'] ?? null), 180),
+                'channel_id'         => $clip($strOrNull($channel['id'] ?? null), 20),
+                'channel_name'       => $clip($strOrNull($channel['name'] ?? null), 80),
                 'guest_id'           => $guestId,
-                'guest_name'         => $data['guest-name'] ?? null,
-                'guest_email'        => $data['email'] ?? null,
-                'guest_phone'        => $data['phone'] ?? null,
-                'guest_language'     => $data['language'] ?? null,
-                'adults'             => $data['adults'] ?? null,
-                'children'           => $data['children'] ?? null,
+                'guest_name'         => $clip($strOrNull($data['guest-name'] ?? null), 180),
+                'guest_email'        => $clip($strOrNull($data['email'] ?? null), 180),
+                'guest_phone'        => $clip($strOrNull($data['phone'] ?? null), 40),
+                'guest_language'     => $clip($strOrNull($data['language'] ?? null), 10),
+                'adults'             => $intOrNull($data['adults'] ?? null),
+                'children'           => $intOrNull($data['children'] ?? null),
                 'arrival_date'       => $arrivalDate,
                 'departure_date'     => $departureDate,
-                'check_in_time'      => $data['check-in'] ?? null,
-                'check_out_time'     => $data['check-out'] ?? null,
-                'notice'             => $data['notice'] ?? null,
-                'guest_app_url'      => $data['guest-app-url'] ?? null,
+                'check_in_time'      => $timeOrNull($data['check-in'] ?? null),
+                'check_out_time'     => $timeOrNull($data['check-out'] ?? null),
+                'notice'             => $strOrNull($data['notice'] ?? null),
+                'guest_app_url'      => $strOrNull($data['guest-app-url'] ?? null),
                 'price_total'        => $priceTotal,
                 'price_paid'         => $pricePaid,
-                'prepayment_amount'  => $data['prepayment'] ?? null,
+                'prepayment_amount'  => $floatOrNull($data['prepayment'] ?? null),
                 'prepayment_paid'    => $toBool($data['prepayment-paid'] ?? false),
-                'deposit_amount'     => $data['deposit'] ?? null,
+                'deposit_amount'     => $floatOrNull($data['deposit'] ?? null),
                 'deposit_paid'       => $toBool($data['deposit-paid'] ?? false),
                 'payment_status'     => $paymentStatus,
                 'internal_status'    => $internalStatus,
-                'source_created_at'  => $data['created-at'] ?? null,
-                'source_updated_at'  => $data['modified-at'] ?? $data['modifiedAt'] ?? null,
+                'source_created_at'  => $tsOrNull($data['created-at'] ?? null),
+                'source_updated_at'  => $tsOrNull($data['modified-at'] ?? $data['modifiedAt'] ?? null),
                 'synced_at'          => now(),
                 'raw_json'           => $data,
             ]
