@@ -15,6 +15,14 @@ interface Staff {
   can_redeem_points: boolean
   can_manage_offers: boolean
   can_view_analytics: boolean
+  /**
+   * Per-user sidebar group whitelist set by an admin in Settings →
+   * Team. `null` = "no restriction" (user sees whatever org-level
+   * Settings → Menu allows). Non-empty array = only those groups
+   * visible in the sidebar. Always ignored for super_admin /
+   * manager roles, who see everything.
+   */
+  allowed_nav_groups?: string[] | null
 }
 
 interface AuthState {

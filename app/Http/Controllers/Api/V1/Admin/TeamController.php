@@ -51,6 +51,21 @@ class TeamController extends Controller
     private const ROLES = ['super_admin', 'manager', 'staff'];
 
     /**
+     * Canonical list of sidebar group labels. Must stay in sync with
+     * `navGroups` in frontend/src/components/Layout.tsx. Overview +
+     * System are intentionally absent here — they're locked-visible
+     * via Layout's ALWAYS_VISIBLE set so a per-user whitelist can
+     * never hide the Dashboard or Settings.
+     */
+    private const TOGGLEABLE_GROUPS = [
+        'AI Chat',
+        'Members & Loyalty',
+        'Bookings',
+        'CRM & Marketing',
+        'Operations',
+    ];
+
+    /**
      * GET /v1/admin/team
      * List every staff member in the current org. Returns both active
      * and inactive so the admin can see deactivated accounts and
@@ -63,24 +78,29 @@ class TeamController extends Controller
             ->orderBy('id')
             ->get()
             ->map(fn (Staff $s) => [
-                'id'                 => $s->id,
-                'user_id'            => $s->user_id,
-                'name'               => $s->user?->name,
-                'email'              => $s->user?->email,
-                'phone'              => $s->user?->phone,
-                'avatar_url'         => $s->user?->avatar_url,
-                'role'               => $s->role,
-                'department'         => $s->department,
-                'is_active'          => $s->is_active,
-                'last_login_at'      => $s->user?->last_login_at,
-                'can_award_points'   => $s->can_award_points,
-                'can_redeem_points'  => $s->can_redeem_points,
-                'can_manage_offers'  => $s->can_manage_offers,
-                'can_view_analytics' => $s->can_view_analytics,
-                'is_me'              => $s->user_id === $request->user()?->id,
+                'id'                  => $s->id,
+                'user_id'             => $s->user_id,
+                'name'                => $s->user?->name,
+                'email'               => $s->user?->email,
+                'phone'               => $s->user?->phone,
+                'avatar_url'          => $s->user?->avatar_url,
+                'role'                => $s->role,
+                'department'          => $s->department,
+                'is_active'           => $s->is_active,
+                'last_login_at'       => $s->user?->last_login_at,
+                'can_award_points'    => $s->can_award_points,
+                'can_redeem_points'   => $s->can_redeem_points,
+                'can_manage_offers'   => $s->can_manage_offers,
+                'can_view_analytics'  => $s->can_view_analytics,
+                'allowed_nav_groups'  => $s->allowed_nav_groups,
+                'is_me'               => $s->user_id === $request->user()?->id,
             ]);
 
-        return response()->json(['staff' => $staff, 'roles' => self::ROLES]);
+        return response()->json([
+            'staff' => $staff,
+            'roles' => self::ROLES,
+            'available_groups' => self::TOGGLEABLE_GROUPS,
+        ]);
     }
 
     /**
@@ -92,14 +112,16 @@ class TeamController extends Controller
     public function invite(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email'              => 'required|email|max:200',
-            'name'               => 'required|string|max:200',
-            'role'               => 'required|string|in:' . implode(',', self::ROLES),
-            'department'         => 'nullable|string|max:80',
-            'can_award_points'   => 'nullable|boolean',
-            'can_redeem_points'  => 'nullable|boolean',
-            'can_manage_offers'  => 'nullable|boolean',
-            'can_view_analytics' => 'nullable|boolean',
+            'email'                => 'required|email|max:200',
+            'name'                 => 'required|string|max:200',
+            'role'                 => 'required|string|in:' . implode(',', self::ROLES),
+            'department'           => 'nullable|string|max:80',
+            'can_award_points'     => 'nullable|boolean',
+            'can_redeem_points'    => 'nullable|boolean',
+            'can_manage_offers'    => 'nullable|boolean',
+            'can_view_analytics'   => 'nullable|boolean',
+            'allowed_nav_groups'   => 'nullable|array',
+            'allowed_nav_groups.*' => 'string|in:' . implode(',', self::TOGGLEABLE_GROUPS),
         ]);
 
         $email = strtolower(trim($validated['email']));
@@ -136,6 +158,16 @@ class TeamController extends Controller
                     ->where('organization_id', $orgId)
                     ->first();
 
+                // allowed_nav_groups defaults to null (= "all visible per
+                // org settings") for admins. For staff role we accept the
+                // passed list as-is — even null means "all" for back-compat.
+                $allowedGroups = $validated['allowed_nav_groups'] ?? null;
+                if (in_array($validated['role'], ['super_admin', 'manager'], true)) {
+                    // Admins always see everything regardless of this
+                    // setting, but we still null it for clarity.
+                    $allowedGroups = null;
+                }
+
                 $payload = [
                     'organization_id'    => $orgId,
                     'user_id'            => $user->id,
@@ -145,6 +177,7 @@ class TeamController extends Controller
                     'can_redeem_points'  => (bool) ($validated['can_redeem_points']  ?? in_array($validated['role'], ['super_admin', 'manager'])),
                     'can_manage_offers'  => (bool) ($validated['can_manage_offers']  ?? in_array($validated['role'], ['super_admin', 'manager'])),
                     'can_view_analytics' => (bool) ($validated['can_view_analytics'] ?? in_array($validated['role'], ['super_admin', 'manager'])),
+                    'allowed_nav_groups' => $allowedGroups,
                     'is_active'          => true,
                 ];
                 if ($staff) {
@@ -205,13 +238,23 @@ class TeamController extends Controller
         $staff = Staff::findOrFail($id);
 
         $validated = $request->validate([
-            'role'               => 'sometimes|string|in:' . implode(',', self::ROLES),
-            'department'         => 'sometimes|nullable|string|max:80',
-            'can_award_points'   => 'sometimes|boolean',
-            'can_redeem_points'  => 'sometimes|boolean',
-            'can_manage_offers'  => 'sometimes|boolean',
-            'can_view_analytics' => 'sometimes|boolean',
+            'role'                 => 'sometimes|string|in:' . implode(',', self::ROLES),
+            'department'           => 'sometimes|nullable|string|max:80',
+            'can_award_points'     => 'sometimes|boolean',
+            'can_redeem_points'    => 'sometimes|boolean',
+            'can_manage_offers'    => 'sometimes|boolean',
+            'can_view_analytics'   => 'sometimes|boolean',
+            'allowed_nav_groups'   => 'sometimes|nullable|array',
+            'allowed_nav_groups.*' => 'string|in:' . implode(',', self::TOGGLEABLE_GROUPS),
         ]);
+
+        // Admins always see everything — clear any whitelist they may have
+        // had from a previous "staff" assignment so they don't accidentally
+        // remain restricted after a promotion.
+        $nextRole = $validated['role'] ?? $staff->role;
+        if (in_array($nextRole, ['super_admin', 'manager'], true)) {
+            $validated['allowed_nav_groups'] = null;
+        }
 
         // Only super-admin can promote TO super-admin.
         if (isset($validated['role']) && $validated['role'] === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {

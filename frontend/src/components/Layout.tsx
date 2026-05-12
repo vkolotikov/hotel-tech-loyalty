@@ -338,13 +338,27 @@ export function Layout({ children }: { children: ReactNode }) {
     window.location.href = `${APP_BASE}/login`
   }
 
-  // Filter groups: role gate + product/feature gate + admin's
-  // org-wide visibility preferences (Settings → Menu). Overview +
-  // System are always considered visible — settings page lives in
-  // System and the dashboard in Overview.
+  // Filter groups in 3 layers, in order:
+  //   1. Per-user whitelist (Settings → Team) — for non-admin staff
+  //      with an `allowed_nav_groups` list set, ONLY those groups
+  //      are visible. Admin roles (super_admin, manager) skip this
+  //      filter so they always see everything. Overview + System
+  //      are exempt regardless (Dashboard + Settings must always
+  //      be reachable).
+  //   2. Org-wide hidden list (Settings → Menu) — applied next.
+  //   3. Per-item role + product + feature gates.
   const ALWAYS_VISIBLE = new Set(['Overview', 'System'])
+  const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
+  const userAllowed = Array.isArray(staff?.allowed_nav_groups) ? staff!.allowed_nav_groups! : null
+  const hasPerUserWhitelist = !isAdmin && userAllowed && userAllowed.length > 0
+
   const visibleGroups = navGroups
-    .filter(group => ALWAYS_VISIBLE.has(group.label) || !hiddenNavGroups.includes(group.label))
+    .filter(group => {
+      if (ALWAYS_VISIBLE.has(group.label)) return true
+      if (hasPerUserWhitelist && !userAllowed!.includes(group.label)) return false
+      if (hiddenNavGroups.includes(group.label)) return false
+      return true
+    })
     .map(group => ({
       ...group,
       items: group.items.filter(item => {

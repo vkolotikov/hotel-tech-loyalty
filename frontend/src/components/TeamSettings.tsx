@@ -40,12 +40,14 @@ interface StaffRow {
   can_redeem_points: boolean
   can_manage_offers: boolean
   can_view_analytics: boolean
+  allowed_nav_groups: string[] | null
   is_me: boolean
 }
 
 interface TeamResponse {
   staff: StaffRow[]
   roles: Role[]
+  available_groups: string[]
 }
 
 export function TeamSettings() {
@@ -103,7 +105,7 @@ export function TeamSettings() {
         ) : (
           <div className="divide-y divide-dark-border">
             {data.staff.map(s => editingId === s.id ? (
-              <EditRow key={s.id} staff={s} availableRoles={data.roles} onCancel={() => setEditingId(null)} onSaved={() => { setEditingId(null); qc.invalidateQueries({ queryKey: ['admin-team'] }) }} />
+              <EditRow key={s.id} staff={s} availableRoles={data.roles} availableGroups={data.available_groups} onCancel={() => setEditingId(null)} onSaved={() => { setEditingId(null); qc.invalidateQueries({ queryKey: ['admin-team'] }) }} />
             ) : (
               <ViewRow
                 key={s.id}
@@ -132,6 +134,7 @@ export function TeamSettings() {
       {inviting && (
         <InviteModal
           availableRoles={data?.roles ?? ['super_admin', 'manager', 'staff']}
+          availableGroups={data?.available_groups ?? []}
           onClose={() => setInviting(false)}
           onInvited={() => { setInviting(false); qc.invalidateQueries({ queryKey: ['admin-team'] }) }}
         />
@@ -201,9 +204,10 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend }: {
 
 /* ───────────────────── Edit row ───────────────────── */
 
-function EditRow({ staff, availableRoles, onCancel, onSaved }: {
+function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: {
   staff: StaffRow
   availableRoles: Role[]
+  availableGroups: string[]
   onCancel: () => void
   onSaved: () => void
 }) {
@@ -214,6 +218,10 @@ function EditRow({ staff, availableRoles, onCancel, onSaved }: {
     can_redeem_points: staff.can_redeem_points,
     can_manage_offers: staff.can_manage_offers,
     can_view_analytics: staff.can_view_analytics,
+    // null / [] = unrestricted; non-empty array = whitelist. We
+    // surface the same triple state on the UI via the "All sections"
+    // option in the picker.
+    allowed_nav_groups: staff.allowed_nav_groups,
   })
 
   const save = useMutation({
@@ -266,13 +274,78 @@ function EditRow({ staff, availableRoles, onCancel, onSaved }: {
             className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500 mb-3" />
 
           <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Per-feature permissions</label>
-          <div className="space-y-1">
+          <div className="space-y-1 mb-3">
             <Toggle label="Award points"   value={form.can_award_points}   onChange={v => setForm(f => ({ ...f, can_award_points: v }))} />
             <Toggle label="Redeem points"  value={form.can_redeem_points}  onChange={v => setForm(f => ({ ...f, can_redeem_points: v }))} />
             <Toggle label="Manage offers"  value={form.can_manage_offers}  onChange={v => setForm(f => ({ ...f, can_manage_offers: v }))} />
             <Toggle label="View analytics" value={form.can_view_analytics} onChange={v => setForm(f => ({ ...f, can_view_analytics: v }))} />
           </div>
+
+          {form.role === 'staff' && (
+            <SectionPicker
+              availableGroups={availableGroups}
+              value={form.allowed_nav_groups}
+              onChange={v => setForm(f => ({ ...f, allowed_nav_groups: v }))}
+            />
+          )}
+          {form.role !== 'staff' && (
+            <div className="text-[11px] text-gray-500 leading-snug bg-dark-bg border border-dark-border rounded-md p-2.5">
+              <span className="text-amber-300 font-semibold">{form.role === 'super_admin' ? 'Super admins' : 'Managers'}</span> always see every section. Section restrictions only apply to the <span className="text-white">staff</span> role.
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Whitelist picker for sidebar groups. Tri-state:
+ *   - "All sections" (null) — no restriction; default for new staff.
+ *   - One or more groups selected — only those visible to this user.
+ *   - Zero groups selected — also "no restriction" (we coerce to null
+ *     to keep API semantics simple).
+ *
+ * Overview + System are intentionally not pickable here — they're
+ * locked-visible by Layout's ALWAYS_VISIBLE set so Dashboard and
+ * Settings can never be hidden.
+ */
+function SectionPicker({ availableGroups, value, onChange }: {
+  availableGroups: string[]
+  value: string[] | null
+  onChange: (v: string[] | null) => void
+}) {
+  const isAll = !value || value.length === 0
+  const toggle = (g: string) => {
+    const cur = value ?? []
+    const next = cur.includes(g) ? cur.filter(x => x !== g) : [...cur, g]
+    onChange(next.length === 0 ? null : next)
+  }
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Sections this person can see</label>
+      <button onClick={() => onChange(null)}
+        className={'w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs mb-1.5 transition-colors ' +
+          (isAll ? 'border-emerald-500/60 bg-emerald-500/[0.06] text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
+        {isAll ? <Check size={12} /> : <span className="w-3" />}
+        <span className="font-bold">All sections</span>
+        <span className="text-[10px] text-gray-500 ml-auto">No restriction</span>
+      </button>
+      <div className="text-[10px] text-gray-600 mb-1.5">— or pick specific ones —</div>
+      <div className="space-y-1">
+        {availableGroups.map(g => {
+          const checked = !isAll && (value ?? []).includes(g)
+          return (
+            <button key={g} onClick={() => toggle(g)}
+              className={'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ' +
+                (checked ? 'border-amber-500/60 bg-amber-500/[0.06] text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+              <span className={'w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
+                {checked && <Check size={9} className="text-black" />}
+              </span>
+              <span>{g}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -292,16 +365,24 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
 
 /* ───────────────────── Invite modal ───────────────────── */
 
-function InviteModal({ availableRoles, onClose, onInvited }: {
+function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
   availableRoles: Role[]
+  availableGroups: string[]
   onClose: () => void
   onInvited: () => void
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    name: string
+    email: string
+    role: Role
+    department: string
+    allowed_nav_groups: string[] | null
+  }>({
     name: '',
     email: '',
-    role: 'staff' as Role,
+    role: 'staff',
     department: '',
+    allowed_nav_groups: null,
   })
 
   const invite = useMutation({
@@ -367,6 +448,14 @@ function InviteModal({ availableRoles, onClose, onInvited }: {
               placeholder="e.g. Front desk"
               className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500" />
           </div>
+
+          {form.role === 'staff' && (
+            <SectionPicker
+              availableGroups={availableGroups}
+              value={form.allowed_nav_groups}
+              onChange={v => setForm(f => ({ ...f, allowed_nav_groups: v }))}
+            />
+          )}
 
           <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-md p-2.5 flex items-start gap-2">
             <Mail size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
