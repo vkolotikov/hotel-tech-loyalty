@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\Staff;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Services\PlanLimitGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -131,6 +132,19 @@ class TeamController extends Controller
         // invite up to manager level.
         if ($validated['role'] === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
             return response()->json(['error' => 'Only super-admins can invite super-admins.'], 403);
+        }
+
+        // Plan-cap check. Skip when the email already maps to an existing
+        // staff record in this org — re-inviting an existing teammate
+        // doesn't add to the count and shouldn't be blocked.
+        $existingStaff = Staff::withoutGlobalScopes()
+            ->whereHas('user', fn ($q) => $q->where('email', $email))
+            ->where('organization_id', $orgId)
+            ->exists();
+        if (!$existingStaff) {
+            if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM)) {
+                return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+            }
         }
 
         try {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Outlet;
 use App\Models\Property;
+use App\Services\PlanLimitGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,10 @@ class PropertyAdminController extends Controller
             'email'     => 'nullable|email',
             'image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_PROPERTIES)) {
+            return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+        }
 
         // Provide defaults for NOT NULL columns in the DB schema
         $validated['timezone'] = $validated['timezone'] ?? 'UTC';

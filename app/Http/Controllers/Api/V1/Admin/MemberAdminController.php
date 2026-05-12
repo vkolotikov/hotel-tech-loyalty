@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\GuestMemberLinkService;
 use App\Services\LoyaltyService;
 use App\Services\NotificationService;
+use App\Services\PlanLimitGuard;
 use App\Services\OpenAiService;
 use App\Services\AnalyticsService;
 use App\Services\QrCodeService;
@@ -45,6 +46,13 @@ class MemberAdminController extends Controller
             'nfc_uid'  => 'nullable|string|max:100',
             'send_welcome_email' => 'nullable|boolean',
         ]);
+
+        // Plan-cap check (max_loyalty_members). 402 lets the admin SPA
+        // distinguish "you hit a quota" from "validation failed" and
+        // show an upgrade CTA instead of a generic error toast.
+        if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_MEMBERS)) {
+            return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+        }
 
         $tier = !empty($validated['tier_id'])
             ? LoyaltyTier::find($validated['tier_id'])
