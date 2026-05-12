@@ -17,7 +17,7 @@ class EmailCampaign extends Model
 
     protected $fillable = [
         'organization_id', 'segment_id', 'name', 'subject',
-        'body_html', 'body_text', 'status', 'recipient_count',
+        'body_html', 'body_text', 'body_blocks', 'status', 'recipient_count',
         'sent_count', 'failed_count', 'sent_at', 'error_message',
         'created_by_user_id', 'sent_by_user_id',
     ];
@@ -27,6 +27,7 @@ class EmailCampaign extends Model
         'recipient_count' => 'integer',
         'sent_count'      => 'integer',
         'failed_count'    => 'integer',
+        'body_blocks'     => 'array',
     ];
 
     public function segment(): BelongsTo

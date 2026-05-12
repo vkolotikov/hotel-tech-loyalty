@@ -287,11 +287,15 @@ class EmailCampaignController extends Controller
     private function validatePayload(Request $request): array
     {
         return $request->validate([
-            'name'       => 'required|string|max:120',
-            'segment_id' => 'sometimes|nullable|integer|exists:member_segments,id',
-            'subject'    => 'required|string|max:200',
-            'body_html'  => 'required|string',
-            'body_text'  => 'nullable|string',
+            'name'        => 'required|string|max:120',
+            'segment_id'  => 'sometimes|nullable|integer|exists:member_segments,id',
+            'subject'     => 'required|string|max:200',
+            'body_html'   => 'required|string',
+            'body_text'   => 'nullable|string',
+            // body_blocks: structured snapshot from the visual builder.
+            // body_html is still authoritative (sent as-is), blocks are
+            // there so the next edit can resume in the builder.
+            'body_blocks' => 'sometimes|nullable|array|max:100',
         ]);
     }
 }

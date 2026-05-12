@@ -1,12 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, X, Pencil, Trash2, Send, Mail, Loader2, CheckCircle, AlertCircle,
   Copy, Beaker, Sparkles, Users, FileText, AlertTriangle, MoreHorizontal,
+  Blocks, Code2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { EmailBlockBuilder, renderBlocksToHtml, TEMPLATE_BLOCKS, type Block } from '../components/EmailBlockBuilder'
 
 /**
  * Email broadcast campaigns. Distinct from the segment quick-message
@@ -24,6 +26,7 @@ interface Campaign {
   subject: string
   body_html: string
   body_text: string | null
+  body_blocks: Block[] | null
   status: 'draft' | 'sending' | 'sent' | 'failed'
   segment_id: number | null
   segment?: { id: number; name: string }
@@ -45,113 +48,14 @@ interface CampaignStats {
   failed_this_month: number
 }
 
-const emptyForm = { name: '', subject: '', body_html: '', body_text: '', segment_id: '' as string | number }
-
-/**
- * Starter HTML templates. Inline styles only — Outlook + Apple Mail
- * still treat <style> blocks unreliably. Tokens like {{member.name}}
- * are previewed with sample values and substituted server-side at send.
- */
-const TEMPLATES: { key: string; label: string; description: string; subject: string; html: string }[] = [
-  {
-    key: 'newsletter',
-    label: 'Newsletter',
-    description: 'Monthly update with header image + three story blocks',
-    subject: 'What\'s new this month at our hotel',
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#1a1a1a;">
-  <div style="background:#0e0e0e;padding:32px 24px;text-align:center;">
-    <h1 style="color:#c9a84c;margin:0;font-size:28px;letter-spacing:0.5px;">Monthly Update</h1>
-  </div>
-  <div style="padding:24px;">
-    <p style="font-size:16px;line-height:1.5;">Hi {{member.name}},</p>
-    <p style="font-size:14px;line-height:1.6;color:#555;">A quick look at what's been happening at your favourite stay this month, plus a few things on the horizon you'll want to know about.</p>
-    <h2 style="font-size:18px;margin-top:32px;border-bottom:1px solid #e5e5e5;padding-bottom:8px;">Story one</h2>
-    <p style="font-size:14px;line-height:1.6;color:#555;">Your copy here…</p>
-    <h2 style="font-size:18px;margin-top:24px;border-bottom:1px solid #e5e5e5;padding-bottom:8px;">Story two</h2>
-    <p style="font-size:14px;line-height:1.6;color:#555;">Your copy here…</p>
-    <div style="margin-top:32px;text-align:center;">
-      <a href="#" style="background:#c9a84c;color:#0e0e0e;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">View on our site</a>
-    </div>
-  </div>
-  <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:11px;color:#888;">
-    You're receiving this as a member of our loyalty programme.
-  </div>
-</div>`,
-  },
-  {
-    key: 'winback',
-    label: 'Win-back',
-    description: 'Re-engagement for members who haven\'t stayed in a while',
-    subject: 'We miss you, {{member.name}}',
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#1a1a1a;">
-  <div style="padding:32px 24px;text-align:center;">
-    <h1 style="margin:0;font-size:32px;color:#1a1a1a;">It's been a while</h1>
-  </div>
-  <div style="padding:0 24px 24px;">
-    <p style="font-size:16px;line-height:1.5;">Hi {{member.name}},</p>
-    <p style="font-size:14px;line-height:1.6;color:#555;">We noticed it's been a few months. As a {{member.tier}} member, you've earned <strong>{{member.points}}</strong> points so far — here's a little bonus to bring you back.</p>
-    <div style="background:#fff8e1;border:1px solid #c9a84c;padding:20px;border-radius:8px;text-align:center;margin:24px 0;">
-      <p style="margin:0;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:1px;">Special offer</p>
-      <p style="margin:8px 0 0;font-size:28px;font-weight:bold;color:#c9a84c;">+500 bonus points</p>
-      <p style="margin:8px 0 0;font-size:12px;color:#888;">On your next booking, this month only</p>
-    </div>
-    <div style="text-align:center;">
-      <a href="#" style="background:#1a1a1a;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Book your next stay</a>
-    </div>
-  </div>
-</div>`,
-  },
-  {
-    key: 'offer',
-    label: 'Offer spotlight',
-    description: 'Single hero offer with big CTA',
-    subject: 'Exclusive for {{member.tier}} members',
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#1a1a1a;">
-  <div style="background:linear-gradient(135deg,#1a1a1a 0%,#3a3a3a 100%);padding:48px 24px;text-align:center;color:#fff;">
-    <p style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#c9a84c;">Members only</p>
-    <h1 style="margin:8px 0 0;font-size:36px;">Your exclusive offer</h1>
-  </div>
-  <div style="padding:32px 24px;">
-    <p style="font-size:16px;line-height:1.5;">Hi {{member.name}},</p>
-    <p style="font-size:15px;line-height:1.6;color:#555;">As a thank you for being one of our most loyal guests, we'd like to share something special with you.</p>
-    <div style="background:#f9f9f9;padding:24px;border-radius:8px;margin:24px 0;text-align:center;">
-      <h2 style="margin:0;font-size:24px;">25% off your next stay</h2>
-      <p style="margin:8px 0 16px;color:#888;font-size:13px;">Valid for bookings made before the end of this month.</p>
-      <a href="#" style="background:#c9a84c;color:#0e0e0e;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Claim now</a>
-    </div>
-  </div>
-</div>`,
-  },
-  {
-    key: 'tier',
-    label: 'Tier promotion',
-    description: 'Congratulate a member on tier upgrade',
-    subject: 'Welcome to {{member.tier}}, {{member.name}}',
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#1a1a1a;">
-  <div style="background:#c9a84c;padding:48px 24px;text-align:center;color:#0e0e0e;">
-    <p style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Tier upgrade</p>
-    <h1 style="margin:8px 0 0;font-size:36px;">Welcome to {{member.tier}}</h1>
-  </div>
-  <div style="padding:32px 24px;">
-    <p style="font-size:16px;line-height:1.5;">Congratulations, {{member.name}}!</p>
-    <p style="font-size:15px;line-height:1.6;color:#555;">You've reached a new tier in our loyalty programme. From now on, every stay earns you more, and you'll enjoy these new benefits:</p>
-    <ul style="font-size:14px;line-height:2;color:#555;padding-left:20px;">
-      <li>Priority room upgrades</li>
-      <li>Complimentary breakfast</li>
-      <li>Late checkout when available</li>
-    </ul>
-    <p style="font-size:14px;color:#888;text-align:center;margin-top:24px;">Current balance: <strong>{{member.points}}</strong> points</p>
-  </div>
-</div>`,
-  },
-  {
-    key: 'blank',
-    label: 'Blank',
-    description: 'Start from scratch',
-    subject: '',
-    html: '',
-  },
-]
+const emptyForm = {
+  name: '',
+  subject: '',
+  body_html: '',
+  body_text: '',
+  segment_id: '' as string | number,
+  body_blocks: [] as Block[],
+}
 
 /**
  * Variable tokens that get substituted at send time. Preview pane uses
@@ -165,14 +69,6 @@ const PREVIEW_VARIABLES: Record<string, string> = {
   '{{member.points}}':        '4,750',
   '{{member.member_number}}': 'HL-2026-000123',
 }
-
-const VARIABLE_CHIPS = [
-  { token: '{{member.name}}',          label: 'Name' },
-  { token: '{{member.first_name}}',    label: 'First name' },
-  { token: '{{member.tier}}',          label: 'Tier' },
-  { token: '{{member.points}}',        label: 'Points' },
-  { token: '{{member.member_number}}', label: 'Member #' },
-]
 
 function applyPreviewVariables(html: string): string {
   return Object.entries(PREVIEW_VARIABLES).reduce(
@@ -189,7 +85,24 @@ export function EmailCampaigns() {
   const [statusFilter, setStatusFilter] = useState<'' | 'draft' | 'sent' | 'failed'>('')
   const [showPreview, setShowPreview] = useState(true)
   const [openMenuFor, setOpenMenuFor] = useState<number | null>(null)
-  const bodyRef = useRef<HTMLTextAreaElement>(null)
+  // 'visual' = block builder is the source of truth (body_html is regenerated from blocks)
+  // 'code'   = raw HTML edit; blocks are decoupled. Legacy campaigns
+  //           with no blocks open straight into 'code'.
+  const [editorMode, setEditorMode] = useState<'visual' | 'code'>('visual')
+  const codeBodyRef = useRef<HTMLTextAreaElement>(null)
+
+  // Whenever blocks change in visual mode, regenerate the HTML output
+  // so preview, save and send all see the latest.
+  useEffect(() => {
+    if (editorMode !== 'visual') return
+    const html = renderBlocksToHtml(form.body_blocks)
+    if (html !== form.body_html) {
+      setForm(f => ({ ...f, body_html: html }))
+    }
+    // We only respond to block changes here; form.body_html will
+    // diverge once the admin switches to 'code' mode, and that's fine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.body_blocks, editorMode])
 
   const { data: statsData } = useQuery<CampaignStats>({
     queryKey: ['email-campaigns-stats'],
@@ -217,6 +130,10 @@ export function EmailCampaigns() {
         body_html: form.body_html,
         body_text: form.body_text || null,
         segment_id: form.segment_id ? Number(form.segment_id) : null,
+        // Only persist blocks when the visual builder owns the HTML.
+        // Code-edited campaigns clear blocks so reopening lands them
+        // straight back in code view (lossless round-trip).
+        body_blocks: editorMode === 'visual' ? form.body_blocks : null,
       }
       return editId
         ? api.put(`/v1/admin/email-campaigns/${editId}`, payload).then(r => r.data)
@@ -279,7 +196,12 @@ export function EmailCampaigns() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   })
 
-  const resetForm = () => { setShowForm(false); setEditId(null); setForm(emptyForm) }
+  const resetForm = () => {
+    setShowForm(false)
+    setEditId(null)
+    setForm(emptyForm)
+    setEditorMode('visual')
+  }
 
   const startEdit = (c: Campaign) => {
     if (c.status !== 'draft') {
@@ -287,28 +209,35 @@ export function EmailCampaigns() {
       return
     }
     setEditId(c.id)
+    const hasBlocks = Array.isArray(c.body_blocks) && c.body_blocks.length > 0
     setForm({
       name: c.name,
       subject: c.subject,
       body_html: c.body_html,
       body_text: c.body_text ?? '',
       segment_id: c.segment_id ?? '',
+      body_blocks: hasBlocks ? c.body_blocks! : [],
     })
+    // Legacy campaigns with no blocks fall back to code view so the
+    // admin's existing HTML stays untouched. Builder-edited campaigns
+    // resume in builder mode.
+    setEditorMode(hasBlocks ? 'visual' : 'code')
     setShowForm(true)
   }
 
   const applyTemplate = (key: string) => {
-    const t = TEMPLATES.find(x => x.key === key)
+    const t = TEMPLATE_BLOCKS[key]
     if (!t) return
     setForm(f => ({
       ...f,
       subject: t.subject || f.subject,
-      body_html: t.html,
+      body_blocks: t.blocks.map(b => ({ ...b, id: Math.random().toString(36).slice(2, 9) })),
     }))
+    setEditorMode('visual')
   }
 
-  const insertVariable = (token: string) => {
-    const el = bodyRef.current
+  const insertVariableInCode = (token: string) => {
+    const el = codeBodyRef.current
     if (!el) {
       setForm(f => ({ ...f, body_html: f.body_html + token }))
       return
@@ -321,6 +250,23 @@ export function EmailCampaigns() {
       el.focus()
       el.selectionStart = el.selectionEnd = start + token.length
     })
+  }
+
+  /**
+   * Switch from visual to code: detach blocks so further HTML edits
+   * persist as-is. Switch from code to visual: warn before doing it
+   * since the current HTML can't be parsed back into blocks.
+   */
+  const switchToCode = () => {
+    setEditorMode('code')
+    setForm(f => ({ ...f, body_blocks: [] }))
+  }
+  const switchToVisual = () => {
+    if (form.body_html.trim() && form.body_blocks.length === 0) {
+      if (!confirm('Switch to visual builder? Your current HTML will be replaced with an empty block list.')) return
+      setForm(f => ({ ...f, body_html: '', body_blocks: [] }))
+    }
+    setEditorMode('visual')
   }
 
   const previewHtml = useMemo(() => {
@@ -439,11 +385,10 @@ export function EmailCampaigns() {
                   <Sparkles size={12} className="text-amber-300" /> Start from a template
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {TEMPLATES.map(t => (
+                  {Object.entries(TEMPLATE_BLOCKS).map(([key, t]) => (
                     <button
-                      key={t.key}
-                      onClick={() => applyTemplate(t.key)}
-                      title={t.description}
+                      key={key}
+                      onClick={() => applyTemplate(key)}
                       className="px-3 py-1.5 rounded-full text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#d0d0d0] hover:text-white border border-dark-border transition-colors"
                     >
                       {t.label}
@@ -481,36 +426,62 @@ export function EmailCampaigns() {
                   className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
 
-              {/* Variable chips */}
-              <div>
-                <p className="text-[11px] text-t-secondary mb-1.5">Insert at cursor:</p>
-                <div className="flex flex-wrap gap-1">
-                  {VARIABLE_CHIPS.map(v => (
-                    <button
-                      key={v.token}
-                      type="button"
-                      onClick={() => insertVariable(v.token)}
-                      className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
-                      title={v.token}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
+              {/* Visual / Code mode toggle */}
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-t-secondary">Email body *</label>
+                <div className="inline-flex bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={switchToVisual}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      editorMode === 'visual' ? 'bg-primary-500/20 text-primary-300' : 'text-t-secondary hover:text-white'
+                    }`}
+                  >
+                    <Blocks size={12} /> Visual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={switchToCode}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      editorMode === 'code' ? 'bg-primary-500/20 text-primary-300' : 'text-t-secondary hover:text-white'
+                    }`}
+                  >
+                    <Code2 size={12} /> Code
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-t-secondary mb-1">HTML body *</label>
-                <textarea
-                  ref={bodyRef}
-                  value={form.body_html}
-                  onChange={e => setForm(f => ({ ...f, body_html: e.target.value }))}
-                  rows={14}
-                  placeholder="<h1>Hi {{member.name}}</h1><p>We've prepared a special offer just for you…</p>"
-                  className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              {editorMode === 'visual' ? (
+                <EmailBlockBuilder
+                  blocks={form.body_blocks}
+                  onChange={next => setForm(f => ({ ...f, body_blocks: next }))}
                 />
-                <p className="text-[10px] text-[#636366] mt-1">Plain HTML. Inline styles render best across email clients.</p>
-              </div>
+              ) : (
+                <div>
+                  <textarea
+                    ref={codeBodyRef}
+                    value={form.body_html}
+                    onChange={e => setForm(f => ({ ...f, body_html: e.target.value }))}
+                    rows={14}
+                    placeholder="<h1>Hi {{member.name}}</h1><p>We've prepared a special offer just for you…</p>"
+                    className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <p className="text-[10px] text-[#636366] mt-1">Plain HTML. Inline styles render best across email clients.</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-[10px] text-t-secondary mr-1 self-center">Insert at cursor:</span>
+                    {Object.keys(PREVIEW_VARIABLES).map(token => (
+                      <button
+                        key={token}
+                        type="button"
+                        onClick={() => insertVariableInCode(token)}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
+                      >
+                        {token.replace(/[{}]|member\./g, '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-t-secondary mb-1">Plain text fallback <span className="text-[#636366]">(optional)</span></label>
