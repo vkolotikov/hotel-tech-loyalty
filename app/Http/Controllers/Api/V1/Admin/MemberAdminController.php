@@ -267,9 +267,65 @@ class MemberAdminController extends Controller
             ->when($request->lifecycle, fn($q, $ls) => $q->whereHas('guests', fn($g) => $g->where('lifecycle_status', $ls)))
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')));
 
+        // Sort. Server-side because the list is paginated — client-only
+        // sort would only reorder the current page.
+        $sort = $request->get('sort_by', 'recent');
+        match ($sort) {
+            'points'        => $query->orderByDesc('current_points'),
+            'name'          => $query->orderBy(
+                User::select('name')->whereColumn('users.id', 'loyalty_members.user_id'),
+                'asc'
+            ),
+            'last_activity' => $query->orderByDesc('updated_at'),
+            default         => $query->orderByDesc('created_at'),
+        };
+
         return response()->json(
-            $query->orderByDesc('created_at')->paginate($request->get('per_page', 25))
+            $query->paginate($request->get('per_page', 25))
         );
+    }
+
+    /**
+     * Lightweight stats for the Members list KPI strip + tier-pill counts.
+     * Single DB hit per tier breakdown row; everything else is one
+     * aggregate query against loyalty_members.
+     */
+    public function stats(): JsonResponse
+    {
+        $base = LoyaltyMember::query();
+
+        $active        = (clone $base)->where('is_active', true)->count();
+        $total         = (clone $base)->count();
+        $newThisMonth  = (clone $base)->where('created_at', '>=', now()->startOfMonth())->count();
+        $avgPoints     = (int) round((clone $base)->avg('current_points') ?? 0);
+
+        // Top tier = highest min_points. Order descending so the first
+        // row is the top tier (used for the top_tier_pct KPI).
+        $tierBreakdown = LoyaltyTier::query()
+            ->orderByDesc('min_points')
+            ->get(['id', 'name', 'color_hex', 'min_points'])
+            ->map(function ($t) {
+                return [
+                    'id'         => $t->id,
+                    'name'       => $t->name,
+                    'color_hex'  => $t->color_hex,
+                    'min_points' => $t->min_points,
+                    'count'      => LoyaltyMember::where('tier_id', $t->id)->count(),
+                ];
+            });
+
+        $topTierCount  = (int) ($tierBreakdown->first()['count'] ?? 0);
+        $topTierPct    = $total > 0 ? round(($topTierCount / $total) * 100) : 0;
+
+        return response()->json([
+            'active_count'    => $active,
+            'total_count'     => $total,
+            'new_this_month'  => $newThisMonth,
+            'avg_points'      => $avgPoints,
+            'top_tier_pct'    => (int) $topTierPct,
+            'top_tier_name'   => $tierBreakdown->first()['name'] ?? null,
+            'tier_breakdown'  => $tierBreakdown->values(),
+        ]);
     }
 
     public function show(int $id): JsonResponse

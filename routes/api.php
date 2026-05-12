@@ -361,6 +361,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::delete('rewards/{id}',                               [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'destroy']);
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
+            Route::get('members/stats',           [MemberAdminController::class, 'stats']);
             Route::get('members/export',          [MemberAdminController::class, 'export']);
             Route::get('members/duplicates',      [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'suggestions']);
             Route::post('members/merge',          [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'merge']);

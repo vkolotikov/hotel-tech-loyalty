@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square, Users, TrendingUp, Coins, Crown, ArrowUpDown, MessageCircle, Gift } from 'lucide-react'
 import { api, resolveImage } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
@@ -25,6 +25,25 @@ export function Members() {
   const onboardingDone = !!rawSettings?.members_onboarding_completed_at
   const [wizardDismissed, setWizardDismissed] = useState(false)
 
+  // Filters live in the URL so the back button + deep links survive
+  // refresh and reload — the staff console gets bookmarked. Search
+  // stays local since debouncing into the URL would spam history.
+  const [urlParams, setUrlParams] = useSearchParams()
+  const tierId       = urlParams.get('tier_id') ?? ''
+  const statusFilter = urlParams.get('status') ?? ''
+  const sortBy       = urlParams.get('sort_by') ?? 'recent'
+  const page         = Number(urlParams.get('page') ?? 1)
+
+  const setUrlParam = (key: string, value: string | undefined, resetPage = true) => {
+    setUrlParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (value === undefined || value === '') next.delete(key)
+      else next.set(key, value)
+      if (resetPage) next.delete('page')
+      return next
+    })
+  }
+
   const [search, setSearch] = useState('')
   // debouncedSearch is what hits the API — every keystroke would
   // otherwise hammer /v1/admin/members on orgs with 5k+ members.
@@ -33,9 +52,6 @@ export function Members() {
     const t = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(t)
   }, [search])
-  const [tierId, setTierId] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [createTab, setCreateTab] = useState<'form' | 'ai'>('form')
   const [form, setForm] = useState({ name: '', email: '', phone: '', tier_id: '' })
@@ -53,6 +69,12 @@ export function Members() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPreview, setImportPreview] = useState<any>(null)
 
+  // Quick award modal — opened by the hover action on each row.
+  // Keeps the staff from leaving the list for a routine +pts adjustment.
+  const [quickAward, setQuickAward] = useState<{ id: number; name: string } | null>(null)
+  const [quickAwardPts, setQuickAwardPts] = useState('')
+  const [quickAwardReason, setQuickAwardReason] = useState('')
+
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -69,15 +91,36 @@ export function Members() {
   })
   const tiers: { id: number; name: string }[] = tiersData?.tiers ?? []
 
+  // Members header KPI strip + tier-pill counts. Cached for 30s so
+  // bouncing between hubs doesn't refetch on every nav.
+  const { data: statsData } = useQuery<{
+    active_count: number; total_count: number; new_this_month: number; avg_points: number;
+    top_tier_pct: number; top_tier_name: string | null;
+    tier_breakdown: { id: number; name: string; color_hex: string | null; count: number }[]
+  }>({
+    queryKey: ['admin-members-stats'],
+    queryFn: () => api.get('/v1/admin/members/stats').then(r => r.data),
+    staleTime: 30_000,
+  })
+  const tierBreakdown = statsData?.tier_breakdown ?? []
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-members', debouncedSearch, tierId, statusFilter, page],
-    queryFn: () => api.get('/v1/admin/members', { params: { search: debouncedSearch, tier_id: tierId || undefined, is_active: statusFilter !== '' ? statusFilter : undefined, page } }).then(r => r.data),
+    queryKey: ['admin-members', debouncedSearch, tierId, statusFilter, sortBy, page],
+    queryFn: () => api.get('/v1/admin/members', {
+      params: {
+        search: debouncedSearch,
+        tier_id: tierId || undefined,
+        is_active: statusFilter !== '' ? statusFilter : undefined,
+        sort_by: sortBy,
+        page,
+      },
+    }).then(r => r.data),
   })
 
   // Reset selection whenever the visible page changes — selectedIds
   // referring to off-page rows would silently get included in bulk
   // actions, which is surprising and dangerous.
-  useEffect(() => { setSelectedIds(new Set()) }, [page, debouncedSearch, tierId, statusFilter])
+  useEffect(() => { setSelectedIds(new Set()) }, [page, debouncedSearch, tierId, statusFilter, sortBy])
 
   const visibleRows: any[] = (data as any)?.data ?? []
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every(m => selectedIds.has(m.id))
@@ -155,6 +198,21 @@ export function Members() {
     URL.revokeObjectURL(url)
   }
 
+  const quickAwardMutation = useMutation({
+    mutationFn: () => api.post('/v1/admin/points/award', {
+      member_id: quickAward?.id,
+      points: Number(quickAwardPts),
+      description: quickAwardReason || 'Staff courtesy',
+    }).then(r => r.data),
+    onSuccess: () => {
+      toast.success(`${quickAwardPts} pts awarded to ${quickAward?.name}`)
+      qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
+      setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Award failed'),
+  })
+
   const createMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/members', {
       name: form.name,
@@ -180,8 +238,39 @@ export function Members() {
     },
   })
 
+  const kpis = [
+    {
+      key: 'active',
+      label: 'Active members',
+      value: statsData ? `${statsData.active_count} / ${statsData.total_count}` : '—',
+      icon: Users,
+      tint: 'text-blue-400',
+    },
+    {
+      key: 'new',
+      label: 'New this month',
+      value: statsData?.new_this_month ?? '—',
+      icon: TrendingUp,
+      tint: 'text-emerald-400',
+    },
+    {
+      key: 'avg',
+      label: 'Avg points',
+      value: statsData ? statsData.avg_points.toLocaleString() : '—',
+      icon: Coins,
+      tint: 'text-amber-400',
+    },
+    {
+      key: 'top',
+      label: statsData?.top_tier_name ? `In ${statsData.top_tier_name}` : 'Top tier',
+      value: statsData ? `${statsData.top_tier_pct}%` : '—',
+      icon: Crown,
+      tint: 'text-purple-400',
+    },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Members</h1>
@@ -212,37 +301,100 @@ export function Members() {
         </div>
       </div>
 
+      {/* KPI strip — at-a-glance health for the loyalty program */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map(k => (
+          <div key={k.key} className="bg-dark-surface rounded-xl border border-dark-border px-4 py-3 flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg bg-dark-surface2 flex items-center justify-center ${k.tint}`}>
+              <k.icon size={16} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-t-secondary truncate">{k.label}</p>
+              <p className="text-lg font-bold text-white truncate">{k.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <Card>
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {/* Search row + sort */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input
               type="text"
               placeholder="Search by name, email, or member number..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              onChange={(e) => { setSearch(e.target.value); setUrlParam('page', undefined) }}
               className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <div className="flex gap-3">
+          <div className="relative">
+            <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366] pointer-events-none" />
             <select
-              value={tierId}
-              onChange={(e) => { setTierId(e.target.value); setPage(1) }}
-              className="flex-1 sm:flex-none bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={sortBy}
+              onChange={(e) => setUrlParam('sort_by', e.target.value === 'recent' ? undefined : e.target.value)}
+              className="appearance-none bg-[#1e1e1e] border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">All Tiers</option>
-              {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value="recent">Recently joined</option>
+              <option value="points">Points high → low</option>
+              <option value="name">Name A → Z</option>
+              <option value="last_activity">Last activity</option>
             </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="flex-1 sm:flex-none bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          </div>
+        </div>
+
+        {/* Tier pills + status segmented toggle */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setUrlParam('tier_id', undefined)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                tierId === ''
+                  ? 'bg-primary-500/15 text-primary-300 border border-primary-500/40'
+                  : 'bg-dark-surface2 text-t-secondary border border-dark-border hover:text-white'
+              }`}
             >
-              <option value="">All Status</option>
-              <option value="1">Active</option>
-              <option value="0">Inactive</option>
-            </select>
+              All tiers
+              <span className="text-[10px] text-t-secondary font-normal">{statsData?.total_count ?? '—'}</span>
+            </button>
+            {tierBreakdown.map(t => {
+              const active = String(tierId) === String(t.id)
+              const dot = t.color_hex || '#c9a84c'
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setUrlParam('tier_id', active ? undefined : String(t.id))}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                    active
+                      ? 'bg-white/10 text-white border-white/30'
+                      : 'bg-dark-surface2 text-t-secondary border-dark-border hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dot }} />
+                  {t.name}
+                  <span className="text-[10px] text-t-secondary font-normal">{t.count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="inline-flex bg-dark-surface2 border border-dark-border rounded-lg p-0.5 self-start lg:self-auto">
+            {[
+              { val: '',  label: 'All' },
+              { val: '1', label: 'Active' },
+              { val: '0', label: 'Inactive' },
+            ].map(opt => (
+              <button
+                key={opt.val}
+                onClick={() => setUrlParam('status', opt.val || undefined)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  statusFilter === opt.val ? 'bg-primary-500/20 text-primary-300' : 'text-t-secondary hover:text-white'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -317,7 +469,7 @@ export function Members() {
                 <th className="pb-3 font-medium">Points</th>
                 <th className="pb-3 font-medium">Joined</th>
                 <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3"></th>
+                <th className="pb-3 text-right pr-2">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
@@ -337,7 +489,7 @@ export function Members() {
                 </tr>
               ) : (
                 ((data as any)?.data ?? []).map((m: any) => (
-                  <tr key={m.id} className="hover:bg-dark-surface2 cursor-pointer transition-colors" onClick={() => navigate(`/members/${m.id}`)}>
+                  <tr key={m.id} className="group hover:bg-dark-surface2 cursor-pointer transition-colors" onClick={() => navigate(`/members/${m.id}`)}>
                     <td className="py-3 w-8" onClick={(e) => { e.stopPropagation(); toggleSelect(m.id) }}>
                       <button className="text-t-secondary hover:text-white">
                         {selectedIds.has(m.id) ? <CheckSquare size={16} className="text-primary-400" /> : <Square size={16} />}
@@ -378,7 +530,28 @@ export function Members() {
                         {m.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="py-3 text-[#636366]"><ChevronRight size={16} /></td>
+                    <td className="py-3 pr-2">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          title="Award points"
+                          onClick={(e) => { e.stopPropagation(); setQuickAward({ id: m.id, name: m.user?.name ?? 'this member' }) }}
+                          className="p-1.5 rounded-md text-emerald-400 hover:bg-emerald-500/15 transition-colors"
+                        >
+                          <Gift size={14} />
+                        </button>
+                        <button
+                          title="Send message"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedIds(new Set([m.id]))
+                            setShowBulkMessage(true)
+                          }}
+                          className="p-1.5 rounded-md text-primary-400 hover:bg-primary-500/15 transition-colors"
+                        >
+                          <MessageCircle size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -394,14 +567,14 @@ export function Members() {
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setUrlParam('page', String(Math.max(1, page - 1)), false)}
                 disabled={page === 1}
                 className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Previous
               </button>
               <button
-                onClick={() => setPage(p => p + 1)}
+                onClick={() => setUrlParam('page', String(page + 1), false)}
                 disabled={page >= ((data as any).last_page ?? 1)}
                 className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
@@ -599,6 +772,65 @@ export function Members() {
           >
             Clear
           </button>
+        </div>
+      )}
+
+      {/* Quick award modal — inline +pts without leaving the list */}
+      {quickAward && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-dark-border">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+                  <Gift size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Award points</p>
+                  <p className="text-[11px] text-t-secondary truncate">to {quickAward.name}</p>
+                </div>
+              </div>
+              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} className="text-[#636366] hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <input
+                type="number"
+                autoFocus
+                placeholder="100"
+                value={quickAwardPts}
+                onChange={e => setQuickAwardPts(e.target.value)}
+                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-2xl font-bold text-emerald-400 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {[100, 250, 500, 1000].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setQuickAwardPts(String(n))}
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white transition-colors"
+                  >
+                    +{n}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Reason (e.g. Staff courtesy)"
+                value={quickAwardReason}
+                onChange={e => setQuickAwardReason(e.target.value)}
+                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t border-dark-border">
+              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button
+                onClick={() => quickAwardMutation.mutate()}
+                disabled={!quickAwardPts || quickAwardMutation.isPending}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+              >
+                {quickAwardMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+                Award
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
