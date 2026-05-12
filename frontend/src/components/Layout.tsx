@@ -6,8 +6,8 @@ import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
-  Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight, Zap, Mail,
-  Crown, Award, Building2, FileText, UserPlus,
+  Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
+  Crown, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
   ListChecks, TrendingUp, FilePlus2,
   ChevronLeft, ChevronRight, ChevronDown,
@@ -76,17 +76,14 @@ const navGroups: NavGroup[] = [
     label: 'Members & Loyalty',
     accent: '#fbbf24', // gold
     items: [
-      { path: '/members',            label: 'Members',    icon: Users,     gate: 'all' },
-      { path: '/members/duplicates', label: 'Duplicates', icon: ArrowLeftRight, gate: 'admin' },
-      { path: '/referrals', label: 'Referrals', icon: UserPlus, gate: 'admin', product: 'loyalty' },
-      { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin', product: 'loyalty' },
-      { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin', product: 'loyalty' },
-      { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers', product: 'loyalty' },
-      { path: '/rewards',  label: 'Rewards',  icon: Sparkles,  gate: 'admin', product: 'loyalty' },
-      { path: '/segments',         label: 'Segments',  icon: ListChecks, gate: 'admin', product: 'loyalty' },
-      { path: '/email-campaigns',  label: 'Campaigns', icon: Mail,       gate: 'admin', product: 'loyalty' },
-      { path: '/earn-rate-events', label: 'Boost events', icon: Zap,     gate: 'admin', product: 'loyalty' },
-      { path: '/wallet-config',    label: 'Wallet passes', icon: CreditCard, gate: 'admin', product: 'loyalty' },
+      // 4-hub consolidation. Each hub is a tabbed container — see
+      // pages/hubs/* for the per-tab routing. Legacy paths like
+      // /tiers, /offers, /referrals etc. still work; they redirect
+      // into the right hub tab.
+      { path: '/members',   label: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
+      { path: '/program',   label: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
+      { path: '/rewards',   label: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },
+      { path: '/campaigns', label: 'Campaigns', icon: Mail,    gate: 'admin', product: 'loyalty', altPaths: ['/email-campaigns'] },
     ],
   },
   {

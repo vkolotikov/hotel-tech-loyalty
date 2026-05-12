@@ -1078,10 +1078,11 @@ export function Settings() {
     const qualModel = getVal('tier_qualification_model') || 'points'
 
     const managePages = [
-      { to: '/tiers',    label: 'Tiers',    icon: <Crown size={16} />,     desc: `${tiers.length} tier${tiers.length === 1 ? '' : 's'} · qualification rules, perks`, accent: '#fbbf24' },
-      { to: '/benefits', label: 'Benefits', icon: <ShieldCheck size={16} />, desc: 'Reusable benefits assigned to tiers',           accent: '#a78bfa' },
-      { to: '/offers',   label: 'Offers',   icon: <Tag size={16} />,       desc: 'Targeted promotions & reward redemptions',        accent: '#60a5fa' },
-      { to: '/members',  label: 'Members',  icon: <Users size={16} />,     desc: 'Member directory, points ledger, tier overrides', accent: '#74c895' },
+      { to: '/program?tab=tiers',    label: 'Tiers',    icon: <Crown size={16} />,        desc: `${tiers.length} tier${tiers.length === 1 ? '' : 's'} · qualification rules, perks`, accent: '#fbbf24' },
+      { to: '/program?tab=benefits', label: 'Benefits', icon: <ShieldCheck size={16} />,  desc: 'Reusable benefits assigned to tiers',           accent: '#a78bfa' },
+      { to: '/rewards?tab=offers',   label: 'Offers',   icon: <Tag size={16} />,          desc: 'Targeted promotions & reward redemptions',        accent: '#60a5fa' },
+      { to: '/members',              label: 'Members',  icon: <Users size={16} />,        desc: 'Member directory, points ledger, tier overrides', accent: '#74c895' },
+      { to: '/wallet-config',        label: 'Wallet passes', icon: <CreditCard size={16} />, desc: 'Apple + Google Wallet pass setup',              accent: '#f59e0b' },
     ]
 
     return (

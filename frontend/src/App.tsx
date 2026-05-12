@@ -17,19 +17,22 @@ import { Activate } from './pages/Activate'
 import { Dashboard } from './pages/Dashboard'
 import { Setup } from './pages/Setup'
 
-// Lazy-loaded pages
-const Members = lazy(() => import('./pages/Members').then(m => ({ default: m.Members })))
-const Referrals = lazy(() => import('./pages/Referrals').then(m => ({ default: m.Referrals })))
-const Rewards = lazy(() => import('./pages/Rewards').then(m => ({ default: m.Rewards })))
-const Segments = lazy(() => import('./pages/Segments').then(m => ({ default: m.Segments })))
-const EarnRateEvents = lazy(() => import('./pages/EarnRateEvents').then(m => ({ default: m.EarnRateEvents })))
-const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns').then(m => ({ default: m.EmailCampaigns })))
+// Lazy-loaded pages. The Members & Loyalty area (Members, Referrals,
+// Rewards, Segments, EarnRateEvents, EmailCampaigns, MemberDuplicates,
+// Offers, Benefits, Tiers) is now loaded INSIDE the hub components
+// at pages/hubs/* — see MembersHub / ProgramHub / RewardsHub /
+// CampaignsHub. The hub wrappers do their own lazy-load.
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
+
+// Consolidated 4-hub pages. The legacy paths below redirect into
+// these via ?tab=… params so deep links / bookmarks survive.
+const MembersHub   = lazy(() => import('./pages/hubs/MembersHub').then(m => ({ default: m.MembersHub })))
+const ProgramHub   = lazy(() => import('./pages/hubs/ProgramHub').then(m => ({ default: m.ProgramHub })))
+const RewardsHub   = lazy(() => import('./pages/hubs/RewardsHub').then(m => ({ default: m.RewardsHub })))
+const CampaignsHub = lazy(() => import('./pages/hubs/CampaignsHub').then(m => ({ default: m.CampaignsHub })))
 const MemberDetail = lazy(() => import('./pages/MemberDetail').then(m => ({ default: m.MemberDetail })))
-const MemberDuplicates = lazy(() => import('./pages/MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
 const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
 const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
-const Offers = lazy(() => import('./pages/Offers').then(m => ({ default: m.Offers })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
 const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ default: m.ChatbotSetup })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
@@ -44,10 +47,8 @@ const ReviewFormBuilder = lazy(() => import('./pages/ReviewFormBuilder').then(m 
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ default: m.ReviewDetail })))
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
-const Benefits = lazy(() => import('./pages/Benefits').then(m => ({ default: m.Benefits })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
-const Tiers = lazy(() => import('./pages/Tiers').then(m => ({ default: m.Tiers })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })))
@@ -178,16 +179,31 @@ export default function App() {
           <Route path="/activate" element={<Activate />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
-          <Route path="/members" element={<LazyRoute><Members /></LazyRoute>} />
-          <Route path="/members/duplicates" element={<LazyRoute gate="admin"><MemberDuplicates /></LazyRoute>} />
+          {/* ── Members & Loyalty: 4 consolidated hubs ─────────────────
+              Each hub is a tab container. Legacy URLs (/tiers, /offers,
+              /referrals, etc.) redirect with ?tab= so bookmarks land
+              on the right tab. Member detail pages keep their own
+              /members/:id route — the hub only handles list/duplicates/
+              segments. */}
+          <Route path="/members" element={<LazyRoute><MembersHub /></LazyRoute>} />
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
-          <Route path="/referrals" element={<LazyRoute><Referrals /></LazyRoute>} />
-          <Route path="/rewards" element={<LazyRoute gate="admin" product="loyalty"><Rewards /></LazyRoute>} />
-          <Route path="/segments" element={<LazyRoute gate="admin" product="loyalty"><Segments /></LazyRoute>} />
-          <Route path="/earn-rate-events" element={<LazyRoute gate="admin" product="loyalty"><EarnRateEvents /></LazyRoute>} />
-          <Route path="/email-campaigns" element={<LazyRoute gate="admin" product="loyalty"><EmailCampaigns /></LazyRoute>} />
+          <Route path="/program" element={<LazyRoute><ProgramHub /></LazyRoute>} />
+          <Route path="/rewards" element={<LazyRoute><RewardsHub /></LazyRoute>} />
+          <Route path="/campaigns" element={<LazyRoute><CampaignsHub /></LazyRoute>} />
+
+          {/* Legacy redirects — preserve deep links to the now-tab pages */}
+          <Route path="/members/duplicates" element={<Navigate to="/members?tab=duplicates" replace />} />
+          <Route path="/segments"           element={<Navigate to="/members?tab=segments" replace />} />
+          <Route path="/tiers"              element={<Navigate to="/program?tab=tiers" replace />} />
+          <Route path="/benefits"           element={<Navigate to="/program?tab=benefits" replace />} />
+          <Route path="/earn-rate-events"   element={<Navigate to="/program?tab=boost-events" replace />} />
+          <Route path="/offers"             element={<Navigate to="/rewards?tab=offers" replace />} />
+          <Route path="/referrals"          element={<Navigate to="/rewards?tab=referrals" replace />} />
+          <Route path="/email-campaigns"    element={<Navigate to="/campaigns?tab=email" replace />} />
+
+          {/* Wallet config — kept routable, removed from sidebar. Reached
+              from a link in Settings (one-time setup, not daily-use). */}
           <Route path="/wallet-config" element={<LazyRoute gate="admin" product="loyalty"><WalletConfig /></LazyRoute>} />
-          <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           {/* Analytics is plain charts/KPIs (no LLM) so we gate on the
               staff `can_view_analytics` flag only. Previously this route
               also required the `ai_insights` plan feature, which made
@@ -225,8 +241,7 @@ export default function App() {
           <Route path="/reviews/forms/:id" element={<LazyRoute gate="admin"><ReviewFormBuilder /></LazyRoute>} />
           <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin"><ReviewDetail /></LazyRoute>} />
           <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
-          <Route path="/tiers" element={<LazyRoute gate="admin" product="loyalty"><Tiers /></LazyRoute>} />
-          <Route path="/benefits" element={<LazyRoute gate="admin" product="loyalty"><Benefits /></LazyRoute>} />
+          {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
           {/* Guests + CRM Reservations consolidated — redirect list pages
