@@ -9,10 +9,12 @@ import { api } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
+import { Link } from 'react-router-dom'
 import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
-  BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck
+  BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
+  TrendingDown, MoveRight, ChevronRight
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -56,6 +58,9 @@ export function Analytics() {
   const [bookingDays, setBookingDays] = useState(30)
   const [growthMonths, setGrowthMonths] = useState(12)
   const [crmPeriod, setCrmPeriod] = useState('months6')
+  const [atRiskDays, setAtRiskDays] = useState(60)
+  const [cohortMonths, setCohortMonths] = useState(6)
+  const [tierMoveDays, setTierMoveDays] = useState(90)
 
   // Loyalty queries
   const { data: overview } = useQuery({
@@ -66,6 +71,24 @@ export function Analytics() {
   const { data: pointsData } = useQuery({
     queryKey: ['analytics-points', pointsDays],
     queryFn: () => api.get(`/v1/admin/analytics/points?days=${pointsDays}`).then(r => r.data),
+  })
+
+  const { data: cohortRetention } = useQuery({
+    queryKey: ['analytics-cohort-retention', cohortMonths],
+    queryFn: () => api.get(`/v1/admin/analytics/cohort-retention?months=${cohortMonths}`).then(r => r.data),
+    enabled: activeTab === 'members',
+  })
+
+  const { data: atRiskMembers } = useQuery({
+    queryKey: ['analytics-at-risk', atRiskDays],
+    queryFn: () => api.get(`/v1/admin/analytics/at-risk-members?days=${atRiskDays}&limit=25`).then(r => r.data),
+    enabled: activeTab === 'members',
+  })
+
+  const { data: tierMovement } = useQuery({
+    queryKey: ['analytics-tier-movement', tierMoveDays],
+    queryFn: () => api.get(`/v1/admin/analytics/tier-movement?days=${tierMoveDays}`).then(r => r.data),
+    enabled: activeTab === 'members',
   })
 
   const { data: memberGrowth } = useQuery({
@@ -655,6 +678,168 @@ export function Analytics() {
                 <Bar dataKey="members" fill="#6366f1" radius={[4, 4, 0, 0]} name="Members" />
               </BarChart>
             </ResponsiveContainer>
+          </Card>
+
+          {/* ─── Tier movement ─── */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <MoveRight size={16} className="text-amber-400" /> Tier movement
+              </h3>
+              <select value={tierMoveDays} onChange={e => setTierMoveDays(Number(e.target.value))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-white">
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+                <option value={180}>Last 6 months</option>
+                <option value={365}>Last year</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-[#1a1a1a] border border-emerald-500/20 rounded-lg p-3 text-center">
+                <TrendingUp size={16} className="text-emerald-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{(tierMovement?.upgrades ?? 0).toLocaleString()}</div>
+                <div className="text-[11px] text-[#636366]">Upgrades</div>
+              </div>
+              <div className="bg-[#1a1a1a] border border-red-500/20 rounded-lg p-3 text-center">
+                <TrendingDown size={16} className="text-red-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{(tierMovement?.downgrades ?? 0).toLocaleString()}</div>
+                <div className="text-[11px] text-[#636366]">Downgrades</div>
+              </div>
+              <div className="bg-[#1a1a1a] border border-dark-border rounded-lg p-3 text-center">
+                <MoveRight size={16} className="text-[#a0a0a0] mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{(tierMovement?.lateral ?? 0).toLocaleString()}</div>
+                <div className="text-[11px] text-[#636366]">No change</div>
+              </div>
+            </div>
+            {(tierMovement?.flows ?? []).length > 0 ? (
+              <div className="space-y-1">
+                {(tierMovement?.flows ?? []).slice(0, 8).map((f: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-dark-surface2">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: (f.from_color || '#666') + '22', color: f.from_color || '#a0a0a0' }}>{f.from}</span>
+                    <ChevronRight size={14} className={f.direction === 'up' ? 'text-emerald-400' : f.direction === 'down' ? 'text-red-400' : 'text-[#636366]'} />
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: (f.to_color || '#666') + '22', color: f.to_color || '#a0a0a0' }}>{f.to}</span>
+                    <span className="ml-auto text-sm text-white font-semibold">{f.count.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#636366] text-center py-6">No tier movement in this window.</p>
+            )}
+          </Card>
+
+          {/* ─── Cohort retention ─── */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <Activity size={16} className="text-blue-400" /> Cohort retention
+                <span className="text-[11px] text-[#636366] font-normal">members with a transaction in the month, as % of cohort size</span>
+              </h3>
+              <select value={cohortMonths} onChange={e => setCohortMonths(Number(e.target.value))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-white">
+                <option value={3}>Last 3 cohorts</option>
+                <option value={6}>Last 6 cohorts</option>
+                <option value={12}>Last 12 cohorts</option>
+              </select>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-t-secondary border-b border-dark-border">
+                    <th className="pb-2 font-medium">Cohort</th>
+                    <th className="pb-2 font-medium text-center">Size</th>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <th key={i} className="pb-2 font-medium text-center text-[11px]">M{i}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(cohortRetention ?? []).length === 0 ? (
+                    <tr><td colSpan={8} className="py-8 text-center text-[#636366]">No cohort data yet — members need at least one join-month + one transaction.</td></tr>
+                  ) : (cohortRetention as any[]).map((c) => (
+                    <tr key={c.cohort} className="border-b border-dark-border last:border-b-0">
+                      <td className="py-2 text-white font-mono text-xs">{c.cohort}</td>
+                      <td className="py-2 text-center text-[#a0a0a0]">{c.size}</td>
+                      {Array.from({ length: 6 }).map((_, i) => {
+                        const cell = c.retention?.[i]
+                        if (!cell) return <td key={i} className="py-2 text-center text-[#3a3a3a]">—</td>
+                        const bg = cell.pct >= 70 ? 'rgba(50,215,75,0.25)' : cell.pct >= 40 ? 'rgba(255,159,10,0.25)' : 'rgba(239,68,68,0.18)'
+                        return (
+                          <td key={i} className="py-1 text-center">
+                            <div className="inline-block min-w-[44px] px-2 py-1 rounded text-xs font-semibold text-white"
+                              style={{ backgroundColor: bg }}>{cell.pct}%</div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* ─── At-risk members ─── */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-400" /> At-risk members
+                <span className="text-[11px] text-[#636366] font-normal">previously active, gone quiet</span>
+              </h3>
+              <select value={atRiskDays} onChange={e => setAtRiskDays(Number(e.target.value))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-white">
+                <option value={30}>No activity 30+ days</option>
+                <option value={60}>No activity 60+ days</option>
+                <option value={90}>No activity 90+ days</option>
+                <option value={180}>No activity 180+ days</option>
+              </select>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-t-secondary border-b border-dark-border">
+                    <th className="pb-2 font-medium">Member</th>
+                    <th className="pb-2 font-medium">Tier</th>
+                    <th className="pb-2 font-medium text-right">Lifetime pts</th>
+                    <th className="pb-2 font-medium text-right">Current pts</th>
+                    <th className="pb-2 font-medium text-right">Days quiet</th>
+                    <th className="pb-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-border">
+                  {(atRiskMembers ?? []).length === 0 ? (
+                    <tr><td colSpan={6} className="py-8 text-center text-[#636366]">Nobody at risk in this window — engagement looks healthy.</td></tr>
+                  ) : (atRiskMembers as any[]).map((m) => (
+                    <tr key={m.id} className="hover:bg-dark-surface2">
+                      <td className="py-2">
+                        <div className="text-white text-sm">{m.name}</div>
+                        <div className="text-[11px] text-[#636366]">{m.email}</div>
+                      </td>
+                      <td className="py-2">
+                        {m.tier && (
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                            style={{ backgroundColor: (m.tier_color || '#666') + '22', color: m.tier_color || '#a0a0a0' }}>
+                            {m.tier}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right text-white font-semibold">{m.lifetime_points.toLocaleString()}</td>
+                      <td className="py-2 text-right text-[#a0a0a0]">{m.current_points.toLocaleString()}</td>
+                      <td className="py-2 text-right">
+                        <span className={`text-sm font-semibold ${m.days_since_activity >= 180 ? 'text-red-400' : m.days_since_activity >= 90 ? 'text-amber-400' : 'text-[#a0a0a0]'}`}>
+                          {m.days_since_activity}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        <Link to={`/members/${m.id}`} className="text-primary-400 hover:text-primary-300 text-xs font-semibold inline-flex items-center gap-1">
+                          Open <ChevronRight size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </>
       )}

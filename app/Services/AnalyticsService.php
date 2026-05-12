@@ -279,6 +279,209 @@ class AnalyticsService
         });
     }
 
+    /**
+     * Cohort retention: for each of the last N join-months, what
+     * fraction of those members had a points transaction in each
+     * subsequent calendar month. The classic SaaS "100% in month 0,
+     * 70% in month 1, 55% in month 2…" triangle.
+     *
+     * Returns:
+     *   [
+     *     ['cohort' => '2025-11', 'size' => 42, 'retention' => [
+     *        ['month' => 0, 'pct' => 100, 'count' => 42],
+     *        ['month' => 1, 'pct' => 67,  'count' => 28],
+     *        ...
+     *     ]],
+     *     ...
+     *   ]
+     *
+     * Computed in two queries (cohort sizes + transaction activity)
+     * with PHP roll-up — keeps the SQL portable across Postgres /
+     * MySQL and avoids generate_series gymnastics.
+     */
+    public function getCohortRetention(int $months = 6): array
+    {
+        return Cache::remember("analytics:cohort_retention:{$months}", self::TTL_LONG, function () use ($months) {
+            $months = max(1, min(12, $months));
+            $startOfWindow = now()->startOfMonth()->subMonths($months - 1);
+
+            $yearJoined = self::yearSql('joined_at');
+            $monthJoined = self::monthSql('joined_at');
+
+            // 1. Cohort sizes per (year, month).
+            $cohorts = LoyaltyMember::query()
+                ->where('joined_at', '>=', $startOfWindow)
+                ->selectRaw("{$yearJoined} AS y, {$monthJoined} AS m, COUNT(*) AS size")
+                ->groupBy('y', 'm')
+                ->orderBy('y')->orderBy('m')
+                ->get()
+                ->keyBy(fn ($r) => sprintf('%d-%02d', $r->y, $r->m));
+
+            if ($cohorts->isEmpty()) return [];
+
+            // 2. Active months per member (distinct year-month they
+            //    had a transaction). One query covers everyone in the
+            //    cohort window.
+            $cohortMemberIds = LoyaltyMember::where('joined_at', '>=', $startOfWindow)->pluck('id');
+            $yearTx = self::yearSql('created_at');
+            $monthTx = self::monthSql('created_at');
+
+            $activity = PointsTransaction::query()
+                ->whereIn('member_id', $cohortMemberIds)
+                ->where('created_at', '>=', $startOfWindow)
+                ->selectRaw("member_id, {$yearTx} AS y, {$monthTx} AS m")
+                ->groupBy('member_id', 'y', 'm')
+                ->get();
+
+            // member_id → set of "Y-M" they were active in
+            $activeByMember = [];
+            foreach ($activity as $row) {
+                $key = sprintf('%d-%02d', $row->y, $row->m);
+                $activeByMember[$row->member_id][$key] = true;
+            }
+
+            // Pre-fetch each member's cohort key (year-month of joined_at).
+            $memberCohort = LoyaltyMember::whereIn('id', $cohortMemberIds)
+                ->get(['id', 'joined_at'])
+                ->mapWithKeys(fn ($m) => [$m->id => $m->joined_at?->format('Y-m')])
+                ->filter();
+
+            // 3. Roll up retention. For each cohort and each month
+            //    offset, count members of that cohort active in that
+            //    target month.
+            $now = now()->startOfMonth();
+            $result = [];
+            foreach ($cohorts as $cohortKey => $cohort) {
+                [$cy, $cm] = array_map('intval', explode('-', $cohortKey));
+                $cohortStart = \Carbon\Carbon::create($cy, $cm, 1);
+                $monthsSince = (int) $cohortStart->diffInMonths($now);
+
+                $retentionRow = [];
+                for ($offset = 0; $offset <= $monthsSince; $offset++) {
+                    $target = $cohortStart->copy()->addMonths($offset);
+                    $targetKey = $target->format('Y-m');
+                    $count = 0;
+                    foreach ($memberCohort as $mid => $mc) {
+                        if ($mc !== $cohortKey) continue;
+                        if (!empty($activeByMember[$mid][$targetKey])) $count++;
+                    }
+                    $retentionRow[] = [
+                        'month' => $offset,
+                        'count' => $count,
+                        'pct'   => $cohort->size > 0 ? round($count * 100 / $cohort->size) : 0,
+                    ];
+                }
+
+                $result[] = [
+                    'cohort'    => $cohortKey,
+                    'size'      => (int) $cohort->size,
+                    'retention' => $retentionRow,
+                ];
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * At-risk member list: previously-active members who haven't
+     * transacted in `days` days. Sorted by last_activity_at ascending
+     * so the most-dormant appear first. Useful as a win-back target.
+     */
+    public function getAtRiskMembers(int $days = 60, int $limit = 50): array
+    {
+        $days = max(7, min(365, $days));
+        $limit = max(10, min(200, $limit));
+        $cutoff = now()->subDays($days);
+
+        return LoyaltyMember::query()
+            ->with(['user:id,name,email,phone', 'tier:id,name,color_hex'])
+            ->where('is_active', true)
+            ->whereNotNull('last_activity_at')
+            ->where('last_activity_at', '<', $cutoff)
+            // Was previously active enough to be worth saving — at
+            // least one earn transaction in their lifetime. Filters
+            // out members who joined and never engaged.
+            ->whereHas('pointsTransactions', fn ($q) => $q->where('points', '>', 0))
+            ->orderBy('last_activity_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($m) => [
+                'id'                  => $m->id,
+                'member_number'       => $m->member_number,
+                'name'                => $m->user?->name,
+                'email'               => $m->user?->email,
+                'phone'               => $m->user?->phone,
+                'tier'                => $m->tier?->name,
+                'tier_color'          => $m->tier?->color_hex,
+                'current_points'      => (int) $m->current_points,
+                'lifetime_points'     => (int) $m->lifetime_points,
+                'last_activity_at'    => $m->last_activity_at?->toIso8601String(),
+                'days_since_activity' => $m->last_activity_at ? (int) $m->last_activity_at->diffInDays(now()) : null,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Tier movement: count of upgrades / downgrades / unchanged
+     * tier assessments over the last `days` days. Reads from
+     * `tier_assessments` (the audit table the assessTier method
+     * writes to) so this reflects what actually happened, not what
+     * the current tier_id suggests.
+     */
+    public function getTierMovement(int $days = 90): array
+    {
+        $days = max(7, min(365, $days));
+        $since = now()->subDays($days);
+
+        // Up / down / lateral counts from the assessment table.
+        $rows = DB::table('tier_assessments')
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('old_tier_id')
+            ->whereNotNull('new_tier_id')
+            ->select('old_tier_id', 'new_tier_id', DB::raw('COUNT(*) as count'))
+            ->groupBy('old_tier_id', 'new_tier_id')
+            ->get();
+
+        $tierMap = LoyaltyTier::all(['id', 'name', 'color_hex', 'sort_order'])->keyBy('id');
+
+        $upgrades = 0;
+        $downgrades = 0;
+        $lateral = 0;
+        $flows = [];
+
+        foreach ($rows as $r) {
+            $from = $tierMap[$r->old_tier_id] ?? null;
+            $to   = $tierMap[$r->new_tier_id] ?? null;
+            if (!$from || !$to) continue;
+
+            $delta = ($to->sort_order ?? 0) - ($from->sort_order ?? 0);
+            if      ($delta > 0) $upgrades   += (int) $r->count;
+            elseif  ($delta < 0) $downgrades += (int) $r->count;
+            else                 $lateral    += (int) $r->count;
+
+            $flows[] = [
+                'from'       => $from->name,
+                'from_color' => $from->color_hex,
+                'to'         => $to->name,
+                'to_color'   => $to->color_hex,
+                'count'      => (int) $r->count,
+                'direction'  => $delta > 0 ? 'up' : ($delta < 0 ? 'down' : 'lateral'),
+            ];
+        }
+
+        // Sort flows: most-frequent first.
+        usort($flows, fn ($a, $b) => $b['count'] - $a['count']);
+
+        return [
+            'days'        => $days,
+            'upgrades'    => $upgrades,
+            'downgrades'  => $downgrades,
+            'lateral'     => $lateral,
+            'flows'       => $flows,
+        ];
+    }
+
     public function getTopMembers(int $limit = 10): array
     {
         return Cache::remember("analytics:top_members:{$limit}", self::TTL_MEDIUM, function () use ($limit) {

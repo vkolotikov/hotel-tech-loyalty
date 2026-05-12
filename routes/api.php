@@ -378,6 +378,9 @@ Route::prefix('v1')->group(function () {
             Route::get('analytics/overview',             [AnalyticsController::class, 'overview']);
             Route::get('analytics/points',               [AnalyticsController::class, 'points']);
             Route::get('analytics/member-growth',        [AnalyticsController::class, 'memberGrowth']);
+            Route::get('analytics/cohort-retention',     [AnalyticsController::class, 'cohortRetention']);
+            Route::get('analytics/at-risk-members',      [AnalyticsController::class, 'atRiskMembers']);
+            Route::get('analytics/tier-movement',        [AnalyticsController::class, 'tierMovement']);
             Route::get('analytics/revenue',              [AnalyticsController::class, 'revenue']);
             Route::get('analytics/revenue-trend',        [AnalyticsController::class, 'revenueTrend']);
             Route::get('analytics/booking-trends',       [AnalyticsController::class, 'bookingTrends']);

@@ -37,6 +37,24 @@ class AnalyticsController extends Controller
         return response()->json($this->analytics->getMemberGrowth($request->get('months', 12)));
     }
 
+    public function cohortRetention(Request $request): JsonResponse
+    {
+        return response()->json($this->analytics->getCohortRetention((int) $request->get('months', 6)));
+    }
+
+    public function atRiskMembers(Request $request): JsonResponse
+    {
+        return response()->json($this->analytics->getAtRiskMembers(
+            (int) $request->get('days', 60),
+            (int) $request->get('limit', 50),
+        ));
+    }
+
+    public function tierMovement(Request $request): JsonResponse
+    {
+        return response()->json($this->analytics->getTierMovement((int) $request->get('days', 90)));
+    }
+
     public function revenue(): JsonResponse
     {
         return response()->json($this->analytics->getRevenueByRoomType());
