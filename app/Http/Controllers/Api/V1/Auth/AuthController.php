@@ -117,6 +117,29 @@ class AuthController extends Controller
                     $refereeBonus  = (int) ($orgId ? HotelSetting::getValue('referee_bonus_points', 250) : 250);
                     $this->loyaltyService->awardPoints($referredBy, $referrerBonus, "Referral: {$user->name} joined", 'referral');
                     $this->loyaltyService->awardPoints($member, $refereeBonus, 'Referral bonus for joining via referral', 'referral');
+
+                    // Record the referral in the ledger so the member-side
+                    // /v1/member/referral endpoint (which reads from
+                    // `referrals`) shows total_referrals + earnings, and
+                    // staff can see the network in the admin referrals page.
+                    // Pre-fix this row was never written — the bonuses
+                    // landed in points_transactions but the loyalty_members
+                    // referrals() relation was always empty.
+                    //
+                    // Status starts at 'rewarded' because we already paid
+                    // out. If a future iteration wants gated bonuses
+                    // (e.g. "unlock the referrer bonus after the referee's
+                    // first stay") this is the single field to change.
+                    \App\Models\Referral::create([
+                        'organization_id'         => $orgId,
+                        'referrer_id'             => $referredBy->id,
+                        'referee_id'              => $member->id,
+                        'status'                  => 'rewarded',
+                        'referrer_points_awarded' => $referrerBonus,
+                        'referee_points_awarded'  => $refereeBonus,
+                        'qualified_at'            => now(),
+                        'rewarded_at'             => now(),
+                    ]);
                 }
 
                 return ['user' => $user, 'member' => $member];

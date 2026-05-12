@@ -297,6 +297,9 @@ Route::prefix('v1')->group(function () {
             Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
 
+            Route::get('referrals',               [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'index']);
+            Route::get('referrals/stats',         [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'stats']);
+
             Route::get('members',                 [MemberAdminController::class, 'index']);
             Route::get('members/export',          [MemberAdminController::class, 'export']);
             Route::get('members/duplicates',      [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'suggestions']);

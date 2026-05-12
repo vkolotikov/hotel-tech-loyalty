@@ -7,7 +7,7 @@ import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, ArrowLeftRight,
-  Crown, Award, Building2, FileText,
+  Crown, Award, Building2, FileText, UserPlus,
   Briefcase, ClipboardList, Radio, ScrollText,
   ListChecks, TrendingUp, FilePlus2,
   ChevronLeft, ChevronRight, ChevronDown,
@@ -78,6 +78,7 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/members',            label: 'Members',    icon: Users,     gate: 'all' },
       { path: '/members/duplicates', label: 'Duplicates', icon: ArrowLeftRight, gate: 'admin' },
+      { path: '/referrals', label: 'Referrals', icon: UserPlus, gate: 'admin', product: 'loyalty' },
       { path: '/tiers',    label: 'Tiers',    icon: Crown,     gate: 'admin', product: 'loyalty' },
       { path: '/benefits', label: 'Benefits', icon: Award,     gate: 'admin', product: 'loyalty' },
       { path: '/offers',   label: 'Offers',   icon: Gift,      gate: 'can_manage_offers', product: 'loyalty' },
