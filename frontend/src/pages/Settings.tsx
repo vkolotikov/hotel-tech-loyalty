@@ -18,6 +18,7 @@ import { BookingTab } from '../components/settings/BookingTab'
 import { PipelinesAdmin } from '../components/PipelinesAdmin'
 import { PlannerSettings } from '../components/PlannerSettings'
 import { MenuSettings } from '../components/MenuSettings'
+import { TeamSettings } from '../components/TeamSettings'
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -224,6 +225,7 @@ const TABS: Tab[] = [
   { id: 'pipelines',     label: 'Pipelines',       icon: GitBranch,  desc: 'CRM pipelines, stages & lost reasons', custom: true },
   { id: 'planner',       label: 'Planner',         icon: ClipboardList, desc: 'Task groups, templates & industry presets', custom: true },
   { id: 'menu',          label: 'Menu',            icon: Layers,        desc: 'Show or hide sidebar groups for your org', custom: true },
+  { id: 'team',          label: 'Team',            icon: Users,         desc: 'Invite teammates and manage roles + permissions', custom: true },
   { id: 'mobile_app',    label: 'Mobile App',      icon: Smartphone, desc: 'Loyalty mobile app appearance & preview', groups: ['mobile_app'], custom: true, product: 'loyalty' },
   { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
@@ -1738,6 +1740,7 @@ export function Settings() {
       case 'pipelines': return <PipelinesAdmin />
       case 'planner': return <PlannerSettings />
       case 'menu': return <MenuSettings />
+      case 'team': return <TeamSettings />
       case 'mobile_app': return renderMobileApp()
       case 'documentation': return renderDocumentation()
       case 'ai_system': return renderAiSystem()

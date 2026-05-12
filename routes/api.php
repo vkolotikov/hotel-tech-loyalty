@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
 use App\Http\Controllers\Api\V1\Admin\PlannerController;
 use App\Http\Controllers\Api\V1\Admin\PlannerPresetController;
 use App\Http\Controllers\Api\V1\Admin\LoyaltyPresetController;
+use App\Http\Controllers\Api\V1\Admin\TeamController;
 use App\Http\Controllers\Api\V1\Admin\VenueController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\CrmSettingsController;
@@ -598,6 +599,14 @@ Route::prefix('v1')->group(function () {
             Route::get('loyalty-presets',               [LoyaltyPresetController::class, 'index']);
             Route::post('loyalty-presets/apply',        [LoyaltyPresetController::class, 'apply']);
             Route::post('loyalty-presets/skip',         [LoyaltyPresetController::class, 'skip']);
+
+            // ─── Team / staff management ─────────────────────────────────
+            Route::get('team',                            [TeamController::class, 'index']);
+            Route::post('team/invite',                    [TeamController::class, 'invite']);
+            Route::put('team/{id}',                       [TeamController::class, 'update']);
+            Route::patch('team/{id}/deactivate',          [TeamController::class, 'deactivate']);
+            Route::patch('team/{id}/reactivate',          [TeamController::class, 'reactivate']);
+            Route::post('team/{id}/resend',               [TeamController::class, 'resend']);
 
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);
