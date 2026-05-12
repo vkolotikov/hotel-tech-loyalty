@@ -178,34 +178,104 @@ class BookingEngineService
                 throw new \RuntimeException('This room is no longer available for the selected dates. Please choose another.');
             }
 
-            // Create reservation in Smoobu. Field names follow the Smoobu Channel
-            // Manager API contract. If the account doesn't have the write API
-            // enabled, Smoobu returns 404 — in that case we still record the
-            // booking locally as pending_pms_sync so the customer flow completes
-            // and staff can reconcile in the dashboard.
-            $pmsResult = null;
+            // ── Live Smoobu availability re-check ───────────────────
+            // The local-mirror check above only sees bookings WE know
+            // about. If Booking.com / Airbnb just sold this room 30
+            // seconds ago and Smoobu's webhook hasn't reached us yet,
+            // our mirror still says "available" and we'd happily
+            // double-book. This single API call asks Smoobu what it
+            // really thinks RIGHT NOW. Wrapped in try/catch so a
+            // transient API error doesn't block the booking — but a
+            // confirmed "not available" is a hard stop.
             try {
-                $pmsResult = $this->smoobu->createReservation([
-                    'apartmentId' => $payload['unit_id'],
-                    'arrivalDate' => $payload['check_in'],
-                    'departureDate' => $payload['check_out'],
-                    'channel_id'  => (int) ($this->smoobu->channelId() ?: 0),
-                    'firstName'   => $guest['first_name'] ?? '',
-                    'lastName'    => $guest['last_name'] ?? '',
-                    'email'       => $guest['email'] ?? '',
-                    'phone'       => $guest['phone'] ?? '',
-                    'adults'      => (int) $payload['adults'],
-                    'children'    => (int) $payload['children'],
-                    'price'       => (float) $payload['gross_total'],
-                    'language'    => 'en',
-                ]);
+                $liveRates = $this->smoobu->getRates(
+                    $payload['check_in'],
+                    $payload['check_out'],
+                    [$apartmentId],
+                );
+                $liveData = $liveRates['data'] ?? $liveRates;
+                $unitLive = $liveData[$apartmentId] ?? null;
+                if ($unitLive !== null && !($unitLive['available'] ?? false)) {
+                    $this->logSubmission('failure', 'pms_unavailable', 'PMS reports unit unavailable at confirm', $data, $requestId, $idempotencyKey);
+                    throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                }
+            } catch (\RuntimeException $e) {
+                // Our own thrown unavailable error — re-throw.
+                throw $e;
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
+                // Transient Smoobu API failure — log but don't block.
+                // The createReservation call below will fail hard if
+                // Smoobu actually rejects, so we still have a second
+                // line of defence.
+                \Illuminate\Support\Facades\Log::warning('Live availability re-check failed at confirm', [
                     'org_id'  => $orgId,
-                    'unit_id' => $payload['unit_id'],
+                    'unit_id' => $apartmentId,
                     'error'   => $e->getMessage(),
                 ]);
-                $this->logSubmission('warning', 'pms_error', $e->getMessage(), $data, $requestId, $idempotencyKey);
+            }
+
+            // ── Create reservation in Smoobu ────────────────────────
+            // Field names follow Smoobu's documented Channel Manager
+            // API contract (camelCase throughout — note `channelId`,
+            // not channel_id, which was a bug pre-fix).
+            //
+            // Error handling has two distinct branches:
+            //   (a) Auth / network / 5xx / 404-not-found — Smoobu is
+            //       reachable problem on us. We can SAFELY fall back
+            //       to a local-only mirror with status pending_pms_sync
+            //       so staff can reconcile manually. Customer flow
+            //       completes, no double-booking risk because the
+            //       availability re-check above already confirmed
+            //       Smoobu has the room.
+            //   (b) Availability / validation rejection — Smoobu says
+            //       "no". HARD FAIL. Pre-fix this fell through to (a)
+            //       and we'd create a local mirror + email the
+            //       customer for a room they didn't actually get.
+            $pmsResult = null;
+            $pmsFatal = null;
+            try {
+                $pmsResult = $this->smoobu->createReservation([
+                    'apartmentId'   => $payload['unit_id'],
+                    'arrivalDate'   => $payload['check_in'],
+                    'departureDate' => $payload['check_out'],
+                    'channelId'     => (int) ($this->smoobu->channelId() ?: 0),
+                    'firstName'     => $guest['first_name'] ?? '',
+                    'lastName'      => $guest['last_name'] ?? '',
+                    'email'         => $guest['email'] ?? '',
+                    'phone'         => $guest['phone'] ?? '',
+                    'adults'        => (int) $payload['adults'],
+                    'children'      => (int) $payload['children'],
+                    'price'         => (float) $payload['gross_total'],
+                    'language'      => 'en',
+                ]);
+            } catch (\Throwable $e) {
+                $msg = $e->getMessage();
+                // Heuristic: any error mentioning availability /
+                // unavailable / booked / conflict / 409 / 422 is
+                // treated as a hard rejection. Everything else is
+                // treated as transient and falls back to local mirror.
+                $isAvailabilityFail =
+                    preg_match('/\b(409|422|unavailable|not available|already booked|overlapping|conflict|inventory)/i', $msg);
+                if ($isAvailabilityFail) {
+                    $this->logSubmission('failure', 'pms_unavailable', $msg, $data, $requestId, $idempotencyKey);
+                    \Illuminate\Support\Facades\Log::warning('Smoobu hard-rejected create (no local fallback)', [
+                        'org_id'  => $orgId,
+                        'unit_id' => $payload['unit_id'],
+                        'error'   => $msg,
+                    ]);
+                    $pmsFatal = $msg;
+                } else {
+                    \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
+                        'org_id'  => $orgId,
+                        'unit_id' => $payload['unit_id'],
+                        'error'   => $msg,
+                    ]);
+                    $this->logSubmission('warning', 'pms_error', $msg, $data, $requestId, $idempotencyKey);
+                }
+            }
+
+            if ($pmsFatal) {
+                throw new \RuntimeException('Booking could not be confirmed: this room is no longer available. Please choose another.');
             }
 
             $result = $pmsResult ?: [
