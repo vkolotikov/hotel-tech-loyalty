@@ -215,6 +215,11 @@ Route::prefix('v1')->group(function () {
             // staff confirms before it's a counted booking.
             Route::post('reservations',     [\App\Http\Controllers\Api\V1\Member\MemberReservationController::class, 'store']);
             Route::get('referral',              [ReferralController::class, 'index']);
+            // Self-serve redemption catalog.
+            Route::get('rewards',                  [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'index']);
+            Route::get('rewards/{id}',             [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'show']);
+            Route::post('rewards/{id}/redeem',     [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'redeem']);
+            Route::get('my/redemptions',           [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'myRedemptions']);
             // Hotel Services catalog (read-only browse for member mobile app).
             // Reuses the public widget controller — tenant middleware has already
             // bound the org so bindOrg() is a no-op and returns the same shape.
@@ -299,6 +304,17 @@ Route::prefix('v1')->group(function () {
 
             Route::get('referrals',               [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'index']);
             Route::get('referrals/stats',         [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'stats']);
+
+            // Rewards catalog
+            Route::get('rewards',                                       [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'index']);
+            Route::get('rewards/redemptions',                           [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'redemptions']);
+            Route::post('rewards/redemptions/{id}/fulfill',             [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'fulfill']);
+            Route::post('rewards/redemptions/{id}/cancel',              [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'cancel']);
+            Route::post('rewards',                                      [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'store']);
+            Route::get('rewards/{id}',                                  [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'show']);
+            Route::put('rewards/{id}',                                  [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'update']);
+            Route::patch('rewards/{id}/toggle',                         [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'toggleActive']);
+            Route::delete('rewards/{id}',                               [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'destroy']);
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
             Route::get('members/export',          [MemberAdminController::class, 'export']);
