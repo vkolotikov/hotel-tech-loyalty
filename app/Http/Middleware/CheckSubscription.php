@@ -90,10 +90,46 @@ class CheckSubscription
                 if ($org) $org->update(['subscription_status' => 'EXPIRED']);
             }
 
+            // ── PAST_DUE grace period ──────────────────────────────
+            // When a paid customer's card fails, Stripe sets PAST_DUE
+            // and retries 4 times over ~7 days. Pre-fix we instantly
+            // 403'd them — locking them OUT of /billing → couldn't
+            // update card → service dead until they emailed support.
+            //
+            // We now grant access for 3 days after the failed-charge
+            // period started, so Stripe's smart retries have time to
+            // succeed AND the customer can fix their card themselves.
+            // The wall-banner UI uses `grace_until` to show a warning
+            // instead of a full lockout during this window.
+            $graceUntil = null;
+            if ($effectiveStatus === 'PAST_DUE') {
+                $periodEnd = $status['periodEnd'] ?? null;
+                $graceUntil = $periodEnd
+                    ? strtotime($periodEnd . ' +3 days')
+                    : strtotime('+3 days');
+                $status['grace_until'] = date('c', $graceUntil);
+                if ($graceUntil > time()) {
+                    // Inside the grace window — let the request through
+                    // but mark the status so the frontend shows a banner.
+                    $request->attributes->set('subscription_status', 'PAST_DUE_GRACE');
+                    $request->attributes->set('subscription_plan', $status['plan'] ?? null);
+                    $request->attributes->set('subscription_trial_end', $trialEnd);
+                    Cache::put($cacheKey, $status, now()->addSeconds(60));
+                    return $next($request);
+                }
+            }
+
             if (!in_array($effectiveStatus, ['ACTIVE', 'TRIALING'])) {
+                $msg = match ($effectiveStatus) {
+                    'PAST_DUE', 'UNPAID' => 'Your most recent payment failed. Please update your payment method to restore access.',
+                    'CANCELED'           => 'Your subscription was canceled. Please reactivate to restore access.',
+                    'PAUSED'             => 'Your subscription is paused. Resume it to restore access.',
+                    'EXPIRED'            => 'Your free trial has expired. Please choose a plan to continue.',
+                    default              => 'Your subscription has expired. Please renew to continue using the platform.',
+                };
                 return response()->json([
                     'error' => 'subscription_required',
-                    'message' => 'Your subscription has expired. Please renew to continue using the platform.',
+                    'message' => $msg,
                     'subscription' => $status,
                 ], 403);
             }

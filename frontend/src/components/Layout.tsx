@@ -608,6 +608,11 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Trial-near-expiry warning banner */}
         <TrialExpiryBanner />
 
+        {/* Paid-plan card-failed grace-period banner. Shown when
+            Stripe says the most recent payment failed and we're
+            inside the 3-day grace window before lockout. */}
+        <PastDueGraceBanner />
+
         {/* Page content. Skipped entirely when the wall is showing so
             that no background queries fire for a tenant whose trial has
             ended. This is intentional — without this gate, every page's
@@ -783,6 +788,45 @@ function TrialExpiryBanner() {
         >
           <CreditCard size={12} />
           Upgrade
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Banner shown when Stripe has set the subscription to PAST_DUE
+ * (most recent charge failed) but we're still inside the 3-day grace
+ * window before our middleware will start blocking. Critical UX —
+ * pre-fix a failed charge instantly 403'd everything including
+ * /billing itself, locking the customer out of the very page they
+ * needed to fix their card.
+ */
+function PastDueGraceBanner() {
+  const { status, graceDaysLeft } = useSubscription()
+  const location = useLocation()
+  if (status !== 'PAST_DUE_GRACE') return null
+  if (location.pathname === '/billing') return null
+
+  const tone = (graceDaysLeft ?? 3) <= 1
+    ? { bg: 'bg-red-500/15', border: 'border-red-500/30', text: 'text-red-300', accent: 'text-red-400' }
+    : { bg: 'bg-amber-500/15', border: 'border-amber-500/30', text: 'text-amber-300', accent: 'text-amber-400' }
+
+  const label = (graceDaysLeft ?? 0) <= 0 ? 'Final notice — payment failed'
+    : (graceDaysLeft === 1) ? 'Payment failed — 1 day to update'
+    : `Payment failed — ${graceDaysLeft} days to update`
+
+  return (
+    <div className={`${tone.bg} border-b ${tone.border} px-4 lg:px-6 py-2`}>
+      <div className="flex items-center gap-3 text-sm">
+        <AlertTriangle size={16} className={tone.accent} />
+        <span className={tone.text}>{label}. <strong>Update your card</strong> to keep access.</span>
+        <Link
+          to="/billing"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-md bg-white/10 hover:bg-white/15 text-white transition-colors"
+        >
+          <CreditCard size={12} />
+          Update payment
         </Link>
       </div>
     </div>

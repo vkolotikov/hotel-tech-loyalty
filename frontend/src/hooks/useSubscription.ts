@@ -9,6 +9,8 @@ export interface SubscriptionData {
   trialStartedAt?: string | null
   trialAlreadyUsed?: boolean
   periodEnd?: string | null
+  /** Set on PAST_DUE_GRACE: until this point we still let them work. */
+  graceUntil?: string | null
   features: Record<string, string>
   products: string[]
   billingAvailable?: boolean
@@ -87,5 +89,25 @@ export function useSubscription() {
 
   const billingAvailable = data?.billingAvailable ?? false
 
-  return { data, isLoading, status, features, products, hasFeature, hasProduct, billingAvailable }
+  // Derived UX hints. These let the Layout banner know what to show
+  // without re-implementing the date math in three places.
+  const trialDaysLeft = (() => {
+    if (status !== 'TRIALING' || !data?.trialEnd) return null
+    const ms = new Date(data.trialEnd).getTime() - Date.now()
+    if (ms <= 0) return 0
+    return Math.ceil(ms / 86_400_000)
+  })()
+  const inPastDueGrace = status === 'PAST_DUE_GRACE'
+  const graceDaysLeft = (() => {
+    if (!inPastDueGrace || !data?.graceUntil) return null
+    const ms = new Date(data.graceUntil).getTime() - Date.now()
+    if (ms <= 0) return 0
+    return Math.ceil(ms / 86_400_000)
+  })()
+
+  return {
+    data, isLoading, status, features, products,
+    hasFeature, hasProduct, billingAvailable,
+    trialDaysLeft, inPastDueGrace, graceDaysLeft,
+  }
 }

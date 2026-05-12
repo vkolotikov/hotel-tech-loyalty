@@ -628,6 +628,31 @@ class AuthController extends Controller
                             ]);
                         }
                     }
+                    // PAST_DUE / UNPAID inside the grace window: the
+                    // middleware lets the request through but the user
+                    // needs to see a banner explaining what's wrong.
+                    // We still return the full features/products so the
+                    // dashboard works normally while they fix billing.
+                    foreach ($subs as $sub) {
+                        if (in_array($sub['status'] ?? '', ['PAST_DUE', 'UNPAID'])) {
+                            $periodEnd = $sub['currentPeriodEnd'] ?? null;
+                            $graceUntil = $periodEnd
+                                ? date('c', strtotime($periodEnd . ' +3 days'))
+                                : date('c', strtotime('+3 days'));
+                            $inGrace = strtotime($graceUntil) > time();
+                            return response()->json([
+                                'active'     => $inGrace,
+                                'status'     => $inGrace ? 'PAST_DUE_GRACE' : 'PAST_DUE',
+                                'plan'       => $sub['plan'] ?? null,
+                                'trialEnd'   => $sub['trialEnd'] ?? null,
+                                'periodEnd'  => $periodEnd,
+                                'graceUntil' => $graceUntil,
+                                'features'   => $inGrace ? $features : [],
+                                'products'   => $inGrace ? $products : [],
+                                'billingAvailable' => true,
+                            ]);
+                        }
+                    }
                     return response()->json(['active' => false, 'status' => 'EXPIRED', 'features' => [], 'products' => [], 'billingAvailable' => true]);
                 }
             } catch (\Exception $e) {
