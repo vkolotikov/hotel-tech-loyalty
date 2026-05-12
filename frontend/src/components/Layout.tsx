@@ -23,6 +23,7 @@ import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
 import { useSettings } from '../lib/crmSettings'
 import { BrandSwitcher } from './BrandSwitcher'
+import { MemberQuickSearch } from './MemberQuickSearch'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -372,6 +373,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-dark-bg">
+      {/* Cmd+K global member search — listens for the chord and
+          renders its own modal portal at z-100. Always-mounted so a
+          fresh page can open it before the rest of the SPA hydrates. */}
+      <MemberQuickSearch />
+
       {/* Mobile drawer backdrop */}
       <div
         onClick={() => setMobileOpen(false)}

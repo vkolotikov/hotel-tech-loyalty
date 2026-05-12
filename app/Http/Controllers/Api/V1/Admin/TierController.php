@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Services\AnalyticsService;
+use App\Services\LoyaltyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,41 @@ class TierController extends Controller
         });
 
         return response()->json(['tiers' => $tiersWithStats]);
+    }
+
+    /**
+     * POST /v1/admin/tiers/preview
+     *
+     * Read-only "if a member had X points / Y nights / Z spend, what
+     * tier would the assess sweep put them in?" tool. Lets admins
+     * sanity-check tier-rule changes without creating a synthetic
+     * member.
+     */
+    public function preview(Request $request, LoyaltyService $loyalty): JsonResponse
+    {
+        $validated = $request->validate([
+            'model'  => 'sometimes|string|in:points,nights,stays,spend,hybrid',
+            'points' => 'sometimes|integer|min:0',
+            'nights' => 'sometimes|integer|min:0',
+            'stays'  => 'sometimes|integer|min:0',
+            'spend'  => 'sometimes|numeric|min:0',
+        ]);
+        $model = $validated['model'] ?? 'points';
+        $tier = $loyalty->previewTier($model, $validated);
+
+        return response()->json([
+            'tier' => $tier ? [
+                'id'     => $tier->id,
+                'name'   => $tier->name,
+                'color'  => $tier->color_hex,
+                'perks'  => $tier->perks,
+                'min_points' => $tier->min_points,
+                'min_nights' => $tier->min_nights,
+                'min_stays'  => $tier->min_stays,
+                'min_spend'  => $tier->min_spend,
+            ] : null,
+            'model' => $model,
+        ]);
     }
 
     public function store(Request $request): JsonResponse

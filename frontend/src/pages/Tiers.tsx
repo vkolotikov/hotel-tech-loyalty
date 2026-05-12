@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { Crown, Plus, Pencil, X, Users, Award, Star, Gem, ShieldCheck, Layers } from 'lucide-react'
+import { Crown, Plus, Pencil, X, Users, Award, Star, Gem, ShieldCheck, Layers, Sparkles, Calculator } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Tier {
@@ -64,6 +64,29 @@ export function Tiers() {
   const [form, setForm] = useState(emptyForm)
   const [expandedTier, setExpandedTier] = useState<number | null>(null)
   const [assignForm, setAssignForm] = useState({ benefit_id: '', value: '' })
+
+  // Preview calculator state
+  const [previewModel, setPreviewModel] = useState<'points' | 'nights' | 'stays' | 'spend' | 'hybrid'>('points')
+  const [previewVals, setPreviewVals] = useState({ points: '5000', nights: '', stays: '', spend: '' })
+  const [previewResult, setPreviewResult] = useState<any>(undefined)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  const runPreview = async () => {
+    setPreviewLoading(true)
+    try {
+      const payload: Record<string, any> = { model: previewModel }
+      for (const k of ['points', 'nights', 'stays', 'spend'] as const) {
+        const v = previewVals[k]
+        if (v !== '' && v != null) payload[k] = Number(v)
+      }
+      const res = await api.post('/v1/admin/tiers/preview', payload).then(r => r.data)
+      setPreviewResult(res.tier ?? null)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Could not run preview')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-tiers'],
@@ -153,6 +176,101 @@ export function Tiers() {
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Plus size={16} /> Add Tier
         </button>
+      </div>
+
+      {/* Tier preview calculator — sanity-check what a hypothetical
+          member would land on without creating a synthetic record. */}
+      <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Calculator size={16} className="text-primary-400" />
+          <h2 className="text-sm font-semibold text-white">Tier preview calculator</h2>
+          <span className="text-[11px] text-[#636366]">— what tier would a member qualify for?</span>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-[11px] font-medium text-t-secondary mb-1">Model</label>
+            <select
+              value={previewModel}
+              onChange={e => setPreviewModel(e.target.value as any)}
+              className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm"
+            >
+              <option value="points">Points</option>
+              <option value="nights">Nights</option>
+              <option value="stays">Stays</option>
+              <option value="spend">Spend ($)</option>
+              <option value="hybrid">Hybrid (any threshold)</option>
+            </select>
+          </div>
+          {(previewModel === 'points' || previewModel === 'hybrid') && (
+            <div>
+              <label className="block text-[11px] font-medium text-t-secondary mb-1">Points</label>
+              <input
+                type="number" min={0}
+                value={previewVals.points}
+                onChange={e => setPreviewVals(v => ({ ...v, points: e.target.value }))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-28"
+              />
+            </div>
+          )}
+          {(previewModel === 'nights' || previewModel === 'hybrid') && (
+            <div>
+              <label className="block text-[11px] font-medium text-t-secondary mb-1">Nights</label>
+              <input
+                type="number" min={0}
+                value={previewVals.nights}
+                onChange={e => setPreviewVals(v => ({ ...v, nights: e.target.value }))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-24"
+              />
+            </div>
+          )}
+          {(previewModel === 'stays' || previewModel === 'hybrid') && (
+            <div>
+              <label className="block text-[11px] font-medium text-t-secondary mb-1">Stays</label>
+              <input
+                type="number" min={0}
+                value={previewVals.stays}
+                onChange={e => setPreviewVals(v => ({ ...v, stays: e.target.value }))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-24"
+              />
+            </div>
+          )}
+          {(previewModel === 'spend' || previewModel === 'hybrid') && (
+            <div>
+              <label className="block text-[11px] font-medium text-t-secondary mb-1">Spend ($)</label>
+              <input
+                type="number" min={0} step="0.01"
+                value={previewVals.spend}
+                onChange={e => setPreviewVals(v => ({ ...v, spend: e.target.value }))}
+                className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-28"
+              />
+            </div>
+          )}
+          <button
+            onClick={runPreview}
+            disabled={previewLoading}
+            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+          >
+            <Sparkles size={14} />
+            {previewLoading ? 'Calculating…' : 'Calculate'}
+          </button>
+          {previewResult !== undefined && (
+            <div className="ml-auto flex items-center gap-2 text-sm">
+              {previewResult === null ? (
+                <span className="text-amber-400">No qualifying tier</span>
+              ) : (
+                <>
+                  <span className="text-[#a0a0a0]">Would qualify for:</span>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs"
+                    style={{ backgroundColor: (previewResult.color || '#666') + '22', color: previewResult.color || '#fff', border: `1px solid ${(previewResult.color || '#666') + '55'}` }}
+                  >
+                    {previewResult.name}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {showForm && (

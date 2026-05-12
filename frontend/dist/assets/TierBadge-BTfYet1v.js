@@ -1,1 +1,0 @@
-import{j as n}from"./vendor-query-COOPCqj7.js";function i({tier:s,color:e}){const t=e?{backgroundColor:e,color:["#FFD700","#C0C0C0","#E5E4E2","#B9F2FF"].includes(e)?"#333":"white"}:void 0;return n.jsx("span",{className:`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold tier-${s.toLowerCase()}`,style:t,children:s})}export{i as T};

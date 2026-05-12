@@ -294,6 +294,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('tiers',                   [TierController::class, 'index']);
             Route::post('tiers',                  [TierController::class, 'store']);
+            Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
 
             Route::get('members',                 [MemberAdminController::class, 'index']);

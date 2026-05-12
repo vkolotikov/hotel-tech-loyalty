@@ -414,6 +414,41 @@ class LoyaltyService
      * Reads from the per-org cached active-tier collection and filters in PHP
      * so the points hot-path doesn't re-query loyalty_tiers on every scan/award.
      */
+    /**
+     * Read-only "would this member qualify?" check used by the admin
+     * tier-rules preview tool. Mirrors getTierForMember() but reads
+     * raw numeric inputs rather than a persisted LoyaltyMember row,
+     * so admins can sketch out "what if a member had 5000 points and
+     * 6 nights" before committing to a tier schema change.
+     *
+     * @param  string                 $model  points|nights|stays|spend|hybrid
+     * @param  array{points?:int,nights?:int,stays?:int,spend?:float} $vals
+     */
+    public function previewTier(string $model, array $vals): ?LoyaltyTier
+    {
+        $points = (int) ($vals['points'] ?? 0);
+        $nights = (int) ($vals['nights'] ?? 0);
+        $stays  = (int) ($vals['stays']  ?? 0);
+        $spend  = (float) ($vals['spend'] ?? 0);
+
+        return match ($model) {
+            'nights' => $this->getTierByNights($nights),
+            'stays'  => $this->getTierByStays($stays),
+            'spend'  => $this->getTierBySpend($spend),
+            'hybrid' => LoyaltyTier::cachedActiveForCurrentOrg()
+                ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+                ->filter(function (LoyaltyTier $t) use ($points, $nights, $stays, $spend) {
+                    return $t->min_points <= $points
+                        || ($t->min_nights !== null && $t->min_nights <= $nights)
+                        || ($t->min_stays  !== null && $t->min_stays  <= $stays)
+                        || ($t->min_spend  !== null && $t->min_spend  <= $spend);
+                })
+                ->sortByDesc('sort_order')
+                ->first(),
+            default  => $this->getTierForPoints($points),
+        };
+    }
+
     public function getTierForPoints(int $lifetimePoints): ?LoyaltyTier
     {
         return LoyaltyTier::cachedActiveForCurrentOrg()
