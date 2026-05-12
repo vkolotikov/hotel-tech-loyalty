@@ -59,6 +59,37 @@ class NotificationService
     }
 
     /**
+     * Birthday bonus celebration push. Fired from the daily
+     * loyalty:birthday-rewards cron after the points are awarded.
+     */
+    public function sendBirthdayBonus(LoyaltyMember $member, int $bonusPoints): void
+    {
+        $this->send($member, [
+            'type'  => 'birthday',
+            'title' => '🎂 Happy birthday!',
+            'body'  => "We've added {$bonusPoints} bonus points to your balance — our gift to you. Enjoy your day.",
+            'data'  => ['points' => $bonusPoints],
+        ]);
+    }
+
+    /**
+     * "You're X points from {reward}" proximity nudge. Fired from
+     * loyalty:reward-nudges when a member's balance enters the 75–99%
+     * band for a still-redeemable reward. data carries reward_id so
+     * the dedupe query can spot recent nudges for the same reward.
+     */
+    public function sendRewardNudge(LoyaltyMember $member, \App\Models\Reward $reward, int $currentBalance): void
+    {
+        $toGo = max(0, (int) $reward->points_cost - $currentBalance);
+        $this->send($member, [
+            'type'  => 'reward_nudge',
+            'title' => "You're {$toGo} points from a reward",
+            'body'  => "{$reward->name} is within reach — one more stay or visit could unlock it.",
+            'data'  => ['reward_id' => $reward->id, 'points_to_go' => $toGo],
+        ]);
+    }
+
+    /**
      * Maps each push `type` to the category opt-in key inside
      * `loyalty_members.notification_preferences`. Members who explicitly
      * opted out of "offers" still get tier + points + transactional

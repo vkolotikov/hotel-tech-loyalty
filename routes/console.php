@@ -18,6 +18,26 @@ Schedule::command('loyalty:expire-points')
     ->withoutOverlapping(20)
     ->runInBackground();
 
+// Daily birthday-bonus sweep at 09:00 UTC. Awards configured bonus
+// points to every member whose date_of_birth matches today, with
+// idempotency keyed on year+member so a re-run is a no-op.
+// 09:00 UTC straddles morning hours across most time zones — refine
+// later if customers want per-org local-time scheduling.
+Schedule::command('loyalty:birthday-rewards')
+    ->dailyAt('09:00')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
+// Daily reward-proximity nudge at 10:00 UTC. Pushes a single "you're
+// X points from {reward}" notification to members whose balance is
+// in the 75-99% band of a still-redeemable reward, deduped 7 days
+// per (member, reward). Runs after birthday sweep so a member who
+// just got the birthday bonus may cross into the nudge band today.
+Schedule::command('loyalty:reward-nudges')
+    ->dailyAt('10:00')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
 // clean and "active" / "waiting" stats reflect reality.
 Schedule::command('chat:reap')->hourly();
