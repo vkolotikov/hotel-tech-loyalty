@@ -18,23 +18,28 @@ class MeController extends Controller
     {
         $user = $request->user();
         return response()->json([
-            'wants_daily_summary'        => (bool) ($user->wants_daily_summary ?? false),
-            'daily_summary_last_sent_at' => $user->daily_summary_last_sent_at?->toIso8601String(),
+            'wants_daily_summary'         => (bool) ($user->wants_daily_summary ?? false),
+            'daily_summary_last_sent_at'  => $user->daily_summary_last_sent_at?->toIso8601String(),
+            'wants_loyalty_digest'        => (bool) ($user->wants_loyalty_digest ?? false),
+            'loyalty_digest_last_sent_at' => $user->loyalty_digest_last_sent_at?->toIso8601String(),
         ]);
     }
 
     public function updatePreferences(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'wants_daily_summary' => 'sometimes|boolean',
+            'wants_daily_summary'   => 'sometimes|boolean',
+            'wants_loyalty_digest'  => 'sometimes|boolean',
         ]);
 
         $user = $request->user();
         $user->fill($validated)->save();
 
         return response()->json([
-            'wants_daily_summary'        => (bool) $user->wants_daily_summary,
-            'daily_summary_last_sent_at' => $user->daily_summary_last_sent_at?->toIso8601String(),
+            'wants_daily_summary'         => (bool) $user->wants_daily_summary,
+            'daily_summary_last_sent_at'  => $user->daily_summary_last_sent_at?->toIso8601String(),
+            'wants_loyalty_digest'        => (bool) $user->wants_loyalty_digest,
+            'loyalty_digest_last_sent_at' => $user->loyalty_digest_last_sent_at?->toIso8601String(),
         ]);
     }
 }

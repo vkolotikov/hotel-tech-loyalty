@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -14,7 +15,7 @@ import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
   BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
-  TrendingDown, MoveRight, ChevronRight
+  TrendingDown, MoveRight, ChevronRight, Mail
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -207,6 +208,25 @@ export function Analytics() {
     enabled: activeTab === 'venues' || activeTab === 'pipeline',
   })
 
+  const qc = useQueryClient()
+
+  // Per-user opt-in for the daily loyalty digest email (mirrors the
+  // engagement-digest pattern but lives on its own pref so admins
+  // can opt in/out independently).
+  const { data: prefs } = useQuery<{ wants_loyalty_digest: boolean }>({
+    queryKey: ['me', 'preferences'],
+    queryFn: () => api.get('/v1/admin/me/preferences').then(r => r.data),
+    staleTime: 60_000,
+  })
+  const setLoyaltyDigest = useMutation({
+    mutationFn: (enabled: boolean) => api.put('/v1/admin/me/preferences', { wants_loyalty_digest: enabled }),
+    onSuccess: (_d, enabled) => {
+      qc.invalidateQueries({ queryKey: ['me', 'preferences'] })
+      toast.success(enabled ? 'Loyalty digest turned on' : 'Loyalty digest turned off')
+    },
+    onError: () => toast.error('Failed to update preference'),
+  })
+
   const kpis = overview?.kpis
   const tierDist = overview?.tier_distribution ?? []
 
@@ -228,12 +248,29 @@ export function Analytics() {
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
           <p className="text-sm text-t-secondary mt-1">Deep dive into loyalty & CRM performance</p>
         </div>
-        <button
-          onClick={() => triggerExport('/v1/admin/analytics/export')}
-          className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
-        >
-          <Download size={15} /> Export Report
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLoyaltyDigest.mutate(!prefs?.wants_loyalty_digest)}
+            disabled={setLoyaltyDigest.isPending}
+            title={prefs?.wants_loyalty_digest
+              ? 'Daily loyalty digest is on. Click to turn off.'
+              : 'Get a morning email at 8am local time with yesterday\'s loyalty numbers + at-risk members. Click to enable.'}
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs transition-colors ${
+              prefs?.wants_loyalty_digest
+                ? 'bg-blue-500/10 border border-blue-500/40 text-blue-400'
+                : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white'
+            }`}
+          >
+            <Mail size={13} />
+            {prefs?.wants_loyalty_digest ? 'Daily digest on' : 'Daily digest'}
+          </button>
+          <button
+            onClick={() => triggerExport('/v1/admin/analytics/export')}
+            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+          >
+            <Download size={15} /> Export Report
+          </button>
+        </div>
       </div>
 
       {/* Tab Navigation */}

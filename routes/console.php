@@ -68,6 +68,16 @@ Schedule::command('engagement:send-daily-summary')
     ->withoutOverlapping(10)
     ->runInBackground();
 
+// Loyalty digest email — same hourly + per-org-timezone + dedupe
+// pattern as the engagement summary, separate opt-in
+// (users.wants_loyalty_digest). Surfaces yesterday's loyalty
+// numbers + 30-day tier movement + top at-risk members so admins
+// get a morning pulse without having to remember to open /analytics.
+Schedule::command('loyalty:send-digest')
+    ->hourly()
+    ->withoutOverlapping(10)
+    ->runInBackground();
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes
