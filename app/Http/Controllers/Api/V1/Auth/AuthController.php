@@ -7,6 +7,7 @@ use App\Mail\VerificationCodeMail;
 use App\Mail\WelcomeTrialMail;
 use App\Models\EmailVerificationCode;
 use App\Models\LoyaltyMember;
+use App\Models\Organization;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\GuestMemberLinkService;
@@ -159,11 +160,22 @@ class AuthController extends Controller
 
         // No tenant context at login — bypass global scopes
         $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+        $localOk = $user && Hash::check($validated['password'], $user->password);
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        // SaaS fallback: when local lookup fails, ask SaaS whether this
+        // email+password combo is valid. Covers the case where a
+        // super-admin created the user in the SaaS Companies / Users
+        // page so the row only exists on the SaaS side. On success,
+        // provision the local user (or sync the existing one's
+        // password) so subsequent logins go straight to the local DB.
+        if (!$localOk) {
+            $saasResult = $this->verifyAgainstSaas($validated['email'], $validated['password']);
+            if (!$saasResult) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+            $user = $this->provisionLocalUserFromSaas($saasResult, $validated['password']);
         }
 
         // Bind org context so subsequent scoped queries work
@@ -189,6 +201,143 @@ class AuthController extends Controller
         }
 
         return response()->json($response);
+    }
+
+    /**
+     * HMAC-signed call to SaaS /auth/service-verify-password. Returns
+     * the SaaS-side user + primary-org payload on success, or null
+     * when SaaS rejects or is unreachable. Fail-closed: any exception
+     * or non-200 → null, so the caller still throws "credentials
+     * incorrect" rather than leaking a partial signal.
+     */
+    private function verifyAgainstSaas(string $email, string $password): ?array
+    {
+        $saasApi = config('services.saas.api_url');
+        $secret  = config('services.saas.jwt_secret', '');
+        if (!$saasApi || !$secret) return null;
+
+        $signature = hash_hmac('sha256', $email . '|verify-password', $secret);
+
+        try {
+            $res = Http::connectTimeout(2)->timeout(5)
+                ->withHeaders(['X-Service-Signature' => $signature])
+                ->post(rtrim($saasApi, '/') . '/auth/service-verify-password', [
+                    'email'    => $email,
+                    'password' => $password,
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning('SaaS verify-password unreachable', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+        return $res->successful() ? $res->json() : null;
+    }
+
+    /**
+     * After SaaS confirmed the password, make sure a local User row
+     * (and the linking Organization + Staff row) exist, then sync the
+     * local password to whatever the caller just typed so the next
+     * login goes straight to the local DB without an extra round trip.
+     *
+     * Re-uses the same role-mapping that SaasAuthMiddleware does so a
+     * user who logs in directly here ends up with the same admin role
+     * they would have via the SSO handoff.
+     */
+    private function provisionLocalUserFromSaas(array $saasData, string $plainPassword): User
+    {
+        $email   = strtolower(trim($saasData['user']['email'] ?? ''));
+        $name    = $saasData['user']['name'] ?? $email;
+        $phone   = $saasData['user']['phone'] ?? null;
+        $saasOrg = $saasData['organization'] ?? null;
+        $saasRole = strtoupper((string) ($saasOrg['role'] ?? 'STAFF'));
+
+        // Mirror SaasAuthMiddleware role-mapping so the user lands with
+        // the same admin rights regardless of which door they came in.
+        $localRole = match ($saasRole) {
+            'OWNER' => 'super_admin',
+            'ADMIN' => 'manager',
+            default => 'receptionist',
+        };
+
+        // Find-or-create the local org linked to SaaS.
+        $org = null;
+        if ($saasOrg && !empty($saasOrg['id'])) {
+            $org = Organization::where('saas_org_id', $saasOrg['id'])->first();
+            if (!$org) {
+                $baseSlug = $saasOrg['slug'] ?? \Illuminate\Support\Str::slug((string) $saasOrg['id']);
+                $slug = $baseSlug;
+                $i = 1;
+                while (Organization::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $i++;
+                }
+                $org = Organization::create([
+                    'saas_org_id' => $saasOrg['id'],
+                    'name'        => $saasOrg['name'] ?? 'Organization',
+                    'slug'        => $slug,
+                ]);
+                try {
+                    app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
+                } catch (\Throwable $e) {
+                    \Log::warning('OrganizationSetupService::setupDefaults failed during SaaS-fallback login', [
+                        'org_id' => $org->id,
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        // Find-or-create the local user.
+        $user = User::withoutGlobalScopes()->where('email', $email)->first();
+        if (!$user) {
+            $user = User::create([
+                'name'            => $name,
+                'email'           => $email,
+                'phone'           => $phone,
+                'password'        => Hash::make($plainPassword),
+                'user_type'       => 'staff',
+                'organization_id' => $org?->id,
+            ]);
+        } else {
+            // Sync the local password to the just-verified one so the
+            // next login bypasses the SaaS roundtrip. Safe: SaaS just
+            // confirmed the user knows this password.
+            $user->password = Hash::make($plainPassword);
+            if (!$user->organization_id && $org) {
+                $user->organization_id = $org->id;
+            }
+            $user->save();
+        }
+
+        // Ensure a Staff row exists for admin access. Use the SaaS-mapped
+        // role on creation; don't downgrade an existing one (an admin in
+        // loyalty may have been promoted locally beyond their SaaS role).
+        if ($org) {
+            $staff = Staff::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $org->id)
+                ->first();
+            if (!$staff) {
+                try {
+                    Staff::withoutGlobalScopes()->create([
+                        'organization_id' => $org->id,
+                        'user_id'         => $user->id,
+                        'role'            => $localRole,
+                        'can_award_points'   => in_array($localRole, ['super_admin', 'manager', 'receptionist'], true),
+                        'can_redeem_points'  => in_array($localRole, ['super_admin', 'manager'], true),
+                        'can_manage_offers'  => in_array($localRole, ['super_admin', 'manager'], true),
+                        'can_view_analytics' => in_array($localRole, ['super_admin', 'manager'], true),
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::warning('Staff seed failed during SaaS-fallback login', [
+                        'user_id' => $user->id,
+                        'org_id'  => $org->id,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return $user;
     }
 
     public function me(Request $request): JsonResponse
