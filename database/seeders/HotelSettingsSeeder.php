@@ -23,6 +23,7 @@ class HotelSettingsSeeder extends Seeder
             ['key' => 'welcome_bonus_points', 'value' => '500', 'type' => 'integer', 'group' => 'points', 'label' => 'Welcome Bonus Points',  'description' => 'Points awarded to new members upon registration.'],
             ['key' => 'referrer_bonus_points', 'value' => '250', 'type' => 'integer', 'group' => 'points', 'label' => 'Referrer Bonus Points', 'description' => 'Points awarded to the member who referred someone.'],
             ['key' => 'referee_bonus_points', 'value' => '250', 'type' => 'integer', 'group' => 'points', 'label' => 'Referee Bonus Points', 'description' => 'Points awarded to the new member who joined via referral.'],
+            ['key' => 'birthday_bonus_points', 'value' => '500', 'type' => 'integer', 'group' => 'points', 'label' => 'Birthday Bonus Points', 'description' => 'Points auto-awarded to members on their birthday by the daily birthday cron. Set to 0 to disable.'],
             ['key' => 'points_per_dollar',    'value' => '10',  'type' => 'integer', 'group' => 'points', 'label' => 'Points Per Dollar',     'description' => 'Number of points earned per dollar spent.'],
             ['key' => 'points_expiry_months', 'value' => '24',  'type' => 'integer', 'group' => 'points', 'label' => 'Points Expiry (Months)','description' => 'Number of months before points expire.'],
             ['key' => 'min_redeem_points',    'value' => '100', 'type' => 'integer', 'group' => 'points', 'label' => 'Min Redeem Points',     'description' => 'Minimum points required to redeem.'],

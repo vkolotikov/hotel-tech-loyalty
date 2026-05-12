@@ -304,6 +304,7 @@ class OrganizationSetupService
             ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Welcome Bonus Points'],
             ['key' => 'referrer_bonus_points', 'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referrer Bonus Points'],
             ['key' => 'referee_bonus_points',  'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referee Bonus Points'],
+            ['key' => 'birthday_bonus_points', 'value' => '500',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Birthday Bonus Points'],
             ['key' => 'points_expiry_months',  'value' => '24',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points Expiry (Months)'],
             ['key' => 'points_per_currency',   'value' => '10',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points per Currency Unit'],
             ['key' => 'currency_symbol',       'value' => '€',        'type' => 'text',   'group' => 'general',    'label' => 'Currency Symbol'],

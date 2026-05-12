@@ -297,10 +297,25 @@ Route::prefix('v1')->group(function () {
             Route::post('nfc-cards',              [ScanController::class, 'linkNfcCard']);
             Route::post('push-token',             [ScanController::class, 'updateStaffPushToken']);
 
+            // Earn-rate bonus events ("Double points weekend" etc.)
+            Route::get('earn-rate-events',                      [\App\Http\Controllers\Api\V1\Admin\EarnRateEventController::class, 'index']);
+            Route::post('earn-rate-events',                     [\App\Http\Controllers\Api\V1\Admin\EarnRateEventController::class, 'store']);
+            Route::get('earn-rate-events/{id}',                 [\App\Http\Controllers\Api\V1\Admin\EarnRateEventController::class, 'show']);
+            Route::put('earn-rate-events/{id}',                 [\App\Http\Controllers\Api\V1\Admin\EarnRateEventController::class, 'update']);
+            Route::delete('earn-rate-events/{id}',              [\App\Http\Controllers\Api\V1\Admin\EarnRateEventController::class, 'destroy']);
+
             Route::get('tiers',                   [TierController::class, 'index']);
             Route::post('tiers',                  [TierController::class, 'store']);
             Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
+
+            // Email broadcast campaigns
+            Route::get('email-campaigns',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);
+            Route::post('email-campaigns',         [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'store']);
+            Route::get('email-campaigns/{id}',     [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'show']);
+            Route::put('email-campaigns/{id}',     [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'update']);
+            Route::delete('email-campaigns/{id}',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
+            Route::post('email-campaigns/{id}/send',[\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
 
             // Member segments — saved criteria sets + campaign send
             Route::get('segments',                [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'index']);

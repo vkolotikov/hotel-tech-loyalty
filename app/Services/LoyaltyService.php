@@ -252,7 +252,7 @@ class LoyaltyService
     /**
      * Calculate points earned for a booking amount.
      */
-    public function calculateEarnedPoints(LoyaltyMember $member, float $amount, ?int $outletId = null): int
+    public function calculateEarnedPoints(LoyaltyMember $member, float $amount, ?int $outletId = null, ?int $propertyId = null): int
     {
         $earnRate = $member->tier->earn_rate;
 
@@ -264,7 +264,37 @@ class LoyaltyService
             }
         }
 
-        return (int) floor($amount * $earnRate);
+        // Apply the highest-matching active earn-rate event multiplier.
+        // We pick the highest (not the product of all matches) so two
+        // overlapping campaigns can't accidentally combine into a
+        // surprise 6x for a member. Stable, predictable behaviour for
+        // a marketing surface that has to be auditable.
+        $multiplier = $this->bestActiveMultiplier($member, $propertyId);
+        return (int) floor($amount * $earnRate * $multiplier);
+    }
+
+    /**
+     * Returns the highest matching multiplier across active
+     * EarnRateEvents for the given member + property + now. 1.0 when
+     * no event matches.
+     */
+    public function bestActiveMultiplier(?LoyaltyMember $member, ?int $propertyId, ?\DateTimeInterface $when = null): float
+    {
+        $when = $when ?: now();
+        try {
+            $events = \App\Models\EarnRateEvent::activeNow()->get();
+        } catch (\Throwable $e) {
+            // Table missing during a deploy window: don't blow up the
+            // earn flow — just skip the boost.
+            return 1.0;
+        }
+        $best = 1.0;
+        foreach ($events as $event) {
+            if (!$event->appliesTo($member, $propertyId, $when)) continue;
+            $m = (float) $event->multiplier;
+            if ($m > $best) $best = $m;
+        }
+        return $best;
     }
 
     /**

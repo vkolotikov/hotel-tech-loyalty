@@ -300,6 +300,10 @@ class SettingsController extends Controller
             ['key' => 'hotel_currency',       'value' => 'EUR',     'type' => 'string',  'group' => 'general',    'label' => 'Currency'],
             ['key' => 'hotel_timezone',       'value' => 'UTC',     'type' => 'string',  'group' => 'general',    'label' => 'Timezone'],
 
+            // Points — backfilled here so the row appears on the Loyalty
+            // tab for orgs created before this key was seeded.
+            ['key' => 'birthday_bonus_points', 'value' => '500',    'type' => 'integer', 'group' => 'points',     'label' => 'Birthday Bonus Points', 'description' => 'Points auto-awarded on each member\'s birthday. 0 disables.'],
+
             // Integrations — PMS
             ['key' => 'booking_smoobu_api_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API Key'],
             ['key' => 'booking_smoobu_channel_id',    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Channel ID'],
