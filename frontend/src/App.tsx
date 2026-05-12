@@ -21,6 +21,7 @@ import { Setup } from './pages/Setup'
 const Members = lazy(() => import('./pages/Members').then(m => ({ default: m.Members })))
 const Referrals = lazy(() => import('./pages/Referrals').then(m => ({ default: m.Referrals })))
 const Rewards = lazy(() => import('./pages/Rewards').then(m => ({ default: m.Rewards })))
+const Segments = lazy(() => import('./pages/Segments').then(m => ({ default: m.Segments })))
 const MemberDetail = lazy(() => import('./pages/MemberDetail').then(m => ({ default: m.MemberDetail })))
 const MemberDuplicates = lazy(() => import('./pages/MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
 const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
@@ -179,6 +180,7 @@ export default function App() {
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
           <Route path="/referrals" element={<LazyRoute><Referrals /></LazyRoute>} />
           <Route path="/rewards" element={<LazyRoute gate="admin" product="loyalty"><Rewards /></LazyRoute>} />
+          <Route path="/segments" element={<LazyRoute gate="admin" product="loyalty"><Segments /></LazyRoute>} />
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           {/* Analytics is plain charts/KPIs (no LLM) so we gate on the
               staff `can_view_analytics` flag only. Previously this route

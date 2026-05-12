@@ -302,6 +302,15 @@ Route::prefix('v1')->group(function () {
             Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
 
+            // Member segments — saved criteria sets + campaign send
+            Route::get('segments',                [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'index']);
+            Route::post('segments',               [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'store']);
+            Route::post('segments/preview',       [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'preview']);
+            Route::get('segments/{id}',           [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'show']);
+            Route::put('segments/{id}',           [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'update']);
+            Route::delete('segments/{id}',        [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'destroy']);
+            Route::post('segments/{id}/send',     [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'send']);
+
             Route::get('referrals',               [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'index']);
             Route::get('referrals/stats',         [\App\Http\Controllers\Api\V1\Admin\ReferralAdminController::class, 'stats']);
 
