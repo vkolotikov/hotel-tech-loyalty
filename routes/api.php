@@ -330,12 +330,15 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('wallet-config/google-service-account', [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadGoogleServiceAccount']);
 
             // Email broadcast campaigns
-            Route::get('email-campaigns',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);
-            Route::post('email-campaigns',         [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'store']);
-            Route::get('email-campaigns/{id}',     [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'show']);
-            Route::put('email-campaigns/{id}',     [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'update']);
-            Route::delete('email-campaigns/{id}',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
-            Route::post('email-campaigns/{id}/send',[\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
+            Route::get('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);
+            Route::get('email-campaigns/stats',            [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'stats']);
+            Route::post('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'store']);
+            Route::get('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'show']);
+            Route::put('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'update']);
+            Route::delete('email-campaigns/{id}',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
+            Route::post('email-campaigns/{id}/send',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
+            Route::post('email-campaigns/{id}/duplicate',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'duplicate']);
+            Route::post('email-campaigns/{id}/test',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'test']);
 
             // Member segments — saved criteria sets + campaign send
             Route::get('segments',                [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'index']);

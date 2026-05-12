@@ -32,12 +32,110 @@ class EmailCampaignController extends Controller
 {
     public function __construct(protected MemberSegmentService $segments) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        // Status filter — drives the All/Draft/Sent/Failed pill bar.
+        $status = $request->get('status');
+        $allowed = [
+            EmailCampaign::STATUS_DRAFT,
+            EmailCampaign::STATUS_SENDING,
+            EmailCampaign::STATUS_SENT,
+            EmailCampaign::STATUS_FAILED,
+        ];
+
         $rows = EmailCampaign::with(['segment:id,name', 'createdBy:id,name', 'sentBy:id,name'])
+            ->when($status && in_array($status, $allowed, true), fn($q) => $q->where('status', $status))
             ->orderByDesc('created_at')
             ->paginate(25);
         return response()->json($rows);
+    }
+
+    /**
+     * Header KPI strip. Cheap aggregates over email_campaigns so the
+     * Campaigns page can show at-a-glance health without a full list scan.
+     */
+    public function stats(): JsonResponse
+    {
+        $monthStart = now()->startOfMonth();
+
+        $sentThisMonth     = (int) EmailCampaign::where('status', EmailCampaign::STATUS_SENT)
+            ->where('sent_at', '>=', $monthStart)
+            ->sum('sent_count');
+        $campaignsThisMo   = (int) EmailCampaign::where('status', EmailCampaign::STATUS_SENT)
+            ->where('sent_at', '>=', $monthStart)
+            ->count();
+        $draftCount        = (int) EmailCampaign::where('status', EmailCampaign::STATUS_DRAFT)->count();
+        $totalReached      = (int) EmailCampaign::where('status', EmailCampaign::STATUS_SENT)->sum('sent_count');
+        $failedThisMonth   = (int) EmailCampaign::where('status', EmailCampaign::STATUS_SENT)
+            ->where('sent_at', '>=', $monthStart)
+            ->sum('failed_count');
+
+        return response()->json([
+            'sent_this_month'       => $sentThisMonth,
+            'campaigns_this_month'  => $campaignsThisMo,
+            'drafts'                => $draftCount,
+            'total_reached'         => $totalReached,
+            'failed_this_month'     => $failedThisMonth,
+        ]);
+    }
+
+    /**
+     * Clone a campaign as a fresh draft. Resets all send-state and
+     * appends "(copy)" to the internal name so the list stays distinct.
+     */
+    public function duplicate(Request $request, int $id): JsonResponse
+    {
+        $source = EmailCampaign::findOrFail($id);
+        $copy = $source->replicate([
+            'status', 'sent_at', 'sent_count', 'failed_count',
+            'recipient_count', 'error_message', 'sent_by_user_id',
+        ]);
+        $copy->name               = mb_substr($source->name . ' (copy)', 0, 120);
+        $copy->status             = EmailCampaign::STATUS_DRAFT;
+        $copy->created_by_user_id = $request->user()->id;
+        $copy->sent_at            = null;
+        $copy->sent_count         = 0;
+        $copy->failed_count       = 0;
+        $copy->recipient_count    = 0;
+        $copy->error_message      = null;
+        $copy->sent_by_user_id    = null;
+        $copy->save();
+
+        return response()->json(['campaign' => $copy->fresh()], 201);
+    }
+
+    /**
+     * Send a single test email to the staff user calling the endpoint.
+     * Used to QA template rendering before broadcasting. Does NOT
+     * change the campaign's status or counters.
+     */
+    public function test(Request $request, int $id): JsonResponse
+    {
+        $campaign = EmailCampaign::findOrFail($id);
+        $user     = $request->user();
+        $email    = $user?->email;
+
+        if (!$email) {
+            return response()->json(['message' => 'Your staff account has no email on file.'], 422);
+        }
+
+        try {
+            Mail::html($campaign->body_html, function ($mail) use ($email, $campaign, $user) {
+                $mail->to($email, $user->name ?? null)
+                     ->subject('[TEST] ' . $campaign->subject);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Email campaign test send failed', [
+                'campaign_id' => $campaign->id,
+                'error'       => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Test send failed: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Test sent to {$email}",
+        ]);
     }
 
     public function show(int $id): JsonResponse
