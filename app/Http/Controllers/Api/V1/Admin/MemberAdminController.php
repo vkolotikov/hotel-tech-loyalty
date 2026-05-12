@@ -464,6 +464,7 @@ class MemberAdminController extends Controller
         $memberNumber = $member->member_number;
         $email = $member->user?->email;
         $name = $member->user?->name;
+        $user = $member->user;
 
         AuditLog::record(
             'member_deleted',
@@ -471,15 +472,45 @@ class MemberAdminController extends Controller
             [],
             ['member_number' => $memberNumber, 'email' => $email, 'name' => $name],
             \Auth::user(),
-            "Member #{$memberNumber} ({$email}) permanently deleted"
+            "Member #{$memberNumber} ({$email}) anonymised"
         );
 
-        // Deleting the User cascades to LoyaltyMember via FK
-        if ($member->user) {
-            $member->user->delete();
-        } else {
-            $member->delete();
-        }
+        // GDPR-style anonymisation rather than hard delete. Points
+        // transactions and bookings hold FKs back to user_id / member_id;
+        // a cascade delete leaves orphan rows showing "null" in admin
+        // views and breaks historical reporting. We wipe every PII field
+        // but keep the row so the audit trail and aggregate stats still
+        // reconcile.
+        \DB::transaction(function () use ($user, $member) {
+            // Kill all sessions / API tokens so any active mobile app
+            // login immediately starts returning 401.
+            if ($user) {
+                try { $user->tokens()->delete(); } catch (\Throwable $e) {}
+            }
+
+            // Drop NFC card mappings — these are physical cards that
+            // shouldn't unlock the anonymised account anymore.
+            try { \App\Models\NfcCard::where('member_id', $member->id)->delete(); } catch (\Throwable $e) {}
+
+            $stub = 'deleted-member-' . $member->id . '@deleted.local';
+
+            $member->update([
+                'is_active'       => false,
+                'qr_code_token'   => null,
+                'expo_push_token' => null,
+            ]);
+
+            if ($user) {
+                $user->forceFill([
+                    'name'        => 'Deleted Member',
+                    'email'       => $stub,
+                    'phone'       => null,
+                    'nationality' => null,
+                    'avatar_url'  => null,
+                    'password'    => bcrypt(\Illuminate\Support\Str::random(40)),
+                ])->save();
+            }
+        });
 
         AnalyticsService::clearDashboardCache();
 

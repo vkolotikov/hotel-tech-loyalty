@@ -365,13 +365,18 @@ class LoyaltyService
             'reason'      => $reason,
         ]);
 
-        // Fire tier upgrade notification
-        if ($isUpgrade) {
-            try {
+        // Tier change notification — both directions. Pre-fix only upgrades
+        // were notified; downgrades happened silently and customers lost
+        // Gold/Platinum benefits without any signal, which is a known
+        // churn trigger.
+        try {
+            if ($isUpgrade) {
                 app(NotificationService::class)->sendTierUpgradeNotification($member, $appropriateTier);
-            } catch (\Throwable $e) {
-                \Log::warning('Failed to send tier notification: ' . $e->getMessage());
+            } else {
+                app(NotificationService::class)->sendTierDowngradeNotification($member, $appropriateTier);
             }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to send tier notification: ' . $e->getMessage());
         }
 
         return true;

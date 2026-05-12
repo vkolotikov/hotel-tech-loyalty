@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2 } from 'lucide-react'
@@ -26,6 +26,13 @@ export function Members() {
   const [wizardDismissed, setWizardDismissed] = useState(false)
 
   const [search, setSearch] = useState('')
+  // debouncedSearch is what hits the API — every keystroke would
+  // otherwise hammer /v1/admin/members on orgs with 5k+ members.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
   const [tierId, setTierId] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
@@ -52,8 +59,8 @@ export function Members() {
   const tiers: { id: number; name: string }[] = tiersData?.tiers ?? []
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-members', search, tierId, statusFilter, page],
-    queryFn: () => api.get('/v1/admin/members', { params: { search, tier_id: tierId || undefined, is_active: statusFilter !== '' ? statusFilter : undefined, page } }).then(r => r.data),
+    queryKey: ['admin-members', debouncedSearch, tierId, statusFilter, page],
+    queryFn: () => api.get('/v1/admin/members', { params: { search: debouncedSearch, tier_id: tierId || undefined, is_active: statusFilter !== '' ? statusFilter : undefined, page } }).then(r => r.data),
   })
 
   const createMutation = useMutation({

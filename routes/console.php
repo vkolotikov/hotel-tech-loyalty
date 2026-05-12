@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Schedule;
 // accumulate.
 Schedule::command('guests:sweep-lifecycle')->dailyAt('03:15');
 
+// Hourly points-expiry sweep. Walks every PointExpiryBucket whose
+// expires_at has passed and writes an append-only `expire` ledger row.
+// Hourly cadence keeps the "redeem points you've already lost" window
+// bounded to ≤1h after the bucket clock ticks over.
+Schedule::command('loyalty:expire-points')
+    ->hourly()
+    ->withoutOverlapping(20)
+    ->runInBackground();
+
 // Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
 // clean and "active" / "waiting" stats reflect reality.
 Schedule::command('chat:reap')->hourly();

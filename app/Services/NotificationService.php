@@ -32,6 +32,22 @@ class NotificationService
         ]);
     }
 
+    /**
+     * Inform a member that their tier was downgraded. Pre-fix this was
+     * silent — members lost Gold/Platinum status with no signal, which
+     * is a known churn trigger and a customer-support FAQ ("I can't see
+     * my benefits anymore" / "Did you change my account?").
+     */
+    public function sendTierDowngradeNotification(LoyaltyMember $member, LoyaltyTier $newTier): void
+    {
+        $this->send($member, [
+            'type'  => 'tier_downgrade',
+            'title' => "Tier update: you're now {$newTier->name}",
+            'body'  => "Your tier was reassessed against the latest qualification window. Earn more points to climb back up — your past status is always within reach.",
+            'data'  => ['tier' => $newTier->name, 'tier_id' => $newTier->id],
+        ]);
+    }
+
     public function sendOfferNotification(LoyaltyMember $member, string $offerTitle): void
     {
         $this->send($member, [
