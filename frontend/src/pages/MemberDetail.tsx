@@ -29,7 +29,7 @@ export function MemberDetail() {
   const [awardForm, setAwardForm] = useState({ points: '', description: '' })
   const [redeemForm, setRedeemForm] = useState({ points: '', description: '' })
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', nationality: '', language: '', date_of_birth: '', tier_id: '', is_active: true })
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', nationality: '', language: '', date_of_birth: '', tier_id: '', tier_override_until: '', is_active: true })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -96,6 +96,7 @@ export function MemberDetail() {
       language: user?.language ?? '',
       date_of_birth: normalizeDate(user?.date_of_birth ?? ''),
       tier_id: String(member?.tier_id ?? ''),
+      tier_override_until: member?.tier_override_until ? String(member.tier_override_until).slice(0, 10) : '',
       is_active: member?.is_active ?? true,
     })
     setAvatarFile(null)
@@ -122,6 +123,7 @@ export function MemberDetail() {
       language: editForm.language || null,
       date_of_birth: editForm.date_of_birth || null,
       tier_id: editForm.tier_id ? Number(editForm.tier_id) : undefined,
+      tier_override_until: editForm.tier_override_until || null,
       is_active: editForm.is_active ? '1' : '0',
     }
     if (avatarFile) {
@@ -643,6 +645,16 @@ export function MemberDetail() {
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">Hold this tier until <span className="text-[#636366]">(optional)</span></label>
+                  <input
+                    type="date"
+                    value={editForm.tier_override_until}
+                    onChange={e => setEditForm(f => ({ ...f, tier_override_until: e.target.value }))}
+                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <p className="text-[11px] text-[#636366] mt-1">Stops the automatic tier sweep from downgrading them before this date. Leave empty for normal tier rules.</p>
                 </div>
                 <div>
                   <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2 } from 'lucide-react'
+import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square } from 'lucide-react'
 import { api, resolveImage } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
@@ -42,6 +42,17 @@ export function Members() {
   const [captureText, setCaptureText] = useState('')
   const [captureLoading, setCaptureLoading] = useState(false)
   const [captureResult, setCaptureResult] = useState<any>(null)
+
+  // Bulk-select + bulk actions state. selectedIds is reset every page
+  // change so the toolbar can't reference rows the user can no longer
+  // see; the parent-page checkbox toggles all currently-visible rows.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [showBulkMessage, setShowBulkMessage] = useState(false)
+  const [bulkMsg, setBulkMsg] = useState({ title: '', body: '', send_email: false, category: 'transactional' as 'offers' | 'points' | 'tier' | 'stays' | 'transactional' })
+  const [showImport, setShowImport] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<any>(null)
+
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -62,6 +73,87 @@ export function Members() {
     queryKey: ['admin-members', debouncedSearch, tierId, statusFilter, page],
     queryFn: () => api.get('/v1/admin/members', { params: { search: debouncedSearch, tier_id: tierId || undefined, is_active: statusFilter !== '' ? statusFilter : undefined, page } }).then(r => r.data),
   })
+
+  // Reset selection whenever the visible page changes — selectedIds
+  // referring to off-page rows would silently get included in bulk
+  // actions, which is surprising and dangerous.
+  useEffect(() => { setSelectedIds(new Set()) }, [page, debouncedSearch, tierId, statusFilter])
+
+  const visibleRows: any[] = (data as any)?.data ?? []
+  const allVisibleSelected = visibleRows.length > 0 && visibleRows.every(m => selectedIds.has(m.id))
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allVisibleSelected) {
+        visibleRows.forEach(m => next.delete(m.id))
+      } else {
+        visibleRows.forEach(m => next.add(m.id))
+      }
+      return next
+    })
+  }
+
+  const bulkMessageMutation = useMutation({
+    mutationFn: () => api.post('/v1/admin/members/bulk-message', {
+      member_ids: Array.from(selectedIds),
+      title: bulkMsg.title,
+      body: bulkMsg.body,
+      send_email: bulkMsg.send_email,
+      category: bulkMsg.category,
+    }).then(r => r.data),
+    onSuccess: (res: any) => {
+      toast.success(`Sent — push: ${res.push_sent}, email: ${res.email_sent}, skipped: ${res.skipped}`)
+      setShowBulkMessage(false)
+      setBulkMsg({ title: '', body: '', send_email: false, category: 'transactional' })
+      setSelectedIds(new Set())
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not send broadcast'),
+  })
+
+  const importPreviewMutation = useMutation({
+    mutationFn: () => {
+      const fd = new FormData()
+      fd.append('file', importFile as File)
+      fd.append('dry_run', '1')
+      return api.post('/v1/admin/members/bulk-import', fd).then(r => r.data)
+    },
+    onSuccess: (res: any) => setImportPreview(res),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not parse CSV'),
+  })
+  const importCommitMutation = useMutation({
+    mutationFn: () => {
+      const fd = new FormData()
+      fd.append('file', importFile as File)
+      return api.post('/v1/admin/members/bulk-import', fd).then(r => r.data)
+    },
+    onSuccess: (res: any) => {
+      toast.success(`Imported ${res.ok} members (skipped ${res.skip}, errors ${res.error})`)
+      qc.invalidateQueries({ queryKey: ['admin-members'] })
+      setShowImport(false)
+      setImportFile(null)
+      setImportPreview(null)
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Import failed'),
+  })
+
+  const downloadCsvTemplate = () => {
+    const csv = 'name,email,phone,tier_name\nJohn Smith,john@example.com,+15551234567,Bronze\n'
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'members-template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const createMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/members', {
@@ -96,6 +188,13 @@ export function Members() {
           <p className="text-sm text-t-secondary mt-0.5">{(data as any)?.total ?? 0} total members</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+          >
+            <Upload size={16} />
+            Import CSV
+          </button>
           <button
             onClick={() => triggerExport('/v1/admin/members/export', { search, tier_id: tierId || undefined })}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
@@ -202,6 +301,15 @@ export function Members() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-t-secondary border-b border-dark-border">
+                <th className="pb-3 w-8">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSelectAll() }}
+                    className="text-t-secondary hover:text-white"
+                    title={allVisibleSelected ? 'Deselect page' : 'Select page'}
+                  >
+                    {allVisibleSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  </button>
+                </th>
                 <th className="pb-3 font-medium">Member</th>
                 <th className="pb-3 font-medium">Phone</th>
                 <th className="pb-3 font-medium">Source</th>
@@ -223,13 +331,18 @@ export function Members() {
                 ))
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-[#636366]">
+                  <td colSpan={9} className="py-12 text-center text-[#636366]">
                     No members yet. {search && 'Try a different search term.'}
                   </td>
                 </tr>
               ) : (
                 ((data as any)?.data ?? []).map((m: any) => (
                   <tr key={m.id} className="hover:bg-dark-surface2 cursor-pointer transition-colors" onClick={() => navigate(`/members/${m.id}`)}>
+                    <td className="py-3 w-8" onClick={(e) => { e.stopPropagation(); toggleSelect(m.id) }}>
+                      <button className="text-t-secondary hover:text-white">
+                        {selectedIds.has(m.id) ? <CheckSquare size={16} className="text-primary-400" /> : <Square size={16} />}
+                      </button>
+                    </td>
                     <td className="py-3">
                       <div className="flex items-center gap-3">
                         {m.user?.avatar_url ? (
@@ -463,6 +576,177 @@ export function Members() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating bulk action bar — slides in from bottom when any row
+          is selected. Counts the union across pages so an admin
+          selecting Page 1 + paging to Page 2 + selecting more still
+          sees the running total. */}
+      {selectedIds.size > 0 && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-40 bg-dark-surface border border-primary-500/50 rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3">
+          <span className="text-sm text-white font-medium">{selectedIds.size} selected</span>
+          <button
+            onClick={() => setShowBulkMessage(true)}
+            className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Send size={14} /> Send message
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-t-secondary hover:text-white text-sm"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {/* Bulk message modal */}
+      {showBulkMessage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-dark-border">
+              <h2 className="text-base font-bold text-white">Send to {selectedIds.size} members</h2>
+              <button onClick={() => setShowBulkMessage(false)} className="text-[#636366] hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Category</label>
+                <select
+                  value={bulkMsg.category}
+                  onChange={e => setBulkMsg(m => ({ ...m, category: e.target.value as any }))}
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  <option value="transactional">Transactional (always delivered)</option>
+                  <option value="offers">Offers</option>
+                  <option value="points">Points</option>
+                  <option value="tier">Tier</option>
+                  <option value="stays">Stays</option>
+                </select>
+                <p className="text-[11px] text-[#636366] mt-1">Members who opted out of this category will be skipped (transactional ignores opt-outs).</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bulkMsg.title}
+                  onChange={e => setBulkMsg(m => ({ ...m, title: e.target.value }))}
+                  maxLength={120}
+                  placeholder="A surprise for our Gold members"
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Message</label>
+                <textarea
+                  value={bulkMsg.body}
+                  onChange={e => setBulkMsg(m => ({ ...m, body: e.target.value }))}
+                  maxLength={500}
+                  rows={4}
+                  placeholder="Double points this weekend on every stay."
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-[#e0e0e0] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bulkMsg.send_email}
+                  onChange={e => setBulkMsg(m => ({ ...m, send_email: e.target.checked }))}
+                />
+                Also send as email
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t border-dark-border">
+              <button onClick={() => setShowBulkMessage(false)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button
+                onClick={() => bulkMessageMutation.mutate()}
+                disabled={bulkMessageMutation.isPending || !bulkMsg.title.trim() || !bulkMsg.body.trim()}
+                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+              >
+                {bulkMessageMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                Send to {selectedIds.size}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV import modal — dry-run preview then commit */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-dark-border">
+              <h2 className="text-base font-bold text-white">Bulk import members</h2>
+              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} className="text-[#636366] hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-[#a0a0a0]">
+                Upload a CSV with columns <code>name, email, phone, tier_name</code>. Up to 500 rows per import.
+                Duplicates by email are skipped automatically.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={downloadCsvTemplate}
+                  className="flex items-center gap-1.5 bg-dark-surface2 border border-dark-border text-[#e0e0e0] px-3 py-1.5 rounded-lg text-xs font-medium"
+                >
+                  <Download size={12} /> Template
+                </button>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
+                  className="text-xs text-[#a0a0a0]"
+                />
+              </div>
+              {importPreview && (
+                <div className="rounded-lg border border-dark-border bg-[#1a1a1a] p-3">
+                  <div className="flex gap-4 text-xs mb-2">
+                    <span className="text-emerald-400 font-semibold">OK: {importPreview.ok}</span>
+                    <span className="text-amber-400 font-semibold">Skip: {importPreview.skip}</span>
+                    <span className="text-red-400 font-semibold">Error: {importPreview.error}</span>
+                    <span className="text-[#636366]">/ {importPreview.total} rows</span>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto text-[11px] font-mono">
+                    {importPreview.rows?.slice(0, 50).map((r: any) => (
+                      <div key={r.line} className={`flex gap-2 py-0.5 ${r.status === 'error' ? 'text-red-400' : r.status === 'skip' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        <span className="text-[#636366] w-10">L{r.line}</span>
+                        <span className="w-12 uppercase">{r.status}</span>
+                        <span className="flex-1 truncate">{r.email}</span>
+                        {r.reason && <span className="text-[#a0a0a0] truncate">{r.reason}</span>}
+                      </div>
+                    ))}
+                    {importPreview.rows?.length > 50 && (
+                      <div className="text-[#636366] pt-2">+ {importPreview.rows.length - 50} more rows…</div>
+                    )}
+                  </div>
+                  {importPreview.plan_limit?.limit && (
+                    <p className="text-[11px] text-[#a0a0a0] mt-2">
+                      Plan cap: currently using {importPreview.plan_limit.count} of {importPreview.plan_limit.limit} loyalty-member slots.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t border-dark-border">
+              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button
+                onClick={() => importPreviewMutation.mutate()}
+                disabled={!importFile || importPreviewMutation.isPending}
+                className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-white text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
+              >
+                {importPreviewMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+                Preview
+              </button>
+              <button
+                onClick={() => importCommitMutation.mutate()}
+                disabled={!importPreview || importPreview.ok === 0 || importCommitMutation.isPending}
+                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+              >
+                {importCommitMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                Import {importPreview ? importPreview.ok : ''}
+              </button>
+            </div>
           </div>
         </div>
       )}

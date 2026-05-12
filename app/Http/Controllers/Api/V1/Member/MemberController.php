@@ -101,13 +101,28 @@ class MemberController extends Controller
             'email_notifications' => 'sometimes|boolean',
             'push_notifications'  => 'sometimes|boolean',
             'marketing_consent'   => 'sometimes|boolean',
+            // Per-category opt-in. Mobile sends a partial object — we
+            // merge with whatever is already there so a Settings screen
+            // can ship one toggle at a time without clobbering the rest.
+            'notification_preferences'           => 'sometimes|array',
+            'notification_preferences.offers'    => 'sometimes|boolean',
+            'notification_preferences.points'    => 'sometimes|boolean',
+            'notification_preferences.tier'      => 'sometimes|boolean',
+            'notification_preferences.stays'     => 'sometimes|boolean',
         ]);
 
         $user = $request->user();
         $user->update(array_filter($validated, fn($k) => in_array($k, ['name', 'phone', 'date_of_birth', 'nationality', 'language']), ARRAY_FILTER_USE_KEY));
 
         $member = $user->loyaltyMember;
-        $member->update(array_filter($validated, fn($k) => in_array($k, ['email_notifications', 'push_notifications', 'marketing_consent']), ARRAY_FILTER_USE_KEY));
+        $memberFields = array_filter($validated, fn($k) => in_array($k, ['email_notifications', 'push_notifications', 'marketing_consent']), ARRAY_FILTER_USE_KEY);
+
+        if (array_key_exists('notification_preferences', $validated)) {
+            $existing = $member->notification_preferences ?: [];
+            $memberFields['notification_preferences'] = array_merge($existing, $validated['notification_preferences']);
+        }
+
+        $member->update($memberFields);
 
         return response()->json([
             'message' => 'Profile updated',

@@ -16,10 +16,10 @@ class LoyaltyMember extends Model
         'organization_id', 'user_id', 'member_number', 'tier_id', 'lifetime_points', 'current_points',
         'qualifying_points', 'tier_review_date', 'tier_effective_from', 'tier_effective_until',
         'tier_qualification_model', 'qualifying_nights', 'qualifying_stays', 'qualifying_spend',
-        'tier_locked', 'property_id',
+        'tier_locked', 'tier_override_until', 'property_id',
         'points_expiry_date', 'qr_code_token', 'nfc_uid', 'nfc_card_issued_at',
         'referral_code', 'referred_by', 'is_active', 'marketing_consent',
-        'email_notifications', 'push_notifications', 'expo_push_token',
+        'email_notifications', 'push_notifications', 'notification_preferences', 'expo_push_token',
         'joined_at', 'welcomed_at', 'last_activity_at',
     ];
 
@@ -28,6 +28,7 @@ class LoyaltyMember extends Model
         'marketing_consent' => 'boolean',
         'email_notifications' => 'boolean',
         'push_notifications' => 'boolean',
+        'notification_preferences' => 'array',
         'points_expiry_date' => 'date',
         'nfc_card_issued_at' => 'datetime',
         'joined_at' => 'datetime',
@@ -36,6 +37,7 @@ class LoyaltyMember extends Model
         'tier_review_date' => 'date',
         'tier_effective_from' => 'date',
         'tier_effective_until' => 'date',
+        'tier_override_until' => 'datetime',
         'tier_locked' => 'boolean',
         'qualifying_spend' => 'decimal:2',
     ];

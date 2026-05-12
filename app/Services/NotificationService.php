@@ -58,9 +58,37 @@ class NotificationService
         ]);
     }
 
+    /**
+     * Maps each push `type` to the category opt-in key inside
+     * `loyalty_members.notification_preferences`. Members who explicitly
+     * opted out of "offers" still get tier + points + transactional
+     * pushes (those are core program comms).
+     */
+    private const TYPE_TO_CATEGORY = [
+        'points_earned'   => 'points',
+        'points_expiry'   => 'points',
+        'tier_upgrade'    => 'tier',
+        'tier_downgrade'  => 'tier',
+        'new_offer'       => 'offers',
+        'offer_expiring'  => 'offers',
+        'booking'         => 'stays',
+        'stay_review'     => 'stays',
+        // Default: anything else (welcome, generic, system) treated as
+        // 'transactional' and only suppressed by the global toggle.
+    ];
+
     public function send(LoyaltyMember $member, array $notification): void
     {
         if (!$member->push_notifications || !$member->expo_push_token) {
+            return;
+        }
+
+        // Per-category opt-in check. NULL preferences = back-compat:
+        // pre-fix members default to "everything on" so the existing
+        // population doesn't suddenly stop hearing from us.
+        $prefs = $member->notification_preferences ?: [];
+        $category = self::TYPE_TO_CATEGORY[$notification['type'] ?? ''] ?? 'transactional';
+        if ($category !== 'transactional' && array_key_exists($category, $prefs) && $prefs[$category] === false) {
             return;
         }
 

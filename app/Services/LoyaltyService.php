@@ -300,6 +300,16 @@ class LoyaltyService
             return false;
         }
 
+        // Honour a still-active admin tier override. Pre-fix admins could
+        // manually promote a member (e.g. "give them Platinum for this
+        // stay") and the next assessTier sweep would drop them back —
+        // the override survived less than a day. tier_override_until in
+        // the future means the override holds; upgrades still apply
+        // (a member can always climb past their override).
+        if ($isDowngrade && $member->tier_override_until && $member->tier_override_until->isFuture()) {
+            return false;
+        }
+
         // Soft landing: only drop one tier at a time
         if ($isDowngrade && $currentTier->soft_landing) {
             $oneTierDown = LoyaltyTier::where('is_active', true)

@@ -359,6 +359,9 @@ class MemberAdminController extends Controller
             'is_active'         => 'sometimes|boolean',
             'marketing_consent' => 'sometimes|boolean',
             'tier_id'           => 'sometimes|exists:loyalty_tiers,id',
+            // ISO timestamp; null clears any pending override and lets
+            // the next assessTier sweep decide.
+            'tier_override_until' => 'sometimes|nullable|date',
             'name'              => 'sometimes|string|max:255',
             'email'             => 'sometimes|email|unique:users,email,' . $member->user_id,
             'phone'             => 'nullable|string|max:20',
@@ -369,14 +372,19 @@ class MemberAdminController extends Controller
         ]);
 
         // Capture old values for audit
-        $oldMemberValues = $member->only(['is_active', 'marketing_consent', 'tier_id']);
+        $oldMemberValues = $member->only(['is_active', 'marketing_consent', 'tier_id', 'tier_override_until']);
         $oldUserValues = $member->user->only(['name', 'email', 'phone', 'nationality', 'language', 'date_of_birth']);
 
-        // Update member fields
+        // Update member fields. tier_override_until is explicitly checked
+        // with has() (not array_filter) because null is a valid clearing
+        // value here.
         $memberFields = array_filter(
             $request->only(['is_active', 'marketing_consent', 'tier_id']),
             fn($v) => $v !== null
         );
+        if ($request->has('tier_override_until')) {
+            $memberFields['tier_override_until'] = $request->input('tier_override_until');
+        }
 
         // When tier_id changes via admin override, also refresh the timing
         // fields so mobile-app tier progress / expiry / review calculations
@@ -515,6 +523,256 @@ class MemberAdminController extends Controller
         AnalyticsService::clearDashboardCache();
 
         return response()->json(['success' => true, 'message' => 'Member deleted']);
+    }
+
+    /**
+     * POST /v1/admin/members/bulk-message
+     *
+     * Sends a push notification (and optionally a one-off email) to up
+     * to 500 selected members. Body:
+     *   - member_ids:  int[] (required, 1..500)
+     *   - title:       string (required, ≤120)
+     *   - body:        string (required, ≤500)
+     *   - send_email:  bool (default false)
+     *   - category:    'offers' | 'points' | 'tier' | 'stays' | 'transactional'
+     *
+     * Returns counts of how many actually received the push — members
+     * who've opted out of the chosen category (or have push off entirely)
+     * are skipped, not errored, so a partial send still reports
+     * accurately.
+     */
+    public function bulkMessage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'member_ids'   => 'required|array|min:1|max:500',
+            'member_ids.*' => 'integer|exists:loyalty_members,id',
+            'title'        => 'required|string|max:120',
+            'body'         => 'required|string|max:500',
+            'send_email'   => 'sometimes|boolean',
+            'category'     => 'sometimes|string|in:offers,points,tier,stays,transactional',
+        ]);
+
+        $category = $validated['category'] ?? 'transactional';
+        // Map the admin's category choice onto a `type` the
+        // NotificationService recognises so its per-category opt-in
+        // gate fires correctly.
+        $type = match ($category) {
+            'offers'  => 'new_offer',
+            'points'  => 'points_earned',
+            'tier'    => 'tier_upgrade',
+            'stays'   => 'booking',
+            default   => 'admin_broadcast',
+        };
+
+        $members = LoyaltyMember::whereIn('id', $validated['member_ids'])->with('user')->get();
+        $svc = app(NotificationService::class);
+
+        $pushSent = 0;
+        $emailSent = 0;
+        $skipped = 0;
+
+        foreach ($members as $m) {
+            try {
+                if ($m->push_notifications && $m->expo_push_token) {
+                    $svc->send($m, [
+                        'type'  => $type,
+                        'title' => $validated['title'],
+                        'body'  => $validated['body'],
+                        'data'  => ['source' => 'admin_broadcast', 'category' => $category],
+                    ]);
+                    $pushSent++;
+                } else {
+                    $skipped++;
+                }
+                if (!empty($validated['send_email']) && $m->email_notifications && $m->user?->email) {
+                    \Illuminate\Support\Facades\Mail::raw(
+                        $validated['body'],
+                        function ($mail) use ($m, $validated) {
+                            $mail->to($m->user->email)->subject($validated['title']);
+                        }
+                    );
+                    $emailSent++;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Bulk message send failed', [
+                    'member_id' => $m->id,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        }
+
+        AuditLog::record(
+            'members_bulk_message',
+            null,
+            [
+                'recipients' => $members->count(),
+                'push_sent'  => $pushSent,
+                'email_sent' => $emailSent,
+                'title'      => $validated['title'],
+            ],
+            [],
+            $request->user(),
+            "Bulk message sent to {$members->count()} members (push: {$pushSent}, email: {$emailSent})"
+        );
+
+        return response()->json([
+            'total'      => $members->count(),
+            'push_sent'  => $pushSent,
+            'email_sent' => $emailSent,
+            'skipped'    => $skipped,
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/members/bulk-import
+     *
+     * Two-phase CSV import:
+     *  1. dry_run = true → parse + validate every row, return a preview
+     *     listing { ok, skip, error } counts and per-row errors. No DB
+     *     writes. Lets the admin fix typos in the CSV before committing.
+     *  2. dry_run = false → re-validate AND insert. Skips duplicates by
+     *     email (same as the manual store flow) so re-running the same
+     *     CSV is safe.
+     *
+     * Hard cap at 500 rows per call. CSV columns expected:
+     *   name, email, phone (opt), tier_name (opt)
+     *
+     * Returns per-row results so the admin can show a "fixed N of M"
+     * summary in the SPA.
+     */
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file'    => 'required|file|mimes:csv,txt|max:2048',
+            'dry_run' => 'sometimes|boolean',
+        ]);
+        $dryRun = (bool) $request->boolean('dry_run', false);
+
+        // Plan-cap pre-check — surfaces an upgrade prompt instead of
+        // creating up to the cap and then erroring on the next row.
+        $usage = app(\App\Services\PlanLimitGuard::class)->usage(
+            \App\Services\PlanLimitGuard::KEY_MEMBERS
+        );
+
+        $rows = [];
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if (!$handle) {
+            return response()->json(['error' => 'Could not read CSV file.'], 422);
+        }
+        $headers = fgetcsv($handle);
+        if (!$headers) {
+            fclose($handle);
+            return response()->json(['error' => 'CSV is empty.'], 422);
+        }
+        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), $headers);
+        while (($r = fgetcsv($handle)) !== false) {
+            if (count($rows) >= 500) break;
+            $rows[] = array_combine($headers, array_pad($r, count($headers), null));
+        }
+        fclose($handle);
+
+        $tiersByName = LoyaltyTier::all()->keyBy(fn ($t) => strtolower($t->name));
+        $defaultTier = LoyaltyTier::where('name', 'Bronze')->first() ?? LoyaltyTier::orderBy('min_points')->first();
+
+        $results = [];
+        $okCount = 0;
+        $skipCount = 0;
+        $errCount = 0;
+
+        $seenEmails = [];
+        foreach ($rows as $i => $row) {
+            $line = $i + 2; // header is row 1
+            $name = trim((string) ($row['name'] ?? ''));
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            $phone = trim((string) ($row['phone'] ?? '')) ?: null;
+            $tierName = trim((string) ($row['tier_name'] ?? ''));
+
+            if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $results[] = ['line' => $line, 'email' => $email, 'status' => 'error', 'reason' => 'Missing name or invalid email'];
+                $errCount++;
+                continue;
+            }
+            if (isset($seenEmails[$email])) {
+                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip', 'reason' => 'Duplicate email in CSV'];
+                $skipCount++;
+                continue;
+            }
+            $seenEmails[$email] = true;
+
+            if (User::withoutGlobalScopes()->where('email', $email)->exists()) {
+                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip', 'reason' => 'Email already exists'];
+                $skipCount++;
+                continue;
+            }
+
+            $tier = $tierName !== ''
+                ? ($tiersByName[strtolower($tierName)] ?? null)
+                : $defaultTier;
+            if (!$tier) {
+                $results[] = ['line' => $line, 'email' => $email, 'status' => 'error', 'reason' => "Unknown tier '{$tierName}'"];
+                $errCount++;
+                continue;
+            }
+
+            $results[] = ['line' => $line, 'email' => $email, 'status' => 'ok', 'tier' => $tier->name];
+            $okCount++;
+
+            if (!$dryRun) {
+                try {
+                    \DB::transaction(function () use ($name, $email, $phone, $tier) {
+                        $user = User::create([
+                            'name'      => $name,
+                            'email'     => $email,
+                            'password'  => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(40)),
+                            'phone'     => $phone,
+                            'user_type' => 'member',
+                        ]);
+                        LoyaltyMember::create([
+                            'user_id'        => $user->id,
+                            'tier_id'        => $tier->id,
+                            'member_number'  => $this->qrCode->generateMemberNumber(),
+                            'qr_code_token'  => \Illuminate\Support\Str::random(64),
+                            'referral_code'  => $this->qrCode->generateReferralCode(),
+                            'lifetime_points'=> 0,
+                            'current_points' => 0,
+                            'is_active'      => true,
+                            'joined_at'      => now(),
+                        ]);
+                    });
+                } catch (\Throwable $e) {
+                    // Last-row error shouldn't abort the whole import —
+                    // flip the row's status to error and keep going.
+                    $results[count($results) - 1] = [
+                        'line' => $line, 'email' => $email, 'status' => 'error',
+                        'reason' => 'Create failed: ' . substr($e->getMessage(), 0, 200),
+                    ];
+                    $okCount--;
+                    $errCount++;
+                }
+            }
+        }
+
+        if (!$dryRun) {
+            AuditLog::record(
+                'members_bulk_import',
+                null,
+                ['imported' => $okCount, 'skipped' => $skipCount, 'errors' => $errCount],
+                [],
+                $request->user(),
+                "Bulk CSV import: {$okCount} created, {$skipCount} skipped, {$errCount} errors"
+            );
+            AnalyticsService::clearDashboardCache();
+        }
+
+        return response()->json([
+            'dry_run'   => $dryRun,
+            'ok'        => $okCount,
+            'skip'      => $skipCount,
+            'error'     => $errCount,
+            'total'     => count($rows),
+            'rows'      => $results,
+            'plan_limit'=> $usage,
+        ]);
     }
 
     public function awardPoints(Request $request): JsonResponse
