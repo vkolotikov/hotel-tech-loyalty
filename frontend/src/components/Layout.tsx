@@ -86,6 +86,7 @@ const navGroups: NavGroup[] = [
       { path: '/segments',         label: 'Segments',  icon: ListChecks, gate: 'admin', product: 'loyalty' },
       { path: '/email-campaigns',  label: 'Campaigns', icon: Mail,       gate: 'admin', product: 'loyalty' },
       { path: '/earn-rate-events', label: 'Boost events', icon: Zap,     gate: 'admin', product: 'loyalty' },
+      { path: '/wallet-config',    label: 'Wallet passes', icon: CreditCard, gate: 'admin', product: 'loyalty' },
     ],
   },
   {

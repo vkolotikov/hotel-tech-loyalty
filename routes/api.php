@@ -110,7 +110,13 @@ Route::prefix('v1')->group(function () {
     Route::get('track/open/{recipient}', [CampaignTrackingController::class, 'open']);
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
-    Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
+    // Apple Wallet pkpass — public route that accepts a Sanctum token
+// via ?token= query because Safari navigations to the .pkpass URL
+// can't carry an Authorization header. Token is resolved inside the
+// controller using PersonalAccessToken::findToken.
+Route::get('v1/member/card/apple-wallet', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'apple']);
+
+Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('config',                [BookingPublicController::class, 'config']);
         Route::get('availability',          [BookingPublicController::class, 'availability']);
         Route::get('unit/{unitId}/rates',   [BookingPublicController::class, 'unitRates']);
@@ -220,6 +226,13 @@ Route::prefix('v1')->group(function () {
             Route::get('rewards/{id}',             [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'show']);
             Route::post('rewards/{id}/redeem',     [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'redeem']);
             Route::get('my/redemptions',           [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'myRedemptions']);
+
+            // Google Wallet — JSON response, normal auth.
+            Route::get('card/google-wallet',       [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'google']);
+            // Apple Wallet route lives OUTSIDE this group — see public
+            // section below — because Safari navigations can't carry
+            // an Authorization header, so it accepts ?token= instead.
+
             // Hotel Services catalog (read-only browse for member mobile app).
             // Reuses the public widget controller — tenant middleware has already
             // bound the org so bindOrg() is a no-op and returns the same shape.
@@ -308,6 +321,13 @@ Route::prefix('v1')->group(function () {
             Route::post('tiers',                  [TierController::class, 'store']);
             Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
+
+            // Wallet pass configuration (Apple + Google)
+            Route::get('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'show']);
+            Route::put('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'update']);
+            Route::post('wallet-config/apple-cert',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleCert']);
+            Route::post('wallet-config/apple-wwdr',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleWwdr']);
+            Route::post('wallet-config/google-service-account', [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadGoogleServiceAccount']);
 
             // Email broadcast campaigns
             Route::get('email-campaigns',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);

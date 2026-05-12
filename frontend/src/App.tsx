@@ -24,6 +24,7 @@ const Rewards = lazy(() => import('./pages/Rewards').then(m => ({ default: m.Rew
 const Segments = lazy(() => import('./pages/Segments').then(m => ({ default: m.Segments })))
 const EarnRateEvents = lazy(() => import('./pages/EarnRateEvents').then(m => ({ default: m.EarnRateEvents })))
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns').then(m => ({ default: m.EmailCampaigns })))
+const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 const MemberDetail = lazy(() => import('./pages/MemberDetail').then(m => ({ default: m.MemberDetail })))
 const MemberDuplicates = lazy(() => import('./pages/MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
 const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
@@ -185,6 +186,7 @@ export default function App() {
           <Route path="/segments" element={<LazyRoute gate="admin" product="loyalty"><Segments /></LazyRoute>} />
           <Route path="/earn-rate-events" element={<LazyRoute gate="admin" product="loyalty"><EarnRateEvents /></LazyRoute>} />
           <Route path="/email-campaigns" element={<LazyRoute gate="admin" product="loyalty"><EmailCampaigns /></LazyRoute>} />
+          <Route path="/wallet-config" element={<LazyRoute gate="admin" product="loyalty"><WalletConfig /></LazyRoute>} />
           <Route path="/offers" element={<LazyRoute gate="can_manage_offers"><Offers /></LazyRoute>} />
           {/* Analytics is plain charts/KPIs (no LLM) so we gate on the
               staff `can_view_analytics` flag only. Previously this route
