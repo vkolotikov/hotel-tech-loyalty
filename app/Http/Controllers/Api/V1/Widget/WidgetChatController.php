@@ -2501,8 +2501,8 @@ class WidgetChatController extends Controller
         }
 
         app()->instance('current_organization_id', $config->organization_id);
-        $avail = app(AvailabilityService::class);
-        $prices = $avail->calendarPrices($request->input('start'), $request->input('end'));
+        $avail  = app(AvailabilityService::class);
+        $result = $avail->calendarPrices($request->input('start'), $request->input('end'));
 
         $currency = \App\Models\HotelSetting::withoutGlobalScopes()
             ->where('organization_id', $config->organization_id)
@@ -2510,8 +2510,9 @@ class WidgetChatController extends Controller
             ->value('value') ?: 'EUR';
 
         return response()->json([
-            'prices'   => $prices,
-            'currency' => $currency,
+            'prices'       => $result['prices']       ?? [],
+            'availability' => $result['availability'] ?? [],
+            'currency'     => $currency,
         ]);
     }
 }

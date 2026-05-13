@@ -192,13 +192,28 @@ class AvailabilityService
      * Get cheapest available price per night for each date in a range.
      * Days where no unit is available are returned as 0 (frontend can mark as unavailable).
      */
+    /**
+     * Cheapest per-night price + availability flag for each day in the range.
+     *
+     * Returns:
+     *   [
+     *     'prices'       => ['2026-05-14' => 150.0, …],
+     *     'availability' => ['2026-05-14' => true, '2026-05-15' => false, …],
+     *   ]
+     *
+     * A day is `availability=false` only when EVERY room is explicitly sold
+     * out per Smoobu data — when Smoobu has no daily entry for a room we
+     * optimistically count it as available against the base price (the PMS
+     * just hasn't been synced for that night).
+     */
     public function calendarPrices(string $start, string $end): array
     {
         $rooms = $this->getRooms();
-        if (empty($rooms)) return [];
+        if (empty($rooms)) return ['prices' => [], 'availability' => []];
 
-        $unitIds = array_keys($rooms);
-        $prices  = [];
+        $unitIds   = array_keys($rooms);
+        $prices    = [];
+        $available = [];
 
         try {
             $daily = $this->smoobu->getDailyRates($start, $end, $unitIds);
@@ -211,31 +226,40 @@ class AvailabilityService
         $endDate = new \DateTime($end);
 
         while ($current <= $endDate) {
-            $dateStr  = $current->format('Y-m-d');
-            $cheapest = PHP_INT_MAX;
+            $dateStr      = $current->format('Y-m-d');
+            $cheapest     = PHP_INT_MAX;
+            $anyAvailable = false;
 
-            // For each room: prefer the Smoobu daily price; if missing, fall
-            // back to that room's DB base_price. This ensures the calendar
-            // dropdown matches the same per-room logic the quote uses.
             foreach ($rooms as $unitId => $room) {
                 $key = (string) $unitId;
                 $day = $daily[$key][$dateStr] ?? null;
-                if ($day && ($day['available'] ?? false) && ($day['price'] ?? 0) > 0) {
-                    $cheapest = min($cheapest, (float) $day['price']);
+
+                if ($day !== null) {
+                    // Smoobu has explicit data for this room/day — trust it.
+                    if (($day['available'] ?? false) && ($day['price'] ?? 0) > 0) {
+                        $anyAvailable = true;
+                        $cheapest     = min($cheapest, (float) $day['price']);
+                    }
+                    // Explicit unavailability: do NOT fall back to base price.
                     continue;
                 }
 
+                // No Smoobu entry — optimistic fallback to base price. The
+                // booking page's final availability check will reject the
+                // dates if the PMS later disagrees.
                 $base = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
                 if ($base > 0) {
-                    $cheapest = min($cheapest, $base);
+                    $anyAvailable = true;
+                    $cheapest     = min($cheapest, $base);
                 }
             }
 
-            $prices[$dateStr] = $cheapest === PHP_INT_MAX ? 0 : (float) $cheapest;
+            $prices[$dateStr]    = $cheapest === PHP_INT_MAX ? 0 : (float) $cheapest;
+            $available[$dateStr] = $anyAvailable;
             $current->modify('+1 day');
         }
 
-        return $prices;
+        return ['prices' => $prices, 'availability' => $available];
     }
 
     /**

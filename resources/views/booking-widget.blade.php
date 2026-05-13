@@ -234,8 +234,13 @@ input,select,textarea{font-family:inherit}
 .cal-day{text-align:center;padding:2px;position:relative;cursor:pointer}
 .cal-day.empty{cursor:default}
 .cal-day.disabled{cursor:not-allowed;opacity:.35}
+.cal-day.sold-out{cursor:not-allowed;pointer-events:none}
+.cal-day.sold-out .day-inner{background:transparent;color:var(--text-secondary);opacity:.45}
+.cal-day.sold-out .day-num{text-decoration:line-through;color:var(--text-secondary)}
+.cal-day.sold-out .day-price{display:none}
+.cal-day.sold-out::after{content:"";position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--text-secondary);opacity:.45}
 .cal-day .day-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:42px;border-radius:8px;transition:all .15s;padding:3px 0}
-.cal-day:not(.empty):not(.disabled):hover .day-inner{background:var(--primary-light)}
+.cal-day:not(.empty):not(.disabled):not(.sold-out):hover .day-inner{background:var(--primary-light)}
 .cal-day .day-num{font-size:13px;font-weight:500;line-height:1.2}
 .cal-day .day-price{font-size:9px;color:var(--text-secondary);font-weight:500;line-height:1.2;margin-top:1px}
 .cal-day .day-price.cheap{color:var(--success)}
@@ -418,6 +423,7 @@ var state = {
   paymentError: null,
   calendarOpen: false,
   calendarPrices: {},
+  calendarAvailability: {},   // YYYY-MM-DD => true|false (false = every room sold out)
   calendarPricesLoading: false,
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
@@ -731,20 +737,24 @@ function renderMonth(year, month) {
     var isStart = state.checkIn === dateStr;
     var isEnd = state.checkOut === dateStr;
     var inRange = state.checkIn && state.checkOut && dateStr > state.checkIn && dateStr < state.checkOut;
+    // Sold-out: backend reports every room as unavailable for this night.
+    // Treat as unselectable so users can't pick a range straddling no-stock days.
+    var soldOut = state.calendarAvailability[dateStr] === false && !isPast;
 
     var cls = 'cal-day';
     if (isPast) cls += ' disabled';
+    if (soldOut) cls += ' sold-out';
     if (isStart) cls += ' range-start';
     if (isEnd) cls += ' range-end';
     if (inRange) cls += ' in-range';
 
-    h += '<div class="' + cls + '" data-date="' + dateStr + '">';
+    h += '<div class="' + cls + '" data-date="' + dateStr + '"' + (soldOut ? ' title="Fully booked"' : '') + '>';
     h += '<div class="day-inner">';
     h += '<span class="day-num">' + d + '</span>';
 
-    // Price under date
+    // Price under date — hidden for sold-out + past days
     var price = state.calendarPrices[dateStr];
-    if (price && !isPast) {
+    if (price && !isPast && !soldOut) {
       var cheapest = getCheapestPrice();
       var isCheap = cheapest > 0 && price <= cheapest * 1.1;
       h += '<span class="day-price' + (isCheap ? ' cheap' : '') + '">' + formatCompactPrice(price) + '</span>';
@@ -1493,6 +1503,14 @@ function loadCalendarPrices() {
           if (state.calendarPrices[d] === undefined) added = true;
           state.calendarPrices[d] = data.prices[d];
         }
+        // Merge per-day availability so renderMonth can gray out sold-out days.
+        // Backend may omit the map entirely on older API versions — treat as
+        // "all days available" when absent.
+        if (data.availability) {
+          for (var ad in data.availability) {
+            state.calendarAvailability[ad] = data.availability[ad];
+          }
+        }
         // Only re-render if calendar is still open and we got new data
         if (added && state.calendarOpen) renderCalendarInPlace();
       }
@@ -1519,7 +1537,8 @@ function renderCalendarInPlace() {
 }
 
 function bindCalendarDays() {
-  var days = document.querySelectorAll('.cal-day[data-date]:not(.disabled)');
+  // Skip past days (.disabled) AND fully-booked days (.sold-out).
+  var days = document.querySelectorAll('.cal-day[data-date]:not(.disabled):not(.sold-out)');
   for (var di = 0; di < days.length; di++) {
     (function(el) {
       el.addEventListener('click', function() {

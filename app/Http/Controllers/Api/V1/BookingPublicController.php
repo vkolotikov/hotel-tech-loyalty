@@ -299,13 +299,18 @@ class BookingPublicController extends Controller
         ]);
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
-        $cacheKey = "booking:calendar:{$orgId}:{$validated['start']}:{$validated['end']}";
+        // v2 prefix: response shape changed from array<date,price> to
+        // ['prices' => …, 'availability' => …]. Bumping busts pre-shape cache.
+        $cacheKey = "booking:calendar:v2:{$orgId}:{$validated['start']}:{$validated['end']}";
 
-        $prices = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($validated, $availability) {
+        $result = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($validated, $availability) {
             return $availability->calendarPrices($validated['start'], $validated['end']);
         });
 
-        return response()->json(['prices' => $prices]);
+        return response()->json([
+            'prices'       => $result['prices']       ?? [],
+            'availability' => $result['availability'] ?? [],
+        ]);
     }
 
     /** POST /v1/booking/webhooks/stripe — Stripe payment webhook receiver. */
