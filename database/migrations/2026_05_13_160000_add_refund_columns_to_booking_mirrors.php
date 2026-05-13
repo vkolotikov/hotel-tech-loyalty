@@ -20,7 +20,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('booking_mirrors', function (Blueprint $t) {
+        Schema::table('booking_mirror', function (Blueprint $t) {
             $t->decimal('refunded_amount', 10, 2)->nullable()->after('price_paid');
             $t->timestamp('refunded_at')->nullable()->after('refunded_amount');
             $t->string('last_refund_id', 255)->nullable()->after('refunded_at');
@@ -29,7 +29,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('booking_mirrors', function (Blueprint $t) {
+        Schema::table('booking_mirror', function (Blueprint $t) {
             $t->dropColumn(['refunded_amount', 'refunded_at', 'last_refund_id']);
         });
     }
