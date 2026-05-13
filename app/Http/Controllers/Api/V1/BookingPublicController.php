@@ -225,6 +225,15 @@ class BookingPublicController extends Controller
             return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
         }
 
+        // Extend the hold so a guest sitting on the Stripe Elements payment
+        // screen doesn't lose their cart at the 10-min mark. We push
+        // expires_at to "now + 15 min" rather than adding-on, so a guest
+        // who reaches this endpoint at 9:30 doesn't suddenly get only 30s
+        // (the original hold) — they get a fresh 15-min window to complete
+        // the card form. Quote→intent is typically <2s, so the original
+        // hold is rarely close to expiry, but this guards the slow path.
+        $hold->update(['expires_at' => now()->addMinutes(15)]);
+
         $payload = $hold->payload_json;
         $amount = (float) ($payload['gross_total'] ?? 0);
         $unitName = $payload['unit_name'] ?? 'Room';

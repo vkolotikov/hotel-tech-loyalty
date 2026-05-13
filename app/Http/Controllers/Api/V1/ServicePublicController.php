@@ -106,8 +106,12 @@ class ServicePublicController extends Controller
             'logo_url'      => $this->getStringSetting($orgId, 'services_widget_logo_url', '') ?: $brandLogo,
         ];
 
-        $stripe = app(StripeService::class);
-        $paymentEnabled = $stripe->isEnabled();
+        // Mock mode short-circuits payment_enabled for services the same
+        // way it does for rooms — widget skips Stripe Elements entirely,
+        // confirm() stamps payment_method='mock'.
+        $stripe        = app(StripeService::class);
+        $mockMode      = $this->getStringSetting($orgId, 'booking_mock_mode', 'false') === 'true';
+        $paymentEnabled = $stripe->isEnabled() && !$mockMode;
 
         return response()->json([
             'categories' => $categories,
@@ -125,6 +129,7 @@ class ServicePublicController extends Controller
             'style'      => $style,
             'payment_enabled'        => $paymentEnabled,
             'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
+            'mock_mode'              => $mockMode,
         ]);
     }
 
@@ -279,6 +284,18 @@ class ServicePublicController extends Controller
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
         ]);
 
+        // Mock mode short-circuit — return a fake intent so a stale widget
+        // still completes. config() returns payment_enabled=false in mock
+        // mode so the widget normally won't call this endpoint.
+        $mockMode = HotelSetting::getValue('booking_mock_mode');
+        if ($mockMode === true || $mockMode === 'true') {
+            return response()->json([
+                'client_secret'     => 'mock_secret_' . bin2hex(random_bytes(8)),
+                'payment_intent_id' => 'pi_mock_' . bin2hex(random_bytes(12)),
+                'mock'              => true,
+            ]);
+        }
+
         if (!$stripe->isEnabled()) {
             return response()->json(['error' => 'Online payment is not enabled.'], 400);
         }
@@ -359,19 +376,35 @@ class ServicePublicController extends Controller
 
         $service = Service::findOrFail($data['service_id']);
 
+        // Mock mode — any service booking confirmed while booking_mock_mode
+        // is on gets stamped as paid via the mock channel so it surfaces
+        // clearly in admin reports as "not a real charge". Mirrors the
+        // pattern used in BookingPublicController::confirm().
+        $mockMode = HotelSetting::getValue('booking_mock_mode');
+        $isMockBooking = ($mockMode === true || $mockMode === 'true');
+
         // If a payment_intent_id is provided, verify it
         $paymentStatus = 'unpaid';
-        if (!empty($data['payment_intent_id'])) {
-            $stripe = app(StripeService::class);
-            if ($stripe->isEnabled()) {
-                try {
-                    $intent = $stripe->retrievePaymentIntent($data['payment_intent_id']);
-                    if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
-                        return response()->json(['error' => 'Payment has not been completed.'], 400);
+        if ($isMockBooking) {
+            $paymentStatus = 'paid';
+        } elseif (!empty($data['payment_intent_id'])) {
+            // Mock prefix in case a stale frontend hit /payment-intent while
+            // mock mode was on — trust the prefix, skip Stripe verification.
+            if (str_starts_with($data['payment_intent_id'], 'pi_mock_')) {
+                $paymentStatus = 'paid';
+                $isMockBooking = true;
+            } else {
+                $stripe = app(StripeService::class);
+                if ($stripe->isEnabled()) {
+                    try {
+                        $intent = $stripe->retrievePaymentIntent($data['payment_intent_id']);
+                        if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
+                            return response()->json(['error' => 'Payment has not been completed.'], 400);
+                        }
+                        $paymentStatus = $intent->status === 'succeeded' ? 'paid' : 'authorized';
+                    } catch (\Throwable $e) {
+                        return response()->json(['error' => 'Unable to verify payment: ' . $e->getMessage()], 400);
                     }
-                    $paymentStatus = $intent->status === 'succeeded' ? 'paid' : 'authorized';
-                } catch (\Throwable $e) {
-                    return response()->json(['error' => 'Unable to verify payment: ' . $e->getMessage()], 400);
                 }
             }
         }
@@ -489,7 +522,18 @@ class ServicePublicController extends Controller
         //    stamp on their LoyaltyMember row — same rule the room-booking
         //    flow uses, so a returning guest never gets a duplicate
         //    "set your password" email after every transaction.
-        $this->sendServiceBookingEmails($booking->load(['service', 'master', 'extras']), $orgId);
+        // Mock-mode bookings skip emails — the Settings UI hint promises
+        // "no charges or emails" so staff can dry-run the flow without
+        // spamming real inboxes. Guest auto-enrol still runs since it's
+        // local-only and useful for testing membership flows.
+        if ($isMockBooking) {
+            \Illuminate\Support\Facades\Log::info('Mock mode — skipping service booking emails', [
+                'org_id' => $orgId,
+                'email'  => $booking->customer_email,
+            ]);
+        } else {
+            $this->sendServiceBookingEmails($booking->load(['service', 'master', 'extras']), $orgId);
+        }
 
         return response()->json([
             'booking_reference' => $booking->booking_reference,

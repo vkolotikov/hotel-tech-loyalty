@@ -735,11 +735,25 @@ class BookingEngineService
     /**
      * Send booking confirmation email + membership invitation email.
      * Wrapped in try/catch so email failures never break the booking flow.
+     *
+     * Skipped entirely when booking_mock_mode=true — the UI hint on the
+     * Settings → Booking page promises "no charges or emails" for mock
+     * bookings so staff can test the full flow against real members
+     * without spamming their inboxes.
      */
     private function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
     {
         $email = $guest['email'] ?? null;
         if (!$email) return;
+
+        $mockMode = $this->resolveSetting($orgId, 'booking_mock_mode', 'false');
+        if ($mockMode === 'true' || $mockMode === true) {
+            \Illuminate\Support\Facades\Log::info('Mock mode — skipping booking emails', [
+                'org_id' => $orgId,
+                'email'  => $email,
+            ]);
+            return;
+        }
 
         $guestName = trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')) ?: 'Guest';
         $hotelName = $this->resolveHotelName($orgId);
