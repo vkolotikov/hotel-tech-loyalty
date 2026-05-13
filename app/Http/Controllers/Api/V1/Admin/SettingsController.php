@@ -36,7 +36,15 @@ class SettingsController extends Controller
         'expedia_api_key',
     ];
 
-    /** Env fallback map: setting key → env variable name. */
+    /**
+     * Env fallback map: setting key → env variable name.
+     *
+     * IMPORTANT: this is a multi-tenant customer portal — each customer
+     * must configure their own keys. Stripe entries are intentionally
+     * absent from this map so an org with empty keys cannot accidentally
+     * fall back to the platform's `.env` and charge OUR Stripe account
+     * (or worse, leak across tenants).
+     */
     private const ENV_FALLBACKS = [
         'ai_openai_api_key'            => 'OPENAI_API_KEY',
         'ai_openai_model'              => 'OPENAI_MODEL',
@@ -53,10 +61,8 @@ class SettingsController extends Controller
         'mail_from_address'            => 'MAIL_FROM_ADDRESS',
         'mail_from_name'               => 'MAIL_FROM_NAME',
         'expo_access_token'            => 'EXPO_ACCESS_TOKEN',
-        'stripe_publishable_key'       => 'STRIPE_PUBLISHABLE_KEY',
-        'stripe_secret_key'            => 'STRIPE_SECRET_KEY',
-        'stripe_webhook_secret'        => 'STRIPE_WEBHOOK_SECRET',
-        'stripe_currency'              => 'STRIPE_CURRENCY',
+        // stripe_* keys are deliberately NOT listed here — each customer
+        // must use their own Stripe account. No platform fallback.
         'twilio_account_sid'           => 'TWILIO_ACCOUNT_SID',
         'twilio_auth_token'            => 'TWILIO_AUTH_TOKEN',
         'twilio_phone_number'          => 'TWILIO_PHONE_NUMBER',
@@ -705,8 +711,11 @@ class SettingsController extends Controller
 
     private function testStripe(): JsonResponse
     {
-        $key = $this->resolveKey('stripe_secret_key', 'STRIPE_SECRET_KEY');
-        if (!$key) return response()->json(['success' => false, 'message' => 'No secret key configured']);
+        // Per-tenant only — no env fallback. Each org configures its own
+        // Stripe account so the "Test connection" button reflects whether
+        // THIS org's keys work, not whether the platform has an env default.
+        $key = HotelSetting::getValue('stripe_secret_key');
+        if (!$key) return response()->json(['success' => false, 'message' => 'No secret key configured for this organization']);
 
         $result = $this->curlTest('https://api.stripe.com/v1/balance', ["Authorization: Bearer {$key}"]);
         return response()->json($result);

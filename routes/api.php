@@ -764,6 +764,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('bookings/{id}',                   [BookingAdminController::class, 'show']);
             Route::post('bookings/{id}/notes',            [BookingAdminController::class, 'addNote']);
             Route::patch('bookings/{id}/status',          [BookingAdminController::class, 'updateStatus']);
+            Route::post('bookings/{id}/refund',           [BookingAdminController::class, 'refund']);
             Route::post('bookings/{id}/sync',             [BookingAdminController::class, 'syncOne']);
 
             // ─── Booking Rooms & Extras (Admin) ─────────────────────────────

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import toast from 'react-hot-toast'
-import { ArrowLeft, RefreshCw, Send, User, Calendar, DollarSign, MessageSquare, MapPin, ExternalLink, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Send, User, Calendar, DollarSign, MessageSquare, MapPin, ExternalLink, CheckCircle, XCircle, AlertTriangle, FileText, CreditCard, Undo2, X, Loader2 } from 'lucide-react'
 import { money } from '../lib/money'
 
 const STATUS_OPTIONS = ['new', 'confirmed', 'follow_up', 'waiting_invoice_payment', 'paid_verified', 'checked-in', 'checked-out', 'issue', 'done', 'cancelled', 'no-show']
@@ -39,6 +39,9 @@ export function BookingDetail() {
   const qc = useQueryClient()
   const [noteBody, setNoteBody] = useState('')
   const [syncing, setSyncing] = useState(false)
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundReason, setRefundReason] = useState<'' | 'duplicate' | 'fraudulent' | 'requested_by_customer'>('')
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking-detail', id],
@@ -56,6 +59,17 @@ export function BookingDetail() {
     mutationFn: (data: any) => api.patch(`/v1/admin/bookings/${id}/status`, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['booking-detail', id] }); toast.success('Updated') },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to update booking'),
+  })
+
+  const refundMutation = useMutation({
+    mutationFn: (data: { amount?: number; reason?: string }) =>
+      api.post(`/v1/admin/bookings/${id}/refund`, data),
+    onSuccess: () => {
+      setRefundOpen(false); setRefundAmount(''); setRefundReason('')
+      qc.invalidateQueries({ queryKey: ['booking-detail', id] })
+      toast.success('Refund issued')
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.error || 'Refund failed'),
   })
 
   const handleSync = async () => {
@@ -205,6 +219,60 @@ export function BookingDetail() {
                   </div>
                 )}
 
+                {/* Stripe / mock payment panel — visible whenever a Stripe
+                    payment intent is attached OR the booking came through
+                    the mock channel. Gives staff one-click access to the
+                    Stripe dashboard + refund button. */}
+                {(b.payment_method === 'stripe' || b.payment_method === 'mock' || b.stripe_payment_intent_id) && (
+                  <div className="mb-5 p-4 rounded-xl" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2">
+                        <CreditCard size={12} className={b.payment_method === 'mock' ? 'text-amber-400' : 'text-blue-400'} />
+                        {b.payment_method === 'mock' ? 'Mock payment' : 'Stripe payment'}
+                      </h4>
+                      {b.stripe_payment_intent_id && b.payment_method !== 'mock' && (
+                        <a
+                          href={`https://dashboard.stripe.com/payments/${b.stripe_payment_intent_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-blue-400 hover:underline inline-flex items-center gap-1"
+                        >
+                          Open in Stripe <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {b.stripe_payment_intent_id && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500">Intent ID</span>
+                          <span className="text-gray-300 font-mono truncate text-right">{b.stripe_payment_intent_id}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Method</span>
+                        <span className="text-white capitalize">{b.payment_method || '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Charged</span>
+                        <span className="text-white tabular-nums">{money(b.price_paid || 0)}</span>
+                      </div>
+                    </div>
+                    {b.payment_method === 'mock' && (
+                      <p className="text-[11px] text-amber-300/80 mt-3">
+                        This booking was created in Mock Mode — no real charge was made.
+                      </p>
+                    )}
+                    {(b.payment_status === 'paid' || b.payment_status === 'partially_refunded') && (
+                      <button
+                        onClick={() => setRefundOpen(true)}
+                        className="mt-3 w-full px-3 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors inline-flex items-center justify-center gap-2"
+                      >
+                        <Undo2 size={12} /> Issue refund
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {b.price_elements?.length > 0 && (
                   <div className="pt-4 border-t border-white/[0.06]">
                     <div className="text-[10px] text-gray-500 font-bold uppercase mb-3">Price Breakdown</div>
@@ -351,6 +419,74 @@ export function BookingDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Refund modal */}
+      {refundOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-dark-border">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-300">
+                  <Undo2 size={15} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Issue refund</p>
+                  <p className="text-[11px] text-t-secondary">Stripe will return funds in 5–10 business days</p>
+                </div>
+              </div>
+              <button onClick={() => setRefundOpen(false)} className="text-[#636366] hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">
+                  Amount <span className="text-[#636366] font-normal">(leave empty for full refund of {money(b.price_total || 0)})</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={e => setRefundAmount(e.target.value)}
+                  placeholder={String(b.price_total ?? '')}
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Reason <span className="text-[#636366] font-normal">(optional)</span></label>
+                <select
+                  value={refundReason}
+                  onChange={e => setRefundReason(e.target.value as any)}
+                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                >
+                  <option value="">— No reason —</option>
+                  <option value="requested_by_customer">Requested by customer</option>
+                  <option value="duplicate">Duplicate charge</option>
+                  <option value="fraudulent">Fraudulent</option>
+                </select>
+              </div>
+              {b.payment_method === 'mock' && (
+                <p className="text-[11px] text-amber-300/80 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+                  This is a mock booking — no real refund will be issued. The payment status will just flip to <code className="font-mono">refunded</code>.
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t border-dark-border">
+              <button onClick={() => setRefundOpen(false)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button
+                onClick={() => refundMutation.mutate({
+                  amount: refundAmount ? Number(refundAmount) : undefined,
+                  reason: refundReason || undefined,
+                })}
+                disabled={refundMutation.isPending}
+                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-2"
+              >
+                {refundMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Undo2 size={14} />}
+                Refund
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

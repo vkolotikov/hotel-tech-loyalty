@@ -163,13 +163,46 @@ class StripeService
         return (int) round($amount * 100);
     }
 
+    /**
+     * Refund a payment. Defaults to a full refund. Pass $amount in major
+     * units (e.g. 50.00) for a partial. Returns the Stripe Refund object
+     * so the caller can persist refund_id / status / reason.
+     */
+    public function refund(string $paymentIntentId, ?float $amount = null, ?string $reason = null): \Stripe\Refund
+    {
+        $this->boot();
+
+        if (!$this->client) {
+            throw new \RuntimeException('Stripe is not configured for this organization.');
+        }
+
+        $payload = ['payment_intent' => $paymentIntentId];
+        if ($amount !== null) {
+            $payload['amount'] = $this->toSmallestUnit($amount);
+        }
+        // Stripe accepts: 'duplicate', 'fraudulent', 'requested_by_customer'.
+        // Anything else gets ignored, but we'd rather not 400 — only attach
+        // when the caller passed a recognised value.
+        if ($reason && in_array($reason, ['duplicate', 'fraudulent', 'requested_by_customer'], true)) {
+            $payload['reason'] = $reason;
+        }
+
+        return $this->client->refunds->create($payload);
+    }
+
+    /**
+     * Load a setting via Eloquent so the model's getValueAttribute accessor
+     * runs and decrypts ENCRYPTED_KEYS transparently. Using ->value('value')
+     * would skip the accessor and return ciphertext for stripe_* keys.
+     */
     private function setting(int $orgId, string $key, string $default): string
     {
         try {
-            return HotelSetting::withoutGlobalScopes()
+            $row = HotelSetting::withoutGlobalScopes()
                 ->where('organization_id', $orgId ?: null)
                 ->where('key', $key)
-                ->value('value') ?? $default;
+                ->first();
+            return $row && $row->value !== null && $row->value !== '' ? $row->value : $default;
         } catch (\Throwable) {
             return $default;
         }

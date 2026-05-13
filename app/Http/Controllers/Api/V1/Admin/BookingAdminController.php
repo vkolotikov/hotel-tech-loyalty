@@ -10,6 +10,7 @@ use App\Models\BookingSubmission;
 use App\Services\BookingEngineService;
 use App\Services\PmsResolver;
 use App\Services\SmoobuClient;
+use App\Services\StripeService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -347,6 +348,83 @@ class BookingAdminController extends Controller
             'body'              => $validated['body'],
             'created_at'        => now(),
         ]);
+
+        return $this->show($id);
+    }
+
+    /**
+     * POST /v1/admin/bookings/{id}/refund — refund a Stripe payment.
+     *
+     * Body: { amount?: float, reason?: string }
+     *   - amount omitted → full refund of the captured payment
+     *   - reason: one of duplicate / fraudulent / requested_by_customer
+     *
+     * Updates BookingMirror.payment_status to 'refunded' (full) or
+     * 'partially_refunded'. Audit-logged. Mock bookings short-circuit so
+     * staff can exercise the flow against a fake-paid booking.
+     */
+    public function refund(Request $request, int $id, StripeService $stripe): JsonResponse
+    {
+        $booking = BookingMirror::findOrFail($id);
+
+        $validated = $request->validate([
+            'amount' => 'nullable|numeric|min:0.01',
+            'reason' => 'nullable|in:duplicate,fraudulent,requested_by_customer',
+        ]);
+
+        if ($booking->payment_status === 'refunded') {
+            return response()->json(['error' => 'Booking is already fully refunded.'], 422);
+        }
+
+        // Mock booking — just flip status, nothing to refund on Stripe.
+        if ($booking->payment_method === 'mock') {
+            $booking->update(['payment_status' => 'refunded']);
+            AuditLog::record('booking_refunded', $booking,
+                ['payment_method' => 'mock', 'amount' => $validated['amount'] ?? null],
+                ['payment_status' => 'refunded'],
+                $request->user(),
+                "Mock booking #{$booking->id} marked refunded");
+            return $this->show($id);
+        }
+
+        if ($booking->payment_method !== 'stripe' || empty($booking->stripe_payment_intent_id)) {
+            return response()->json([
+                'error' => 'No Stripe payment is attached to this booking. Refund manually via your PMS or accounting tool.',
+            ], 422);
+        }
+
+        try {
+            $refund = $stripe->refund(
+                $booking->stripe_payment_intent_id,
+                $validated['amount'] ?? null,
+                $validated['reason'] ?? null,
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Stripe refund failed: ' . $e->getMessage(),
+            ], 502);
+        }
+
+        // Full refund if no amount specified OR the refund covers the full
+        // captured total. We don't store the per-refund history here — the
+        // Stripe Dashboard remains the source of truth for the refund ledger.
+        $isFull = $validated['amount'] === null
+            || ((float) $validated['amount']) >= (float) ($booking->price_total ?? 0);
+
+        $booking->update([
+            'payment_status' => $isFull ? 'refunded' : 'partially_refunded',
+        ]);
+
+        AuditLog::record('booking_refunded', $booking,
+            [
+                'amount'      => $validated['amount'] ?? 'full',
+                'reason'      => $validated['reason'] ?? null,
+                'refund_id'   => $refund->id ?? null,
+                'is_full'     => $isFull,
+            ],
+            ['payment_status' => $booking->payment_status],
+            $request->user(),
+            "Stripe refund issued for booking #{$booking->id}" . ($validated['amount'] ? " ({$validated['amount']})" : ' (full)'));
 
         return $this->show($id);
     }

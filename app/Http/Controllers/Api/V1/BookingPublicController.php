@@ -100,9 +100,13 @@ class BookingPublicController extends Controller
             'logo_url'      => $this->getStringSetting($orgId, 'booking_widget_logo_url', '') ?: $brandLogo,
         ];
 
-        // Payment: expose whether Stripe payment is enabled + publishable key
-        $stripe = app(StripeService::class);
-        $paymentEnabled = $stripe->isEnabled();
+        // Payment: expose whether Stripe payment is enabled + publishable key.
+        // Mock mode short-circuits: when on, the widget still walks the
+        // payment step but skips real Stripe Elements + the backend stamps
+        // the booking as paid without a real charge.
+        $stripe        = app(StripeService::class);
+        $mockMode      = $this->getStringSetting($orgId, 'booking_mock_mode', 'false') === 'true';
+        $paymentEnabled = $stripe->isEnabled() && !$mockMode;
 
         return response()->json([
             'units'      => $units,
@@ -114,6 +118,7 @@ class BookingPublicController extends Controller
             'style'      => $style,
             'payment_enabled'      => $paymentEnabled,
             'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
+            'mock_mode'            => $mockMode,
         ]);
     }
 
@@ -190,11 +195,24 @@ class BookingPublicController extends Controller
             'hold_token' => 'required|string',
         ]);
 
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+
+        // Mock mode short-circuit. The widget should never reach this
+        // endpoint when mock_mode=true (config() returns payment_enabled=false),
+        // but if it does — e.g. from a stale frontend — we return a clearly
+        // fake intent id so confirm() can recognise it and auto-mark paid.
+        if (HotelSetting::getValue('booking_mock_mode') === true || HotelSetting::getValue('booking_mock_mode') === 'true') {
+            return response()->json([
+                'client_secret'     => 'mock_secret_' . bin2hex(random_bytes(8)),
+                'payment_intent_id' => 'pi_mock_' . bin2hex(random_bytes(12)),
+                'mock'              => true,
+            ]);
+        }
+
         if (!$stripe->isEnabled()) {
             return response()->json(['error' => 'Online payment is not enabled.'], 400);
         }
 
-        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
         if (!$orgId) {
             return response()->json(['error' => 'Organization context required.'], 400);
         }
@@ -247,30 +265,49 @@ class BookingPublicController extends Controller
             'payment_intent_id'    => 'nullable|string|max:255',
         ]);
 
-        // If a payment_intent_id is provided, verify it succeeded before confirming
-        if (!empty($validated['payment_intent_id'])) {
-            $stripe = app(StripeService::class);
-            if ($stripe->isEnabled()) {
-                try {
-                    $intent = $stripe->retrievePaymentIntent($validated['payment_intent_id']);
-                    if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
+        // Mock mode: any booking confirmed while booking_mock_mode=true gets
+        // stamped as paid via the mock channel so it shows up clearly in
+        // admin reports as "not a real charge". config() returns
+        // payment_enabled=false when mock mode is on so the widget skips
+        // Stripe Elements; we stamp here too in case a payment_intent_id
+        // does come through (defensive against stale frontends).
+        $mockMode = HotelSetting::getValue('booking_mock_mode');
+        if ($mockMode === true || $mockMode === 'true') {
+            $validated['payment_method'] = 'mock';
+            $validated['payment_status'] = 'paid';
+            // Fall through to booking creation — skip Stripe verification entirely.
+        } elseif (!empty($validated['payment_intent_id'])) {
+            // Mock-mode short-circuit. paymentIntent() returns ids prefixed
+            // with `pi_mock_` when booking_mock_mode is on; we trust them
+            // without contacting Stripe and stamp the booking as paid via
+            // the mock channel so admins can spot it later.
+            if (str_starts_with($validated['payment_intent_id'], 'pi_mock_')) {
+                $validated['payment_method'] = 'mock';
+                $validated['payment_status'] = 'paid';
+            } else {
+                $stripe = app(StripeService::class);
+                if ($stripe->isEnabled()) {
+                    try {
+                        $intent = $stripe->retrievePaymentIntent($validated['payment_intent_id']);
+                        if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
+                            return response()->json([
+                                'error' => 'Payment has not been completed. Status: ' . $intent->status,
+                            ], 400);
+                        }
+                        // Verify the payment intent belongs to this booking (hold_token in metadata)
+                        if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
+                            return response()->json([
+                                'error' => 'Payment does not match this booking.',
+                            ], 400);
+                        }
+                        // Attach payment method info to the booking data
+                        $validated['payment_method'] = 'stripe';
+                        $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
+                    } catch (\Throwable $e) {
                         return response()->json([
-                            'error' => 'Payment has not been completed. Status: ' . $intent->status,
+                            'error' => 'Unable to verify payment: ' . $e->getMessage(),
                         ], 400);
                     }
-                    // Verify the payment intent belongs to this booking (hold_token in metadata)
-                    if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
-                        return response()->json([
-                            'error' => 'Payment does not match this booking.',
-                        ], 400);
-                    }
-                    // Attach payment method info to the booking data
-                    $validated['payment_method'] = 'stripe';
-                    $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
-                } catch (\Throwable $e) {
-                    return response()->json([
-                        'error' => 'Unable to verify payment: ' . $e->getMessage(),
-                    ], 400);
                 }
             }
         }
