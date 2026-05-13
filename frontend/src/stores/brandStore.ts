@@ -53,6 +53,19 @@ export const useBrandStore = create<BrandState>()(
       loading: false,
       setBrands: (brands) => {
         const { currentBrandId } = get()
+
+        // Single-brand org: auto-select the only brand instead of staying
+        // on "All brands". Otherwise newly-created records (popup rules,
+        // KB items, chatbot config, etc.) get brand_id=NULL because the
+        // BelongsToBrand trait only auto-fills when current_brand_id is
+        // bound to a truthy value. When a 2nd brand is later added and
+        // the admin filters by brand, those NULL rows vanish — that's
+        // exactly the "popup rules disappear after creating brand 2" bug.
+        if (brands.length === 1) {
+          set({ brands, currentBrandId: brands[0].id })
+          return
+        }
+
         // If the persisted brand is no longer in the list (renamed org,
         // brand was deleted, switched accounts), fall back to "All brands"
         // rather than sending a stale id to the backend.

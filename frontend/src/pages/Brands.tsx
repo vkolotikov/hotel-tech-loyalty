@@ -121,9 +121,17 @@ export function Brands() {
       }
       return api.post('/v1/admin/brands', fd).then(r => r.data)
     },
-    onSuccess: () => {
+    onSuccess: (_data, _vars) => {
       qc.invalidateQueries({ queryKey: ['admin-brands'] })
       qc.invalidateQueries({ queryKey: ['brands'] })
+      // First-brand-creation case: an org that just went from 1 brand to 2.
+      // Brand-scoped pages (popup rules, KB, chatbot config) were caching
+      // results under "All brands" / single-brand context — now they need
+      // to refetch under whichever brand the admin lands on next. Blanket
+      // invalidate so no stale data lingers anywhere.
+      if (!editId) {
+        qc.invalidateQueries()
+      }
       toast.success(editId ? 'Brand updated' : 'Brand created')
       closeForm()
     },
