@@ -32,6 +32,13 @@ class HotelSetting extends Model
     public const ENCRYPTED_KEYS = [
         'stripe_secret_key',
         'stripe_webhook_secret',
+        // Smoobu webhook secret is now per-org (was env-only) — encrypting
+        // it at rest keeps parity with the Stripe webhook secret. The
+        // Smoobu API key is also a credential; encrypted for the same
+        // reason. Legacy plaintext rows are transparently decrypted via
+        // the try/catch in getValueAttribute and re-encrypted on next save.
+        'booking_smoobu_api_key',
+        'booking_smoobu_webhook_secret',
     ];
 
     protected static function booted(): void

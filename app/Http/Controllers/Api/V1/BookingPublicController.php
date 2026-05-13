@@ -462,8 +462,39 @@ class BookingPublicController extends Controller
      */
     public function webhook(Request $request, SmoobuClient $smoobu, BookingEngineService $service): JsonResponse
     {
-        $secret = config('services.smoobu.webhook_secret');
-        if (!$secret || !hash_equals($secret, (string) $request->header('X-Webhook-Secret', ''))) {
+        // ──────────────────────────────────────────────────────────────
+        // Step 1: signature verification.
+        //
+        // Smoobu lets each org configure their own webhook URL. We
+        // require the org to include `?org={widget_token}` in that URL
+        // so we can look up THEIR booking_smoobu_webhook_secret from
+        // hotel_settings and verify against it. This is per-tenant and
+        // beats the previous global env-only secret.
+        //
+        // Legacy fallback: if no `?org=` query param is present we
+        // still accept the env secret so deployments mid-migration
+        // keep working. The fallback path is logged so customers
+        // know to update their Smoobu webhook URL.
+        // ──────────────────────────────────────────────────────────────
+        $providedSecret = (string) $request->header('X-Webhook-Secret', '');
+        $orgToken = $request->query('org');
+        $resolvedOrgId = null;
+        $expectedSecret = null;
+
+        if ($orgToken) {
+            $org = \App\Models\Organization::where('widget_token', $orgToken)->first(['id']);
+            if (!$org) {
+                return response()->json(['error' => 'Unknown org token'], 401);
+            }
+            $resolvedOrgId = (int) $org->id;
+            app()->instance('current_organization_id', $resolvedOrgId);
+            $expectedSecret = HotelSetting::getValue('booking_smoobu_webhook_secret') ?: null;
+        } else {
+            \Illuminate\Support\Facades\Log::warning('Smoobu webhook called without ?org= token — falling back to env secret. Customer should update their Smoobu webhook URL.');
+            $expectedSecret = config('services.smoobu.webhook_secret');
+        }
+
+        if (!$expectedSecret || !hash_equals((string) $expectedSecret, $providedSecret)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -471,6 +502,36 @@ class BookingPublicController extends Controller
         $action  = $payload['action'] ?? null;
         $data    = $payload['data'] ?? $payload;
         $reservationId = $data['id'] ?? $data['reservation_id'] ?? null;
+
+        // ──────────────────────────────────────────────────────────────
+        // Step 2: replay protection.
+        //
+        // Smoobu doesn't include a per-delivery event ID, so we hash the
+        // canonicalised body and insert into smoobu_webhook_events with
+        // a unique index on body_hash. Duplicate → 23505 → caught here
+        // → return 200 no-op. Smoobu stops retrying.
+        // ──────────────────────────────────────────────────────────────
+        $bodyHash = \App\Models\SmoobuWebhookEvent::hashBody($payload);
+        try {
+            \App\Models\SmoobuWebhookEvent::create([
+                'organization_id' => $resolvedOrgId,
+                'body_hash'       => $bodyHash,
+                'action'          => $action ? mb_substr((string) $action, 0, 60) : null,
+                'reservation_id'  => $reservationId ? mb_substr((string) $reservationId, 0, 60) : null,
+                'received_at'     => now(),
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // 23505 = unique violation. Same body already processed.
+            if ($e->getCode() === '23505' || str_contains($e->getMessage(), 'smoobu_webhook_events_body_hash_unique')) {
+                \Illuminate\Support\Facades\Log::info('Smoobu webhook replay ignored', [
+                    'body_hash'      => $bodyHash,
+                    'action'         => $action,
+                    'reservation_id' => $reservationId,
+                ]);
+                return response()->json(['ok' => true, 'note' => 'duplicate event ignored']);
+            }
+            throw $e;
+        }
 
         // Build the list of (org_id, brand_id) candidates with a
         // configured Smoobu key. Same shape as the cron's

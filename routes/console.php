@@ -77,6 +77,17 @@ Schedule::command('bookings:sync-pms')
     ->withoutOverlapping(10)
     ->runInBackground();
 
+// Push local-only bookings to Smoobu after the original confirm() POST
+// failed. Without this, a guest could pay via Stripe + see "Booked!"
+// while the PMS has no record, until staff manually intervenes. Runs
+// every 5 min like the pull cron, but offset so the two don't clobber
+// each other's Smoobu rate budget. Cap at 5 attempts per booking
+// before flagging for manual review — see RetryPmsSync::MAX_ATTEMPTS.
+Schedule::command('bookings:retry-pms-sync')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10)
+    ->runInBackground();
+
 // Engagement Hub daily summary email. Hourly cron — the command itself
 // gates on each org's local 8am (so a Tokyo org and a New York org both
 // get their summary at 8am local) and dedupes via

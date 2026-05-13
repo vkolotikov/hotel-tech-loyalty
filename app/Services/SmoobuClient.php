@@ -394,13 +394,20 @@ class SmoobuClient
 
     // ─── Helpers ───────────────────────────────────────────────────────────
 
+    /**
+     * Load a setting via Eloquent so the model's getValueAttribute accessor
+     * runs and decrypts ENCRYPTED_KEYS (like booking_smoobu_api_key) on
+     * the way out. Using ->value() would skip the accessor and return
+     * ciphertext for encrypted keys.
+     */
     private function setting(string $key, string $default = ''): string
     {
         try {
-            return HotelSetting::withoutGlobalScopes()
+            $row = HotelSetting::withoutGlobalScopes()
                 ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
                 ->where('key', $key)
-                ->value('value') ?? $default;
+                ->first();
+            return $row && $row->value !== null && $row->value !== '' ? $row->value : $default;
         } catch (\Throwable) {
             return $default;
         }
