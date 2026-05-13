@@ -231,6 +231,18 @@ class DocumentationController extends Controller
                         'title' => 'Member Duplicates & Merge',
                         'content' => "Over time the same person can end up with multiple member records — collected via different channels (web form, mobile app, manual entry, chatbot lead capture). The Duplicates page surfaces likely matches and lets staff merge them safely.\n\n**How matching works:**\n- Email match (case-insensitive)\n- Normalized phone match (digits-only)\n- Fuzzy name + DOB match\n- Each candidate pair gets a confidence score\n\n**Merge workflow:**\n1. Open Members → Duplicates\n2. Click \"Review & Merge\" on a pair\n3. Side-by-side preview of both profiles + merge target\n4. Choose which fields to keep from each side\n5. Confirm — points ledger entries, bookings, inquiries, loyalty history all reattach to the surviving record. The losing record is soft-deleted with an audit log entry.\n\n**Best practice:** Run the duplicates check weekly. Always merge into the older record (more history) unless the newer one has materially better data.",
                     ],
+                    [
+                        'title' => 'Sidebar consolidation — 11 pages → 4 hubs',
+                        'content' => "**As of May 2026** the Members & Loyalty section of the sidebar collapsed from 11 entries into 4 tabbed hubs. Less overwhelming, same features.\n\n**The 4 hubs and what's inside each:**\n\n- **Members** — List · Duplicates · Segments\n- **Program** — Tiers · Benefits · Boost events (earn-rate)\n- **Rewards** — Catalog · Offers · Referrals\n- **Campaigns** — Email · Send history\n\nEach hub uses URL `?tab=` for deep links, so bookmarking `/program?tab=benefits` lands you back on that exact tab. Legacy URLs (`/tiers`, `/offers`, `/segments`, `/email-campaigns`, etc.) redirect to the right hub + tab automatically — old bookmarks still work.\n\n**Wallet passes** (Apple + Google) was removed from the sidebar — it's now accessed from Settings → Loyalty as a manage-page link.",
+                    ],
+                    [
+                        'title' => 'Members list — KPIs, tier pills, hover actions',
+                        'content' => "**As of May 2026** the Members list is a KPI-first layout with modern filtering and inline actions.\n\n**KPI strip (top):**\n- Active members (X of total)\n- New this month\n- Average points balance\n- Top tier % (proportion of members in the highest tier)\n\n**Filters below KPIs:**\n- **Tier pills** with live counts (replaces the old Tier dropdown). Click \"All tiers\" to clear.\n- **Status segmented toggle** (All / Active / Inactive) instead of a dropdown.\n- **Sort dropdown** — Recently joined / Points high → low / Name A→Z / Last activity. Sort + filters persist in the URL.\n\n**Per-row hover actions** appear on the right of each row:\n- **Gift icon** — quick award modal. +100/+250/+500/+1000 chips for fast amounts, optional reason. Posts to the standard award endpoint. No need to open the detail page for routine point gifts.\n- **Message icon** — selects just that member and opens the bulk-message flow (so it's a 1-of-1 send).\n\nBulk actions (page checkbox + multi-select) and the floating bulk-action bar are unchanged.",
+                    ],
+                    [
+                        'title' => 'Member detail — tabs, kebab menu, unified points',
+                        'content' => "**As of May 2026** the Member detail page (`/members/{id}`) has a compact hero header and tabbed content.\n\n**Hero:** avatar + name + tier badge + active/inactive pill + email · member# + contact actions on top; a primary-gold **Current Points** number as the headline stat with Lifetime / Stays / Total spent / Member since beneath.\n\n**Header actions (right):** Request review · AI Analysis · `⋯` kebab menu. The kebab hides destructive actions until needed:\n- Edit info (opens the Settings tab in edit mode)\n- Resend welcome email\n- Deactivate / Reactivate\n- Delete permanently\n\n**Tabs (deep-linkable via `?tab=`):**\n- **Overview** — Recent activity (top 5 transactions) + AI Insights panel (when triggered). Right column: QR code + Unified Adjust Points panel.\n- **Transactions** — full points ledger\n- **Journey** — chronological merge of CRM activities, inquiries, reservations, and stays (only shows when a linked CRM guest exists)\n- **CRM Profile** — full linked-guest detail (only shows when linked)\n- **Settings** — Edit form (avatar, name, contact, tier, tier-override-until, active toggle) + Danger zone (Delete permanently)\n\n**Unified Adjust Points panel** replaces the old two Award + Redeem cards. One form with an Award/Redeem segmented toggle and quick-amount chips (+100/+250/+500/+1000). Reason is optional.",
+                    ],
                 ],
             ],
             [
@@ -411,21 +423,77 @@ class DocumentationController extends Controller
             ],
             [
                 'slug' => 'campaigns',
-                'title' => 'Campaigns & Notifications',
+                'title' => 'Campaigns (Email + Push)',
                 'icon' => 'Bell',
-                'description' => 'Push notification campaigns with audience segmentation.',
+                'description' => 'Block-builder email campaigns, broadcast history, and saved-segment targeting.',
                 'articles' => [
                     [
-                        'title' => 'Creating Campaigns',
-                        'content' => "**Steps:**\n1. Define campaign name and message content\n2. Select audience segment (or create new)\n3. Set delivery schedule (immediate or future)\n4. Review and launch\n\n**Segments** filter members by:\n- Tier (Bronze, Silver, Gold, etc.)\n- Points balance range\n- Last activity date\n- Join date range\n- Property association",
+                        'title' => 'Where it lives in the sidebar',
+                        'content' => "Campaigns now sits inside the **Campaigns hub** under Members & Loyalty (sidebar consolidation, May 2026). The hub has two tabs:\n\n- **Email campaigns** — compose, save, and send rich emails to a saved segment\n- **Send history** — every broadcast that touched any channel (bulk push, segment push, email campaign) in one read-only timeline, sourced from the audit log\n\nLegacy URLs still work: `/email-campaigns` redirects to `/campaigns?tab=email`.",
+                    ],
+                    [
+                        'title' => 'KPI strip + filter pills',
+                        'content' => "Top of the Email campaigns tab shows four at-a-glance KPIs:\n\n- **Sent this month** — total recipient count across all campaigns sent since the 1st\n- **Active drafts** — campaigns still in draft status\n- **Total reached** — lifetime sum of delivered emails\n- **Failed this month** — bounced + permanent failures; turns red when non-zero\n\nBelow the KPI strip is a filter pill bar (All / Drafts / Sent / Failed) with live counts. Powered by `GET /v1/admin/email-campaigns/stats` (cached 30s client-side).",
+                    ],
+                    [
+                        'title' => 'Block-based visual builder',
+                        'content' => "The compose form is a **block builder**, not a raw HTML textarea. Six block types:\n\n- **Heading** — H1/H2/H3, color + alignment\n- **Text** — body paragraph with font size, color, alignment\n- **Button** — label, URL, background + text color, alignment\n- **Image** — URL, alt text, width%, optional click-through link\n- **Divider** — horizontal line, color\n- **Spacer** — fixed vertical gap (4–120px)\n\n**Each block expands when clicked** to show its inline editor. Reorder with the ↑/↓ icons on each card; delete with the trash icon.\n\n**Variable chips** — every text/heading/button block has a row of token chips below it: Name · First · Tier · Points · Member #. Clicking a chip pastes that token at the cursor position.\n\n**Templates** load as block stacks: Newsletter / Win-back / Offer spotlight / Tier promotion / Blank. The template populates the block list (and the subject if empty), then you customize from there.\n\n**Visual / Code toggle** at the top-right of the body section lets power users drop into raw HTML edit. Switching to Code detaches the block stack so HTML edits round-trip cleanly; switching back warns before wiping.",
+                    ],
+                    [
+                        'title' => 'Live preview',
+                        'content' => "A sandboxed iframe on the right of the compose form renders your email exactly as it will arrive. Variable tokens are substituted with realistic sample values (e.g. `{{member.name}}` → \"Sarah Johnson\") so you see the recipient view, not the template view.\n\nToggle on/off via the \"Hide preview\" link in the form header. On narrow screens the preview drops below the compose pane.",
+                    ],
+                    [
+                        'title' => 'Send a test before broadcasting',
+                        'content' => "**Send test to me** in the compose footer mails the rendered email to your own staff account, with `[TEST]` prefixed to the subject. It does NOT touch the campaign's status, recipient count, or send counters — purely for QA.\n\nThe button only appears once the draft has been saved at least once (so the campaign has an ID to test against).\n\nTypical flow: load template → tweak blocks → Save draft → Send test to me → review in your inbox → Send now.",
+                    ],
+                    [
+                        'title' => 'Duplicate a campaign',
+                        'content' => "Every row has a kebab `⋯` menu with **Duplicate as draft**. This clones the campaign (works on drafts, sent, or failed) as a fresh draft, appends \"(copy)\" to the name, resets all send-state, and opens it immediately for edit.\n\nUse this when you want to re-run last month's win-back with tweaks, or take a sent campaign as the starting point for a similar audience.",
+                    ],
+                    [
+                        'title' => 'Targeting an audience',
+                        'content' => "Set the **Target segment** dropdown on the draft form. The dropdown lists every saved segment from Members → Segments with its current member count.\n\nIf you leave the segment blank, the campaign saves but won't be sendable until you either (a) attach a segment, or (b) provide explicit `member_ids` at send-time via the API.\n\n**Opt-outs are respected automatically.** Members who have toggled off email_notifications are silently skipped — they still count toward `recipient_count` but not `sent_count`. The send response includes both numbers.",
+                    ],
+                    [
+                        'title' => 'Send history (audit-log view)',
+                        'content' => "The **Send history** tab on the Campaigns hub is a read-only timeline of every member-broadcast that touched any channel. It's sourced from the `audit_logs` table (no new schema) so the view is \"what did we send\" without per-channel telemetry.\n\nThree actions are surfaced:\n- `members_bulk_message` — Bulk push from the Members list\n- `segment_campaign_sent` — Segment-targeted push\n- `email_campaign_sent` — Email broadcast\n\nLatest 50 across all three, sorted by sent-at. Shows channel, what was sent, recipients, delivered, who sent it, and when.",
+                    ],
+                    [
+                        'title' => 'Email Templates (still separate)',
+                        'content' => "The Email Templates page (Settings → Email Templates) is unchanged and remains the home for reusable **transactional** templates — booking confirmation, welcome to loyalty, tier upgrade, points-expiry warning, etc. These are triggered by system events, not broadcast manually.\n\nMarketing broadcasts (one-off and scheduled) live in **Campaigns** instead. The two systems don't overlap: Templates is for emails the platform sends on your behalf, Campaigns is for emails you send to a segment.",
                     ],
                     [
                         'title' => 'Campaign Best Practices',
-                        'content' => "- **Personalize by tier:** High-tier members expect exclusive messaging\n- **Seasonal offers:** Create campaigns around holidays and peak seasons\n- **Re-engagement:** Target members inactive for 90+ days with special incentives\n- **New member welcome:** Automated campaign for newly enrolled members\n- **Points expiry reminders:** Alert members before their points expire",
+                        'content' => "- **Personalize by tier** — use the Tier variable chip so Bronze and Diamond don't get the same body\n- **Send test to yourself first** — every time. Inline styles render differently across Gmail, Outlook, Apple Mail\n- **Re-engagement** — target members inactive for 90+ days with a bonus-points incentive (Win-back template is built for this)\n- **Tier promotion** — congratulate members on a tier upgrade with the Tier promo template\n- **Seasonal offers** — duplicate last year's winning campaign as a starting point, then refresh the dates and copy\n- **Audience size sanity check** — the segment dropdown shows current member count next to each segment name; if it says (3 members) you probably picked the wrong segment",
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'wallet-passes',
+                'title' => 'Wallet Passes (Apple + Google)',
+                'icon' => 'CreditCard',
+                'description' => 'End-to-end Apple Wallet + Google Wallet pass generation for member loyalty cards.',
+                'articles' => [
+                    [
+                        'title' => 'What it is',
+                        'content' => "Members can add their loyalty card to **Apple Wallet** (iOS) or **Google Wallet** (Android) from the mobile app. The pass shows their member number, current tier, current points, and a scannable QR code that maps back to their account.\n\nWhen a member's tier changes or points are awarded/redeemed, the pass auto-updates so what's in their wallet always matches what's in the system.\n\nConfigured per organization. Each org has its own Apple Pass Type ID + signing certificate, and its own Google service account — passes are branded as the hotel, not as Hotel Tech.",
                     ],
                     [
-                        'title' => 'Email Templates',
-                        'content' => "The Email Templates page stores reusable transactional + marketing email templates per organization.\n\n**Each template has:**\n- Name + category (transactional, marketing, system)\n- Subject line (supports placeholders)\n- HTML body + plain-text fallback\n- Available placeholders: `{guest_name}`, `{member_number}`, `{points_balance}`, `{tier}`, `{booking_ref}`, `{check_in}`, `{check_out}`, `{property_name}`, `{hotel_name}`\n\n**System templates** (used internally by the platform):\n- Booking confirmation\n- Booking cancellation\n- Reservation reminder (T-3 days)\n- Welcome to loyalty program\n- Tier upgrade congratulations\n- Points expiry warning\n- Inquiry follow-up\n\n**Best practice:** Always test a template by sending to yourself before assigning it to a campaign or system event. Keep marketing templates short — under 200 words.",
+                        'title' => 'Initial setup (admin)',
+                        'content' => "All credentials are configured in **Settings → Wallet passes**. The page won't issue passes until both sets are uploaded:\n\n**Apple Wallet:**\n1. Apple Developer Account → Pass Type ID (e.g. `pass.com.yourbrand.loyalty`)\n2. Generate a `.p12` signing certificate from that Pass Type ID, set a password\n3. Download Apple's WWDR intermediate certificate (`.cer`, then convert to `.pem`)\n4. Upload the `.p12` (Settings → Wallet passes → Upload Apple cert), enter the password\n5. Upload the WWDR `.pem` to the same screen\n6. Fill in your Apple Team ID and Pass Type ID strings\n\n**Google Wallet:**\n1. Google Pay & Wallet Console → create an Issuer account\n2. Download the service account JSON key\n3. Upload it (Settings → Wallet passes → Upload Google service account)\n4. Enter your Issuer ID\n\nCertificate files are stored on the PRIVATE disk under `storage/app/wallet/{org_id}/` — never publicly accessible. The Apple `.p12` password is Laravel-encrypted at rest.",
+                    ],
+                    [
+                        'title' => 'How members add a pass',
+                        'content' => "On the mobile app's Card tab, members see two buttons (one per wallet, whichever is appropriate for their OS):\n\n- **Add to Apple Wallet** — opens a `.pkpass` file in Safari, which iOS auto-routes to Wallet for one-tap add\n- **Add to Google Wallet** — opens `pay.google.com/gp/v/save/{jwt}` in the browser, which Google handles\n\nThe pass shows the member's QR code, member number, tier, and current point balance. Members can re-add the same pass any time — it overwrites the previous one with fresh data.",
+                    ],
+                    [
+                        'title' => 'Troubleshooting',
+                        'content' => "**\"Wallet passes aren't configured\" error on the member app** — admin hasn't uploaded credentials yet. Go to Settings → Wallet passes and complete both sets.\n\n**Apple pass fails to open in Safari** — almost always a bad `.p12` password or expired WWDR cert. Apple's WWDR cert rolled in 2023; if you uploaded the old one, the signature won't validate. Download the latest from developer.apple.com.\n\n**Google pass shows \"Sample pass\" branding** — your Issuer ID is set to Google's test issuer (`3388000000022xxxxxx`). Update to your real Issuer ID from the Google Pay & Wallet Console.\n\n**Pass shows wrong points / tier** — the pass embeds a snapshot at the moment it's generated. Members need to tap \"Add to Wallet\" again to refresh, OR (future) we'll wire push-update via Apple's Push Notification Service. Right now manual re-add is the path.",
+                    ],
+                    [
+                        'title' => 'Security notes',
+                        'content' => "- Cert files (`.p12`, `.pem`, service account JSON) are **never** stored on the public disk. They live at `storage/app/wallet/{org_id}/` (gitignored, server-only).\n- The Apple cert password is `Crypt`-encrypted on the model via a custom accessor.\n- The Apple Wallet endpoint sits outside `auth:sanctum` (Safari can't carry Authorization headers on navigation). It validates a short-lived Sanctum token from `?token=` via `PersonalAccessToken::findToken()` — token never sent to a third party.\n- Google Wallet uses a stateless JWT signed by the service account; nothing on the Google side is ever sent your private key.",
                     ],
                 ],
             ],
