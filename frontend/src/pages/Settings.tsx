@@ -9,7 +9,7 @@ import {
   Mail, Wifi, CheckCircle, XCircle, Eye, EyeOff,
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, ChevronRight, Link2, Phone,
-  Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck,
+  Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
   BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -1345,6 +1345,48 @@ export function Settings() {
                   </button>
                 </div>
               )}
+              {/* Per-org Smoobu webhook URL helper. Customers need to
+                  paste THIS URL into Smoobu's webhook settings — the
+                  ?org= token routes the delivery to their org so we
+                  can verify against their booking_smoobu_webhook_secret
+                  (not the platform's global secret). Shown regardless
+                  of activation state so it's discoverable during setup. */}
+              {section.id === 'smoobu' && (() => {
+                const widgetToken = settingsData?.widget_token || ''
+                const webhookUrl = widgetToken
+                  ? `${window.location.origin}/api/v1/booking/webhooks/smoobu?org=${widgetToken}`
+                  : ''
+                const copyUrl = () => {
+                  if (!webhookUrl) return
+                  navigator.clipboard.writeText(webhookUrl)
+                    .then(() => toast.success('Webhook URL copied'))
+                    .catch(() => toast.error('Could not copy'))
+                }
+                return (
+                  <div className="mt-3 mb-1 rounded-xl border border-blue-500/15 bg-blue-500/[0.03] p-3 text-xs">
+                    <div className="flex items-center gap-2 mb-1.5 text-blue-300/90">
+                      <Link2 size={12} />
+                      <span className="font-semibold uppercase tracking-wider text-[10px]">Smoobu webhook URL</span>
+                    </div>
+                    <p className="text-gray-500 text-[11px] mb-2 leading-relaxed">
+                      Paste this URL into Smoobu → Settings → Webhooks. The <code className="font-mono text-blue-300">?org=</code> token routes deliveries to your org and verifies against the webhook secret above. Smoobu also sends the secret in the <code className="font-mono text-blue-300">X-Webhook-Secret</code> header.
+                    </p>
+                    {widgetToken ? (
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 px-2 py-1.5 rounded bg-black/30 text-emerald-300 font-mono text-[10px] break-all">
+                          {webhookUrl}
+                        </code>
+                        <button onClick={copyUrl}
+                          className={btnPrimary + ' bg-blue-500/15 text-blue-300 border border-blue-500/20 hover:bg-blue-500/25 text-[11px] px-3 py-1.5 flex-shrink-0'}>
+                          <Copy size={11} /> Copy
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-amber-400 text-[11px]">Widget token not loaded yet — refresh the page.</p>
+                    )}
+                  </div>
+                )
+              })()}
               {/* Sync health — surfaced for integrations that have a sync
                   pipeline (currently Smoobu). Last sync time + counts +
                   collapsible history mean staff can spot silent failures
