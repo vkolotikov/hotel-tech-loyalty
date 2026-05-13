@@ -101,12 +101,31 @@ class BookingPublicController extends Controller
         ];
 
         // Payment: expose whether Stripe payment is enabled + publishable key.
-        // Mock mode short-circuits: when on, the widget still walks the
-        // payment step but skips real Stripe Elements + the backend stamps
-        // the booking as paid without a real charge.
+        // Mock mode short-circuits: when on, the widget skips Stripe entirely
+        // and the backend stamps the booking as paid without a real charge.
         $stripe        = app(StripeService::class);
         $mockMode      = $this->getStringSetting($orgId, 'booking_mock_mode', 'false') === 'true';
-        $paymentEnabled = $stripe->isEnabled() && !$mockMode;
+
+        // Currency-mismatch guard. If the widget quotes in EUR but Stripe
+        // is configured for USD, the PaymentIntent would charge $X instead
+        // of €X — guest sees one currency, gets billed another, chargeback
+        // city. Disable payment when they disagree and surface the
+        // mismatch so the admin sees a clear cause in their Network tab.
+        $stripeCurrency  = strtolower((string) $stripe->currency());
+        $widgetCurrency  = strtolower((string) $currency);
+        $currencyMismatch = $stripe->isEnabled()
+            && $stripeCurrency !== ''
+            && $stripeCurrency !== $widgetCurrency;
+
+        $paymentEnabled = $stripe->isEnabled() && !$mockMode && !$currencyMismatch;
+
+        if ($currencyMismatch) {
+            \Illuminate\Support\Facades\Log::warning('Booking widget currency mismatch — online payment disabled', [
+                'org_id'           => $orgId,
+                'widget_currency'  => $widgetCurrency,
+                'stripe_currency'  => $stripeCurrency,
+            ]);
+        }
 
         return response()->json([
             'units'      => $units,
@@ -119,6 +138,7 @@ class BookingPublicController extends Controller
             'payment_enabled'      => $paymentEnabled,
             'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
             'mock_mode'            => $mockMode,
+            'currency_mismatch'    => $currencyMismatch,
         ]);
     }
 
@@ -211,6 +231,17 @@ class BookingPublicController extends Controller
 
         if (!$stripe->isEnabled()) {
             return response()->json(['error' => 'Online payment is not enabled.'], 400);
+        }
+
+        // Defense in depth — config() already disables payment_enabled
+        // when currencies don't match, but if a stale widget still calls
+        // this endpoint we refuse rather than create a mis-currency intent.
+        $widgetCurrency = strtolower((string) HotelSetting::getValue('booking_currency', 'EUR'));
+        $stripeCurrency = strtolower((string) $stripe->currency());
+        if ($stripeCurrency && $stripeCurrency !== $widgetCurrency) {
+            return response()->json([
+                'error' => 'Payment configuration error: widget currency does not match Stripe currency.',
+            ], 400);
         }
 
         if (!$orgId) {

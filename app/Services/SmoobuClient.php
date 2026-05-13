@@ -435,46 +435,66 @@ class SmoobuClient
         }
     }
 
+    /**
+     * Smoobu rate-limits most endpoints at ~60 req/min. On 429, retry with
+     * exponential backoff (250ms / 500ms / 1s) up to 3 times, honouring the
+     * `Retry-After` header when Smoobu sends one. Non-429 5xx errors also
+     * get one retry (transient gateway hiccups), but 4xx other than 429 are
+     * fatal — those reflect a real client problem.
+     */
+    private const RATE_LIMIT_RETRIES = 3;
+    private const BACKOFF_MS_BASE    = 250;
+
     private function get(string $path, array $params = []): array
     {
-        $response = Http::withHeaders(['Api-Key' => $this->apiKey])
-            ->timeout($this->timeout)
-            ->get("{$this->baseUrl}{$path}", $params);
-
-        if (!$response->successful()) {
-            Log::error("Smoobu GET {$path} failed", ['status' => $response->status(), 'body' => $response->body()]);
-            throw new \RuntimeException("Smoobu API error: {$response->status()}");
-        }
-
-        return $response->json() ?? [];
+        return $this->request('GET', $path, ['query' => $params]);
     }
 
     private function post(string $path, array $data): array
     {
-        $response = Http::withHeaders(['Api-Key' => $this->apiKey])
-            ->timeout($this->timeout)
-            ->post("{$this->baseUrl}{$path}", $data);
-
-        if (!$response->successful()) {
-            Log::error("Smoobu POST {$path} failed", ['status' => $response->status(), 'body' => $response->body()]);
-            throw new \RuntimeException("Smoobu API error: {$response->status()}");
-        }
-
-        return $response->json() ?? [];
+        return $this->request('POST', $path, ['json' => $data]);
     }
 
     private function delete(string $path): array
     {
-        $response = Http::withHeaders(['Api-Key' => $this->apiKey])
-            ->timeout($this->timeout)
-            ->delete("{$this->baseUrl}{$path}");
+        return $this->request('DELETE', $path, [], ['ok' => true]);
+    }
 
-        if (!$response->successful()) {
-            Log::error("Smoobu DELETE {$path} failed", ['status' => $response->status(), 'body' => $response->body()]);
-            throw new \RuntimeException("Smoobu API error: {$response->status()}");
+    private function request(string $method, string $path, array $options, array $default = []): array
+    {
+        $url = "{$this->baseUrl}{$path}";
+        $attempt = 0;
+
+        while (true) {
+            $client = Http::withHeaders(['Api-Key' => $this->apiKey])->timeout($this->timeout);
+            $response = match ($method) {
+                'GET'    => $client->get($url, $options['query'] ?? []),
+                'POST'   => $client->post($url, $options['json'] ?? []),
+                'DELETE' => $client->delete($url),
+                default  => throw new \LogicException("Unsupported method: {$method}"),
+            };
+
+            if ($response->successful()) {
+                return $response->json() ?? $default;
+            }
+
+            $status = $response->status();
+            $isRetryable = $status === 429 || $status >= 500;
+
+            if (!$isRetryable || $attempt >= self::RATE_LIMIT_RETRIES) {
+                Log::error("Smoobu {$method} {$path} failed", ['status' => $status, 'body' => $response->body(), 'attempts' => $attempt + 1]);
+                throw new \RuntimeException("Smoobu API error: {$status}");
+            }
+
+            // Honour Retry-After if present; otherwise exponential backoff.
+            $retryAfter = (int) $response->header('Retry-After');
+            $sleepMs    = $retryAfter > 0
+                ? $retryAfter * 1000
+                : (int) (self::BACKOFF_MS_BASE * (2 ** $attempt));
+            Log::info("Smoobu {$method} {$path} retrying after {$sleepMs}ms", ['status' => $status, 'attempt' => $attempt + 1]);
+            usleep($sleepMs * 1000);
+            $attempt++;
         }
-
-        return $response->json() ?? ['ok' => true];
     }
 
     // ─── Mock Responses ────────────────────────────────────────────────────

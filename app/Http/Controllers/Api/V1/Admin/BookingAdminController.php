@@ -400,6 +400,27 @@ class BookingAdminController extends Controller
     }
 
     /** PATCH /v1/admin/bookings/{id}/status — update internal status / invoice / payment. */
+    /**
+     * Legal payment_status transitions. Anything not listed for a current
+     * state is rejected with 422 so staff can't accidentally flip a paid
+     * booking back to "pending" and lose the audit trail.
+     *
+     * `paid` and `refunded` are terminal-ish — only narrow forward-paths
+     * out of them. `disputed` can resolve either way. Manual states like
+     * `invoice_waiting` and `channel_managed` keep flexibility for staff
+     * workflows that bypass the digital payment path.
+     */
+    private const PAYMENT_STATUS_TRANSITIONS = [
+        'open'                => ['pending', 'paid', 'invoice_waiting', 'channel_managed'],
+        'pending'             => ['paid', 'open', 'invoice_waiting', 'channel_managed'],
+        'paid'                => ['partially_refunded', 'refunded', 'disputed'],
+        'partially_refunded'  => ['refunded', 'paid', 'disputed'],
+        'refunded'            => [],  // terminal — only restored via webhook on dispute-won
+        'disputed'            => ['paid', 'refunded', 'partially_refunded'],
+        'invoice_waiting'     => ['paid', 'open', 'channel_managed'],
+        'channel_managed'     => ['paid', 'open', 'pending'],
+    ];
+
     public function updateStatus(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([
@@ -408,6 +429,35 @@ class BookingAdminController extends Controller
             'payment_status'  => 'nullable|string|max:40',
             'price_paid'      => 'nullable|numeric|min:0',
         ]);
+
+        // State-machine guard on payment_status — see PAYMENT_STATUS_TRANSITIONS.
+        // Returns 422 with a clear message rather than silently allowing
+        // illegal transitions that strand bookings in inconsistent state.
+        if (array_key_exists('payment_status', $validated) && $validated['payment_status'] !== null) {
+            $existing = BookingMirror::findOrFail($id);
+            $current = $existing->payment_status ?: 'open';
+            $next    = $validated['payment_status'];
+
+            if ($current !== $next) {
+                $allowed = self::PAYMENT_STATUS_TRANSITIONS[$current] ?? null;
+                if ($allowed === null) {
+                    return response()->json([
+                        'error' => "Unknown current payment_status '{$current}'. Cannot transition.",
+                    ], 422);
+                }
+                if (!in_array($next, $allowed, true)) {
+                    return response()->json([
+                        'error'   => "Cannot move payment_status from '{$current}' to '{$next}'.",
+                        'allowed' => $allowed,
+                        'hint'    => $current === 'refunded'
+                            ? 'Refunded is terminal — issue a new charge if you need to restore.'
+                            : ($current === 'paid' && $next === 'pending'
+                                ? 'A paid booking cannot become pending. Use the Refund button to reverse the charge.'
+                                : null),
+                    ], 422);
+                }
+            }
+        }
 
         // Row-lock so concurrent status/payment edits serialize instead of
         // racing (e.g. one operator marks paid while another changes status).

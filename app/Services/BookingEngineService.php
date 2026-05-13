@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\IdempotencyReplay;
 use App\Mail\BookingConfirmationMail;
 use App\Mail\BookingMembershipMail;
 use App\Models\AuditLog;
@@ -140,10 +141,28 @@ class BookingEngineService
         // double-booking a single-inventory unit.
         $lockKey = "room:{$orgId}:{$apartmentId}";
 
+        try {
         [$mirror, $result, $internalStatus, $pmsResult] = DB::transaction(function () use (
             $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey
         ) {
             DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+
+            // Re-check idempotency INSIDE the lock so two requests with the
+            // same key that both missed the pre-check (race window between
+            // line ~108 and here) don't both create a booking. The pre-check
+            // outside the lock is the fast path; this is the correctness check.
+            // Whoever lost the race finds the winner's row and re-throws as
+            // a sentinel below, which the outer catch converts into the
+            // cached response.
+            if ($idempotencyKey && $orgId) {
+                $existing = BookingIdempotencyKey::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+                if ($existing && $existing->isValid()) {
+                    throw new IdempotencyReplay($existing->response_json);
+                }
+            }
 
             // Re-load hold under lock — defends against concurrent consumption.
             $hold = BookingHold::where('id', $hold->id)->lockForUpdate()->first();
@@ -326,6 +345,12 @@ class BookingEngineService
 
             return [$mirror, $result, $internalStatus, $pmsResult];
         });
+        } catch (IdempotencyReplay $replay) {
+            // Concurrent request with the same idempotency_key won the race
+            // and already wrote the cached response. The transaction is
+            // rolled back automatically, so no partial state remains.
+            return array_merge($replay->response, ['replayed' => true]);
+        }
 
         // Lifecycle: a confirmed widget booking is real engagement. If the
         // departure date has already passed (rare for widget but possible
@@ -361,15 +386,40 @@ class BookingEngineService
             'currency'          => 'EUR',
         ];
 
-        // Save idempotency
+        // Save idempotency. Unique constraint on (organization_id,
+        // idempotency_key) is the final backstop — if a concurrent request
+        // slipped past both the pre-check and the in-lock re-check (very
+        // unusual: same key targeting different rooms), we catch the 23505
+        // here, look up the winner's row, and return THAT response so the
+        // caller gets the original booking reference rather than a stranded
+        // duplicate. The duplicate booking row already committed before
+        // this point, so log it loudly — staff will need to cancel it.
         if ($idempotencyKey) {
-            BookingIdempotencyKey::create([
-                'idempotency_key' => $idempotencyKey,
-                'request_hash'    => md5(json_encode($data)),
-                'response_json'   => $response,
-                'status_code'     => 201,
-                'expires_at'      => now()->addHours(24),
-            ]);
+            try {
+                BookingIdempotencyKey::create([
+                    'idempotency_key' => $idempotencyKey,
+                    'request_hash'    => md5(json_encode($data)),
+                    'response_json'   => $response,
+                    'status_code'     => 201,
+                    'expires_at'      => now()->addHours(24),
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() === '23505') {
+                    \Illuminate\Support\Facades\Log::error('Idempotency-key race produced a duplicate booking — manual cancel required', [
+                        'org_id'           => $orgId,
+                        'idempotency_key'  => $idempotencyKey,
+                        'duplicate_mirror_id' => $mirror->id ?? null,
+                    ]);
+                    $existing = BookingIdempotencyKey::withoutGlobalScopes()
+                        ->where('organization_id', $orgId)
+                        ->where('idempotency_key', $idempotencyKey)
+                        ->first();
+                    if ($existing && $existing->response_json) {
+                        return array_merge($existing->response_json, ['replayed' => true]);
+                    }
+                }
+                throw $e;
+            }
         }
 
         $this->logSubmission('success', null, null, array_merge($data, $response), $requestId, $idempotencyKey, $response, $guestId);
