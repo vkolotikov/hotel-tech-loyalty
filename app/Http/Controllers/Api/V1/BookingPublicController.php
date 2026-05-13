@@ -378,15 +378,43 @@ class BookingPublicController extends Controller
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
         // v2 prefix: response shape changed from array<date,price> to
         // ['prices' => …, 'availability' => …]. Bumping busts pre-shape cache.
-        $cacheKey = "booking:calendar:v2:{$orgId}:{$validated['start']}:{$validated['end']}";
+        $freshKey = "booking:calendar:v2:{$orgId}:{$validated['start']}:{$validated['end']}";
+        // Stale-while-revalidate: keep a longer-lived backup copy keyed
+        // separately so a Smoobu outage doesn't blank the widget calendar.
+        // Stale TTL of 24h is intentional — even day-old prices are more
+        // useful than an empty calendar that breaks the booking funnel.
+        $staleKey = "booking:calendar:v2:stale:{$orgId}:{$validated['start']}:{$validated['end']}";
 
-        $result = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($validated, $availability) {
-            return $availability->calendarPrices($validated['start'], $validated['end']);
-        });
+        $cache = \Illuminate\Support\Facades\Cache::store();
+        $result = $cache->get($freshKey);
+        $isStale = false;
+
+        if ($result === null) {
+            try {
+                $result = $availability->calendarPrices($validated['start'], $validated['end']);
+                // Write both: fresh (5 min) AND stale backup (24h).
+                $cache->put($freshKey, $result, 300);
+                $cache->put($staleKey, $result, 86400);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('calendarPrices live fetch failed — serving stale if available', [
+                    'org_id' => $orgId,
+                    'error'  => $e->getMessage(),
+                ]);
+                $result = $cache->get($staleKey);
+                $isStale = true;
+            }
+        }
+
+        if (!$result) {
+            return response()->json(['prices' => [], 'availability' => [], 'stale' => false]);
+        }
 
         return response()->json([
             'prices'       => $result['prices']       ?? [],
             'availability' => $result['availability'] ?? [],
+            // Surfaced so the widget can show a discreet "prices may be
+            // out of date" notice if the backend is in stale-fallback mode.
+            'stale'        => $isStale,
         ]);
     }
 

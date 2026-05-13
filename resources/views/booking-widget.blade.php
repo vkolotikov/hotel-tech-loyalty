@@ -1620,9 +1620,12 @@ styleTag.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
 document.head.appendChild(styleTag);
 
 /* --- Init --- */
+var lastConfigLoadAt = 0;
+
 apiGet('config').then(function(data) {
   state.config = data;
   state.loading = false;
+  lastConfigLoadAt = Date.now();
   applyStyle(data);
 
   // Initialize Stripe if payment is enabled
@@ -1681,6 +1684,41 @@ apiGet('config').then(function(data) {
   state.loading = false;
   state.error = 'Unable to load booking configuration. Please refresh the page.';
   render();
+});
+
+/* --- Refresh config when tab becomes visible after a long pause ---
+ * If the admin rotates the Stripe publishable key while a guest has the
+ * widget open in a background tab, the cached key would 400 on the
+ * eventual click. We re-fetch when the tab returns after 5+ minutes,
+ * but only if the guest hasn't started the payment step (otherwise the
+ * already-mounted Stripe Elements would be torn out from under them).
+ */
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) return;
+  if (Date.now() - lastConfigLoadAt < 5 * 60 * 1000) return;
+  // Don't disrupt an active payment flow — Stripe Elements is already
+  // mounted with the existing publishable key and re-keying mid-flight
+  // breaks the iframe.
+  if (state.step >= 4 || state.stripeElements) return;
+
+  apiGet('config').then(function (data) {
+    lastConfigLoadAt = Date.now();
+    var keyChanged = state.stripePublishableKey !== (data.stripe_publishable_key || null);
+    state.config = data;
+    if (keyChanged && data.payment_enabled && data.stripe_publishable_key) {
+      state.stripePublishableKey = data.stripe_publishable_key;
+      loadStripeJs(function () {
+        state.stripeInstance = Stripe(state.stripePublishableKey);
+      });
+    }
+    if (state.config && state.config.currency_mismatch !== undefined) {
+      // Mismatch banner needs a re-render even if nothing else changed.
+      render();
+    }
+  }).catch(function () {
+    // Silent — widget keeps using its cached config; next genuine action
+    // will surface the failure properly.
+  });
 });
 
 })();

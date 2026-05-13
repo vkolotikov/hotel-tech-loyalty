@@ -910,6 +910,23 @@ class BookingAdminController extends Controller
                 ['value' => json_encode($units), 'type' => 'json', 'group' => 'booking'],
             );
 
+            // Orphan cleanup: any booking_rooms row for this org whose pms_id
+            // is no longer in the fresh Smoobu list gets soft-deactivated.
+            // Admin-created rooms (pms_id IS NULL) are NOT touched — they
+            // exist independently of the PMS. This stops the widget from
+            // offering rooms that no longer exist in Smoobu's inventory.
+            $orphaned = 0;
+            if ($orgId) {
+                $freshPmsIds = array_keys($units);
+                $orphaned = \App\Models\BookingRoom::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->whereNotNull('pms_id')
+                    ->where('pms_id', '!=', '')
+                    ->whereNotIn('pms_id', $freshPmsIds)
+                    ->where('is_active', true)
+                    ->update(['is_active' => false]);
+            }
+
             // Clear availability caches
             \Illuminate\Support\Facades\Cache::flush();
 
@@ -917,10 +934,17 @@ class BookingAdminController extends Controller
                 'organization_id' => $orgId,
                 'user_id'         => request()->user()?->id,
                 'action'          => 'booking.sync_apartments',
-                'description'     => 'Synced ' . count($units) . ' apartments from PMS',
+                'description'     => 'Synced ' . count($units) . ' apartments from PMS'
+                    . ($orphaned > 0 ? " · deactivated {$orphaned} orphan(s) no longer in PMS" : ''),
             ]);
 
-            return response()->json(['message' => 'Synced ' . count($units) . ' apartments from PMS.', 'count' => count($units), 'units' => $units]);
+            return response()->json([
+                'message' => 'Synced ' . count($units) . ' apartments from PMS.'
+                    . ($orphaned > 0 ? " Deactivated {$orphaned} orphan room(s)." : ''),
+                'count'   => count($units),
+                'orphans_deactivated' => $orphaned,
+                'units'   => $units,
+            ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Apartment sync failed', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to sync apartments: ' . $e->getMessage(), 'count' => 0], 200);
