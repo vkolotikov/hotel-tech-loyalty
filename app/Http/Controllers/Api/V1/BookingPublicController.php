@@ -356,33 +356,29 @@ class BookingPublicController extends Controller
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature', '');
 
-        // Try to verify with any configured webhook secret across all orgs.
-        // Stripe sends webhooks without org context, so we check org_id from
-        // the PaymentIntent metadata to find the right org's secret.
-        $event = null;
         $rawPayload = json_decode($payload, true);
-        $orgId = $rawPayload['data']['object']['metadata']['org_id'] ?? null;
+        $orgId = $this->resolveStripeWebhookOrg($rawPayload);
 
-        if ($orgId) {
-            // Bind the org so StripeService can load the correct keys
-            app()->instance('current_organization_id', (int) $orgId);
-            $stripe = app(StripeService::class);
-
-            try {
-                // Signature verification proves the payload is authentic from Stripe,
-                // so the org_id in metadata is trustworthy after this succeeds.
-                $event = $stripe->constructWebhookEvent($payload, $sigHeader);
-            } catch (\Stripe\Exception\SignatureVerificationException $e) {
-                return response()->json(['error' => 'Invalid signature'], 400);
-            } catch (\Throwable $e) {
-                return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
-            }
-        } else {
+        if (!$orgId) {
             // No org context — log and acknowledge (use Log since AuditLog requires org)
             \Illuminate\Support\Facades\Log::info('Stripe webhook without org context', [
                 'event_type' => $rawPayload['type'] ?? 'unknown',
             ]);
             return response()->json(['received' => true]);
+        }
+
+        // Bind the org so StripeService can load the correct keys
+        app()->instance('current_organization_id', (int) $orgId);
+        $stripe = app(StripeService::class);
+
+        try {
+            // Signature verification proves the payload is authentic from Stripe,
+            // so the org_id in metadata is trustworthy after this succeeds.
+            $event = $stripe->constructWebhookEvent($payload, $sigHeader);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            return response()->json(['error' => 'Invalid signature'], 400);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
         }
 
         // Handle relevant events
@@ -429,9 +425,171 @@ class BookingPublicController extends Controller
                     'hold_token'    => $intent->metadata->hold_token ?? null,
                 ]),
             ]);
+        } elseif ($event->type === 'charge.refunded') {
+            // Refund issued — sync our state. Fires for refunds initiated from
+            // the Stripe Dashboard, async settlement reversals, and our own
+            // admin refunds (idempotency check below dedupes our own actions).
+            $this->handleChargeRefunded($event->data->object);
+        } elseif ($event->type === 'charge.dispute.created') {
+            // Chargeback opened. Stripe holds the funds pending review. We
+            // flag the booking so staff see it — do NOT auto-refund yet,
+            // since most disputes are won (i.e. funds released back to us).
+            $this->handleChargeDisputeCreated($event->data->object);
+        } elseif ($event->type === 'charge.dispute.closed') {
+            // Dispute decided. If lost (status='lost'), funds were debited
+            // → treat as refunded. If won, restore payment_status to 'paid'.
+            $this->handleChargeDisputeClosed($event->data->object);
         }
 
         return response()->json(['received' => true]);
+    }
+
+    /**
+     * Resolve the org for a Stripe webhook before signature verification.
+     *
+     * Path 1 (preferred): metadata.org_id — propagated from PaymentIntent
+     * metadata onto Charge events. Works for payment_intent.* and
+     * charge.* including charge.refunded.
+     *
+     * Path 2 (dispute events): Disputes don't carry user metadata, but
+     * their payload includes a `payment_intent` field. Look up the
+     * BookingMirror by that PI id (cross-tenant scope-less query) and
+     * grab its organization_id. Safe because signature verification
+     * still happens with the resolved org's secret afterwards — an
+     * attacker spoofing a PI id can't make their forged payload
+     * verify.
+     */
+    private function resolveStripeWebhookOrg(?array $rawPayload): ?int
+    {
+        if (!$rawPayload) return null;
+        $metaOrgId = $rawPayload['data']['object']['metadata']['org_id'] ?? null;
+        if ($metaOrgId) return (int) $metaOrgId;
+
+        $paymentIntentId = $rawPayload['data']['object']['payment_intent'] ?? null;
+        if ($paymentIntentId) {
+            $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('stripe_payment_intent_id', $paymentIntentId)
+                ->first(['organization_id']);
+            return $mirror ? (int) $mirror->organization_id : null;
+        }
+
+        return null;
+    }
+
+    private function handleChargeRefunded(\Stripe\Charge $charge): void
+    {
+        $paymentIntentId = $charge->payment_intent;
+        if (!$paymentIntentId) return;
+
+        $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('stripe_payment_intent_id', $paymentIntentId)
+            ->first();
+        if (!$mirror) return;
+
+        // Find the most recent refund on the charge.
+        $refunds = $charge->refunds->data ?? [];
+        if (empty($refunds)) return;
+        $latest = end($refunds);
+        $refundId = is_object($latest) ? $latest->id : ($latest['id'] ?? null);
+        $refundAmt = is_object($latest)
+            ? $latest->amount / 100
+            : (($latest['amount'] ?? 0) / 100);
+
+        // Idempotency: if we already processed this exact refund id
+        // (admin-initiated path persists last_refund_id before the webhook
+        // can arrive), skip to avoid double-reversing loyalty points or
+        // re-sending the email.
+        if ($mirror->last_refund_id === $refundId) {
+            \Illuminate\Support\Facades\Log::info('Stripe charge.refunded webhook — already processed', [
+                'mirror_id' => $mirror->id,
+                'refund_id' => $refundId,
+            ]);
+            return;
+        }
+
+        try {
+            app(\App\Services\BookingRefundService::class)->applyRefund(
+                $mirror,
+                $refundAmt,
+                $latest->reason ?? ($latest['reason'] ?? 'webhook'),
+                $refundId,
+                false, // refund already exists on Stripe — don't issue a second one
+                null,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('charge.refunded webhook applyRefund failed', [
+                'mirror_id' => $mirror->id,
+                'error'     => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function handleChargeDisputeCreated(\Stripe\Dispute $dispute): void
+    {
+        $paymentIntentId = $dispute->payment_intent;
+        if (!$paymentIntentId) return;
+
+        $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('stripe_payment_intent_id', $paymentIntentId)
+            ->first();
+        if (!$mirror) return;
+
+        try {
+            app(\App\Services\BookingRefundService::class)->flagDisputed(
+                $mirror,
+                $dispute->reason ?? null,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('charge.dispute.created webhook failed', [
+                'mirror_id' => $mirror->id,
+                'error'     => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function handleChargeDisputeClosed(\Stripe\Dispute $dispute): void
+    {
+        $paymentIntentId = $dispute->payment_intent;
+        if (!$paymentIntentId) return;
+
+        $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('stripe_payment_intent_id', $paymentIntentId)
+            ->first();
+        if (!$mirror) return;
+
+        $status = $dispute->status ?? '';
+
+        if ($status === 'lost') {
+            // Dispute lost — funds permanently debited. Treat as a full
+            // refund (with all the side effects: points reversal, Smoobu
+            // cancel, refund email).
+            try {
+                app(\App\Services\BookingRefundService::class)->applyRefund(
+                    $mirror,
+                    null,
+                    'fraudulent',
+                    'dispute_' . $dispute->id,
+                    false,
+                    null,
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Dispute-lost refund failed', [
+                    'mirror_id' => $mirror->id,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        } elseif (in_array($status, ['won', 'warning_closed'], true)) {
+            // Funds reinstated — restore status only if we'd marked it disputed.
+            if ($mirror->payment_status === 'disputed') {
+                $mirror->update(['payment_status' => 'paid']);
+                \App\Models\AuditLog::record('booking_dispute_won', $mirror,
+                    ['dispute_id' => $dispute->id, 'status' => $status],
+                    ['payment_status' => 'paid'],
+                    null,
+                    "Stripe dispute resolved in our favour on booking #{$mirror->id}",
+                );
+            }
+        }
     }
 
     /**

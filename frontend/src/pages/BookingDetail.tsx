@@ -12,11 +12,14 @@ const INVOICE_OPTIONS = ['not_applicable', 'to_issue', 'issued', 'waiting_funds'
 const PAYMENT_STATUS_OPTIONS = ['pending', 'paid', 'invoice_waiting', 'channel_managed', 'open']
 
 const PAY_PILL: Record<string, string> = {
-  paid:            'bg-emerald-500/15 text-emerald-400',
-  open:            'bg-red-500/15 text-red-400',
-  pending:         'bg-red-500/15 text-red-400',
-  invoice_waiting: 'bg-amber-500/15 text-amber-400',
-  channel_managed: 'bg-teal-500/15 text-teal-400',
+  paid:                'bg-emerald-500/15 text-emerald-400',
+  open:                'bg-red-500/15 text-red-400',
+  pending:             'bg-red-500/15 text-red-400',
+  invoice_waiting:     'bg-amber-500/15 text-amber-400',
+  channel_managed:     'bg-teal-500/15 text-teal-400',
+  refunded:            'bg-amber-500/15 text-amber-300',
+  partially_refunded:  'bg-amber-500/15 text-amber-300',
+  disputed:            'bg-red-500/15 text-red-300',
 }
 
 function formatLabel(s: string) {
@@ -64,10 +67,23 @@ export function BookingDetail() {
   const refundMutation = useMutation({
     mutationFn: (data: { amount?: number; reason?: string }) =>
       api.post(`/v1/admin/bookings/${id}/refund`, data),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       setRefundOpen(false); setRefundAmount(''); setRefundReason('')
       qc.invalidateQueries({ queryKey: ['booking-detail', id] })
-      toast.success('Refund issued')
+      // Surface side-effect summary returned by the backend so staff
+      // know what happened beyond just the Stripe charge.
+      const o = res?.data?.refund_outcome
+      if (o) {
+        const bits = [
+          o.is_full ? 'Full refund' : 'Partial refund',
+          o.reversed_points > 0 ? `${o.reversed_points} pts reversed` : null,
+          o.pms_cancelled ? 'PMS cancelled' : (o.is_full ? 'PMS cancel needed manually' : null),
+          o.email_sent ? 'Guest emailed' : 'No email sent',
+        ].filter(Boolean).join(' · ')
+        toast.success(bits)
+      } else {
+        toast.success('Refund issued')
+      }
     },
     onError: (e: any) => toast.error(e?.response?.data?.error || 'Refund failed'),
   })
@@ -256,7 +272,32 @@ export function BookingDetail() {
                         <span className="text-gray-500">Charged</span>
                         <span className="text-white tabular-nums">{money(b.price_paid || 0)}</span>
                       </div>
+                      {b.refunded_amount > 0 && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Refunded</span>
+                            <span className="text-amber-300 tabular-nums">−{money(b.refunded_amount)}</span>
+                          </div>
+                          {b.refunded_at && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Refunded at</span>
+                              <span className="text-gray-300">{new Date(b.refunded_at).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {b.last_refund_id && b.payment_method !== 'mock' && (
+                            <div className="flex justify-between gap-3">
+                              <span className="text-gray-500">Refund ID</span>
+                              <span className="text-gray-300 font-mono truncate text-right">{b.last_refund_id}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
+                    {b.payment_status === 'disputed' && (
+                      <p className="text-[11px] text-red-300/80 mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-2.5">
+                        ⚠ Chargeback opened on this payment. Stripe is holding the funds pending review. Reply to the dispute from your Stripe Dashboard before issuing a refund.
+                      </p>
+                    )}
                     {b.payment_method === 'mock' && (
                       <p className="text-[11px] text-amber-300/80 mt-3">
                         This booking was created in Mock Mode — no real charge was made.

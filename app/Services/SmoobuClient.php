@@ -207,6 +207,28 @@ class SmoobuClient
         return $this->get("/reservations/{$reservationId}");
     }
 
+    /**
+     * Cancel a reservation in Smoobu (best-effort).
+     *
+     * Smoobu's external API supports DELETE on reservations created via
+     * the API for the org's direct booking channel. Channel-managed
+     * bookings (Airbnb, Booking.com etc.) cannot be cancelled through us
+     * because the OTA is the source of truth — Smoobu will return 4xx
+     * and the caller must handle that gracefully (typically by audit-
+     * logging the failure and prompting staff to cancel in the PMS UI).
+     *
+     * Mock mode short-circuits to a synthetic success.
+     */
+    public function cancelReservation(string $reservationId): array
+    {
+        $this->boot();
+        if ($this->isMock) {
+            return ['id' => $reservationId, 'status' => 'cancelled'];
+        }
+
+        return $this->delete("/reservations/{$reservationId}");
+    }
+
     public function listReservations(array $params = []): array
     {
         $this->boot();
@@ -439,6 +461,20 @@ class SmoobuClient
         }
 
         return $response->json() ?? [];
+    }
+
+    private function delete(string $path): array
+    {
+        $response = Http::withHeaders(['Api-Key' => $this->apiKey])
+            ->timeout($this->timeout)
+            ->delete("{$this->baseUrl}{$path}");
+
+        if (!$response->successful()) {
+            Log::error("Smoobu DELETE {$path} failed", ['status' => $response->status(), 'body' => $response->body()]);
+            throw new \RuntimeException("Smoobu API error: {$response->status()}");
+        }
+
+        return $response->json() ?? ['ok' => true];
     }
 
     // ─── Mock Responses ────────────────────────────────────────────────────

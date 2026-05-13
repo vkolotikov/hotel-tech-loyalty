@@ -27,9 +27,11 @@ class BookingMirror extends Model
         'check_in_time', 'check_out_time',
         'price_total', 'price_paid', 'prepayment_amount', 'prepayment_paid',
         'deposit_amount', 'deposit_paid',
+        'refunded_amount', 'refunded_at', 'last_refund_id',
         'notice', 'assistant_notice', 'guest_app_url',
         'payment_method', 'payment_status', 'stripe_payment_intent_id', 'internal_status', 'invoice_state',
         'source_created_at', 'source_updated_at', 'synced_at', 'lifecycle_counted_at', 'raw_json',
+        'pms_sync_attempts', 'pms_sync_last_attempt_at', 'pms_sync_last_error',
     ];
 
     protected $casts = [
@@ -37,6 +39,8 @@ class BookingMirror extends Model
         'departure_date'    => 'date',
         'price_total'       => 'decimal:2',
         'price_paid'        => 'decimal:2',
+        'refunded_amount'   => 'decimal:2',
+        'refunded_at'       => 'datetime',
         'prepayment_amount' => 'decimal:2',
         'prepayment_paid'   => 'boolean',
         'deposit_amount'    => 'decimal:2',
@@ -45,6 +49,7 @@ class BookingMirror extends Model
         'source_updated_at' => 'datetime',
         'synced_at'         => 'datetime',
         'lifecycle_counted_at' => 'datetime',
+        'pms_sync_last_attempt_at' => 'datetime',
         'raw_json'          => 'array',
     ];
 
