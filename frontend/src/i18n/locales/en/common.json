@@ -1255,6 +1255,157 @@
     }
   },
 
+  "canned_replies": {
+    "title": "Canned Replies",
+    "subtitle": "Pre-written responses agents can insert with one click from the inbox. Org-wide, max 50.",
+    "add": "Add",
+    "save": "Save",
+    "saving": "Saving…",
+    "loading": "Loading…",
+    "empty": "No canned replies yet. Click \"Add\" to create one.",
+    "label_placeholder": "Label (e.g. Greeting)",
+    "text_placeholder": "Reply text — what gets inserted into the message box",
+    "move_up_title": "Move up",
+    "delete_title": "Delete",
+    "unsaved_warning": "You have unsaved changes.",
+    "toasts": {
+      "saved": "Canned replies saved",
+      "save_failed": "Save failed",
+      "max_reached": "Maximum 50 canned replies",
+      "empty_removed": "Empty entries will be removed"
+    }
+  },
+
+  "popup_rules": {
+    "title": "Popup Automation Rules",
+    "subtitle": "Configure when the chat widget auto-opens with a message",
+    "brand_required": "popup rules",
+    "add_rule": "Add Rule",
+    "loading": "Loading…",
+    "empty": "No popup rules yet. Create one to auto-engage visitors.",
+    "form": {
+      "edit_title": "Edit Rule",
+      "new_title": "New Popup Rule",
+      "rule_name": "Rule Name",
+      "rule_name_placeholder": "Welcome popup",
+      "priority": "Priority",
+      "trigger_type": "Trigger Type",
+      "delay_seconds": "Delay (seconds)",
+      "scroll_pct": "Scroll Depth (%)",
+      "url_match_type": "URL Match Type",
+      "url_pattern": "URL Pattern (optional)",
+      "url_pattern_placeholder": "/booking, /rooms, etc.",
+      "visitor_type": "Visitor Type",
+      "message": "Popup Message",
+      "message_placeholder": "Hi! Looking for the perfect room? I can help you find one…",
+      "quick_replies": "Quick Reply Buttons",
+      "quick_reply_placeholder": "Add quick reply…",
+      "active": "Active",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "trigger_types": {
+      "page_load": "Page Load",
+      "page_load_desc": "Triggers when the page loads",
+      "time_delay": "Time Delay",
+      "time_delay_desc": "Triggers after X seconds",
+      "scroll_depth": "Scroll Depth",
+      "scroll_depth_desc": "Triggers at X% scroll",
+      "exit_intent": "Exit Intent",
+      "exit_intent_desc": "Triggers when mouse leaves viewport"
+    },
+    "url_match_types": {
+      "contains": "Contains",
+      "exact": "Exact Match",
+      "starts_with": "Starts With",
+      "regex": "Regex"
+    },
+    "visitor_types": {
+      "all": "All Visitors",
+      "new": "New Visitors",
+      "returning": "Returning Visitors"
+    },
+    "row": {
+      "inactive": "Inactive",
+      "url_label": "URL: {{type}} \"{{value}}\"",
+      "visitor": "Visitor: {{type}}",
+      "priority": "Priority: {{value}}"
+    },
+    "delete_confirm": "Delete this rule?",
+    "toasts": {
+      "created": "Rule created",
+      "updated": "Rule updated",
+      "deleted": "Deleted",
+      "failed": "Failed"
+    }
+  },
+
+  "training": {
+    "title": "AI Training & Fine-tuning",
+    "subtitle": "Train custom AI models using your knowledge base data",
+    "stats": {
+      "faq_items": "Active FAQ Items",
+      "documents": "Processed Documents",
+      "jobs": "Training Jobs",
+      "active_jobs": "Active Jobs"
+    },
+    "export": "Export Training Data (JSONL)",
+    "exporting": "Exporting…",
+    "new_job": "New Training Job",
+    "create_form": {
+      "title": "Create Fine-tuning Job",
+      "warn_min_faqs": "You need at least 10 active FAQ items to start fine-tuning. Currently: {{count}}",
+      "base_model": "Base Model",
+      "epochs": "Epochs",
+      "epochs_hint": "How many times to iterate over the training data (3 is typical)",
+      "cancel": "Cancel",
+      "creating": "Creating…",
+      "start": "Start Training"
+    },
+    "jobs_section": "Training Jobs",
+    "loading": "Loading…",
+    "empty": "No training jobs yet. Export your data or start a fine-tuning job.",
+    "job": {
+      "id_prefix": "Job #{{id}}",
+      "started": "Started: {{date}}",
+      "completed": "Completed: {{date}}",
+      "model": "Model: {{name}}",
+      "epochs": "Epochs: {{count}}",
+      "cancel": "Cancel"
+    },
+    "statuses": {
+      "preparing": "preparing",
+      "uploading": "uploading",
+      "training": "training",
+      "completed": "completed",
+      "failed": "failed",
+      "cancelled": "cancelled"
+    },
+    "toasts": {
+      "exported": "Exported {{count}} training examples",
+      "export_failed": "Export failed",
+      "job_created": "Training job created",
+      "create_failed": "Failed to create job",
+      "job_cancelled": "Job cancelled"
+    }
+  },
+
+  "chatbot_test": {
+    "brand_required": "the AI test playground",
+    "header": "Test the AI",
+    "clear": "Clear",
+    "empty_hint": "Send a message to try your chatbot's current behavior, model, and knowledge base.",
+    "thinking": "Thinking…",
+    "input_placeholder": "Ask anything to test your AI…",
+    "prompt_title": "Active System Prompt",
+    "prompt_help": "This is the prompt the AI sees, built from your behavior config + matched knowledge base entries.",
+    "show_prompt": "Show prompt",
+    "hide_prompt": "Hide prompt",
+    "prompt_placeholder": "Send a message to see the prompt that was used.",
+    "toast_failed": "AI call failed"
+  },
+
   "chat_inbox": {
     "title": "Inbox",
     "stats": {

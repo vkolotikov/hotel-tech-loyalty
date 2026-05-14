@@ -1255,6 +1255,157 @@
     }
   },
 
+  "canned_replies": {
+    "title": "Vorgefertigte Antworten",
+    "subtitle": "Vorgefertigte Antworten, die Agenten mit einem Klick aus dem Posteingang einfügen können. Organisationsweit, max. 50.",
+    "add": "Hinzufügen",
+    "save": "Speichern",
+    "saving": "Speichert…",
+    "loading": "Lädt…",
+    "empty": "Noch keine vorgefertigten Antworten. Klicken Sie auf „Hinzufügen“, um eine zu erstellen.",
+    "label_placeholder": "Bezeichnung (z.B. Begrüßung)",
+    "text_placeholder": "Antworttext — wird in das Eingabefeld eingefügt",
+    "move_up_title": "Nach oben",
+    "delete_title": "Löschen",
+    "unsaved_warning": "Sie haben ungespeicherte Änderungen.",
+    "toasts": {
+      "saved": "Antworten gespeichert",
+      "save_failed": "Speichern fehlgeschlagen",
+      "max_reached": "Maximal 50 vorgefertigte Antworten",
+      "empty_removed": "Leere Einträge werden entfernt"
+    }
+  },
+
+  "popup_rules": {
+    "title": "Popup-Automatisierungsregeln",
+    "subtitle": "Konfigurieren, wann sich das Chat-Widget automatisch mit einer Nachricht öffnet",
+    "brand_required": "Popup-Regeln",
+    "add_rule": "Regel hinzufügen",
+    "loading": "Lädt…",
+    "empty": "Noch keine Popup-Regeln. Erstellen Sie eine, um Besucher automatisch anzusprechen.",
+    "form": {
+      "edit_title": "Regel bearbeiten",
+      "new_title": "Neue Popup-Regel",
+      "rule_name": "Regelname",
+      "rule_name_placeholder": "Willkommens-Popup",
+      "priority": "Priorität",
+      "trigger_type": "Trigger-Typ",
+      "delay_seconds": "Verzögerung (Sekunden)",
+      "scroll_pct": "Scroll-Tiefe (%)",
+      "url_match_type": "URL-Übereinstimmung",
+      "url_pattern": "URL-Muster (optional)",
+      "url_pattern_placeholder": "/booking, /rooms, etc.",
+      "visitor_type": "Besuchertyp",
+      "message": "Popup-Nachricht",
+      "message_placeholder": "Hallo! Suchen Sie das perfekte Zimmer? Ich helfe gerne…",
+      "quick_replies": "Schnellantwort-Buttons",
+      "quick_reply_placeholder": "Schnellantwort hinzufügen…",
+      "active": "Aktiv",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichert…"
+    },
+    "trigger_types": {
+      "page_load": "Seitenaufruf",
+      "page_load_desc": "Löst beim Laden der Seite aus",
+      "time_delay": "Zeitverzögerung",
+      "time_delay_desc": "Löst nach X Sekunden aus",
+      "scroll_depth": "Scroll-Tiefe",
+      "scroll_depth_desc": "Löst bei X% Scroll aus",
+      "exit_intent": "Exit-Intent",
+      "exit_intent_desc": "Löst aus, wenn die Maus das Viewport verlässt"
+    },
+    "url_match_types": {
+      "contains": "Enthält",
+      "exact": "Exakte Übereinstimmung",
+      "starts_with": "Beginnt mit",
+      "regex": "Regex"
+    },
+    "visitor_types": {
+      "all": "Alle Besucher",
+      "new": "Neue Besucher",
+      "returning": "Wiederkehrende"
+    },
+    "row": {
+      "inactive": "Inaktiv",
+      "url_label": "URL: {{type}} „{{value}}“",
+      "visitor": "Besucher: {{type}}",
+      "priority": "Priorität: {{value}}"
+    },
+    "delete_confirm": "Diese Regel löschen?",
+    "toasts": {
+      "created": "Regel erstellt",
+      "updated": "Regel aktualisiert",
+      "deleted": "Gelöscht",
+      "failed": "Fehler"
+    }
+  },
+
+  "training": {
+    "title": "KI-Training & Feinabstimmung",
+    "subtitle": "Trainieren Sie eigene KI-Modelle mit Daten aus Ihrer Wissensdatenbank",
+    "stats": {
+      "faq_items": "Aktive FAQ-Einträge",
+      "documents": "Verarbeitete Dokumente",
+      "jobs": "Trainingsaufgaben",
+      "active_jobs": "Aktive Aufgaben"
+    },
+    "export": "Trainingsdaten exportieren (JSONL)",
+    "exporting": "Exportiere…",
+    "new_job": "Neuer Trainingsjob",
+    "create_form": {
+      "title": "Feinabstimmungs-Job erstellen",
+      "warn_min_faqs": "Sie benötigen mindestens 10 aktive FAQ-Einträge zum Feinabstimmen. Aktuell: {{count}}",
+      "base_model": "Basismodell",
+      "epochs": "Epochen",
+      "epochs_hint": "Wie oft die Trainingsdaten durchlaufen werden (3 ist üblich)",
+      "cancel": "Abbrechen",
+      "creating": "Erstellt…",
+      "start": "Training starten"
+    },
+    "jobs_section": "Trainingsaufgaben",
+    "loading": "Lädt…",
+    "empty": "Noch keine Trainingsaufgaben. Exportieren Sie Ihre Daten oder starten Sie eine Feinabstimmung.",
+    "job": {
+      "id_prefix": "Job #{{id}}",
+      "started": "Gestartet: {{date}}",
+      "completed": "Abgeschlossen: {{date}}",
+      "model": "Modell: {{name}}",
+      "epochs": "Epochen: {{count}}",
+      "cancel": "Abbrechen"
+    },
+    "statuses": {
+      "preparing": "vorbereitend",
+      "uploading": "hochladen",
+      "training": "trainiert",
+      "completed": "abgeschlossen",
+      "failed": "fehlgeschlagen",
+      "cancelled": "abgebrochen"
+    },
+    "toasts": {
+      "exported": "{{count}} Trainingsbeispiele exportiert",
+      "export_failed": "Export fehlgeschlagen",
+      "job_created": "Trainingsjob erstellt",
+      "create_failed": "Job konnte nicht erstellt werden",
+      "job_cancelled": "Job abgebrochen"
+    }
+  },
+
+  "chatbot_test": {
+    "brand_required": "der KI-Testplattform",
+    "header": "KI testen",
+    "clear": "Löschen",
+    "empty_hint": "Senden Sie eine Nachricht, um das aktuelle Verhalten, das Modell und die Wissensdatenbank Ihres Chatbots zu testen.",
+    "thinking": "Denkt nach…",
+    "input_placeholder": "Stellen Sie eine Frage, um Ihre KI zu testen…",
+    "prompt_title": "Aktiver System-Prompt",
+    "prompt_help": "Das ist der Prompt, den die KI sieht — gebildet aus Ihrer Verhaltenskonfiguration und passenden Wissensdatenbank-Einträgen.",
+    "show_prompt": "Prompt anzeigen",
+    "hide_prompt": "Prompt ausblenden",
+    "prompt_placeholder": "Senden Sie eine Nachricht, um den verwendeten Prompt zu sehen.",
+    "toast_failed": "KI-Aufruf fehlgeschlagen"
+  },
+
   "chat_inbox": {
     "title": "Posteingang",
     "stats": {

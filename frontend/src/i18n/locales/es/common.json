@@ -1255,6 +1255,157 @@
     }
   },
 
+  "canned_replies": {
+    "title": "Respuestas predefinidas",
+    "subtitle": "Respuestas pre-escritas que los agentes pueden insertar con un clic desde la bandeja. A nivel organización, máx. 50.",
+    "add": "Añadir",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "loading": "Cargando…",
+    "empty": "Aún no hay respuestas predefinidas. Haz clic en «Añadir» para crear una.",
+    "label_placeholder": "Etiqueta (p. ej. Saludo)",
+    "text_placeholder": "Texto de respuesta — lo que se inserta en el cuadro de mensaje",
+    "move_up_title": "Subir",
+    "delete_title": "Eliminar",
+    "unsaved_warning": "Tienes cambios sin guardar.",
+    "toasts": {
+      "saved": "Respuestas guardadas",
+      "save_failed": "Error al guardar",
+      "max_reached": "Máximo 50 respuestas predefinidas",
+      "empty_removed": "Las entradas vacías serán eliminadas"
+    }
+  },
+
+  "popup_rules": {
+    "title": "Reglas de automatización de pop-up",
+    "subtitle": "Configura cuándo el widget de chat se abre automáticamente con un mensaje",
+    "brand_required": "reglas de pop-up",
+    "add_rule": "Añadir regla",
+    "loading": "Cargando…",
+    "empty": "Aún no hay reglas de pop-up. Crea una para captar visitantes automáticamente.",
+    "form": {
+      "edit_title": "Editar regla",
+      "new_title": "Nueva regla de pop-up",
+      "rule_name": "Nombre de la regla",
+      "rule_name_placeholder": "Pop-up de bienvenida",
+      "priority": "Prioridad",
+      "trigger_type": "Tipo de disparador",
+      "delay_seconds": "Retraso (segundos)",
+      "scroll_pct": "Profundidad de scroll (%)",
+      "url_match_type": "Tipo de coincidencia URL",
+      "url_pattern": "Patrón URL (opcional)",
+      "url_pattern_placeholder": "/booking, /rooms, etc.",
+      "visitor_type": "Tipo de visitante",
+      "message": "Mensaje del pop-up",
+      "message_placeholder": "¡Hola! ¿Buscas la habitación ideal? Puedo ayudarte…",
+      "quick_replies": "Botones de respuesta rápida",
+      "quick_reply_placeholder": "Añadir respuesta rápida…",
+      "active": "Activo",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "trigger_types": {
+      "page_load": "Carga de página",
+      "page_load_desc": "Se dispara al cargar la página",
+      "time_delay": "Retraso temporal",
+      "time_delay_desc": "Se dispara tras X segundos",
+      "scroll_depth": "Profundidad de scroll",
+      "scroll_depth_desc": "Se dispara al X% de scroll",
+      "exit_intent": "Intento de salida",
+      "exit_intent_desc": "Se dispara cuando el ratón sale del viewport"
+    },
+    "url_match_types": {
+      "contains": "Contiene",
+      "exact": "Coincidencia exacta",
+      "starts_with": "Comienza con",
+      "regex": "Regex"
+    },
+    "visitor_types": {
+      "all": "Todos los visitantes",
+      "new": "Visitantes nuevos",
+      "returning": "Visitantes recurrentes"
+    },
+    "row": {
+      "inactive": "Inactivo",
+      "url_label": "URL: {{type}} «{{value}}»",
+      "visitor": "Visitante: {{type}}",
+      "priority": "Prioridad: {{value}}"
+    },
+    "delete_confirm": "¿Eliminar esta regla?",
+    "toasts": {
+      "created": "Regla creada",
+      "updated": "Regla actualizada",
+      "deleted": "Eliminada",
+      "failed": "Error"
+    }
+  },
+
+  "training": {
+    "title": "Entrenamiento y fine-tuning IA",
+    "subtitle": "Entrena modelos IA personalizados con datos de tu base de conocimiento",
+    "stats": {
+      "faq_items": "FAQ activas",
+      "documents": "Documentos procesados",
+      "jobs": "Tareas de entrenamiento",
+      "active_jobs": "Tareas activas"
+    },
+    "export": "Exportar datos de entrenamiento (JSONL)",
+    "exporting": "Exportando…",
+    "new_job": "Nueva tarea de entrenamiento",
+    "create_form": {
+      "title": "Crear tarea de fine-tuning",
+      "warn_min_faqs": "Necesitas al menos 10 FAQ activas para iniciar el fine-tuning. Actualmente: {{count}}",
+      "base_model": "Modelo base",
+      "epochs": "Épocas",
+      "epochs_hint": "Cuántas veces iterar sobre los datos de entrenamiento (3 es típico)",
+      "cancel": "Cancelar",
+      "creating": "Creando…",
+      "start": "Iniciar entrenamiento"
+    },
+    "jobs_section": "Tareas de entrenamiento",
+    "loading": "Cargando…",
+    "empty": "Aún no hay tareas de entrenamiento. Exporta tus datos o inicia un fine-tuning.",
+    "job": {
+      "id_prefix": "Tarea n.º {{id}}",
+      "started": "Iniciada: {{date}}",
+      "completed": "Completada: {{date}}",
+      "model": "Modelo: {{name}}",
+      "epochs": "Épocas: {{count}}",
+      "cancel": "Cancelar"
+    },
+    "statuses": {
+      "preparing": "preparando",
+      "uploading": "subiendo",
+      "training": "entrenando",
+      "completed": "completado",
+      "failed": "fallido",
+      "cancelled": "cancelado"
+    },
+    "toasts": {
+      "exported": "Exportados {{count}} ejemplos de entrenamiento",
+      "export_failed": "Error al exportar",
+      "job_created": "Tarea de entrenamiento creada",
+      "create_failed": "Error al crear la tarea",
+      "job_cancelled": "Tarea cancelada"
+    }
+  },
+
+  "chatbot_test": {
+    "brand_required": "el playground de prueba IA",
+    "header": "Probar la IA",
+    "clear": "Limpiar",
+    "empty_hint": "Envía un mensaje para probar el comportamiento, modelo y base de conocimiento actuales del chatbot.",
+    "thinking": "Pensando…",
+    "input_placeholder": "Pregunta lo que quieras para probar tu IA…",
+    "prompt_title": "Prompt del sistema activo",
+    "prompt_help": "Es el prompt que ve la IA, construido a partir de tu configuración de comportamiento + entradas relevantes de la base de conocimiento.",
+    "show_prompt": "Mostrar prompt",
+    "hide_prompt": "Ocultar prompt",
+    "prompt_placeholder": "Envía un mensaje para ver el prompt usado.",
+    "toast_failed": "Error en la llamada IA"
+  },
+
   "chat_inbox": {
     "title": "Bandeja de entrada",
     "stats": {

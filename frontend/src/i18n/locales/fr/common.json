@@ -1255,6 +1255,157 @@
     }
   },
 
+  "canned_replies": {
+    "title": "Réponses prédéfinies",
+    "subtitle": "Réponses pré-écrites que les agents peuvent insérer en un clic depuis la boîte de réception. Au niveau organisation, max 50.",
+    "add": "Ajouter",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "loading": "Chargement…",
+    "empty": "Aucune réponse prédéfinie. Cliquez sur « Ajouter » pour en créer une.",
+    "label_placeholder": "Libellé (ex. Salutation)",
+    "text_placeholder": "Texte de réponse — ce qui sera inséré dans le champ message",
+    "move_up_title": "Monter",
+    "delete_title": "Supprimer",
+    "unsaved_warning": "Vous avez des modifications non enregistrées.",
+    "toasts": {
+      "saved": "Réponses enregistrées",
+      "save_failed": "Échec de l'enregistrement",
+      "max_reached": "Maximum 50 réponses prédéfinies",
+      "empty_removed": "Les entrées vides seront supprimées"
+    }
+  },
+
+  "popup_rules": {
+    "title": "Règles d'automatisation pop-up",
+    "subtitle": "Configurez quand le widget de chat s'ouvre automatiquement avec un message",
+    "brand_required": "règles de pop-up",
+    "add_rule": "Ajouter une règle",
+    "loading": "Chargement…",
+    "empty": "Aucune règle pop-up. Créez-en une pour engager automatiquement les visiteurs.",
+    "form": {
+      "edit_title": "Modifier la règle",
+      "new_title": "Nouvelle règle pop-up",
+      "rule_name": "Nom de la règle",
+      "rule_name_placeholder": "Pop-up de bienvenue",
+      "priority": "Priorité",
+      "trigger_type": "Type de déclencheur",
+      "delay_seconds": "Délai (secondes)",
+      "scroll_pct": "Profondeur de défilement (%)",
+      "url_match_type": "Type de correspondance URL",
+      "url_pattern": "Motif URL (optionnel)",
+      "url_pattern_placeholder": "/booking, /rooms, etc.",
+      "visitor_type": "Type de visiteur",
+      "message": "Message du pop-up",
+      "message_placeholder": "Bonjour ! Vous cherchez la chambre idéale ? Je peux vous aider…",
+      "quick_replies": "Boutons de réponse rapide",
+      "quick_reply_placeholder": "Ajouter une réponse rapide…",
+      "active": "Actif",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "trigger_types": {
+      "page_load": "Chargement de page",
+      "page_load_desc": "Se déclenche au chargement",
+      "time_delay": "Délai temporel",
+      "time_delay_desc": "Se déclenche après X secondes",
+      "scroll_depth": "Profondeur de défilement",
+      "scroll_depth_desc": "Se déclenche à X% de défilement",
+      "exit_intent": "Intention de sortie",
+      "exit_intent_desc": "Se déclenche quand la souris quitte la fenêtre"
+    },
+    "url_match_types": {
+      "contains": "Contient",
+      "exact": "Correspondance exacte",
+      "starts_with": "Commence par",
+      "regex": "Regex"
+    },
+    "visitor_types": {
+      "all": "Tous les visiteurs",
+      "new": "Nouveaux visiteurs",
+      "returning": "Visiteurs récurrents"
+    },
+    "row": {
+      "inactive": "Inactif",
+      "url_label": "URL : {{type}} « {{value}} »",
+      "visitor": "Visiteur : {{type}}",
+      "priority": "Priorité : {{value}}"
+    },
+    "delete_confirm": "Supprimer cette règle ?",
+    "toasts": {
+      "created": "Règle créée",
+      "updated": "Règle mise à jour",
+      "deleted": "Supprimé",
+      "failed": "Échec"
+    }
+  },
+
+  "training": {
+    "title": "Entraînement et fine-tuning IA",
+    "subtitle": "Entraînez des modèles IA personnalisés avec les données de votre base de connaissances",
+    "stats": {
+      "faq_items": "Éléments FAQ actifs",
+      "documents": "Documents traités",
+      "jobs": "Tâches d'entraînement",
+      "active_jobs": "Tâches actives"
+    },
+    "export": "Exporter les données d'entraînement (JSONL)",
+    "exporting": "Export…",
+    "new_job": "Nouvelle tâche d'entraînement",
+    "create_form": {
+      "title": "Créer une tâche de fine-tuning",
+      "warn_min_faqs": "Il faut au moins 10 éléments FAQ actifs pour démarrer le fine-tuning. Actuellement : {{count}}",
+      "base_model": "Modèle de base",
+      "epochs": "Époques",
+      "epochs_hint": "Combien de fois itérer sur les données d'entraînement (3 est typique)",
+      "cancel": "Annuler",
+      "creating": "Création…",
+      "start": "Démarrer l'entraînement"
+    },
+    "jobs_section": "Tâches d'entraînement",
+    "loading": "Chargement…",
+    "empty": "Aucune tâche d'entraînement. Exportez vos données ou lancez un fine-tuning.",
+    "job": {
+      "id_prefix": "Tâche nº {{id}}",
+      "started": "Démarrée : {{date}}",
+      "completed": "Terminée : {{date}}",
+      "model": "Modèle : {{name}}",
+      "epochs": "Époques : {{count}}",
+      "cancel": "Annuler"
+    },
+    "statuses": {
+      "preparing": "préparation",
+      "uploading": "téléversement",
+      "training": "entraînement",
+      "completed": "terminé",
+      "failed": "échec",
+      "cancelled": "annulé"
+    },
+    "toasts": {
+      "exported": "{{count}} exemples d'entraînement exportés",
+      "export_failed": "Échec de l'export",
+      "job_created": "Tâche d'entraînement créée",
+      "create_failed": "Échec de création de la tâche",
+      "job_cancelled": "Tâche annulée"
+    }
+  },
+
+  "chatbot_test": {
+    "brand_required": "la zone de test IA",
+    "header": "Tester l'IA",
+    "clear": "Effacer",
+    "empty_hint": "Envoyez un message pour tester le comportement, le modèle et la base de connaissances actuels de votre chatbot.",
+    "thinking": "Réflexion…",
+    "input_placeholder": "Posez une question pour tester votre IA…",
+    "prompt_title": "Prompt système actif",
+    "prompt_help": "C'est le prompt que l'IA voit, construit à partir de votre configuration de comportement + les entrées de base de connaissances correspondantes.",
+    "show_prompt": "Afficher le prompt",
+    "hide_prompt": "Masquer le prompt",
+    "prompt_placeholder": "Envoyez un message pour voir le prompt utilisé.",
+    "toast_failed": "Échec de l'appel IA"
+  },
+
   "chat_inbox": {
     "title": "Boîte de réception",
     "stats": {

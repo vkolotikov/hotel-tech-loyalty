@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { Send, Bot, User, Sparkles } from 'lucide-react'
 import { api } from '../lib/api'
@@ -13,6 +14,7 @@ type Msg = { role: 'user' | 'assistant'; content: string }
  * as the embedded widget on the backend.
  */
 export function ChatbotTestAi() {
+  const { t } = useTranslation()
   const [history, setHistory] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
@@ -29,7 +31,7 @@ export function ChatbotTestAi() {
       setLastPrompt(data.system_prompt || '')
       setInput('')
     },
-    onError: (e: any) => toast.error(e?.response?.data?.error || 'AI call failed'),
+    onError: (e: any) => toast.error(e?.response?.data?.error || t('chatbot_test.toast_failed', 'AI call failed')),
   })
 
   const handleSend = () => {
@@ -39,22 +41,22 @@ export function ChatbotTestAi() {
   }
 
   return (
-    <BrandRequired feature="the AI test playground">
+    <BrandRequired feature={t('chatbot_test.brand_required', 'the AI test playground')}>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 bg-dark-surface border border-dark-border rounded-xl flex flex-col" style={{ height: '70vh' }}>
         <div className="p-3 border-b border-dark-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-primary-400" />
-            <h2 className="text-sm font-semibold text-white">Test the AI</h2>
+            <h2 className="text-sm font-semibold text-white">{t('chatbot_test.header', 'Test the AI')}</h2>
           </div>
           <button onClick={() => { setHistory([]); setLastPrompt('') }}
-            className="text-xs text-t-secondary hover:text-white">Clear</button>
+            className="text-xs text-t-secondary hover:text-white">{t('chatbot_test.clear', 'Clear')}</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {history.length === 0 && (
             <div className="text-center text-t-secondary text-xs py-10">
-              Send a message to try your chatbot's current behavior, model, and knowledge base.
+              {t('chatbot_test.empty_hint', "Send a message to try your chatbot's current behavior, model, and knowledge base.")}
             </div>
           )}
           {history.map((m, i) => (
@@ -75,7 +77,7 @@ export function ChatbotTestAi() {
             </div>
           ))}
           {send.isPending && (
-            <div className="text-xs text-t-secondary">Thinking…</div>
+            <div className="text-xs text-t-secondary">{t('chatbot_test.thinking', 'Thinking…')}</div>
           )}
           <div ref={endRef} />
         </div>
@@ -85,7 +87,7 @@ export function ChatbotTestAi() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
-            placeholder="Ask anything to test your AI…"
+            placeholder={t('chatbot_test.input_placeholder', 'Ask anything to test your AI…')}
             className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
           />
           <button onClick={handleSend} disabled={!input.trim() || send.isPending}
@@ -96,13 +98,13 @@ export function ChatbotTestAi() {
       </div>
 
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4 space-y-3" style={{ height: '70vh', overflowY: 'auto' }}>
-        <h3 className="text-sm font-semibold text-white">Active System Prompt</h3>
-        <p className="text-[10px] text-t-secondary">This is the prompt the AI sees, built from your behavior config + matched knowledge base entries.</p>
+        <h3 className="text-sm font-semibold text-white">{t('chatbot_test.prompt_title', 'Active System Prompt')}</h3>
+        <p className="text-[10px] text-t-secondary">{t('chatbot_test.prompt_help', 'This is the prompt the AI sees, built from your behavior config + matched knowledge base entries.')}</p>
         <button onClick={() => setShowPrompt(v => !v)}
-          className="text-xs text-primary-400 hover:underline">{showPrompt ? 'Hide' : 'Show'} prompt</button>
+          className="text-xs text-primary-400 hover:underline">{showPrompt ? t('chatbot_test.hide_prompt', 'Hide prompt') : t('chatbot_test.show_prompt', 'Show prompt')}</button>
         {showPrompt && (
           <pre className="text-[10px] text-t-secondary whitespace-pre-wrap bg-dark-bg p-3 rounded-lg border border-dark-border">
-            {lastPrompt || 'Send a message to see the prompt that was used.'}
+            {lastPrompt || t('chatbot_test.prompt_placeholder', 'Send a message to see the prompt that was used.')}
           </pre>
         )}
       </div>

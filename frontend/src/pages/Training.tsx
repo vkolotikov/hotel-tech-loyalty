@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { GraduationCap, Play, Download, X as XCircle, RefreshCw, Database, FileText, AlertTriangle } from 'lucide-react'
@@ -14,6 +15,7 @@ const BASE_MODELS = [
 ]
 
 export function Training() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [baseModel, setBaseModel] = useState('gpt-4.1-mini')
@@ -43,9 +45,9 @@ export function Training() {
       a.download = `training-data-${format(new Date(), 'yyyy-MM-dd')}.jsonl`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Exported ${data.count} training examples`)
+      toast.success(t('training.toasts.exported', { count: data.count, defaultValue: 'Exported {{count}} training examples' }))
     },
-    onError: () => toast.error('Export failed'),
+    onError: () => toast.error(t('training.toasts.export_failed', 'Export failed')),
   })
 
   // Create training job
@@ -55,9 +57,9 @@ export function Training() {
       qc.invalidateQueries({ queryKey: ['training-jobs'] })
       qc.invalidateQueries({ queryKey: ['training-stats'] })
       setShowCreate(false)
-      toast.success('Training job created')
+      toast.success(t('training.toasts.job_created', 'Training job created'))
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to create job'),
+    onError: (e: any) => toast.error(e.response?.data?.error || t('training.toasts.create_failed', 'Failed to create job')),
   })
 
   // Cancel job
@@ -65,7 +67,7 @@ export function Training() {
     mutationFn: (id: number) => api.post(`/v1/admin/training/jobs/${id}/cancel`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['training-jobs'] })
-      toast.success('Job cancelled')
+      toast.success(t('training.toasts.job_cancelled', 'Job cancelled'))
     },
   })
 
@@ -78,7 +80,7 @@ export function Training() {
       failed: 'bg-red-500/20 text-red-400',
       cancelled: 'bg-dark-surface4 text-t-secondary',
     }
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.preparing}`}>{status}</span>
+    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.preparing}`}>{t(`training.statuses.${status}`, { defaultValue: String(status ?? '') })}</span>
   }
 
   return (
@@ -86,8 +88,8 @@ export function Training() {
       <div className="flex items-center gap-3">
         <GraduationCap className="text-primary-500" size={28} />
         <div>
-          <h1 className="text-2xl font-bold text-white">AI Training & Fine-tuning</h1>
-          <p className="text-sm text-t-secondary">Train custom AI models using your knowledge base data</p>
+          <h1 className="text-2xl font-bold text-white">{t('training.title', 'AI Training & Fine-tuning')}</h1>
+          <p className="text-sm text-t-secondary">{t('training.subtitle', 'Train custom AI models using your knowledge base data')}</p>
         </div>
       </div>
 
@@ -95,19 +97,19 @@ export function Training() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><Database size={14} /> Active FAQ Items</div>
+            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><Database size={14} /> {t('training.stats.faq_items', 'Active FAQ Items')}</div>
             <div className="text-2xl font-bold text-white">{stats.faq_count}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><FileText size={14} /> Processed Documents</div>
+            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><FileText size={14} /> {t('training.stats.documents', 'Processed Documents')}</div>
             <div className="text-2xl font-bold text-white">{stats.document_count}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><GraduationCap size={14} /> Training Jobs</div>
+            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><GraduationCap size={14} /> {t('training.stats.jobs', 'Training Jobs')}</div>
             <div className="text-2xl font-bold text-white">{stats.jobs_count}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><RefreshCw size={14} /> Active Jobs</div>
+            <div className="flex items-center gap-2 text-t-secondary text-xs mb-1"><RefreshCw size={14} /> {t('training.stats.active_jobs', 'Active Jobs')}</div>
             <div className="text-2xl font-bold text-primary-400">{stats.active_jobs}</div>
           </div>
         </div>
@@ -117,11 +119,11 @@ export function Training() {
       <div className="flex items-center gap-3">
         <button onClick={() => exportData.mutate()} disabled={exportData.isPending}
           className="flex items-center gap-2 bg-dark-surface border border-dark-border text-white px-4 py-2 rounded-lg hover:bg-dark-surface3 text-sm disabled:opacity-50">
-          <Download size={16} /> {exportData.isPending ? 'Exporting...' : 'Export Training Data (JSONL)'}
+          <Download size={16} /> {exportData.isPending ? t('training.exporting', 'Exporting...') : t('training.export', 'Export Training Data (JSONL)')}
         </button>
         <button onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
-          <Play size={16} /> New Training Job
+          <Play size={16} /> {t('training.new_job', 'New Training Job')}
         </button>
       </div>
 
@@ -129,40 +131,40 @@ export function Training() {
       {showCreate && (
         <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-white font-semibold">Create Fine-tuning Job</h3>
+            <h3 className="text-white font-semibold">{t('training.create_form.title', 'Create Fine-tuning Job')}</h3>
             <button onClick={() => setShowCreate(false)} className="text-t-secondary hover:text-white"><XCircle size={18} /></button>
           </div>
 
           {(stats?.faq_count || 0) < 10 && (
             <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-3">
               <AlertTriangle size={16} className="text-yellow-400" />
-              <span className="text-sm text-yellow-400">You need at least 10 active FAQ items to start fine-tuning. Currently: {stats?.faq_count || 0}</span>
+              <span className="text-sm text-yellow-400">{t('training.create_form.warn_min_faqs', { count: stats?.faq_count || 0, defaultValue: 'You need at least 10 active FAQ items to start fine-tuning. Currently: {{count}}' })}</span>
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Base Model</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('training.create_form.base_model', 'Base Model')}</label>
               <select value={baseModel} onChange={e => setBaseModel(e.target.value)}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
                 {BASE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Epochs</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('training.create_form.epochs', 'Epochs')}</label>
               <input type="number" min={1} max={50} value={epochs} onChange={e => setEpochs(Number(e.target.value))}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-              <p className="text-xs text-dark-border2 mt-1">How many times to iterate over the training data (3 is typical)</p>
+              <p className="text-xs text-dark-border2 mt-1">{t('training.create_form.epochs_hint', 'How many times to iterate over the training data (3 is typical)')}</p>
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('training.create_form.cancel', 'Cancel')}</button>
             <button
               onClick={() => createJob.mutate({ base_model: baseModel, hyperparameters: { n_epochs: epochs } })}
               disabled={createJob.isPending || (stats?.faq_count || 0) < 10}
               className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
-              <Play size={14} /> {createJob.isPending ? 'Creating...' : 'Start Training'}
+              <Play size={14} /> {createJob.isPending ? t('training.create_form.creating', 'Creating...') : t('training.create_form.start', 'Start Training')}
             </button>
           </div>
         </div>
@@ -170,13 +172,13 @@ export function Training() {
 
       {/* Jobs List */}
       <div>
-        <h2 className="text-lg font-semibold text-white mb-3">Training Jobs</h2>
+        <h2 className="text-lg font-semibold text-white mb-3">{t('training.jobs_section', 'Training Jobs')}</h2>
         {isLoading ? (
-          <div className="text-center text-t-secondary py-12">Loading...</div>
+          <div className="text-center text-t-secondary py-12">{t('training.loading', 'Loading...')}</div>
         ) : jobs.length === 0 ? (
           <div className="text-center text-t-secondary py-12">
             <GraduationCap size={40} className="mx-auto mb-3 opacity-30" />
-            <p>No training jobs yet. Export your data or start a fine-tuning job.</p>
+            <p>{t('training.empty', 'No training jobs yet. Export your data or start a fine-tuning job.')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -185,15 +187,15 @@ export function Training() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-medium">Job #{job.id}</span>
+                      <span className="text-white font-medium">{t('training.job.id_prefix', { id: job.id, defaultValue: 'Job #{{id}}' })}</span>
                       {statusBadge(job.status)}
                       <span className="text-xs text-t-secondary">{job.base_model}</span>
                     </div>
                     <div className="text-xs text-dark-border2 space-x-3">
-                      {job.started_at && <span>Started: {format(new Date(job.started_at), 'MMM d, HH:mm')}</span>}
-                      {job.completed_at && <span>Completed: {format(new Date(job.completed_at), 'MMM d, HH:mm')}</span>}
-                      {job.fine_tuned_model && <span className="text-green-400">Model: {job.fine_tuned_model}</span>}
-                      {job.hyperparameters?.n_epochs && <span>Epochs: {job.hyperparameters.n_epochs}</span>}
+                      {job.started_at && <span>{t('training.job.started', { date: format(new Date(job.started_at), 'MMM d, HH:mm'), defaultValue: 'Started: {{date}}' })}</span>}
+                      {job.completed_at && <span>{t('training.job.completed', { date: format(new Date(job.completed_at), 'MMM d, HH:mm'), defaultValue: 'Completed: {{date}}' })}</span>}
+                      {job.fine_tuned_model && <span className="text-green-400">{t('training.job.model', { name: job.fine_tuned_model, defaultValue: 'Model: {{name}}' })}</span>}
+                      {job.hyperparameters?.n_epochs && <span>{t('training.job.epochs', { count: job.hyperparameters.n_epochs, defaultValue: 'Epochs: {{count}}' })}</span>}
                     </div>
                     {job.error_message && (
                       <p className="text-xs text-red-400 mt-1">{job.error_message}</p>
@@ -209,7 +211,7 @@ export function Training() {
                   {['preparing', 'uploading', 'training'].includes(job.status) && (
                     <button onClick={() => cancelJob.mutate(job.id)} disabled={cancelJob.isPending}
                       className="flex items-center gap-1 text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/30">
-                      <XCircle size={12} /> Cancel
+                      <XCircle size={12} /> {t('training.job.cancel', 'Cancel')}
                     </button>
                   )}
                 </div>
