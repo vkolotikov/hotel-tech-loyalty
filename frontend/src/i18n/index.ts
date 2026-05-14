@@ -4,6 +4,8 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import en from './locales/en/common.json'
 import ru from './locales/ru/common.json'
 import de from './locales/de/common.json'
+import fr from './locales/fr/common.json'
+import es from './locales/es/common.json'
 
 /**
  * Admin SPA i18n. Russian is the first non-English locale; German /
@@ -23,6 +25,8 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English',  flag: '\u{1F1FA}\u{1F1F8}' },
   { code: 'ru', label: 'Russian',  flag: '\u{1F1F7}\u{1F1FA}' },
   { code: 'de', label: 'Deutsch',  flag: '\u{1F1E9}\u{1F1EA}' },
+  { code: 'fr', label: 'Français', flag: '\u{1F1EB}\u{1F1F7}' },
+  { code: 'es', label: 'Español',  flag: '\u{1F1EA}\u{1F1F8}' },
 ] as const
 
 export type LangCode = (typeof SUPPORTED_LANGUAGES)[number]['code']
@@ -35,6 +39,8 @@ i18n
       en: { common: en },
       ru: { common: ru },
       de: { common: de },
+      fr: { common: fr },
+      es: { common: es },
     },
     fallbackLng: 'en',
     defaultNS: 'common',

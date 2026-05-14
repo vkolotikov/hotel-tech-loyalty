@@ -1,0 +1,261 @@
+{
+  "app": {
+    "name": "Hotel Tech",
+    "loading": "Chargement…",
+    "saving": "Enregistrement…",
+    "error_generic": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "language": "Langue"
+  },
+
+  "actions": {
+    "save": "Enregistrer",
+    "save_changes": "Enregistrer les modifications",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "remove": "Retirer",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "filters": "Filtres",
+    "clear": "Effacer",
+    "clear_all": "Tout effacer",
+    "refresh": "Actualiser",
+    "reset": "Réinitialiser",
+    "submit": "Envoyer",
+    "confirm": "Confirmer",
+    "duplicate": "Dupliquer",
+    "export": "Exporter",
+    "import": "Importer",
+    "upload": "Téléverser",
+    "download": "Télécharger",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "view": "Voir",
+    "details": "Détails",
+    "more": "Plus",
+    "show_more": "Voir plus",
+    "show_less": "Voir moins",
+    "select": "Sélectionner",
+    "select_all": "Tout sélectionner",
+    "deselect_all": "Tout désélectionner",
+    "open": "Ouvrir",
+    "preview": "Aperçu",
+    "discard": "Abandonner",
+    "send": "Envoyer",
+    "yes": "Oui",
+    "no": "Non",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "draft": "Brouillon",
+    "published": "Publié"
+  },
+
+  "status": {
+    "ok": "OK",
+    "error": "Erreur",
+    "warning": "Avertissement",
+    "info": "Info",
+    "success": "Succès",
+    "pending": "En attente",
+    "completed": "Terminé",
+    "in_progress": "En cours",
+    "failed": "Échec",
+    "online": "En ligne",
+    "offline": "Hors ligne"
+  },
+
+  "nav": {
+    "groups": {
+      "overview": "Vue d'ensemble",
+      "ai_chat": "Chat IA",
+      "members_loyalty": "Membres & Fidélité",
+      "bookings": "Réservations",
+      "crm_marketing": "CRM & Marketing",
+      "operations": "Opérations",
+      "system": "Système"
+    },
+    "items": {
+      "dashboard": "Tableau de bord",
+      "analytics": "Analyses",
+      "ai_insights": "Insights IA",
+      "engagement": "Engagement",
+      "chatbot_setup": "Configuration du chatbot",
+      "members": "Membres",
+      "program": "Programme",
+      "rewards": "Récompenses",
+      "campaigns": "Campagnes",
+      "reservations": "Réservations",
+      "services": "Services",
+      "rooms_services": "Chambres & Services",
+      "masters": "Personnel",
+      "extras": "Suppléments",
+      "payments": "Paiements",
+      "leads_inquiries": "Leads & Demandes",
+      "tasks": "Tâches",
+      "reports": "Rapports",
+      "lead_forms": "Formulaires",
+      "companies": "Entreprises",
+      "reviews": "Avis",
+      "planner": "Planning",
+      "brands": "Marques",
+      "properties": "Établissements",
+      "scan": "Scanner",
+      "billing": "Facturation",
+      "audit_log": "Journal d'audit",
+      "settings": "Paramètres"
+    }
+  },
+
+  "topbar": {
+    "search_placeholder": "Rechercher membres, clients, réservations…",
+    "notifications": "Notifications",
+    "no_notifications": "Aucune notification",
+    "mark_all_read": "Tout marquer comme lu",
+    "profile": "Profil",
+    "logout": "Se déconnecter",
+    "switch_brand": "Changer de marque",
+    "all_brands": "Toutes les marques"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Bon retour",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "remember_me": "Se souvenir de moi",
+      "forgot_password": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "no_account": "Pas encore de compte ?",
+      "create_account": "Créer un compte",
+      "invalid_credentials": "E-mail ou mot de passe invalide"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "name": "Votre nom",
+      "company": "Société / nom de l'hôtel",
+      "submit": "Créer le compte",
+      "have_account": "Déjà un compte ?",
+      "sign_in": "Se connecter"
+    },
+    "forgot": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+      "submit": "Envoyer le lien",
+      "sent": "Vérifiez votre boîte mail pour le lien de réinitialisation.",
+      "back_to_login": "Retour à la connexion"
+    },
+    "reset": {
+      "title": "Définir un nouveau mot de passe",
+      "new_password": "Nouveau mot de passe",
+      "confirm_password": "Confirmer le mot de passe",
+      "submit": "Mettre à jour le mot de passe",
+      "mismatch": "Les mots de passe ne correspondent pas"
+    }
+  },
+
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bon retour, {{name}}",
+    "kpis": {
+      "members": "Membres",
+      "new_this_month": "Nouveaux ce mois-ci",
+      "points_issued": "Points attribués",
+      "points_redeemed": "Points utilisés",
+      "active_bookings": "Réservations actives",
+      "monthly_revenue": "Revenu mensuel",
+      "conversion_rate": "Taux de conversion"
+    },
+    "sections": {
+      "recent_activity": "Activité récente",
+      "top_members": "Meilleurs membres",
+      "upcoming_stays": "Séjours à venir",
+      "ai_insights": "Insights IA",
+      "tasks_today": "Tâches du jour",
+      "leads_pipeline": "Pipeline des leads"
+    },
+    "empty": {
+      "no_activity": "Aucune activité récente.",
+      "no_leads": "Aucun lead ouvert.",
+      "no_tasks": "Aucune tâche aujourd'hui."
+    }
+  },
+
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Gérer la configuration, les intégrations et le branding",
+    "save_changes": "Enregistrer les modifications",
+    "discard": "Abandonner",
+    "language": "Langue de l'interface",
+    "language_help": "Langue de la console d'administration. Chaque membre du personnel choisit la sienne.",
+    "tabs": {
+      "general": "Général",
+      "branding": "Branding",
+      "loyalty": "Fidélité",
+      "notifications": "Notifications",
+      "integrations": "Intégrations",
+      "booking": "Réservation",
+      "pipelines": "Pipelines",
+      "planner": "Planning",
+      "menu": "Menu",
+      "team": "Équipe",
+      "mobile_app": "Application mobile",
+      "documentation": "Documentation",
+      "ai_usage": "Utilisation IA",
+      "ai_system": "IA & Système"
+    }
+  },
+
+  "common": {
+    "yes": "Oui",
+    "no": "Non",
+    "all": "Tous",
+    "none": "Aucun",
+    "any": "Tout",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "this_week": "Cette semaine",
+    "this_month": "Ce mois-ci",
+    "last_month": "Mois dernier",
+    "last_7_days": "7 derniers jours",
+    "last_30_days": "30 derniers jours",
+    "last_90_days": "90 derniers jours",
+    "no_results": "Aucun résultat",
+    "no_data": "Aucune donnée",
+    "and_more": "et {{count}} de plus",
+    "name": "Nom",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "status": "Statut",
+    "date": "Date",
+    "created": "Créé",
+    "updated": "Mis à jour",
+    "actions": "Actions",
+    "type": "Type",
+    "amount": "Montant",
+    "total": "Total",
+    "notes": "Notes",
+    "description": "Description"
+  },
+
+  "toasts": {
+    "saved": "Enregistré",
+    "updated": "Mis à jour",
+    "deleted": "Supprimé",
+    "created": "Créé",
+    "copied": "Copié dans le presse-papiers",
+    "error": "Une erreur est survenue"
+  }
+}
