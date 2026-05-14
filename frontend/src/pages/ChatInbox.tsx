@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -15,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns'
 type ConvStatus = 'all' | 'active' | 'waiting' | 'resolved' | 'archived'
 
 export function ChatInbox() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const initialId = searchParams.get('id') ? Number(searchParams.get('id')) : null
@@ -78,7 +80,7 @@ export function ChatInbox() {
   const startDictation = async () => {
     if (micState !== 'idle') return
     if (!hasMediaRecorder) {
-      toast.error('Voice input not supported in this browser')
+      toast.error(t('chat_inbox.toasts.voice_unsupported', 'Voice input not supported in this browser'))
       return
     }
     try {
@@ -110,10 +112,10 @@ export function ChatInbox() {
           if (text) {
             setReplyText(prev => (prev.trim() ? prev.trim() + ' ' + text : text))
           } else {
-            toast('No speech detected', { icon: 'ℹ️' })
+            toast(t('chat_inbox.toasts.no_speech', 'No speech detected'), { icon: 'ℹ️' })
           }
         } catch (e: any) {
-          toast.error(e?.response?.data?.error || 'Transcription failed')
+          toast.error(e?.response?.data?.error || t('chat_inbox.toasts.transcription_failed', 'Transcription failed'))
         } finally {
           setMicState('idle')
         }
@@ -126,7 +128,7 @@ export function ChatInbox() {
       setMicState('recording')
       rec.start()
     } catch (e: any) {
-      toast.error('Microphone permission denied')
+      toast.error(t('chat_inbox.toasts.mic_denied', 'Microphone permission denied'))
       cleanupMic()
       setMicState('idle')
     }
@@ -236,7 +238,7 @@ export function ChatInbox() {
   const sendReply = useMutation({
     mutationFn: (text: string) => api.post(`/v1/admin/chat-inbox/${selectedId}/messages`, { content: text }),
     onSuccess: () => { setReplyText(''); invalidateAll() },
-    onError: () => toast.error('Failed to send'),
+    onError: () => toast.error(t('chat_inbox.toasts.send_failed', 'Failed to send')),
   })
 
   const uploadAttachment = useMutation({
@@ -244,8 +246,8 @@ export function ChatInbox() {
       const fd = new FormData(); fd.append('file', file)
       return api.post(`/v1/admin/chat-inbox/${selectedId}/upload`, fd)
     },
-    onSuccess: () => { invalidateAll(); toast.success('File sent') },
-    onError: () => toast.error('Upload failed (max 8MB)'),
+    onSuccess: () => { invalidateAll(); toast.success(t('chat_inbox.toasts.file_sent', 'File sent')) },
+    onError: () => toast.error(t('chat_inbox.toasts.upload_failed', 'Upload failed (max 8MB)')),
   })
 
   const downloadTranscript = (format: 'text' | 'html') => {
@@ -254,7 +256,7 @@ export function ChatInbox() {
 
   const updateStatus = useMutation({
     mutationFn: (status: string) => api.put(`/v1/admin/chat-inbox/${selectedId}/status`, { status }),
-    onSuccess: () => { invalidateAll(); setShowMoreMenu(false); toast.success('Status updated') },
+    onSuccess: () => { invalidateAll(); setShowMoreMenu(false); toast.success(t('chat_inbox.toasts.status_updated', 'Status updated')) },
   })
 
   const toggleAi = useMutation({
@@ -264,22 +266,22 @@ export function ChatInbox() {
 
   const updateContact = useMutation({
     mutationFn: (data: any) => api.put(`/v1/admin/chat-inbox/${selectedId}/contact`, data),
-    onSuccess: () => { invalidateAll(); setShowContactEdit(false); toast.success('Contact updated') },
+    onSuccess: () => { invalidateAll(); setShowContactEdit(false); toast.success(t('chat_inbox.toasts.contact_updated', 'Contact updated')) },
   })
 
   const captureLead = useMutation({
     mutationFn: (data: any) => api.post(`/v1/admin/chat-inbox/${selectedId}/capture-lead`, data),
-    onSuccess: () => { invalidateAll(); setShowLeadForm(false); toast.success('Lead captured → Inquiries') },
+    onSuccess: () => { invalidateAll(); setShowLeadForm(false); toast.success(t('chat_inbox.toasts.lead_captured', 'Lead captured → Inquiries')) },
   })
 
   const submitFeedback = useMutation({
     mutationFn: ({ messageId, payload }: any) => api.post(`/v1/admin/chat-inbox/messages/${messageId}/feedback`, payload),
-    onSuccess: () => { invalidateAll(); setFeedbackOpen(null); toast.success('Feedback saved') },
+    onSuccess: () => { invalidateAll(); setFeedbackOpen(null); toast.success(t('chat_inbox.toasts.feedback_saved', 'Feedback saved')) },
   })
 
   const transferConv = useMutation({
     mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { agent_id: agentId }),
-    onSuccess: () => { invalidateAll(); setShowTransferMenu(false); toast.success('Transferred') },
+    onSuccess: () => { invalidateAll(); setShowTransferMenu(false); toast.success(t('chat_inbox.toasts.transferred', 'Transferred')) },
   })
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -303,7 +305,7 @@ export function ChatInbox() {
     system: { icon: User, align: 'justify-center', bg: '' },
   }
 
-  const convName = (c: any) => c.member?.user?.name || c.visitor_name || 'Visitor'
+  const convName = (c: any) => c.member?.user?.name || c.visitor_name || t('chat_inbox.visitor_fallback', 'Visitor')
   const convInitial = (c: any) => (convName(c)).charAt(0).toUpperCase()
 
   // ─── Render ──────────────────────────────────────────────────────────
@@ -315,15 +317,15 @@ export function ChatInbox() {
     <div className="flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-64px)]">
       {/* ═══ Compact Header ═══ */}
       <div className="flex items-center justify-between px-1 pb-3">
-        <h1 className="text-lg font-bold text-white">Inbox</h1>
+        <h1 className="text-lg font-bold text-white">{t('chat_inbox.title', 'Inbox')}</h1>
         {stats && (
           <div className="flex gap-3">
             {[
-              { label: 'Active', value: stats.active, color: 'text-emerald-400' },
-              { label: 'Waiting', value: stats.waiting, color: 'text-amber-400' },
-              { label: 'Unassigned', value: stats.unassigned, color: 'text-red-400' },
+              { key: 'active', label: t('chat_inbox.stats.active', 'Active'), value: stats.active, color: 'text-emerald-400' },
+              { key: 'waiting', label: t('chat_inbox.stats.waiting', 'Waiting'), value: stats.waiting, color: 'text-amber-400' },
+              { key: 'unassigned', label: t('chat_inbox.stats.unassigned', 'Unassigned'), value: stats.unassigned, color: 'text-red-400' },
             ].filter(s => s.value > 0).map(s => (
-              <span key={s.label} className="flex items-center gap-1.5 text-xs">
+              <span key={s.key} className="flex items-center gap-1.5 text-xs">
                 <span className={`text-sm font-bold ${s.color}`}>{s.value}</span>
                 <span className="text-gray-500">{s.label}</span>
               </span>
@@ -346,16 +348,16 @@ export function ChatInbox() {
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg pl-8 pr-3 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30"
-                placeholder="Search conversations..." />
+                placeholder={t('chat_inbox.search_placeholder', 'Search conversations...')} />
             </div>
             <div className="flex gap-0.5 bg-white/[0.02] rounded-lg p-0.5">
               {(['all', 'active', 'waiting', 'resolved', 'archived'] as ConvStatus[]).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
-                  className={`flex-1 py-1 rounded-md text-[11px] capitalize transition-all ${
+                  className={`flex-1 py-1 rounded-md text-[11px] transition-all ${
                     statusFilter === s
                       ? 'bg-white/[0.08] text-white font-medium shadow-sm'
                       : 'text-gray-500 hover:text-gray-300'
-                  }`}>{s}</button>
+                  }`}>{t(`chat_inbox.status_filters.${s}`, s)}</button>
               ))}
             </div>
           </div>
@@ -367,7 +369,7 @@ export function ChatInbox() {
                 <div className="w-5 h-5 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
               </div>
             ) : conversations.length === 0 ? (
-              <div className="text-center text-gray-600 py-12 text-xs">No conversations</div>
+              <div className="text-center text-gray-600 py-12 text-xs">{t('chat_inbox.no_conversations', 'No conversations')}</div>
             ) : conversations.map((c: any) => {
               const active = selectedId === c.id
               return (
@@ -416,7 +418,7 @@ export function ChatInbox() {
           {/* Bottom toggle */}
           <div className="px-3 py-2 border-t border-white/[0.04]">
             <label className="flex items-center justify-between text-[11px] text-gray-500 cursor-pointer select-none">
-              <span>Group by visitor</span>
+              <span>{t('chat_inbox.group_by_visitor', 'Group by visitor')}</span>
               <button type="button" onClick={() => {
                 const next = !groupByVisitor
                 setGroupByVisitor(next)
@@ -438,7 +440,7 @@ export function ChatInbox() {
                 <button
                   onClick={() => setSelectedId(null)}
                   className="md:hidden p-1.5 -ml-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-                  aria-label="Back to conversations"
+                  aria-label={t('chat_inbox.back_aria', 'Back to conversations')}
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -454,7 +456,7 @@ export function ChatInbox() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-white">{convName(conv)}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[conv.status] || ''}`}>{conv.status}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[conv.status] || ''}`}>{t(`chat_inbox.status_filters.${conv.status}`, { defaultValue: String(conv.status ?? '') })}</span>
                       {conv.member?.tier && <span className="text-[10px] bg-primary-500/15 text-primary-400 px-1.5 py-0.5 rounded">{conv.member.tier.name}</span>}
                     </div>
                     <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -478,15 +480,15 @@ export function ChatInbox() {
                       ? 'bg-primary-500/10 text-primary-400 hover:bg-primary-500/20'
                       : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
                   }`}
-                  title={(conv.ai_enabled ?? true) ? 'Pause AI auto-replies' : 'Resume AI auto-replies'}>
-                  {(conv.ai_enabled ?? true) ? <><PauseCircle size={12} /> AI On</> : <><PlayCircle size={12} /> AI Off</>}
+                  title={(conv.ai_enabled ?? true) ? t('chat_inbox.ai_pause_tooltip', 'Pause AI auto-replies') : t('chat_inbox.ai_resume_tooltip', 'Resume AI auto-replies')}>
+                  {(conv.ai_enabled ?? true) ? <><PauseCircle size={12} /> {t('chat_inbox.ai_on', 'AI On')}</> : <><PlayCircle size={12} /> {t('chat_inbox.ai_off', 'AI Off')}</>}
                 </button>
 
                 {/* Resolve */}
                 {conv.status !== 'resolved' && conv.status !== 'archived' && (
                   <button onClick={() => updateStatus.mutate('resolved')}
                     className="flex items-center gap-1 text-[11px] bg-blue-500/10 text-blue-400 px-2.5 py-1.5 rounded-lg hover:bg-blue-500/20">
-                    <CheckCircle size={12} /> Resolve
+                    <CheckCircle size={12} /> {t('chat_inbox.resolve', 'Resolve')}
                   </button>
                 )}
 
@@ -502,29 +504,29 @@ export function ChatInbox() {
                       <div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[200px] py-1 overflow-hidden">
                         <button onClick={() => { setShowContactEdit(v => !v); setShowMoreMenu(false) }}
                           className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
-                          <Edit3 size={13} /> Edit contact info
+                          <Edit3 size={13} /> {t('chat_inbox.more.edit_contact', 'Edit contact info')}
                         </button>
                         {!conv.lead_captured && (
                           <button onClick={() => {
                             setLeadForm({ name: conv.visitor_name || '', email: conv.visitor_email || '', phone: conv.visitor_phone || '', notes: '' })
                             setShowLeadForm(true); setShowMoreMenu(false)
                           }} className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
-                            <UserPlus size={13} /> Capture as lead
+                            <UserPlus size={13} /> {t('chat_inbox.more.capture_lead', 'Capture as lead')}
                           </button>
                         )}
                         <button onClick={() => { setShowTransferMenu(true); setShowMoreMenu(false) }}
                           className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
-                          <ArrowRightLeft size={13} /> Transfer to agent
+                          <ArrowRightLeft size={13} /> {t('chat_inbox.more.transfer', 'Transfer to agent')}
                         </button>
                         <button onClick={() => { downloadTranscript('text'); setShowMoreMenu(false) }}
                           className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
-                          <Download size={13} /> Download transcript
+                          <Download size={13} /> {t('chat_inbox.more.download_transcript', 'Download transcript')}
                         </button>
                         <div className="border-t border-white/[0.06] my-1" />
                         {conv.status !== 'archived' && (
                           <button onClick={() => updateStatus.mutate('archived')}
                             className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-500 hover:bg-white/[0.04] hover:text-gray-300">
-                            <Archive size={13} /> Archive
+                            <Archive size={13} /> {t('chat_inbox.more.archive', 'Archive')}
                           </button>
                         )}
                       </div>
@@ -538,11 +540,11 @@ export function ChatInbox() {
             {showTransferMenu && (
               <div className="px-4 py-2.5 border-b border-white/[0.06] bg-purple-500/[0.03]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-purple-300">Transfer to:</span>
+                  <span className="text-xs font-medium text-purple-300">{t('chat_inbox.transfer.header', 'Transfer to:')}</span>
                   <button onClick={() => setShowTransferMenu(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {(agentList || []).length === 0 && <span className="text-[11px] text-gray-500">No agents available</span>}
+                  {(agentList || []).length === 0 && <span className="text-[11px] text-gray-500">{t('chat_inbox.transfer.no_agents', 'No agents available')}</span>}
                   {(agentList || []).map((a: any) => (
                     <button key={a.id} onClick={() => transferConv.mutate(a.id)}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] transition-colors ${
@@ -554,7 +556,7 @@ export function ChatInbox() {
                         {a.name?.charAt(0) || '?'}
                       </div>
                       {a.name}
-                      {conv.assigned_to === a.id && <span className="text-[9px] text-purple-500">(current)</span>}
+                      {conv.assigned_to === a.id && <span className="text-[9px] text-purple-500">{t('chat_inbox.transfer.current', '(current)')}</span>}
                     </button>
                   ))}
                 </div>
@@ -565,19 +567,19 @@ export function ChatInbox() {
             {showLeadForm && (
               <div className="px-4 py-3 border-b border-white/[0.06] bg-emerald-500/[0.03]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-emerald-300">Capture as inquiry</span>
+                  <span className="text-xs font-medium text-emerald-300">{t('chat_inbox.lead.header', 'Capture as inquiry')}</span>
                   <button onClick={() => setShowLeadForm(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
                 </div>
                 <div className="flex gap-2 items-end">
                   <input type="text" value={leadForm.name} onChange={e => setLeadForm(p => ({ ...p, name: e.target.value }))}
-                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Name" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder={t('chat_inbox.lead.name', 'Name')} />
                   <input type="email" value={leadForm.email} onChange={e => setLeadForm(p => ({ ...p, email: e.target.value }))}
-                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Email" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder={t('chat_inbox.lead.email', 'Email')} />
                   <input type="text" value={leadForm.phone} onChange={e => setLeadForm(p => ({ ...p, phone: e.target.value }))}
-                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder="Phone" />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder={t('chat_inbox.lead.phone', 'Phone')} />
                   <button onClick={() => captureLead.mutate(leadForm)} disabled={captureLead.isPending}
                     className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 flex-shrink-0">
-                    {captureLead.isPending ? '...' : 'Create'}
+                    {captureLead.isPending ? t('chat_inbox.lead.saving', '...') : t('chat_inbox.lead.create', 'Create')}
                   </button>
                 </div>
               </div>
@@ -587,27 +589,27 @@ export function ChatInbox() {
             {showContactEdit && (
               <div className="px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-300">Contact details</span>
+                  <span className="text-xs font-medium text-gray-300">{t('chat_inbox.contact.header', 'Contact details')}</span>
                   <button onClick={() => setShowContactEdit(false)} className="text-gray-500 hover:text-white"><X size={13} /></button>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
                   <input type="text" value={contactForm.visitor_name || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_name: e.target.value }))}
-                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Name" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.name', 'Name')} />
                   <input type="email" value={contactForm.visitor_email || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_email: e.target.value }))}
-                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Email" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.email', 'Email')} />
                   <input type="text" value={contactForm.visitor_phone || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_phone: e.target.value }))}
-                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Phone" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.phone', 'Phone')} />
                   <input type="text" value={contactForm.visitor_country || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_country: e.target.value }))}
-                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Country" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.country', 'Country')} />
                   <input type="text" value={contactForm.visitor_city || ''} onChange={e => setContactForm((p: any) => ({ ...p, visitor_city: e.target.value }))}
-                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="City" />
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.city', 'City')} />
                 </div>
                 <div className="flex gap-2 mt-2">
                   <input type="text" value={contactForm.agent_notes || ''} onChange={e => setContactForm((p: any) => ({ ...p, agent_notes: e.target.value }))}
-                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder="Internal notes..." />
+                    className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.notes', 'Internal notes...')} />
                   <button onClick={() => updateContact.mutate(contactForm)} disabled={updateContact.isPending}
                     className="flex items-center gap-1 bg-primary-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50 flex-shrink-0">
-                    <Save size={11} /> Save
+                    <Save size={11} /> {t('chat_inbox.contact.save', 'Save')}
                   </button>
                 </div>
               </div>
@@ -640,7 +642,7 @@ export function ChatInbox() {
                     <div className={`${style.bg} rounded-2xl px-3.5 py-2 max-w-[70%]`}>
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-[10px] font-medium text-gray-500 capitalize">
-                          {isAgent ? (msg.sender_user?.name || 'You') : msg.sender_type}
+                          {isAgent ? (msg.sender_user?.name || t('chat_inbox.messages.agent_self', 'You')) : msg.sender_type}
                         </span>
                         <span className="text-[10px] text-gray-700">
                           {msg.created_at ? formatDistanceToNow(new Date(msg.created_at), { addSuffix: true }) : ''}
@@ -657,7 +659,7 @@ export function ChatInbox() {
                           ) : (
                             <a href={API_URL + msg.attachment_url} target="_blank" rel="noopener noreferrer"
                               className="inline-flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs text-primary-400 hover:text-primary-300">
-                              <FileText size={13} /> {msg.content || 'Download file'}
+                              <FileText size={13} /> {msg.content || t('chat_inbox.messages.download_file', 'Download file')}
                             </a>
                           )}
                         </div>
@@ -668,17 +670,17 @@ export function ChatInbox() {
                           {msg.feedback ? (
                             <div className="flex items-center gap-2 text-[10px] text-gray-500">
                               {msg.feedback.rating === 'good' ? <ThumbsUp size={9} className="text-emerald-400" /> : <ThumbsDown size={9} className="text-red-400" />}
-                              <span>Reviewed</span>
-                              {msg.feedback.applied_to_training && <span className="flex items-center gap-0.5 text-amber-400"><GraduationCap size={9} /> trained</span>}
+                              <span>{t('chat_inbox.messages.feedback_reviewed', 'Reviewed')}</span>
+                              {msg.feedback.applied_to_training && <span className="flex items-center gap-0.5 text-amber-400"><GraduationCap size={9} /> {t('chat_inbox.messages.feedback_trained', 'trained')}</span>}
                               <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: msg.feedback.rating, comment: msg.feedback.comment || '', corrected_answer: '', apply_to_training: false }) }}
-                                className="ml-auto text-gray-600 hover:text-gray-400">Edit</button>
+                                className="ml-auto text-gray-600 hover:text-gray-400">{t('chat_inbox.messages.feedback_edit', 'Edit')}</button>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'good', comment: '', corrected_answer: '', apply_to_training: false }) }}
-                                className="text-[10px] text-gray-600 hover:text-emerald-400 flex items-center gap-0.5"><ThumbsUp size={9} /> Good</button>
+                                className="text-[10px] text-gray-600 hover:text-emerald-400 flex items-center gap-0.5"><ThumbsUp size={9} /> {t('chat_inbox.messages.feedback_good', 'Good')}</button>
                               <button onClick={() => { setFeedbackOpen(msg.id); setFeedbackForm({ rating: 'bad', comment: '', corrected_answer: '', apply_to_training: true }) }}
-                                className="text-[10px] text-gray-600 hover:text-red-400 flex items-center gap-0.5"><ThumbsDown size={9} /> Bad</button>
+                                className="text-[10px] text-gray-600 hover:text-red-400 flex items-center gap-0.5"><ThumbsDown size={9} /> {t('chat_inbox.messages.feedback_bad', 'Bad')}</button>
                             </div>
                           )}
                           {feedbackOpen === msg.id && (
@@ -686,31 +688,31 @@ export function ChatInbox() {
                               <div className="flex gap-1.5">
                                 <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'good' }))}
                                   className={`flex-1 text-[10px] py-1 rounded-lg flex items-center justify-center gap-1 ${feedbackForm.rating === 'good' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/[0.04] text-gray-500'}`}>
-                                  <ThumbsUp size={9} /> Good
+                                  <ThumbsUp size={9} /> {t('chat_inbox.messages.feedback_good', 'Good')}
                                 </button>
                                 <button onClick={() => setFeedbackForm(p => ({ ...p, rating: 'bad' }))}
                                   className={`flex-1 text-[10px] py-1 rounded-lg flex items-center justify-center gap-1 ${feedbackForm.rating === 'bad' ? 'bg-red-500/15 text-red-300' : 'bg-white/[0.04] text-gray-500'}`}>
-                                  <ThumbsDown size={9} /> Bad
+                                  <ThumbsDown size={9} /> {t('chat_inbox.messages.feedback_bad', 'Bad')}
                                 </button>
                               </div>
                               <textarea value={feedbackForm.comment} onChange={e => setFeedbackForm(p => ({ ...p, comment: e.target.value }))}
-                                rows={2} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder="Comment (optional)" />
+                                rows={2} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder={t('chat_inbox.messages.feedback_comment', 'Comment (optional)')} />
                               {feedbackForm.rating === 'bad' && (
                                 <>
                                   <textarea value={feedbackForm.corrected_answer} onChange={e => setFeedbackForm(p => ({ ...p, corrected_answer: e.target.value }))}
-                                    rows={3} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder="What should the AI have said?" />
+                                    rows={3} className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none" placeholder={t('chat_inbox.messages.feedback_correction', 'What should the AI have said?')} />
                                   <label className="flex items-center gap-2 text-[10px] text-gray-500">
                                     <input type="checkbox" checked={feedbackForm.apply_to_training} onChange={e => setFeedbackForm(p => ({ ...p, apply_to_training: e.target.checked }))} className="rounded" />
-                                    <GraduationCap size={9} /> Save to AI knowledge base
+                                    <GraduationCap size={9} /> {t('chat_inbox.messages.feedback_save_kb', 'Save to AI knowledge base')}
                                   </label>
                                 </>
                               )}
                               <div className="flex gap-2">
                                 <button onClick={() => submitFeedback.mutate({ messageId: msg.id, payload: feedbackForm })} disabled={submitFeedback.isPending}
                                   className="flex-1 bg-primary-600 text-white text-[10px] py-1.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium">
-                                  {submitFeedback.isPending ? 'Saving...' : 'Submit'}
+                                  {submitFeedback.isPending ? t('chat_inbox.messages.feedback_submitting', 'Saving...') : t('chat_inbox.messages.feedback_submit', 'Submit')}
                                 </button>
-                                <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-gray-500 hover:text-white">Cancel</button>
+                                <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-gray-500 hover:text-white">{t('chat_inbox.messages.feedback_cancel', 'Cancel')}</button>
                               </div>
                             </div>
                           )}
@@ -731,7 +733,7 @@ export function ChatInbox() {
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '120ms' }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '240ms' }} />
-                    <span className="text-[10px] text-gray-600 ml-1">typing…</span>
+                    <span className="text-[10px] text-gray-600 ml-1">{t('chat_inbox.messages.typing', 'typing…')}</span>
                   </div>
                 </div>
               )}
@@ -752,7 +754,7 @@ export function ChatInbox() {
                 {showCannedMenu && (
                   <div className="absolute bottom-full left-16 mb-2 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[260px] max-h-72 overflow-y-auto">
                     {cannedResponses.length === 0 && (
-                      <div className="p-3 text-xs text-gray-500">No canned responses yet</div>
+                      <div className="p-3 text-xs text-gray-500">{t('chat_inbox.reply.no_canned', 'No canned responses yet')}</div>
                     )}
                     {cannedResponses.map((c: any, i: number) => (
                       <button key={i} onClick={() => { setReplyText(p => p ? p + ' ' + c.text : c.text); setShowCannedMenu(false) }}
@@ -766,27 +768,27 @@ export function ChatInbox() {
                 <div className="flex gap-1.5 items-end">
                   <div className="flex gap-0.5">
                     <button type="button" onClick={() => { setShowEmojiPicker(v => !v); setShowCannedMenu(false) }}
-                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title="Emoji">
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title={t('chat_inbox.reply.emoji_title', 'Emoji')}>
                       <Smile size={16} />
                     </button>
                     <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.txt"
                       onChange={e => { const file = e.target.files?.[0]; if (file) uploadAttachment.mutate(file) }} />
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}
-                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors disabled:opacity-50" title="Attach file">
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors disabled:opacity-50" title={t('chat_inbox.reply.attach_title', 'Attach file')}>
                       <Paperclip size={16} />
                     </button>
                     <button type="button" onClick={() => { setShowCannedMenu(v => !v); setShowEmojiPicker(false) }}
-                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title="Canned responses">
+                      className="text-gray-600 hover:text-white rounded-lg p-2 hover:bg-white/[0.04] transition-colors" title={t('chat_inbox.reply.canned_title', 'Canned responses')}>
                       <Zap size={16} />
                     </button>
                   </div>
                   <textarea value={replyText} onChange={e => { setReplyText(e.target.value); pingAgentTyping() }}
                     onKeyDown={handleKeyDown} rows={1}
                     className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white resize-none placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30"
-                    placeholder={micState === 'recording' ? 'Listening… tap stop when done' : micState === 'transcribing' ? 'Transcribing…' : 'Type a reply... (Enter to send)'} />
+                    placeholder={micState === 'recording' ? t('chat_inbox.reply.listening', 'Listening… tap stop when done') : micState === 'transcribing' ? t('chat_inbox.reply.transcribing', 'Transcribing…') : t('chat_inbox.reply.placeholder', 'Type a reply... (Enter to send)')} />
                   {hasMediaRecorder && (
                     <button type="button" onClick={toggleDictation} disabled={micState === 'transcribing'}
-                      title={micState === 'recording' ? 'Stop recording' : 'Dictate reply'}
+                      title={micState === 'recording' ? t('chat_inbox.reply.mic_stop', 'Stop recording') : t('chat_inbox.reply.mic_dictate', 'Dictate reply')}
                       className={
                         'p-2 rounded-xl transition-colors disabled:opacity-50 ' +
                         (micState === 'recording'
@@ -811,7 +813,7 @@ export function ChatInbox() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <MessageSquare size={40} className="mx-auto mb-3 text-gray-800" />
-              <p className="text-sm text-gray-600">Select a conversation</p>
+              <p className="text-sm text-gray-600">{t('chat_inbox.empty_select', 'Select a conversation')}</p>
             </div>
           </div>
         )}

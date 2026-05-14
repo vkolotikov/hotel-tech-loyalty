@@ -1255,6 +1255,104 @@
     }
   },
 
+  "chat_inbox": {
+    "title": "Inbox",
+    "stats": {
+      "active": "Active",
+      "waiting": "Waiting",
+      "unassigned": "Unassigned"
+    },
+    "search_placeholder": "Search conversations…",
+    "status_filters": {
+      "all": "All",
+      "active": "Active",
+      "waiting": "Waiting",
+      "resolved": "Resolved",
+      "archived": "Archived"
+    },
+    "no_conversations": "No conversations",
+    "group_by_visitor": "Group by visitor",
+    "visitor_fallback": "Visitor",
+    "back_aria": "Back to conversations",
+    "ai_on": "AI On",
+    "ai_off": "AI Off",
+    "ai_pause_tooltip": "Pause AI auto-replies",
+    "ai_resume_tooltip": "Resume AI auto-replies",
+    "resolve": "Resolve",
+    "more": {
+      "edit_contact": "Edit contact info",
+      "capture_lead": "Capture as lead",
+      "transfer": "Transfer to agent",
+      "download_transcript": "Download transcript",
+      "archive": "Archive"
+    },
+    "transfer": {
+      "header": "Transfer to:",
+      "no_agents": "No agents available",
+      "current": "(current)"
+    },
+    "lead": {
+      "header": "Capture as inquiry",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "saving": "…",
+      "create": "Create"
+    },
+    "contact": {
+      "header": "Contact details",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "country": "Country",
+      "city": "City",
+      "notes": "Internal notes…",
+      "save": "Save"
+    },
+    "messages": {
+      "agent_self": "You",
+      "typing": "typing…",
+      "feedback_reviewed": "Reviewed",
+      "feedback_trained": "trained",
+      "feedback_edit": "Edit",
+      "feedback_good": "Good",
+      "feedback_bad": "Bad",
+      "feedback_comment": "Comment (optional)",
+      "feedback_correction": "What should the AI have said?",
+      "feedback_save_kb": "Save to AI knowledge base",
+      "feedback_submit": "Submit",
+      "feedback_submitting": "Saving…",
+      "feedback_cancel": "Cancel",
+      "download_file": "Download file"
+    },
+    "reply": {
+      "emoji_title": "Emoji",
+      "attach_title": "Attach file",
+      "canned_title": "Canned responses",
+      "no_canned": "No canned responses yet",
+      "listening": "Listening… tap stop when done",
+      "transcribing": "Transcribing…",
+      "placeholder": "Type a reply… (Enter to send)",
+      "mic_stop": "Stop recording",
+      "mic_dictate": "Dictate reply"
+    },
+    "empty_select": "Select a conversation",
+    "toasts": {
+      "voice_unsupported": "Voice input not supported in this browser",
+      "mic_denied": "Microphone permission denied",
+      "no_speech": "No speech detected",
+      "transcription_failed": "Transcription failed",
+      "send_failed": "Failed to send",
+      "file_sent": "File sent",
+      "upload_failed": "Upload failed (max 8MB)",
+      "status_updated": "Status updated",
+      "contact_updated": "Contact updated",
+      "lead_captured": "Lead captured → Inquiries",
+      "feedback_saved": "Feedback saved",
+      "transferred": "Transferred"
+    }
+  },
+
   "chatbot_setup": {
     "title": "Chatbot Setup",
     "subtitle": "All chatbot configuration in one place",

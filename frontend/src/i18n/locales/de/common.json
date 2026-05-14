@@ -1255,6 +1255,104 @@
     }
   },
 
+  "chat_inbox": {
+    "title": "Posteingang",
+    "stats": {
+      "active": "Aktiv",
+      "waiting": "Wartet",
+      "unassigned": "Nicht zugewiesen"
+    },
+    "search_placeholder": "Konversationen suchen…",
+    "status_filters": {
+      "all": "Alle",
+      "active": "Aktiv",
+      "waiting": "Wartet",
+      "resolved": "Gelöst",
+      "archived": "Archiviert"
+    },
+    "no_conversations": "Keine Konversationen",
+    "group_by_visitor": "Nach Besucher gruppieren",
+    "visitor_fallback": "Besucher",
+    "back_aria": "Zurück zu den Konversationen",
+    "ai_on": "KI Ein",
+    "ai_off": "KI Aus",
+    "ai_pause_tooltip": "KI-Auto-Antworten pausieren",
+    "ai_resume_tooltip": "KI-Auto-Antworten fortsetzen",
+    "resolve": "Lösen",
+    "more": {
+      "edit_contact": "Kontaktdaten bearbeiten",
+      "capture_lead": "Als Lead erfassen",
+      "transfer": "An Agent übergeben",
+      "download_transcript": "Protokoll herunterladen",
+      "archive": "Archivieren"
+    },
+    "transfer": {
+      "header": "Übergeben an:",
+      "no_agents": "Keine Agenten verfügbar",
+      "current": "(aktuell)"
+    },
+    "lead": {
+      "header": "Als Anfrage erfassen",
+      "name": "Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "saving": "…",
+      "create": "Erstellen"
+    },
+    "contact": {
+      "header": "Kontaktdaten",
+      "name": "Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "country": "Land",
+      "city": "Stadt",
+      "notes": "Interne Notizen…",
+      "save": "Speichern"
+    },
+    "messages": {
+      "agent_self": "Sie",
+      "typing": "schreibt…",
+      "feedback_reviewed": "Geprüft",
+      "feedback_trained": "trainiert",
+      "feedback_edit": "Bearbeiten",
+      "feedback_good": "Gut",
+      "feedback_bad": "Schlecht",
+      "feedback_comment": "Kommentar (optional)",
+      "feedback_correction": "Was hätte die KI sagen sollen?",
+      "feedback_save_kb": "In KI-Wissensdatenbank speichern",
+      "feedback_submit": "Senden",
+      "feedback_submitting": "Speichert…",
+      "feedback_cancel": "Abbrechen",
+      "download_file": "Datei herunterladen"
+    },
+    "reply": {
+      "emoji_title": "Emoji",
+      "attach_title": "Datei anhängen",
+      "canned_title": "Vorgefertigte Antworten",
+      "no_canned": "Noch keine vorgefertigten Antworten",
+      "listening": "Höre zu… auf Stopp tippen, wenn fertig",
+      "transcribing": "Transkribiere…",
+      "placeholder": "Antwort eingeben… (Enter zum Senden)",
+      "mic_stop": "Aufnahme stoppen",
+      "mic_dictate": "Antwort diktieren"
+    },
+    "empty_select": "Wählen Sie eine Konversation",
+    "toasts": {
+      "voice_unsupported": "Spracheingabe wird in diesem Browser nicht unterstützt",
+      "mic_denied": "Mikrofonzugriff verweigert",
+      "no_speech": "Keine Sprache erkannt",
+      "transcription_failed": "Transkription fehlgeschlagen",
+      "send_failed": "Senden fehlgeschlagen",
+      "file_sent": "Datei gesendet",
+      "upload_failed": "Upload fehlgeschlagen (max. 8 MB)",
+      "status_updated": "Status aktualisiert",
+      "contact_updated": "Kontakt aktualisiert",
+      "lead_captured": "Lead erfasst → Anfragen",
+      "feedback_saved": "Feedback gespeichert",
+      "transferred": "Übergeben"
+    }
+  },
+
   "chatbot_setup": {
     "title": "Chatbot-Einrichtung",
     "subtitle": "Gesamte Chatbot-Konfiguration an einem Ort",

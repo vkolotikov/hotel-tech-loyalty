@@ -1269,6 +1269,104 @@
     }
   },
 
+  "chat_inbox": {
+    "title": "Входящие",
+    "stats": {
+      "active": "Активные",
+      "waiting": "Ожидают",
+      "unassigned": "Без назначения"
+    },
+    "search_placeholder": "Поиск переписок…",
+    "status_filters": {
+      "all": "Все",
+      "active": "Активные",
+      "waiting": "Ожидают",
+      "resolved": "Решены",
+      "archived": "В архиве"
+    },
+    "no_conversations": "Переписок нет",
+    "group_by_visitor": "Группировать по посетителю",
+    "visitor_fallback": "Посетитель",
+    "back_aria": "Назад к переписке",
+    "ai_on": "AI вкл",
+    "ai_off": "AI выкл",
+    "ai_pause_tooltip": "Приостановить авто-ответы AI",
+    "ai_resume_tooltip": "Возобновить авто-ответы AI",
+    "resolve": "Закрыть",
+    "more": {
+      "edit_contact": "Редактировать контакт",
+      "capture_lead": "Записать как лид",
+      "transfer": "Передать оператору",
+      "download_transcript": "Скачать стенограмму",
+      "archive": "В архив"
+    },
+    "transfer": {
+      "header": "Передать:",
+      "no_agents": "Нет доступных операторов",
+      "current": "(текущий)"
+    },
+    "lead": {
+      "header": "Записать как запрос",
+      "name": "Имя",
+      "email": "Email",
+      "phone": "Телефон",
+      "saving": "…",
+      "create": "Создать"
+    },
+    "contact": {
+      "header": "Контактные данные",
+      "name": "Имя",
+      "email": "Email",
+      "phone": "Телефон",
+      "country": "Страна",
+      "city": "Город",
+      "notes": "Внутренние заметки…",
+      "save": "Сохранить"
+    },
+    "messages": {
+      "agent_self": "Вы",
+      "typing": "печатает…",
+      "feedback_reviewed": "Проверено",
+      "feedback_trained": "обучено",
+      "feedback_edit": "Изменить",
+      "feedback_good": "Хорошо",
+      "feedback_bad": "Плохо",
+      "feedback_comment": "Комментарий (необязательно)",
+      "feedback_correction": "Что AI должен был ответить?",
+      "feedback_save_kb": "Сохранить в базу знаний AI",
+      "feedback_submit": "Отправить",
+      "feedback_submitting": "Сохранение…",
+      "feedback_cancel": "Отмена",
+      "download_file": "Скачать файл"
+    },
+    "reply": {
+      "emoji_title": "Эмодзи",
+      "attach_title": "Прикрепить файл",
+      "canned_title": "Шаблоны ответов",
+      "no_canned": "Шаблонов ответов пока нет",
+      "listening": "Слушаю… нажмите стоп, когда закончите",
+      "transcribing": "Распознавание…",
+      "placeholder": "Введите ответ… (Enter — отправить)",
+      "mic_stop": "Остановить запись",
+      "mic_dictate": "Надиктовать ответ"
+    },
+    "empty_select": "Выберите переписку",
+    "toasts": {
+      "voice_unsupported": "Голосовой ввод не поддерживается в этом браузере",
+      "mic_denied": "Доступ к микрофону отклонён",
+      "no_speech": "Речь не обнаружена",
+      "transcription_failed": "Ошибка распознавания речи",
+      "send_failed": "Не удалось отправить",
+      "file_sent": "Файл отправлен",
+      "upload_failed": "Ошибка загрузки (макс. 8 МБ)",
+      "status_updated": "Статус обновлён",
+      "contact_updated": "Контакт обновлён",
+      "lead_captured": "Лид создан → Запросы",
+      "feedback_saved": "Отзыв сохранён",
+      "transferred": "Передано"
+    }
+  },
+
   "chatbot_setup": {
     "title": "Настройка чат-бота",
     "subtitle": "Вся конфигурация чат-бота в одном месте",

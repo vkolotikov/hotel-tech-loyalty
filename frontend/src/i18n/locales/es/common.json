@@ -1255,6 +1255,104 @@
     }
   },
 
+  "chat_inbox": {
+    "title": "Bandeja de entrada",
+    "stats": {
+      "active": "Activas",
+      "waiting": "En espera",
+      "unassigned": "Sin asignar"
+    },
+    "search_placeholder": "Buscar conversaciones…",
+    "status_filters": {
+      "all": "Todas",
+      "active": "Activas",
+      "waiting": "En espera",
+      "resolved": "Resueltas",
+      "archived": "Archivadas"
+    },
+    "no_conversations": "No hay conversaciones",
+    "group_by_visitor": "Agrupar por visitante",
+    "visitor_fallback": "Visitante",
+    "back_aria": "Volver a conversaciones",
+    "ai_on": "IA activa",
+    "ai_off": "IA desactivada",
+    "ai_pause_tooltip": "Pausar respuestas automáticas de IA",
+    "ai_resume_tooltip": "Reanudar respuestas automáticas de IA",
+    "resolve": "Resolver",
+    "more": {
+      "edit_contact": "Editar contacto",
+      "capture_lead": "Capturar como lead",
+      "transfer": "Transferir a agente",
+      "download_transcript": "Descargar transcripción",
+      "archive": "Archivar"
+    },
+    "transfer": {
+      "header": "Transferir a:",
+      "no_agents": "No hay agentes disponibles",
+      "current": "(actual)"
+    },
+    "lead": {
+      "header": "Capturar como consulta",
+      "name": "Nombre",
+      "email": "Email",
+      "phone": "Teléfono",
+      "saving": "…",
+      "create": "Crear"
+    },
+    "contact": {
+      "header": "Datos de contacto",
+      "name": "Nombre",
+      "email": "Email",
+      "phone": "Teléfono",
+      "country": "País",
+      "city": "Ciudad",
+      "notes": "Notas internas…",
+      "save": "Guardar"
+    },
+    "messages": {
+      "agent_self": "Tú",
+      "typing": "escribiendo…",
+      "feedback_reviewed": "Revisado",
+      "feedback_trained": "entrenado",
+      "feedback_edit": "Editar",
+      "feedback_good": "Bien",
+      "feedback_bad": "Mal",
+      "feedback_comment": "Comentario (opcional)",
+      "feedback_correction": "¿Qué debería haber dicho la IA?",
+      "feedback_save_kb": "Guardar en base de conocimiento IA",
+      "feedback_submit": "Enviar",
+      "feedback_submitting": "Guardando…",
+      "feedback_cancel": "Cancelar",
+      "download_file": "Descargar archivo"
+    },
+    "reply": {
+      "emoji_title": "Emoji",
+      "attach_title": "Adjuntar archivo",
+      "canned_title": "Respuestas predefinidas",
+      "no_canned": "Aún no hay respuestas predefinidas",
+      "listening": "Escuchando… toque detener al terminar",
+      "transcribing": "Transcribiendo…",
+      "placeholder": "Escribe una respuesta… (Enter para enviar)",
+      "mic_stop": "Detener grabación",
+      "mic_dictate": "Dictar respuesta"
+    },
+    "empty_select": "Selecciona una conversación",
+    "toasts": {
+      "voice_unsupported": "La entrada de voz no es compatible con este navegador",
+      "mic_denied": "Permiso de micrófono denegado",
+      "no_speech": "No se detectó voz",
+      "transcription_failed": "Error de transcripción",
+      "send_failed": "Error al enviar",
+      "file_sent": "Archivo enviado",
+      "upload_failed": "Error de carga (máx. 8 MB)",
+      "status_updated": "Estado actualizado",
+      "contact_updated": "Contacto actualizado",
+      "lead_captured": "Lead capturado → Consultas",
+      "feedback_saved": "Comentario guardado",
+      "transferred": "Transferido"
+    }
+  },
+
   "chatbot_setup": {
     "title": "Configuración del chatbot",
     "subtitle": "Toda la configuración del chatbot en un solo lugar",
