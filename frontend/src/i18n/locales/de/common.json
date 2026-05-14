@@ -1255,6 +1255,189 @@
     }
   },
 
+  "reservations": {
+    "title": "Reservierungen",
+    "total_count": "{{count}} insgesamt",
+    "submissions_subtitle": "Protokoll der Buchungs-Widget-Anfragen",
+    "export": "Export",
+    "add_reservation": "Reservierung hinzufügen",
+    "add_short": "Hinzu",
+    "tabs": {
+      "reservations": "Reservierungen",
+      "submissions": "Anfragen"
+    },
+    "quick": {
+      "arrivals_today": "Anreisen heute",
+      "departures_today": "Abreisen heute",
+      "in_house": "Im Haus",
+      "all": "Alle"
+    },
+    "search_placeholder": "Suche: Buchungs-Nr., Gastname, Firma…",
+    "filters_button": "Filter",
+    "filters": {
+      "all_statuses": "Alle Status",
+      "all_properties": "Alle Objekte",
+      "all_room_types": "Alle Zimmertypen",
+      "all_meal_plans": "Alle Verpflegungen",
+      "all_payments": "Alle Zahlungen",
+      "all_channels": "Alle Kanäle",
+      "from": "Von",
+      "to": "Bis",
+      "clear": "Zurücksetzen"
+    },
+    "table": {
+      "conf_no": "Buchungs-Nr.",
+      "guest": "Gast",
+      "property": "Objekt",
+      "check_in": "Anreise",
+      "check_out": "Abreise",
+      "nights": "Nächte",
+      "room": "Zimmer",
+      "total": "Gesamt",
+      "payment": "Zahlung",
+      "status": "Status",
+      "actions": "Aktionen",
+      "loading": "Lädt…",
+      "no_reservations": "Keine Reservierungen gefunden",
+      "page_of": "Seite {{current}} von {{last}}"
+    },
+    "row_actions": {
+      "check_in_title": "Einchecken",
+      "check_in_short": "Ein",
+      "check_out_title": "Auschecken",
+      "check_out_short": "Aus"
+    },
+    "create": {
+      "title": "Reservierung hinzufügen",
+      "guest_id": "Gast-ID",
+      "property_req": "Objekt *",
+      "booking_channel": "Buchungskanal",
+      "check_in_req": "Anreise *",
+      "check_out_req": "Abreise *",
+      "rooms": "Zimmer",
+      "room_type": "Zimmertyp",
+      "room_number": "Zimmernummer",
+      "rate_per_night": "Preis/Nacht ({{symbol}})",
+      "total_label": "Gesamt ({{symbol}})",
+      "total_auto": "auto: {{value}}",
+      "meal_plan": "Verpflegung",
+      "payment_method": "Zahlungsart",
+      "special_requests": "Sonderwünsche",
+      "notes": "Notizen",
+      "select_placeholder": "-- Auswählen --",
+      "cancel": "Abbrechen",
+      "saving": "Speichert…",
+      "create": "Erstellen"
+    },
+    "toasts": {
+      "created": "Reservierung erstellt",
+      "error": "Fehler",
+      "checked_in": "Gast eingecheckt",
+      "checked_out": "Gast ausgecheckt",
+      "check_in_failed": "Einchecken fehlgeschlagen",
+      "check_out_failed": "Auschecken fehlgeschlagen",
+      "export_failed": "Export fehlgeschlagen"
+    }
+  },
+
+  "corporate": {
+    "title": "Firmenkunden",
+    "total_count": "{{count}} insgesamt",
+    "add_account": "Konto hinzufügen",
+    "search_placeholder": "Suche: Firma, Kontakt, E-Mail…",
+    "filters": {
+      "all_statuses": "Alle Status",
+      "all_managers": "Alle Manager"
+    },
+    "statuses": {
+      "Active": "Aktiv",
+      "Expired": "Abgelaufen",
+      "Pending": "Ausstehend",
+      "Suspended": "Pausiert"
+    },
+    "table": {
+      "company": "Firma",
+      "industry": "Branche",
+      "contact": "Kontakt",
+      "manager": "Manager",
+      "contract": "Vertrag",
+      "rate": "Tarif",
+      "discount": "Rabatt",
+      "revenue": "Umsatz",
+      "status": "Status",
+      "loading": "Lädt…",
+      "no_accounts": "Keine Firmenkunden gefunden",
+      "page_of": "Seite {{current}} von {{last}} ({{total}} Einträge)"
+    },
+    "create": {
+      "title": "Firmenkunde hinzufügen",
+      "tab_manual": "Manuell",
+      "tab_ai": "KI-Erfassung",
+      "select_placeholder": "Auswählen…",
+      "company_name": "Firmenname *",
+      "industry": "Branche",
+      "contact_person": "Ansprechperson",
+      "contact_email": "Kontakt-E-Mail",
+      "contact_phone": "Kontakt-Telefon",
+      "account_manager": "Account-Manager",
+      "contract_start": "Vertragsbeginn",
+      "contract_end": "Vertragsende",
+      "negotiated_rate": "Verhandelter Tarif",
+      "rate_type": "Tariftyp",
+      "discount_pct": "Rabatt %",
+      "annual_room_nights": "Ziel Nächte/Jahr",
+      "payment_terms": "Zahlungsbedingungen",
+      "credit_limit": "Kreditlimit",
+      "billing_email": "Rechnungs-E-Mail",
+      "tax_id": "Steuer-ID",
+      "billing_address": "Rechnungsadresse",
+      "notes": "Notizen",
+      "cancel": "Abbrechen",
+      "creating": "Erstellt…",
+      "create": "Konto erstellen"
+    },
+    "capture": {
+      "instructions": "Fügen Sie eine E-Mail, einen Vertragsauszug, ein Angebot oder Meeting-Notizen ein. Die KI extrahiert die Firmendaten automatisch.",
+      "placeholder": "z.B. Nach unserem Meeting mit Acme Corp (IT-Firma) hat ihr Travel Manager Jane Doe (jane@acme.com, +1 555 0123) einem Firmentarif von 180€/Nacht mit 15% Rabatt zugestimmt. Vertrag Jan–Dez 2026, Ziel 500 Nächte. Zahlung net 30, Kreditlimit 50.000€. Steuer-ID: US12-3456789…",
+      "cancel": "Abbrechen",
+      "extract": "Extrahieren",
+      "extracting": "Extrahiere…",
+      "review_hint": "KI hat folgendes extrahiert. Vor dem Erstellen prüfen und bearbeiten.",
+      "annual_room_nights_short": "Nächte/Jahr",
+      "back": "Zurück",
+      "create_account": "Konto erstellen"
+    },
+    "detail": {
+      "lifetime_revenue": "Umsatz gesamt",
+      "open_pipeline": "Offene Pipeline · {{count}}",
+      "credit_usage": "Kreditauslastung",
+      "no_limit_set": "Kein Limit gesetzt",
+      "credit_pct": "Kredit · {{pct}}%",
+      "last_contact": "Letzter Kontakt",
+      "no_activity_yet": "Noch keine Aktivität",
+      "renewal_soon": "Verlängerung steht an",
+      "renewal_message": "Vertrag endet am {{date}} — innerhalb von 60 Tagen.",
+      "billing_email": "Rechnungs-E-Mail",
+      "tax_id": "Steuer-ID",
+      "rate_type": "Tariftyp",
+      "payment_terms": "Zahlungsbedingungen",
+      "billing_address": "Rechnungsadresse",
+      "notes": "Notizen",
+      "linked_deals": "Verknüpfte Deals",
+      "recent_reservations": "Letzte Reservierungen",
+      "empty_recent": "Keine aktuellen Reservierungen oder Anfragen für dieses Konto.",
+      "inquiry_fallback": "Anfrage Nr. {{id}}"
+    },
+    "toasts": {
+      "created": "Firmenkunde erstellt",
+      "create_error": "Fehler beim Erstellen",
+      "extract_failed": "Daten konnten nicht extrahiert werden",
+      "ai_failed": "KI-Extraktion fehlgeschlagen",
+      "captured_for": "Firmenkunde erstellt für {{name}}",
+      "create_failed": "Konto konnte nicht erstellt werden"
+    }
+  },
+
   "guests": {
     "title": "Gäste",
     "total_count": "{{count}} insgesamt",

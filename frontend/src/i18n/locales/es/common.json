@@ -1255,6 +1255,189 @@
     }
   },
 
+  "reservations": {
+    "title": "Reservas",
+    "total_count": "{{count}} en total",
+    "submissions_subtitle": "Registro de envíos del widget de reservas",
+    "export": "Exportar",
+    "add_reservation": "Añadir reserva",
+    "add_short": "Añadir",
+    "tabs": {
+      "reservations": "Reservas",
+      "submissions": "Envíos"
+    },
+    "quick": {
+      "arrivals_today": "Llegadas hoy",
+      "departures_today": "Salidas hoy",
+      "in_house": "En casa",
+      "all": "Todas"
+    },
+    "search_placeholder": "Buscar: n.º reserva, nombre, empresa…",
+    "filters_button": "Filtros",
+    "filters": {
+      "all_statuses": "Todos los estados",
+      "all_properties": "Todos los establecimientos",
+      "all_room_types": "Todos los tipos de habitación",
+      "all_meal_plans": "Todos los planes",
+      "all_payments": "Todos los pagos",
+      "all_channels": "Todos los canales",
+      "from": "Desde",
+      "to": "Hasta",
+      "clear": "Limpiar"
+    },
+    "table": {
+      "conf_no": "N.º conf.",
+      "guest": "Huésped",
+      "property": "Establecimiento",
+      "check_in": "Entrada",
+      "check_out": "Salida",
+      "nights": "Noches",
+      "room": "Habitación",
+      "total": "Total",
+      "payment": "Pago",
+      "status": "Estado",
+      "actions": "Acciones",
+      "loading": "Cargando…",
+      "no_reservations": "No se encontraron reservas",
+      "page_of": "Página {{current}} de {{last}}"
+    },
+    "row_actions": {
+      "check_in_title": "Registrar entrada",
+      "check_in_short": "Entr.",
+      "check_out_title": "Registrar salida",
+      "check_out_short": "Sal."
+    },
+    "create": {
+      "title": "Añadir reserva",
+      "guest_id": "ID huésped",
+      "property_req": "Establecimiento *",
+      "booking_channel": "Canal de reserva",
+      "check_in_req": "Entrada *",
+      "check_out_req": "Salida *",
+      "rooms": "Habitaciones",
+      "room_type": "Tipo de habitación",
+      "room_number": "Número de habitación",
+      "rate_per_night": "Tarifa/Noche ({{symbol}})",
+      "total_label": "Total ({{symbol}})",
+      "total_auto": "auto: {{value}}",
+      "meal_plan": "Plan de comidas",
+      "payment_method": "Método de pago",
+      "special_requests": "Solicitudes especiales",
+      "notes": "Notas",
+      "select_placeholder": "-- Seleccionar --",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "create": "Crear"
+    },
+    "toasts": {
+      "created": "Reserva creada",
+      "error": "Error",
+      "checked_in": "Huésped registrado",
+      "checked_out": "Huésped despedido",
+      "check_in_failed": "Error en entrada",
+      "check_out_failed": "Error en salida",
+      "export_failed": "Error al exportar"
+    }
+  },
+
+  "corporate": {
+    "title": "Cuentas corporativas",
+    "total_count": "{{count}} en total",
+    "add_account": "Añadir cuenta",
+    "search_placeholder": "Buscar: empresa, contacto, email…",
+    "filters": {
+      "all_statuses": "Todos los estados",
+      "all_managers": "Todos los gestores"
+    },
+    "statuses": {
+      "Active": "Activa",
+      "Expired": "Expirada",
+      "Pending": "Pendiente",
+      "Suspended": "Suspendida"
+    },
+    "table": {
+      "company": "Empresa",
+      "industry": "Sector",
+      "contact": "Contacto",
+      "manager": "Gestor",
+      "contract": "Contrato",
+      "rate": "Tarifa",
+      "discount": "Descuento",
+      "revenue": "Ingresos",
+      "status": "Estado",
+      "loading": "Cargando…",
+      "no_accounts": "No se encontraron cuentas corporativas",
+      "page_of": "Página {{current}} de {{last}} ({{total}} resultados)"
+    },
+    "create": {
+      "title": "Añadir cuenta corporativa",
+      "tab_manual": "Manual",
+      "tab_ai": "Captura IA",
+      "select_placeholder": "Seleccionar…",
+      "company_name": "Nombre de la empresa *",
+      "industry": "Sector",
+      "contact_person": "Persona de contacto",
+      "contact_email": "Email de contacto",
+      "contact_phone": "Teléfono de contacto",
+      "account_manager": "Gestor de cuenta",
+      "contract_start": "Inicio del contrato",
+      "contract_end": "Fin del contrato",
+      "negotiated_rate": "Tarifa negociada",
+      "rate_type": "Tipo de tarifa",
+      "discount_pct": "Descuento %",
+      "annual_room_nights": "Objetivo noches/año",
+      "payment_terms": "Condiciones de pago",
+      "credit_limit": "Límite de crédito",
+      "billing_email": "Email de facturación",
+      "tax_id": "NIF / Tax ID",
+      "billing_address": "Dirección de facturación",
+      "notes": "Notas",
+      "cancel": "Cancelar",
+      "creating": "Creando…",
+      "create": "Crear cuenta"
+    },
+    "capture": {
+      "instructions": "Pega un email, extracto de contrato, propuesta o notas de reunión. La IA extraerá los detalles de la cuenta corporativa automáticamente.",
+      "placeholder": "p. ej. Tras nuestra reunión con Acme Corp (empresa tech), su travel manager Jane Doe (jane@acme.com, +1 555 0123) aceptó una tarifa corporativa de 180€/noche con 15% de descuento. Contrato ene-dic 2026, objetivo 500 noches. Pago net 30, límite crédito 50.000€. NIF: US12-3456789…",
+      "cancel": "Cancelar",
+      "extract": "Extraer",
+      "extracting": "Extrayendo…",
+      "review_hint": "La IA ha extraído lo siguiente. Revisa y edita antes de crear la cuenta.",
+      "annual_room_nights_short": "Noches/año",
+      "back": "Atrás",
+      "create_account": "Crear cuenta"
+    },
+    "detail": {
+      "lifetime_revenue": "Ingresos totales",
+      "open_pipeline": "Pipeline abierto · {{count}}",
+      "credit_usage": "Uso de crédito",
+      "no_limit_set": "Sin límite",
+      "credit_pct": "Crédito · {{pct}}%",
+      "last_contact": "Último contacto",
+      "no_activity_yet": "Sin actividad aún",
+      "renewal_soon": "Renovación próxima",
+      "renewal_message": "El contrato termina el {{date}} — menos de 60 días.",
+      "billing_email": "Email de facturación",
+      "tax_id": "NIF / Tax ID",
+      "rate_type": "Tipo de tarifa",
+      "payment_terms": "Condiciones de pago",
+      "billing_address": "Dirección de facturación",
+      "notes": "Notas",
+      "linked_deals": "Operaciones vinculadas",
+      "recent_reservations": "Reservas recientes",
+      "empty_recent": "No hay reservas ni consultas recientes para esta cuenta.",
+      "inquiry_fallback": "Consulta n.º {{id}}"
+    },
+    "toasts": {
+      "created": "Cuenta corporativa creada",
+      "create_error": "Error al crear la cuenta",
+      "extract_failed": "No se pudieron extraer los datos",
+      "ai_failed": "Error de extracción IA",
+      "captured_for": "Cuenta corporativa creada para {{name}}",
+      "create_failed": "No se pudo crear la cuenta"
+    }
+  },
+
   "guests": {
     "title": "Huéspedes",
     "total_count": "{{count}} en total",

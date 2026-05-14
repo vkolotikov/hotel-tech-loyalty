@@ -1269,6 +1269,189 @@
     }
   },
 
+  "reservations": {
+    "title": "Бронирования",
+    "total_count": "{{count}} всего",
+    "submissions_subtitle": "Журнал заявок виджета бронирования",
+    "export": "Экспорт",
+    "add_reservation": "Добавить бронь",
+    "add_short": "Добавить",
+    "tabs": {
+      "reservations": "Бронирования",
+      "submissions": "Заявки"
+    },
+    "quick": {
+      "arrivals_today": "Заезды сегодня",
+      "departures_today": "Выезды сегодня",
+      "in_house": "Проживают",
+      "all": "Все"
+    },
+    "search_placeholder": "Поиск: № брони, имя гостя, компания…",
+    "filters_button": "Фильтры",
+    "filters": {
+      "all_statuses": "Все статусы",
+      "all_properties": "Все объекты",
+      "all_room_types": "Все типы номеров",
+      "all_meal_plans": "Все типы питания",
+      "all_payments": "Все платежи",
+      "all_channels": "Все каналы",
+      "from": "С",
+      "to": "По",
+      "clear": "Сбросить"
+    },
+    "table": {
+      "conf_no": "№ брони",
+      "guest": "Гость",
+      "property": "Объект",
+      "check_in": "Заезд",
+      "check_out": "Выезд",
+      "nights": "Ночей",
+      "room": "Номер",
+      "total": "Сумма",
+      "payment": "Оплата",
+      "status": "Статус",
+      "actions": "Действия",
+      "loading": "Загрузка…",
+      "no_reservations": "Бронирования не найдены",
+      "page_of": "Страница {{current}} из {{last}}"
+    },
+    "row_actions": {
+      "check_in_title": "Заселить",
+      "check_in_short": "Засел.",
+      "check_out_title": "Выселить",
+      "check_out_short": "Высел."
+    },
+    "create": {
+      "title": "Добавить бронь",
+      "guest_id": "ID гостя",
+      "property_req": "Объект *",
+      "booking_channel": "Канал бронирования",
+      "check_in_req": "Заезд *",
+      "check_out_req": "Выезд *",
+      "rooms": "Номера",
+      "room_type": "Тип номера",
+      "room_number": "Номер комнаты",
+      "rate_per_night": "Цена за ночь ({{symbol}})",
+      "total_label": "Итого ({{symbol}})",
+      "total_auto": "авто: {{value}}",
+      "meal_plan": "Тип питания",
+      "payment_method": "Способ оплаты",
+      "special_requests": "Особые пожелания",
+      "notes": "Заметки",
+      "select_placeholder": "-- Выберите --",
+      "cancel": "Отмена",
+      "saving": "Сохранение…",
+      "create": "Создать"
+    },
+    "toasts": {
+      "created": "Бронь создана",
+      "error": "Ошибка",
+      "checked_in": "Гость заселён",
+      "checked_out": "Гость выселен",
+      "check_in_failed": "Ошибка заселения",
+      "check_out_failed": "Ошибка выселения",
+      "export_failed": "Ошибка экспорта"
+    }
+  },
+
+  "corporate": {
+    "title": "Корпоративные клиенты",
+    "total_count": "{{count}} всего",
+    "add_account": "Добавить компанию",
+    "search_placeholder": "Поиск: компания, контакт, email…",
+    "filters": {
+      "all_statuses": "Все статусы",
+      "all_managers": "Все менеджеры"
+    },
+    "statuses": {
+      "Active": "Активный",
+      "Expired": "Истёк",
+      "Pending": "В ожидании",
+      "Suspended": "Приостановлен"
+    },
+    "table": {
+      "company": "Компания",
+      "industry": "Отрасль",
+      "contact": "Контакт",
+      "manager": "Менеджер",
+      "contract": "Контракт",
+      "rate": "Тариф",
+      "discount": "Скидка",
+      "revenue": "Выручка",
+      "status": "Статус",
+      "loading": "Загрузка…",
+      "no_accounts": "Корпоративные клиенты не найдены",
+      "page_of": "Страница {{current}} из {{last}} ({{total}} записей)"
+    },
+    "create": {
+      "title": "Добавить корпоративного клиента",
+      "tab_manual": "Вручную",
+      "tab_ai": "AI-захват",
+      "select_placeholder": "Выберите…",
+      "company_name": "Название компании *",
+      "industry": "Отрасль",
+      "contact_person": "Контактное лицо",
+      "contact_email": "Email контакта",
+      "contact_phone": "Телефон контакта",
+      "account_manager": "Менеджер клиента",
+      "contract_start": "Начало контракта",
+      "contract_end": "Конец контракта",
+      "negotiated_rate": "Договорной тариф",
+      "rate_type": "Тип тарифа",
+      "discount_pct": "Скидка %",
+      "annual_room_nights": "План ночей в год",
+      "payment_terms": "Условия оплаты",
+      "credit_limit": "Кредитный лимит",
+      "billing_email": "Email для счетов",
+      "tax_id": "ИНН / Tax ID",
+      "billing_address": "Адрес для счетов",
+      "notes": "Заметки",
+      "cancel": "Отмена",
+      "creating": "Создание…",
+      "create": "Создать клиента"
+    },
+    "capture": {
+      "instructions": "Вставьте письмо, выдержку из контракта, предложение или заметки встречи. AI автоматически извлечёт данные корпоративного клиента.",
+      "placeholder": "напр. По итогам встречи с Acme Corp (IT-компания), их travel-менеджер Jane Doe (jane@acme.com, +1 555 0123) согласилась на тариф $180/ночь со скидкой 15%. Контракт январь–декабрь 2026, цель 500 ночей. Оплата net 30, кредит $50 000. Tax ID: US12-3456789…",
+      "cancel": "Отмена",
+      "extract": "Извлечь",
+      "extracting": "Извлечение…",
+      "review_hint": "AI извлёк следующие данные. Проверьте и отредактируйте перед созданием клиента.",
+      "annual_room_nights_short": "Ночей в год",
+      "back": "Назад",
+      "create_account": "Создать клиента"
+    },
+    "detail": {
+      "lifetime_revenue": "Выручка за всё время",
+      "open_pipeline": "Открытая воронка · {{count}}",
+      "credit_usage": "Использование кредита",
+      "no_limit_set": "Лимит не задан",
+      "credit_pct": "Кредит · {{pct}}%",
+      "last_contact": "Последний контакт",
+      "no_activity_yet": "Пока без активности",
+      "renewal_soon": "Скоро продление",
+      "renewal_message": "Контракт заканчивается {{date}} — менее 60 дней.",
+      "billing_email": "Email для счетов",
+      "tax_id": "ИНН / Tax ID",
+      "rate_type": "Тип тарифа",
+      "payment_terms": "Условия оплаты",
+      "billing_address": "Адрес для счетов",
+      "notes": "Заметки",
+      "linked_deals": "Связанные сделки",
+      "recent_reservations": "Недавние бронирования",
+      "empty_recent": "Для этого клиента нет недавних бронирований или запросов.",
+      "inquiry_fallback": "Запрос №{{id}}"
+    },
+    "toasts": {
+      "created": "Корпоративный клиент создан",
+      "create_error": "Ошибка создания клиента",
+      "extract_failed": "Не удалось извлечь данные",
+      "ai_failed": "Ошибка AI-извлечения",
+      "captured_for": "Корпоративный клиент создан: {{name}}",
+      "create_failed": "Не удалось создать клиента"
+    }
+  },
+
   "guests": {
     "title": "Гости",
     "total_count": "{{count}} всего",

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
 }
 
 export function Corporate() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const settings = useSettings()
   const [search, setSearch] = useState('')
@@ -59,8 +61,8 @@ export function Corporate() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/corporate-accounts', body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['corporate-accounts'] }); setShowCreate(false); setForm({ ...EMPTY_FORM }); toast.success('Corporate account created') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Error creating account'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['corporate-accounts'] }); setShowCreate(false); setForm({ ...EMPTY_FORM }); toast.success(t('corporate.toasts.created', 'Corporate account created')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('corporate.toasts.create_error', 'Error creating account')),
   })
 
   const accounts = data?.data ?? []
@@ -84,11 +86,11 @@ export function Corporate() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Corporate Accounts</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{meta.total ?? 0} total</p>
+          <h1 className="text-2xl font-bold text-white">{t('corporate.title', 'Corporate Accounts')}</h1>
+          <p className="text-sm text-t-secondary mt-0.5">{t('corporate.total_count', { count: meta.total ?? 0, defaultValue: '{{count}} total' })}</p>
         </div>
         <button onClick={() => { setShowCreate(true); setForm({ ...EMPTY_FORM }) }} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-          <Plus size={15} /> Add Account
+          <Plus size={15} /> {t('corporate.add_account', 'Add Account')}
         </button>
       </div>
 
@@ -96,17 +98,17 @@ export function Corporate() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-          <input type="text" placeholder="Search company, contact, email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+          <input type="text" placeholder={t('corporate.search_placeholder', 'Search company, contact, email...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             className="w-full pl-9 pr-3 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}
           className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
-          <option value="">All Statuses</option>
-          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          <option value="">{t('corporate.filters.all_statuses', 'All Statuses')}</option>
+          {STATUSES.map(s => <option key={s} value={s}>{t(`corporate.statuses.${s}`, s)}</option>)}
         </select>
         <select value={accountManager} onChange={e => { setAccountManager(e.target.value); setPage(1) }}
           className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
-          <option value="">All Managers</option>
+          <option value="">{t('corporate.filters.all_managers', 'All Managers')}</option>
           {settings.account_managers.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
@@ -118,22 +120,22 @@ export function Corporate() {
             <thead className="border-b border-dark-border bg-dark-surface2">
               <tr>
                 <th className="w-8 px-3 py-3" />
-                <SortHeader col="company_name" label="Company" />
-                <SortHeader col="industry" label="Industry" />
-                <SortHeader col="contact_person" label="Contact" />
-                <SortHeader col="account_manager" label="Manager" />
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Contract</th>
-                <SortHeader col="negotiated_rate" label="Rate" />
-                <SortHeader col="discount_percentage" label="Discount" />
-                <SortHeader col="annual_revenue" label="Revenue" />
-                <SortHeader col="status" label="Status" />
+                <SortHeader col="company_name" label={t('corporate.table.company', 'Company')} />
+                <SortHeader col="industry" label={t('corporate.table.industry', 'Industry')} />
+                <SortHeader col="contact_person" label={t('corporate.table.contact', 'Contact')} />
+                <SortHeader col="account_manager" label={t('corporate.table.manager', 'Manager')} />
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('corporate.table.contract', 'Contract')}</th>
+                <SortHeader col="negotiated_rate" label={t('corporate.table.rate', 'Rate')} />
+                <SortHeader col="discount_percentage" label={t('corporate.table.discount', 'Discount')} />
+                <SortHeader col="annual_revenue" label={t('corporate.table.revenue', 'Revenue')} />
+                <SortHeader col="status" label={t('corporate.table.status', 'Status')} />
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">Loading...</td></tr>
+                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">{t('corporate.table.loading', 'Loading...')}</td></tr>
               ) : accounts.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">No corporate accounts found</td></tr>
+                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">{t('corporate.table.no_accounts', 'No corporate accounts found')}</td></tr>
               ) : accounts.map((a: any) => (
                 <>
                   <tr key={a.id} onClick={() => setExpandedId(expandedId === a.id ? null : a.id)} className="hover:bg-dark-surface2/50 cursor-pointer transition-colors">
@@ -152,7 +154,7 @@ export function Corporate() {
                     <td className="px-4 py-3 text-primary-400 font-medium">{a.annual_revenue != null ? fmt(a.annual_revenue) : '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-t-secondary'}`}>
-                        {a.status}
+                        {t(`corporate.statuses.${a.status}`, { defaultValue: a.status ?? '' })}
                       </span>
                     </td>
                   </tr>
@@ -171,7 +173,7 @@ export function Corporate() {
 
         {meta.last_page > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border">
-            <span className="text-xs text-t-secondary">Page {meta.current_page} of {meta.last_page} ({meta.total} results)</span>
+            <span className="text-xs text-t-secondary">{t('corporate.table.page_of', { current: meta.current_page, last: meta.last_page, total: meta.total, defaultValue: 'Page {{current}} of {{last}} ({{total}} results)' })}</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronLeft size={16} /></button>
               <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronRight size={16} /></button>
@@ -187,7 +189,7 @@ export function Corporate() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
               <div className="flex items-center gap-2">
                 <Building2 size={18} className="text-primary-400" />
-                <h2 className="text-lg font-bold text-white">Add Corporate Account</h2>
+                <h2 className="text-lg font-bold text-white">{t('corporate.create.title', 'Add Corporate Account')}</h2>
               </div>
               <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} className="text-[#636366] hover:text-white"><X size={18} /></button>
             </div>
@@ -195,36 +197,36 @@ export function Corporate() {
             {/* Tabs */}
             <div className="flex border-b border-dark-border">
               <button onClick={() => setCreateTab('form')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'form' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-t-secondary hover:text-white'}`}>
-                <Plus size={14} className="inline mr-1.5 -mt-0.5" />Manual Entry
+                <Plus size={14} className="inline mr-1.5 -mt-0.5" />{t('corporate.create.tab_manual', 'Manual Entry')}
               </button>
               <button onClick={() => setCreateTab('ai')} className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${createTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-t-secondary hover:text-white'}`}>
-                <Sparkles size={14} className="inline mr-1.5 -mt-0.5" />AI Capture
+                <Sparkles size={14} className="inline mr-1.5 -mt-0.5" />{t('corporate.create.tab_ai', 'AI Capture')}
               </button>
             </div>
 
             {createTab === 'form' ? (
               <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form) }} className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Company Name *" value={form.company_name} onChange={v => F('company_name', v)} required />
-                  <Select label="Industry" value={form.industry} onChange={v => F('industry', v)} options={settings.industries} />
-                  <Input label="Contact Person" value={form.contact_person} onChange={v => F('contact_person', v)} />
-                  <Input label="Contact Email" value={form.contact_email} onChange={v => F('contact_email', v)} type="email" />
-                  <Input label="Contact Phone" value={form.contact_phone} onChange={v => F('contact_phone', v)} />
-                  <Select label="Account Manager" value={form.account_manager} onChange={v => F('account_manager', v)} options={settings.account_managers} />
-                  <Input label="Contract Start" value={form.contract_start} onChange={v => F('contract_start', v)} type="date" />
-                  <Input label="Contract End" value={form.contract_end} onChange={v => F('contract_end', v)} type="date" />
-                  <Input label="Negotiated Rate" value={form.negotiated_rate} onChange={v => F('negotiated_rate', v)} type="number" />
-                  <Select label="Rate Type" value={form.rate_type} onChange={v => F('rate_type', v)} options={settings.rate_types} />
-                  <Input label="Discount %" value={form.discount_percentage} onChange={v => F('discount_percentage', v)} type="number" />
-                  <Input label="Annual Room Nights Target" value={form.annual_room_nights_target} onChange={v => F('annual_room_nights_target', v)} type="number" />
-                  <Input label="Payment Terms" value={form.payment_terms} onChange={v => F('payment_terms', v)} />
-                  <Input label="Credit Limit" value={form.credit_limit} onChange={v => F('credit_limit', v)} type="number" />
-                  <Input label="Billing Email" value={form.billing_email} onChange={v => F('billing_email', v)} type="email" />
-                  <Input label="Tax ID" value={form.tax_id} onChange={v => F('tax_id', v)} />
+                  <Input label={t('corporate.create.company_name', 'Company Name *')} value={form.company_name} onChange={v => F('company_name', v)} required />
+                  <Select label={t('corporate.create.industry', 'Industry')} value={form.industry} onChange={v => F('industry', v)} options={settings.industries} />
+                  <Input label={t('corporate.create.contact_person', 'Contact Person')} value={form.contact_person} onChange={v => F('contact_person', v)} />
+                  <Input label={t('corporate.create.contact_email', 'Contact Email')} value={form.contact_email} onChange={v => F('contact_email', v)} type="email" />
+                  <Input label={t('corporate.create.contact_phone', 'Contact Phone')} value={form.contact_phone} onChange={v => F('contact_phone', v)} />
+                  <Select label={t('corporate.create.account_manager', 'Account Manager')} value={form.account_manager} onChange={v => F('account_manager', v)} options={settings.account_managers} />
+                  <Input label={t('corporate.create.contract_start', 'Contract Start')} value={form.contract_start} onChange={v => F('contract_start', v)} type="date" />
+                  <Input label={t('corporate.create.contract_end', 'Contract End')} value={form.contract_end} onChange={v => F('contract_end', v)} type="date" />
+                  <Input label={t('corporate.create.negotiated_rate', 'Negotiated Rate')} value={form.negotiated_rate} onChange={v => F('negotiated_rate', v)} type="number" />
+                  <Select label={t('corporate.create.rate_type', 'Rate Type')} value={form.rate_type} onChange={v => F('rate_type', v)} options={settings.rate_types} />
+                  <Input label={t('corporate.create.discount_pct', 'Discount %')} value={form.discount_percentage} onChange={v => F('discount_percentage', v)} type="number" />
+                  <Input label={t('corporate.create.annual_room_nights', 'Annual Room Nights Target')} value={form.annual_room_nights_target} onChange={v => F('annual_room_nights_target', v)} type="number" />
+                  <Input label={t('corporate.create.payment_terms', 'Payment Terms')} value={form.payment_terms} onChange={v => F('payment_terms', v)} />
+                  <Input label={t('corporate.create.credit_limit', 'Credit Limit')} value={form.credit_limit} onChange={v => F('credit_limit', v)} type="number" />
+                  <Input label={t('corporate.create.billing_email', 'Billing Email')} value={form.billing_email} onChange={v => F('billing_email', v)} type="email" />
+                  <Input label={t('corporate.create.tax_id', 'Tax ID')} value={form.tax_id} onChange={v => F('tax_id', v)} />
                 </div>
-                <Input label="Billing Address" value={form.billing_address} onChange={v => F('billing_address', v)} />
+                <Input label={t('corporate.create.billing_address', 'Billing Address')} value={form.billing_address} onChange={v => F('billing_address', v)} />
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.notes', 'Notes')}</label>
                   <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
                     className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                 </div>
@@ -235,9 +237,9 @@ export function Corporate() {
                   inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">Cancel</button>
+                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">{t('corporate.create.cancel', 'Cancel')}</button>
                   <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
-                    {createMutation.isPending ? 'Creating...' : 'Create Account'}
+                    {createMutation.isPending ? t('corporate.create.creating', 'Creating...') : t('corporate.create.create', 'Create Account')}
                   </button>
                 </div>
               </form>
@@ -245,12 +247,12 @@ export function Corporate() {
               <div className="p-6">
                 {!captureResult ? (
                   <div className="space-y-3">
-                    <p className="text-xs text-t-secondary">Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.</p>
+                    <p className="text-xs text-t-secondary">{t('corporate.capture.instructions', 'Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.')}</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
-                      placeholder="e.g. Following our meeting with Acme Corp (tech company), their travel manager Jane Doe (jane@acme.com, +1 555 0123) agreed to a corporate rate of $180/night with 15% discount. Contract runs Jan-Dec 2026, targeting 500 room nights. Payment net 30, credit limit $50,000. Tax ID: US12-3456789..."
+                      placeholder={t('corporate.capture.placeholder', 'e.g. Following our meeting with Acme Corp…')}
                       className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                     <div className="flex justify-end gap-3">
-                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
                       <button
                         onClick={async () => {
                           if (!captureText.trim()) return
@@ -260,42 +262,42 @@ export function Corporate() {
                             if (res.data.success) {
                               setCaptureResult(res.data.data)
                             } else {
-                              toast.error(res.data.error || 'Failed to extract data')
+                              toast.error(res.data.error || t('corporate.toasts.extract_failed', 'Failed to extract data'))
                             }
                           } catch (e: any) {
-                            toast.error(e.response?.data?.message || 'AI extraction failed')
+                            toast.error(e.response?.data?.message || t('corporate.toasts.ai_failed', 'AI extraction failed'))
                           } finally { setCaptureLoading(false) }
                         }}
                         disabled={captureLoading || !captureText.trim()}
                         className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
                       >
-                        {captureLoading ? <><Loader2 size={14} className="animate-spin" /> Extracting...</> : <><Sparkles size={14} /> Extract</>}
+                        {captureLoading ? <><Loader2 size={14} className="animate-spin" /> {t('corporate.capture.extracting', 'Extracting...')}</> : <><Sparkles size={14} /> {t('corporate.capture.extract', 'Extract')}</>}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
-                      AI extracted the following. Review and edit before creating the account.
+                      {t('corporate.capture.review_hint', 'AI extracted the following. Review and edit before creating the account.')}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { key: 'company_name', label: 'Company Name *' },
-                        { key: 'industry', label: 'Industry' },
-                        { key: 'contact_person', label: 'Contact Person' },
-                        { key: 'contact_email', label: 'Contact Email' },
-                        { key: 'contact_phone', label: 'Contact Phone' },
-                        { key: 'account_manager', label: 'Account Manager' },
-                        { key: 'contract_start', label: 'Contract Start', type: 'date' },
-                        { key: 'contract_end', label: 'Contract End', type: 'date' },
-                        { key: 'negotiated_rate', label: 'Negotiated Rate', type: 'number' },
-                        { key: 'rate_type', label: 'Rate Type' },
-                        { key: 'discount_percentage', label: 'Discount %', type: 'number' },
-                        { key: 'annual_room_nights_target', label: 'Annual Room Nights', type: 'number' },
-                        { key: 'payment_terms', label: 'Payment Terms' },
-                        { key: 'credit_limit', label: 'Credit Limit', type: 'number' },
-                        { key: 'billing_email', label: 'Billing Email' },
-                        { key: 'tax_id', label: 'Tax ID' },
+                        { key: 'company_name', label: t('corporate.create.company_name', 'Company Name *') },
+                        { key: 'industry', label: t('corporate.create.industry', 'Industry') },
+                        { key: 'contact_person', label: t('corporate.create.contact_person', 'Contact Person') },
+                        { key: 'contact_email', label: t('corporate.create.contact_email', 'Contact Email') },
+                        { key: 'contact_phone', label: t('corporate.create.contact_phone', 'Contact Phone') },
+                        { key: 'account_manager', label: t('corporate.create.account_manager', 'Account Manager') },
+                        { key: 'contract_start', label: t('corporate.create.contract_start', 'Contract Start'), type: 'date' },
+                        { key: 'contract_end', label: t('corporate.create.contract_end', 'Contract End'), type: 'date' },
+                        { key: 'negotiated_rate', label: t('corporate.create.negotiated_rate', 'Negotiated Rate'), type: 'number' },
+                        { key: 'rate_type', label: t('corporate.create.rate_type', 'Rate Type') },
+                        { key: 'discount_percentage', label: t('corporate.create.discount_pct', 'Discount %'), type: 'number' },
+                        { key: 'annual_room_nights_target', label: t('corporate.capture.annual_room_nights_short', 'Annual Room Nights'), type: 'number' },
+                        { key: 'payment_terms', label: t('corporate.create.payment_terms', 'Payment Terms') },
+                        { key: 'credit_limit', label: t('corporate.create.credit_limit', 'Credit Limit'), type: 'number' },
+                        { key: 'billing_email', label: t('corporate.create.billing_email', 'Billing Email') },
+                        { key: 'tax_id', label: t('corporate.create.tax_id', 'Tax ID') },
                       ].map(({ key, label, type }) => (
                         <div key={key}>
                           <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
@@ -305,19 +307,19 @@ export function Corporate() {
                       ))}
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Billing Address</label>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.billing_address', 'Billing Address')}</label>
                       <input type="text" value={captureResult.billing_address ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, billing_address: e.target.value }))}
                         className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                      <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.notes', 'Notes')}</label>
                       <textarea value={captureResult.notes ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))} rows={3}
                         className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                     </div>
                     <div className="flex justify-between pt-1">
-                      <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">Back</button>
+                      <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">{t('corporate.capture.back', 'Back')}</button>
                       <div className="flex gap-3">
-                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
                         <button
                           onClick={async () => {
                             const r = captureResult
@@ -343,16 +345,16 @@ export function Corporate() {
                                 notes: r.notes || undefined,
                               })
                               qc.invalidateQueries({ queryKey: ['corporate-accounts'] })
-                              toast.success(`Corporate account created for ${r.company_name}`)
+                              toast.success(t('corporate.toasts.captured_for', { name: r.company_name, defaultValue: 'Corporate account created for {{name}}' }))
                               setShowCreate(false); setCaptureResult(null); setCaptureText('')
                             } catch (e: any) {
-                              toast.error(e.response?.data?.message || 'Failed to create account')
+                              toast.error(e.response?.data?.message || t('corporate.toasts.create_failed', 'Failed to create account'))
                             }
                           }}
                           disabled={!captureResult.company_name}
                           className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
                         >
-                          Create Account
+                          {t('corporate.capture.create_account', 'Create Account')}
                         </button>
                       </div>
                     </div>
@@ -368,6 +370,7 @@ export function Corporate() {
 }
 
 function DetailPanel({ account, detail, currencySymbol }: { account: any; detail: any; currencySymbol: string }) {
+  const { t } = useTranslation()
   const fmt = (v: any) => v != null ? `${currencySymbol}${Number(v).toLocaleString()}` : '—'
   const info = detail ?? account
   const ltv = detail?.ltv
@@ -378,9 +381,9 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
     <div className="space-y-4">
       {ltv && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Vital label="Lifetime revenue" value={fmt(ltv.confirmed_revenue)} valueClass="text-emerald-400" />
+          <Vital label={t('corporate.detail.lifetime_revenue', 'Lifetime revenue')} value={fmt(ltv.confirmed_revenue)} valueClass="text-emerald-400" />
           <Vital
-            label={`Open pipeline · ${ltv.open_pipeline_count}`}
+            label={t('corporate.detail.open_pipeline', { count: ltv.open_pipeline_count, defaultValue: 'Open pipeline · {{count}}' })}
             value={fmt(ltv.open_pipeline_value)}
             valueClass="text-cyan-400"
           />
@@ -391,10 +394,10 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
             currencySymbol={currencySymbol}
           />
           <Vital
-            label="Last contact"
+            label={t('corporate.detail.last_contact', 'Last contact')}
             value={ltv.last_contact_at
               ? new Date(ltv.last_contact_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-              : 'No activity yet'}
+              : t('corporate.detail.no_activity_yet', 'No activity yet')}
             valueClass={ltv.last_contact_at ? 'text-white' : 'text-amber-400'}
           />
         </div>
@@ -402,25 +405,25 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
 
       {ltv?.renewal_soon && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-amber-200 flex items-center gap-2">
-          <span className="font-bold uppercase tracking-wide text-amber-300">Renewal soon</span>
-          <span>Contract ends {info.contract_end} — within 60 days.</span>
+          <span className="font-bold uppercase tracking-wide text-amber-300">{t('corporate.detail.renewal_soon', 'Renewal soon')}</span>
+          <span>{t('corporate.detail.renewal_message', { date: info.contract_end, defaultValue: 'Contract ends {{date}} — within 60 days.' })}</span>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InfoBlock label="Billing Email" value={info.billing_email || '—'} />
-        <InfoBlock label="Tax ID" value={info.tax_id || '—'} />
-        <InfoBlock label="Rate Type" value={info.rate_type || '—'} />
-        <InfoBlock label="Payment Terms" value={info.payment_terms || '—'} />
+        <InfoBlock label={t('corporate.detail.billing_email', 'Billing Email')} value={info.billing_email || '—'} />
+        <InfoBlock label={t('corporate.detail.tax_id', 'Tax ID')} value={info.tax_id || '—'} />
+        <InfoBlock label={t('corporate.detail.rate_type', 'Rate Type')} value={info.rate_type || '—'} />
+        <InfoBlock label={t('corporate.detail.payment_terms', 'Payment Terms')} value={info.payment_terms || '—'} />
       </div>
-      {info.billing_address && <div><span className="text-xs text-t-secondary">Billing Address</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
-      {info.notes && <div><span className="text-xs text-t-secondary">Notes</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
+      {info.billing_address && <div><span className="text-xs text-t-secondary">{t('corporate.detail.billing_address', 'Billing Address')}</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
+      {info.notes && <div><span className="text-xs text-t-secondary">{t('corporate.detail.notes', 'Notes')}</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
 
       <CustomFieldsDisplay entity="corporate_account" values={info.custom_data} />
 
       {detail?.recent_inquiries?.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Linked deals</h4>
+          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">{t('corporate.detail.linked_deals', 'Linked deals')}</h4>
           <div className="space-y-1">
             {detail.recent_inquiries.map((i: any) => (
               <a
@@ -429,7 +432,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
                 className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs hover:bg-dark-surface transition"
               >
                 <span className="text-gray-300 flex-1 truncate">
-                  {i.guest_name ?? `Inquiry #${i.id}`}
+                  {i.guest_name ?? t('corporate.detail.inquiry_fallback', { id: i.id, defaultValue: 'Inquiry #{{id}}' })}
                   {i.inquiry_type && <span className="text-[#636366]"> · {i.inquiry_type}</span>}
                 </span>
                 <span className="text-[#636366] mr-3">{i.check_in ?? '—'}</span>
@@ -443,7 +446,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
 
       {detail?.recent_reservations?.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">Recent reservations</h4>
+          <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">{t('corporate.detail.recent_reservations', 'Recent reservations')}</h4>
           <div className="space-y-1">
             {detail.recent_reservations.map((r: any) => (
               <div key={r.id} className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs">
@@ -457,7 +460,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
         </div>
       )}
       {detail && !detail.recent_reservations?.length && !detail.recent_inquiries?.length && (
-        <p className="text-xs text-[#636366]">No recent reservations or inquiries for this account.</p>
+        <p className="text-xs text-[#636366]">{t('corporate.detail.empty_recent', 'No recent reservations or inquiries for this account.')}</p>
       )}
     </div>
   )
@@ -478,15 +481,16 @@ function CreditMeter({ outstanding, limit, pct, currencySymbol }: {
   pct: number | null
   currencySymbol: string
 }) {
+  const { t } = useTranslation()
   const fmt = (v: any) => v != null ? `${currencySymbol}${Number(v).toLocaleString()}` : '—'
   if (!limit || limit <= 0) {
-    return <Vital label="Credit usage" value="No limit set" valueClass="text-t-secondary" />
+    return <Vital label={t('corporate.detail.credit_usage', 'Credit usage')} value={t('corporate.detail.no_limit_set', 'No limit set')} valueClass="text-t-secondary" />
   }
   const barColor = pct! >= 90 ? '#ef4444' : pct! >= 75 ? '#f59e0b' : '#10b981'
   return (
     <div className="bg-dark-bg border border-dark-border rounded-md p-2.5">
       <div className="flex items-center justify-between text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <span>Credit · {pct}%</span>
+        <span>{t('corporate.detail.credit_pct', { pct, defaultValue: 'Credit · {{pct}}%' })}</span>
         <span className="text-white tabular-nums normal-case">{fmt(outstanding)} / {fmt(limit)}</span>
       </div>
       <div className="mt-1.5 h-1.5 bg-dark-surface2 rounded-full overflow-hidden">
@@ -514,12 +518,13 @@ function Input({ label, value, onChange, type = 'text', required }: { label: str
 }
 
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  const { t } = useTranslation()
   return (
     <div>
       <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-        <option value="">Select...</option>
+        <option value="">{t('corporate.create.select_placeholder', 'Select...')}</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>

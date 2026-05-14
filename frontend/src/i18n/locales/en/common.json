@@ -1255,6 +1255,189 @@
     }
   },
 
+  "reservations": {
+    "title": "Reservations",
+    "total_count": "{{count}} total",
+    "submissions_subtitle": "Booking widget submissions log",
+    "export": "Export",
+    "add_reservation": "Add Reservation",
+    "add_short": "Add",
+    "tabs": {
+      "reservations": "Reservations",
+      "submissions": "Submissions"
+    },
+    "quick": {
+      "arrivals_today": "Arrivals Today",
+      "departures_today": "Departures Today",
+      "in_house": "In-House",
+      "all": "All"
+    },
+    "search_placeholder": "Search confirmation no, guest name, company…",
+    "filters_button": "Filters",
+    "filters": {
+      "all_statuses": "All Statuses",
+      "all_properties": "All Properties",
+      "all_room_types": "All Room Types",
+      "all_meal_plans": "All Meal Plans",
+      "all_payments": "All Payments",
+      "all_channels": "All Channels",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear"
+    },
+    "table": {
+      "conf_no": "Conf. No",
+      "guest": "Guest",
+      "property": "Property",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "nights": "Nights",
+      "room": "Room",
+      "total": "Total",
+      "payment": "Payment",
+      "status": "Status",
+      "actions": "Actions",
+      "loading": "Loading…",
+      "no_reservations": "No reservations found",
+      "page_of": "Page {{current}} of {{last}}"
+    },
+    "row_actions": {
+      "check_in_title": "Check In",
+      "check_in_short": "In",
+      "check_out_title": "Check Out",
+      "check_out_short": "Out"
+    },
+    "create": {
+      "title": "Add Reservation",
+      "guest_id": "Guest ID",
+      "property_req": "Property *",
+      "booking_channel": "Booking Channel",
+      "check_in_req": "Check-in *",
+      "check_out_req": "Check-out *",
+      "rooms": "Rooms",
+      "room_type": "Room Type",
+      "room_number": "Room Number",
+      "rate_per_night": "Rate/Night ({{symbol}})",
+      "total_label": "Total ({{symbol}})",
+      "total_auto": "auto: {{value}}",
+      "meal_plan": "Meal Plan",
+      "payment_method": "Payment Method",
+      "special_requests": "Special Requests",
+      "notes": "Notes",
+      "select_placeholder": "-- Select --",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "create": "Create"
+    },
+    "toasts": {
+      "created": "Reservation created",
+      "error": "Error",
+      "checked_in": "Guest checked in",
+      "checked_out": "Guest checked out",
+      "check_in_failed": "Check-in failed",
+      "check_out_failed": "Check-out failed",
+      "export_failed": "Export failed"
+    }
+  },
+
+  "corporate": {
+    "title": "Corporate Accounts",
+    "total_count": "{{count}} total",
+    "add_account": "Add Account",
+    "search_placeholder": "Search company, contact, email…",
+    "filters": {
+      "all_statuses": "All Statuses",
+      "all_managers": "All Managers"
+    },
+    "statuses": {
+      "Active": "Active",
+      "Expired": "Expired",
+      "Pending": "Pending",
+      "Suspended": "Suspended"
+    },
+    "table": {
+      "company": "Company",
+      "industry": "Industry",
+      "contact": "Contact",
+      "manager": "Manager",
+      "contract": "Contract",
+      "rate": "Rate",
+      "discount": "Discount",
+      "revenue": "Revenue",
+      "status": "Status",
+      "loading": "Loading…",
+      "no_accounts": "No corporate accounts found",
+      "page_of": "Page {{current}} of {{last}} ({{total}} results)"
+    },
+    "create": {
+      "title": "Add Corporate Account",
+      "tab_manual": "Manual Entry",
+      "tab_ai": "AI Capture",
+      "select_placeholder": "Select…",
+      "company_name": "Company Name *",
+      "industry": "Industry",
+      "contact_person": "Contact Person",
+      "contact_email": "Contact Email",
+      "contact_phone": "Contact Phone",
+      "account_manager": "Account Manager",
+      "contract_start": "Contract Start",
+      "contract_end": "Contract End",
+      "negotiated_rate": "Negotiated Rate",
+      "rate_type": "Rate Type",
+      "discount_pct": "Discount %",
+      "annual_room_nights": "Annual Room Nights Target",
+      "payment_terms": "Payment Terms",
+      "credit_limit": "Credit Limit",
+      "billing_email": "Billing Email",
+      "tax_id": "Tax ID",
+      "billing_address": "Billing Address",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "creating": "Creating…",
+      "create": "Create Account"
+    },
+    "capture": {
+      "instructions": "Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.",
+      "placeholder": "e.g. Following our meeting with Acme Corp (tech company), their travel manager Jane Doe (jane@acme.com, +1 555 0123) agreed to a corporate rate of $180/night with 15% discount. Contract runs Jan-Dec 2026, targeting 500 room nights. Payment net 30, credit limit $50,000. Tax ID: US12-3456789…",
+      "cancel": "Cancel",
+      "extract": "Extract",
+      "extracting": "Extracting…",
+      "review_hint": "AI extracted the following. Review and edit before creating the account.",
+      "annual_room_nights_short": "Annual Room Nights",
+      "back": "Back",
+      "create_account": "Create Account"
+    },
+    "detail": {
+      "lifetime_revenue": "Lifetime revenue",
+      "open_pipeline": "Open pipeline · {{count}}",
+      "credit_usage": "Credit usage",
+      "no_limit_set": "No limit set",
+      "credit_pct": "Credit · {{pct}}%",
+      "last_contact": "Last contact",
+      "no_activity_yet": "No activity yet",
+      "renewal_soon": "Renewal soon",
+      "renewal_message": "Contract ends {{date}} — within 60 days.",
+      "billing_email": "Billing Email",
+      "tax_id": "Tax ID",
+      "rate_type": "Rate Type",
+      "payment_terms": "Payment Terms",
+      "billing_address": "Billing Address",
+      "notes": "Notes",
+      "linked_deals": "Linked deals",
+      "recent_reservations": "Recent reservations",
+      "empty_recent": "No recent reservations or inquiries for this account.",
+      "inquiry_fallback": "Inquiry #{{id}}"
+    },
+    "toasts": {
+      "created": "Corporate account created",
+      "create_error": "Error creating account",
+      "extract_failed": "Failed to extract data",
+      "ai_failed": "AI extraction failed",
+      "captured_for": "Corporate account created for {{name}}",
+      "create_failed": "Failed to create account"
+    }
+  },
+
   "guests": {
     "title": "Guests",
     "total_count": "{{count}} total",

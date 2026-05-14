@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
@@ -34,6 +35,7 @@ const EMPTY_FORM = {
 type View = 'reservations' | 'submissions'
 
 export function Reservations() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const settings = useSettings()
   const [view, setView] = useState<View>('reservations')
@@ -83,26 +85,26 @@ export function Reservations() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/reservations', body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); setShowCreate(false); setForm({ ...EMPTY_FORM }); toast.success('Reservation created') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); setShowCreate(false); setForm({ ...EMPTY_FORM }); toast.success(t('reservations.toasts.created', 'Reservation created')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('reservations.toasts.error', 'Error')),
   })
 
   const checkInMutation = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/reservations/${id}/check-in`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); toast.success('Guest checked in') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Check-in failed'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); toast.success(t('reservations.toasts.checked_in', 'Guest checked in')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('reservations.toasts.check_in_failed', 'Check-in failed')),
   })
 
   const checkOutMutation = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/reservations/${id}/check-out`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); toast.success('Guest checked out') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Check-out failed'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reservations'] }); toast.success(t('reservations.toasts.checked_out', 'Guest checked out')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('reservations.toasts.check_out_failed', 'Check-out failed')),
   })
 
   const handleExport = async () => {
     setExporting(true)
     try { await triggerExport('/v1/admin/reservations/export', params) }
-    catch { toast.error('Export failed') } finally { setExporting(false) }
+    catch { toast.error(t('reservations.toasts.export_failed', 'Export failed')) } finally { setExporting(false) }
   }
 
   const autoTotal = useMemo(() => {
@@ -138,16 +140,16 @@ export function Reservations() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-xs md:text-sm text-t-secondary mt-0.5">{view === 'reservations' ? `${meta.total ?? 0} total` : 'Booking widget submissions log'}</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t('reservations.title', 'Reservations')}</h1>
+          <p className="text-xs md:text-sm text-t-secondary mt-0.5">{view === 'reservations' ? t('reservations.total_count', { count: meta.total ?? 0, defaultValue: '{{count}} total' }) : t('reservations.submissions_subtitle', 'Booking widget submissions log')}</p>
         </div>
         {view === 'reservations' && (
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-1.5 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-              <Download size={14} /> <span className="hidden sm:inline">Export</span>
+              <Download size={14} /> <span className="hidden sm:inline">{t('reservations.export', 'Export')}</span>
             </button>
             <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors">
-              <Plus size={15} /> <span className="hidden sm:inline">Add Reservation</span><span className="sm:hidden">Add</span>
+              <Plus size={15} /> <span className="hidden sm:inline">{t('reservations.add_reservation', 'Add Reservation')}</span><span className="sm:hidden">{t('reservations.add_short', 'Add')}</span>
             </button>
           </div>
         )}
@@ -156,12 +158,12 @@ export function Reservations() {
       {/* View tabs */}
       <div className="flex gap-1 border-b border-dark-border">
         {([
-          { key: 'reservations' as const, label: 'Reservations' },
-          { key: 'submissions' as const, label: 'Submissions' },
-        ]).map(t => (
-          <button key={t.key} onClick={() => setView(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${view === t.key ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'}`}>
-            {t.label}
+          { key: 'reservations' as const, labelKey: 'reservations.tabs.reservations', fallback: 'Reservations' },
+          { key: 'submissions' as const, labelKey: 'reservations.tabs.submissions', fallback: 'Submissions' },
+        ]).map(tab => (
+          <button key={tab.key} onClick={() => setView(tab.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${view === tab.key ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'}`}>
+            {t(tab.labelKey, tab.fallback)}
           </button>
         ))}
       </div>
@@ -172,14 +174,14 @@ export function Reservations() {
       {/* Quick filters — scroll horizontally on mobile if labels overflow */}
       <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
         {[
-          { key: 'arrivals_today', label: 'Arrivals Today' },
-          { key: 'departures_today', label: 'Departures Today' },
-          { key: 'in_house', label: 'In-House' },
-          { key: '', label: 'All' },
-        ].map(({ key, label }) => (
-          <button key={label} onClick={() => setQuick(key)}
+          { key: 'arrivals_today', labelKey: 'reservations.quick.arrivals_today', fallback: 'Arrivals Today' },
+          { key: 'departures_today', labelKey: 'reservations.quick.departures_today', fallback: 'Departures Today' },
+          { key: 'in_house', labelKey: 'reservations.quick.in_house', fallback: 'In-House' },
+          { key: '', labelKey: 'reservations.quick.all', fallback: 'All' },
+        ].map(({ key, labelKey, fallback }) => (
+          <button key={labelKey} onClick={() => setQuick(key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap flex-shrink-0 ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
-            {label}
+            {t(labelKey, fallback)}
           </button>
         ))}
       </div>
@@ -189,47 +191,47 @@ export function Reservations() {
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search confirmation no, guest name, company..." className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('reservations.search_placeholder', 'Search confirmation no, guest name, company...')} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
-            <Filter size={14} /> Filters {hasFilters ? '●' : ''}
+            <Filter size={14} /> {t('reservations.filters_button', 'Filters')} {hasFilters ? '●' : ''}
           </button>
         </div>
         {showFilters && (
           <div className="flex flex-wrap gap-2 items-center">
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Statuses</option>
+              <option value="">{t('reservations.filters.all_statuses', 'All Statuses')}</option>
               {settings.reservation_statuses.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={propertyId} onChange={e => { setPropertyId(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Properties</option>
+              <option value="">{t('reservations.filters.all_properties', 'All Properties')}</option>
               {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select value={roomType} onChange={e => { setRoomType(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Room Types</option>
+              <option value="">{t('reservations.filters.all_room_types', 'All Room Types')}</option>
               {settings.room_types.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={mealPlan} onChange={e => { setMealPlan(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Meal Plans</option>
+              <option value="">{t('reservations.filters.all_meal_plans', 'All Meal Plans')}</option>
               {settings.meal_plans.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Payments</option>
+              <option value="">{t('reservations.filters.all_payments', 'All Payments')}</option>
               {settings.payment_statuses.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={bookingChannel} onChange={e => { setBookingChannel(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">All Channels</option>
+              <option value="">{t('reservations.filters.all_channels', 'All Channels')}</option>
               {settings.booking_channels.map(s => <option key={s}>{s}</option>)}
             </select>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-t-secondary">From</span>
+              <span className="text-xs text-t-secondary">{t('reservations.filters.from', 'From')}</span>
               <input type="date" value={checkInFrom} onChange={e => { setCheckInFrom(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-t-secondary">To</span>
+              <span className="text-xs text-t-secondary">{t('reservations.filters.to', 'To')}</span>
               <input type="date" value={checkInTo} onChange={e => { setCheckInTo(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
-            {hasFilters && <button onClick={clearFilters} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
+            {hasFilters && <button onClick={clearFilters} className="text-xs text-[#636366] hover:text-white px-2">{t('reservations.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -239,22 +241,22 @@ export function Reservations() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-dark-border">
-              <SortHeader col="confirmation_no" label="Conf. No" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Guest</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Property</th>
-              <SortHeader col="check_in" label="Check-in" />
-              <SortHeader col="check_out" label="Check-out" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Nights</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Room</th>
-              <SortHeader col="total_amount" label="Total" />
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Payment</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">Status</th>
-              <th className="px-4 py-3 text-xs font-medium text-t-secondary">Actions</th>
+              <SortHeader col="confirmation_no" label={t('reservations.table.conf_no', 'Conf. No')} />
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.guest', 'Guest')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.property', 'Property')}</th>
+              <SortHeader col="check_in" label={t('reservations.table.check_in', 'Check-in')} />
+              <SortHeader col="check_out" label={t('reservations.table.check_out', 'Check-out')} />
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.nights', 'Nights')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.room', 'Room')}</th>
+              <SortHeader col="total_amount" label={t('reservations.table.total', 'Total')} />
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.payment', 'Payment')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.status', 'Status')}</th>
+              <th className="px-4 py-3 text-xs font-medium text-t-secondary">{t('reservations.table.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-            {!isLoading && reservations.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">No reservations found</td></tr>}
+            {isLoading && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">{t('reservations.table.loading', 'Loading...')}</td></tr>}
+            {!isLoading && reservations.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">{t('reservations.table.no_reservations', 'No reservations found')}</td></tr>}
             {reservations.map((r: any) => (
               <tr key={r.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
                 <td className="px-4 py-3 text-primary-400 font-medium text-xs">{r.confirmation_no ?? '—'}</td>
@@ -286,15 +288,15 @@ export function Reservations() {
                     {r.status === 'Confirmed' && (
                       <button onClick={() => checkInMutation.mutate(r.id)} disabled={checkInMutation.isPending}
                         className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                        title="Check In">
-                        <LogIn size={12} /> In
+                        title={t('reservations.row_actions.check_in_title', 'Check In')}>
+                        <LogIn size={12} /> {t('reservations.row_actions.check_in_short', 'In')}
                       </button>
                     )}
                     {r.status === 'Checked In' && (
                       <button onClick={() => checkOutMutation.mutate(r.id)} disabled={checkOutMutation.isPending}
                         className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-500/10 text-[#a0a0a0] hover:bg-gray-500/20 transition-colors disabled:opacity-50"
-                        title="Check Out">
-                        <LogOut size={12} /> Out
+                        title={t('reservations.row_actions.check_out_title', 'Check Out')}>
+                        <LogOut size={12} /> {t('reservations.row_actions.check_out_short', 'Out')}
                       </button>
                     )}
                   </div>
@@ -308,7 +310,7 @@ export function Reservations() {
       {/* Pagination */}
       {meta.last_page > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
+          <span className="text-t-secondary">{t('reservations.table.page_of', { current: meta.current_page, last: meta.last_page, defaultValue: 'Page {{current}} of {{last}}' })}</span>
           <div className="flex gap-2">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
             <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
@@ -322,7 +324,7 @@ export function Reservations() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-white mb-4">Add Reservation</h2>
+            <h2 className="text-lg font-bold text-white mb-4">{t('reservations.create.title', 'Add Reservation')}</h2>
             <form onSubmit={e => {
               e.preventDefault()
               const total = form.total_amount || autoTotal
@@ -339,81 +341,81 @@ export function Reservations() {
             }} className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Guest ID</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.guest_id', 'Guest ID')}</label>
                   <input type="number" value={form.guest_id} onChange={e => setForm(f => ({ ...f, guest_id: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Property *</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.property_req', 'Property *')}</label>
                   <select required value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
+                    <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Booking Channel</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.booking_channel', 'Booking Channel')}</label>
                   <select value={form.booking_channel} onChange={e => setForm(f => ({ ...f, booking_channel: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
+                    <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.booking_channels.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Check-in *</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.check_in_req', 'Check-in *')}</label>
                   <input required type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Check-out *</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.check_out_req', 'Check-out *')}</label>
                   <input required type="date" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Rooms</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.rooms', 'Rooms')}</label>
                   <input type="number" min="1" value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.room_type', 'Room Type')}</label>
                   <select value={form.room_type} onChange={e => setForm(f => ({ ...f, room_type: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
+                    <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.room_types.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Room Number</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.room_number', 'Room Number')}</label>
                   <input value={form.room_number} onChange={e => setForm(f => ({ ...f, room_number: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Rate/Night ({settings.currency_symbol})</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.rate_per_night', { symbol: settings.currency_symbol, defaultValue: 'Rate/Night ({{symbol}})' })}</label>
                   <input type="number" step="0.01" value={form.rate_per_night} onChange={e => setForm(f => ({ ...f, rate_per_night: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Total ({settings.currency_symbol}) {autoTotal && !form.total_amount ? `auto: ${autoTotal}` : ''}</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.total_label', { symbol: settings.currency_symbol, defaultValue: 'Total ({{symbol}})' })} {autoTotal && !form.total_amount ? t('reservations.create.total_auto', { value: autoTotal, defaultValue: 'auto: {{value}}' }) : ''}</label>
                   <input type="number" step="0.01" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))} placeholder={autoTotal || ''} className={`${inp} placeholder-[#636366]`} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Meal Plan</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.meal_plan', 'Meal Plan')}</label>
                   <select value={form.meal_plan} onChange={e => setForm(f => ({ ...f, meal_plan: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
+                    <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.meal_plans.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Payment Method</label>
+                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.payment_method', 'Payment Method')}</label>
                   <select value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))} className={inp}>
-                    <option value="">-- Select --</option>
+                    <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.payment_methods.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Special Requests</label>
+                <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.special_requests', 'Special Requests')}</label>
                 <textarea value={form.special_requests} onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.notes', 'Notes')}</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('reservations.create.cancel', 'Cancel')}</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
-                  {createMutation.isPending ? 'Saving...' : 'Create'}
+                  {createMutation.isPending ? t('reservations.create.saving', 'Saving...') : t('reservations.create.create', 'Create')}
                 </button>
               </div>
             </form>
