@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import en from './locales/en/common.json'
 import ru from './locales/ru/common.json'
+import de from './locales/de/common.json'
 
 /**
  * Admin SPA i18n. Russian is the first non-English locale; German /
@@ -21,6 +22,7 @@ import ru from './locales/ru/common.json'
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English',  flag: '\u{1F1FA}\u{1F1F8}' },
   { code: 'ru', label: 'Russian',  flag: '\u{1F1F7}\u{1F1FA}' },
+  { code: 'de', label: 'Deutsch',  flag: '\u{1F1E9}\u{1F1EA}' },
 ] as const
 
 export type LangCode = (typeof SUPPORTED_LANGUAGES)[number]['code']
@@ -32,6 +34,7 @@ i18n
     resources: {
       en: { common: en },
       ru: { common: ru },
+      de: { common: de },
     },
     fallbackLng: 'en',
     defaultNS: 'common',
