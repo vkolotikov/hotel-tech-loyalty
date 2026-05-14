@@ -583,7 +583,7 @@ class WidgetChatController extends Controller
                     $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams, (int) $orgId
                 );
             } else {
-                $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams);
+                $aiResponse = $this->callProvider($provider, $systemPrompt, $contextMessages, $model, $temperature, $maxTokens, $extraParams, 'website_chatbot');
             }
 
             // Structured-reply parse. The Responses-API path is constrained
@@ -1365,6 +1365,27 @@ class WidgetChatController extends Controller
         return $response;
     }
 
+    /**
+     * Record a tool-calling round's token usage to the org ledger.
+     * The tool-call methods don't go through DispatchesAiChat::trackUsage
+     * because they speak raw HTTP themselves — so they call this helper
+     * after each round's response.
+     */
+    private function trackWidgetUsage(int $orgId, string $model, string $feature, int $inputTokens, int $outputTokens): void
+    {
+        try {
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: $model,
+                inputTokens: $inputTokens,
+                outputTokens: $outputTokens,
+                feature: $feature,
+            );
+        } catch (\Throwable $e) {
+            // Already logged inside AiUsageService.
+        }
+    }
+
     private function callOpenAiWithTools(
         string $systemPrompt,
         array $messages,
@@ -1385,7 +1406,7 @@ class WidgetChatController extends Controller
         // via the shared dispatcher (which already routes gpt-5.x to the
         // Responses API).
         if (empty($tools)) {
-            return $this->callProvider('openai', $systemPrompt, $messages, $model, $temperature, $maxTokens, $extra);
+            return $this->callProvider('openai', $systemPrompt, $messages, $model, $temperature, $maxTokens, $extra, 'website_chatbot');
         }
 
         // gpt-5.x belongs on /v1/responses per OpenAI's official guidance.
@@ -1439,6 +1460,14 @@ class WidgetChatController extends Controller
                 ]);
                 throw new \RuntimeException("OpenAI tool-call error {$status} [{$model}]: {$msg}");
             }
+
+            // Track token usage per round (each round is a separate billable call).
+            $usage = $response->json('usage') ?: [];
+            $this->trackWidgetUsage(
+                $orgId, $model, 'website_chatbot_tools',
+                (int) ($usage['prompt_tokens']     ?? 0),
+                (int) ($usage['completion_tokens'] ?? 0),
+            );
 
             $choiceMessage = $response->json('choices.0.message');
             if (!is_array($choiceMessage)) return '';
@@ -1609,6 +1638,14 @@ class WidgetChatController extends Controller
                 ]);
                 throw new \RuntimeException("OpenAI Responses tool-call error {$status} [{$model}]: {$msg}");
             }
+
+            // Track token usage per round (each round is a separate billable call).
+            $usage = $response->json('usage') ?: [];
+            $this->trackWidgetUsage(
+                $orgId, $model, 'website_chatbot_tools',
+                (int) ($usage['input_tokens']  ?? 0),
+                (int) ($usage['output_tokens'] ?? 0),
+            );
 
             $output = $response->json('output') ?: [];
 

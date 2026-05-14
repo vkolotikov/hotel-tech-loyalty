@@ -234,6 +234,17 @@ class CrmAiService
 
     private function call(string $system, array $messages, array $tools, ?array $toolChoice = null): array
     {
+        // Plan-cap gate: refuse early if the org's plan doesn't include
+        // this model. Throws so the controller can surface a clear
+        // upgrade-your-plan message instead of silently failing the call.
+        $org = app()->bound('current_organization_id')
+            ? \App\Models\Organization::find((int) app('current_organization_id'))
+            : null;
+        if ($org && !app(\App\Services\AiUsageService::class)->isModelAllowed($org, $this->model)) {
+            $allowed = (array) ($org->featureValue('ai_allowed_models') ?? []);
+            throw new \App\Exceptions\AiModelNotAllowed($this->model, $allowed);
+        }
+
         $body = ['model' => $this->model, 'max_tokens' => 4096, 'system' => $system, 'messages' => $messages];
         if ($tools)      $body['tools']       = $tools;
         if ($toolChoice) $body['tool_choice']  = $toolChoice;
@@ -254,7 +265,23 @@ class CrmAiService
             }
 
             if ($response->successful()) {
-                return $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
+                $json = $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
+
+                // Record usage for billing + plan-cap enforcement. Anthropic
+                // returns usage.input_tokens / usage.output_tokens. Wrapped
+                // in app()-resolution so this service can still be used in
+                // contexts where the container isn't bound.
+                $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+                if ($orgId) {
+                    app(\App\Services\AiUsageService::class)->recordUsage(
+                        orgId:        $orgId,
+                        model:        $this->model,
+                        inputTokens:  (int) ($json['usage']['input_tokens']  ?? 0),
+                        outputTokens: (int) ($json['usage']['output_tokens'] ?? 0),
+                        feature:      'crm_chat',
+                    );
+                }
+                return $json;
             }
 
             $status = $response->status();

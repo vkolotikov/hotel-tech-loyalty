@@ -65,7 +65,7 @@ class OpenAiService
         $this->lastHandoff = null;
 
         try {
-            $reply = $this->callProvider($provider, $systemPrompt, $messages, $model, $temperature, $maxTokens, $extraParams);
+            $reply = $this->callProvider($provider, $systemPrompt, $messages, $model, $temperature, $maxTokens, $extraParams, 'member_chat');
             return $this->extractHandoffToken($reply);
         } catch (\Throwable $e) {
             Log::error("AI chat error [{$provider}/{$model}]: " . $e->getMessage());
@@ -90,6 +90,28 @@ class OpenAiService
             $reply = trim(preg_replace('/\[HANDOFF(?::[a-z0-9_\- ]{1,80})?\]\s*$/i', '', $reply));
         }
         return $reply;
+    }
+
+    /**
+     * Record token usage from an OpenAI SDK chat response. Uses the
+     * member's org when current_organization_id isn't bound (which
+     * is the case from queued jobs / scheduled commands).
+     */
+    private function recordResponseUsage($response, string $feature, ?int $orgId = null): void
+    {
+        $orgId = $orgId ?? (app()->bound('current_organization_id') ? (int) app('current_organization_id') : null);
+        if (!$orgId) return;
+        try {
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: $this->model,
+                inputTokens: (int) ($response->usage->promptTokens ?? 0),
+                outputTokens: (int) ($response->usage->completionTokens ?? 0),
+                feature: $feature,
+            );
+        } catch (\Throwable $e) {
+            // Already logged inside AiUsageService.
+        }
     }
 
     /**
@@ -119,6 +141,7 @@ Return JSON only with keys: title, description, type (discount/bonus_points/upgr
                 'response_format' => ['type' => 'json_object'],
                 'max_tokens' => 300,
             ]);
+            $this->recordResponseUsage($response, 'personalize_offer', (int) $member->organization_id);
 
             return json_decode($response->choices[0]->message->content, true) ?? [];
         } catch (\Throwable $e) {
@@ -153,6 +176,7 @@ Return JSON only with: score (float 0-1), reason (string), recommendation (strin
                 'response_format' => ['type' => 'json_object'],
                 'max_tokens' => 200,
             ]);
+            $this->recordResponseUsage($response, 'predict_churn', (int) $member->organization_id);
 
             $data = json_decode($response->choices[0]->message->content, true);
             return (float) ($data['score'] ?? 0.5);
@@ -179,6 +203,7 @@ Focus on: key trends, what's working, what needs attention, and 2 specific recom
                 'max_tokens' => 600,
                 'temperature' => 0.5,
             ]);
+            $this->recordResponseUsage($response, 'weekly_insight_report');
 
             return $response->choices[0]->message->content;
         } catch (\Throwable $e) {
@@ -203,6 +228,7 @@ Review: {$text}";
                 'response_format' => ['type' => 'json_object'],
                 'max_tokens' => 200,
             ]);
+            $this->recordResponseUsage($response, 'sentiment_analysis');
 
             return json_decode($response->choices[0]->message->content, true) ?? [];
         } catch (\Throwable $e) {
@@ -234,6 +260,7 @@ Review: {$text}";
                 'max_tokens' => 100,
                 'temperature' => 0.8,
             ]);
+            $this->recordResponseUsage($response, 'upsell_suggestion', (int) $member->organization_id);
 
             return $response->choices[0]->message->content;
         } catch (\Throwable $e) {

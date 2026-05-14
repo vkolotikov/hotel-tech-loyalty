@@ -497,6 +497,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('settings/test-integration',      [SettingsController::class, 'testIntegration']);
             Route::get('settings/sync-status',            [SettingsController::class, 'syncStatus']);
 
+            // ─── AI usage (per-org token ledger) ─────────────────────────────
+            Route::get('ai-usage/stats',  [\App\Http\Controllers\Api\V1\Admin\AiUsageController::class, 'stats']);
+            Route::get('ai-usage/recent', [\App\Http\Controllers\Api\V1\Admin\AiUsageController::class, 'recent']);
+            Route::get('ai-usage/series', [\App\Http\Controllers\Api\V1\Admin\AiUsageController::class, 'series']);
+
             // ─── Chatbot Analytics ──────────────────────────────────────────
             Route::get('chatbot/analytics',                   [\App\Http\Controllers\Api\V1\Admin\ChatbotAnalyticsController::class, 'index']);
 

@@ -215,6 +215,17 @@ PROMPT;
             'response_format' => ['type' => 'json_object'],
         ]);
 
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        if ($orgId) {
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: self::MODEL,
+                inputTokens: (int) ($response->usage->promptTokens ?? 0),
+                outputTokens: (int) ($response->usage->completionTokens ?? 0),
+                feature: 'engagement_brief',
+            );
+        }
+
         $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
         $decoded = json_decode($raw, true);
 

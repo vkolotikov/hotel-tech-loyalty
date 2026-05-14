@@ -300,6 +300,8 @@ PROMPT;
             'response_format' => ['type' => 'json_object'],
         ]);
 
+        $this->recordUsage($response, 'inquiry_smart_panel');
+
         $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
         $decoded = json_decode($raw, true);
 
@@ -308,6 +310,23 @@ PROMPT;
         }
 
         return $decoded;
+    }
+
+    private function recordUsage($response, string $feature): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        if (!$orgId) return;
+        try {
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: self::MODEL,
+                inputTokens: (int) ($response->usage->promptTokens ?? 0),
+                outputTokens: (int) ($response->usage->completionTokens ?? 0),
+                feature: $feature,
+            );
+        } catch (\Throwable $e) {
+            // Already logged inside AiUsageService.
+        }
     }
 
     private function normaliseIntent(?string $raw): string
@@ -463,6 +482,8 @@ PROMPT;
             'response_format' => ['type' => 'json_object'],
         ]);
 
+        $this->recordUsage($response, 'inquiry_lost_reason');
+
         $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
@@ -532,6 +553,8 @@ PROMPT;
             'temperature'     => 0.5, // a bit of warmth, still grounded
             'response_format' => ['type' => 'json_object'],
         ]);
+
+        $this->recordUsage($response, 'inquiry_proposal_draft');
 
         $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
         $decoded = json_decode($raw, true);

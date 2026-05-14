@@ -29,15 +29,54 @@ trait DispatchesAiChat
         float $temperature,
         int $maxTokens,
         array $extra = [],
+        string $feature = 'chat',
     ): string {
+        $this->assertModelAllowed($model);
         return match ($provider) {
-            'anthropic' => $this->dispatchAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
-            'google'    => $this->dispatchGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
-            default     => $this->dispatchOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra),
+            'anthropic' => $this->dispatchAnthropic($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra, $feature),
+            'google'    => $this->dispatchGoogle($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra, $feature),
+            default     => $this->dispatchOpenAi($systemPrompt, $messages, $model, $temperature, $maxTokens, $extra, $feature),
         };
     }
 
-    private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
+    /**
+     * Hard-block when the org's plan doesn't include the requested model.
+     * No-op when no org context is bound (e.g. CLI / public webhooks).
+     */
+    private function assertModelAllowed(string $model): void
+    {
+        if (!app()->bound('current_organization_id')) return;
+        $org = \App\Models\Organization::find((int) app('current_organization_id'));
+        if (!$org) return;
+        if (!app(\App\Services\AiUsageService::class)->isModelAllowed($org, $model)) {
+            $allowed = (array) ($org->featureValue('ai_allowed_models') ?? []);
+            throw new \App\Exceptions\AiModelNotAllowed($model, $allowed);
+        }
+    }
+
+    /**
+     * Record AI usage for billing + plan-cap reporting. Swallows errors —
+     * a ledger write failure must never break the AI call itself.
+     */
+    private function trackUsage(string $model, string $feature, int $inputTokens, int $outputTokens): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        if (!$orgId) return;
+        try {
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: $model,
+                inputTokens: $inputTokens,
+                outputTokens: $outputTokens,
+                feature: $feature,
+            );
+        } catch (\Throwable $e) {
+            // Already logged inside AiUsageService; double-catch keeps the
+            // trait fail-safe even if the service itself blows up.
+        }
+    }
+
+    private function dispatchOpenAi(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
         $apiKey = config('openai.api_key', env('OPENAI_API_KEY', ''));
         if (!$apiKey) {
@@ -52,9 +91,9 @@ trait DispatchesAiChat
         // they work there and a forced migration adds risk for no win.
         $isGpt5 = (bool) preg_match('/^gpt-5/i', $model);
         if ($isGpt5) {
-            return $this->dispatchOpenAiResponses($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra);
+            return $this->dispatchOpenAiResponses($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra, $feature);
         }
-        return $this->dispatchOpenAiChatCompletions($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra);
+        return $this->dispatchOpenAiChatCompletions($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra, $feature);
     }
 
     /**
@@ -73,7 +112,7 @@ trait DispatchesAiChat
      * function-calling here yet — the widget's tool surface still uses
      * Chat Completions and stays where it is.
      */
-    private function dispatchOpenAiResponses(string $apiKey, string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
+    private function dispatchOpenAiResponses(string $apiKey, string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
         // The Responses API takes `instructions` for the system content
         // and the message array as `input`. Don't merge the system into
@@ -112,7 +151,7 @@ trait DispatchesAiChat
             $params['temperature'] = $temp;
         }
 
-        return $this->withRetry(function () use ($apiKey, $params, $model) {
+        return $this->withRetry(function () use ($apiKey, $params, $model, $feature) {
             $response = Http::withToken($apiKey)
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/responses', $params);
@@ -128,11 +167,19 @@ trait DispatchesAiChat
                 throw new \RuntimeException("OpenAI Responses API error {$status} [{$model}]: {$errorMsg}");
             }
 
+            $body = $response->json();
+            // Responses API usage shape: usage.input_tokens / output_tokens.
+            $this->trackUsage(
+                $model,
+                $feature,
+                (int) ($body['usage']['input_tokens']  ?? 0),
+                (int) ($body['usage']['output_tokens'] ?? 0),
+            );
+
             // SDK convenience aggregator first — falls back to walking the
             // output array, which is what the doc warns is "not safe to
             // assume that the model's text output is present at
             // output[0].content[0].text".
-            $body = $response->json();
             if (!empty($body['output_text'])) {
                 return (string) $body['output_text'];
             }
@@ -163,7 +210,7 @@ trait DispatchesAiChat
      * Same code as before the gpt-5 split — kept verbatim so older
      * deployments don't regress.
      */
-    private function dispatchOpenAiChatCompletions(string $apiKey, string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
+    private function dispatchOpenAiChatCompletions(string $apiKey, string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
         $isOSeries = (bool) preg_match('/^(o1|o3|o4)/i', $model);
         $isModern  = !$isOSeries && (bool) preg_match('/^(gpt-4o|gpt-4\.1|gpt-4-turbo)/i', $model);
@@ -186,7 +233,7 @@ trait DispatchesAiChat
             if (!empty($extra['stop_sequences'])) $params['stop'] = $extra['stop_sequences'];
         }
 
-        return $this->withRetry(function () use ($apiKey, $params, $model) {
+        return $this->withRetry(function () use ($apiKey, $params, $model, $feature) {
             $response = Http::withToken($apiKey)
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/chat/completions', $params);
@@ -202,18 +249,26 @@ trait DispatchesAiChat
                 throw new \RuntimeException("OpenAI API error {$status} [{$model}]: {$errorMsg}");
             }
 
-            return $response->json('choices.0.message.content') ?? '';
+            $body = $response->json();
+            // Chat Completions usage shape: usage.prompt_tokens / completion_tokens.
+            $this->trackUsage(
+                $model,
+                $feature,
+                (int) ($body['usage']['prompt_tokens']     ?? 0),
+                (int) ($body['usage']['completion_tokens'] ?? 0),
+            );
+            return $body['choices'][0]['message']['content'] ?? '';
         }, "OpenAI/{$model}");
     }
 
-    private function dispatchAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
+    private function dispatchAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
         $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
         if (!$apiKey) {
             throw new \RuntimeException('Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env');
         }
 
-        return $this->withRetry(function () use ($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra) {
+        return $this->withRetry(function () use ($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra, $feature) {
             $payload = [
                 'model'       => $model,
                 'max_tokens'  => $maxTokens,
@@ -245,11 +300,19 @@ trait DispatchesAiChat
                 throw new \RuntimeException('Anthropic API error ' . $status . ': ' . substr($response->body(), 0, 300));
             }
 
-            return $response->json()['content'][0]['text'] ?? '';
+            $body = $response->json();
+            // Anthropic usage shape: usage.input_tokens / output_tokens.
+            $this->trackUsage(
+                $model,
+                $feature,
+                (int) ($body['usage']['input_tokens']  ?? 0),
+                (int) ($body['usage']['output_tokens'] ?? 0),
+            );
+            return $body['content'][0]['text'] ?? '';
         }, "Anthropic/{$model}");
     }
 
-    private function dispatchGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = []): string
+    private function dispatchGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
         $apiKey = config('services.google.gemini_api_key', env('GOOGLE_GEMINI_API_KEY'));
         if (!$apiKey) {
@@ -264,7 +327,7 @@ trait DispatchesAiChat
             ];
         }
 
-        return $this->withRetry(function () use ($apiKey, $system, $contents, $model, $temp, $maxTokens) {
+        return $this->withRetry(function () use ($apiKey, $system, $contents, $model, $temp, $maxTokens, $feature) {
             $response = Http::timeout(60)->post(
                 "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
                 [
@@ -286,7 +349,15 @@ trait DispatchesAiChat
                 throw new \RuntimeException('Gemini API error ' . $status . ': ' . substr($response->body(), 0, 300));
             }
 
-            return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $body = $response->json();
+            // Gemini usage shape: usageMetadata.promptTokenCount / candidatesTokenCount.
+            $this->trackUsage(
+                $model,
+                $feature,
+                (int) ($body['usageMetadata']['promptTokenCount']     ?? 0),
+                (int) ($body['usageMetadata']['candidatesTokenCount'] ?? 0),
+            );
+            return $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
         }, "Google/{$model}");
     }
 

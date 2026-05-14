@@ -255,7 +255,7 @@ class ChatbotConfigController extends Controller
         ], fn($v) => $v !== null);
 
         try {
-            $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens, $extraParams);
+            $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens, $extraParams, 'chatbot_test');
         } catch (\Throwable $e) {
             return response()->json(['error' => 'AI call failed: ' . $e->getMessage()], 500);
         }

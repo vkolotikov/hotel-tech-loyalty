@@ -10,7 +10,7 @@ import {
   Zap, Globe, Users, Star, Layers, CreditCard, MessageSquare, Map,
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
-  BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList,
+  BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList, Activity,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSubscription } from '../hooks/useSubscription'
@@ -19,6 +19,7 @@ import { PipelinesAdmin } from '../components/PipelinesAdmin'
 import { PlannerSettings } from '../components/PlannerSettings'
 import { MenuSettings } from '../components/MenuSettings'
 import { TeamSettings } from '../components/TeamSettings'
+import { AiUsagePanel } from '../components/AiUsagePanel'
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -228,6 +229,7 @@ const TABS: Tab[] = [
   { id: 'team',          label: 'Team',            icon: Users,         desc: 'Invite teammates and manage roles + permissions', custom: true },
   { id: 'mobile_app',    label: 'Mobile App',      icon: Smartphone, desc: 'Loyalty mobile app appearance & preview', groups: ['mobile_app'], custom: true, product: 'loyalty' },
   { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
+  { id: 'ai_usage',      label: 'AI Usage',        icon: Activity,   desc: 'Month-to-date AI spend, per-model + per-feature breakdown, plan cap', custom: true },
   { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
 ]
 
@@ -1786,6 +1788,7 @@ export function Settings() {
       case 'team': return <TeamSettings />
       case 'mobile_app': return renderMobileApp()
       case 'documentation': return renderDocumentation()
+      case 'ai_usage': return <AiUsagePanel />
       case 'ai_system': return renderAiSystem()
       default: {
         // Generic tab — just render its settings
