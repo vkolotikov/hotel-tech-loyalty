@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   Plus, X, Pencil, Trash2, Send, Mail, Loader2, CheckCircle, AlertCircle,
   Copy, Beaker, Sparkles, Users, FileText, AlertTriangle, MoreHorizontal,
@@ -79,6 +80,7 @@ function applyPreviewVariables(html: string): string {
 
 export function EmailCampaigns() {
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -326,15 +328,15 @@ export function EmailCampaigns() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Email campaigns</h1>
+          <h1 className="text-2xl font-bold text-white">{t('emailCampaigns.title', 'Email campaigns')}</h1>
           <p className="text-sm text-t-secondary mt-0.5">
-            Compose, save, then send rich emails to a saved segment. Opted-out members are skipped automatically.
+            {t('emailCampaigns.subtitle', 'Compose, save, then send rich emails to a saved segment. Opted-out members are skipped automatically.')}
           </p>
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm">
-          <Plus size={16} /> New campaign
+          <Plus size={16} /> {t('emailCampaigns.new_campaign', 'New campaign')}
         </button>
       </div>
 
@@ -358,10 +360,10 @@ export function EmailCampaigns() {
         <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">{editId ? 'Edit draft' : 'New draft'}</h2>
+              <h2 className="text-sm font-semibold text-white">{editId ? t('emailCampaigns.form.edit_draft', 'Edit draft') : t('emailCampaigns.form.new_draft', 'New draft')}</h2>
               {editId && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300">
-                  Draft saved
+                  {t('emailCampaigns.form.draft_saved', 'Draft saved')}
                 </span>
               )}
             </div>
@@ -370,7 +372,7 @@ export function EmailCampaigns() {
                 onClick={() => setShowPreview(p => !p)}
                 className="text-xs text-t-secondary hover:text-white"
               >
-                {showPreview ? 'Hide preview' : 'Show preview'}
+                {showPreview ? t('emailCampaigns.form.hide_preview', 'Hide preview') : t('emailCampaigns.form.show_preview', 'Show preview')}
               </button>
               <button onClick={resetForm} className="text-t-secondary hover:text-white"><X size={18} /></button>
             </div>
@@ -382,7 +384,7 @@ export function EmailCampaigns() {
               {/* Template picker */}
               <div>
                 <p className="text-xs font-medium text-t-secondary mb-2 flex items-center gap-1.5">
-                  <Sparkles size={12} className="text-amber-300" /> Start from a template
+                  <Sparkles size={12} className="text-amber-300" /> {t('emailCampaigns.form.start_from_template', 'Start from a template')}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(TEMPLATE_BLOCKS).map(([key, t]) => (
@@ -400,19 +402,19 @@ export function EmailCampaigns() {
               {/* Meta row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-t-secondary mb-1">Internal name *</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.internal_name', 'Internal name *')}</label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. June win-back to Gold tier"
+                    placeholder={t('emailCampaigns.form.internal_name_placeholder', 'e.g. June win-back to Gold tier')}
                     className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-t-secondary mb-1">Target segment</label>
+                  <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.target_segment', 'Target segment')}</label>
                   <select value={form.segment_id} onChange={e => setForm(f => ({ ...f, segment_id: e.target.value }))}
                     className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                    <option value="">— No segment (pick recipients on send) —</option>
+                    <option value="">{t('emailCampaigns.form.no_segment_option', '— No segment (pick recipients on send) —')}</option>
                     {segments.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.name} {s.member_count_cached != null ? `(${s.member_count_cached.toLocaleString()} members)` : ''}
+                        {s.name} {s.member_count_cached != null ? `(${t('emailCampaigns.form.members_count', { count: s.member_count_cached, defaultValue: '{{count}} members' })})` : ''}
                       </option>
                     ))}
                   </select>
@@ -420,15 +422,15 @@ export function EmailCampaigns() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-t-secondary mb-1">Subject *</label>
+                <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.subject', 'Subject *')}</label>
                 <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                  placeholder="Your exclusive offer inside"
+                  placeholder={t('emailCampaigns.form.subject_placeholder', 'Your exclusive offer inside')}
                   className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
 
               {/* Visual / Code mode toggle */}
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-medium text-t-secondary">Email body *</label>
+                <label className="block text-xs font-medium text-t-secondary">{t('emailCampaigns.form.email_body', 'Email body *')}</label>
                 <div className="inline-flex bg-dark-surface2 border border-dark-border rounded-lg p-0.5">
                   <button
                     type="button"
@@ -437,7 +439,7 @@ export function EmailCampaigns() {
                       editorMode === 'visual' ? 'bg-primary-500/20 text-primary-300' : 'text-t-secondary hover:text-white'
                     }`}
                   >
-                    <Blocks size={12} /> Visual
+                    <Blocks size={12} /> {t('emailCampaigns.form.visual_mode', 'Visual')}
                   </button>
                   <button
                     type="button"
@@ -446,7 +448,7 @@ export function EmailCampaigns() {
                       editorMode === 'code' ? 'bg-primary-500/20 text-primary-300' : 'text-t-secondary hover:text-white'
                     }`}
                   >
-                    <Code2 size={12} /> Code
+                    <Code2 size={12} /> {t('emailCampaigns.form.code_mode', 'Code')}
                   </button>
                 </div>
               </div>
@@ -466,9 +468,9 @@ export function EmailCampaigns() {
                     placeholder="<h1>Hi {{member.name}}</h1><p>We've prepared a special offer just for you…</p>"
                     className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
-                  <p className="text-[10px] text-[#636366] mt-1">Plain HTML. Inline styles render best across email clients.</p>
+                  <p className="text-[10px] text-[#636366] mt-1">{t('emailCampaigns.form.code_hint', 'Plain HTML. Inline styles render best across email clients.')}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-[10px] text-t-secondary mr-1 self-center">Insert at cursor:</span>
+                    <span className="text-[10px] text-t-secondary mr-1 self-center">{t('emailCampaigns.form.insert_at_cursor', 'Insert at cursor:')}</span>
                     {Object.keys(PREVIEW_VARIABLES).map(token => (
                       <button
                         key={token}
@@ -484,10 +486,10 @@ export function EmailCampaigns() {
               )}
 
               <div>
-                <label className="block text-xs font-medium text-t-secondary mb-1">Plain text fallback <span className="text-[#636366]">(optional)</span></label>
+                <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.plain_text_fallback', 'Plain text fallback')} <span className="text-[#636366]">{t('emailCampaigns.form.plain_text_optional', '(optional)')}</span></label>
                 <textarea value={form.body_text} onChange={e => setForm(f => ({ ...f, body_text: e.target.value }))}
                   rows={3}
-                  placeholder="Plain-text version for clients that can't render HTML"
+                  placeholder={t('emailCampaigns.form.plain_text_placeholder', "Plain-text version for clients that can't render HTML")}
                   className="w-full text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
             </div>
@@ -496,13 +498,13 @@ export function EmailCampaigns() {
             {showPreview && (
               <div className="lg:sticky lg:top-4 self-start min-w-0">
                 <p className="text-xs font-medium text-t-secondary mb-2 flex items-center gap-1.5">
-                  <Mail size={12} /> Live preview
+                  <Mail size={12} /> {t('emailCampaigns.form.live_preview', 'Live preview')}
                 </p>
                 <div className="bg-dark-surface2 rounded-lg border border-dark-border overflow-hidden">
                   <div className="px-3 py-2 border-b border-dark-border bg-dark-surface3">
-                    <p className="text-[10px] uppercase tracking-wide text-t-secondary">Subject</p>
+                    <p className="text-[10px] uppercase tracking-wide text-t-secondary">{t('emailCampaigns.form.preview_subject_label', 'Subject')}</p>
                     <p className="text-xs text-white truncate font-medium">
-                      {applyPreviewVariables(form.subject) || <span className="text-t-secondary italic">No subject yet</span>}
+                      {applyPreviewVariables(form.subject) || <span className="text-t-secondary italic">{t('emailCampaigns.form.preview_no_subject', 'No subject yet')}</span>}
                     </p>
                   </div>
                   <iframe
@@ -514,7 +516,7 @@ export function EmailCampaigns() {
                   />
                 </div>
                 <p className="text-[10px] text-t-secondary mt-2">
-                  Sample values shown for variables — actual sends substitute each recipient's data.
+                  {t('emailCampaigns.form.preview_help', "Sample values shown for variables — actual sends substitute each recipient's data.")}
                 </p>
               </div>
             )}
@@ -523,10 +525,12 @@ export function EmailCampaigns() {
           {/* Action row */}
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-t border-dark-border bg-dark-surface2">
             <p className="text-[11px] text-t-secondary">
-              {!canSave ? 'Fill name, subject, and HTML body to save.' : 'Save the draft, then send a test to yourself before broadcasting.'}
+              {!canSave
+                ? t('emailCampaigns.form.fill_to_save', 'Fill name, subject, and HTML body to save.')
+                : t('emailCampaigns.form.save_test_hint', 'Save the draft, then send a test to yourself before broadcasting.')}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('emailCampaigns.form.cancel', 'Cancel')}</button>
               {editId && (
                 <button
                   onClick={() => testMutation.mutate(editId)}
@@ -534,7 +538,7 @@ export function EmailCampaigns() {
                   className="flex items-center gap-1.5 bg-dark-surface3 hover:bg-dark-surface text-[#e0e0e0] text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 border border-dark-border"
                 >
                   {testMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Beaker size={14} />}
-                  Send test to me
+                  {t('emailCampaigns.form.send_test_to_me', 'Send test to me')}
                 </button>
               )}
               <button
@@ -542,16 +546,16 @@ export function EmailCampaigns() {
                 disabled={saveMutation.isPending || !canSave}
                 className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
                 {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
-                {editId ? 'Update draft' : 'Save draft'}
+                {editId ? t('emailCampaigns.form.update_draft', 'Update draft') : t('emailCampaigns.form.save_draft', 'Save draft')}
               </button>
               {editId && (
                 <button
-                  onClick={() => confirm('Send this campaign now? Recipients are locked in by the segment.') && sendMutation.mutate(editId)}
+                  onClick={() => confirm(t('emailCampaigns.form.send_now_confirm', 'Send this campaign now? Recipients are locked in by the segment.')) && sendMutation.mutate(editId)}
                   disabled={sendMutation.isPending}
                   className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
                 >
                   {sendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  Send now
+                  {t('emailCampaigns.form.send_now', 'Send now')}
                 </button>
               )}
             </div>
@@ -562,10 +566,10 @@ export function EmailCampaigns() {
       {/* Filter pills */}
       <div className="flex flex-wrap items-center gap-1.5">
         {[
-          { val: '',       label: 'All',    count: statusCounts.all },
-          { val: 'draft',  label: 'Drafts', count: statusCounts.draft },
-          { val: 'sent',   label: 'Sent',   count: statusCounts.sent },
-          { val: 'failed', label: 'Failed', count: statusCounts.failed },
+          { val: '',       label: t('emailCampaigns.filters.all',    'All'),    count: statusCounts.all },
+          { val: 'draft',  label: t('emailCampaigns.filters.drafts', 'Drafts'), count: statusCounts.draft },
+          { val: 'sent',   label: t('emailCampaigns.filters.sent',   'Sent'),   count: statusCounts.sent },
+          { val: 'failed', label: t('emailCampaigns.filters.failed', 'Failed'), count: statusCounts.failed },
         ].map(opt => (
           <button
             key={opt.val || 'all'}
@@ -584,14 +588,14 @@ export function EmailCampaigns() {
 
       <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
         {isLoading ? (
-          <p className="text-center text-[#636366] py-8 text-sm">Loading…</p>
+          <p className="text-center text-[#636366] py-8 text-sm">{t('emailCampaigns.loading', 'Loading…')}</p>
         ) : campaigns.length === 0 ? (
           <div className="text-center py-12">
             <Mail size={36} className="mx-auto text-[#636366] mb-3" />
             <p className="text-[#636366] text-sm">
               {statusFilter
-                ? `No ${statusFilter} campaigns. Try a different filter.`
-                : 'No campaigns yet. Click "New campaign" to draft your first broadcast.'}
+                ? t('emailCampaigns.empty.filtered', { status: statusFilter, defaultValue: 'No {{status}} campaigns. Try a different filter.' })
+                : t('emailCampaigns.empty.default', 'No campaigns yet. Click "New campaign" to draft your first broadcast.')}
             </p>
           </div>
         ) : (
@@ -599,12 +603,12 @@ export function EmailCampaigns() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-t-secondary border-b border-dark-border bg-dark-surface2">
-                  <th className="px-5 py-3 font-medium">Campaign</th>
-                  <th className="px-5 py-3 font-medium">Audience</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Sent / Recipients</th>
-                  <th className="px-5 py-3 font-medium">When</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3 font-medium">{t('emailCampaigns.table.campaign', 'Campaign')}</th>
+                  <th className="px-5 py-3 font-medium">{t('emailCampaigns.table.audience', 'Audience')}</th>
+                  <th className="px-5 py-3 font-medium">{t('emailCampaigns.table.status', 'Status')}</th>
+                  <th className="px-5 py-3 font-medium text-right">{t('emailCampaigns.table.sent_recipients', 'Sent / Recipients')}</th>
+                  <th className="px-5 py-3 font-medium">{t('emailCampaigns.table.when', 'When')}</th>
+                  <th className="px-5 py-3 text-right">{t('emailCampaigns.table.actions', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border">
@@ -617,7 +621,7 @@ export function EmailCampaigns() {
                     <td className="px-5 py-3 text-xs text-[#a0a0a0]">
                       {c.segment?.name
                         ? <span className="inline-flex items-center gap-1"><Users size={11} /> {c.segment.name}</span>
-                        : <span className="text-[#636366]">— Unsegmented —</span>}
+                        : <span className="text-[#636366]">{t('emailCampaigns.table.unsegmented', '— Unsegmented —')}</span>}
                     </td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -633,7 +637,7 @@ export function EmailCampaigns() {
                         {c.status}
                       </span>
                       {c.failed_count > 0 && c.status === 'sent' && (
-                        <div className="text-[10px] text-[#f59e0b] mt-0.5">{c.failed_count} failed</div>
+                        <div className="text-[10px] text-[#f59e0b] mt-0.5">{t('emailCampaigns.table.failed_count', { count: c.failed_count, defaultValue: '{{count}} failed' })}</div>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right text-white font-semibold tabular-nums">
@@ -642,7 +646,7 @@ export function EmailCampaigns() {
                         : <>{c.sent_count.toLocaleString()} / {c.recipient_count.toLocaleString()}</>}
                     </td>
                     <td className="px-5 py-3 text-xs text-t-secondary">
-                      {c.sent_at ? format(new Date(c.sent_at), 'MMM d, HH:mm') : `drafted ${format(new Date(c.created_at), 'MMM d')}`}
+                      {c.sent_at ? format(new Date(c.sent_at), 'MMM d, HH:mm') : t('emailCampaigns.table.drafted_on', { date: format(new Date(c.created_at), 'MMM d'), defaultValue: 'drafted {{date}}' })}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex gap-1 justify-end items-center">
@@ -652,13 +656,13 @@ export function EmailCampaigns() {
                               onClick={() => startEdit(c)}
                               className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-2.5 py-1 rounded transition-colors"
                             >
-                              <Pencil size={12} /> Edit
+                              <Pencil size={12} /> {t('emailCampaigns.table.edit', 'Edit')}
                             </button>
                             <button
-                              onClick={() => confirm(`Send "${c.name}" now?${c.segment ? ` Audience: ${c.segment.name}.` : ''}`) && sendMutation.mutate(c.id)}
+                              onClick={() => confirm(t('emailCampaigns.table.send_confirm', { name: c.name, audience: c.segment ? t('emailCampaigns.table.send_confirm_audience', { name: c.segment.name, defaultValue: ' Audience: {{name}}.' }) : '', defaultValue: 'Send "{{name}}" now?{{audience}}' })) && sendMutation.mutate(c.id)}
                               className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 py-1 rounded transition-colors"
                             >
-                              <Send size={12} /> Send
+                              <Send size={12} /> {t('emailCampaigns.table.send', 'Send')}
                             </button>
                           </>
                         )}
@@ -668,7 +672,7 @@ export function EmailCampaigns() {
                             onClick={() => setOpenMenuFor(openMenuFor === c.id ? null : c.id)}
                             onBlur={() => setTimeout(() => setOpenMenuFor(m => (m === c.id ? null : m)), 150)}
                             className="p-1.5 rounded hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white"
-                            title="More"
+                            title={t('emailCampaigns.table.more_tooltip', 'More')}
                           >
                             <MoreHorizontal size={14} />
                           </button>
@@ -680,7 +684,7 @@ export function EmailCampaigns() {
                                 disabled={duplicateMutation.isPending}
                                 className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface2 flex items-center gap-2 disabled:opacity-50"
                               >
-                                <Copy size={13} className="text-primary-400" /> Duplicate as draft
+                                <Copy size={13} className="text-primary-400" /> {t('emailCampaigns.table.duplicate_as_draft', 'Duplicate as draft')}
                               </button>
                               {c.status === 'draft' && (
                                 <button
@@ -689,7 +693,7 @@ export function EmailCampaigns() {
                                   disabled={testMutation.isPending}
                                   className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface2 flex items-center gap-2 disabled:opacity-50"
                                 >
-                                  <Beaker size={13} className="text-amber-300" /> Send test to me
+                                  <Beaker size={13} className="text-amber-300" /> {t('emailCampaigns.table.send_test_to_me', 'Send test to me')}
                                 </button>
                               )}
                               {c.status === 'draft' && (
@@ -697,10 +701,10 @@ export function EmailCampaigns() {
                                   <div className="border-t border-dark-border my-1" />
                                   <button
                                     onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => confirm(`Delete draft "${c.name}"?`) && deleteMutation.mutate(c.id)}
+                                    onClick={() => confirm(t('emailCampaigns.table.delete_confirm', { name: c.name, defaultValue: 'Delete draft "{{name}}"?' })) && deleteMutation.mutate(c.id)}
                                     className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
                                   >
-                                    <Trash2 size={13} /> Delete draft
+                                    <Trash2 size={13} /> {t('emailCampaigns.table.delete_draft', 'Delete draft')}
                                   </button>
                                 </>
                               )}

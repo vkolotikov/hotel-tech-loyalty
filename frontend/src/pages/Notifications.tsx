@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import { PairTabs, CAMPAIGNS_TABS } from '../components/PairTabs'
@@ -46,6 +47,7 @@ const CHANNELS = [
 export function Notifications() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [step, setStep] = useState<Step>(1)
   const [form, setForm] = useState({
@@ -187,47 +189,47 @@ export function Notifications() {
       <PairTabs tabs={CAMPAIGNS_TABS} />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Notification Campaigns</h1>
-          <p className="text-sm text-t-secondary mt-1">Send targeted push notifications and email campaigns</p>
+          <h1 className="text-2xl font-bold text-white">{t('notifications.title', 'Notification Campaigns')}</h1>
+          <p className="text-sm text-t-secondary mt-1">{t('notifications.subtitle', 'Send targeted push notifications and email campaigns')}</p>
         </div>
         <button
           onClick={openWizard}
           className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
         >
-          + New Campaign
+          {t('notifications.new_campaign', '+ New Campaign')}
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Campaigns" value={data?.total ?? 0} tone="white" />
-        <StatCard label="Push Sent" value={campaigns.reduce((s, c) => s + (c.sent_count ?? 0), 0)} tone="blue" />
-        <StatCard label="Emails Sent" value={campaigns.reduce((s, c) => s + (c.email_sent_count ?? 0), 0)} tone="violet" />
-        <StatCard label="Avg Open Rate" value={openRate !== null ? `${openRate}%` : '—'} tone="green" />
+        <StatCard label={t('notifications.stats.total_campaigns', 'Total Campaigns')} value={data?.total ?? 0} tone="white" />
+        <StatCard label={t('notifications.stats.push_sent', 'Push Sent')} value={campaigns.reduce((s, c) => s + (c.sent_count ?? 0), 0)} tone="blue" />
+        <StatCard label={t('notifications.stats.emails_sent', 'Emails Sent')} value={campaigns.reduce((s, c) => s + (c.email_sent_count ?? 0), 0)} tone="violet" />
+        <StatCard label={t('notifications.stats.avg_open_rate', 'Avg Open Rate')} value={openRate !== null ? `${openRate}%` : '—'} tone="green" />
       </div>
 
       <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
         <div className="px-6 py-4 border-b border-dark-border">
-          <h2 className="font-semibold text-white">Recent Campaigns</h2>
+          <h2 className="font-semibold text-white">{t('notifications.recent.title', 'Recent Campaigns')}</h2>
         </div>
         {isLoading ? (
-          <div className="p-12 text-center text-[#636366]">Loading...</div>
+          <div className="p-12 text-center text-[#636366]">{t('notifications.recent.loading', 'Loading…')}</div>
         ) : campaigns.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-t-secondary font-medium">No campaigns yet</p>
-            <p className="text-sm text-[#636366] mt-1">Create your first campaign to engage members</p>
+            <p className="text-t-secondary font-medium">{t('notifications.recent.no_campaigns', 'No campaigns yet')}</p>
+            <p className="text-sm text-[#636366] mt-1">{t('notifications.recent.no_campaigns_sub', 'Create your first campaign to engage members')}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-dark-surface2 text-t-secondary text-xs uppercase tracking-wide">
               <tr>
-                <th className="px-6 py-3 text-left">Campaign</th>
-                <th className="px-6 py-3 text-left">Channel</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                <th className="px-6 py-3 text-left">Segment</th>
-                <th className="px-6 py-3 text-right">Push</th>
-                <th className="px-6 py-3 text-right">Email</th>
-                <th className="px-6 py-3 text-right">Opened</th>
-                <th className="px-6 py-3 text-left">Date</th>
+                <th className="px-6 py-3 text-left">{t('notifications.table.campaign', 'Campaign')}</th>
+                <th className="px-6 py-3 text-left">{t('notifications.table.channel', 'Channel')}</th>
+                <th className="px-6 py-3 text-left">{t('notifications.table.status', 'Status')}</th>
+                <th className="px-6 py-3 text-left">{t('notifications.table.segment', 'Segment')}</th>
+                <th className="px-6 py-3 text-right">{t('notifications.table.push', 'Push')}</th>
+                <th className="px-6 py-3 text-right">{t('notifications.table.email', 'Email')}</th>
+                <th className="px-6 py-3 text-right">{t('notifications.table.opened', 'Opened')}</th>
+                <th className="px-6 py-3 text-left">{t('notifications.table.date', 'Date')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
@@ -243,7 +245,7 @@ export function Notifications() {
                       : c.channel === 'email' ? 'bg-[#0a84ff]/15 text-[#0a84ff]'
                       : 'bg-[#32d74b]/15 text-[#32d74b]'
                     }`}>
-                      {c.channel === 'both' ? 'PUSH+EMAIL' : (c.channel ?? 'push').toUpperCase()}
+                      {c.channel === 'both' ? t('notifications.table.channel_both', 'PUSH+EMAIL') : (c.channel ?? 'push').toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -252,7 +254,7 @@ export function Notifications() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-[#a0a0a0]">
-                    {c.segment_rules?.tiers?.join(', ') || 'All members'}
+                    {c.segment_rules?.tiers?.join(', ') || t('notifications.table.all_members', 'All members')}
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-white">{(c.sent_count ?? 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right font-medium text-[#0a84ff]">{(c.email_sent_count ?? 0).toLocaleString()}</td>
@@ -273,7 +275,7 @@ export function Notifications() {
             {/* Header with stepper */}
             <div className="p-5 border-b border-dark-border">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white">New Campaign</h2>
+                <h2 className="text-lg font-bold text-white">{t('notifications.wizard.title_new', 'New Campaign')}</h2>
                 <button onClick={closeWizard} className="text-[#636366] hover:text-white text-xl">&times;</button>
               </div>
               <Stepper current={step} />
@@ -322,7 +324,7 @@ export function Notifications() {
                 onClick={closeWizard}
                 className="border border-dark-border text-[#a0a0a0] px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
               >
-                Cancel
+                {t('notifications.wizard.cancel', 'Cancel')}
               </button>
               <div className="flex-1" />
               {step > 1 && (
@@ -330,7 +332,7 @@ export function Notifications() {
                   onClick={() => setStep((s => (s - 1) as Step)(step))}
                   className="border border-dark-border text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
                 >
-                  Back
+                  {t('notifications.wizard.back', 'Back')}
                 </button>
               )}
               {step < 4 ? (
@@ -339,7 +341,7 @@ export function Notifications() {
                   disabled={!canAdvanceFrom(step)}
                   className="bg-primary-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Continue
+                  {t('notifications.wizard.continue', 'Continue')}
                 </button>
               ) : (
                 <button
@@ -347,7 +349,7 @@ export function Notifications() {
                   disabled={createMutation.isPending || !canAdvanceFrom(3) || (audience?.reachable ?? 0) === 0}
                   className="bg-primary-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {createMutation.isPending ? 'Sending...' : form.scheduled_at ? 'Schedule Campaign' : 'Send Now'}
+                  {createMutation.isPending ? t('notifications.wizard.sending', 'Sending…') : form.scheduled_at ? t('notifications.wizard.schedule_campaign', 'Schedule Campaign') : t('notifications.wizard.send_now', 'Send Now')}
                 </button>
               )}
             </div>
@@ -374,11 +376,12 @@ function StatCard({ label, value, tone }: { label: string; value: number | strin
 }
 
 function Stepper({ current }: { current: Step }) {
+  const { t } = useTranslation()
   const steps = [
-    { n: 1, label: 'Channel & Template' },
-    { n: 2, label: 'Audience' },
-    { n: 3, label: 'Details' },
-    { n: 4, label: 'Review & Send' },
+    { n: 1, label: t('notifications.wizard.steps.channel_template', 'Channel & Template') },
+    { n: 2, label: t('notifications.wizard.steps.audience', 'Audience') },
+    { n: 3, label: t('notifications.wizard.steps.details', 'Details') },
+    { n: 4, label: t('notifications.wizard.steps.review_send', 'Review & Send') },
   ] as const
   return (
     <div className="flex items-center gap-2">
@@ -411,13 +414,14 @@ interface Step1Props {
 }
 
 function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1Props) {
+  const { t } = useTranslation()
   const showEmailSection = form.channel === 'email' || form.channel === 'both'
   const showPushSection = form.channel === 'push' || form.channel === 'both'
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Choose a channel</h3>
+        <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step1.choose_channel', 'Choose a channel')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {CHANNELS.map(ch => (
             <button
@@ -438,11 +442,11 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
 
       {showEmailSection && (
         <div>
-          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Email template</h3>
+          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step1.email_template', 'Email template')}</h3>
           {emailTemplates.length === 0 ? (
             <div className="bg-dark-surface2 rounded-xl border border-dark-border p-6 text-center">
-              <p className="text-sm text-t-secondary">No email templates yet.</p>
-              <p className="text-xs text-[#636366] mt-1">Create one in Email Templates first.</p>
+              <p className="text-sm text-t-secondary">{t('notifications.wizard.step1.no_templates', 'No email templates yet.')}</p>
+              <p className="text-xs text-[#636366] mt-1">{t('notifications.wizard.step1.no_templates_sub', 'Create one in Email Templates first.')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto">
@@ -474,31 +478,31 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
             </div>
           )}
           {selectedTemplate && (
-            <p className="text-xs text-primary-400 mt-2">Selected: {selectedTemplate.name}</p>
+            <p className="text-xs text-primary-400 mt-2">{t('notifications.wizard.step1.selected', { name: selectedTemplate.name, defaultValue: 'Selected: {{name}}' })}</p>
           )}
         </div>
       )}
 
       {showPushSection && (
         <div>
-          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Push content</h3>
+          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step1.push_content', 'Push content')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Title</label>
+              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.title_label', 'Title')}</label>
               <input
                 type="text"
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="e.g. Special offer just for you!"
+                placeholder={t('notifications.wizard.step1.title_placeholder', 'e.g. Special offer just for you!')}
                 className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Message body</label>
+              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.body_label', 'Message body')}</label>
               <textarea
                 value={form.body}
                 onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-                placeholder="Earn double points this weekend..."
+                placeholder={t('notifications.wizard.step1.body_placeholder', 'Earn double points this weekend…')}
                 rows={3}
                 className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
               />
@@ -522,12 +526,13 @@ interface Step2Props {
 }
 
 function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: Step2Props) {
+  const { t } = useTranslation()
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-5">
         <div>
-          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Filter by tier</h3>
-          <p className="text-xs text-[#636366] mb-2">Leave empty to target all tiers</p>
+          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step2.filter_tier', 'Filter by tier')}</h3>
+          <p className="text-xs text-[#636366] mb-2">{t('notifications.wizard.step2.tier_help', 'Leave empty to target all tiers')}</p>
           <div className="flex flex-wrap gap-2">
             {tiers.map(tier => (
               <button
@@ -546,10 +551,10 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
         </div>
 
         <div>
-          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Filter by points</h3>
+          <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step2.filter_points', 'Filter by points')}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-[#a0a0a0] mb-1">Minimum</label>
+              <label className="block text-xs text-[#a0a0a0] mb-1">{t('notifications.wizard.step2.minimum', 'Minimum')}</label>
               <input
                 type="number"
                 value={form.points_min}
@@ -559,7 +564,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
               />
             </div>
             <div>
-              <label className="block text-xs text-[#a0a0a0] mb-1">Maximum</label>
+              <label className="block text-xs text-[#a0a0a0] mb-1">{t('notifications.wizard.step2.maximum', 'Maximum')}</label>
               <input
                 type="number"
                 value={form.points_max}
@@ -574,8 +579,8 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
 
       <div className="bg-dark-surface2 rounded-xl border border-dark-border p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Who will receive this</h3>
-          {loading && <span className="text-[10px] text-[#636366]">Updating...</span>}
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('notifications.wizard.step2.audience_title', 'Who will receive this')}</h3>
+          {loading && <span className="text-[10px] text-[#636366]">{t('notifications.wizard.step2.updating', 'Updating…')}</span>}
         </div>
 
         <div className="text-center py-4 border-b border-dark-border mb-4">
@@ -583,28 +588,30 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
             {audience?.reachable?.toLocaleString() ?? '—'}
           </div>
           <div className="text-xs text-[#a0a0a0] mt-2 uppercase tracking-wide">
-            Reachable on {form.channel === 'both' ? 'push or email' : form.channel}
+            {form.channel === 'both'
+              ? t('notifications.wizard.step2.reachable_on_push_email', 'Reachable on push or email')
+              : t('notifications.wizard.step2.reachable_on', { channel: form.channel, defaultValue: 'Reachable on {{channel}}' })}
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
           <div>
             <div className="text-lg font-bold text-white">{audience?.total ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">Match filter</div>
+            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.match_filter', 'Match filter')}</div>
           </div>
           <div>
             <div className="text-lg font-bold text-[#32d74b]">{audience?.push_ready ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">Push-ready</div>
+            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.push_ready', 'Push-ready')}</div>
           </div>
           <div>
             <div className="text-lg font-bold text-[#0a84ff]">{audience?.email_ready ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">Email-opted</div>
+            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.email_opted', 'Email-opted')}</div>
           </div>
         </div>
 
         {(audience?.sample?.length ?? 0) > 0 && (
           <div>
-            <p className="text-[11px] font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">Sample recipients</p>
+            <p className="text-[11px] font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">{t('notifications.wizard.step2.sample_recipients', 'Sample recipients')}</p>
             <div className="space-y-1.5">
               {audience!.sample.map(m => (
                 <div key={m.id} className="flex items-center justify-between text-xs bg-dark-surface rounded-md px-2 py-1.5">
@@ -621,7 +628,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
 
         {(audience?.reachable ?? 0) === 0 && !loading && (
           <p className="text-xs text-[#ff9500] mt-4 text-center">
-            No reachable members for this segment + channel combination. Adjust filters or channel.
+            {t('notifications.wizard.step2.no_reachable', 'No reachable members for this segment + channel combination. Adjust filters or channel.')}
           </p>
         )}
       </div>
@@ -638,44 +645,45 @@ interface Step3Props {
 }
 
 function Step3Details({ form, setForm, selectedTemplate }: Step3Props) {
+  const { t } = useTranslation()
   const showEmail = form.channel === 'email' || form.channel === 'both'
 
   return (
     <div className="max-w-2xl space-y-5">
       <div>
-        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Campaign name <span className="text-[#636366] font-normal normal-case tracking-normal">(for your reference)</span></label>
+        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.campaign_name', 'Campaign name')} <span className="text-[#636366] font-normal normal-case tracking-normal">{t('notifications.wizard.step3.campaign_name_hint', '(for your reference)')}</span></label>
         <input
           type="text"
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          placeholder="e.g. October weekend offer"
+          placeholder={t('notifications.wizard.step3.campaign_name_placeholder', 'e.g. October weekend offer')}
           className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
       {showEmail && (
         <div>
-          <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Email subject line</label>
+          <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.email_subject', 'Email subject line')}</label>
           <input
             type="text"
             value={form.email_subject}
             onChange={e => setForm(f => ({ ...f, email_subject: e.target.value }))}
-            placeholder={selectedTemplate?.subject || 'Enter subject'}
+            placeholder={selectedTemplate?.subject || t('notifications.wizard.step3.subject_placeholder_fallback', 'Enter subject')}
             className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
-          <p className="text-[11px] text-[#636366] mt-1">Leave blank to use the template default: <span className="text-t-secondary">{selectedTemplate?.subject ?? '—'}</span></p>
+          <p className="text-[11px] text-[#636366] mt-1">{t('notifications.wizard.step3.subject_default_hint', 'Leave blank to use the template default:')} <span className="text-t-secondary">{selectedTemplate?.subject ?? '—'}</span></p>
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Schedule</label>
+        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.schedule', 'Schedule')}</label>
         <input
           type="datetime-local"
           value={form.scheduled_at}
           onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
           className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
-        <p className="text-[11px] text-[#636366] mt-1">Leave blank to send immediately on review.</p>
+        <p className="text-[11px] text-[#636366] mt-1">{t('notifications.wizard.step3.schedule_hint', 'Leave blank to send immediately on review.')}</p>
       </div>
     </div>
   )
@@ -693,47 +701,50 @@ interface Step4Props {
 }
 
 function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, testPending }: Step4Props) {
+  const { t } = useTranslation()
   const showEmail = form.channel === 'email' || form.channel === 'both'
   const showPush = form.channel === 'push' || form.channel === 'both'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Summary</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('notifications.wizard.step4.summary', 'Summary')}</h3>
 
-        <ReviewRow label="Campaign" value={form.name || '—'} />
-        <ReviewRow label="Channel" value={form.channel === 'both' ? 'Push + Email' : form.channel === 'email' ? 'Email only' : 'Push only'} />
-        <ReviewRow label="Recipients" value={audience?.reachable ? `${audience.reachable.toLocaleString()} members` : 'None'} tone={(audience?.reachable ?? 0) > 0 ? 'ok' : 'warn'} />
-        <ReviewRow label="Segment" value={
+        <ReviewRow label={t('notifications.wizard.step4.row.campaign', 'Campaign')} value={form.name || '—'} />
+        <ReviewRow label={t('notifications.wizard.step4.row.channel', 'Channel')} value={form.channel === 'both' ? t('notifications.wizard.step4.channel_both', 'Push + Email') : form.channel === 'email' ? t('notifications.wizard.step4.channel_email_only', 'Email only') : t('notifications.wizard.step4.channel_push_only', 'Push only')} />
+        <ReviewRow label={t('notifications.wizard.step4.row.recipients', 'Recipients')} value={audience?.reachable ? t('notifications.wizard.step4.recipients_count', { count: audience.reachable, defaultValue: '{{count}} members' }) : t('notifications.wizard.step4.recipients_none', 'None')} tone={(audience?.reachable ?? 0) > 0 ? 'ok' : 'warn'} />
+        <ReviewRow label={t('notifications.wizard.step4.row.segment', 'Segment')} value={
           [
-            form.tier_filter.length > 0 ? `Tiers: ${form.tier_filter.join(', ')}` : 'All tiers',
+            form.tier_filter.length > 0
+              ? t('notifications.wizard.step4.tiers_label', { tiers: form.tier_filter.join(', '), defaultValue: 'Tiers: {{tiers}}' })
+              : t('notifications.wizard.step4.all_tiers', 'All tiers'),
             form.points_min ? `≥ ${form.points_min} pts` : null,
             form.points_max ? `≤ ${form.points_max} pts` : null,
           ].filter(Boolean).join(' · ')
         } />
         {showEmail && (
           <>
-            <ReviewRow label="Email template" value={selectedTemplate?.name ?? '—'} />
-            <ReviewRow label="Subject" value={form.email_subject || selectedTemplate?.subject || '—'} />
+            <ReviewRow label={t('notifications.wizard.step4.row.email_template', 'Email template')} value={selectedTemplate?.name ?? '—'} />
+            <ReviewRow label={t('notifications.wizard.step4.row.subject', 'Subject')} value={form.email_subject || selectedTemplate?.subject || '—'} />
           </>
         )}
         {showPush && (
           <>
-            <ReviewRow label="Push title" value={form.title || '—'} />
-            <ReviewRow label="Push body" value={form.body || '—'} />
+            <ReviewRow label={t('notifications.wizard.step4.row.push_title', 'Push title')} value={form.title || '—'} />
+            <ReviewRow label={t('notifications.wizard.step4.row.push_body', 'Push body')} value={form.body || '—'} />
           </>
         )}
-        <ReviewRow label="Scheduled" value={form.scheduled_at ? new Date(form.scheduled_at).toLocaleString() : 'Send immediately'} />
+        <ReviewRow label={t('notifications.wizard.step4.row.scheduled', 'Scheduled')} value={form.scheduled_at ? new Date(form.scheduled_at).toLocaleString() : t('notifications.wizard.step4.send_immediately', 'Send immediately')} />
 
         {showEmail && selectedTemplate && (
           <div className="pt-4 border-t border-dark-border">
-            <p className="text-xs font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">Send test email</p>
+            <p className="text-xs font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">{t('notifications.wizard.step4.send_test_email', 'Send test email')}</p>
             <div className="flex gap-2">
               <input
                 type="email"
                 value={form.test_email}
                 onChange={e => setForm(f => ({ ...f, test_email: e.target.value }))}
-                placeholder="Leave blank to send to yourself"
+                placeholder={t('notifications.wizard.step4.test_placeholder', 'Leave blank to send to yourself')}
                 className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
               <button
@@ -741,7 +752,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
                 disabled={testPending}
                 className="bg-dark-surface2 border border-dark-border text-white px-4 py-2 rounded-lg text-xs font-semibold hover:border-primary-500 disabled:opacity-50 transition-colors"
               >
-                {testPending ? 'Sending...' : 'Send test'}
+                {testPending ? t('notifications.wizard.step4.sending_test', 'Sending…') : t('notifications.wizard.step4.send_test', 'Send test')}
               </button>
             </div>
           </div>
@@ -749,7 +760,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Preview</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">{t('notifications.wizard.step4.preview', 'Preview')}</h3>
         {showEmail && selectedTemplate ? (
           <div className="bg-white rounded-lg border border-dark-border overflow-hidden" style={{ height: 520 }}>
             <iframe
@@ -766,15 +777,15 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
                 <div className="w-8 h-8 rounded-lg bg-primary-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] text-[#999] uppercase tracking-wide font-semibold">Your App</p>
-                    <p className="text-[10px] text-[#666]">now</p>
+                    <p className="text-[11px] text-[#999] uppercase tracking-wide font-semibold">{t('notifications.wizard.step4.your_app', 'Your App')}</p>
+                    <p className="text-[10px] text-[#666]">{t('notifications.wizard.step4.now', 'now')}</p>
                   </div>
-                  <p className="text-sm font-bold text-white mt-0.5 truncate">{form.title || 'Push title'}</p>
-                  <p className="text-xs text-[#ccc] mt-0.5 line-clamp-3">{form.body || 'Push message body preview'}</p>
+                  <p className="text-sm font-bold text-white mt-0.5 truncate">{form.title || t('notifications.wizard.step4.push_placeholder_title', 'Push title')}</p>
+                  <p className="text-xs text-[#ccc] mt-0.5 line-clamp-3">{form.body || t('notifications.wizard.step4.push_placeholder_body', 'Push message body preview')}</p>
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-[#636366] text-center mt-4">Push notification preview</p>
+            <p className="text-[11px] text-[#636366] text-center mt-4">{t('notifications.wizard.step4.push_preview_label', 'Push notification preview')}</p>
           </div>
         ) : null}
       </div>
