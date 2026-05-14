@@ -70,6 +70,15 @@ use App\Http\Controllers\Api\V1\Admin\VoiceAgentController;
 use App\Http\Controllers\Api\V1\Widget\WidgetChatController;
 use Illuminate\Support\Facades\Route;
 
+// ─── Internal (server-to-server, HMAC-signed) ───────────────────────────
+// Used by the SaaS platform's super-admin AI Profitability page to read
+// per-org AI usage. NOT versioned — see InternalAiUsageController for
+// the auth/payload spec.
+Route::prefix('internal/ai-usage')->group(function () {
+    Route::post('by-saas-orgs', [\App\Http\Controllers\Api\Internal\InternalAiUsageController::class, 'byOrgs']);
+    Route::post('series',       [\App\Http\Controllers\Api\Internal\InternalAiUsageController::class, 'series']);
+});
+
 Route::prefix('v1')->group(function () {
 
     // ─── Public ──────────────────────────────────────────────────────────────────
