@@ -1255,6 +1255,185 @@
     }
   },
 
+  "offers": {
+    "title": "Sonderangebote",
+    "create": "Angebot erstellen",
+    "ai_generated": "KI-generiert",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "usage_used": "{{used}}/{{limit}} genutzt",
+    "types": {
+      "discount": "Rabatt",
+      "points_multiplier": "Punkte-Multiplikator",
+      "free_night": "Gratis-Übernachtung",
+      "upgrade": "Upgrade",
+      "bonus_points": "Bonuspunkte",
+      "cashback": "Cashback"
+    },
+    "form": {
+      "edit_title": "Angebot bearbeiten",
+      "create_title": "Angebot erstellen",
+      "title": "Titel",
+      "description": "Beschreibung",
+      "image": "Bild",
+      "upload_image": "Bild hochladen",
+      "type": "Typ",
+      "value": "Wert",
+      "start_date": "Startdatum",
+      "start_placeholder": "Startdatum wählen",
+      "end_date": "Enddatum",
+      "end_placeholder": "Enddatum wählen",
+      "featured": "Hervorgehoben",
+      "active": "Aktiv",
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    },
+    "toasts": {
+      "deleted": "Angebot gelöscht",
+      "updated": "Angebot aktualisiert",
+      "created": "Angebot erstellt",
+      "save_failed": "Speichern fehlgeschlagen"
+    }
+  },
+
+  "benefits": {
+    "title": "Vorteile",
+    "add": "Vorteil hinzufügen",
+    "show_inactive": "Inaktive anzeigen",
+    "all_categories": "Alle Kategorien",
+    "summary": "{{active}} aktiv · {{inactive}} inaktiv · {{shown}} angezeigt",
+    "categories": {
+      "accommodation": "Unterkunft",
+      "dining": "Gastronomie",
+      "wellness": "Wellness",
+      "transport": "Transport",
+      "recognition": "Anerkennung",
+      "points": "Punkte",
+      "access": "Zugang",
+      "other": "Sonstiges"
+    },
+    "fulfillment_modes": {
+      "automatic": "automatisch",
+      "staff_approved": "Personal-genehmigt",
+      "pms_linked": "PMS-verknüpft",
+      "voucher": "Gutschein",
+      "on_request": "auf Anfrage"
+    },
+    "form": {
+      "edit_title": "Vorteil bearbeiten",
+      "new_title": "Neuer Vorteil",
+      "name": "Name",
+      "code_placeholder": "Code (z.B. early_checkin)",
+      "limit_stay": "Limit pro Aufenthalt",
+      "limit_year": "Limit pro Jahr",
+      "sort_order": "Reihenfolge",
+      "description": "Beschreibung",
+      "requires_active_stay": "Erfordert aktiven Aufenthalt",
+      "save": "Speichern",
+      "saving": "Speichert…"
+    },
+    "table": {
+      "benefit": "Vorteil",
+      "code": "Code",
+      "category": "Kategorie",
+      "fulfillment": "Bereitstellung",
+      "limits": "Limits",
+      "status": "Status",
+      "actions": "Aktionen",
+      "disabled": "Deaktiviert",
+      "per_stay": "{{count}}/Aufenthalt",
+      "per_year": "{{count}}/Jahr",
+      "unlimited": "Unbegrenzt",
+      "loading": "Lädt…",
+      "empty": "Noch keine Vorteile definiert",
+      "no_match": "Keine Vorteile entsprechen den Filtern",
+      "enable_tooltip": "Aktivieren",
+      "disable_tooltip": "Deaktivieren"
+    },
+    "toasts": {
+      "updated": "Vorteil aktualisiert",
+      "created": "Vorteil erstellt",
+      "save_failed": "Speichern fehlgeschlagen",
+      "deactivated": "Vorteil deaktiviert",
+      "toggled": "Status aktualisiert",
+      "toggle_failed": "Umschalten fehlgeschlagen"
+    }
+  },
+
+  "tiers": {
+    "title": "Stufen",
+    "add": "Stufe hinzufügen",
+    "preview": {
+      "title": "Stufen-Vorschau-Rechner",
+      "subtitle": "— welche Stufe würde ein Mitglied erreichen?",
+      "model": "Modell",
+      "points": "Punkte",
+      "nights": "Nächte",
+      "stays": "Aufenthalte",
+      "spend": "Ausgaben ($)",
+      "hybrid": "Hybrid (beliebige Schwelle)",
+      "calculate": "Berechnen",
+      "calculating": "Berechne…",
+      "no_qualifying": "Keine qualifizierende Stufe",
+      "would_qualify": "Würde qualifizieren für:"
+    },
+    "form": {
+      "edit_title": "Stufe bearbeiten",
+      "new_title": "Neue Stufe",
+      "name": "Stufenname",
+      "sort_order": "Reihenfolge",
+      "min_points": "Min. Punkte",
+      "max_points": "Max. Punkte",
+      "earn_rate": "Verdienstrate",
+      "grace_days": "Karenztage",
+      "min_nights": "Min. Nächte",
+      "min_stays": "Min. Aufenthalte",
+      "min_spend": "Min. Ausgaben ($)",
+      "description": "Beschreibung",
+      "qualification": {
+        "rolling_12": "Rollende 12 Monate",
+        "calendar_year": "Kalenderjahr",
+        "anniversary_year": "Jubiläumsjahr"
+      },
+      "soft_landing": "Sanfte Landung",
+      "invitation_only": "Nur auf Einladung",
+      "save": "Speichern",
+      "saving": "Speichert…"
+    },
+    "icons": {
+      "star": "Stern",
+      "award": "Auszeichnung",
+      "crown": "Krone",
+      "gem": "Edelstein",
+      "diamond": "Diamant",
+      "shield": "Schild",
+      "layers": "Schichten"
+    },
+    "summary": {
+      "earn_x": "{{rate}}× Verdienst",
+      "invite_only": "Nur Einladung",
+      "range_open": "{{min}} Pkt+",
+      "range_closed": "{{min}} - {{max}} Pkt"
+    },
+    "expanded": {
+      "title": "Stufenvorteile",
+      "remove": "Entfernen",
+      "select_benefit": "Vorteil auswählen…",
+      "value_placeholder": "Wert (optional)",
+      "assign": "Zuweisen"
+    },
+    "toasts": {
+      "updated": "Stufe aktualisiert",
+      "created": "Stufe erstellt",
+      "save_failed": "Stufe konnte nicht gespeichert werden",
+      "preview_failed": "Vorschau konnte nicht ausgeführt werden",
+      "benefit_assigned": "Vorteil zugewiesen",
+      "benefit_assign_failed": "Vorteil konnte nicht zugewiesen werden",
+      "benefit_removed": "Vorteil entfernt"
+    },
+    "loading": "Lädt…"
+  },
+
   "knowledge_base": {
     "brand_required": "die Wissensdatenbank",
     "title": "Wissensdatenbank",

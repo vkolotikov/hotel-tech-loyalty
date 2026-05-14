@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Award, Plus, Pencil, Trash2, X, Filter, Eye, EyeOff } from 'lucide-react'
@@ -28,6 +29,7 @@ const emptyForm = {
 }
 
 export function Benefits() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
@@ -48,16 +50,16 @@ export function Benefits() {
       setShowForm(false)
       setEditId(null)
       setForm(emptyForm)
-      toast.success(editId ? 'Benefit updated' : 'Benefit created')
+      toast.success(editId ? t('benefits.toasts.updated', 'Benefit updated') : t('benefits.toasts.created', 'Benefit created'))
     },
-    onError: () => toast.error('Failed to save benefit'),
+    onError: () => toast.error(t('benefits.toasts.save_failed', 'Failed to save benefit')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/benefits/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-benefits'] })
-      toast.success('Benefit deactivated')
+      toast.success(t('benefits.toasts.deactivated', 'Benefit deactivated'))
     },
   })
 
@@ -65,9 +67,9 @@ export function Benefits() {
     mutationFn: (id: number) => api.post(`/v1/admin/benefits/${id}/toggle`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-benefits'] })
-      toast.success('Benefit status updated')
+      toast.success(t('benefits.toasts.toggled', 'Benefit status updated'))
     },
-    onError: () => toast.error('Failed to toggle benefit'),
+    onError: () => toast.error(t('benefits.toasts.toggle_failed', 'Failed to toggle benefit')),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -107,12 +109,12 @@ export function Benefits() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Benefits</h1>
+        <h1 className="text-2xl font-bold text-white">{t('benefits.title', 'Benefits')}</h1>
         <button
           onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm) }}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
         >
-          <Plus size={16} /> Add Benefit
+          <Plus size={16} /> {t('benefits.add', 'Add Benefit')}
         </button>
       </div>
 
@@ -128,7 +130,7 @@ export function Benefits() {
           }`}
         >
           {showInactive ? <Eye size={14} /> : <EyeOff size={14} />}
-          Show inactive
+          {t('benefits.show_inactive', 'Show inactive')}
           {inactiveCount > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{inactiveCount}</span>
           )}
@@ -142,73 +144,73 @@ export function Benefits() {
             onChange={e => setCategoryFilter(e.target.value)}
             className="bg-dark-surface border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <option value="all">All categories</option>
+            <option value="all">{t('benefits.all_categories', 'All categories')}</option>
             {CATEGORIES.map(c => (
-              <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1).replace('_', ' ')}</option>
+              <option key={c} value={c}>{t(`benefits.categories.${c}`, c.charAt(0).toUpperCase() + c.slice(1).replace('_', ' '))}</option>
             ))}
           </select>
         </div>
 
         {/* Summary counts */}
         <div className="ml-auto text-xs text-t-secondary">
-          {activeCount} active · {inactiveCount} inactive · {filteredBenefits.length} shown
+          {t('benefits.summary', { active: activeCount, inactive: inactiveCount, shown: filteredBenefits.length, defaultValue: '{{active}} active · {{inactive}} inactive · {{shown}} shown' })}
         </div>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">{editId ? 'Edit' : 'New'} Benefit</h2>
+            <h2 className="text-lg font-semibold text-white">{editId ? t('benefits.form.edit_title', 'Edit Benefit') : t('benefits.form.new_title', 'New Benefit')}</h2>
             <button type="button" onClick={() => setShowForm(false)} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Name" required
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('benefits.form.name', 'Name')} required
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="Code (e.g. early_checkin)" required disabled={!!editId}
+            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder={t('benefits.form.code_placeholder', 'Code (e.g. early_checkin)')} required disabled={!!editId}
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
             <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
-              {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+              {CATEGORIES.map(c => <option key={c} value={c}>{t(`benefits.categories.${c}`, c.replace('_', ' '))}</option>)}
             </select>
             <select value={form.fulfillment_mode} onChange={e => setForm({ ...form, fulfillment_mode: e.target.value })}
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
-              {FULFILLMENT_MODES.map(m => <option key={m} value={m}>{m.replace('_', ' ')}</option>)}
+              {FULFILLMENT_MODES.map(m => <option key={m} value={m}>{t(`benefits.fulfillment_modes.${m}`, m.replace('_', ' '))}</option>)}
             </select>
-            <input value={form.usage_limit_per_stay} onChange={e => setForm({ ...form, usage_limit_per_stay: e.target.value })} placeholder="Limit per stay" type="number"
+            <input value={form.usage_limit_per_stay} onChange={e => setForm({ ...form, usage_limit_per_stay: e.target.value })} placeholder={t('benefits.form.limit_stay', 'Limit per stay')} type="number"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.usage_limit_per_year} onChange={e => setForm({ ...form, usage_limit_per_year: e.target.value })} placeholder="Limit per year" type="number"
+            <input value={form.usage_limit_per_year} onChange={e => setForm({ ...form, usage_limit_per_year: e.target.value })} placeholder={t('benefits.form.limit_year', 'Limit per year')} type="number"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.sort_order} onChange={e => setForm({ ...form, sort_order: e.target.value })} placeholder="Sort order" type="number"
+            <input value={form.sort_order} onChange={e => setForm({ ...form, sort_order: e.target.value })} placeholder={t('benefits.form.sort_order', 'Sort order')} type="number"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
           </div>
-          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description"
+          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={t('benefits.form.description', 'Description')}
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" rows={2} />
           <label className="flex items-center gap-2 text-sm text-t-secondary">
             <input type="checkbox" checked={form.requires_active_stay} onChange={e => setForm({ ...form, requires_active_stay: e.target.checked })}
               className="rounded border-dark-border" />
-            Requires active stay
+            {t('benefits.form.requires_active_stay', 'Requires active stay')}
           </label>
           <button type="submit" disabled={saveMutation.isPending}
             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
-            {saveMutation.isPending ? 'Saving...' : 'Save'}
+            {saveMutation.isPending ? t('benefits.form.saving', 'Saving...') : t('benefits.form.save', 'Save')}
           </button>
         </form>
       )}
 
       {isLoading ? (
-        <div className="text-center text-t-secondary py-12">Loading...</div>
+        <div className="text-center text-t-secondary py-12">{t('benefits.table.loading', 'Loading...')}</div>
       ) : (
         <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-dark-border text-t-secondary text-xs uppercase">
-                <th className="text-left px-4 py-3">Benefit</th>
-                <th className="text-left px-4 py-3">Code</th>
-                <th className="text-left px-4 py-3">Category</th>
-                <th className="text-left px-4 py-3">Fulfillment</th>
-                <th className="text-left px-4 py-3">Limits</th>
-                <th className="text-center px-4 py-3">Status</th>
-                <th className="text-right px-4 py-3">Actions</th>
+                <th className="text-left px-4 py-3">{t('benefits.table.benefit', 'Benefit')}</th>
+                <th className="text-left px-4 py-3">{t('benefits.table.code', 'Code')}</th>
+                <th className="text-left px-4 py-3">{t('benefits.table.category', 'Category')}</th>
+                <th className="text-left px-4 py-3">{t('benefits.table.fulfillment', 'Fulfillment')}</th>
+                <th className="text-left px-4 py-3">{t('benefits.table.limits', 'Limits')}</th>
+                <th className="text-center px-4 py-3">{t('benefits.table.status', 'Status')}</th>
+                <th className="text-right px-4 py-3">{t('benefits.table.actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -221,7 +223,7 @@ export function Benefits() {
                         <span className="text-white text-sm font-medium">{b.name}</span>
                         {!b.is_active && (
                           <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-400 uppercase">
-                            Disabled
+                            {t('benefits.table.disabled', 'Disabled')}
                           </span>
                         )}
                       </div>
@@ -229,14 +231,14 @@ export function Benefits() {
                   </td>
                   <td className="px-4 py-3 text-sm text-t-secondary font-mono">{b.code}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{b.category}</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-dark-surface2 text-t-secondary">{t(`benefits.categories.${b.category}`, { defaultValue: String(b.category ?? '') })}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-t-secondary">{b.fulfillment_mode.replace('_', ' ')}</td>
+                  <td className="px-4 py-3 text-sm text-t-secondary">{t(`benefits.fulfillment_modes.${b.fulfillment_mode}`, { defaultValue: String(b.fulfillment_mode ?? '').replace('_', ' ') })}</td>
                   <td className="px-4 py-3 text-sm text-t-secondary">
-                    {b.usage_limit_per_stay && `${b.usage_limit_per_stay}/stay`}
+                    {b.usage_limit_per_stay && t('benefits.table.per_stay', { count: b.usage_limit_per_stay, defaultValue: '{{count}}/stay' })}
                     {b.usage_limit_per_stay && b.usage_limit_per_year && ' · '}
-                    {b.usage_limit_per_year && `${b.usage_limit_per_year}/yr`}
-                    {!b.usage_limit_per_stay && !b.usage_limit_per_year && 'Unlimited'}
+                    {b.usage_limit_per_year && t('benefits.table.per_year', { count: b.usage_limit_per_year, defaultValue: '{{count}}/yr' })}
+                    {!b.usage_limit_per_stay && !b.usage_limit_per_year && t('benefits.table.unlimited', 'Unlimited')}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center">
@@ -245,7 +247,7 @@ export function Benefits() {
                         disabled={toggleMutation.isPending}
                         className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:opacity-50"
                         style={{ backgroundColor: b.is_active ? '#32d74b' : '#48484a' }}
-                        title={b.is_active ? 'Click to disable' : 'Click to enable'}
+                        title={b.is_active ? t('benefits.table.disable_tooltip', 'Click to disable') : t('benefits.table.enable_tooltip', 'Click to enable')}
                       >
                         <span
                           className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
@@ -263,7 +265,7 @@ export function Benefits() {
               ))}
               {filteredBenefits.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-t-secondary">
-                  {allBenefits.length === 0 ? 'No benefits defined yet' : 'No benefits match the current filters'}
+                  {allBenefits.length === 0 ? t('benefits.table.empty', 'No benefits defined yet') : t('benefits.table.no_match', 'No benefits match the current filters')}
                 </td></tr>
               )}
             </tbody>

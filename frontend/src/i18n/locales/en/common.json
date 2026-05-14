@@ -1255,6 +1255,185 @@
     }
   },
 
+  "offers": {
+    "title": "Special Offers",
+    "create": "Create Offer",
+    "ai_generated": "AI Generated",
+    "active": "Active",
+    "inactive": "Inactive",
+    "usage_used": "{{used}}/{{limit}} used",
+    "types": {
+      "discount": "discount",
+      "points_multiplier": "points multiplier",
+      "free_night": "free night",
+      "upgrade": "upgrade",
+      "bonus_points": "bonus points",
+      "cashback": "cashback"
+    },
+    "form": {
+      "edit_title": "Edit Offer",
+      "create_title": "Create Offer",
+      "title": "Title",
+      "description": "Description",
+      "image": "Image",
+      "upload_image": "Upload Image",
+      "type": "Type",
+      "value": "Value",
+      "start_date": "Start Date",
+      "start_placeholder": "Pick start date",
+      "end_date": "End Date",
+      "end_placeholder": "Pick end date",
+      "featured": "Featured",
+      "active": "Active",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "toasts": {
+      "deleted": "Offer deleted",
+      "updated": "Offer updated",
+      "created": "Offer created",
+      "save_failed": "Save failed"
+    }
+  },
+
+  "benefits": {
+    "title": "Benefits",
+    "add": "Add Benefit",
+    "show_inactive": "Show inactive",
+    "all_categories": "All categories",
+    "summary": "{{active}} active · {{inactive}} inactive · {{shown}} shown",
+    "categories": {
+      "accommodation": "accommodation",
+      "dining": "dining",
+      "wellness": "wellness",
+      "transport": "transport",
+      "recognition": "recognition",
+      "points": "points",
+      "access": "access",
+      "other": "other"
+    },
+    "fulfillment_modes": {
+      "automatic": "automatic",
+      "staff_approved": "staff approved",
+      "pms_linked": "pms linked",
+      "voucher": "voucher",
+      "on_request": "on request"
+    },
+    "form": {
+      "edit_title": "Edit Benefit",
+      "new_title": "New Benefit",
+      "name": "Name",
+      "code_placeholder": "Code (e.g. early_checkin)",
+      "limit_stay": "Limit per stay",
+      "limit_year": "Limit per year",
+      "sort_order": "Sort order",
+      "description": "Description",
+      "requires_active_stay": "Requires active stay",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "table": {
+      "benefit": "Benefit",
+      "code": "Code",
+      "category": "Category",
+      "fulfillment": "Fulfillment",
+      "limits": "Limits",
+      "status": "Status",
+      "actions": "Actions",
+      "disabled": "Disabled",
+      "per_stay": "{{count}}/stay",
+      "per_year": "{{count}}/yr",
+      "unlimited": "Unlimited",
+      "loading": "Loading…",
+      "empty": "No benefits defined yet",
+      "no_match": "No benefits match the current filters",
+      "enable_tooltip": "Click to enable",
+      "disable_tooltip": "Click to disable"
+    },
+    "toasts": {
+      "updated": "Benefit updated",
+      "created": "Benefit created",
+      "save_failed": "Failed to save benefit",
+      "deactivated": "Benefit deactivated",
+      "toggled": "Benefit status updated",
+      "toggle_failed": "Failed to toggle benefit"
+    }
+  },
+
+  "tiers": {
+    "title": "Tiers",
+    "add": "Add Tier",
+    "preview": {
+      "title": "Tier preview calculator",
+      "subtitle": "— what tier would a member qualify for?",
+      "model": "Model",
+      "points": "Points",
+      "nights": "Nights",
+      "stays": "Stays",
+      "spend": "Spend ($)",
+      "hybrid": "Hybrid (any threshold)",
+      "calculate": "Calculate",
+      "calculating": "Calculating…",
+      "no_qualifying": "No qualifying tier",
+      "would_qualify": "Would qualify for:"
+    },
+    "form": {
+      "edit_title": "Edit Tier",
+      "new_title": "New Tier",
+      "name": "Tier Name",
+      "sort_order": "Sort order",
+      "min_points": "Min Points",
+      "max_points": "Max Points",
+      "earn_rate": "Earn Rate",
+      "grace_days": "Grace days",
+      "min_nights": "Min Nights",
+      "min_stays": "Min Stays",
+      "min_spend": "Min Spend ($)",
+      "description": "Description",
+      "qualification": {
+        "rolling_12": "Rolling 12 Months",
+        "calendar_year": "Calendar Year",
+        "anniversary_year": "Anniversary Year"
+      },
+      "soft_landing": "Soft Landing",
+      "invitation_only": "Invitation Only",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "icons": {
+      "star": "Star",
+      "award": "Award",
+      "crown": "Crown",
+      "gem": "Gem",
+      "diamond": "Diamond",
+      "shield": "Shield",
+      "layers": "Layers"
+    },
+    "summary": {
+      "earn_x": "{{rate}}x earn",
+      "invite_only": "Invite only",
+      "range_open": "{{min}} pts+",
+      "range_closed": "{{min}} pts - {{max}} pts"
+    },
+    "expanded": {
+      "title": "Tier Benefits",
+      "remove": "Remove",
+      "select_benefit": "Select benefit…",
+      "value_placeholder": "Value (optional)",
+      "assign": "Assign"
+    },
+    "toasts": {
+      "updated": "Tier updated",
+      "created": "Tier created",
+      "save_failed": "Failed to save tier",
+      "preview_failed": "Could not run preview",
+      "benefit_assigned": "Benefit assigned",
+      "benefit_assign_failed": "Failed to assign benefit",
+      "benefit_removed": "Benefit removed"
+    },
+    "loading": "Loading…"
+  },
+
   "knowledge_base": {
     "brand_required": "the knowledge base",
     "title": "Knowledge Base",

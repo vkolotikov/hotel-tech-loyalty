@@ -1255,6 +1255,185 @@
     }
   },
 
+  "offers": {
+    "title": "Offres spéciales",
+    "create": "Créer une offre",
+    "ai_generated": "Généré par IA",
+    "active": "Active",
+    "inactive": "Inactive",
+    "usage_used": "{{used}}/{{limit}} utilisés",
+    "types": {
+      "discount": "remise",
+      "points_multiplier": "multiplicateur de points",
+      "free_night": "nuit gratuite",
+      "upgrade": "surclassement",
+      "bonus_points": "points bonus",
+      "cashback": "cashback"
+    },
+    "form": {
+      "edit_title": "Modifier l'offre",
+      "create_title": "Créer une offre",
+      "title": "Titre",
+      "description": "Description",
+      "image": "Image",
+      "upload_image": "Téléverser une image",
+      "type": "Type",
+      "value": "Valeur",
+      "start_date": "Date de début",
+      "start_placeholder": "Choisir la date de début",
+      "end_date": "Date de fin",
+      "end_placeholder": "Choisir la date de fin",
+      "featured": "En vedette",
+      "active": "Active",
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    },
+    "toasts": {
+      "deleted": "Offre supprimée",
+      "updated": "Offre mise à jour",
+      "created": "Offre créée",
+      "save_failed": "Échec de l'enregistrement"
+    }
+  },
+
+  "benefits": {
+    "title": "Avantages",
+    "add": "Ajouter un avantage",
+    "show_inactive": "Afficher inactifs",
+    "all_categories": "Toutes les catégories",
+    "summary": "{{active}} actifs · {{inactive}} inactifs · {{shown}} affichés",
+    "categories": {
+      "accommodation": "hébergement",
+      "dining": "restauration",
+      "wellness": "bien-être",
+      "transport": "transport",
+      "recognition": "reconnaissance",
+      "points": "points",
+      "access": "accès",
+      "other": "autre"
+    },
+    "fulfillment_modes": {
+      "automatic": "automatique",
+      "staff_approved": "approbation personnel",
+      "pms_linked": "lié au PMS",
+      "voucher": "bon",
+      "on_request": "sur demande"
+    },
+    "form": {
+      "edit_title": "Modifier l'avantage",
+      "new_title": "Nouvel avantage",
+      "name": "Nom",
+      "code_placeholder": "Code (ex. early_checkin)",
+      "limit_stay": "Limite par séjour",
+      "limit_year": "Limite par an",
+      "sort_order": "Ordre de tri",
+      "description": "Description",
+      "requires_active_stay": "Nécessite un séjour actif",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "table": {
+      "benefit": "Avantage",
+      "code": "Code",
+      "category": "Catégorie",
+      "fulfillment": "Mode",
+      "limits": "Limites",
+      "status": "Statut",
+      "actions": "Actions",
+      "disabled": "Désactivé",
+      "per_stay": "{{count}}/séjour",
+      "per_year": "{{count}}/an",
+      "unlimited": "Illimité",
+      "loading": "Chargement…",
+      "empty": "Aucun avantage défini",
+      "no_match": "Aucun avantage ne correspond aux filtres",
+      "enable_tooltip": "Activer",
+      "disable_tooltip": "Désactiver"
+    },
+    "toasts": {
+      "updated": "Avantage mis à jour",
+      "created": "Avantage créé",
+      "save_failed": "Échec de l'enregistrement",
+      "deactivated": "Avantage désactivé",
+      "toggled": "Statut mis à jour",
+      "toggle_failed": "Échec de la bascule"
+    }
+  },
+
+  "tiers": {
+    "title": "Niveaux",
+    "add": "Ajouter un niveau",
+    "preview": {
+      "title": "Calculateur de niveau",
+      "subtitle": "— quel niveau un membre obtiendrait-il ?",
+      "model": "Modèle",
+      "points": "Points",
+      "nights": "Nuits",
+      "stays": "Séjours",
+      "spend": "Dépenses ($)",
+      "hybrid": "Hybride (n'importe quel seuil)",
+      "calculate": "Calculer",
+      "calculating": "Calcul…",
+      "no_qualifying": "Aucun niveau qualifiant",
+      "would_qualify": "Obtiendrait le niveau :"
+    },
+    "form": {
+      "edit_title": "Modifier le niveau",
+      "new_title": "Nouveau niveau",
+      "name": "Nom du niveau",
+      "sort_order": "Ordre de tri",
+      "min_points": "Points min.",
+      "max_points": "Points max.",
+      "earn_rate": "Taux de gain",
+      "grace_days": "Jours de grâce",
+      "min_nights": "Nuits min.",
+      "min_stays": "Séjours min.",
+      "min_spend": "Dépenses min. ($)",
+      "description": "Description",
+      "qualification": {
+        "rolling_12": "12 mois glissants",
+        "calendar_year": "Année calendaire",
+        "anniversary_year": "Année anniversaire"
+      },
+      "soft_landing": "Atterrissage doux",
+      "invitation_only": "Sur invitation seulement",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "icons": {
+      "star": "Étoile",
+      "award": "Récompense",
+      "crown": "Couronne",
+      "gem": "Gemme",
+      "diamond": "Diamant",
+      "shield": "Bouclier",
+      "layers": "Couches"
+    },
+    "summary": {
+      "earn_x": "{{rate}}× gain",
+      "invite_only": "Sur invitation",
+      "range_open": "{{min}} pts+",
+      "range_closed": "{{min}} - {{max}} pts"
+    },
+    "expanded": {
+      "title": "Avantages du niveau",
+      "remove": "Retirer",
+      "select_benefit": "Choisir un avantage…",
+      "value_placeholder": "Valeur (optionnel)",
+      "assign": "Assigner"
+    },
+    "toasts": {
+      "updated": "Niveau mis à jour",
+      "created": "Niveau créé",
+      "save_failed": "Échec de l'enregistrement du niveau",
+      "preview_failed": "Impossible d'exécuter l'aperçu",
+      "benefit_assigned": "Avantage assigné",
+      "benefit_assign_failed": "Échec de l'assignation de l'avantage",
+      "benefit_removed": "Avantage retiré"
+    },
+    "loading": "Chargement…"
+  },
+
   "knowledge_base": {
     "brand_required": "la base de connaissances",
     "title": "Base de connaissances",

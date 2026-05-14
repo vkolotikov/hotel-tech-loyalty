@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Star, Sparkles, Upload } from 'lucide-react'
 import { api, resolveImage } from '../lib/api'
@@ -8,6 +9,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 
 export function Offers() {
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [editOffer, setEditOffer] = useState<any>(null)
   const qc = useQueryClient()
@@ -19,7 +21,7 @@ export function Offers() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/offers/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-offers'] }); toast.success('Offer deleted') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-offers'] }); toast.success(t('offers.toasts.deleted', 'Offer deleted')) },
   })
 
   const typeColors: Record<string, string> = {
@@ -34,12 +36,12 @@ export function Offers() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Special Offers</h1>
+        <h1 className="text-2xl font-bold text-white">{t('offers.title', 'Special Offers')}</h1>
         <button
           onClick={() => { setEditOffer(null); setShowForm(true) }}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
         >
-          <Plus size={16} /> Create Offer
+          <Plus size={16} /> {t('offers.create', 'Create Offer')}
         </button>
       </div>
 
@@ -64,13 +66,13 @@ export function Offers() {
               )}
               {offer.ai_generated && (
                 <div className="flex items-center gap-1 text-xs text-primary-400 mb-2">
-                  <Sparkles size={12} /> AI Generated
+                  <Sparkles size={12} /> {t('offers.ai_generated', 'AI Generated')}
                 </div>
               )}
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mb-1 ${typeColors[offer.type] ?? 'bg-dark-surface3 text-[#a0a0a0]'}`}>
-                    {offer.type.replace(/_/g, ' ')}
+                    {t(`offers.types.${offer.type}`, { defaultValue: String(offer.type ?? '').replace(/_/g, ' ') })}
                   </span>
                   <h4 className="font-semibold text-white">{offer.title}</h4>
                 </div>
@@ -78,11 +80,11 @@ export function Offers() {
               <p className="text-sm text-t-secondary mb-3 line-clamp-2">{offer.description}</p>
               <div className="text-sm text-[#636366] mb-4">
                 {format(new Date(offer.start_date), 'MMM d')} — {format(new Date(offer.end_date), 'MMM d, yyyy')}
-                {offer.usage_limit && <span className="ml-2">· {offer.times_used}/{offer.usage_limit} used</span>}
+                {offer.usage_limit && <span className="ml-2">· {t('offers.usage_used', { used: offer.times_used, limit: offer.usage_limit, defaultValue: '{{used}}/{{limit}} used' })}</span>}
               </div>
               <div className="flex items-center gap-2">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${offer.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
-                  {offer.is_active ? 'Active' : 'Inactive'}
+                  {offer.is_active ? t('offers.active', 'Active') : t('offers.inactive', 'Inactive')}
                 </span>
                 <div className="flex-1" />
                 <button onClick={() => { setEditOffer(offer); setShowForm(true) }} className="p-1.5 text-[#636366] hover:text-primary-400 hover:bg-primary-500/10 rounded">
@@ -103,6 +105,7 @@ export function Offers() {
 }
 
 function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(offer?.image_url ?? null)
@@ -146,15 +149,15 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
       if (offer) {
         formData.append('_method', 'PUT')
         await api.post(`/v1/admin/offers/${offer.id}`, formData)
-        toast.success('Offer updated')
+        toast.success(t('offers.toasts.updated', 'Offer updated'))
       } else {
         await api.post('/v1/admin/offers', formData)
-        toast.success('Offer created')
+        toast.success(t('offers.toasts.created', 'Offer created'))
       }
       qc.invalidateQueries({ queryKey: ['admin-offers'] })
       onClose()
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Save failed')
+      toast.error(e.response?.data?.message || t('offers.toasts.save_failed', 'Save failed'))
     }
   }
 
@@ -162,13 +165,13 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-dark-border flex items-center justify-between">
-          <h3 className="font-bold text-white">{offer ? 'Edit Offer' : 'Create Offer'}</h3>
+          <h3 className="font-bold text-white">{offer ? t('offers.form.edit_title', 'Edit Offer') : t('offers.form.create_title', 'Create Offer')}</h3>
           <button onClick={onClose} className="text-[#636366] hover:text-white">✕</button>
         </div>
         <div className="p-6 space-y-4">
           {(['title', 'description'] as const).map((f) => (
             <div key={f}>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1 capitalize">{f}</label>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t(`offers.form.${f}`, f.charAt(0).toUpperCase() + f.slice(1))}</label>
               {f === 'description'
                 ? <textarea value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} />
                 : <input type="text" value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
@@ -178,7 +181,7 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
 
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium text-[#a0a0a0] mb-1">Image</label>
+            <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.image', 'Image')}</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -200,41 +203,41 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full bg-[#1e1e1e] border border-dashed border-dark-border2 rounded-lg px-3 py-4 text-sm text-[#636366] hover:border-primary-500 hover:text-primary-400 transition-colors flex items-center justify-center gap-2"
               >
-                <Upload size={16} /> Upload Image
+                <Upload size={16} /> {t('offers.form.upload_image', 'Upload Image')}
               </button>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">Type</label>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.type', 'Type')}</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
-                {['discount','points_multiplier','free_night','upgrade','bonus_points','cashback'].map(t => (
-                  <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+                {['discount','points_multiplier','free_night','upgrade','bonus_points','cashback'].map(typeKey => (
+                  <option key={typeKey} value={typeKey}>{t(`offers.types.${typeKey}`, typeKey.replace(/_/g, ' '))}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">Value</label>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.value', 'Value')}</label>
               <input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">Start Date</label>
-              <DatePicker value={form.start_date} onChange={(v) => setForm({ ...form, start_date: v })} placeholder="Pick start date" />
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.start_date', 'Start Date')}</label>
+              <DatePicker value={form.start_date} onChange={(v) => setForm({ ...form, start_date: v })} placeholder={t('offers.form.start_placeholder', 'Pick start date')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">End Date</label>
-              <DatePicker value={form.end_date} onChange={(v) => setForm({ ...form, end_date: v })} placeholder="Pick end date" />
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.end_date', 'End Date')}</label>
+              <DatePicker value={form.end_date} onChange={(v) => setForm({ ...form, end_date: v })} placeholder={t('offers.form.end_placeholder', 'Pick end date')} />
             </div>
           </div>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-[#a0a0a0]"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /> Featured</label>
-            <label className="flex items-center gap-2 text-sm text-[#a0a0a0]"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Active</label>
+            <label className="flex items-center gap-2 text-sm text-[#a0a0a0]"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /> {t('offers.form.featured', 'Featured')}</label>
+            <label className="flex items-center gap-2 text-sm text-[#a0a0a0]"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> {t('offers.form.active', 'Active')}</label>
           </div>
         </div>
         <div className="p-6 border-t border-dark-border flex gap-3">
-          <button onClick={onClose} className="flex-1 border border-dark-border text-[#a0a0a0] py-2.5 rounded-lg text-sm font-medium hover:bg-dark-surface2">Cancel</button>
-          <button onClick={save} className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700">Save</button>
+          <button onClick={onClose} className="flex-1 border border-dark-border text-[#a0a0a0] py-2.5 rounded-lg text-sm font-medium hover:bg-dark-surface2">{t('offers.form.cancel', 'Cancel')}</button>
+          <button onClick={save} className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700">{t('offers.form.save', 'Save')}</button>
         </div>
       </div>
     </div>

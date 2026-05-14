@@ -1269,6 +1269,185 @@
     }
   },
 
+  "offers": {
+    "title": "Специальные предложения",
+    "create": "Создать предложение",
+    "ai_generated": "Создано AI",
+    "active": "Активно",
+    "inactive": "Неактивно",
+    "usage_used": "{{used}}/{{limit}} использовано",
+    "types": {
+      "discount": "скидка",
+      "points_multiplier": "множитель баллов",
+      "free_night": "бесплатная ночь",
+      "upgrade": "апгрейд",
+      "bonus_points": "бонусные баллы",
+      "cashback": "кэшбэк"
+    },
+    "form": {
+      "edit_title": "Изменить предложение",
+      "create_title": "Создать предложение",
+      "title": "Название",
+      "description": "Описание",
+      "image": "Изображение",
+      "upload_image": "Загрузить изображение",
+      "type": "Тип",
+      "value": "Значение",
+      "start_date": "Начало",
+      "start_placeholder": "Выберите дату начала",
+      "end_date": "Окончание",
+      "end_placeholder": "Выберите дату окончания",
+      "featured": "Рекомендуемое",
+      "active": "Активно",
+      "cancel": "Отмена",
+      "save": "Сохранить"
+    },
+    "toasts": {
+      "deleted": "Предложение удалено",
+      "updated": "Предложение обновлено",
+      "created": "Предложение создано",
+      "save_failed": "Ошибка сохранения"
+    }
+  },
+
+  "benefits": {
+    "title": "Привилегии",
+    "add": "Добавить привилегию",
+    "show_inactive": "Показать неактивные",
+    "all_categories": "Все категории",
+    "summary": "{{active}} активно · {{inactive}} неактивно · {{shown}} показано",
+    "categories": {
+      "accommodation": "проживание",
+      "dining": "питание",
+      "wellness": "велнес",
+      "transport": "транспорт",
+      "recognition": "признание",
+      "points": "баллы",
+      "access": "доступ",
+      "other": "другое"
+    },
+    "fulfillment_modes": {
+      "automatic": "автоматически",
+      "staff_approved": "одобрение персонала",
+      "pms_linked": "через PMS",
+      "voucher": "ваучер",
+      "on_request": "по запросу"
+    },
+    "form": {
+      "edit_title": "Изменить привилегию",
+      "new_title": "Новая привилегия",
+      "name": "Название",
+      "code_placeholder": "Код (напр. early_checkin)",
+      "limit_stay": "Лимит за проживание",
+      "limit_year": "Лимит за год",
+      "sort_order": "Порядок",
+      "description": "Описание",
+      "requires_active_stay": "Требует активного проживания",
+      "save": "Сохранить",
+      "saving": "Сохранение…"
+    },
+    "table": {
+      "benefit": "Привилегия",
+      "code": "Код",
+      "category": "Категория",
+      "fulfillment": "Способ предоставления",
+      "limits": "Лимиты",
+      "status": "Статус",
+      "actions": "Действия",
+      "disabled": "Отключено",
+      "per_stay": "{{count}}/проживание",
+      "per_year": "{{count}}/год",
+      "unlimited": "Без лимита",
+      "loading": "Загрузка…",
+      "empty": "Привилегии ещё не настроены",
+      "no_match": "Нет привилегий, соответствующих фильтрам",
+      "enable_tooltip": "Включить",
+      "disable_tooltip": "Отключить"
+    },
+    "toasts": {
+      "updated": "Привилегия обновлена",
+      "created": "Привилегия создана",
+      "save_failed": "Не удалось сохранить",
+      "deactivated": "Привилегия деактивирована",
+      "toggled": "Статус привилегии обновлён",
+      "toggle_failed": "Не удалось переключить"
+    }
+  },
+
+  "tiers": {
+    "title": "Уровни",
+    "add": "Добавить уровень",
+    "preview": {
+      "title": "Калькулятор уровня",
+      "subtitle": "— на какой уровень попадёт участник?",
+      "model": "Модель",
+      "points": "Баллы",
+      "nights": "Ночи",
+      "stays": "Проживания",
+      "spend": "Траты ($)",
+      "hybrid": "Гибрид (любой порог)",
+      "calculate": "Рассчитать",
+      "calculating": "Расчёт…",
+      "no_qualifying": "Подходящих уровней нет",
+      "would_qualify": "Получит уровень:"
+    },
+    "form": {
+      "edit_title": "Изменить уровень",
+      "new_title": "Новый уровень",
+      "name": "Название уровня",
+      "sort_order": "Порядок",
+      "min_points": "Мин. баллов",
+      "max_points": "Макс. баллов",
+      "earn_rate": "Множитель начисления",
+      "grace_days": "Льготные дни",
+      "min_nights": "Мин. ночей",
+      "min_stays": "Мин. проживаний",
+      "min_spend": "Мин. трат ($)",
+      "description": "Описание",
+      "qualification": {
+        "rolling_12": "Скользящие 12 месяцев",
+        "calendar_year": "Календарный год",
+        "anniversary_year": "Год с даты регистрации"
+      },
+      "soft_landing": "Мягкое понижение",
+      "invitation_only": "Только по приглашению",
+      "save": "Сохранить",
+      "saving": "Сохранение…"
+    },
+    "icons": {
+      "star": "Звезда",
+      "award": "Награда",
+      "crown": "Корона",
+      "gem": "Самоцвет",
+      "diamond": "Бриллиант",
+      "shield": "Щит",
+      "layers": "Слои"
+    },
+    "summary": {
+      "earn_x": "{{rate}}× начисление",
+      "invite_only": "По приглашению",
+      "range_open": "{{min}} баллов+",
+      "range_closed": "{{min}} - {{max}} баллов"
+    },
+    "expanded": {
+      "title": "Привилегии уровня",
+      "remove": "Удалить",
+      "select_benefit": "Выберите привилегию…",
+      "value_placeholder": "Значение (опционально)",
+      "assign": "Назначить"
+    },
+    "toasts": {
+      "updated": "Уровень обновлён",
+      "created": "Уровень создан",
+      "save_failed": "Не удалось сохранить уровень",
+      "preview_failed": "Не удалось выполнить расчёт",
+      "benefit_assigned": "Привилегия назначена",
+      "benefit_assign_failed": "Не удалось назначить привилегию",
+      "benefit_removed": "Привилегия удалена"
+    },
+    "loading": "Загрузка…"
+  },
+
   "knowledge_base": {
     "brand_required": "базы знаний",
     "title": "База знаний",

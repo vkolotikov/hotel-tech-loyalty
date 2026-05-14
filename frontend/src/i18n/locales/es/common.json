@@ -1255,6 +1255,185 @@
     }
   },
 
+  "offers": {
+    "title": "Ofertas especiales",
+    "create": "Crear oferta",
+    "ai_generated": "Generado por IA",
+    "active": "Activa",
+    "inactive": "Inactiva",
+    "usage_used": "{{used}}/{{limit}} usados",
+    "types": {
+      "discount": "descuento",
+      "points_multiplier": "multiplicador de puntos",
+      "free_night": "noche gratis",
+      "upgrade": "mejora",
+      "bonus_points": "puntos bonus",
+      "cashback": "cashback"
+    },
+    "form": {
+      "edit_title": "Editar oferta",
+      "create_title": "Crear oferta",
+      "title": "Título",
+      "description": "Descripción",
+      "image": "Imagen",
+      "upload_image": "Subir imagen",
+      "type": "Tipo",
+      "value": "Valor",
+      "start_date": "Fecha de inicio",
+      "start_placeholder": "Elegir fecha de inicio",
+      "end_date": "Fecha de fin",
+      "end_placeholder": "Elegir fecha de fin",
+      "featured": "Destacada",
+      "active": "Activa",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    },
+    "toasts": {
+      "deleted": "Oferta eliminada",
+      "updated": "Oferta actualizada",
+      "created": "Oferta creada",
+      "save_failed": "Error al guardar"
+    }
+  },
+
+  "benefits": {
+    "title": "Beneficios",
+    "add": "Añadir beneficio",
+    "show_inactive": "Mostrar inactivos",
+    "all_categories": "Todas las categorías",
+    "summary": "{{active}} activos · {{inactive}} inactivos · {{shown}} mostrados",
+    "categories": {
+      "accommodation": "alojamiento",
+      "dining": "restauración",
+      "wellness": "bienestar",
+      "transport": "transporte",
+      "recognition": "reconocimiento",
+      "points": "puntos",
+      "access": "acceso",
+      "other": "otro"
+    },
+    "fulfillment_modes": {
+      "automatic": "automático",
+      "staff_approved": "aprobado por staff",
+      "pms_linked": "vinculado al PMS",
+      "voucher": "vale",
+      "on_request": "bajo petición"
+    },
+    "form": {
+      "edit_title": "Editar beneficio",
+      "new_title": "Nuevo beneficio",
+      "name": "Nombre",
+      "code_placeholder": "Código (p. ej. early_checkin)",
+      "limit_stay": "Límite por estancia",
+      "limit_year": "Límite por año",
+      "sort_order": "Orden",
+      "description": "Descripción",
+      "requires_active_stay": "Requiere estancia activa",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "table": {
+      "benefit": "Beneficio",
+      "code": "Código",
+      "category": "Categoría",
+      "fulfillment": "Modo",
+      "limits": "Límites",
+      "status": "Estado",
+      "actions": "Acciones",
+      "disabled": "Desactivado",
+      "per_stay": "{{count}}/estancia",
+      "per_year": "{{count}}/año",
+      "unlimited": "Ilimitado",
+      "loading": "Cargando…",
+      "empty": "No hay beneficios definidos",
+      "no_match": "Ningún beneficio coincide con los filtros",
+      "enable_tooltip": "Activar",
+      "disable_tooltip": "Desactivar"
+    },
+    "toasts": {
+      "updated": "Beneficio actualizado",
+      "created": "Beneficio creado",
+      "save_failed": "Error al guardar el beneficio",
+      "deactivated": "Beneficio desactivado",
+      "toggled": "Estado actualizado",
+      "toggle_failed": "Error al cambiar"
+    }
+  },
+
+  "tiers": {
+    "title": "Niveles",
+    "add": "Añadir nivel",
+    "preview": {
+      "title": "Calculadora de niveles",
+      "subtitle": "— ¿qué nivel alcanzaría un miembro?",
+      "model": "Modelo",
+      "points": "Puntos",
+      "nights": "Noches",
+      "stays": "Estancias",
+      "spend": "Gasto ($)",
+      "hybrid": "Híbrido (cualquier umbral)",
+      "calculate": "Calcular",
+      "calculating": "Calculando…",
+      "no_qualifying": "Ningún nivel califica",
+      "would_qualify": "Calificaría para:"
+    },
+    "form": {
+      "edit_title": "Editar nivel",
+      "new_title": "Nuevo nivel",
+      "name": "Nombre del nivel",
+      "sort_order": "Orden",
+      "min_points": "Puntos mín.",
+      "max_points": "Puntos máx.",
+      "earn_rate": "Tasa de ganancia",
+      "grace_days": "Días de gracia",
+      "min_nights": "Noches mín.",
+      "min_stays": "Estancias mín.",
+      "min_spend": "Gasto mín. ($)",
+      "description": "Descripción",
+      "qualification": {
+        "rolling_12": "12 meses móviles",
+        "calendar_year": "Año natural",
+        "anniversary_year": "Año aniversario"
+      },
+      "soft_landing": "Aterrizaje suave",
+      "invitation_only": "Solo por invitación",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "icons": {
+      "star": "Estrella",
+      "award": "Premio",
+      "crown": "Corona",
+      "gem": "Gema",
+      "diamond": "Diamante",
+      "shield": "Escudo",
+      "layers": "Capas"
+    },
+    "summary": {
+      "earn_x": "{{rate}}× ganancia",
+      "invite_only": "Solo invitación",
+      "range_open": "{{min}} pts+",
+      "range_closed": "{{min}} - {{max}} pts"
+    },
+    "expanded": {
+      "title": "Beneficios del nivel",
+      "remove": "Quitar",
+      "select_benefit": "Elegir beneficio…",
+      "value_placeholder": "Valor (opcional)",
+      "assign": "Asignar"
+    },
+    "toasts": {
+      "updated": "Nivel actualizado",
+      "created": "Nivel creado",
+      "save_failed": "Error al guardar el nivel",
+      "preview_failed": "No se pudo ejecutar la vista previa",
+      "benefit_assigned": "Beneficio asignado",
+      "benefit_assign_failed": "Error al asignar el beneficio",
+      "benefit_removed": "Beneficio retirado"
+    },
+    "loading": "Cargando…"
+  },
+
   "knowledge_base": {
     "brand_required": "la base de conocimiento",
     "title": "Base de conocimiento",
