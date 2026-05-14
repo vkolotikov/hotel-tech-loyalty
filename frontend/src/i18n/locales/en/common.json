@@ -225,6 +225,104 @@
     "no_activity": "No recent activity yet."
   },
 
+  "inquiryDetail": {
+    "back": "Back",
+    "lost_reason_prefix": "Lost: {{reason}}",
+    "draft_proposal": "Draft proposal",
+    "draft_proposal_tooltip": "AI: draft proposal email from this inquiry",
+    "via": "via {{source}}",
+    "default_inquiry_type": "general",
+    "profile": {
+      "contact": "Contact",
+      "email": "Email",
+      "phone": "Phone",
+      "stay": "Stay",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "rooms": "Rooms",
+      "adults": "Adults",
+      "children": "Children",
+      "special_requests": "Special requests",
+      "pipeline": "Pipeline",
+      "property": "Property",
+      "priority": "Priority",
+      "source": "Source",
+      "default_priority": "Medium",
+      "default_source": "Manual",
+      "linked_reservation": "Linked reservation",
+      "custom_fields": "Custom fields",
+      "edit": "Edit",
+      "open_guest_profile": "Open guest profile →"
+    },
+    "timeline": {
+      "all": "All",
+      "empty": "No activity yet — log a note, call, or email below.",
+      "composer": {
+        "subject": "Subject",
+        "meeting_title": "Meeting title",
+        "note_placeholder": "Add a note…",
+        "call_placeholder": "Call summary — what did the guest ask, what did you say…",
+        "email_placeholder": "Email body…",
+        "meeting_placeholder": "Meeting notes…",
+        "minutes_placeholder": "min",
+        "voice_note": "Voice note (Whisper)",
+        "stop_recording": "Stop recording",
+        "send_hint": "⌘/Ctrl + Enter to send",
+        "recording": "● Recording — click stop when done",
+        "transcribing": "Transcribing…"
+      },
+      "by_creator": "by {{name}}"
+    },
+    "smart_panel": {
+      "title": "AI Smart Panel",
+      "refresh_tooltip": "Regenerate brief",
+      "generate": "Generate brief →",
+      "generating": "Generating…",
+      "win_probability": "Win probability",
+      "suggested_next_action": "Suggested next action",
+      "generated_at": "Generated {{ago}}",
+      "cached_suffix": " · cached"
+    },
+    "tasks": {
+      "open_tasks": "Open tasks ({{count}})",
+      "add_task": "Add task",
+      "empty": "No open tasks.",
+      "mark_complete": "Mark complete",
+      "overdue_prefix": "Overdue · "
+    },
+    "won": {
+      "title": "Mark as Won",
+      "move_into": "Move this lead into",
+      "creates_reservation": "A draft reservation will be created automatically with the inquiry's dates and pax.",
+      "no_reservation_warning": "Heads up: no draft reservation will be created — the inquiry is missing a property or stay dates.",
+      "already_linked": "A reservation is already linked.",
+      "note_placeholder": "Optional note — e.g. how the deal closed, terms agreed.",
+      "submit": "Mark won",
+      "saving": "Saving…"
+    },
+    "lost": {
+      "title": "Mark as Lost",
+      "closing_in": "Closing this lead in",
+      "pick_reason": "Pick the reason — it powers the loss-reason breakdown on the funnel report.",
+      "reading_timeline": "Reading timeline…",
+      "suggest_from_timeline": "Suggest from timeline",
+      "ai_suggestion_label": "AI suggestion · {{confidence}} confidence",
+      "no_reasons": "No reasons configured. Add some in Settings → Pipelines.",
+      "note_placeholder": "Optional context — e.g. what they went with instead, what we'd need to win next time.",
+      "submit": "Mark lost",
+      "saving": "Saving…"
+    },
+    "proposal": {
+      "title": "AI proposal draft",
+      "subtitle": "Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.",
+      "drafting": "Drafting…",
+      "subject": "Subject",
+      "body": "Body",
+      "regenerate": "Regenerate",
+      "regenerate_tooltip": "Try a different draft"
+    }
+  },
+
   "inquiries": {
     "title": "Sales Pipeline",
     "subtitle": "{{total}} total · {{leads}} leads · {{deals}} active deals · {{closed}} closed",

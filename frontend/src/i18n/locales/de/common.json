@@ -225,6 +225,104 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "inquiryDetail": {
+    "back": "Zurück",
+    "lost_reason_prefix": "Verloren: {{reason}}",
+    "draft_proposal": "Angebot entwerfen",
+    "draft_proposal_tooltip": "KI: Angebot-E-Mail aus dieser Anfrage entwerfen",
+    "via": "über {{source}}",
+    "default_inquiry_type": "allgemein",
+    "profile": {
+      "contact": "Kontakt",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "stay": "Aufenthalt",
+      "check_in": "Anreise",
+      "check_out": "Abreise",
+      "rooms": "Zimmer",
+      "adults": "Erwachsene",
+      "children": "Kinder",
+      "special_requests": "Sonderwünsche",
+      "pipeline": "Pipeline",
+      "property": "Objekt",
+      "priority": "Priorität",
+      "source": "Quelle",
+      "default_priority": "Mittel",
+      "default_source": "Manuell",
+      "linked_reservation": "Verknüpfte Reservierung",
+      "custom_fields": "Eigene Felder",
+      "edit": "Bearbeiten",
+      "open_guest_profile": "Gastprofil öffnen →"
+    },
+    "timeline": {
+      "all": "Alle",
+      "empty": "Noch keine Aktivität — notieren Sie unten einen Anruf, eine E-Mail oder eine Notiz.",
+      "composer": {
+        "subject": "Betreff",
+        "meeting_title": "Meeting-Titel",
+        "note_placeholder": "Notiz hinzufügen…",
+        "call_placeholder": "Zusammenfassung des Anrufs — was hat der Gast gefragt, was haben Sie gesagt…",
+        "email_placeholder": "E-Mail-Text…",
+        "meeting_placeholder": "Meeting-Notizen…",
+        "minutes_placeholder": "min",
+        "voice_note": "Sprachnotiz (Whisper)",
+        "stop_recording": "Aufnahme stoppen",
+        "send_hint": "⌘/Strg + Eingabe zum Senden",
+        "recording": "● Aufnahme läuft — klicken Sie auf Stopp, wenn fertig",
+        "transcribing": "Transkribieren…"
+      },
+      "by_creator": "von {{name}}"
+    },
+    "smart_panel": {
+      "title": "KI Smart-Panel",
+      "refresh_tooltip": "Briefing neu erstellen",
+      "generate": "Briefing erstellen →",
+      "generating": "Wird erstellt…",
+      "win_probability": "Gewinnwahrscheinlichkeit",
+      "suggested_next_action": "Empfohlene nächste Aktion",
+      "generated_at": "Erstellt {{ago}}",
+      "cached_suffix": " · zwischengespeichert"
+    },
+    "tasks": {
+      "open_tasks": "Offene Aufgaben ({{count}})",
+      "add_task": "Aufgabe hinzufügen",
+      "empty": "Keine offenen Aufgaben.",
+      "mark_complete": "Als erledigt markieren",
+      "overdue_prefix": "Überfällig · "
+    },
+    "won": {
+      "title": "Als gewonnen markieren",
+      "move_into": "Diesen Lead verschieben nach",
+      "creates_reservation": "Eine Reservierungs-Entwurf wird automatisch mit den Daten und Personen aus der Anfrage erstellt.",
+      "no_reservation_warning": "Hinweis: Es wird kein Reservierungs-Entwurf erstellt — der Anfrage fehlen Objekt oder Aufenthaltsdaten.",
+      "already_linked": "Eine Reservierung ist bereits verknüpft.",
+      "note_placeholder": "Optionale Notiz — z. B. wie der Deal abgeschlossen wurde, vereinbarte Bedingungen.",
+      "submit": "Als gewonnen markieren",
+      "saving": "Speichern…"
+    },
+    "lost": {
+      "title": "Als verloren markieren",
+      "closing_in": "Diesen Lead schließen in",
+      "pick_reason": "Wählen Sie den Grund — er fließt in die Verlust-Analyse im Funnel-Report ein.",
+      "reading_timeline": "Verlauf wird gelesen…",
+      "suggest_from_timeline": "Aus dem Verlauf vorschlagen",
+      "ai_suggestion_label": "KI-Vorschlag · {{confidence}} Konfidenz",
+      "no_reasons": "Keine Gründe konfiguriert. Fügen Sie welche in Einstellungen → Pipelines hinzu.",
+      "note_placeholder": "Optionaler Kontext — z. B. wofür sie sich stattdessen entschieden haben, was wir beim nächsten Mal brauchen.",
+      "submit": "Als verloren markieren",
+      "saving": "Speichern…"
+    },
+    "proposal": {
+      "title": "KI-Angebotsentwurf",
+      "subtitle": "Erstellt aus den Aufenthaltsdetails und Sonderwünschen dieser Anfrage. Vor dem Senden überprüfen — das Modell hilft, ist aber nicht magisch.",
+      "drafting": "Entwurf wird erstellt…",
+      "subject": "Betreff",
+      "body": "Inhalt",
+      "regenerate": "Neu erzeugen",
+      "regenerate_tooltip": "Anderen Entwurf versuchen"
+    }
+  },
+
   "inquiries": {
     "title": "Vertriebs-Pipeline",
     "subtitle": "{{total}} insgesamt · {{leads}} Leads · {{deals}} aktive Deals · {{closed}} abgeschlossen",

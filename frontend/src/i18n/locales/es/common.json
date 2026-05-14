@@ -225,6 +225,104 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "inquiryDetail": {
+    "back": "Atrás",
+    "lost_reason_prefix": "Perdida: {{reason}}",
+    "draft_proposal": "Redactar propuesta",
+    "draft_proposal_tooltip": "IA: redactar correo de propuesta a partir de esta consulta",
+    "via": "vía {{source}}",
+    "default_inquiry_type": "general",
+    "profile": {
+      "contact": "Contacto",
+      "email": "Email",
+      "phone": "Teléfono",
+      "stay": "Estancia",
+      "check_in": "Entrada",
+      "check_out": "Salida",
+      "rooms": "Habitaciones",
+      "adults": "Adultos",
+      "children": "Niños",
+      "special_requests": "Peticiones especiales",
+      "pipeline": "Pipeline",
+      "property": "Propiedad",
+      "priority": "Prioridad",
+      "source": "Origen",
+      "default_priority": "Media",
+      "default_source": "Manual",
+      "linked_reservation": "Reserva vinculada",
+      "custom_fields": "Campos personalizados",
+      "edit": "Editar",
+      "open_guest_profile": "Abrir perfil del cliente →"
+    },
+    "timeline": {
+      "all": "Todo",
+      "empty": "Aún sin actividad — añade una nota, llamada o email abajo.",
+      "composer": {
+        "subject": "Asunto",
+        "meeting_title": "Título de la reunión",
+        "note_placeholder": "Añadir una nota…",
+        "call_placeholder": "Resumen de la llamada — qué preguntó el cliente, qué respondiste…",
+        "email_placeholder": "Cuerpo del email…",
+        "meeting_placeholder": "Notas de la reunión…",
+        "minutes_placeholder": "min",
+        "voice_note": "Nota de voz (Whisper)",
+        "stop_recording": "Detener grabación",
+        "send_hint": "⌘/Ctrl + Intro para enviar",
+        "recording": "● Grabando — pulsa stop cuando termines",
+        "transcribing": "Transcribiendo…"
+      },
+      "by_creator": "por {{name}}"
+    },
+    "smart_panel": {
+      "title": "Panel IA",
+      "refresh_tooltip": "Regenerar resumen",
+      "generate": "Generar resumen →",
+      "generating": "Generando…",
+      "win_probability": "Probabilidad de cierre",
+      "suggested_next_action": "Próxima acción sugerida",
+      "generated_at": "Generado {{ago}}",
+      "cached_suffix": " · en caché"
+    },
+    "tasks": {
+      "open_tasks": "Tareas abiertas ({{count}})",
+      "add_task": "Añadir tarea",
+      "empty": "No hay tareas abiertas.",
+      "mark_complete": "Marcar como completada",
+      "overdue_prefix": "Atrasada · "
+    },
+    "won": {
+      "title": "Marcar como ganada",
+      "move_into": "Mover este lead a",
+      "creates_reservation": "Se creará automáticamente un borrador de reserva con las fechas y huéspedes de la consulta.",
+      "no_reservation_warning": "Aviso: no se creará el borrador de reserva — falta propiedad o fechas en la consulta.",
+      "already_linked": "Ya hay una reserva vinculada.",
+      "note_placeholder": "Nota opcional — p. ej. cómo se cerró, condiciones acordadas.",
+      "submit": "Marcar ganada",
+      "saving": "Guardando…"
+    },
+    "lost": {
+      "title": "Marcar como perdida",
+      "closing_in": "Cerrando este lead en",
+      "pick_reason": "Elige el motivo — alimenta el desglose de motivos de pérdida en el informe de embudo.",
+      "reading_timeline": "Leyendo el historial…",
+      "suggest_from_timeline": "Sugerir desde el historial",
+      "ai_suggestion_label": "Sugerencia IA · confianza {{confidence}}",
+      "no_reasons": "No hay motivos configurados. Añádelos en Ajustes → Pipelines.",
+      "note_placeholder": "Contexto opcional — p. ej. con quién se decidieron y qué necesitaríamos para ganar.",
+      "submit": "Marcar perdida",
+      "saving": "Guardando…"
+    },
+    "proposal": {
+      "title": "Borrador IA",
+      "subtitle": "Generado a partir de los detalles de la estancia y peticiones especiales. Revísalo antes de enviar — el modelo ayuda pero no hace magia.",
+      "drafting": "Redactando…",
+      "subject": "Asunto",
+      "body": "Cuerpo",
+      "regenerate": "Regenerar",
+      "regenerate_tooltip": "Probar otro borrador"
+    }
+  },
+
   "inquiries": {
     "title": "Pipeline de ventas",
     "subtitle": "{{total}} en total · {{leads}} leads · {{deals}} acuerdos activos · {{closed}} cerrados",

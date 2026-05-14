@@ -8,6 +8,7 @@ import {
   Flame, Wand2, Mic, Square, Loader2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
@@ -294,6 +295,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
   onDraftProposal: () => void
   changing: boolean
 }) {
+  const { t } = useTranslation()
   const [stageOpen, setStageOpen] = useState(false)
   const stage = inq.pipeline_stage
   const stageColor = stage?.color ?? '#94a3b8'
@@ -306,7 +308,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
     <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onBack} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" aria-label="Back">
+          <button onClick={onBack} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" aria-label={t('inquiryDetail.back', 'Back')}>
             <ArrowLeft size={18} />
           </button>
           <div className="min-w-0">
@@ -315,17 +317,17 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
               <BrandBadge brandId={inq.brand_id} />
               {stage?.kind === 'lost' && inq.lost_reason && (
                 <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
-                  Lost: {inq.lost_reason.label}
+                  {t('inquiryDetail.lost_reason_prefix', { reason: inq.lost_reason.label, defaultValue: 'Lost: {{reason}}' })}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 mt-1 text-xs text-t-secondary flex-wrap">
               {company && <span className="flex items-center gap-1"><Building2 size={11} />{company}</span>}
               <span>·</span>
-              <span>{inq.inquiry_type ?? 'general'}</span>
+              <span>{inq.inquiry_type ?? t('inquiryDetail.default_inquiry_type', 'general')}</span>
               <span>·</span>
               <span className="font-mono">{value}</span>
-              {inq.source && <><span>·</span><span>via {inq.source}</span></>}
+              {inq.source && <><span>·</span><span>{t('inquiryDetail.via', { source: inq.source, defaultValue: 'via {{source}}' })}</span></>}
             </div>
           </div>
         </div>
@@ -334,10 +336,10 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
           <button
             onClick={onDraftProposal}
             className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/15 hover:text-purple-200 text-xs font-bold"
-            title="AI: draft proposal email from this inquiry"
+            title={t('inquiryDetail.draft_proposal_tooltip', 'AI: draft proposal email from this inquiry')}
           >
             <Wand2 size={13} />
-            Draft proposal
+            {t('inquiryDetail.draft_proposal', 'Draft proposal')}
           </button>
 
           <div className="relative">
@@ -394,45 +396,46 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
 /* ── Left: Profile column ───────────────────────────────────── */
 
 function ProfileCol({ inq }: { inq: InquiryDetail }) {
+  const { t } = useTranslation()
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4 space-y-4 self-start">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <User size={11} /> Contact
+        <User size={11} /> {t('inquiryDetail.profile.contact', 'Contact')}
       </div>
-      <Field label="Email" value={inq.guest?.email ?? '—'} />
-      <Field label="Phone" value={inq.guest?.phone ?? '—'} />
+      <Field label={t('inquiryDetail.profile.email', 'Email')} value={inq.guest?.email ?? '—'} />
+      <Field label={t('inquiryDetail.profile.phone', 'Phone')} value={inq.guest?.phone ?? '—'} />
 
       <div className="border-t border-dark-border pt-4 flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <CalendarIcon size={11} /> Stay
+        <CalendarIcon size={11} /> {t('inquiryDetail.profile.stay', 'Stay')}
       </div>
-      <Field label="Check-in"  value={inq.check_in ?? '—'} mono />
-      <Field label="Check-out" value={inq.check_out ?? '—'} mono />
+      <Field label={t('inquiryDetail.profile.check_in',  'Check-in')}  value={inq.check_in ?? '—'} mono />
+      <Field label={t('inquiryDetail.profile.check_out', 'Check-out')} value={inq.check_out ?? '—'} mono />
       <div className="grid grid-cols-3 gap-2">
-        <Field label="Rooms"    value={String(inq.num_rooms ?? '—')} />
-        <Field label="Adults"   value={String(inq.num_adults ?? '—')} />
-        <Field label="Children" value={String(inq.num_children ?? '—')} />
+        <Field label={t('inquiryDetail.profile.rooms',    'Rooms')}    value={String(inq.num_rooms ?? '—')} />
+        <Field label={t('inquiryDetail.profile.adults',   'Adults')}   value={String(inq.num_adults ?? '—')} />
+        <Field label={t('inquiryDetail.profile.children', 'Children')} value={String(inq.num_children ?? '—')} />
       </div>
 
       {inq.special_requests && (
         <>
           <div className="border-t border-dark-border pt-4 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-            Special requests
+            {t('inquiryDetail.profile.special_requests', 'Special requests')}
           </div>
           <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{inq.special_requests}</p>
         </>
       )}
 
       <div className="border-t border-dark-border pt-4 flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <MapPin size={11} /> Pipeline
+        <MapPin size={11} /> {t('inquiryDetail.profile.pipeline', 'Pipeline')}
       </div>
-      <Field label="Property" value={inq.property?.name ?? '—'} />
-      <Field label="Priority" value={inq.priority ?? 'Medium'} />
-      <Field label="Source"   value={inq.source ?? 'Manual'} />
+      <Field label={t('inquiryDetail.profile.property', 'Property')} value={inq.property?.name ?? '—'} />
+      <Field label={t('inquiryDetail.profile.priority', 'Priority')} value={inq.priority ?? t('inquiryDetail.profile.default_priority', 'Medium')} />
+      <Field label={t('inquiryDetail.profile.source',   'Source')}   value={inq.source ?? t('inquiryDetail.profile.default_source', 'Manual')} />
 
       {inq.reservations && inq.reservations.length > 0 && (
         <>
           <div className="border-t border-dark-border pt-4 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-            Linked reservation
+            {t('inquiryDetail.profile.linked_reservation', 'Linked reservation')}
           </div>
           {inq.reservations.map(r => (
             <Link key={r.id} to={`/reservations`} className="flex items-center justify-between text-xs hover:underline">
@@ -447,7 +450,7 @@ function ProfileCol({ inq }: { inq: InquiryDetail }) {
 
       {inq.guest_id && (
         <Link to={`/guest/${inq.guest_id}`} className="block text-xs text-accent hover:underline pt-2 border-t border-dark-border">
-          Open guest profile →
+          {t('inquiryDetail.profile.open_guest_profile', 'Open guest profile →')}
         </Link>
       )}
     </div>
@@ -461,6 +464,7 @@ function ProfileCol({ inq }: { inq: InquiryDetail }) {
  * the inquiry entity — no field defs, no section.
  */
 function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { data: fields } = useCustomFields('inquiry')
   const [editing, setEditing] = useState(false)
@@ -498,11 +502,11 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
     <div className="border-t border-dark-border pt-4 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-purple-300">
-          <Sparkles size={11} /> Custom fields
+          <Sparkles size={11} /> {t('inquiryDetail.profile.custom_fields', 'Custom fields')}
         </div>
         {!editing && (
           <button onClick={start} className="text-[10px] text-t-secondary hover:text-accent flex items-center gap-1">
-            Edit
+            {t('inquiryDetail.profile.edit', 'Edit')}
           </button>
         )}
       </div>
@@ -518,13 +522,13 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
             layout="stack"
           />
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => setEditing(false)} className="px-3 py-1 text-xs text-t-secondary hover:text-white">Cancel</button>
+            <button onClick={() => setEditing(false)} className="px-3 py-1 text-xs text-t-secondary hover:text-white">{t('actions.cancel', 'Cancel')}</button>
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
               className="bg-accent text-black font-bold rounded-md px-3 py-1 text-xs disabled:opacity-50"
             >
-              {save.isPending ? 'Saving…' : 'Save'}
+              {save.isPending ? t('app.saving', 'Saving…') : t('actions.save', 'Save')}
             </button>
           </div>
         </>
@@ -553,6 +557,7 @@ function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
   seed: { type: string; subject?: string; body: string } | null
   onSeedConsumed: () => void
 }) {
+  const { t } = useTranslation()
   const [filter, setFilter] = useState<string>('all')
   const filtered = useMemo(
     () => filter === 'all' ? activities : activities.filter(a => a.type === filter),
@@ -564,18 +569,20 @@ function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl flex flex-col" style={{ minHeight: 480 }}>
       <div className="flex items-center gap-1 p-2 border-b border-dark-border overflow-x-auto">
-        {filterChips.map(t => {
-          const active = filter === t
-          const meta = t === 'all' ? null : ACTIVITY_TYPES[t]
+        {/* Loop var renamed from `t` to `chipKey` so it doesn't shadow
+            the i18n `t` from useTranslation above. */}
+        {filterChips.map(chipKey => {
+          const active = filter === chipKey
+          const meta = chipKey === 'all' ? null : ACTIVITY_TYPES[chipKey]
           return (
             <button
-              key={t}
-              onClick={() => setFilter(t)}
+              key={chipKey}
+              onClick={() => setFilter(chipKey)}
               className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                 active ? 'bg-accent text-black' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
               }`}
             >
-              {t === 'all' ? 'All' : meta?.label ?? t}
+              {chipKey === 'all' ? t('inquiryDetail.timeline.all', 'All') : meta?.label ?? chipKey}
             </button>
           )
         })}
@@ -584,7 +591,7 @@ function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
       <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
           <div className="text-center text-t-secondary text-sm py-8">
-            No activity yet — log a note, call, or email below.
+            {t('inquiryDetail.timeline.empty', 'No activity yet — log a note, call, or email below.')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -604,6 +611,7 @@ function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
+  const { t } = useTranslation()
   const meta = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES.system
   const Icon = meta.icon
   return (
@@ -631,7 +639,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
           <p className="text-sm text-t-secondary mt-1 whitespace-pre-wrap leading-relaxed">{activity.body}</p>
         )}
         {activity.creator && (
-          <p className="text-[10px] text-t-secondary mt-1">by {activity.creator.name}</p>
+          <p className="text-[10px] text-t-secondary mt-1">{t('inquiryDetail.timeline.by_creator', { name: activity.creator.name, defaultValue: 'by {{name}}' })}</p>
         )}
       </div>
     </div>
@@ -644,6 +652,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
   seed: { type: string; subject?: string; body: string } | null
   onSeedConsumed: () => void
 }) {
+  const { t } = useTranslation()
   const [type, setType] = useState<'note' | 'call' | 'email' | 'meeting'>('note')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
@@ -754,7 +763,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
         <input
           value={subject}
           onChange={e => setSubject(e.target.value)}
-          placeholder={type === 'email' ? 'Subject' : 'Meeting title'}
+          placeholder={type === 'email' ? t('inquiryDetail.timeline.composer.subject', 'Subject') : t('inquiryDetail.timeline.composer.meeting_title', 'Meeting title')}
           className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm placeholder-t-secondary outline-none focus:border-accent mb-2"
         />
       )}
@@ -764,9 +773,10 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
           onChange={e => setBody(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
           placeholder={
-            type === 'note' ? 'Add a note…' :
-            type === 'call' ? 'Call summary — what did the guest ask, what did you say…' :
-            type === 'email' ? 'Email body…' : 'Meeting notes…'
+            type === 'note'    ? t('inquiryDetail.timeline.composer.note_placeholder',    'Add a note…') :
+            type === 'call'    ? t('inquiryDetail.timeline.composer.call_placeholder',    'Call summary — what did the guest ask, what did you say…') :
+            type === 'email'   ? t('inquiryDetail.timeline.composer.email_placeholder',   'Email body…') :
+                                 t('inquiryDetail.timeline.composer.meeting_placeholder', 'Meeting notes…')
           }
           rows={2}
           className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none"
@@ -775,7 +785,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
           <input
             value={duration}
             onChange={e => setDuration(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="min"
+            placeholder={t('inquiryDetail.timeline.composer.minutes_placeholder', 'min')}
             className="w-16 bg-dark-bg border border-dark-border rounded-md px-2 py-1.5 text-sm text-center outline-none focus:border-accent"
           />
         )}
@@ -787,7 +797,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
               ? 'bg-red-500 text-white animate-pulse hover:bg-red-400'
               : 'bg-dark-bg border border-dark-border text-t-secondary hover:text-white hover:border-accent/50'
           }`}
-          title={recording ? 'Stop recording' : 'Voice note (Whisper)'}
+          title={recording ? t('inquiryDetail.timeline.composer.stop_recording', 'Stop recording') : t('inquiryDetail.timeline.composer.voice_note', 'Voice note (Whisper)')}
         >
           {transcribing ? <Loader2 size={14} className="animate-spin" /> : recording ? <Square size={14} /> : <Mic size={14} />}
         </button>
@@ -800,9 +810,9 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
         </button>
       </div>
       <p className="text-[10px] text-t-secondary mt-1.5">
-        ⌘/Ctrl + Enter to send
-        {recording && <span className="text-red-400 font-bold ml-2">● Recording — click stop when done</span>}
-        {transcribing && <span className="text-accent ml-2">Transcribing…</span>}
+        {t('inquiryDetail.timeline.composer.send_hint', '⌘/Ctrl + Enter to send')}
+        {recording && <span className="text-red-400 font-bold ml-2">{t('inquiryDetail.timeline.composer.recording', '● Recording — click stop when done')}</span>}
+        {transcribing && <span className="text-accent ml-2">{t('inquiryDetail.timeline.composer.transcribing', 'Transcribing…')}</span>}
       </p>
     </div>
   )
@@ -815,6 +825,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
   tasks: Task[]
   onCompleteTask: (taskId: number) => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(false)
 
@@ -825,18 +836,18 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-            <Clock size={11} /> Open tasks ({tasks.length})
+            <Clock size={11} /> {t('inquiryDetail.tasks.open_tasks', { count: tasks.length, defaultValue: 'Open tasks ({{count}})' })}
           </div>
           <button
             onClick={() => setAdding(true)}
             className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
-            title="Add task"
+            title={t('inquiryDetail.tasks.add_task', 'Add task')}
           >
             <Plus size={13} />
           </button>
         </div>
         {tasks.length === 0 ? (
-          <p className="text-xs text-t-secondary italic">No open tasks.</p>
+          <p className="text-xs text-t-secondary italic">{t('inquiryDetail.tasks.empty', 'No open tasks.')}</p>
         ) : (
           <div className="space-y-1.5">
             {tasks.map(t => <TaskRow key={t.id} task={t} onComplete={() => onCompleteTask(t.id)} />)}
@@ -867,6 +878,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
  * with force_refresh=true to bypass the cache.
  */
 function SmartPanel({ inq }: { inq: InquiryDetail }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
 
   // Seed React Query with the cached values from the inquiry payload —
@@ -911,13 +923,13 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
     <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-purple-300">
-          <Sparkles size={11} /> AI Smart Panel
+          <Sparkles size={11} /> {t('inquiryDetail.smart_panel.title', 'AI Smart Panel')}
         </div>
         <button
           onClick={() => refresh.mutate()}
           disabled={generating}
           className="p-1 rounded hover:bg-purple-500/15 text-purple-300/70 hover:text-purple-200 disabled:opacity-40"
-          title="Regenerate brief"
+          title={t('inquiryDetail.smart_panel.refresh_tooltip', 'Regenerate brief')}
         >
           <RefreshCw size={11} className={generating ? 'animate-spin' : ''} />
         </button>
@@ -928,12 +940,12 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
           onClick={() => refresh.mutate()}
           className="w-full text-left text-xs text-purple-200/80 hover:text-purple-200 italic py-2"
         >
-          Generate brief →
+          {t('inquiryDetail.smart_panel.generate', 'Generate brief →')}
         </button>
       )}
 
       {generating && !brief?.brief && (
-        <p className="text-xs text-purple-200/60 italic">Generating…</p>
+        <p className="text-xs text-purple-200/60 italic">{t('inquiryDetail.smart_panel.generating', 'Generating…')}</p>
       )}
 
       {brief?.brief && (
@@ -969,7 +981,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
       {brief?.win_probability !== null && brief?.win_probability !== undefined && (
         <div className="mt-3">
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-            <span>Win probability</span>
+            <span>{t('inquiryDetail.smart_panel.win_probability', 'Win probability')}</span>
             <span className="text-white">{brief.win_probability}%</span>
           </div>
           <div className="mt-1 h-1.5 bg-dark-bg rounded-full overflow-hidden">
@@ -984,7 +996,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
       {brief?.suggested_action && (
         <div className="mt-3 pt-3 border-t border-purple-500/20">
           <div className="text-[10px] uppercase tracking-wide font-bold text-purple-300 mb-1">
-            Suggested next action
+            {t('inquiryDetail.smart_panel.suggested_next_action', 'Suggested next action')}
           </div>
           <p className="text-xs text-white leading-relaxed">{brief.suggested_action}</p>
         </div>
@@ -992,7 +1004,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
 
       {brief?.generated_at && (
         <p className="text-[9px] text-t-secondary italic mt-3">
-          Generated {relativeTime(brief.generated_at)}{brief.cached ? ' · cached' : ''}
+          {t('inquiryDetail.smart_panel.generated_at', { ago: relativeTime(brief.generated_at), defaultValue: 'Generated {{ago}}' })}{brief.cached ? t('inquiryDetail.smart_panel.cached_suffix', ' · cached') : ''}
         </p>
       )}
     </div>
@@ -1000,20 +1012,21 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
 }
 
 function TaskRow({ task, onComplete }: { task: Task; onComplete: () => void }) {
+  const { t } = useTranslation()
   const overdue = task.due_at && new Date(task.due_at) < new Date()
   return (
     <div className="flex items-start gap-2 group">
       <button
         onClick={onComplete}
         className="w-4 h-4 rounded-full border-2 border-dark-border hover:border-emerald-400 flex-shrink-0 mt-0.5 transition-colors"
-        title="Mark complete"
+        title={t('inquiryDetail.tasks.mark_complete', 'Mark complete')}
       />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white truncate">{task.title}</p>
         <div className="flex items-center gap-2 text-[10px] text-t-secondary mt-0.5">
           {task.due_at && (
             <span className={overdue ? 'text-red-400 font-bold' : ''}>
-              {overdue ? 'Overdue · ' : ''}{relativeTime(task.due_at)}
+              {overdue ? t('inquiryDetail.tasks.overdue_prefix', 'Overdue · ') : ''}{relativeTime(task.due_at)}
             </span>
           )}
           {task.assignee && <span>· {task.assignee.name}</span>}
@@ -1031,6 +1044,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
   onClose: () => void
   onSuccess: () => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [note, setNote] = useState('')
 
@@ -1052,25 +1066,25 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
     <Modal onClose={onClose}>
       <div className="flex items-center gap-2 mb-1">
         <Trophy size={20} className="text-emerald-400" />
-        <h2 className="text-lg font-bold text-white">Mark as Won</h2>
+        <h2 className="text-lg font-bold text-white">{t('inquiryDetail.won.title', 'Mark as Won')}</h2>
       </div>
       <p className="text-sm text-t-secondary mb-4">
-        Move this lead into <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
-        {willCreateReservation && ' A draft reservation will be created automatically with the inquiry\'s dates and pax.'}
+        {t('inquiryDetail.won.move_into', 'Move this lead into')} <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
+        {willCreateReservation && ' ' + t('inquiryDetail.won.creates_reservation', "A draft reservation will be created automatically with the inquiry's dates and pax.")}
         {!willCreateReservation && !inq.reservations?.length && (
           <span className="block mt-1 text-xs text-amber-300">
-            Heads up: no draft reservation will be created — the inquiry is missing a property or stay dates.
+            {t('inquiryDetail.won.no_reservation_warning', 'Heads up: no draft reservation will be created — the inquiry is missing a property or stay dates.')}
           </span>
         )}
         {!!inq.reservations?.length && (
-          <span className="block mt-1 text-xs">A reservation is already linked.</span>
+          <span className="block mt-1 text-xs">{t('inquiryDetail.won.already_linked', 'A reservation is already linked.')}</span>
         )}
       </p>
 
       <textarea
         value={note}
         onChange={e => setNote(e.target.value)}
-        placeholder="Optional note — e.g. how the deal closed, terms agreed."
+        placeholder={t('inquiryDetail.won.note_placeholder', 'Optional note — e.g. how the deal closed, terms agreed.')}
         rows={3}
         className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none mb-4"
       />
@@ -1080,7 +1094,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
           onClick={onClose}
           className="px-4 py-2 text-sm text-t-secondary hover:text-white"
         >
-          Cancel
+          {t('actions.cancel', 'Cancel')}
         </button>
         <button
           onClick={() => submit.mutate()}
@@ -1088,7 +1102,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
           className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
         >
           <Trophy size={14} />
-          {submit.isPending ? 'Saving…' : 'Mark won'}
+          {submit.isPending ? t('inquiryDetail.won.saving', 'Saving…') : t('inquiryDetail.won.submit', 'Mark won')}
         </button>
       </div>
     </Modal>
@@ -1101,6 +1115,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
   onClose: () => void
   onSuccess: () => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [reasonId, setReasonId] = useState<number | null>(null)
   const [note, setNote] = useState('')
@@ -1153,11 +1168,11 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
     <Modal onClose={onClose}>
       <div className="flex items-center gap-2 mb-1">
         <X size={20} className="text-red-400" />
-        <h2 className="text-lg font-bold text-white">Mark as Lost</h2>
+        <h2 className="text-lg font-bold text-white">{t('inquiryDetail.lost.title', 'Mark as Lost')}</h2>
       </div>
       <p className="text-sm text-t-secondary mb-3">
-        Closing this lead in <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
-        Pick the reason — it powers the loss-reason breakdown on the funnel report.
+        {t('inquiryDetail.lost.closing_in', 'Closing this lead in')} <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
+        {' '}{t('inquiryDetail.lost.pick_reason', 'Pick the reason — it powers the loss-reason breakdown on the funnel report.')}
       </p>
 
       <button
@@ -1166,15 +1181,15 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-2 rounded-md text-xs font-bold border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/15 disabled:opacity-50"
       >
         {guess.isPending
-          ? <><Loader2 size={12} className="animate-spin" /> Reading timeline…</>
-          : <><Wand2 size={12} /> Suggest from timeline</>
+          ? <><Loader2 size={12} className="animate-spin" /> {t('inquiryDetail.lost.reading_timeline', 'Reading timeline…')}</>
+          : <><Wand2 size={12} /> {t('inquiryDetail.lost.suggest_from_timeline', 'Suggest from timeline')}</>
         }
       </button>
 
       {aiGuess && (
         <div className="bg-purple-500/5 border border-purple-500/20 rounded-md px-3 py-2 mb-3 text-xs">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-purple-300 mb-0.5">
-            <Sparkles size={9} /> AI suggestion · {aiGuess.confidence} confidence
+            <Sparkles size={9} /> {t('inquiryDetail.lost.ai_suggestion_label', { confidence: aiGuess.confidence, defaultValue: 'AI suggestion · {{confidence}} confidence' })}
           </div>
           {aiGuess.reasoning && <p className="text-white/80">{aiGuess.reasoning}</p>}
         </div>
@@ -1200,14 +1215,14 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
           </button>
         ))}
         {!reasons?.length && (
-          <p className="text-xs text-t-secondary italic">No reasons configured. Add some in Settings → Pipelines.</p>
+          <p className="text-xs text-t-secondary italic">{t('inquiryDetail.lost.no_reasons', 'No reasons configured. Add some in Settings → Pipelines.')}</p>
         )}
       </div>
 
       <textarea
         value={note}
         onChange={e => setNote(e.target.value)}
-        placeholder="Optional context — e.g. what they went with instead, what we'd need to win next time."
+        placeholder={t('inquiryDetail.lost.note_placeholder', "Optional context — e.g. what they went with instead, what we'd need to win next time.")}
         rows={3}
         className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none mb-4"
       />
@@ -1217,7 +1232,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
           onClick={onClose}
           className="px-4 py-2 text-sm text-t-secondary hover:text-white"
         >
-          Cancel
+          {t('actions.cancel', 'Cancel')}
         </button>
         <button
           onClick={() => submit.mutate()}
@@ -1225,7 +1240,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
           className="bg-red-500 hover:bg-red-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
         >
           <X size={14} />
-          {submit.isPending ? 'Saving…' : 'Mark lost'}
+          {submit.isPending ? t('inquiryDetail.lost.saving', 'Saving…') : t('inquiryDetail.lost.submit', 'Mark lost')}
         </button>
       </div>
     </Modal>
@@ -1237,6 +1252,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   onClose: () => void
   onUseAsEmail: (draft: { subject: string; body: string }) => void
 }) {
+  const { t } = useTranslation()
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
 
@@ -1273,26 +1289,26 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Wand2 size={18} className="text-purple-400" />
-            <h2 className="text-lg font-bold text-white">AI proposal draft</h2>
+            <h2 className="text-lg font-bold text-white">{t('inquiryDetail.proposal.title', 'AI proposal draft')}</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
             <X size={16} />
           </button>
         </div>
         <p className="text-xs text-t-secondary mb-3">
-          Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.
+          {t('inquiryDetail.proposal.subtitle', "Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.")}
         </p>
 
         {draft.isPending && !body ? (
           <div className="py-12 text-center text-t-secondary text-sm flex flex-col items-center gap-2">
             <Loader2 size={20} className="animate-spin text-purple-400" />
-            Drafting…
+            {t('inquiryDetail.proposal.drafting', 'Drafting…')}
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-                Subject
+                {t('inquiryDetail.proposal.subject', 'Subject')}
               </label>
               <input
                 value={subject}
@@ -1302,7 +1318,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-                Body
+                {t('inquiryDetail.proposal.body', 'Body')}
               </label>
               <textarea
                 value={body}
@@ -1319,10 +1335,10 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             onClick={() => draft.mutate()}
             disabled={draft.isPending}
             className="flex items-center gap-1.5 px-3 py-2 text-xs text-t-secondary hover:text-white disabled:opacity-50"
-            title="Try a different draft"
+            title={t('inquiryDetail.proposal.regenerate_tooltip', 'Try a different draft')}
           >
             <RefreshCw size={12} className={draft.isPending ? 'animate-spin' : ''} />
-            Regenerate
+            {t('inquiryDetail.proposal.regenerate', 'Regenerate')}
           </button>
           <div className="flex gap-2">
             <button

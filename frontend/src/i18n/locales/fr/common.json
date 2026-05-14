@@ -225,6 +225,104 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "inquiryDetail": {
+    "back": "Retour",
+    "lost_reason_prefix": "Perdu : {{reason}}",
+    "draft_proposal": "Rédiger une proposition",
+    "draft_proposal_tooltip": "IA : rédiger un e-mail de proposition à partir de cette demande",
+    "via": "via {{source}}",
+    "default_inquiry_type": "général",
+    "profile": {
+      "contact": "Contact",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "stay": "Séjour",
+      "check_in": "Arrivée",
+      "check_out": "Départ",
+      "rooms": "Chambres",
+      "adults": "Adultes",
+      "children": "Enfants",
+      "special_requests": "Demandes spéciales",
+      "pipeline": "Pipeline",
+      "property": "Établissement",
+      "priority": "Priorité",
+      "source": "Source",
+      "default_priority": "Moyenne",
+      "default_source": "Manuel",
+      "linked_reservation": "Réservation liée",
+      "custom_fields": "Champs personnalisés",
+      "edit": "Modifier",
+      "open_guest_profile": "Ouvrir le profil du client →"
+    },
+    "timeline": {
+      "all": "Tous",
+      "empty": "Aucune activité pour l'instant — ajoutez une note, un appel ou un e-mail ci-dessous.",
+      "composer": {
+        "subject": "Objet",
+        "meeting_title": "Titre de la réunion",
+        "note_placeholder": "Ajouter une note…",
+        "call_placeholder": "Résumé de l'appel — ce que le client a demandé, ce que vous avez répondu…",
+        "email_placeholder": "Corps de l'e-mail…",
+        "meeting_placeholder": "Notes de réunion…",
+        "minutes_placeholder": "min",
+        "voice_note": "Note vocale (Whisper)",
+        "stop_recording": "Arrêter l'enregistrement",
+        "send_hint": "⌘/Ctrl + Entrée pour envoyer",
+        "recording": "● Enregistrement — cliquez sur stop quand vous avez terminé",
+        "transcribing": "Transcription…"
+      },
+      "by_creator": "par {{name}}"
+    },
+    "smart_panel": {
+      "title": "Panneau IA",
+      "refresh_tooltip": "Régénérer le résumé",
+      "generate": "Générer le résumé →",
+      "generating": "Génération…",
+      "win_probability": "Probabilité de gain",
+      "suggested_next_action": "Action suivante suggérée",
+      "generated_at": "Généré {{ago}}",
+      "cached_suffix": " · en cache"
+    },
+    "tasks": {
+      "open_tasks": "Tâches ouvertes ({{count}})",
+      "add_task": "Ajouter une tâche",
+      "empty": "Aucune tâche ouverte.",
+      "mark_complete": "Marquer comme terminée",
+      "overdue_prefix": "En retard · "
+    },
+    "won": {
+      "title": "Marquer comme gagnée",
+      "move_into": "Déplacer ce lead dans",
+      "creates_reservation": "Un brouillon de réservation sera créé automatiquement avec les dates et le nombre de personnes de la demande.",
+      "no_reservation_warning": "Attention : aucun brouillon de réservation ne sera créé — l'établissement ou les dates du séjour manquent.",
+      "already_linked": "Une réservation est déjà liée.",
+      "note_placeholder": "Note facultative — par ex. comment l'affaire s'est conclue, conditions convenues.",
+      "submit": "Marquer gagnée",
+      "saving": "Enregistrement…"
+    },
+    "lost": {
+      "title": "Marquer comme perdue",
+      "closing_in": "Fermeture du lead dans",
+      "pick_reason": "Choisissez la raison — elle alimente l'analyse des raisons de perte dans le rapport d'entonnoir.",
+      "reading_timeline": "Lecture du parcours…",
+      "suggest_from_timeline": "Suggérer depuis le parcours",
+      "ai_suggestion_label": "Suggestion IA · confiance {{confidence}}",
+      "no_reasons": "Aucune raison configurée. Ajoutez-en dans Paramètres → Pipelines.",
+      "note_placeholder": "Contexte facultatif — par ex. ce qu'ils ont choisi à la place, ce qu'il nous faudrait pour gagner.",
+      "submit": "Marquer perdue",
+      "saving": "Enregistrement…"
+    },
+    "proposal": {
+      "title": "Brouillon IA",
+      "subtitle": "Issu des détails du séjour et des demandes spéciales. Vérifiez avant d'envoyer — le modèle aide, sans faire de magie.",
+      "drafting": "Rédaction…",
+      "subject": "Objet",
+      "body": "Corps",
+      "regenerate": "Régénérer",
+      "regenerate_tooltip": "Essayer un autre brouillon"
+    }
+  },
+
   "inquiries": {
     "title": "Pipeline commercial",
     "subtitle": "{{total}} au total · {{leads}} leads · {{deals}} affaires en cours · {{closed}} clôturées",

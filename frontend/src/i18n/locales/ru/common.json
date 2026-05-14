@@ -227,6 +227,104 @@
     "no_activity": "Пока нет активности."
   },
 
+  "inquiryDetail": {
+    "back": "Назад",
+    "lost_reason_prefix": "Проигран: {{reason}}",
+    "draft_proposal": "Черновик письма",
+    "draft_proposal_tooltip": "AI: составить черновик предложения по этой заявке",
+    "via": "через {{source}}",
+    "default_inquiry_type": "общий",
+    "profile": {
+      "contact": "Контакт",
+      "email": "Email",
+      "phone": "Телефон",
+      "stay": "Заезд",
+      "check_in": "Заезд",
+      "check_out": "Выезд",
+      "rooms": "Номера",
+      "adults": "Взрослые",
+      "children": "Дети",
+      "special_requests": "Особые пожелания",
+      "pipeline": "Воронка",
+      "property": "Объект",
+      "priority": "Приоритет",
+      "source": "Источник",
+      "default_priority": "Средний",
+      "default_source": "Вручную",
+      "linked_reservation": "Связанная бронь",
+      "custom_fields": "Доп. поля",
+      "edit": "Изменить",
+      "open_guest_profile": "Открыть профиль гостя →"
+    },
+    "timeline": {
+      "all": "Все",
+      "empty": "Активности пока нет — добавьте заметку, звонок или письмо ниже.",
+      "composer": {
+        "subject": "Тема",
+        "meeting_title": "Название встречи",
+        "note_placeholder": "Добавить заметку…",
+        "call_placeholder": "Краткое содержание звонка — о чём спрашивал гость, что вы ответили…",
+        "email_placeholder": "Текст письма…",
+        "meeting_placeholder": "Заметки встречи…",
+        "minutes_placeholder": "мин",
+        "voice_note": "Голосовая заметка (Whisper)",
+        "stop_recording": "Остановить запись",
+        "send_hint": "⌘/Ctrl + Enter — отправить",
+        "recording": "● Идёт запись — нажмите стоп, когда закончите",
+        "transcribing": "Расшифровка…"
+      },
+      "by_creator": "от {{name}}"
+    },
+    "smart_panel": {
+      "title": "AI Smart Panel",
+      "refresh_tooltip": "Сгенерировать заново",
+      "generate": "Сгенерировать резюме →",
+      "generating": "Генерация…",
+      "win_probability": "Вероятность выигрыша",
+      "suggested_next_action": "Рекомендуемое действие",
+      "generated_at": "Создано {{ago}}",
+      "cached_suffix": " · из кэша"
+    },
+    "tasks": {
+      "open_tasks": "Открытых задач ({{count}})",
+      "add_task": "Добавить задачу",
+      "empty": "Открытых задач нет.",
+      "mark_complete": "Отметить как выполненную",
+      "overdue_prefix": "Просрочено · "
+    },
+    "won": {
+      "title": "Отметить как выигранную",
+      "move_into": "Перенести лида в",
+      "creates_reservation": "Черновик брони будет создан автоматически по датам и количеству гостей из заявки.",
+      "no_reservation_warning": "Внимание: черновик брони не будет создан — в заявке не указан объект или даты заезда.",
+      "already_linked": "Бронь уже связана.",
+      "note_placeholder": "Заметка (необязательно) — например, как закрылась сделка, условия.",
+      "submit": "Отметить выигранной",
+      "saving": "Сохраняем…"
+    },
+    "lost": {
+      "title": "Отметить как проигранную",
+      "closing_in": "Закрытие лида в",
+      "pick_reason": "Выберите причину — она влияет на разбивку причин потерь в отчёте по воронке.",
+      "reading_timeline": "Читаем историю…",
+      "suggest_from_timeline": "Подсказать по истории",
+      "ai_suggestion_label": "AI-подсказка · уверенность {{confidence}}",
+      "no_reasons": "Причины не настроены. Добавьте их в Настройки → Воронки.",
+      "note_placeholder": "Контекст (необязательно) — например, что выбрали вместо нас и что нужно изменить, чтобы выигрывать.",
+      "submit": "Отметить проигранной",
+      "saving": "Сохраняем…"
+    },
+    "proposal": {
+      "title": "AI черновик предложения",
+      "subtitle": "Составлено по деталям заезда и особым пожеланиям. Прочитайте и подправьте — модель помогает, но не творит чудеса.",
+      "drafting": "Составляем…",
+      "subject": "Тема",
+      "body": "Текст",
+      "regenerate": "Перегенерировать",
+      "regenerate_tooltip": "Попробовать другой вариант"
+    }
+  },
+
   "inquiries": {
     "title": "Воронка продаж",
     "subtitle": "{{total}} всего · {{leads}} лидов · {{deals}} активных сделок · {{closed}} закрытых",
