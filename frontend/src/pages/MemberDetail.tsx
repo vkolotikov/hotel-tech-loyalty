@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import { ContactActions } from '../components/ContactActions'
@@ -30,6 +31,7 @@ export function MemberDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [urlParams, setUrlParams] = useSearchParams()
   const activeTab = urlParams.get('tab') ?? 'overview'
   const selectTab = (key: string) => {
@@ -230,11 +232,11 @@ export function MemberDetail() {
   const canAdjustPoints = isAdmin || staff?.can_award_points || staff?.can_redeem_points
 
   const tabs: { key: string; label: string; icon: React.ReactNode; show: boolean }[] = [
-    { key: 'overview',     label: 'Overview',     icon: <LayoutDashboard size={15} />, show: true },
-    { key: 'transactions', label: 'Transactions', icon: <Receipt size={15} />,         show: true },
-    { key: 'journey',      label: 'Journey',      icon: <History size={15} />,         show: !!linkedGuest },
-    { key: 'crm',          label: 'CRM Profile',  icon: <Crown size={15} />,           show: !!linkedGuest },
-    { key: 'settings',     label: 'Settings',     icon: <SettingsIcon size={15} />,    show: true },
+    { key: 'overview',     label: t('memberDetail.tabs.overview',     'Overview'),     icon: <LayoutDashboard size={15} />, show: true },
+    { key: 'transactions', label: t('memberDetail.tabs.transactions', 'Transactions'), icon: <Receipt size={15} />,         show: true },
+    { key: 'journey',      label: t('memberDetail.tabs.journey',      'Journey'),      icon: <History size={15} />,         show: !!linkedGuest },
+    { key: 'crm',          label: t('memberDetail.tabs.crm_profile',  'CRM Profile'),  icon: <Crown size={15} />,           show: !!linkedGuest },
+    { key: 'settings',     label: t('memberDetail.tabs.settings',     'Settings'),     icon: <SettingsIcon size={15} />,    show: true },
   ].filter(t => t.show)
 
   return (
@@ -263,7 +265,7 @@ export function MemberDetail() {
                 <h1 className="text-xl md:text-2xl font-bold text-white truncate">{user?.name}</h1>
                 {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${member?.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-red-500/15 text-red-400'}`}>
-                  {member?.is_active ? 'Active' : 'Inactive'}
+                  {member?.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                 </span>
               </div>
               <p className="text-xs md:text-sm text-t-secondary mt-1 truncate">{user?.email} · {member?.member_number}</p>
@@ -283,7 +285,7 @@ export function MemberDetail() {
                   className="hidden sm:flex items-center gap-2 bg-primary-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
                 >
                   <Sparkles size={14} />
-                  <span className="whitespace-nowrap">{aiLoading ? 'Analyzing...' : 'AI Analysis'}</span>
+                  <span className="whitespace-nowrap">{aiLoading ? t('memberDetail.analyzing', 'Analyzing…') : t('memberDetail.ai_analysis', 'AI Analysis')}</span>
                 </button>
               )}
               {isAdmin && (
@@ -291,21 +293,21 @@ export function MemberDetail() {
                   <button
                     onClick={() => setKebabOpen(v => !v)}
                     className="p-2 rounded-lg bg-dark-surface2 hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white transition-colors"
-                    title="More actions"
+                    title={t('memberDetail.more_actions', 'More actions')}
                   >
                     <MoreHorizontal size={16} />
                   </button>
                   {kebabOpen && (
                     <div className="absolute right-0 top-full mt-1 w-52 bg-dark-surface border border-dark-border rounded-lg shadow-2xl z-30 py-1">
                       <button onClick={startEditing} className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface2 flex items-center gap-2">
-                        <Pencil size={14} className="text-primary-400" /> Edit info
+                        <Pencil size={14} className="text-primary-400" /> {t('memberDetail.kebab.edit_info', 'Edit info')}
                       </button>
                       <button
                         onClick={() => resendWelcomeMutation.mutate()}
                         disabled={resendWelcomeMutation.isPending}
                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface2 flex items-center gap-2 disabled:opacity-50"
                       >
-                        <Mail size={14} className="text-primary-400" /> Resend welcome email
+                        <Mail size={14} className="text-primary-400" /> {t('memberDetail.kebab.resend_welcome', 'Resend welcome email')}
                       </button>
                       <button
                         onClick={() => deactivateMutation.mutate()}
@@ -313,20 +315,20 @@ export function MemberDetail() {
                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface2 flex items-center gap-2 disabled:opacity-50"
                       >
                         {member?.is_active
-                          ? <><UserX size={14} className="text-amber-400" /> Deactivate</>
-                          : <><UserCheck size={14} className="text-emerald-400" /> Reactivate</>}
+                          ? <><UserX size={14} className="text-amber-400" /> {t('memberDetail.kebab.deactivate', 'Deactivate')}</>
+                          : <><UserCheck size={14} className="text-emerald-400" /> {t('memberDetail.kebab.reactivate', 'Reactivate')}</>}
                       </button>
                       <div className="border-t border-dark-border my-1" />
                       <button
                         onClick={() => {
-                          if (confirm(`Permanently delete ${user?.name ?? 'this member'}? All their data will be removed.`)) {
+                          if (confirm(t('memberDetail.kebab.delete_confirm', { name: user?.name ?? 'this member', defaultValue: 'Permanently delete {{name}}? All their data will be removed.' }))) {
                             deleteMutation.mutate()
                           }
                         }}
                         disabled={deleteMutation.isPending}
                         className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 disabled:opacity-50"
                       >
-                        <Trash2 size={14} /> Delete permanently
+                        <Trash2 size={14} /> {t('memberDetail.kebab.delete', 'Delete permanently')}
                       </button>
                     </div>
                   )}
@@ -340,24 +342,29 @@ export function MemberDetail() {
               row beneath. */}
           <div className="grid grid-cols-3 gap-4 md:gap-6 pt-4 border-t border-dark-border">
             <div className="col-span-3 sm:col-span-1">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">Current points</p>
+              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.current_points', 'Current points')}</p>
               <p className="text-4xl md:text-5xl font-bold text-primary-400 mt-1 leading-none">
                 {(member?.current_points ?? 0).toLocaleString()}
               </p>
               <p className="text-xs text-t-secondary mt-2">
-                <span className="text-emerald-400 font-semibold">{(member?.lifetime_points ?? 0).toLocaleString()}</span> lifetime
+                {/* Two-token line: bold lifetime count + plain "lifetime" label.
+                    Split into a `<Trans>`-style template so the order can flip
+                    in languages that put the noun first (e.g. RU "за всё время"
+                    sits AFTER the number, others may differ). */}
+                <span className="text-emerald-400 font-semibold">{(member?.lifetime_points ?? 0).toLocaleString()}</span>
+                {' '}{t('memberDetail.hero.lifetime_label', 'lifetime')}
               </p>
             </div>
             <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">Stays</p>
+              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.stays', 'Stays')}</p>
               <p className="text-2xl md:text-3xl font-bold text-purple-400 mt-1">{data?.stats?.total_bookings ?? 0}</p>
             </div>
             <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">Total spent</p>
+              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.total_spent', 'Total spent')}</p>
               <p className="text-2xl md:text-3xl font-bold text-orange-400 mt-1">${(data?.stats?.total_spent ?? 0).toLocaleString()}</p>
             </div>
             <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">Member since</p>
+              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.member_since', 'Member since')}</p>
               <p className="text-base md:text-lg font-semibold text-white mt-1">
                 {member?.joined_at ? new Date(member.joined_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '—'}
               </p>
@@ -392,16 +399,16 @@ export function MemberDetail() {
                 Transactions tab. */}
             <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
               <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">Recent Activity</h2>
+                <h2 className="text-sm font-semibold text-white">{t('memberDetail.recent_activity', 'Recent Activity')}</h2>
                 {(data?.recent_transactions?.length ?? 0) > 5 && (
                   <button onClick={() => selectTab('transactions')} className="text-xs text-primary-400 hover:underline">
-                    See all
+                    {t('memberDetail.see_all', 'See all')}
                   </button>
                 )}
               </div>
               <div className="divide-y divide-dark-border">
                 {(data?.recent_transactions ?? []).length === 0 ? (
-                  <p className="text-center text-[#636366] py-8 text-sm">No transactions yet</p>
+                  <p className="text-center text-[#636366] py-8 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
                 ) : (data?.recent_transactions ?? []).slice(0, 5).map((tx: any) => (
                   <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
                     <div className={`text-sm font-bold tabular-nums w-16 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
@@ -423,11 +430,11 @@ export function MemberDetail() {
             {aiData && (
               <div className="bg-primary-500/10 rounded-xl border border-primary-500/20 p-5">
                 <h3 className="font-semibold text-primary-400 mb-3 flex items-center gap-2">
-                  <Sparkles size={15} /> AI Insights
+                  <Sparkles size={15} /> {t('memberDetail.ai.title', 'AI Insights')}
                 </h3>
                 {aiData.churn_risk !== undefined && (
                   <div className="mb-3">
-                    <p className="text-xs text-primary-400 font-semibold mb-1">Churn Risk</p>
+                    <p className="text-xs text-primary-400 font-semibold mb-1">{t('memberDetail.ai.churn_risk', 'Churn Risk')}</p>
                     <div className="w-full bg-dark-surface3 rounded-full h-2">
                       <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${(aiData.churn_risk ?? 0) * 100}%` }} />
                     </div>
@@ -436,13 +443,13 @@ export function MemberDetail() {
                 )}
                 {aiData.personalized_offer && (
                   <div className="mb-3">
-                    <p className="text-xs text-primary-400 font-semibold mb-1">Suggested Offer</p>
+                    <p className="text-xs text-primary-400 font-semibold mb-1">{t('memberDetail.ai.suggested_offer', 'Suggested Offer')}</p>
                     <p className="text-sm text-white">{typeof aiData.personalized_offer === 'string' ? aiData.personalized_offer : aiData.personalized_offer?.title}</p>
                   </div>
                 )}
                 {aiData.upsell_suggestion && (
                   <div>
-                    <p className="text-xs text-primary-400 font-semibold mb-1">Upsell Script</p>
+                    <p className="text-xs text-primary-400 font-semibold mb-1">{t('memberDetail.ai.upsell_script', 'Upsell Script')}</p>
                     <p className="text-sm text-[#a0a0a0] italic">"{aiData.upsell_suggestion}"</p>
                   </div>
                 )}
@@ -457,7 +464,7 @@ export function MemberDetail() {
                 toggle replaces what used to be two stacked cards. */}
             {canAdjustPoints && (
               <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-                <h3 className="font-semibold text-white mb-3">Adjust Points</h3>
+                <h3 className="font-semibold text-white mb-3">{t('memberDetail.adjust.title', 'Adjust Points')}</h3>
                 <div className="inline-flex w-full bg-dark-surface2 border border-dark-border rounded-lg p-0.5 mb-3">
                   <button
                     onClick={() => setPointsMode('award')}
@@ -465,7 +472,7 @@ export function MemberDetail() {
                       pointsMode === 'award' ? 'bg-emerald-500/20 text-emerald-300' : 'text-t-secondary hover:text-white'
                     }`}
                   >
-                    <Plus size={13} /> Award
+                    <Plus size={13} /> {t('memberDetail.adjust.award', 'Award')}
                   </button>
                   <button
                     onClick={() => setPointsMode('redeem')}
@@ -473,13 +480,13 @@ export function MemberDetail() {
                       pointsMode === 'redeem' ? 'bg-red-500/20 text-red-300' : 'text-t-secondary hover:text-white'
                     }`}
                   >
-                    <Minus size={13} /> Redeem
+                    <Minus size={13} /> {t('memberDetail.adjust.redeem', 'Redeem')}
                   </button>
                 </div>
 
                 <input
                   type="number"
-                  placeholder="Points"
+                  placeholder={t('memberDetail.adjust.points_placeholder', 'Points')}
                   value={pointsForm.points}
                   onChange={e => setPointsForm(f => ({ ...f, points: e.target.value }))}
                   className={`w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-xl font-bold text-center tabular-nums focus:outline-none focus:ring-2 mb-2 ${
@@ -499,7 +506,9 @@ export function MemberDetail() {
                 </div>
                 <input
                   type="text"
-                  placeholder={pointsMode === 'award' ? 'Reason (e.g. Staff courtesy)' : 'Reason (e.g. Room upgrade)'}
+                  placeholder={pointsMode === 'award'
+                    ? t('memberDetail.adjust.reason_award',  'Reason (e.g. Staff courtesy)')
+                    : t('memberDetail.adjust.reason_redeem', 'Reason (e.g. Room upgrade)')}
                   value={pointsForm.description}
                   onChange={e => setPointsForm(f => ({ ...f, description: e.target.value }))}
                   className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -512,8 +521,10 @@ export function MemberDetail() {
                   }`}
                 >
                   {(awardMutation.isPending || redeemMutation.isPending)
-                    ? 'Working…'
-                    : pointsMode === 'award' ? 'Award points' : 'Redeem points'}
+                    ? t('memberDetail.adjust.working', 'Working…')
+                    : pointsMode === 'award'
+                      ? t('memberDetail.adjust.award_btn',  'Award points')
+                      : t('memberDetail.adjust.redeem_btn', 'Redeem points')}
                 </button>
               </div>
             )}
@@ -524,11 +535,11 @@ export function MemberDetail() {
       {activeTab === 'transactions' && (
         <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border">
-            <h2 className="text-sm font-semibold text-white">All Transactions</h2>
+            <h2 className="text-sm font-semibold text-white">{t('memberDetail.all_transactions', 'All Transactions')}</h2>
           </div>
           <div className="divide-y divide-dark-border">
             {(data?.recent_transactions ?? []).length === 0 ? (
-              <p className="text-center text-[#636366] py-10 text-sm">No transactions yet</p>
+              <p className="text-center text-[#636366] py-10 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
             ) : (data?.recent_transactions ?? []).map((tx: any) => (
               <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
                 <div className={`text-sm font-bold tabular-nums w-20 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
@@ -550,7 +561,7 @@ export function MemberDetail() {
 
       {activeTab === 'journey' && linkedGuest && (
         <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
-          <h2 className="font-semibold text-white mb-3">Customer Journey</h2>
+          <h2 className="font-semibold text-white mb-3">{t('memberDetail.customer_journey', 'Customer Journey')}</h2>
           <JourneyTimeline
             activities={linkedGuest.activities ?? []}
             inquiries={linkedGuest.inquiries ?? []}

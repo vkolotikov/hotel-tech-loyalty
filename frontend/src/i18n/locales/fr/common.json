@@ -225,6 +225,56 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "memberDetail": {
+    "ai_analysis": "Analyse IA",
+    "analyzing": "Analyse…",
+    "more_actions": "Plus d'actions",
+    "kebab": {
+      "edit_info": "Modifier les infos",
+      "resend_welcome": "Renvoyer l'e-mail de bienvenue",
+      "deactivate": "Désactiver",
+      "reactivate": "Réactiver",
+      "delete": "Supprimer définitivement",
+      "delete_confirm": "Supprimer {{name}} définitivement ? Toutes ses données seront effacées."
+    },
+    "hero": {
+      "current_points": "Points actuels",
+      "lifetime_label": "à vie",
+      "stays": "Séjours",
+      "total_spent": "Total dépensé",
+      "member_since": "Membre depuis"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "transactions": "Transactions",
+      "journey": "Parcours",
+      "crm_profile": "Profil CRM",
+      "settings": "Paramètres"
+    },
+    "recent_activity": "Activité récente",
+    "see_all": "Tout voir",
+    "no_transactions": "Aucune transaction",
+    "ai": {
+      "title": "Insights IA",
+      "churn_risk": "Risque d'attrition",
+      "suggested_offer": "Offre suggérée",
+      "upsell_script": "Script de montée en gamme"
+    },
+    "adjust": {
+      "title": "Ajuster les points",
+      "award": "Attribuer",
+      "redeem": "Utiliser",
+      "points_placeholder": "Points",
+      "reason_award": "Motif (ex. Geste commercial)",
+      "reason_redeem": "Motif (ex. Surclassement)",
+      "working": "Traitement…",
+      "award_btn": "Attribuer les points",
+      "redeem_btn": "Utiliser les points"
+    },
+    "all_transactions": "Toutes les transactions",
+    "customer_journey": "Parcours client"
+  },
+
   "members": {
     "title": "Membres",
     "total_one": "{{count}} membre au total",

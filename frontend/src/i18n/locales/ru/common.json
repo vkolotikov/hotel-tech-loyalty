@@ -227,6 +227,56 @@
     "no_activity": "Пока нет активности."
   },
 
+  "memberDetail": {
+    "ai_analysis": "AI-анализ",
+    "analyzing": "Анализ…",
+    "more_actions": "Ещё действия",
+    "kebab": {
+      "edit_info": "Изменить данные",
+      "resend_welcome": "Отправить приветственное письмо снова",
+      "deactivate": "Деактивировать",
+      "reactivate": "Активировать снова",
+      "delete": "Удалить навсегда",
+      "delete_confirm": "Удалить {{name}} навсегда? Все данные будут потеряны."
+    },
+    "hero": {
+      "current_points": "Текущие баллы",
+      "lifetime_label": "за всё время",
+      "stays": "Заезды",
+      "total_spent": "Всего потрачено",
+      "member_since": "Участник с"
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "transactions": "Транзакции",
+      "journey": "История",
+      "crm_profile": "CRM профиль",
+      "settings": "Настройки"
+    },
+    "recent_activity": "Недавняя активность",
+    "see_all": "Все",
+    "no_transactions": "Транзакций пока нет",
+    "ai": {
+      "title": "AI инсайты",
+      "churn_risk": "Риск оттока",
+      "suggested_offer": "Рекомендуемое предложение",
+      "upsell_script": "Скрипт допродажи"
+    },
+    "adjust": {
+      "title": "Изменить баллы",
+      "award": "Начислить",
+      "redeem": "Списать",
+      "points_placeholder": "Баллы",
+      "reason_award": "Причина (напр. Подарок от персонала)",
+      "reason_redeem": "Причина (напр. Апгрейд номера)",
+      "working": "Сохраняем…",
+      "award_btn": "Начислить баллы",
+      "redeem_btn": "Списать баллы"
+    },
+    "all_transactions": "Все транзакции",
+    "customer_journey": "История клиента"
+  },
+
   "members": {
     "title": "Участники",
     "total_one": "{{count}} участник всего",

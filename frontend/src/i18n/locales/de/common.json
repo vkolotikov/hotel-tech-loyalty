@@ -225,6 +225,56 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "memberDetail": {
+    "ai_analysis": "KI-Analyse",
+    "analyzing": "Analysiere…",
+    "more_actions": "Weitere Aktionen",
+    "kebab": {
+      "edit_info": "Daten bearbeiten",
+      "resend_welcome": "Willkommens-E-Mail erneut senden",
+      "deactivate": "Deaktivieren",
+      "reactivate": "Reaktivieren",
+      "delete": "Endgültig löschen",
+      "delete_confirm": "{{name}} endgültig löschen? Alle Daten gehen verloren."
+    },
+    "hero": {
+      "current_points": "Aktuelle Punkte",
+      "lifetime_label": "insgesamt",
+      "stays": "Aufenthalte",
+      "total_spent": "Gesamtausgaben",
+      "member_since": "Mitglied seit"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "transactions": "Transaktionen",
+      "journey": "Verlauf",
+      "crm_profile": "CRM-Profil",
+      "settings": "Einstellungen"
+    },
+    "recent_activity": "Letzte Aktivität",
+    "see_all": "Alle anzeigen",
+    "no_transactions": "Noch keine Transaktionen",
+    "ai": {
+      "title": "KI-Insights",
+      "churn_risk": "Abwanderungsrisiko",
+      "suggested_offer": "Vorgeschlagenes Angebot",
+      "upsell_script": "Upsell-Skript"
+    },
+    "adjust": {
+      "title": "Punkte anpassen",
+      "award": "Gutschreiben",
+      "redeem": "Einlösen",
+      "points_placeholder": "Punkte",
+      "reason_award": "Grund (z. B. Geste des Personals)",
+      "reason_redeem": "Grund (z. B. Zimmer-Upgrade)",
+      "working": "Wird verarbeitet…",
+      "award_btn": "Punkte gutschreiben",
+      "redeem_btn": "Punkte einlösen"
+    },
+    "all_transactions": "Alle Transaktionen",
+    "customer_journey": "Gästereise"
+  },
+
   "members": {
     "title": "Mitglieder",
     "total_one": "{{count}} Mitglied insgesamt",

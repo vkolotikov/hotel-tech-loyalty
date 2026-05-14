@@ -225,6 +225,56 @@
     "no_activity": "No recent activity yet."
   },
 
+  "memberDetail": {
+    "ai_analysis": "AI Analysis",
+    "analyzing": "Analyzing…",
+    "more_actions": "More actions",
+    "kebab": {
+      "edit_info": "Edit info",
+      "resend_welcome": "Resend welcome email",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "delete": "Delete permanently",
+      "delete_confirm": "Permanently delete {{name}}? All their data will be removed."
+    },
+    "hero": {
+      "current_points": "Current points",
+      "lifetime_label": "lifetime",
+      "stays": "Stays",
+      "total_spent": "Total spent",
+      "member_since": "Member since"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "transactions": "Transactions",
+      "journey": "Journey",
+      "crm_profile": "CRM Profile",
+      "settings": "Settings"
+    },
+    "recent_activity": "Recent Activity",
+    "see_all": "See all",
+    "no_transactions": "No transactions yet",
+    "ai": {
+      "title": "AI Insights",
+      "churn_risk": "Churn Risk",
+      "suggested_offer": "Suggested Offer",
+      "upsell_script": "Upsell Script"
+    },
+    "adjust": {
+      "title": "Adjust Points",
+      "award": "Award",
+      "redeem": "Redeem",
+      "points_placeholder": "Points",
+      "reason_award": "Reason (e.g. Staff courtesy)",
+      "reason_redeem": "Reason (e.g. Room upgrade)",
+      "working": "Working…",
+      "award_btn": "Award points",
+      "redeem_btn": "Redeem points"
+    },
+    "all_transactions": "All Transactions",
+    "customer_journey": "Customer Journey"
+  },
+
   "members": {
     "title": "Members",
     "total_one": "{{count}} total member",

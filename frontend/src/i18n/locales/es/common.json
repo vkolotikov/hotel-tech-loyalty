@@ -225,6 +225,56 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "memberDetail": {
+    "ai_analysis": "Análisis IA",
+    "analyzing": "Analizando…",
+    "more_actions": "Más acciones",
+    "kebab": {
+      "edit_info": "Editar datos",
+      "resend_welcome": "Reenviar correo de bienvenida",
+      "deactivate": "Desactivar",
+      "reactivate": "Reactivar",
+      "delete": "Eliminar permanentemente",
+      "delete_confirm": "¿Eliminar a {{name}} permanentemente? Se borrarán todos sus datos."
+    },
+    "hero": {
+      "current_points": "Puntos actuales",
+      "lifetime_label": "totales",
+      "stays": "Estancias",
+      "total_spent": "Total gastado",
+      "member_since": "Miembro desde"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "transactions": "Transacciones",
+      "journey": "Recorrido",
+      "crm_profile": "Perfil CRM",
+      "settings": "Ajustes"
+    },
+    "recent_activity": "Actividad reciente",
+    "see_all": "Ver todo",
+    "no_transactions": "Aún sin transacciones",
+    "ai": {
+      "title": "Insights IA",
+      "churn_risk": "Riesgo de abandono",
+      "suggested_offer": "Oferta sugerida",
+      "upsell_script": "Script de upsell"
+    },
+    "adjust": {
+      "title": "Ajustar puntos",
+      "award": "Otorgar",
+      "redeem": "Canjear",
+      "points_placeholder": "Puntos",
+      "reason_award": "Motivo (p. ej. Cortesía del personal)",
+      "reason_redeem": "Motivo (p. ej. Mejora de habitación)",
+      "working": "Procesando…",
+      "award_btn": "Otorgar puntos",
+      "redeem_btn": "Canjear puntos"
+    },
+    "all_transactions": "Todas las transacciones",
+    "customer_journey": "Recorrido del cliente"
+  },
+
   "members": {
     "title": "Miembros",
     "total_one": "{{count}} miembro en total",
