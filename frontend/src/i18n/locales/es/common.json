@@ -1255,6 +1255,154 @@
     }
   },
 
+  "knowledge_base": {
+    "brand_required": "la base de conocimiento",
+    "title": "Base de conocimiento",
+    "subtitle": "Gestiona FAQ, categorías y documentos que alimentan al asistente IA",
+    "tabs": {
+      "items": "Elementos FAQ",
+      "categories": "Categorías",
+      "documents": "Documentos"
+    },
+    "search_placeholder": "Buscar preguntas o respuestas…",
+    "all_categories": "Todas las categorías",
+    "ai_generate": "Generar con IA",
+    "add_faq": "Añadir FAQ",
+    "add_category": "Añadir categoría",
+    "loading": "Cargando…",
+    "items_empty": "Aún no hay elementos FAQ. Añade el primero para que la IA pueda responder.",
+    "categories_empty": "Aún no hay categorías. Crea una para organizar tus FAQ.",
+    "documents_empty": "Aún no hay documentos subidos.",
+    "inactive": "Inactivo",
+    "ai_gen": {
+      "title": "Generador IA de FAQ",
+      "intro": "Pega cualquier material fuente — descripción del hotel, folleto, política, ficha — y la IA redactará pares de pregunta-respuesta FAQ. Revisa el resultado, desmarca lo que no quieras y luego importa.",
+      "source_text": "Texto fuente",
+      "source_placeholder": "Pega información del hotel, políticas, servicios, descripciones de habitaciones, etc.…",
+      "chars_count": "{{count}} caracteres · máx 20 000",
+      "save_into_category": "Guardar en la categoría",
+      "auto_create_category": "Crear automáticamente «AI Generated»",
+      "generate": "Generar borradores FAQ",
+      "generating": "Generando…",
+      "preview_header": "Vista previa ({{selected}}/{{total}} seleccionados)",
+      "select_all": "Seleccionar todos",
+      "select_none": "Deseleccionar todos",
+      "discard": "Descartar",
+      "import_count": "Importar {{count}} elementos",
+      "importing": "Importando…"
+    },
+    "item_form": {
+      "edit_title": "Editar elemento FAQ",
+      "new_title": "Nuevo elemento FAQ",
+      "category": "Categoría",
+      "category_none": "Ninguna",
+      "priority": "Prioridad",
+      "question": "Pregunta",
+      "question_placeholder": "¿A qué hora es el check-in?",
+      "answer": "Respuesta",
+      "answer_placeholder": "El check-in es a las 15:00…",
+      "keywords": "Palabras clave",
+      "keyword_placeholder": "Añadir palabra clave…",
+      "ai_suggest_title": "Pedir a la IA que sugiera palabras clave a partir de la pregunta y respuesta",
+      "ai_short": "IA",
+      "ai_loading": "…",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "cat_form": {
+      "edit_title": "Editar categoría",
+      "new_title": "Nueva categoría",
+      "name": "Nombre",
+      "name_placeholder": "Nombre de la categoría",
+      "priority": "Prioridad",
+      "description": "Descripción",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "item_row": {
+      "used_count": "Usado {{count}} veces | Prioridad: {{priority}}"
+    },
+    "cat_row": {
+      "items_count": "({{count}} elementos)"
+    },
+    "documents": {
+      "upload_hint": "Sube archivos PDF, DOCX o TXT para ampliar el conocimiento de la IA",
+      "choose_file": "Elegir archivo",
+      "uploading": "Subiendo y procesando…",
+      "reprocess_title": "Reprocesar",
+      "preview_summary": "Vista previa del texto extraído"
+    },
+    "status": {
+      "pending": "pendiente",
+      "processing": "procesando",
+      "completed": "completado",
+      "failed": "fallido"
+    },
+    "delete_confirm": {
+      "item": "¿Eliminar este elemento FAQ?",
+      "category": "¿Eliminar esta categoría?",
+      "document": "¿Eliminar este documento?"
+    },
+    "toasts": {
+      "item_created": "Elemento creado",
+      "item_updated": "Elemento actualizado",
+      "cat_created": "Categoría creada",
+      "cat_updated": "Categoría actualizada",
+      "deleted": "Eliminado",
+      "failed": "Error",
+      "doc_uploaded": "Documento subido",
+      "doc_upload_failed": "Error al subir",
+      "reprocessing": "Reprocesamiento iniciado",
+      "no_keywords": "No se sugirieron palabras clave",
+      "kw_added": "Añadidas {{count}} palabras clave",
+      "ai_failed": "Error en la sugerencia IA",
+      "ai_no_items": "La IA no devolvió elementos",
+      "extracted_count": "Extraídos {{count}} borradores FAQ — revisa e importa",
+      "extract_failed": "Error de extracción",
+      "imported_count": "Importados {{count}} elementos FAQ",
+      "import_failed": "Error al importar"
+    }
+  },
+
+  "chatbot_analytics": {
+    "title": "Analítica del chat",
+    "subtitle": "Mide el rendimiento de tu agente de ventas IA",
+    "loading": "Cargando analítica…",
+    "no_data": "No hay datos disponibles",
+    "ranges": {
+      "d7": "7d",
+      "d14": "14d",
+      "d30": "30d",
+      "d90": "90d"
+    },
+    "kpis": {
+      "total_conversations": "Conversaciones totales",
+      "leads_captured": "Leads capturados",
+      "ai_resolved": "IA resuelto",
+      "escalated": "Escaladas a humano",
+      "avg_messages": "Mensajes medios / chat",
+      "lead_conversion": "Conversión a leads",
+      "ai_resolution_rate": "Tasa de resolución IA",
+      "human_escalation_rate": "Tasa de escalado humano",
+      "conversion_sub": "{{rate}}% conversión",
+      "rate_sub": "{{rate}}% tasa"
+    },
+    "trend_title": "Tendencia de conversaciones",
+    "peak_hours": "Horas pico",
+    "status_breakdown": "Desglose por estado",
+    "no_conversations": "Aún no hay conversaciones",
+    "top_pages": "Páginas top de chat",
+    "no_page_data": "Aún no hay datos de páginas",
+    "visitor_countries": "Países de visitantes",
+    "no_country_data": "Aún no hay datos de países",
+    "series": {
+      "conversations": "Conversaciones",
+      "messages": "Mensajes"
+    }
+  },
+
   "canned_replies": {
     "title": "Respuestas predefinidas",
     "subtitle": "Respuestas pre-escritas que los agentes pueden insertar con un clic desde la bandeja. A nivel organización, máx. 50.",

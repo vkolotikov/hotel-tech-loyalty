@@ -1269,6 +1269,154 @@
     }
   },
 
+  "knowledge_base": {
+    "brand_required": "базы знаний",
+    "title": "База знаний",
+    "subtitle": "Управляйте FAQ, категориями и документами, на основе которых работает AI-ассистент",
+    "tabs": {
+      "items": "Пункты FAQ",
+      "categories": "Категории",
+      "documents": "Документы"
+    },
+    "search_placeholder": "Поиск вопросов и ответов…",
+    "all_categories": "Все категории",
+    "ai_generate": "AI-генерация",
+    "add_faq": "Добавить FAQ",
+    "add_category": "Добавить категорию",
+    "loading": "Загрузка…",
+    "items_empty": "Пунктов FAQ ещё нет. Добавьте первый, чтобы AI мог отвечать на вопросы.",
+    "categories_empty": "Категорий ещё нет. Создайте, чтобы организовать пункты FAQ.",
+    "documents_empty": "Документы ещё не загружены.",
+    "inactive": "Неактивно",
+    "ai_gen": {
+      "title": "AI-генератор FAQ",
+      "intro": "Вставьте любой исходный текст — описание отеля, брошюру, политики, фактсшит — и AI сформирует черновики пар вопрос-ответ. Просмотрите результат, снимите ненужное и импортируйте.",
+      "source_text": "Исходный текст",
+      "source_placeholder": "Вставьте информацию об отеле, политики, услуги, описания номеров и т.д.…",
+      "chars_count": "{{count}} символов · максимум 20 000",
+      "save_into_category": "Сохранить в категорию",
+      "auto_create_category": "Создать «AI Generated» автоматически",
+      "generate": "Сгенерировать черновики",
+      "generating": "Генерация…",
+      "preview_header": "Предпросмотр ({{selected}}/{{total}} выбрано)",
+      "select_all": "Выбрать все",
+      "select_none": "Снять все",
+      "discard": "Отменить",
+      "import_count": "Импортировать {{count}} пунктов",
+      "importing": "Импорт…"
+    },
+    "item_form": {
+      "edit_title": "Изменить пункт FAQ",
+      "new_title": "Новый пункт FAQ",
+      "category": "Категория",
+      "category_none": "Нет",
+      "priority": "Приоритет",
+      "question": "Вопрос",
+      "question_placeholder": "Во сколько заселение?",
+      "answer": "Ответ",
+      "answer_placeholder": "Заселение с 15:00…",
+      "keywords": "Ключевые слова",
+      "keyword_placeholder": "Добавьте ключевое слово…",
+      "ai_suggest_title": "Попросить AI подобрать ключевые слова из вопроса и ответа",
+      "ai_short": "AI",
+      "ai_loading": "…",
+      "cancel": "Отмена",
+      "save": "Сохранить",
+      "saving": "Сохранение…"
+    },
+    "cat_form": {
+      "edit_title": "Изменить категорию",
+      "new_title": "Новая категория",
+      "name": "Название",
+      "name_placeholder": "Название категории",
+      "priority": "Приоритет",
+      "description": "Описание",
+      "cancel": "Отмена",
+      "save": "Сохранить",
+      "saving": "Сохранение…"
+    },
+    "item_row": {
+      "used_count": "Использовано {{count}} раз | Приоритет: {{priority}}"
+    },
+    "cat_row": {
+      "items_count": "({{count}} пунктов)"
+    },
+    "documents": {
+      "upload_hint": "Загрузите PDF, DOCX или TXT, чтобы расширить знания AI",
+      "choose_file": "Выбрать файл",
+      "uploading": "Загрузка и обработка…",
+      "reprocess_title": "Обработать заново",
+      "preview_summary": "Предпросмотр извлечённого текста"
+    },
+    "status": {
+      "pending": "в очереди",
+      "processing": "обработка",
+      "completed": "готово",
+      "failed": "ошибка"
+    },
+    "delete_confirm": {
+      "item": "Удалить этот пункт FAQ?",
+      "category": "Удалить эту категорию?",
+      "document": "Удалить этот документ?"
+    },
+    "toasts": {
+      "item_created": "Пункт создан",
+      "item_updated": "Пункт обновлён",
+      "cat_created": "Категория создана",
+      "cat_updated": "Категория обновлена",
+      "deleted": "Удалено",
+      "failed": "Ошибка",
+      "doc_uploaded": "Документ загружен",
+      "doc_upload_failed": "Ошибка загрузки",
+      "reprocessing": "Повторная обработка запущена",
+      "no_keywords": "Ключевые слова не предложены",
+      "kw_added": "Добавлено {{count}} ключевых слов",
+      "ai_failed": "Не удалось получить подсказку AI",
+      "ai_no_items": "AI не вернул пунктов",
+      "extracted_count": "Извлечено {{count}} черновиков FAQ — проверьте и импортируйте",
+      "extract_failed": "Ошибка извлечения",
+      "imported_count": "Импортировано {{count}} пунктов FAQ",
+      "import_failed": "Ошибка импорта"
+    }
+  },
+
+  "chatbot_analytics": {
+    "title": "Аналитика чата",
+    "subtitle": "Оцените эффективность вашего AI-продавца",
+    "loading": "Загрузка аналитики…",
+    "no_data": "Данных нет",
+    "ranges": {
+      "d7": "7д",
+      "d14": "14д",
+      "d30": "30д",
+      "d90": "90д"
+    },
+    "kpis": {
+      "total_conversations": "Всего диалогов",
+      "leads_captured": "Захвачено лидов",
+      "ai_resolved": "AI решил",
+      "escalated": "Передано человеку",
+      "avg_messages": "Среднее сообщений / чат",
+      "lead_conversion": "Конверсия в лиды",
+      "ai_resolution_rate": "Доля решений AI",
+      "human_escalation_rate": "Доля эскалаций",
+      "conversion_sub": "{{rate}}% конверсия",
+      "rate_sub": "{{rate}}% доля"
+    },
+    "trend_title": "Динамика диалогов",
+    "peak_hours": "Часы пик",
+    "status_breakdown": "Разбивка по статусам",
+    "no_conversations": "Диалогов пока нет",
+    "top_pages": "Топ страниц чата",
+    "no_page_data": "Данных по страницам пока нет",
+    "visitor_countries": "Страны посетителей",
+    "no_country_data": "Данных по странам пока нет",
+    "series": {
+      "conversations": "Диалоги",
+      "messages": "Сообщения"
+    }
+  },
+
   "canned_replies": {
     "title": "Шаблоны ответов",
     "subtitle": "Готовые ответы, которые оператор вставляет одним кликом из чата. На уровне организации, максимум 50.",

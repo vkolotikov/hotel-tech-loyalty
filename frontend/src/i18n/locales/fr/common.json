@@ -1255,6 +1255,154 @@
     }
   },
 
+  "knowledge_base": {
+    "brand_required": "la base de connaissances",
+    "title": "Base de connaissances",
+    "subtitle": "Gérez les FAQ, catégories et documents qui alimentent l'assistant IA",
+    "tabs": {
+      "items": "Éléments FAQ",
+      "categories": "Catégories",
+      "documents": "Documents"
+    },
+    "search_placeholder": "Rechercher dans questions ou réponses…",
+    "all_categories": "Toutes les catégories",
+    "ai_generate": "Générer par IA",
+    "add_faq": "Ajouter une FAQ",
+    "add_category": "Ajouter une catégorie",
+    "loading": "Chargement…",
+    "items_empty": "Pas encore de FAQ. Ajoutez la première pour que l'IA puisse répondre aux questions.",
+    "categories_empty": "Pas encore de catégories. Créez-en une pour organiser vos FAQ.",
+    "documents_empty": "Aucun document chargé pour l'instant.",
+    "inactive": "Inactif",
+    "ai_gen": {
+      "title": "Générateur FAQ IA",
+      "intro": "Collez n'importe quel matériel source — description d'hôtel, brochure, politique, fiche — et l'IA rédigera des paires Q&R FAQ. Vérifiez le résultat, décochez ce que vous ne voulez pas, puis importez.",
+      "source_text": "Texte source",
+      "source_placeholder": "Collez les infos de l'hôtel, politiques, services, descriptions de chambres, etc.…",
+      "chars_count": "{{count}} caractères · max 20 000",
+      "save_into_category": "Enregistrer dans la catégorie",
+      "auto_create_category": "Créer automatiquement « AI Generated »",
+      "generate": "Générer des brouillons FAQ",
+      "generating": "Génération…",
+      "preview_header": "Aperçu ({{selected}}/{{total}} sélectionnés)",
+      "select_all": "Tout sélectionner",
+      "select_none": "Tout désélectionner",
+      "discard": "Annuler",
+      "import_count": "Importer {{count}} éléments",
+      "importing": "Import…"
+    },
+    "item_form": {
+      "edit_title": "Modifier l'élément FAQ",
+      "new_title": "Nouvel élément FAQ",
+      "category": "Catégorie",
+      "category_none": "Aucune",
+      "priority": "Priorité",
+      "question": "Question",
+      "question_placeholder": "Quelle est l'heure d'arrivée ?",
+      "answer": "Réponse",
+      "answer_placeholder": "L'arrivée se fait à partir de 15h00…",
+      "keywords": "Mots-clés",
+      "keyword_placeholder": "Ajouter un mot-clé…",
+      "ai_suggest_title": "Laisser l'IA suggérer des mots-clés à partir de la question + réponse",
+      "ai_short": "IA",
+      "ai_loading": "…",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "cat_form": {
+      "edit_title": "Modifier la catégorie",
+      "new_title": "Nouvelle catégorie",
+      "name": "Nom",
+      "name_placeholder": "Nom de la catégorie",
+      "priority": "Priorité",
+      "description": "Description",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "item_row": {
+      "used_count": "Utilisé {{count}} fois | Priorité : {{priority}}"
+    },
+    "cat_row": {
+      "items_count": "({{count}} éléments)"
+    },
+    "documents": {
+      "upload_hint": "Téléversez des fichiers PDF, DOCX ou TXT pour étendre les connaissances de l'IA",
+      "choose_file": "Choisir un fichier",
+      "uploading": "Téléversement et traitement…",
+      "reprocess_title": "Retraiter",
+      "preview_summary": "Aperçu du texte extrait"
+    },
+    "status": {
+      "pending": "en attente",
+      "processing": "traitement",
+      "completed": "terminé",
+      "failed": "échec"
+    },
+    "delete_confirm": {
+      "item": "Supprimer cet élément FAQ ?",
+      "category": "Supprimer cette catégorie ?",
+      "document": "Supprimer ce document ?"
+    },
+    "toasts": {
+      "item_created": "Élément créé",
+      "item_updated": "Élément mis à jour",
+      "cat_created": "Catégorie créée",
+      "cat_updated": "Catégorie mise à jour",
+      "deleted": "Supprimé",
+      "failed": "Échec",
+      "doc_uploaded": "Document téléversé",
+      "doc_upload_failed": "Échec du téléversement",
+      "reprocessing": "Retraitement démarré",
+      "no_keywords": "Aucun mot-clé suggéré",
+      "kw_added": "{{count}} mots-clés ajoutés",
+      "ai_failed": "Échec de la suggestion IA",
+      "ai_no_items": "L'IA n'a retourné aucun élément",
+      "extracted_count": "{{count}} brouillons FAQ extraits — vérifiez et importez",
+      "extract_failed": "Échec de l'extraction",
+      "imported_count": "{{count}} éléments FAQ importés",
+      "import_failed": "Échec de l'import"
+    }
+  },
+
+  "chatbot_analytics": {
+    "title": "Analytique du chat",
+    "subtitle": "Mesurez la performance de votre agent commercial IA",
+    "loading": "Chargement des analyses…",
+    "no_data": "Aucune donnée disponible",
+    "ranges": {
+      "d7": "7j",
+      "d14": "14j",
+      "d30": "30j",
+      "d90": "90j"
+    },
+    "kpis": {
+      "total_conversations": "Conversations totales",
+      "leads_captured": "Leads capturés",
+      "ai_resolved": "Résolus par l'IA",
+      "escalated": "Escaladés vers un humain",
+      "avg_messages": "Messages moyens / chat",
+      "lead_conversion": "Conversion en leads",
+      "ai_resolution_rate": "Taux de résolution IA",
+      "human_escalation_rate": "Taux d'escalade humaine",
+      "conversion_sub": "{{rate}}% conversion",
+      "rate_sub": "{{rate}}% taux"
+    },
+    "trend_title": "Tendance des conversations",
+    "peak_hours": "Heures de pointe",
+    "status_breakdown": "Répartition par statut",
+    "no_conversations": "Pas encore de conversations",
+    "top_pages": "Pages chat populaires",
+    "no_page_data": "Pas encore de données de pages",
+    "visitor_countries": "Pays des visiteurs",
+    "no_country_data": "Pas encore de données pays",
+    "series": {
+      "conversations": "Conversations",
+      "messages": "Messages"
+    }
+  },
+
   "canned_replies": {
     "title": "Réponses prédéfinies",
     "subtitle": "Réponses pré-écrites que les agents peuvent insérer en un clic depuis la boîte de réception. Au niveau organisation, max 50.",

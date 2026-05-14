@@ -1255,6 +1255,154 @@
     }
   },
 
+  "knowledge_base": {
+    "brand_required": "die Wissensdatenbank",
+    "title": "Wissensdatenbank",
+    "subtitle": "Verwalten Sie FAQ-Einträge, Kategorien und Dokumente, die den KI-Assistenten speisen",
+    "tabs": {
+      "items": "FAQ-Einträge",
+      "categories": "Kategorien",
+      "documents": "Dokumente"
+    },
+    "search_placeholder": "Fragen oder Antworten suchen…",
+    "all_categories": "Alle Kategorien",
+    "ai_generate": "KI-Generieren",
+    "add_faq": "FAQ hinzufügen",
+    "add_category": "Kategorie hinzufügen",
+    "loading": "Lädt…",
+    "items_empty": "Noch keine FAQ-Einträge. Fügen Sie den ersten hinzu, damit die KI Fragen beantworten kann.",
+    "categories_empty": "Noch keine Kategorien. Erstellen Sie eine, um Ihre FAQ-Einträge zu organisieren.",
+    "documents_empty": "Noch keine Dokumente hochgeladen.",
+    "inactive": "Inaktiv",
+    "ai_gen": {
+      "title": "KI-FAQ-Generator",
+      "intro": "Fügen Sie beliebiges Quellmaterial ein — Hotelbeschreibung, Broschüre, Richtlinien, Faktenblatt — und die KI entwirft FAQ-Frage/Antwort-Paare. Überprüfen Sie das Ergebnis, deaktivieren Sie Unerwünschtes und importieren Sie.",
+      "source_text": "Quelltext",
+      "source_placeholder": "Fügen Sie Hotelinfos, Richtlinien, Services, Zimmerbeschreibungen ein…",
+      "chars_count": "{{count}} Zeichen · max. 20.000",
+      "save_into_category": "In Kategorie speichern",
+      "auto_create_category": "„AI Generated“ automatisch anlegen",
+      "generate": "FAQ-Entwürfe generieren",
+      "generating": "Generiere…",
+      "preview_header": "Vorschau ({{selected}}/{{total}} ausgewählt)",
+      "select_all": "Alle auswählen",
+      "select_none": "Keine auswählen",
+      "discard": "Verwerfen",
+      "import_count": "{{count}} Einträge importieren",
+      "importing": "Importiere…"
+    },
+    "item_form": {
+      "edit_title": "FAQ-Eintrag bearbeiten",
+      "new_title": "Neuer FAQ-Eintrag",
+      "category": "Kategorie",
+      "category_none": "Keine",
+      "priority": "Priorität",
+      "question": "Frage",
+      "question_placeholder": "Wann ist die Anreisezeit?",
+      "answer": "Antwort",
+      "answer_placeholder": "Die Anreisezeit ist 15:00 Uhr…",
+      "keywords": "Schlüsselwörter",
+      "keyword_placeholder": "Schlüsselwort hinzufügen…",
+      "ai_suggest_title": "KI soll Schlüsselwörter aus Frage + Antwort vorschlagen",
+      "ai_short": "KI",
+      "ai_loading": "…",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichert…"
+    },
+    "cat_form": {
+      "edit_title": "Kategorie bearbeiten",
+      "new_title": "Neue Kategorie",
+      "name": "Name",
+      "name_placeholder": "Kategoriename",
+      "priority": "Priorität",
+      "description": "Beschreibung",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichert…"
+    },
+    "item_row": {
+      "used_count": "{{count}}× verwendet | Priorität: {{priority}}"
+    },
+    "cat_row": {
+      "items_count": "({{count}} Einträge)"
+    },
+    "documents": {
+      "upload_hint": "Laden Sie PDF-, DOCX- oder TXT-Dateien hoch, um das Wissen der KI zu erweitern",
+      "choose_file": "Datei wählen",
+      "uploading": "Hochladen und Verarbeiten…",
+      "reprocess_title": "Neu verarbeiten",
+      "preview_summary": "Extrahierten Text anzeigen"
+    },
+    "status": {
+      "pending": "ausstehend",
+      "processing": "verarbeitend",
+      "completed": "abgeschlossen",
+      "failed": "fehlgeschlagen"
+    },
+    "delete_confirm": {
+      "item": "Diesen FAQ-Eintrag löschen?",
+      "category": "Diese Kategorie löschen?",
+      "document": "Dieses Dokument löschen?"
+    },
+    "toasts": {
+      "item_created": "Eintrag erstellt",
+      "item_updated": "Eintrag aktualisiert",
+      "cat_created": "Kategorie erstellt",
+      "cat_updated": "Kategorie aktualisiert",
+      "deleted": "Gelöscht",
+      "failed": "Fehler",
+      "doc_uploaded": "Dokument hochgeladen",
+      "doc_upload_failed": "Upload fehlgeschlagen",
+      "reprocessing": "Neuverarbeitung gestartet",
+      "no_keywords": "Keine Schlüsselwörter vorgeschlagen",
+      "kw_added": "{{count}} Schlüsselwörter hinzugefügt",
+      "ai_failed": "KI-Vorschlag fehlgeschlagen",
+      "ai_no_items": "KI hat keine Einträge zurückgegeben",
+      "extracted_count": "{{count}} FAQ-Entwürfe extrahiert — prüfen und importieren",
+      "extract_failed": "Extraktion fehlgeschlagen",
+      "imported_count": "{{count}} FAQ-Einträge importiert",
+      "import_failed": "Import fehlgeschlagen"
+    }
+  },
+
+  "chatbot_analytics": {
+    "title": "Chat-Analyse",
+    "subtitle": "Messen Sie die Performance Ihres KI-Vertriebsagenten",
+    "loading": "Analyse wird geladen…",
+    "no_data": "Keine Daten verfügbar",
+    "ranges": {
+      "d7": "7T",
+      "d14": "14T",
+      "d30": "30T",
+      "d90": "90T"
+    },
+    "kpis": {
+      "total_conversations": "Konversationen gesamt",
+      "leads_captured": "Erfasste Leads",
+      "ai_resolved": "KI gelöst",
+      "escalated": "An Mensch eskaliert",
+      "avg_messages": "Ø Nachrichten / Chat",
+      "lead_conversion": "Lead-Konversion",
+      "ai_resolution_rate": "KI-Lösungsrate",
+      "human_escalation_rate": "Mensch-Eskalationsrate",
+      "conversion_sub": "{{rate}}% Konversion",
+      "rate_sub": "{{rate}}% Rate"
+    },
+    "trend_title": "Konversations-Trend",
+    "peak_hours": "Stoßzeiten",
+    "status_breakdown": "Status-Aufteilung",
+    "no_conversations": "Noch keine Konversationen",
+    "top_pages": "Top Chat-Seiten",
+    "no_page_data": "Noch keine Seitendaten",
+    "visitor_countries": "Besucherländer",
+    "no_country_data": "Noch keine Länderdaten",
+    "series": {
+      "conversations": "Konversationen",
+      "messages": "Nachrichten"
+    }
+  },
+
   "canned_replies": {
     "title": "Vorgefertigte Antworten",
     "subtitle": "Vorgefertigte Antworten, die Agenten mit einem Klick aus dem Posteingang einfügen können. Organisationsweit, max. 50.",

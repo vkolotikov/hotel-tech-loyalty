@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { BookOpen, Plus, Pencil, Trash2, Upload, FileText, FolderOpen, Search, X, Save, RotateCcw, Sparkles } from 'lucide-react'
@@ -11,6 +12,7 @@ const emptyItem = { question: '', answer: '', keywords: [] as string[], priority
 const emptyCategory = { name: '', description: '', priority: 0, is_active: true }
 
 export function KnowledgeBase() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('items')
   const [search, setSearch] = useState('')
@@ -34,14 +36,14 @@ export function KnowledgeBase() {
       setShowItemForm(false)
       setEditItemId(null)
       setItemForm(emptyItem)
-      toast.success(editItemId ? 'Item updated' : 'Item created')
+      toast.success(editItemId ? t('knowledge_base.toasts.item_updated', 'Item updated') : t('knowledge_base.toasts.item_created', 'Item created'))
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('knowledge_base.toasts.failed', 'Failed')),
   })
 
   const deleteItem = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/items/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-items'] }); toast.success('Deleted') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-items'] }); toast.success(t('knowledge_base.toasts.deleted', 'Deleted')) },
   })
 
   // Asks the AI for suggested search keywords for the current question/answer
@@ -51,7 +53,7 @@ export function KnowledgeBase() {
       api.post('/v1/admin/chatbot-config/suggest-keywords', payload).then(r => r.data),
     onSuccess: (data: any) => {
       const fresh: string[] = Array.isArray(data?.keywords) ? data.keywords : []
-      if (fresh.length === 0) { toast('No keywords suggested'); return }
+      if (fresh.length === 0) { toast(t('knowledge_base.toasts.no_keywords', 'No keywords suggested')); return }
       setItemForm(prev => {
         const seen = new Set(prev.keywords.map(k => k.toLowerCase()))
         const merged = [...prev.keywords]
@@ -60,9 +62,9 @@ export function KnowledgeBase() {
         }
         return { ...prev, keywords: merged }
       })
-      toast.success(`Added ${fresh.length} suggested keywords`)
+      toast.success(t('knowledge_base.toasts.kw_added', { count: fresh.length, defaultValue: 'Added {{count}} suggested keywords' }))
     },
-    onError: () => toast.error('AI suggestion failed'),
+    onError: () => toast.error(t('knowledge_base.toasts.ai_failed', 'AI suggestion failed')),
   })
 
   // ─── Categories ───
@@ -82,14 +84,14 @@ export function KnowledgeBase() {
       setShowCatForm(false)
       setEditCatId(null)
       setCatForm(emptyCategory)
-      toast.success(editCatId ? 'Category updated' : 'Category created')
+      toast.success(editCatId ? t('knowledge_base.toasts.cat_updated', 'Category updated') : t('knowledge_base.toasts.cat_created', 'Category created'))
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('knowledge_base.toasts.failed', 'Failed')),
   })
 
   const deleteCat = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/categories/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-categories'] }); toast.success('Deleted') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-categories'] }); toast.success(t('knowledge_base.toasts.deleted', 'Deleted')) },
   })
 
   // ─── Documents ───
@@ -104,18 +106,18 @@ export function KnowledgeBase() {
       fd.append('file', file)
       return api.post('/v1/admin/knowledge/documents', fd)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Document uploaded') },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success(t('knowledge_base.toasts.doc_uploaded', 'Document uploaded')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('knowledge_base.toasts.doc_upload_failed', 'Upload failed')),
   })
 
   const deleteDoc = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/knowledge/documents/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Deleted') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success(t('knowledge_base.toasts.deleted', 'Deleted')) },
   })
 
   const reprocessDoc = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/knowledge/documents/${id}/reprocess`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success('Reprocessing started') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['knowledge-documents'] }); toast.success(t('knowledge_base.toasts.reprocessing', 'Reprocessing started')) },
   })
 
   // ─── AI FAQ Generator ───
@@ -129,10 +131,10 @@ export function KnowledgeBase() {
     onSuccess: (data) => {
       const items = (data.items || []).map((it: any) => ({ ...it, keywords: it.keywords || [], selected: true }))
       setAiPreview(items)
-      if (items.length === 0) toast.error(data.message || 'AI returned no items')
-      else toast.success(`Extracted ${items.length} draft FAQ items — review and import`)
+      if (items.length === 0) toast.error(data.message || t('knowledge_base.toasts.ai_no_items', 'AI returned no items'))
+      else toast.success(t('knowledge_base.toasts.extracted_count', { count: items.length, defaultValue: 'Extracted {{count}} draft FAQ items — review and import' }))
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Extraction failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('knowledge_base.toasts.extract_failed', 'Extraction failed')),
   })
 
   const importFaqs = useMutation({
@@ -146,12 +148,12 @@ export function KnowledgeBase() {
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ['knowledge-items'] })
       qc.invalidateQueries({ queryKey: ['knowledge-categories'] })
-      toast.success(`Imported ${r.data?.created_count ?? 0} FAQ items`)
+      toast.success(t('knowledge_base.toasts.imported_count', { count: r.data?.created_count ?? 0, defaultValue: 'Imported {{count}} FAQ items' }))
       setAiPreview([])
       setAiSourceText('')
       setShowAiGen(false)
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Import failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('knowledge_base.toasts.import_failed', 'Import failed')),
   })
 
   const addKeyword = () => {
@@ -183,38 +185,38 @@ export function KnowledgeBase() {
       completed: 'bg-green-500/20 text-green-400',
       failed: 'bg-red-500/20 text-red-400',
     }
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.pending}`}>{status}</span>
+    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.pending}`}>{t(`knowledge_base.status.${status}`, { defaultValue: String(status ?? '') })}</span>
   }
 
   return (
-    <BrandRequired feature="the knowledge base">
+    <BrandRequired feature={t('knowledge_base.brand_required', 'the knowledge base')}>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <BookOpen className="text-primary-500" size={28} />
         <div>
-          <h1 className="text-2xl font-bold text-white">Knowledge Base</h1>
-          <p className="text-sm text-t-secondary">Manage FAQ items, categories, and documents that power the AI assistant</p>
+          <h1 className="text-2xl font-bold text-white">{t('knowledge_base.title', 'Knowledge Base')}</h1>
+          <p className="text-sm text-t-secondary">{t('knowledge_base.subtitle', 'Manage FAQ items, categories, and documents that power the AI assistant')}</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-dark-surface border border-dark-border rounded-lg p-1 w-fit">
         {[
-          { key: 'items' as Tab, label: 'FAQ Items', icon: FileText, count: items.length },
-          { key: 'categories' as Tab, label: 'Categories', icon: FolderOpen, count: categories.length },
-          { key: 'documents' as Tab, label: 'Documents', icon: Upload, count: documents.length },
-        ].map(t => (
+          { key: 'items' as Tab, labelKey: 'knowledge_base.tabs.items', fallback: 'FAQ Items', icon: FileText, count: items.length },
+          { key: 'categories' as Tab, labelKey: 'knowledge_base.tabs.categories', fallback: 'Categories', icon: FolderOpen, count: categories.length },
+          { key: 'documents' as Tab, labelKey: 'knowledge_base.tabs.documents', fallback: 'Documents', icon: Upload, count: documents.length },
+        ].map(tabDef => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabDef.key}
+            onClick={() => setTab(tabDef.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
+              tab === tabDef.key ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
             }`}
           >
-            <t.icon size={16} />
-            {t.label}
-            <span className="text-xs opacity-60">({t.count})</span>
+            <tabDef.icon size={16} />
+            {t(tabDef.labelKey, tabDef.fallback)}
+            <span className="text-xs opacity-60">({tabDef.count})</span>
           </button>
         ))}
       </div>
@@ -231,7 +233,7 @@ export function KnowledgeBase() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-white text-sm"
-                placeholder="Search questions or answers..."
+                placeholder={t('knowledge_base.search_placeholder', 'Search questions or answers...')}
               />
             </div>
             <select
@@ -239,20 +241,20 @@ export function KnowledgeBase() {
               onChange={e => setFilterCat(e.target.value)}
               className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
             >
-              <option value="">All Categories</option>
+              <option value="">{t('knowledge_base.all_categories', 'All Categories')}</option>
               {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <button
               onClick={() => setShowAiGen(v => !v)}
               className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
             >
-              <Sparkles size={16} /> AI Generate
+              <Sparkles size={16} /> {t('knowledge_base.ai_generate', 'AI Generate')}
             </button>
             <button
               onClick={() => { setShowItemForm(true); setEditItemId(null); setItemForm(emptyItem) }}
               className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
-              <Plus size={16} /> Add FAQ
+              <Plus size={16} /> {t('knowledge_base.add_faq', 'Add FAQ')}
             </button>
           </div>
 
@@ -262,35 +264,35 @@ export function KnowledgeBase() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles size={18} className="text-purple-400" />
-                  <h3 className="text-white font-semibold">AI FAQ Generator</h3>
+                  <h3 className="text-white font-semibold">{t('knowledge_base.ai_gen.title', 'AI FAQ Generator')}</h3>
                 </div>
                 <button onClick={() => { setShowAiGen(false); setAiPreview([]); setAiSourceText('') }} className="text-t-secondary hover:text-white"><X size={18} /></button>
               </div>
               <p className="text-xs text-t-secondary -mt-2">
-                Paste any source material — hotel description, brochure copy, policy doc, fact sheet — and the AI will draft FAQ Q&amp;A pairs for you. Review the result, untick anything you don't want, then import.
+                {t('knowledge_base.ai_gen.intro', "Paste any source material — hotel description, brochure copy, policy doc, fact sheet — and the AI will draft FAQ Q&A pairs for you. Review the result, untick anything you don't want, then import.")}
               </p>
 
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Source text</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.ai_gen.source_text', 'Source text')}</label>
                 <textarea
                   value={aiSourceText}
                   onChange={e => setAiSourceText(e.target.value)}
                   rows={8}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Paste hotel info, policies, services, room descriptions, etc..."
+                  placeholder={t('knowledge_base.ai_gen.source_placeholder', 'Paste hotel info, policies, services, room descriptions, etc...')}
                 />
-                <div className="text-[10px] text-t-secondary mt-1">{aiSourceText.length} characters · max 20,000</div>
+                <div className="text-[10px] text-t-secondary mt-1">{t('knowledge_base.ai_gen.chars_count', { count: aiSourceText.length, defaultValue: '{{count}} characters · max 20,000' })}</div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-t-secondary mb-1">Save into category</label>
+                  <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.ai_gen.save_into_category', 'Save into category')}</label>
                   <select
                     value={aiCategoryId ?? ''}
                     onChange={e => setAiCategoryId(e.target.value ? Number(e.target.value) : null)}
                     className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                   >
-                    <option value="">Auto-create "AI Generated"</option>
+                    <option value="">{t('knowledge_base.ai_gen.auto_create_category', 'Auto-create "AI Generated"')}</option>
                     {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
@@ -300,7 +302,7 @@ export function KnowledgeBase() {
                     disabled={extractFaqs.isPending || aiSourceText.trim().length < 50}
                     className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
                   >
-                    <Sparkles size={14} /> {extractFaqs.isPending ? 'Generating...' : 'Generate FAQ Drafts'}
+                    <Sparkles size={14} /> {extractFaqs.isPending ? t('knowledge_base.ai_gen.generating', 'Generating...') : t('knowledge_base.ai_gen.generate', 'Generate FAQ Drafts')}
                   </button>
                 </div>
               </div>
@@ -308,10 +310,10 @@ export function KnowledgeBase() {
               {aiPreview.length > 0 && (
                 <div className="space-y-2 border-t border-dark-border pt-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-white">Preview ({aiPreview.filter(i => i.selected).length}/{aiPreview.length} selected)</h4>
+                    <h4 className="text-sm font-semibold text-white">{t('knowledge_base.ai_gen.preview_header', { selected: aiPreview.filter(i => i.selected).length, total: aiPreview.length, defaultValue: 'Preview ({{selected}}/{{total}} selected)' })}</h4>
                     <div className="flex gap-2">
-                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: true })))} className="text-xs text-t-secondary hover:text-white">Select all</button>
-                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: false })))} className="text-xs text-t-secondary hover:text-white">Select none</button>
+                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: true })))} className="text-xs text-t-secondary hover:text-white">{t('knowledge_base.ai_gen.select_all', 'Select all')}</button>
+                      <button onClick={() => setAiPreview(p => p.map(i => ({ ...i, selected: false })))} className="text-xs text-t-secondary hover:text-white">{t('knowledge_base.ai_gen.select_none', 'Select none')}</button>
                     </div>
                   </div>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -345,13 +347,13 @@ export function KnowledgeBase() {
                     ))}
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
-                    <button onClick={() => setAiPreview([])} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Discard</button>
+                    <button onClick={() => setAiPreview([])} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('knowledge_base.ai_gen.discard', 'Discard')}</button>
                     <button
                       onClick={() => importFaqs.mutate()}
                       disabled={importFaqs.isPending || aiPreview.filter(i => i.selected).length === 0}
                       className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
                     >
-                      <Save size={14} /> {importFaqs.isPending ? 'Importing...' : `Import ${aiPreview.filter(i => i.selected).length} items`}
+                      <Save size={14} /> {importFaqs.isPending ? t('knowledge_base.ai_gen.importing', 'Importing...') : t('knowledge_base.ai_gen.import_count', { count: aiPreview.filter(i => i.selected).length, defaultValue: 'Import {{count}} items' })}
                     </button>
                   </div>
                 </div>
@@ -363,40 +365,40 @@ export function KnowledgeBase() {
           {showItemForm && (
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-semibold">{editItemId ? 'Edit FAQ Item' : 'New FAQ Item'}</h3>
+                <h3 className="text-white font-semibold">{editItemId ? t('knowledge_base.item_form.edit_title', 'Edit FAQ Item') : t('knowledge_base.item_form.new_title', 'New FAQ Item')}</h3>
                 <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="text-t-secondary hover:text-white"><X size={18} /></button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-t-secondary mb-1">Category</label>
+                  <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.category', 'Category')}</label>
                   <select
                     value={itemForm.category_id || ''}
                     onChange={e => setItemForm(p => ({ ...p, category_id: e.target.value ? Number(e.target.value) : null }))}
                     className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                   >
-                    <option value="">None</option>
+                    <option value="">{t('knowledge_base.item_form.category_none', 'None')}</option>
                     {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-t-secondary mb-1">Priority</label>
+                  <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.priority', 'Priority')}</label>
                   <input type="number" min={0} value={itemForm.priority} onChange={e => setItemForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Question</label>
-                <input type="text" value={itemForm.question} onChange={e => setItemForm(p => ({ ...p, question: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="What is the check-in time?" />
+                <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.question', 'Question')}</label>
+                <input type="text" value={itemForm.question} onChange={e => setItemForm(p => ({ ...p, question: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={t('knowledge_base.item_form.question_placeholder', 'What is the check-in time?')} />
               </div>
 
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Answer</label>
-                <textarea value={itemForm.answer} onChange={e => setItemForm(p => ({ ...p, answer: e.target.value }))} rows={4} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Check-in time is 3:00 PM..." />
+                <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.answer', 'Answer')}</label>
+                <textarea value={itemForm.answer} onChange={e => setItemForm(p => ({ ...p, answer: e.target.value }))} rows={4} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={t('knowledge_base.item_form.answer_placeholder', 'Check-in time is 3:00 PM...')} />
               </div>
 
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Keywords</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.keywords', 'Keywords')}</label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {itemForm.keywords.map((kw, i) => (
                     <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded text-xs">
@@ -406,23 +408,23 @@ export function KnowledgeBase() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Add keyword..." />
+                  <input type="text" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())} className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={t('knowledge_base.item_form.keyword_placeholder', 'Add keyword...')} />
                   <button onClick={addKeyword} className="bg-dark-surface4 text-white px-3 py-2 rounded-lg text-sm hover:bg-dark-border2"><Plus size={14} /></button>
                   <button
                     type="button"
                     disabled={!itemForm.question.trim() || suggestKeywords.isPending}
                     onClick={() => suggestKeywords.mutate({ question: itemForm.question, answer: itemForm.answer })}
                     className="flex items-center gap-1 bg-primary-600/20 text-primary-400 px-3 py-2 rounded-lg text-xs hover:bg-primary-600/30 disabled:opacity-50"
-                    title="Let AI suggest keywords from question + answer">
-                    <Sparkles size={14} /> {suggestKeywords.isPending ? '...' : 'AI'}
+                    title={t('knowledge_base.item_form.ai_suggest_title', 'Let AI suggest keywords from question + answer')}>
+                    <Sparkles size={14} /> {suggestKeywords.isPending ? t('knowledge_base.item_form.ai_loading', '...') : t('knowledge_base.item_form.ai_short', 'AI')}
                   </button>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2">
-                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
+                <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('knowledge_base.item_form.cancel', 'Cancel')}</button>
                 <button onClick={() => saveItem.mutate(itemForm)} disabled={saveItem.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
-                  <Save size={14} /> {saveItem.isPending ? 'Saving...' : 'Save'}
+                  <Save size={14} /> {saveItem.isPending ? t('knowledge_base.item_form.saving', 'Saving...') : t('knowledge_base.item_form.save', 'Save')}
                 </button>
               </div>
             </div>
@@ -430,11 +432,11 @@ export function KnowledgeBase() {
 
           {/* Items List */}
           {loadingItems ? (
-            <div className="text-center text-t-secondary py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">{t('knowledge_base.loading', 'Loading...')}</div>
           ) : items.length === 0 ? (
             <div className="text-center text-t-secondary py-12">
               <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-              <p>No FAQ items yet. Add your first one to help the AI answer questions.</p>
+              <p>{t('knowledge_base.items_empty', 'No FAQ items yet. Add your first one to help the AI answer questions.')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -445,7 +447,7 @@ export function KnowledgeBase() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-white font-medium text-sm">{item.question}</span>
                         {item.category && <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{item.category.name}</span>}
-                        {!item.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
+                        {!item.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
                       </div>
                       <p className="text-sm text-t-secondary line-clamp-2">{item.answer}</p>
                       {item.keywords?.length > 0 && (
@@ -455,11 +457,11 @@ export function KnowledgeBase() {
                           ))}
                         </div>
                       )}
-                      <div className="text-xs text-dark-border2 mt-1">Used {item.use_count} times | Priority: {item.priority}</div>
+                      <div className="text-xs text-dark-border2 mt-1">{t('knowledge_base.item_row.used_count', { count: item.use_count, priority: item.priority, defaultValue: 'Used {{count}} times | Priority: {{priority}}' })}</div>
                     </div>
                     <div className="flex gap-1">
                       <button onClick={() => editItem(item)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
-                      <button onClick={() => { if (confirm('Delete this FAQ item?')) deleteItem.mutate(item.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.item', 'Delete this FAQ item?'))) deleteItem.mutate(item.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -477,45 +479,45 @@ export function KnowledgeBase() {
               onClick={() => { setShowCatForm(true); setEditCatId(null); setCatForm(emptyCategory) }}
               className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
-              <Plus size={16} /> Add Category
+              <Plus size={16} /> {t('knowledge_base.add_category', 'Add Category')}
             </button>
           </div>
 
           {showCatForm && (
             <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-semibold">{editCatId ? 'Edit Category' : 'New Category'}</h3>
+                <h3 className="text-white font-semibold">{editCatId ? t('knowledge_base.cat_form.edit_title', 'Edit Category') : t('knowledge_base.cat_form.new_title', 'New Category')}</h3>
                 <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="text-t-secondary hover:text-white"><X size={18} /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-t-secondary mb-1">Name</label>
-                  <input type="text" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder="Category name" />
+                  <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.cat_form.name', 'Name')}</label>
+                  <input type="text" value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" placeholder={t('knowledge_base.cat_form.name_placeholder', 'Category name')} />
                 </div>
                 <div>
-                  <label className="block text-sm text-t-secondary mb-1">Priority</label>
+                  <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.cat_form.priority', 'Priority')}</label>
                   <input type="number" min={0} value={catForm.priority} onChange={e => setCatForm(p => ({ ...p, priority: Number(e.target.value) }))} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Description</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.cat_form.description', 'Description')}</label>
                 <textarea value={catForm.description} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
+                <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('knowledge_base.cat_form.cancel', 'Cancel')}</button>
                 <button onClick={() => saveCat.mutate(catForm)} disabled={saveCat.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
-                  <Save size={14} /> {saveCat.isPending ? 'Saving...' : 'Save'}
+                  <Save size={14} /> {saveCat.isPending ? t('knowledge_base.cat_form.saving', 'Saving...') : t('knowledge_base.cat_form.save', 'Save')}
                 </button>
               </div>
             </div>
           )}
 
           {loadingCats ? (
-            <div className="text-center text-t-secondary py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">{t('knowledge_base.loading', 'Loading...')}</div>
           ) : categories.length === 0 ? (
             <div className="text-center text-t-secondary py-12">
               <FolderOpen size={40} className="mx-auto mb-3 opacity-30" />
-              <p>No categories yet. Create one to organize your FAQ items.</p>
+              <p>{t('knowledge_base.categories_empty', 'No categories yet. Create one to organize your FAQ items.')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -524,14 +526,14 @@ export function KnowledgeBase() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-medium">{cat.name}</span>
-                      <span className="text-xs text-t-secondary">({cat.items_count || 0} items)</span>
-                      {!cat.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inactive</span>}
+                      <span className="text-xs text-t-secondary">{t('knowledge_base.cat_row.items_count', { count: cat.items_count || 0, defaultValue: '({{count}} items)' })}</span>
+                      {!cat.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
                     </div>
                     {cat.description && <p className="text-sm text-t-secondary mt-1">{cat.description}</p>}
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => editCat(cat)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
-                    <button onClick={() => { if (confirm('Delete this category?')) deleteCat.mutate(cat.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                    <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.category', 'Delete this category?'))) deleteCat.mutate(cat.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -546,10 +548,10 @@ export function KnowledgeBase() {
           {/* Upload Area */}
           <div className="bg-dark-surface border-2 border-dashed border-dark-border rounded-xl p-8 text-center">
             <Upload size={32} className="mx-auto mb-3 text-dark-border2" />
-            <p className="text-sm text-t-secondary mb-3">Upload PDF, DOCX, or TXT files to extend the AI's knowledge</p>
+            <p className="text-sm text-t-secondary mb-3">{t('knowledge_base.documents.upload_hint', "Upload PDF, DOCX, or TXT files to extend the AI's knowledge")}</p>
             <label className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm cursor-pointer">
               <Upload size={16} />
-              Choose File
+              {t('knowledge_base.documents.choose_file', 'Choose File')}
               <input
                 type="file"
                 accept=".pdf,.doc,.docx,.txt"
@@ -561,15 +563,15 @@ export function KnowledgeBase() {
                 }}
               />
             </label>
-            {uploadDoc.isPending && <p className="text-sm text-primary-400 mt-2">Uploading and processing...</p>}
+            {uploadDoc.isPending && <p className="text-sm text-primary-400 mt-2">{t('knowledge_base.documents.uploading', 'Uploading and processing...')}</p>}
           </div>
 
           {/* Documents List */}
           {loadingDocs ? (
-            <div className="text-center text-t-secondary py-12">Loading...</div>
+            <div className="text-center text-t-secondary py-12">{t('knowledge_base.loading', 'Loading...')}</div>
           ) : documents.length === 0 ? (
             <div className="text-center text-t-secondary py-8">
-              <p>No documents uploaded yet.</p>
+              <p>{t('knowledge_base.documents_empty', 'No documents uploaded yet.')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -592,14 +594,14 @@ export function KnowledgeBase() {
                     </div>
                     <div className="flex gap-1">
                       {doc.processing_status === 'failed' && (
-                        <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-t-secondary hover:text-primary-400" title="Reprocess"><RotateCcw size={14} /></button>
+                        <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-t-secondary hover:text-primary-400" title={t('knowledge_base.documents.reprocess_title', 'Reprocess')}><RotateCcw size={14} /></button>
                       )}
-                      <button onClick={() => { if (confirm('Delete this document?')) deleteDoc.mutate(doc.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.document', 'Delete this document?'))) deleteDoc.mutate(doc.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
                     </div>
                   </div>
                   {doc.extracted_text && (
                     <details className="mt-2">
-                      <summary className="text-xs text-t-secondary cursor-pointer hover:text-white">Preview extracted text</summary>
+                      <summary className="text-xs text-t-secondary cursor-pointer hover:text-white">{t('knowledge_base.documents.preview_summary', 'Preview extracted text')}</summary>
                       <pre className="text-xs text-t-secondary mt-2 bg-dark-surface rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap">{doc.extracted_text.substring(0, 1000)}{doc.extracted_text.length > 1000 ? '...' : ''}</pre>
                     </details>
                   )}

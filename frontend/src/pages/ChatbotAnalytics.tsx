@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -14,11 +15,11 @@ const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50',
 const PIE_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#32d74b', '#ef4444', '#06b6d4', '#636366']
 
 const DATE_RANGES = [
-  { label: '7d',  days: 7  },
-  { label: '14d', days: 14 },
-  { label: '30d', days: 30 },
-  { label: '90d', days: 90 },
-]
+  { labelKey: 'd7',  fallback: '7d',  days: 7  },
+  { labelKey: 'd14', fallback: '14d', days: 14 },
+  { labelKey: 'd30', fallback: '30d', days: 30 },
+  { labelKey: 'd90', fallback: '90d', days: 90 },
+] as const
 
 interface Overview {
   total_conversations: number
@@ -72,6 +73,7 @@ function shortUrl(url: string): string {
 }
 
 export function ChatbotAnalytics() {
+  const { t } = useTranslation()
   const [days, setDays] = useState(30)
 
   const { data, isLoading } = useQuery<Analytics>({
@@ -89,44 +91,44 @@ export function ChatbotAnalytics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Chat Analytics</h2>
-          <p className="text-xs text-t-secondary mt-0.5">Measure your AI sales agent's performance</p>
+          <h2 className="text-lg font-semibold text-white">{t('chatbot_analytics.title', 'Chat Analytics')}</h2>
+          <p className="text-xs text-t-secondary mt-0.5">{t('chatbot_analytics.subtitle', "Measure your AI sales agent's performance")}</p>
         </div>
         <div className="flex gap-1">
           {DATE_RANGES.map(r => (
             <button key={r.days} onClick={() => setDays(r.days)}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${days === r.days ? 'bg-primary-600 text-white' : 'bg-dark-hover text-t-secondary hover:text-white'}`}>
-              {r.label}
+              {t(`chatbot_analytics.ranges.${r.labelKey}`, r.fallback)}
             </button>
           ))}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center text-t-secondary py-12">Loading analytics…</div>
+        <div className="text-center text-t-secondary py-12">{t('chatbot_analytics.loading', 'Loading analytics…')}</div>
       ) : !data ? (
-        <div className="text-center text-t-secondary py-12">No data available</div>
+        <div className="text-center text-t-secondary py-12">{t('chatbot_analytics.no_data', 'No data available')}</div>
       ) : (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <StatCard icon={MessageSquare} label="Total Conversations" value={ov!.total_conversations} color="text-blue-400" />
-            <StatCard icon={UserCheck}    label="Leads Captured"      value={ov!.leads_captured}
-              sub={`${ov!.lead_conversion_rate}% conversion`} color="text-green-400" />
-            <StatCard icon={Bot}          label="AI Resolved"         value={ov!.ai_resolved}
-              sub={`${ov!.ai_resolution_rate}% rate`} color="text-purple-400" />
-            <StatCard icon={Users}        label="Escalated to Human"  value={ov!.human_escalated} color="text-amber-400" />
-            <StatCard icon={TrendingUp}   label="Avg Messages / Chat" value={ov!.avg_messages} color="text-cyan-400" />
-            <StatCard icon={ArrowUpRight} label="Lead Conversion"     value={`${ov!.lead_conversion_rate}%`} color="text-emerald-400" />
-            <StatCard icon={Bot}          label="AI Resolution Rate"  value={`${ov!.ai_resolution_rate}%`} color="text-indigo-400" />
-            <StatCard icon={ArrowUpRight} label="Human Escalation Rate"
+            <StatCard icon={MessageSquare} label={t('chatbot_analytics.kpis.total_conversations', 'Total Conversations')} value={ov!.total_conversations} color="text-blue-400" />
+            <StatCard icon={UserCheck}    label={t('chatbot_analytics.kpis.leads_captured', 'Leads Captured')}      value={ov!.leads_captured}
+              sub={t('chatbot_analytics.kpis.conversion_sub', { rate: ov!.lead_conversion_rate, defaultValue: '{{rate}}% conversion' })} color="text-green-400" />
+            <StatCard icon={Bot}          label={t('chatbot_analytics.kpis.ai_resolved', 'AI Resolved')}         value={ov!.ai_resolved}
+              sub={t('chatbot_analytics.kpis.rate_sub', { rate: ov!.ai_resolution_rate, defaultValue: '{{rate}}% rate' })} color="text-purple-400" />
+            <StatCard icon={Users}        label={t('chatbot_analytics.kpis.escalated', 'Escalated to Human')}  value={ov!.human_escalated} color="text-amber-400" />
+            <StatCard icon={TrendingUp}   label={t('chatbot_analytics.kpis.avg_messages', 'Avg Messages / Chat')} value={ov!.avg_messages} color="text-cyan-400" />
+            <StatCard icon={ArrowUpRight} label={t('chatbot_analytics.kpis.lead_conversion', 'Lead Conversion')}     value={`${ov!.lead_conversion_rate}%`} color="text-emerald-400" />
+            <StatCard icon={Bot}          label={t('chatbot_analytics.kpis.ai_resolution_rate', 'AI Resolution Rate')}  value={`${ov!.ai_resolution_rate}%`} color="text-indigo-400" />
+            <StatCard icon={ArrowUpRight} label={t('chatbot_analytics.kpis.human_escalation_rate', 'Human Escalation Rate')}
               value={ov!.total_conversations > 0 ? `${Math.round((ov!.human_escalated / ov!.total_conversations) * 100)}%` : '0%'}
               color="text-rose-400" />
           </div>
 
           {/* Conversation Trend */}
           <div className="bg-dark-card border border-dark-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Conversation Trend</h3>
+            <h3 className="text-sm font-semibold text-white mb-4">{t('chatbot_analytics.trend_title', 'Conversation Trend')}</h3>
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={data.trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
@@ -140,7 +142,7 @@ export function ChatbotAnalytics() {
                   tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
                 <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={{ color: '#8e8e93' }} />
-                <Area type="monotone" dataKey="count" name="Conversations"
+                <Area type="monotone" dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')}
                   stroke="#3b82f6" fill="url(#convGrad)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
@@ -151,7 +153,7 @@ export function ChatbotAnalytics() {
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={14} className="text-t-secondary" />
-                <h3 className="text-sm font-semibold text-white">Peak Hours</h3>
+                <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.peak_hours', 'Peak Hours')}</h3>
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={data.hourly_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -160,13 +162,13 @@ export function ChatbotAnalytics() {
                     interval={3} />
                   <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
                   <Tooltip contentStyle={CHART_TOOLTIP} />
-                  <Bar dataKey="count" name="Messages" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="count" name={t('chatbot_analytics.series.messages', 'Messages')} fill="#6366f1" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-4">Status Breakdown</h3>
+              <h3 className="text-sm font-semibold text-white mb-4">{t('chatbot_analytics.status_breakdown', 'Status Breakdown')}</h3>
               {statusData.length > 0 ? (
                 <div className="flex items-center gap-4">
                   <ResponsiveContainer width="50%" height={160}>
@@ -193,7 +195,7 @@ export function ChatbotAnalytics() {
                   </div>
                 </div>
               ) : (
-                <p className="text-t-secondary text-sm py-8 text-center">No conversations yet</p>
+                <p className="text-t-secondary text-sm py-8 text-center">{t('chatbot_analytics.no_conversations', 'No conversations yet')}</p>
               )}
             </div>
           </div>
@@ -203,7 +205,7 @@ export function ChatbotAnalytics() {
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <LayoutList size={14} className="text-t-secondary" />
-                <h3 className="text-sm font-semibold text-white">Top Chat Pages</h3>
+                <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.top_pages', 'Top Chat Pages')}</h3>
               </div>
               {data.top_pages.length > 0 ? (
                 <div className="space-y-2">
@@ -226,14 +228,14 @@ export function ChatbotAnalytics() {
                   })}
                 </div>
               ) : (
-                <p className="text-t-secondary text-sm py-4 text-center">No page data yet</p>
+                <p className="text-t-secondary text-sm py-4 text-center">{t('chatbot_analytics.no_page_data', 'No page data yet')}</p>
               )}
             </div>
 
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Globe size={14} className="text-t-secondary" />
-                <h3 className="text-sm font-semibold text-white">Visitor Countries</h3>
+                <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.visitor_countries', 'Visitor Countries')}</h3>
               </div>
               {data.top_countries.length > 0 ? (
                 <div className="space-y-2">
@@ -254,7 +256,7 @@ export function ChatbotAnalytics() {
                   })}
                 </div>
               ) : (
-                <p className="text-t-secondary text-sm py-4 text-center">No country data yet</p>
+                <p className="text-t-secondary text-sm py-4 text-center">{t('chatbot_analytics.no_country_data', 'No country data yet')}</p>
               )}
             </div>
           </div>

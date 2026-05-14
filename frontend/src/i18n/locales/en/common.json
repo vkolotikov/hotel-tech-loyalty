@@ -1255,6 +1255,154 @@
     }
   },
 
+  "knowledge_base": {
+    "brand_required": "the knowledge base",
+    "title": "Knowledge Base",
+    "subtitle": "Manage FAQ items, categories, and documents that power the AI assistant",
+    "tabs": {
+      "items": "FAQ Items",
+      "categories": "Categories",
+      "documents": "Documents"
+    },
+    "search_placeholder": "Search questions or answers…",
+    "all_categories": "All Categories",
+    "ai_generate": "AI Generate",
+    "add_faq": "Add FAQ",
+    "add_category": "Add Category",
+    "loading": "Loading…",
+    "items_empty": "No FAQ items yet. Add your first one to help the AI answer questions.",
+    "categories_empty": "No categories yet. Create one to organize your FAQ items.",
+    "documents_empty": "No documents uploaded yet.",
+    "inactive": "Inactive",
+    "ai_gen": {
+      "title": "AI FAQ Generator",
+      "intro": "Paste any source material — hotel description, brochure copy, policy doc, fact sheet — and the AI will draft FAQ Q&A pairs for you. Review the result, untick anything you don't want, then import.",
+      "source_text": "Source text",
+      "source_placeholder": "Paste hotel info, policies, services, room descriptions, etc…",
+      "chars_count": "{{count}} characters · max 20,000",
+      "save_into_category": "Save into category",
+      "auto_create_category": "Auto-create \"AI Generated\"",
+      "generate": "Generate FAQ Drafts",
+      "generating": "Generating…",
+      "preview_header": "Preview ({{selected}}/{{total}} selected)",
+      "select_all": "Select all",
+      "select_none": "Select none",
+      "discard": "Discard",
+      "import_count": "Import {{count}} items",
+      "importing": "Importing…"
+    },
+    "item_form": {
+      "edit_title": "Edit FAQ Item",
+      "new_title": "New FAQ Item",
+      "category": "Category",
+      "category_none": "None",
+      "priority": "Priority",
+      "question": "Question",
+      "question_placeholder": "What is the check-in time?",
+      "answer": "Answer",
+      "answer_placeholder": "Check-in time is 3:00 PM…",
+      "keywords": "Keywords",
+      "keyword_placeholder": "Add keyword…",
+      "ai_suggest_title": "Let AI suggest keywords from question + answer",
+      "ai_short": "AI",
+      "ai_loading": "…",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "cat_form": {
+      "edit_title": "Edit Category",
+      "new_title": "New Category",
+      "name": "Name",
+      "name_placeholder": "Category name",
+      "priority": "Priority",
+      "description": "Description",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "item_row": {
+      "used_count": "Used {{count}} times | Priority: {{priority}}"
+    },
+    "cat_row": {
+      "items_count": "({{count}} items)"
+    },
+    "documents": {
+      "upload_hint": "Upload PDF, DOCX, or TXT files to extend the AI's knowledge",
+      "choose_file": "Choose File",
+      "uploading": "Uploading and processing…",
+      "reprocess_title": "Reprocess",
+      "preview_summary": "Preview extracted text"
+    },
+    "status": {
+      "pending": "pending",
+      "processing": "processing",
+      "completed": "completed",
+      "failed": "failed"
+    },
+    "delete_confirm": {
+      "item": "Delete this FAQ item?",
+      "category": "Delete this category?",
+      "document": "Delete this document?"
+    },
+    "toasts": {
+      "item_created": "Item created",
+      "item_updated": "Item updated",
+      "cat_created": "Category created",
+      "cat_updated": "Category updated",
+      "deleted": "Deleted",
+      "failed": "Failed",
+      "doc_uploaded": "Document uploaded",
+      "doc_upload_failed": "Upload failed",
+      "reprocessing": "Reprocessing started",
+      "no_keywords": "No keywords suggested",
+      "kw_added": "Added {{count}} suggested keywords",
+      "ai_failed": "AI suggestion failed",
+      "ai_no_items": "AI returned no items",
+      "extracted_count": "Extracted {{count}} draft FAQ items — review and import",
+      "extract_failed": "Extraction failed",
+      "imported_count": "Imported {{count}} FAQ items",
+      "import_failed": "Import failed"
+    }
+  },
+
+  "chatbot_analytics": {
+    "title": "Chat Analytics",
+    "subtitle": "Measure your AI sales agent's performance",
+    "loading": "Loading analytics…",
+    "no_data": "No data available",
+    "ranges": {
+      "d7": "7d",
+      "d14": "14d",
+      "d30": "30d",
+      "d90": "90d"
+    },
+    "kpis": {
+      "total_conversations": "Total Conversations",
+      "leads_captured": "Leads Captured",
+      "ai_resolved": "AI Resolved",
+      "escalated": "Escalated to Human",
+      "avg_messages": "Avg Messages / Chat",
+      "lead_conversion": "Lead Conversion",
+      "ai_resolution_rate": "AI Resolution Rate",
+      "human_escalation_rate": "Human Escalation Rate",
+      "conversion_sub": "{{rate}}% conversion",
+      "rate_sub": "{{rate}}% rate"
+    },
+    "trend_title": "Conversation Trend",
+    "peak_hours": "Peak Hours",
+    "status_breakdown": "Status Breakdown",
+    "no_conversations": "No conversations yet",
+    "top_pages": "Top Chat Pages",
+    "no_page_data": "No page data yet",
+    "visitor_countries": "Visitor Countries",
+    "no_country_data": "No country data yet",
+    "series": {
+      "conversations": "Conversations",
+      "messages": "Messages"
+    }
+  },
+
   "canned_replies": {
     "title": "Canned Replies",
     "subtitle": "Pre-written responses agents can insert with one click from the inbox. Org-wide, max 50.",
