@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info, CheckCircle, AlertTriangle, Wifi, RefreshCw } from 'lucide-react'
@@ -6,50 +7,37 @@ import toast from 'react-hot-toast'
 import { AI_PROVIDERS, findModel, findProvider, formatModelLabel } from '../lib/aiModels'
 import { BrandRequired } from '../components/BrandRequired'
 
+// Labels resolved via t() at render — keep value as stable identifier + English fallback only.
 const SALES_STYLES = [
   { value: 'consultative', label: 'Consultative', desc: 'Ask questions, understand needs, then recommend' },
   { value: 'aggressive', label: 'Aggressive', desc: 'Proactively push offers and upsells' },
   { value: 'passive', label: 'Passive', desc: 'Only offer when explicitly asked' },
   { value: 'educational', label: 'Educational', desc: 'Inform and educate, let guest decide' },
-]
+] as const
 
 const TONES = [
   { value: 'professional', label: 'Professional' },
   { value: 'friendly', label: 'Friendly' },
   { value: 'casual', label: 'Casual' },
   { value: 'formal', label: 'Formal' },
-]
+] as const
 
 const REPLY_LENGTHS = [
-  { value: 'concise', label: 'Concise', desc: '1-2 sentences' },
-  { value: 'moderate', label: 'Moderate', desc: '2-4 sentences' },
-  { value: 'detailed', label: 'Detailed', desc: 'Thorough responses' },
-]
+  { value: 'concise', label: 'Concise' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'detailed', label: 'Detailed' },
+] as const
 
 const LANGUAGES = [
-  { value: 'auto', label: 'Auto-detect (match customer language)' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'it', label: 'Italian' },
-  { value: 'pt', label: 'Portuguese' },
-  { value: 'nl', label: 'Dutch' },
-  { value: 'ru', label: 'Russian' },
-  { value: 'pl', label: 'Polish' },
-  { value: 'tr', label: 'Turkish' },
-  { value: 'ar', label: 'Arabic' },
-  { value: 'zh', label: 'Chinese' },
-  { value: 'ja', label: 'Japanese' },
-  { value: 'ko', label: 'Korean' },
-  { value: 'hi', label: 'Hindi' },
-  { value: 'uk', label: 'Ukrainian' },
-]
+  'auto', 'en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ru', 'pl',
+  'tr', 'ar', 'zh', 'ja', 'ko', 'hi', 'uk',
+] as const
 
 // Model registry now lives in lib/aiModels.ts so any future model-aware UI
 // (admin AI selector, voice agent picker) shares the same source of truth.
 
 export function ChatbotConfig() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
 
   const { data: behavior, isLoading: loadingBehavior } = useQuery({
@@ -74,7 +62,7 @@ export function ChatbotConfig() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chatbot-behavior'] })
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('chatbot_config.toasts.save_failed', 'Save failed')),
   })
 
   const saveModel = useMutation({
@@ -82,7 +70,7 @@ export function ChatbotConfig() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chatbot-model'] })
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('chatbot_config.toasts.save_failed', 'Save failed')),
   })
 
   const handleSaveAll = async () => {
@@ -91,7 +79,7 @@ export function ChatbotConfig() {
         saveBehavior.mutateAsync(bForm),
         saveModel.mutateAsync(mForm),
       ])
-      toast.success('Configuration saved')
+      toast.success(t('chatbot_config.toasts.saved', 'Configuration saved'))
       setBehaviorForm(null)
       setModelForm(null)
     } catch {
@@ -140,7 +128,7 @@ export function ChatbotConfig() {
       })
       setProbe({ status: data.available ? 'ok' : 'error', message: data.message })
     } catch (e: any) {
-      setProbe({ status: 'error', message: e?.response?.data?.message || 'Probe failed' })
+      setProbe({ status: 'error', message: e?.response?.data?.message || t('chatbot_config.model.probe_failed', 'Probe failed') })
     }
   }
   useEffect(() => {
@@ -151,33 +139,33 @@ export function ChatbotConfig() {
   }, [mForm.provider, mForm.model_name])
 
   return (
-    <BrandRequired feature="the chatbot configuration">
+    <BrandRequired feature={t('chatbot_config.brand_required', 'the chatbot configuration')}>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Bot className="text-primary-500" size={28} />
         <div>
-          <h1 className="text-2xl font-bold text-white">Chatbot Configuration</h1>
-          <p className="text-sm text-t-secondary">Configure how your AI assistant behaves and responds to guests</p>
+          <h1 className="text-2xl font-bold text-white">{t('chatbot_config.title', 'Chatbot Configuration')}</h1>
+          <p className="text-sm text-t-secondary">{t('chatbot_config.subtitle', 'Configure how your AI assistant behaves and responds to guests')}</p>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center text-t-secondary py-12">Loading configuration...</div>
+        <div className="text-center text-t-secondary py-12">{t('chatbot_config.loading', 'Loading configuration...')}</div>
       ) : (
         <div className="space-y-6">
           {/* AI Model */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">AI Model</h2>
+              <h2 className="text-lg font-semibold text-white">{t('chatbot_config.model.section', 'AI Model')}</h2>
               <span className="text-xs text-t-secondary bg-dark-hover px-2 py-1 rounded-lg">
-                ★ = recommended for luxury hospitality
+                {t('chatbot_config.model.recommended_hint', '★ = recommended for luxury hospitality')}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Provider</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.model.provider', 'Provider')}</label>
                 <select
                   value={mForm.provider || 'openai'}
                   onChange={e => {
@@ -193,10 +181,10 @@ export function ChatbotConfig() {
               </div>
               <div>
                 <label className="block text-sm text-t-secondary mb-1 flex items-center gap-2">
-                  <span>Model</span>
-                  {probe.status === 'checking' && <span className="text-[10px] text-gray-500 flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> Verifying…</span>}
-                  {probe.status === 'ok'       && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle size={10} /> Available on your account</span>}
-                  {probe.status === 'error'    && <span className="text-[10px] text-amber-400 flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> Not available — {probe.message || 'check API key'}</span>}
+                  <span>{t('chatbot_config.model.model', 'Model')}</span>
+                  {probe.status === 'checking' && <span className="text-[10px] text-gray-500 flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> {t('chatbot_config.model.verifying', 'Verifying…')}</span>}
+                  {probe.status === 'ok'       && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle size={10} /> {t('chatbot_config.model.available', 'Available on your account')}</span>}
+                  {probe.status === 'error'    && <span className="text-[10px] text-amber-400 flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> {t('chatbot_config.model.not_available', { reason: probe.message || t('chatbot_config.model.check_api_key', 'check API key'), defaultValue: 'Not available — {{reason}}' })}</span>}
                 </label>
                 <div className="flex items-stretch gap-2">
                   <select
@@ -207,7 +195,7 @@ export function ChatbotConfig() {
                     {selectedProvider.models.map(m => <option key={m.id} value={m.id}>{formatModelLabel(m)}</option>)}
                   </select>
                   <button onClick={runProbe} type="button" disabled={probe.status === 'checking'}
-                    title="Verify the chosen model is enabled on your API key"
+                    title={t('chatbot_config.model.verify_tooltip', 'Verify the chosen model is enabled on your API key')}
                     className="px-3 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-hover disabled:opacity-40 transition-colors">
                     <Wifi size={14} />
                   </button>
@@ -234,7 +222,7 @@ export function ChatbotConfig() {
                 className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors"
               >
                 {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                Advanced Settings
+                {t('chatbot_config.model.advanced_toggle', 'Advanced Settings')}
               </button>
 
               {showAdvanced && (
@@ -242,9 +230,9 @@ export function ChatbotConfig() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <label className="text-sm text-t-secondary">Temperature</label>
+                        <label className="text-sm text-t-secondary">{t('chatbot_config.model.temperature', 'Temperature')}</label>
                         <span className="text-xs text-t-secondary">({(mForm.temperature ?? 0.7).toFixed(1)})</span>
-                        <span title="Controls creativity. Lower = more factual, higher = more creative. 0.7 is recommended for hospitality.">
+                        <span title={t('chatbot_config.model.temperature_help', 'Controls creativity. Lower = more factual, higher = more creative. 0.7 is recommended for hospitality.')}>
                           <Info size={11} className="text-t-secondary cursor-help" />
                         </span>
                       </div>
@@ -255,14 +243,14 @@ export function ChatbotConfig() {
                         className="w-full accent-primary-500"
                       />
                       <div className="flex justify-between text-xs text-t-secondary mt-0.5">
-                        <span>Precise (0.0)</span><span>Creative (1.0)</span>
+                        <span>{t('chatbot_config.model.temperature_precise', 'Precise (0.0)')}</span><span>{t('chatbot_config.model.temperature_creative', 'Creative (1.0)')}</span>
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <label className="text-sm text-t-secondary">Max Response Tokens</label>
+                        <label className="text-sm text-t-secondary">{t('chatbot_config.model.max_tokens', 'Max Response Tokens')}</label>
                         <span className="text-xs text-t-secondary">({mForm.max_tokens ?? 1024})</span>
-                        <span title="Maximum length of AI response. 1024 allows ~750 words — good for detailed hotel info. Increase for very long answers.">
+                        <span title={t('chatbot_config.model.max_tokens_help', 'Maximum length of AI response. 1024 allows ~750 words — good for detailed hotel info. Increase for very long answers.')}>
                           <Info size={11} className="text-t-secondary cursor-help" />
                         </span>
                       </div>
@@ -273,7 +261,7 @@ export function ChatbotConfig() {
                         className="w-full accent-primary-500"
                       />
                       <div className="flex justify-between text-xs text-t-secondary mt-0.5">
-                        <span>Short (200)</span><span>Detailed (4096)</span>
+                        <span>{t('chatbot_config.model.max_tokens_short', 'Short (200)')}</span><span>{t('chatbot_config.model.max_tokens_detailed', 'Detailed (4096)')}</span>
                       </div>
                     </div>
                   </div>
@@ -284,8 +272,8 @@ export function ChatbotConfig() {
                   {supportsVerbosity && (
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <label className="text-sm text-t-secondary">Response Verbosity</label>
-                        <span title="Controls how concise vs detailed responses are, separately from token budget. Use low for chatbot-style brevity; medium is the doc default; high for thorough explanations.">
+                        <label className="text-sm text-t-secondary">{t('chatbot_config.model.verbosity', 'Response Verbosity')}</label>
+                        <span title={t('chatbot_config.model.verbosity_help', 'Controls how concise vs detailed responses are, separately from token budget. Use low for chatbot-style brevity; medium is the doc default; high for thorough explanations.')}>
                           <Info size={11} className="text-t-secondary cursor-help" />
                         </span>
                       </div>
@@ -294,9 +282,9 @@ export function ChatbotConfig() {
                         onChange={e => updateModel('verbosity', e.target.value)}
                         className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                       >
-                        <option value="low">Low — concise, punchy replies (recommended for chat)</option>
-                        <option value="medium">Medium — balanced, the API default</option>
-                        <option value="high">High — thorough multi-paragraph answers</option>
+                        <option value="low">{t('chatbot_config.model.verbosity_low', 'Low — concise, punchy replies (recommended for chat)')}</option>
+                        <option value="medium">{t('chatbot_config.model.verbosity_medium', 'Medium — balanced, the API default')}</option>
+                        <option value="high">{t('chatbot_config.model.verbosity_high', 'High — thorough multi-paragraph answers')}</option>
                       </select>
                     </div>
                   )}
@@ -305,8 +293,8 @@ export function ChatbotConfig() {
                   {supportsReasoning && (
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <label className="text-sm text-t-secondary">Reasoning Effort</label>
-                        <span title="Controls how much GPT-5.x 'thinks' before answering. Higher effort = slower but deeper. For a fast sales chatbot, 'low' is ideal. Temperature is ignored unless set to 'none'.">
+                        <label className="text-sm text-t-secondary">{t('chatbot_config.model.reasoning', 'Reasoning Effort')}</label>
+                        <span title={t('chatbot_config.model.reasoning_help', "Controls how much GPT-5.x 'thinks' before answering. Higher effort = slower but deeper. For a fast sales chatbot, 'low' is ideal. Temperature is ignored unless set to 'none'.")}>
                           <Info size={11} className="text-t-secondary cursor-help" />
                         </span>
                       </div>
@@ -315,22 +303,22 @@ export function ChatbotConfig() {
                         onChange={e => updateModel('reasoning_effort', e.target.value)}
                         className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                       >
-                        <option value="none">None — temperature active, fastest (like classic GPT)</option>
-                        <option value="low">Low — light reasoning, fast responses ★ recommended for chat</option>
-                        <option value="medium">Medium — balanced depth and speed</option>
-                        <option value="high">High — deep reasoning, slower responses</option>
-                        <option value="xhigh">xHigh — maximum reasoning, slowest (for complex analysis)</option>
+                        <option value="none">{t('chatbot_config.model.reasoning_none', 'None — temperature active, fastest (like classic GPT)')}</option>
+                        <option value="low">{t('chatbot_config.model.reasoning_low', 'Low — light reasoning, fast responses ★ recommended for chat')}</option>
+                        <option value="medium">{t('chatbot_config.model.reasoning_medium', 'Medium — balanced depth and speed')}</option>
+                        <option value="high">{t('chatbot_config.model.reasoning_high', 'High — deep reasoning, slower responses')}</option>
+                        <option value="xhigh">{t('chatbot_config.model.reasoning_xhigh', 'xHigh — maximum reasoning, slowest (for complex analysis)')}</option>
                       </select>
                       {(mForm.reasoning_effort ?? 'low') !== 'none' && (
                         <p className="text-xs text-amber-400 mt-1">
-                          Temperature and top_p are ignored when reasoning effort is active (none disables it).
+                          {t('chatbot_config.model.reasoning_warning', 'Temperature and top_p are ignored when reasoning effort is active (none disables it).')}
                         </p>
                       )}
                     </div>
                   )}
                   <p className="text-xs text-t-secondary">
-                    For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.
-                    {supportsReasoning && ' Reasoning models ignore temperature unless effort = none.'}
+                    {t('chatbot_config.model.luxury_hint', 'For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.')}
+                    {supportsReasoning && t('chatbot_config.model.reasoning_temp_hint', ' Reasoning models ignore temperature unless effort = none.')}
                   </p>
                 </div>
               )}
@@ -339,60 +327,60 @@ export function ChatbotConfig() {
 
           {/* Identity Section */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">Assistant Identity</h2>
+            <h2 className="text-lg font-semibold text-white">{t('chatbot_config.identity.section', 'Assistant Identity')}</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Assistant Name</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.identity.assistant_name', 'Assistant Name')}</label>
                 <input
                   type="text"
                   value={bForm.assistant_name || ''}
                   onChange={e => updateBehavior('assistant_name', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Hotel Assistant"
+                  placeholder={t('chatbot_config.identity.assistant_name_placeholder', 'Hotel Assistant')}
                 />
               </div>
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Language</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.identity.language', 'Language')}</label>
                 <select
                   value={bForm.language || 'en'}
                   onChange={e => updateBehavior('language', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
-                  {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  {LANGUAGES.map(lang => <option key={lang} value={lang}>{t(`chatbot_config.languages.${lang}`, lang)}</option>)}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Identity / Persona</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.identity.identity', 'Identity / Persona')}</label>
               <textarea
                 value={bForm.identity || ''}
                 onChange={e => updateBehavior('identity', e.target.value)}
                 rows={5}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="You are a luxury hotel concierge AI assistant with deep knowledge of hospitality..."
+                placeholder={t('chatbot_config.identity.identity_placeholder', 'You are a luxury hotel concierge AI assistant with deep knowledge of hospitality...')}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Goal</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.identity.goal', 'Goal')}</label>
               <textarea
                 value={bForm.goal || ''}
                 onChange={e => updateBehavior('goal', e.target.value)}
                 rows={5}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="Help guests with loyalty program questions, recommend experiences, and increase engagement..."
+                placeholder={t('chatbot_config.identity.goal_placeholder', 'Help guests with loyalty program questions, recommend experiences, and increase engagement...')}
               />
             </div>
           </div>
 
           {/* Personality Section */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">Personality & Style</h2>
+            <h2 className="text-lg font-semibold text-white">{t('chatbot_config.personality.section', 'Personality & Style')}</h2>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-2">Sales Style</label>
+              <label className="block text-sm text-t-secondary mb-2">{t('chatbot_config.personality.sales_style', 'Sales Style')}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {SALES_STYLES.map(s => (
                   <button
@@ -404,8 +392,8 @@ export function ChatbotConfig() {
                         : 'border-dark-border hover:border-dark-border2'
                     }`}
                   >
-                    <div className="text-sm font-medium text-white">{s.label}</div>
-                    <div className="text-xs text-t-secondary mt-1">{s.desc}</div>
+                    <div className="text-sm font-medium text-white">{t(`chatbot_config.sales_styles.${s.value}`, s.label)}</div>
+                    <div className="text-xs text-t-secondary mt-1">{t(`chatbot_config.sales_styles.${s.value}_desc`, s.desc)}</div>
                   </button>
                 ))}
               </div>
@@ -413,17 +401,17 @@ export function ChatbotConfig() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Tone</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.personality.tone', 'Tone')}</label>
                 <select
                   value={bForm.tone || 'professional'}
                   onChange={e => updateBehavior('tone', e.target.value)}
                   className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                 >
-                  {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {TONES.map(tone => <option key={tone.value} value={tone.value}>{t(`chatbot_config.tones.${tone.value}`, tone.label)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-t-secondary mb-1">Reply Length</label>
+                <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.personality.reply_length', 'Reply Length')}</label>
                 <div className="flex gap-2">
                   {REPLY_LENGTHS.map(r => (
                     <button
@@ -435,7 +423,7 @@ export function ChatbotConfig() {
                           : 'border-dark-border text-t-secondary hover:border-dark-border2'
                       }`}
                     >
-                      {r.label}
+                      {t(`chatbot_config.reply_lengths.${r.value}`, r.label)}
                     </button>
                   ))}
                 </div>
@@ -445,8 +433,8 @@ export function ChatbotConfig() {
 
           {/* Rules Section */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">Core Rules</h2>
-            <p className="text-sm text-t-secondary">Rules the assistant must always follow</p>
+            <h2 className="text-lg font-semibold text-white">{t('chatbot_config.rules.section', 'Core Rules')}</h2>
+            <p className="text-sm text-t-secondary">{t('chatbot_config.rules.subtitle', 'Rules the assistant must always follow')}</p>
 
             <div className="space-y-2">
               {(bForm.core_rules || []).map((rule: string, i: number) => (
@@ -466,7 +454,7 @@ export function ChatbotConfig() {
                 onChange={e => setNewRule(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addRule()}
                 className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="Add a rule..."
+                placeholder={t('chatbot_config.rules.placeholder', 'Add a rule...')}
               />
               <button
                 onClick={addRule}
@@ -479,38 +467,38 @@ export function ChatbotConfig() {
 
           {/* Escalation & Fallback */}
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">Escalation & Fallback</h2>
+            <h2 className="text-lg font-semibold text-white">{t('chatbot_config.escalation.section', 'Escalation & Fallback')}</h2>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Escalation Policy</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.escalation.policy', 'Escalation Policy')}</label>
               <textarea
                 value={bForm.escalation_policy || ''}
                 onChange={e => updateBehavior('escalation_policy', e.target.value)}
                 rows={2}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="If the guest asks to speak to a human, politely offer to connect them with the front desk..."
+                placeholder={t('chatbot_config.escalation.policy_placeholder', 'If the guest asks to speak to a human, politely offer to connect them with the front desk...')}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Fallback Message</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.escalation.fallback', 'Fallback Message')}</label>
               <input
                 type="text"
                 value={bForm.fallback_message || ''}
                 onChange={e => updateBehavior('fallback_message', e.target.value)}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="I'm sorry, I couldn't process your request. Please contact our front desk for assistance."
+                placeholder={t('chatbot_config.escalation.fallback_placeholder', "I'm sorry, I couldn't process your request. Please contact our front desk for assistance.")}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-t-secondary mb-1">Custom Instructions</label>
+              <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.escalation.custom', 'Custom Instructions')}</label>
               <textarea
                 value={bForm.custom_instructions || ''}
                 onChange={e => updateBehavior('custom_instructions', e.target.value)}
                 rows={6}
                 className="w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="Additional instructions for the AI assistant..."
+                placeholder={t('chatbot_config.escalation.custom_placeholder', 'Additional instructions for the AI assistant...')}
               />
             </div>
           </div>
@@ -523,7 +511,7 @@ export function ChatbotConfig() {
               className="flex items-center gap-2 bg-primary-600 text-white px-6 py-2.5 rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
             >
               <Save size={16} />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
+              {isSaving ? t('chatbot_config.saving', 'Saving...') : t('chatbot_config.save_all', 'Save Configuration')}
             </button>
           </div>
         </div>

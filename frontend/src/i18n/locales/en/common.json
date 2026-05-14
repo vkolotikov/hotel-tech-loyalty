@@ -1255,6 +1255,141 @@
     }
   },
 
+  "chatbot_setup": {
+    "title": "Chatbot Setup",
+    "subtitle": "All chatbot configuration in one place",
+    "loading": "Loading…",
+    "tabs": {
+      "config": "Behavior & Model",
+      "knowledge": "Knowledge Base",
+      "widget": "Widget",
+      "canned": "Canned Replies",
+      "popups": "Popup Rules",
+      "training": "AI Training",
+      "test": "Test the AI",
+      "analytics": "Analytics"
+    }
+  },
+
+  "chatbot_config": {
+    "title": "Chatbot Configuration",
+    "subtitle": "Configure how your AI assistant behaves and responds to guests",
+    "brand_required": "the chatbot configuration",
+    "loading": "Loading configuration…",
+    "save_all": "Save Configuration",
+    "saving": "Saving…",
+    "toasts": {
+      "saved": "Configuration saved",
+      "save_failed": "Save failed"
+    },
+    "model": {
+      "section": "AI Model",
+      "recommended_hint": "★ = recommended for luxury hospitality",
+      "provider": "Provider",
+      "model": "Model",
+      "verifying": "Verifying…",
+      "available": "Available on your account",
+      "not_available": "Not available — {{reason}}",
+      "check_api_key": "check API key",
+      "verify_tooltip": "Verify the chosen model is enabled on your API key",
+      "probe_failed": "Probe failed",
+      "advanced_toggle": "Advanced Settings",
+      "temperature": "Temperature",
+      "temperature_help": "Controls creativity. Lower = more factual, higher = more creative. 0.7 is recommended for hospitality.",
+      "temperature_precise": "Precise (0.0)",
+      "temperature_creative": "Creative (1.0)",
+      "max_tokens": "Max Response Tokens",
+      "max_tokens_help": "Maximum length of AI response. 1024 allows ~750 words — good for detailed hotel info. Increase for very long answers.",
+      "max_tokens_short": "Short (200)",
+      "max_tokens_detailed": "Detailed (4096)",
+      "verbosity": "Response Verbosity",
+      "verbosity_help": "Controls how concise vs detailed responses are, separately from token budget. Use low for chatbot-style brevity; medium is the doc default; high for thorough explanations.",
+      "verbosity_low": "Low — concise, punchy replies (recommended for chat)",
+      "verbosity_medium": "Medium — balanced, the API default",
+      "verbosity_high": "High — thorough multi-paragraph answers",
+      "reasoning": "Reasoning Effort",
+      "reasoning_help": "Controls how much GPT-5.x 'thinks' before answering. Higher effort = slower but deeper. For a fast sales chatbot, 'low' is ideal. Temperature is ignored unless set to 'none'.",
+      "reasoning_none": "None — temperature active, fastest (like classic GPT)",
+      "reasoning_low": "Low — light reasoning, fast responses ★ recommended for chat",
+      "reasoning_medium": "Medium — balanced depth and speed",
+      "reasoning_high": "High — deep reasoning, slower responses",
+      "reasoning_xhigh": "xHigh — maximum reasoning, slowest (for complex analysis)",
+      "reasoning_warning": "Temperature and top_p are ignored when reasoning effort is active (none disables it).",
+      "luxury_hint": "For luxury hospitality: temperature 0.7, tokens 1024–2048. Higher tokens for room descriptions & detailed policy explanations.",
+      "reasoning_temp_hint": " Reasoning models ignore temperature unless effort = none."
+    },
+    "identity": {
+      "section": "Assistant Identity",
+      "assistant_name": "Assistant Name",
+      "assistant_name_placeholder": "Hotel Assistant",
+      "language": "Language",
+      "identity": "Identity / Persona",
+      "identity_placeholder": "You are a luxury hotel concierge AI assistant with deep knowledge of hospitality…",
+      "goal": "Goal",
+      "goal_placeholder": "Help guests with loyalty program questions, recommend experiences, and increase engagement…"
+    },
+    "personality": {
+      "section": "Personality & Style",
+      "sales_style": "Sales Style",
+      "tone": "Tone",
+      "reply_length": "Reply Length"
+    },
+    "sales_styles": {
+      "consultative": "Consultative",
+      "consultative_desc": "Ask questions, understand needs, then recommend",
+      "aggressive": "Aggressive",
+      "aggressive_desc": "Proactively push offers and upsells",
+      "passive": "Passive",
+      "passive_desc": "Only offer when explicitly asked",
+      "educational": "Educational",
+      "educational_desc": "Inform and educate, let guest decide"
+    },
+    "tones": {
+      "professional": "Professional",
+      "friendly": "Friendly",
+      "casual": "Casual",
+      "formal": "Formal"
+    },
+    "reply_lengths": {
+      "concise": "Concise",
+      "moderate": "Moderate",
+      "detailed": "Detailed"
+    },
+    "languages": {
+      "auto": "Auto-detect (match customer language)",
+      "en": "English",
+      "es": "Spanish",
+      "fr": "French",
+      "de": "German",
+      "it": "Italian",
+      "pt": "Portuguese",
+      "nl": "Dutch",
+      "ru": "Russian",
+      "pl": "Polish",
+      "tr": "Turkish",
+      "ar": "Arabic",
+      "zh": "Chinese",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "hi": "Hindi",
+      "uk": "Ukrainian"
+    },
+    "rules": {
+      "section": "Core Rules",
+      "subtitle": "Rules the assistant must always follow",
+      "placeholder": "Add a rule…"
+    },
+    "escalation": {
+      "section": "Escalation & Fallback",
+      "policy": "Escalation Policy",
+      "policy_placeholder": "If the guest asks to speak to a human, politely offer to connect them with the front desk…",
+      "fallback": "Fallback Message",
+      "fallback_placeholder": "I'm sorry, I couldn't process your request. Please contact our front desk for assistance.",
+      "custom": "Custom Instructions",
+      "custom_placeholder": "Additional instructions for the AI assistant…"
+    }
+  },
+
   "reservations": {
     "title": "Reservations",
     "total_count": "{{count}} total",

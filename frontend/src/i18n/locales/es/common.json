@@ -1255,6 +1255,141 @@
     }
   },
 
+  "chatbot_setup": {
+    "title": "Configuración del chatbot",
+    "subtitle": "Toda la configuración del chatbot en un solo lugar",
+    "loading": "Cargando…",
+    "tabs": {
+      "config": "Comportamiento y modelo",
+      "knowledge": "Base de conocimiento",
+      "widget": "Widget",
+      "canned": "Respuestas predefinidas",
+      "popups": "Reglas de pop-up",
+      "training": "Entrenamiento IA",
+      "test": "Probar la IA",
+      "analytics": "Analítica"
+    }
+  },
+
+  "chatbot_config": {
+    "title": "Configuración del chatbot",
+    "subtitle": "Configura cómo se comporta y responde tu asistente IA a los huéspedes",
+    "brand_required": "la configuración del chatbot",
+    "loading": "Cargando configuración…",
+    "save_all": "Guardar configuración",
+    "saving": "Guardando…",
+    "toasts": {
+      "saved": "Configuración guardada",
+      "save_failed": "Error al guardar"
+    },
+    "model": {
+      "section": "Modelo IA",
+      "recommended_hint": "★ = recomendado para hospitalidad de lujo",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "verifying": "Verificando…",
+      "available": "Disponible en tu cuenta",
+      "not_available": "No disponible — {{reason}}",
+      "check_api_key": "comprueba la clave API",
+      "verify_tooltip": "Verificar que el modelo seleccionado esté habilitado con tu clave API",
+      "probe_failed": "Verificación fallida",
+      "advanced_toggle": "Ajustes avanzados",
+      "temperature": "Temperatura",
+      "temperature_help": "Controla la creatividad. Más bajo = más factual, más alto = más creativo. 0,7 se recomienda para hostelería.",
+      "temperature_precise": "Preciso (0,0)",
+      "temperature_creative": "Creativo (1,0)",
+      "max_tokens": "Tokens máx. de respuesta",
+      "max_tokens_help": "Longitud máxima de respuesta. 1024 ≈ 750 palabras — bien para información hotelera detallada. Aumenta para respuestas muy largas.",
+      "max_tokens_short": "Corto (200)",
+      "max_tokens_detailed": "Detallado (4096)",
+      "verbosity": "Verbosidad de respuesta",
+      "verbosity_help": "Controla la concisión o detalle de respuestas, independiente del presupuesto de tokens. Low para brevedad estilo chat; medium por defecto; high para explicaciones completas.",
+      "verbosity_low": "Low — respuestas concisas y contundentes (recomendado para chat)",
+      "verbosity_medium": "Medium — equilibrado, predeterminado de la API",
+      "verbosity_high": "High — respuestas detalladas en varios párrafos",
+      "reasoning": "Esfuerzo de razonamiento",
+      "reasoning_help": "Controla cuánto 'piensa' GPT-5.x antes de responder. Más esfuerzo = más lento pero más profundo. Para un chatbot de ventas rápido, 'low' es ideal. La temperatura se ignora salvo si se establece en 'none'.",
+      "reasoning_none": "None — temperatura activa, lo más rápido (como GPT clásico)",
+      "reasoning_low": "Low — razonamiento ligero, respuestas rápidas ★ recomendado para chat",
+      "reasoning_medium": "Medium — equilibrio entre profundidad y velocidad",
+      "reasoning_high": "High — razonamiento profundo, más lento",
+      "reasoning_xhigh": "xHigh — razonamiento máximo, lo más lento (análisis complejos)",
+      "reasoning_warning": "Temperatura y top_p se ignoran cuando el razonamiento está activo (none lo desactiva).",
+      "luxury_hint": "Para hospitalidad de lujo: temperatura 0,7, tokens 1024–2048. Más tokens para descripciones de habitaciones y políticas detalladas.",
+      "reasoning_temp_hint": " Los modelos de razonamiento ignoran la temperatura salvo si effort = none."
+    },
+    "identity": {
+      "section": "Identidad del asistente",
+      "assistant_name": "Nombre del asistente",
+      "assistant_name_placeholder": "Hotel Assistant",
+      "language": "Idioma",
+      "identity": "Identidad / Persona",
+      "identity_placeholder": "Eres un asistente IA conserje de un hotel de lujo con profundo conocimiento de la hospitalidad…",
+      "goal": "Objetivo",
+      "goal_placeholder": "Ayudar a los huéspedes con preguntas del programa de fidelización, recomendar experiencias y aumentar el compromiso…"
+    },
+    "personality": {
+      "section": "Personalidad y estilo",
+      "sales_style": "Estilo de venta",
+      "tone": "Tono",
+      "reply_length": "Longitud de respuesta"
+    },
+    "sales_styles": {
+      "consultative": "Consultivo",
+      "consultative_desc": "Hacer preguntas, entender necesidades y luego recomendar",
+      "aggressive": "Agresivo",
+      "aggressive_desc": "Promover activamente ofertas y ventas adicionales",
+      "passive": "Pasivo",
+      "passive_desc": "Ofrecer solo cuando se solicita explícitamente",
+      "educational": "Educativo",
+      "educational_desc": "Informar y educar, dejar que el huésped decida"
+    },
+    "tones": {
+      "professional": "Profesional",
+      "friendly": "Amistoso",
+      "casual": "Informal",
+      "formal": "Formal"
+    },
+    "reply_lengths": {
+      "concise": "Conciso",
+      "moderate": "Moderado",
+      "detailed": "Detallado"
+    },
+    "languages": {
+      "auto": "Detección automática (idioma del cliente)",
+      "en": "Inglés",
+      "es": "Español",
+      "fr": "Francés",
+      "de": "Alemán",
+      "it": "Italiano",
+      "pt": "Portugués",
+      "nl": "Neerlandés",
+      "ru": "Ruso",
+      "pl": "Polaco",
+      "tr": "Turco",
+      "ar": "Árabe",
+      "zh": "Chino",
+      "ja": "Japonés",
+      "ko": "Coreano",
+      "hi": "Hindi",
+      "uk": "Ucraniano"
+    },
+    "rules": {
+      "section": "Reglas fundamentales",
+      "subtitle": "Reglas que el asistente debe seguir siempre",
+      "placeholder": "Añadir una regla…"
+    },
+    "escalation": {
+      "section": "Escalado y respaldo",
+      "policy": "Política de escalado",
+      "policy_placeholder": "Si el huésped pide hablar con un humano, ofrece conectarle con la recepción…",
+      "fallback": "Mensaje de respaldo",
+      "fallback_placeholder": "Lo siento, no pude procesar tu solicitud. Por favor contacta con nuestra recepción.",
+      "custom": "Instrucciones personalizadas",
+      "custom_placeholder": "Instrucciones adicionales para el asistente IA…"
+    }
+  },
+
   "reservations": {
     "title": "Reservas",
     "total_count": "{{count}} en total",

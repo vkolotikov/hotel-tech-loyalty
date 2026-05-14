@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate, BarChart2 } from 'lucide-react'
 
 const ChatbotConfig     = lazy(() => import('./ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
@@ -12,24 +13,25 @@ const ChatbotAnalytics  = lazy(() => import('./ChatbotAnalytics').then(m => ({ d
 
 type Tab = 'config' | 'knowledge' | 'widget' | 'canned' | 'popups' | 'training' | 'test' | 'analytics'
 
-const TABS: { key: Tab; label: string; icon: any }[] = [
-  { key: 'config',    label: 'Behavior & Model', icon: Bot },
-  { key: 'knowledge', label: 'Knowledge Base',   icon: BookOpen },
-  { key: 'widget',    label: 'Widget',           icon: LayoutTemplate },
-  { key: 'canned',    label: 'Canned Replies',   icon: MessageSquareReply },
-  { key: 'popups',    label: 'Popup Rules',      icon: Zap },
-  { key: 'training',  label: 'AI Training',      icon: GraduationCap },
-  { key: 'test',      label: 'Test the AI',      icon: MessageCircleQuestion },
-  { key: 'analytics', label: 'Analytics',        icon: BarChart2 },
+const TABS: { key: Tab; labelKey: string; fallback: string; icon: any }[] = [
+  { key: 'config',    labelKey: 'chatbot_setup.tabs.config',    fallback: 'Behavior & Model', icon: Bot },
+  { key: 'knowledge', labelKey: 'chatbot_setup.tabs.knowledge', fallback: 'Knowledge Base',   icon: BookOpen },
+  { key: 'widget',    labelKey: 'chatbot_setup.tabs.widget',    fallback: 'Widget',           icon: LayoutTemplate },
+  { key: 'canned',    labelKey: 'chatbot_setup.tabs.canned',    fallback: 'Canned Replies',   icon: MessageSquareReply },
+  { key: 'popups',    labelKey: 'chatbot_setup.tabs.popups',    fallback: 'Popup Rules',      icon: Zap },
+  { key: 'training',  labelKey: 'chatbot_setup.tabs.training',  fallback: 'AI Training',      icon: GraduationCap },
+  { key: 'test',      labelKey: 'chatbot_setup.tabs.test',      fallback: 'Test the AI',      icon: MessageCircleQuestion },
+  { key: 'analytics', labelKey: 'chatbot_setup.tabs.analytics', fallback: 'Analytics',        icon: BarChart2 },
 ]
 
 // Persist last tab so the page restores its previous view across navigations.
 const STORAGE_KEY = 'loyalty-chatbot-setup-tab'
 
 export function ChatbotSetup() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>(() => {
     const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) as Tab | null
-    return saved && TABS.some(t => t.key === saved) ? saved : 'config'
+    return saved && TABS.some(it => it.key === saved) ? saved : 'config'
   })
 
   const switchTab = (next: Tab) => {
@@ -40,24 +42,24 @@ export function ChatbotSetup() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Chatbot Setup</h1>
-        <p className="text-sm text-t-secondary mt-0.5">All chatbot configuration in one place</p>
+        <h1 className="text-2xl font-bold text-white">{t('chatbot_setup.title', 'Chatbot Setup')}</h1>
+        <p className="text-sm text-t-secondary mt-0.5">{t('chatbot_setup.subtitle', 'All chatbot configuration in one place')}</p>
       </div>
 
       <div className="flex gap-1 border-b border-dark-border overflow-x-auto">
-        {TABS.map(t => {
-          const Icon = t.icon
-          const active = tab === t.key
+        {TABS.map(tabDef => {
+          const Icon = tabDef.icon
+          const active = tab === tabDef.key
           return (
-            <button key={t.key} onClick={() => switchTab(t.key)}
+            <button key={tabDef.key} onClick={() => switchTab(tabDef.key)}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${active ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'}`}>
-              <Icon size={14} /> {t.label}
+              <Icon size={14} /> {t(tabDef.labelKey, tabDef.fallback)}
             </button>
           )
         })}
       </div>
 
-      <Suspense fallback={<div className="text-center text-[#636366] py-12">Loading...</div>}>
+      <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('chatbot_setup.loading', 'Loading...')}</div>}>
         {tab === 'config'    && <ChatbotConfig />}
         {tab === 'knowledge' && <KnowledgeBase />}
         {tab === 'widget'    && <ChatbotWidget />}

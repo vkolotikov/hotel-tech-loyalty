@@ -1255,6 +1255,141 @@
     }
   },
 
+  "chatbot_setup": {
+    "title": "Chatbot-Einrichtung",
+    "subtitle": "Gesamte Chatbot-Konfiguration an einem Ort",
+    "loading": "Lädt…",
+    "tabs": {
+      "config": "Verhalten & Modell",
+      "knowledge": "Wissensdatenbank",
+      "widget": "Widget",
+      "canned": "Vorgefertigte Antworten",
+      "popups": "Popup-Regeln",
+      "training": "KI-Training",
+      "test": "KI testen",
+      "analytics": "Analytik"
+    }
+  },
+
+  "chatbot_config": {
+    "title": "Chatbot-Konfiguration",
+    "subtitle": "Konfigurieren Sie, wie sich Ihr KI-Assistent verhält und auf Gäste reagiert",
+    "brand_required": "die Chatbot-Konfiguration",
+    "loading": "Konfiguration wird geladen…",
+    "save_all": "Konfiguration speichern",
+    "saving": "Speichert…",
+    "toasts": {
+      "saved": "Konfiguration gespeichert",
+      "save_failed": "Speichern fehlgeschlagen"
+    },
+    "model": {
+      "section": "KI-Modell",
+      "recommended_hint": "★ = empfohlen für Luxus-Hospitality",
+      "provider": "Anbieter",
+      "model": "Modell",
+      "verifying": "Prüfe…",
+      "available": "In Ihrem Konto verfügbar",
+      "not_available": "Nicht verfügbar — {{reason}}",
+      "check_api_key": "API-Schlüssel prüfen",
+      "verify_tooltip": "Prüfen, ob das gewählte Modell mit Ihrem API-Schlüssel verfügbar ist",
+      "probe_failed": "Prüfung fehlgeschlagen",
+      "advanced_toggle": "Erweiterte Einstellungen",
+      "temperature": "Temperatur",
+      "temperature_help": "Steuert Kreativität. Niedriger = faktischer, höher = kreativer. 0,7 wird für Gastgewerbe empfohlen.",
+      "temperature_precise": "Präzise (0,0)",
+      "temperature_creative": "Kreativ (1,0)",
+      "max_tokens": "Max. Antwort-Tokens",
+      "max_tokens_help": "Maximale Antwortlänge. 1024 ≈ 750 Wörter — gut für ausführliche Hotelinfos. Für sehr lange Antworten erhöhen.",
+      "max_tokens_short": "Kurz (200)",
+      "max_tokens_detailed": "Ausführlich (4096)",
+      "verbosity": "Antwort-Ausführlichkeit",
+      "verbosity_help": "Steuert Kürze vs. Detailtiefe — unabhängig vom Token-Budget. Low für Chat-Kürze; medium ist der API-Standard; high für ausführliche Antworten.",
+      "verbosity_low": "Low — knappe, prägnante Antworten (empfohlen für Chat)",
+      "verbosity_medium": "Medium — ausgewogen, API-Standard",
+      "verbosity_high": "High — ausführliche Mehrabsatz-Antworten",
+      "reasoning": "Argumentationstiefe",
+      "reasoning_help": "Steuert, wie viel GPT-5.x vor der Antwort 'nachdenkt'. Höher = langsamer aber tiefer. Für schnellen Verkaufs-Chatbot ist 'low' ideal. Temperatur wird ignoriert, außer 'none' ist gesetzt.",
+      "reasoning_none": "None — Temperatur aktiv, am schnellsten (wie klassisches GPT)",
+      "reasoning_low": "Low — leichte Argumentation, schnelle Antworten ★ empfohlen für Chat",
+      "reasoning_medium": "Medium — ausgewogen zwischen Tiefe und Geschwindigkeit",
+      "reasoning_high": "High — tiefe Argumentation, langsamer",
+      "reasoning_xhigh": "xHigh — maximale Argumentation, am langsamsten (für komplexe Analysen)",
+      "reasoning_warning": "Temperatur und top_p werden ignoriert, wenn Argumentation aktiv ist (none deaktiviert sie).",
+      "luxury_hint": "Für Luxus-Hospitality: Temperatur 0,7, Tokens 1024–2048. Mehr Tokens für Zimmerbeschreibungen und Richtlinien.",
+      "reasoning_temp_hint": " Argumentationsmodelle ignorieren Temperatur, außer bei effort = none."
+    },
+    "identity": {
+      "section": "Assistenten-Identität",
+      "assistant_name": "Assistentenname",
+      "assistant_name_placeholder": "Hotel Assistant",
+      "language": "Sprache",
+      "identity": "Identität / Persona",
+      "identity_placeholder": "Sie sind ein KI-Concierge eines Luxushotels mit fundiertem Wissen im Gastgewerbe…",
+      "goal": "Ziel",
+      "goal_placeholder": "Gästen bei Fragen zum Treueprogramm helfen, Erlebnisse empfehlen und Engagement steigern…"
+    },
+    "personality": {
+      "section": "Persönlichkeit & Stil",
+      "sales_style": "Verkaufsstil",
+      "tone": "Tonfall",
+      "reply_length": "Antwortlänge"
+    },
+    "sales_styles": {
+      "consultative": "Beratend",
+      "consultative_desc": "Fragen stellen, Bedürfnisse verstehen, dann empfehlen",
+      "aggressive": "Aggressiv",
+      "aggressive_desc": "Angebote und Upsells aktiv pushen",
+      "passive": "Passiv",
+      "passive_desc": "Nur bei expliziter Nachfrage anbieten",
+      "educational": "Bildend",
+      "educational_desc": "Informieren und aufklären, Gast entscheidet"
+    },
+    "tones": {
+      "professional": "Professionell",
+      "friendly": "Freundlich",
+      "casual": "Locker",
+      "formal": "Förmlich"
+    },
+    "reply_lengths": {
+      "concise": "Knapp",
+      "moderate": "Mittel",
+      "detailed": "Ausführlich"
+    },
+    "languages": {
+      "auto": "Automatisch (an Kundensprache anpassen)",
+      "en": "Englisch",
+      "es": "Spanisch",
+      "fr": "Französisch",
+      "de": "Deutsch",
+      "it": "Italienisch",
+      "pt": "Portugiesisch",
+      "nl": "Niederländisch",
+      "ru": "Russisch",
+      "pl": "Polnisch",
+      "tr": "Türkisch",
+      "ar": "Arabisch",
+      "zh": "Chinesisch",
+      "ja": "Japanisch",
+      "ko": "Koreanisch",
+      "hi": "Hindi",
+      "uk": "Ukrainisch"
+    },
+    "rules": {
+      "section": "Grundregeln",
+      "subtitle": "Regeln, die der Assistent immer befolgen muss",
+      "placeholder": "Regel hinzufügen…"
+    },
+    "escalation": {
+      "section": "Eskalation & Fallback",
+      "policy": "Eskalationsrichtlinie",
+      "policy_placeholder": "Wenn der Gast einen Menschen sprechen möchte, höflich anbieten, ihn mit der Rezeption zu verbinden…",
+      "fallback": "Fallback-Nachricht",
+      "fallback_placeholder": "Es tut mir leid, ich konnte Ihre Anfrage nicht bearbeiten. Bitte wenden Sie sich an unsere Rezeption.",
+      "custom": "Eigene Anweisungen",
+      "custom_placeholder": "Zusätzliche Anweisungen für den KI-Assistenten…"
+    }
+  },
+
   "reservations": {
     "title": "Reservierungen",
     "total_count": "{{count}} insgesamt",
