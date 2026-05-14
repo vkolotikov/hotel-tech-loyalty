@@ -225,6 +225,65 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "reports": {
+    "title": "Rapports commerciaux",
+    "subtitle": "Entonnoir, prévisions, raisons de perte et tableau des commerciaux.",
+    "loading": "Chargement…",
+    "funnel": {
+      "title": "Entonnoir du pipeline",
+      "subtitle": "Abandon par étape, {{months}} derniers mois",
+      "empty": "Aucun deal sur cette période.",
+      "won_deals": "Deals gagnés",
+      "lost_deals": "Deals perdus",
+      "win_rate": "Taux de gain",
+      "avg_days_to_close": "Jours moyens jusqu'à clôture",
+      "from_prev_overall": "{{from_prev}}% vs précédente · {{overall}}% au total"
+    },
+    "forecast": {
+      "title": "Prévision de revenus",
+      "subtitle": "Pipeline ouvert pondéré par la probabilité de gain",
+      "empty": "Aucun deal ouvert.",
+      "expected_weighted": "Attendu (pondéré)",
+      "gross_pipeline": "Pipeline brut",
+      "gross": "Brut",
+      "expected": "Attendu"
+    },
+    "lost": {
+      "title": "Raisons de perte",
+      "subtitle": "Pourquoi {{count}} deals ont échappé",
+      "empty": "Aucun deal perdu — bravo.",
+      "total_lost": "Total perdu",
+      "lost_value": "Valeur perdue"
+    },
+    "sources": {
+      "title": "Attribution par source",
+      "subtitle": "D'où viennent les deals et quel canal convertit",
+      "empty": "Pas de données pour l'instant.",
+      "table": {
+        "source": "Source",
+        "total": "Total",
+        "won": "Gagnés",
+        "lost": "Perdus",
+        "win_rate": "Taux de gain",
+        "won_value": "Valeur gagnée"
+      }
+    },
+    "owner": {
+      "title": "Classement des commerciaux",
+      "subtitle": "Activité par commercial, {{days}} derniers jours",
+      "empty": "Aucune activité enregistrée.",
+      "open_pill": "{{count}} ouverts",
+      "lost_pill": "{{count}} perdus"
+    },
+    "companies": {
+      "title": "Top entreprises",
+      "subtitle": "Par revenu de réservations confirmées",
+      "empty": "Pas encore de revenu B2B.",
+      "credit_used": "Crédit utilisé {{percent}}%",
+      "open_suffix": "ouverts"
+    }
+  },
+
   "tasks": {
     "title": "Tâches",
     "subtitle": {

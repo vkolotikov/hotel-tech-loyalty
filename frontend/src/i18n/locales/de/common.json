@@ -225,6 +225,65 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "reports": {
+    "title": "Vertriebsberichte",
+    "subtitle": "Funnel, Prognose, Verlust-Aufschlüsselung und Mitarbeiter-Scoreboard.",
+    "loading": "Wird geladen…",
+    "funnel": {
+      "title": "Pipeline-Funnel",
+      "subtitle": "Stufen-Abfall, letzte {{months}} Monate",
+      "empty": "Keine Deals in diesem Zeitraum.",
+      "won_deals": "Gewonnene Deals",
+      "lost_deals": "Verlorene Deals",
+      "win_rate": "Gewinnrate",
+      "avg_days_to_close": "Ø Tage bis Abschluss",
+      "from_prev_overall": "{{from_prev}}% von Vorstufe · {{overall}}% gesamt"
+    },
+    "forecast": {
+      "title": "Umsatzprognose",
+      "subtitle": "Offene Pipeline gewichtet nach Gewinnwahrscheinlichkeit",
+      "empty": "Keine offenen Deals.",
+      "expected_weighted": "Erwartet (gewichtet)",
+      "gross_pipeline": "Brutto-Pipeline",
+      "gross": "Brutto",
+      "expected": "Erwartet"
+    },
+    "lost": {
+      "title": "Verlustgründe",
+      "subtitle": "Warum {{count}} Deals verloren gingen",
+      "empty": "Keine verlorenen Deals — gut.",
+      "total_lost": "Verloren insgesamt",
+      "lost_value": "Verlustwert"
+    },
+    "sources": {
+      "title": "Quellen-Attribution",
+      "subtitle": "Woher die Deals kommen und welcher Kanal konvertiert",
+      "empty": "Noch keine Daten.",
+      "table": {
+        "source": "Quelle",
+        "total": "Gesamt",
+        "won": "Gewonnen",
+        "lost": "Verloren",
+        "win_rate": "Gewinnrate",
+        "won_value": "Gewonnener Wert"
+      }
+    },
+    "owner": {
+      "title": "Mitarbeiter-Scoreboard",
+      "subtitle": "Aktivität pro Mitarbeiter, letzte {{days}} Tage",
+      "empty": "Noch keine Aktivität erfasst.",
+      "open_pill": "{{count}} offen",
+      "lost_pill": "{{count}} verloren"
+    },
+    "companies": {
+      "title": "Top-Firmen",
+      "subtitle": "Nach bestätigtem Reservierungsumsatz",
+      "empty": "Noch kein Firmenumsatz.",
+      "credit_used": "Kreditlinie {{percent}}% genutzt",
+      "open_suffix": "offen"
+    }
+  },
+
   "tasks": {
     "title": "Aufgaben",
     "subtitle": {

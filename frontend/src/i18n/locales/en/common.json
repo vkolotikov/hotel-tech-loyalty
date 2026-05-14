@@ -225,6 +225,65 @@
     "no_activity": "No recent activity yet."
   },
 
+  "reports": {
+    "title": "Sales Reporting",
+    "subtitle": "Funnel, forecast, lost-reason breakdown, and per-rep scoreboard.",
+    "loading": "Loading…",
+    "funnel": {
+      "title": "Pipeline funnel",
+      "subtitle": "Stage drop-off, last {{months}} months",
+      "empty": "No deals in this window.",
+      "won_deals": "Won deals",
+      "lost_deals": "Lost deals",
+      "win_rate": "Win rate",
+      "avg_days_to_close": "Avg days to close",
+      "from_prev_overall": "{{from_prev}}% from prev · {{overall}}% overall"
+    },
+    "forecast": {
+      "title": "Revenue forecast",
+      "subtitle": "Open pipeline weighted by win probability",
+      "empty": "No open deals.",
+      "expected_weighted": "Expected (weighted)",
+      "gross_pipeline": "Gross open pipeline",
+      "gross": "Gross",
+      "expected": "Expected"
+    },
+    "lost": {
+      "title": "Lost reasons",
+      "subtitle": "Why {{count}} deals slipped away",
+      "empty": "No lost deals — nice.",
+      "total_lost": "Total lost",
+      "lost_value": "Lost value"
+    },
+    "sources": {
+      "title": "Source attribution",
+      "subtitle": "Where the deals come from and which channel converts",
+      "empty": "No data yet.",
+      "table": {
+        "source": "Source",
+        "total": "Total",
+        "won": "Won",
+        "lost": "Lost",
+        "win_rate": "Win rate",
+        "won_value": "Won value"
+      }
+    },
+    "owner": {
+      "title": "Owner scoreboard",
+      "subtitle": "Per-rep activity, last {{days}} days",
+      "empty": "No activity recorded yet.",
+      "open_pill": "{{count}} open",
+      "lost_pill": "{{count}} lost"
+    },
+    "companies": {
+      "title": "Top companies",
+      "subtitle": "By confirmed reservation revenue",
+      "empty": "No corporate revenue yet.",
+      "credit_used": "Credit {{percent}}% used",
+      "open_suffix": "open"
+    }
+  },
+
   "tasks": {
     "title": "Tasks",
     "subtitle": {

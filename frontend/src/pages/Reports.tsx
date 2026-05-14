@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -47,6 +48,7 @@ const STAGE_PALETTE = [
 const PIE_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#a855f7', '#94a3b8']
 
 export function Reports() {
+  const { t } = useTranslation()
   const [windowMonths, setWindowMonths] = useState(6)
   const [ownerDays, setOwnerDays] = useState(30)
 
@@ -54,9 +56,9 @@ export function Reports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Sales Reporting</h1>
+          <h1 className="text-2xl font-bold text-white">{t('reports.title', 'Sales Reporting')}</h1>
           <p className="text-sm text-t-secondary mt-0.5">
-            Funnel, forecast, lost-reason breakdown, and per-rep scoreboard.
+            {t('reports.subtitle', 'Funnel, forecast, lost-reason breakdown, and per-rep scoreboard.')}
           </p>
         </div>
         <div className="flex items-center gap-1.5 bg-dark-surface border border-dark-border rounded-lg p-0.5">
@@ -96,21 +98,24 @@ export function Reports() {
 /* ── 1. Funnel ──────────────────────────────────────────────── */
 
 function FunnelCard({ months }: { months: number }) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-funnel', months],
     queryFn: () => api.get('/v1/admin/analytics/inquiry-funnel', { params: { months } }).then(r => r.data),
   })
 
   return (
-    <Card icon={<Funnel size={14} className="text-accent" />} title="Pipeline funnel" subtitle={`Stage drop-off, last ${months} months`}>
-      {isLoading ? <Loading /> : !data?.stages?.length ? <Empty label="No deals in this window." /> : (
+    <Card icon={<Funnel size={14} className="text-accent" />}
+      title={t('reports.funnel.title', 'Pipeline funnel')}
+      subtitle={t('reports.funnel.subtitle', { months, defaultValue: 'Stage drop-off, last {{months}} months' })}>
+      {isLoading ? <Loading /> : !data?.stages?.length ? <Empty label={t('reports.funnel.empty', 'No deals in this window.')} /> : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <Stat label="Won deals" value={data.won} valueClass="text-emerald-400" />
-            <Stat label="Lost deals" value={data.lost} valueClass="text-red-400" />
-            <Stat label="Win rate" value={`${data.win_rate_pct}%`} valueClass="text-white" />
+            <Stat label={t('reports.funnel.won_deals', 'Won deals')} value={data.won} valueClass="text-emerald-400" />
+            <Stat label={t('reports.funnel.lost_deals', 'Lost deals')} value={data.lost} valueClass="text-red-400" />
+            <Stat label={t('reports.funnel.win_rate', 'Win rate')} value={`${data.win_rate_pct}%`} valueClass="text-white" />
             <Stat
-              label="Avg days to close"
+              label={t('reports.funnel.avg_days_to_close', 'Avg days to close')}
               value={data.avg_days_to_close ?? '—'}
               valueClass="text-white"
             />
@@ -137,7 +142,7 @@ function FunnelCard({ months }: { months: number }) {
                         <span className="text-[10px] text-white/70">€{Math.round(s.value).toLocaleString()}</span>
                       )}
                       <span className="ml-auto text-[10px] text-white/70 tabular-nums">
-                        {i === 0 ? '100%' : `${s.rate_from_prev}%`} from prev · {s.rate_from_start}% overall
+                        {t('reports.funnel.from_prev_overall', { from_prev: i === 0 ? 100 : s.rate_from_prev, overall: s.rate_from_start, defaultValue: '{{from_prev}}% from prev · {{overall}}% overall' })}
                       </span>
                     </div>
                   </div>
@@ -154,6 +159,7 @@ function FunnelCard({ months }: { months: number }) {
 /* ── 2. Forecast ────────────────────────────────────────────── */
 
 function ForecastCard({ months }: { months: number }) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-forecast', months],
     queryFn: () => api.get('/v1/admin/reporting/forecast', { params: { months } }).then(r => r.data),
@@ -162,19 +168,19 @@ function ForecastCard({ months }: { months: number }) {
   return (
     <Card
       icon={<TrendingUp size={14} className="text-emerald-400" />}
-      title="Revenue forecast"
-      subtitle="Open pipeline weighted by win probability"
+      title={t('reports.forecast.title', 'Revenue forecast')}
+      subtitle={t('reports.forecast.subtitle', 'Open pipeline weighted by win probability')}
     >
-      {isLoading ? <Loading /> : !data?.buckets?.length ? <Empty label="No open deals." /> : (
+      {isLoading ? <Loading /> : !data?.buckets?.length ? <Empty label={t('reports.forecast.empty', 'No open deals.')} /> : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Stat
-              label="Expected (weighted)"
+              label={t('reports.forecast.expected_weighted', 'Expected (weighted)')}
               value={`€${Math.round(data.total_expected).toLocaleString()}`}
               valueClass="text-emerald-400"
             />
             <Stat
-              label="Gross open pipeline"
+              label={t('reports.forecast.gross_pipeline', 'Gross open pipeline')}
               value={`€${Math.round(data.total_gross).toLocaleString()}`}
               valueClass="text-white"
             />
@@ -188,8 +194,8 @@ function ForecastCard({ months }: { months: number }) {
                 contentStyle={{ background: '#0a0a0a', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
                 formatter={(v: any) => [`€${Math.round(v).toLocaleString()}`, '']}
               />
-              <Bar dataKey="gross_value" fill={COLORS.slate} fillOpacity={0.4} name="Gross" />
-              <Bar dataKey="expected_value" fill={COLORS.emerald} name="Expected" />
+              <Bar dataKey="gross_value" fill={COLORS.slate} fillOpacity={0.4} name={t('reports.forecast.gross', 'Gross')} />
+              <Bar dataKey="expected_value" fill={COLORS.emerald} name={t('reports.forecast.expected', 'Expected')} />
             </BarChart>
           </ResponsiveContainer>
         </>
@@ -201,6 +207,7 @@ function ForecastCard({ months }: { months: number }) {
 /* ── 3. Lost reasons ────────────────────────────────────────── */
 
 function LostReasonsCard({ months }: { months: number }) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-lost-reasons', months],
     queryFn: () => api.get('/v1/admin/reporting/lost-reasons', { params: { months } }).then(r => r.data),
@@ -209,15 +216,15 @@ function LostReasonsCard({ months }: { months: number }) {
   return (
     <Card
       icon={<X size={14} className="text-red-400" />}
-      title="Lost reasons"
-      subtitle={`Why ${data?.total_count ?? 0} deals slipped away`}
+      title={t('reports.lost.title', 'Lost reasons')}
+      subtitle={t('reports.lost.subtitle', { count: data?.total_count ?? 0, defaultValue: 'Why {{count}} deals slipped away' })}
     >
-      {isLoading ? <Loading /> : !data?.reasons?.length ? <Empty label="No lost deals — nice." /> : (
+      {isLoading ? <Loading /> : !data?.reasons?.length ? <Empty label={t('reports.lost.empty', 'No lost deals — nice.')} /> : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <Stat label="Total lost" value={data.total_count} valueClass="text-red-400" />
+            <Stat label={t('reports.lost.total_lost', 'Total lost')} value={data.total_count} valueClass="text-red-400" />
             <Stat
-              label="Lost value"
+              label={t('reports.lost.lost_value', 'Lost value')}
               value={`€${Math.round(data.total_value).toLocaleString()}`}
               valueClass="text-red-400"
             />
@@ -266,6 +273,7 @@ function LostReasonsCard({ months }: { months: number }) {
 /* ── 4. Source attribution ──────────────────────────────────── */
 
 function SourceAttributionCard({ months }: { months: number }) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-sources', months],
     queryFn: () => api.get('/v1/admin/reporting/source-attribution', { params: { months } }).then(r => r.data),
@@ -274,19 +282,19 @@ function SourceAttributionCard({ months }: { months: number }) {
   return (
     <Card
       icon={<BarChart3 size={14} className="text-violet-400" />}
-      title="Source attribution"
-      subtitle="Where the deals come from and which channel converts"
+      title={t('reports.sources.title', 'Source attribution')}
+      subtitle={t('reports.sources.subtitle', 'Where the deals come from and which channel converts')}
     >
-      {isLoading ? <Loading /> : !data?.sources?.length ? <Empty label="No data yet." /> : (
+      {isLoading ? <Loading /> : !data?.sources?.length ? <Empty label={t('reports.sources.empty', 'No data yet.')} /> : (
         <table className="w-full text-xs">
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-t-secondary border-b border-dark-border">
-              <th className="text-left font-bold py-2">Source</th>
-              <th className="text-right font-bold py-2">Total</th>
-              <th className="text-right font-bold py-2">Won</th>
-              <th className="text-right font-bold py-2">Lost</th>
-              <th className="text-right font-bold py-2">Win rate</th>
-              <th className="text-right font-bold py-2">Won value</th>
+              <th className="text-left font-bold py-2">{t('reports.sources.table.source', 'Source')}</th>
+              <th className="text-right font-bold py-2">{t('reports.sources.table.total', 'Total')}</th>
+              <th className="text-right font-bold py-2">{t('reports.sources.table.won', 'Won')}</th>
+              <th className="text-right font-bold py-2">{t('reports.sources.table.lost', 'Lost')}</th>
+              <th className="text-right font-bold py-2">{t('reports.sources.table.win_rate', 'Win rate')}</th>
+              <th className="text-right font-bold py-2">{t('reports.sources.table.won_value', 'Won value')}</th>
             </tr>
           </thead>
           <tbody>
@@ -314,6 +322,7 @@ function SourceAttributionCard({ months }: { months: number }) {
 /* ── 5. Owner scoreboard ────────────────────────────────────── */
 
 function OwnerScoreboardCard({ days, setDays }: { days: number; setDays: (n: number) => void }) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-owner-activity', days],
     queryFn: () => api.get('/v1/admin/reporting/owner-activity', { params: { days } }).then(r => r.data),
@@ -322,8 +331,8 @@ function OwnerScoreboardCard({ days, setDays }: { days: number; setDays: (n: num
   return (
     <Card
       icon={<Users size={14} className="text-rose-400" />}
-      title="Owner scoreboard"
-      subtitle={`Per-rep activity, last ${days} days`}
+      title={t('reports.owner.title', 'Owner scoreboard')}
+      subtitle={t('reports.owner.subtitle', { days, defaultValue: 'Per-rep activity, last {{days}} days' })}
       action={
         <div className="flex items-center gap-1 bg-dark-bg border border-dark-border rounded-md p-0.5">
           {[7, 30, 90].map(d => (
@@ -340,7 +349,7 @@ function OwnerScoreboardCard({ days, setDays }: { days: number; setDays: (n: num
         </div>
       }
     >
-      {isLoading ? <Loading /> : !data?.owners?.length ? <Empty label="No activity recorded yet." /> : (
+      {isLoading ? <Loading /> : !data?.owners?.length ? <Empty label={t('reports.owner.empty', 'No activity recorded yet.')} /> : (
         <div className="space-y-1.5">
           {data.owners.map((o: any, i: number) => (
             <div key={o.name + i} className="flex items-center gap-3 p-2 rounded-md hover:bg-dark-surface2">
@@ -348,8 +357,8 @@ function OwnerScoreboardCard({ days, setDays }: { days: number; setDays: (n: num
               <span className="text-sm font-semibold text-white flex-1 truncate">{o.name}</span>
               <Pill icon={<Clock size={9} />} label={o.activities} color="#22d3ee" />
               <Pill icon={<Trophy size={9} />} label={o.won} color="#10b981" />
-              <Pill label={`${o.open} open`} color="#3b82f6" muted />
-              <Pill label={`${o.lost} lost`} color="#ef4444" muted />
+              <Pill label={t('reports.owner.open_pill', { count: o.open, defaultValue: '{{count}} open' })} color="#3b82f6" muted />
+              <Pill label={t('reports.owner.lost_pill', { count: o.lost, defaultValue: '{{count}} lost' })} color="#ef4444" muted />
             </div>
           ))}
         </div>
@@ -377,6 +386,7 @@ function Pill({ icon, label, color, muted }: { icon?: React.ReactNode; label: an
 /* ── 6. Top companies (LTV) ─────────────────────────────────── */
 
 function CompanyLtvCard() {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-company-ltv'],
     queryFn: () => api.get('/v1/admin/reporting/company-ltv', { params: { limit: 10 } }).then(r => r.data),
@@ -385,10 +395,10 @@ function CompanyLtvCard() {
   return (
     <Card
       icon={<Building2 size={14} className="text-amber-400" />}
-      title="Top companies"
-      subtitle="By confirmed reservation revenue"
+      title={t('reports.companies.title', 'Top companies')}
+      subtitle={t('reports.companies.subtitle', 'By confirmed reservation revenue')}
     >
-      {isLoading ? <Loading /> : !data?.companies?.length ? <Empty label="No corporate revenue yet." /> : (
+      {isLoading ? <Loading /> : !data?.companies?.length ? <Empty label={t('reports.companies.empty', 'No corporate revenue yet.')} /> : (
         <div className="space-y-1.5">
           {data.companies.map((c: any, i: number) => {
             const utilization = c.credit_limit
@@ -409,7 +419,7 @@ function CompanyLtvCard() {
                       <>
                         {c.industry && <span>·</span>}
                         <span className={utilization >= 80 ? 'text-amber-400 font-bold' : ''}>
-                          Credit {utilization}% used
+                          {t('reports.companies.credit_used', { percent: utilization, defaultValue: 'Credit {{percent}}% used' })}
                         </span>
                       </>
                     )}
@@ -421,7 +431,7 @@ function CompanyLtvCard() {
                   </p>
                   {c.open_pipeline_value > 0 && (
                     <p className="text-[10px] text-t-secondary tabular-nums">
-                      +€{Math.round(c.open_pipeline_value).toLocaleString()} open
+                      +€{Math.round(c.open_pipeline_value).toLocaleString()} {t('reports.companies.open_suffix', 'open')}
                     </p>
                   )}
                 </div>
@@ -474,7 +484,8 @@ function Stat({ label, value, valueClass = 'text-white' }: {
 }
 
 function Loading() {
-  return <p className="text-sm text-t-secondary py-8 text-center">Loading…</p>
+  const { t } = useTranslation()
+  return <p className="text-sm text-t-secondary py-8 text-center">{t('reports.loading', 'Loading…')}</p>
 }
 
 function Empty({ label }: { label: string }) {

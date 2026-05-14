@@ -225,6 +225,65 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "reports": {
+    "title": "Informes de ventas",
+    "subtitle": "Embudo, previsión, motivos de pérdida y marcador por comercial.",
+    "loading": "Cargando…",
+    "funnel": {
+      "title": "Embudo de pipeline",
+      "subtitle": "Caída por etapa, últimos {{months}} meses",
+      "empty": "Sin acuerdos en este periodo.",
+      "won_deals": "Acuerdos ganados",
+      "lost_deals": "Acuerdos perdidos",
+      "win_rate": "Tasa de cierre",
+      "avg_days_to_close": "Días medios al cierre",
+      "from_prev_overall": "{{from_prev}}% vs anterior · {{overall}}% global"
+    },
+    "forecast": {
+      "title": "Previsión de ingresos",
+      "subtitle": "Pipeline abierto ponderado por probabilidad de cierre",
+      "empty": "Sin acuerdos abiertos.",
+      "expected_weighted": "Esperado (ponderado)",
+      "gross_pipeline": "Pipeline bruto",
+      "gross": "Bruto",
+      "expected": "Esperado"
+    },
+    "lost": {
+      "title": "Motivos de pérdida",
+      "subtitle": "Por qué se escaparon {{count}} acuerdos",
+      "empty": "Sin acuerdos perdidos — bien.",
+      "total_lost": "Total perdidos",
+      "lost_value": "Valor perdido"
+    },
+    "sources": {
+      "title": "Atribución por origen",
+      "subtitle": "De dónde llegan los acuerdos y qué canal convierte",
+      "empty": "Sin datos aún.",
+      "table": {
+        "source": "Origen",
+        "total": "Total",
+        "won": "Ganados",
+        "lost": "Perdidos",
+        "win_rate": "Tasa",
+        "won_value": "Valor ganado"
+      }
+    },
+    "owner": {
+      "title": "Marcador de comerciales",
+      "subtitle": "Actividad por comercial, últimos {{days}} días",
+      "empty": "Aún sin actividad registrada.",
+      "open_pill": "{{count}} abiertos",
+      "lost_pill": "{{count}} perdidos"
+    },
+    "companies": {
+      "title": "Top empresas",
+      "subtitle": "Por ingresos de reservas confirmadas",
+      "empty": "Aún sin ingresos corporativos.",
+      "credit_used": "Crédito usado {{percent}}%",
+      "open_suffix": "abiertos"
+    }
+  },
+
   "tasks": {
     "title": "Tareas",
     "subtitle": {
