@@ -1255,6 +1255,185 @@
     }
   },
 
+  "guests": {
+    "title": "Huéspedes",
+    "total_count": "{{count}} en total",
+    "actions": {
+      "backfill_tooltip": "Vincular huéspedes sin enlace a miembros de fidelización por email",
+      "backfill_linking": "Vinculando…",
+      "backfill_links": "Vincular cuentas",
+      "ai_capture": "Captura IA",
+      "export": "Exportar",
+      "add_guest": "Añadir huésped"
+    },
+    "search_placeholder": "Buscar: nombre, email, teléfono, empresa…",
+    "filters_button": "Filtros",
+    "filters": {
+      "all_countries": "Todos los países",
+      "all_guest_types": "Todos los tipos",
+      "all_vip_levels": "Todos los niveles VIP",
+      "all_sources": "Todas las fuentes",
+      "all_lifecycle": "Todos los ciclos",
+      "clear": "Limpiar"
+    },
+    "lifecycle": {
+      "Lead": "Lead",
+      "Prospect": "Prospecto",
+      "Customer": "Cliente",
+      "Repeat": "Recurrente",
+      "Inactive": "Inactivo"
+    },
+    "table": {
+      "full_name": "Nombre completo",
+      "email": "Email",
+      "phone": "Teléfono",
+      "company": "Empresa",
+      "nationality": "Nacionalidad",
+      "vip_level": "Nivel VIP",
+      "loyalty": "Fidelización",
+      "source": "Fuente",
+      "lifecycle": "Ciclo",
+      "guest_type": "Tipo de huésped",
+      "total_stays": "Estancias totales",
+      "total_revenue": "Ingresos totales",
+      "last_stay": "Última estancia",
+      "created": "Creado",
+      "loading": "Cargando…",
+      "no_guests": "No se encontraron huéspedes",
+      "page_of": "Página {{current}} de {{last}}"
+    },
+    "vip_standard": "Estándar",
+    "create": {
+      "title": "Añadir huésped",
+      "salutation": "Tratamiento",
+      "salutation_none": "--",
+      "first_name": "Nombre *",
+      "last_name": "Apellido *",
+      "full_name": "Nombre completo",
+      "email": "Email",
+      "phone": "Teléfono",
+      "mobile": "Móvil",
+      "company": "Empresa",
+      "nationality": "Nacionalidad",
+      "country": "País",
+      "guest_type": "Tipo de huésped",
+      "vip_level": "Nivel VIP",
+      "lead_source": "Fuente del lead",
+      "select_placeholder": "-- Seleccionar --",
+      "none_placeholder": "-- Ninguno --",
+      "notes": "Notas",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "create": "Crear"
+    },
+    "capture": {
+      "title": "Captura IA de huéspedes",
+      "instructions": "Pega un email, solicitud de reserva o cualquier mensaje. La IA extraerá la información del huésped y la consulta automáticamente.",
+      "placeholder": "Pega aquí el email o el mensaje…",
+      "cancel": "Cancelar",
+      "extract": "Extraer",
+      "extracting": "Extrayendo…",
+      "review_hint": "La IA ha extraído lo siguiente. Revisa y edita antes de crear.",
+      "fields": {
+        "customer_name": "Nombre del huésped",
+        "email": "Email",
+        "phone": "Teléfono",
+        "company": "Empresa",
+        "country": "País",
+        "nationality": "Nacionalidad",
+        "guest_type": "Tipo de huésped",
+        "vip_level": "Nivel VIP",
+        "source": "Fuente"
+      },
+      "notes": "Notas",
+      "back": "Atrás",
+      "create_guest": "Crear huésped"
+    },
+    "toasts": {
+      "created": "Huésped creado",
+      "deleted": "Eliminado",
+      "error": "Error",
+      "export_failed": "Error al exportar",
+      "backfill_failed": "Error al vincular",
+      "delete_confirm": "¿Eliminar este huésped?",
+      "extract_failed": "No se pudieron extraer los datos",
+      "ai_failed": "Error de extracción IA",
+      "captured_for": "Huésped creado para {{name}}",
+      "create_failed": "No se pudo crear el huésped"
+    }
+  },
+
+  "guest_detail": {
+    "back": "Volver a huéspedes",
+    "not_found": "Huésped no encontrado o error al cargar.",
+    "vip_prefix": "VIP {{level}}",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "stats": {
+      "total_stays": "Estancias totales",
+      "total_revenue": "Ingresos totales",
+      "last_stay": "Última estancia",
+      "inquiries": "Consultas",
+      "na": "N/D"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "inquiries": "Consultas",
+      "reservations": "Reservas",
+      "activities": "Actividades"
+    },
+    "sections": {
+      "identity": "Identidad",
+      "contact": "Información de contacto",
+      "preferences": "Preferencias",
+      "tags": "Etiquetas",
+      "notes": "Notas",
+      "no_tags": "Sin etiquetas",
+      "no_notes": "Aún no hay notas."
+    },
+    "fields": {
+      "full_name": "Nombre completo",
+      "company": "Empresa",
+      "first_name": "Nombre",
+      "last_name": "Apellido",
+      "guest_type": "Tipo de huésped",
+      "vip_level": "Nivel VIP",
+      "email": "Email",
+      "phone": "Teléfono",
+      "country": "País",
+      "city": "Ciudad",
+      "address": "Dirección",
+      "room_type": "Tipo de habitación",
+      "floor": "Planta",
+      "language": "Idioma",
+      "dietary": "Dieta",
+      "source": "Fuente"
+    },
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "toast_updated": "Huésped actualizado",
+    "toast_save_failed": "Error al guardar",
+    "inquiries_empty": "No hay consultas.",
+    "reservations_empty": "No hay reservas.",
+    "inquiry_default": "Consulta n.º {{n}}",
+    "inquiry_status": {
+      "resolved": "resuelta",
+      "pending": "pendiente",
+      "open": "abierta"
+    },
+    "reservations_table": {
+      "confirmation": "Confirmación",
+      "check_in": "Entrada",
+      "check_out": "Salida",
+      "room": "Habitación",
+      "status": "Estado",
+      "amount": "Importe",
+      "status_confirmed": "confirmada",
+      "status_cancelled": "cancelada",
+      "status_unknown": "desconocido"
+    }
+  },
+
   "analytics": {
     "title": "Analítica",
     "subtitle": "Análisis profundo del rendimiento de Fidelización y CRM",

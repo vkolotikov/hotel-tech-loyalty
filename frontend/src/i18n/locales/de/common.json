@@ -1255,6 +1255,185 @@
     }
   },
 
+  "guests": {
+    "title": "Gäste",
+    "total_count": "{{count}} insgesamt",
+    "actions": {
+      "backfill_tooltip": "Nicht verknüpfte Gäste per E-Mail mit Treuemitgliedern verbinden",
+      "backfill_linking": "Verknüpfen…",
+      "backfill_links": "Verknüpfungen nachtragen",
+      "ai_capture": "KI-Erfassung",
+      "export": "Export",
+      "add_guest": "Gast hinzufügen"
+    },
+    "search_placeholder": "Suche: Name, E-Mail, Telefon, Firma…",
+    "filters_button": "Filter",
+    "filters": {
+      "all_countries": "Alle Länder",
+      "all_guest_types": "Alle Gastarten",
+      "all_vip_levels": "Alle VIP-Stufen",
+      "all_sources": "Alle Quellen",
+      "all_lifecycle": "Alle Phasen",
+      "clear": "Zurücksetzen"
+    },
+    "lifecycle": {
+      "Lead": "Lead",
+      "Prospect": "Interessent",
+      "Customer": "Kunde",
+      "Repeat": "Stammgast",
+      "Inactive": "Inaktiv"
+    },
+    "table": {
+      "full_name": "Voller Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "company": "Firma",
+      "nationality": "Nationalität",
+      "vip_level": "VIP-Stufe",
+      "loyalty": "Treue",
+      "source": "Quelle",
+      "lifecycle": "Phase",
+      "guest_type": "Gastart",
+      "total_stays": "Aufenthalte gesamt",
+      "total_revenue": "Umsatz gesamt",
+      "last_stay": "Letzter Aufenthalt",
+      "created": "Erstellt",
+      "loading": "Lädt…",
+      "no_guests": "Keine Gäste gefunden",
+      "page_of": "Seite {{current}} von {{last}}"
+    },
+    "vip_standard": "Standard",
+    "create": {
+      "title": "Gast hinzufügen",
+      "salutation": "Anrede",
+      "salutation_none": "--",
+      "first_name": "Vorname *",
+      "last_name": "Nachname *",
+      "full_name": "Voller Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "mobile": "Mobil",
+      "company": "Firma",
+      "nationality": "Nationalität",
+      "country": "Land",
+      "guest_type": "Gastart",
+      "vip_level": "VIP-Stufe",
+      "lead_source": "Lead-Quelle",
+      "select_placeholder": "-- Auswählen --",
+      "none_placeholder": "-- Keine --",
+      "notes": "Notizen",
+      "cancel": "Abbrechen",
+      "saving": "Speichert…",
+      "create": "Erstellen"
+    },
+    "capture": {
+      "title": "KI-Gasterfassung",
+      "instructions": "Fügen Sie eine E-Mail, Buchungsanfrage oder Nachricht ein. Die KI extrahiert Gast- und Anfragedaten automatisch.",
+      "placeholder": "E-Mail oder Nachricht hier einfügen…",
+      "cancel": "Abbrechen",
+      "extract": "Extrahieren",
+      "extracting": "Extrahiere…",
+      "review_hint": "KI hat folgendes extrahiert. Vor dem Erstellen prüfen und bearbeiten.",
+      "fields": {
+        "customer_name": "Gastname",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "company": "Firma",
+        "country": "Land",
+        "nationality": "Nationalität",
+        "guest_type": "Gastart",
+        "vip_level": "VIP-Stufe",
+        "source": "Quelle"
+      },
+      "notes": "Notizen",
+      "back": "Zurück",
+      "create_guest": "Gast erstellen"
+    },
+    "toasts": {
+      "created": "Gast erstellt",
+      "deleted": "Gelöscht",
+      "error": "Fehler",
+      "export_failed": "Export fehlgeschlagen",
+      "backfill_failed": "Verknüpfung fehlgeschlagen",
+      "delete_confirm": "Diesen Gast löschen?",
+      "extract_failed": "Daten konnten nicht extrahiert werden",
+      "ai_failed": "KI-Extraktion fehlgeschlagen",
+      "captured_for": "Gast erstellt: {{name}}",
+      "create_failed": "Gast konnte nicht erstellt werden"
+    }
+  },
+
+  "guest_detail": {
+    "back": "Zurück zu Gästen",
+    "not_found": "Gast nicht gefunden oder Ladefehler.",
+    "vip_prefix": "VIP {{level}}",
+    "edit": "Bearbeiten",
+    "cancel": "Abbrechen",
+    "stats": {
+      "total_stays": "Aufenthalte gesamt",
+      "total_revenue": "Umsatz gesamt",
+      "last_stay": "Letzter Aufenthalt",
+      "inquiries": "Anfragen",
+      "na": "k.A."
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "inquiries": "Anfragen",
+      "reservations": "Reservierungen",
+      "activities": "Aktivitäten"
+    },
+    "sections": {
+      "identity": "Identität",
+      "contact": "Kontaktinformationen",
+      "preferences": "Präferenzen",
+      "tags": "Tags",
+      "notes": "Notizen",
+      "no_tags": "Keine Tags",
+      "no_notes": "Noch keine Notizen."
+    },
+    "fields": {
+      "full_name": "Voller Name",
+      "company": "Firma",
+      "first_name": "Vorname",
+      "last_name": "Nachname",
+      "guest_type": "Gastart",
+      "vip_level": "VIP-Stufe",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "country": "Land",
+      "city": "Stadt",
+      "address": "Adresse",
+      "room_type": "Zimmertyp",
+      "floor": "Etage",
+      "language": "Sprache",
+      "dietary": "Ernährung",
+      "source": "Quelle"
+    },
+    "save": "Änderungen speichern",
+    "saving": "Speichert…",
+    "toast_updated": "Gast aktualisiert",
+    "toast_save_failed": "Speichern fehlgeschlagen",
+    "inquiries_empty": "Keine Anfragen gefunden.",
+    "reservations_empty": "Keine Reservierungen gefunden.",
+    "inquiry_default": "Anfrage Nr. {{n}}",
+    "inquiry_status": {
+      "resolved": "gelöst",
+      "pending": "offen",
+      "open": "offen"
+    },
+    "reservations_table": {
+      "confirmation": "Bestätigung",
+      "check_in": "Anreise",
+      "check_out": "Abreise",
+      "room": "Zimmer",
+      "status": "Status",
+      "amount": "Betrag",
+      "status_confirmed": "bestätigt",
+      "status_cancelled": "storniert",
+      "status_unknown": "unbekannt"
+    }
+  },
+
   "analytics": {
     "title": "Analytik",
     "subtitle": "Tiefer Einblick in Loyalty- und CRM-Performance",

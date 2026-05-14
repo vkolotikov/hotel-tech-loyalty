@@ -1269,6 +1269,185 @@
     }
   },
 
+  "guests": {
+    "title": "Гости",
+    "total_count": "{{count}} всего",
+    "actions": {
+      "backfill_tooltip": "Связать гостей-сирот с участниками программы по email",
+      "backfill_linking": "Связывание…",
+      "backfill_links": "Связать с участниками",
+      "ai_capture": "AI-распознавание",
+      "export": "Экспорт",
+      "add_guest": "Добавить гостя"
+    },
+    "search_placeholder": "Поиск: имя, email, телефон, компания…",
+    "filters_button": "Фильтры",
+    "filters": {
+      "all_countries": "Все страны",
+      "all_guest_types": "Все типы гостей",
+      "all_vip_levels": "Все VIP-уровни",
+      "all_sources": "Все источники",
+      "all_lifecycle": "Все жизненные циклы",
+      "clear": "Сбросить"
+    },
+    "lifecycle": {
+      "Lead": "Лид",
+      "Prospect": "Перспектива",
+      "Customer": "Клиент",
+      "Repeat": "Повторный",
+      "Inactive": "Неактивный"
+    },
+    "table": {
+      "full_name": "Полное имя",
+      "email": "Email",
+      "phone": "Телефон",
+      "company": "Компания",
+      "nationality": "Национальность",
+      "vip_level": "VIP-уровень",
+      "loyalty": "Лояльность",
+      "source": "Источник",
+      "lifecycle": "Жизненный цикл",
+      "guest_type": "Тип гостя",
+      "total_stays": "Всего проживаний",
+      "total_revenue": "Общая выручка",
+      "last_stay": "Последнее проживание",
+      "created": "Создан",
+      "loading": "Загрузка…",
+      "no_guests": "Гости не найдены",
+      "page_of": "Страница {{current}} из {{last}}"
+    },
+    "vip_standard": "Стандартный",
+    "create": {
+      "title": "Добавить гостя",
+      "salutation": "Обращение",
+      "salutation_none": "--",
+      "first_name": "Имя *",
+      "last_name": "Фамилия *",
+      "full_name": "Полное имя",
+      "email": "Email",
+      "phone": "Телефон",
+      "mobile": "Мобильный",
+      "company": "Компания",
+      "nationality": "Национальность",
+      "country": "Страна",
+      "guest_type": "Тип гостя",
+      "vip_level": "VIP-уровень",
+      "lead_source": "Источник лида",
+      "select_placeholder": "-- Выберите --",
+      "none_placeholder": "-- Не выбрано --",
+      "notes": "Заметки",
+      "cancel": "Отмена",
+      "saving": "Сохранение…",
+      "create": "Создать"
+    },
+    "capture": {
+      "title": "AI-распознавание гостя",
+      "instructions": "Вставьте письмо, запрос на бронирование или любое сообщение. AI автоматически извлечёт данные гостя и запроса.",
+      "placeholder": "Вставьте текст письма или сообщения сюда…",
+      "cancel": "Отмена",
+      "extract": "Извлечь",
+      "extracting": "Извлечение…",
+      "review_hint": "AI извлёк следующие данные. Проверьте и отредактируйте перед созданием.",
+      "fields": {
+        "customer_name": "Имя гостя",
+        "email": "Email",
+        "phone": "Телефон",
+        "company": "Компания",
+        "country": "Страна",
+        "nationality": "Национальность",
+        "guest_type": "Тип гостя",
+        "vip_level": "VIP-уровень",
+        "source": "Источник"
+      },
+      "notes": "Заметки",
+      "back": "Назад",
+      "create_guest": "Создать гостя"
+    },
+    "toasts": {
+      "created": "Гость создан",
+      "deleted": "Удалено",
+      "error": "Ошибка",
+      "export_failed": "Ошибка экспорта",
+      "backfill_failed": "Ошибка связывания",
+      "delete_confirm": "Удалить этого гостя?",
+      "extract_failed": "Не удалось извлечь данные",
+      "ai_failed": "Ошибка AI-извлечения",
+      "captured_for": "Гость создан: {{name}}",
+      "create_failed": "Не удалось создать гостя"
+    }
+  },
+
+  "guest_detail": {
+    "back": "Назад к гостям",
+    "not_found": "Гость не найден или не загрузился.",
+    "vip_prefix": "VIP {{level}}",
+    "edit": "Изменить",
+    "cancel": "Отмена",
+    "stats": {
+      "total_stays": "Всего проживаний",
+      "total_revenue": "Общая выручка",
+      "last_stay": "Последнее проживание",
+      "inquiries": "Запросы",
+      "na": "Н/Д"
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "inquiries": "Запросы",
+      "reservations": "Бронирования",
+      "activities": "Активности"
+    },
+    "sections": {
+      "identity": "Идентификация",
+      "contact": "Контактная информация",
+      "preferences": "Предпочтения",
+      "tags": "Метки",
+      "notes": "Заметки",
+      "no_tags": "Меток нет",
+      "no_notes": "Заметок пока нет."
+    },
+    "fields": {
+      "full_name": "Полное имя",
+      "company": "Компания",
+      "first_name": "Имя",
+      "last_name": "Фамилия",
+      "guest_type": "Тип гостя",
+      "vip_level": "VIP-уровень",
+      "email": "Email",
+      "phone": "Телефон",
+      "country": "Страна",
+      "city": "Город",
+      "address": "Адрес",
+      "room_type": "Тип номера",
+      "floor": "Этаж",
+      "language": "Язык",
+      "dietary": "Питание",
+      "source": "Источник"
+    },
+    "save": "Сохранить",
+    "saving": "Сохранение…",
+    "toast_updated": "Гость обновлён",
+    "toast_save_failed": "Не удалось сохранить",
+    "inquiries_empty": "Запросов не найдено.",
+    "reservations_empty": "Бронирований не найдено.",
+    "inquiry_default": "Запрос №{{n}}",
+    "inquiry_status": {
+      "resolved": "решено",
+      "pending": "ожидает",
+      "open": "открыт"
+    },
+    "reservations_table": {
+      "confirmation": "Подтверждение",
+      "check_in": "Заезд",
+      "check_out": "Выезд",
+      "room": "Номер",
+      "status": "Статус",
+      "amount": "Сумма",
+      "status_confirmed": "подтверждено",
+      "status_cancelled": "отменено",
+      "status_unknown": "неизвестно"
+    }
+  },
+
   "analytics": {
     "title": "Аналитика",
     "subtitle": "Подробный анализ программы лояльности и CRM",

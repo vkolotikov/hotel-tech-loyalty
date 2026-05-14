@@ -1255,6 +1255,185 @@
     }
   },
 
+  "guests": {
+    "title": "Guests",
+    "total_count": "{{count}} total",
+    "actions": {
+      "backfill_tooltip": "Link unlinked guests to loyalty members by email match",
+      "backfill_linking": "Linking…",
+      "backfill_links": "Backfill Links",
+      "ai_capture": "AI Capture",
+      "export": "Export",
+      "add_guest": "Add Guest"
+    },
+    "search_placeholder": "Search name, email, phone, company…",
+    "filters_button": "Filters",
+    "filters": {
+      "all_countries": "All Countries",
+      "all_guest_types": "All Guest Types",
+      "all_vip_levels": "All VIP Levels",
+      "all_sources": "All Sources",
+      "all_lifecycle": "All Lifecycle",
+      "clear": "Clear"
+    },
+    "lifecycle": {
+      "Lead": "Lead",
+      "Prospect": "Prospect",
+      "Customer": "Customer",
+      "Repeat": "Repeat",
+      "Inactive": "Inactive"
+    },
+    "table": {
+      "full_name": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "nationality": "Nationality",
+      "vip_level": "VIP Level",
+      "loyalty": "Loyalty",
+      "source": "Source",
+      "lifecycle": "Lifecycle",
+      "guest_type": "Guest Type",
+      "total_stays": "Total Stays",
+      "total_revenue": "Total Revenue",
+      "last_stay": "Last Stay",
+      "created": "Created",
+      "loading": "Loading…",
+      "no_guests": "No guests found",
+      "page_of": "Page {{current}} of {{last}}"
+    },
+    "vip_standard": "Standard",
+    "create": {
+      "title": "Add Guest",
+      "salutation": "Salutation",
+      "salutation_none": "--",
+      "first_name": "First Name *",
+      "last_name": "Last Name *",
+      "full_name": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "mobile": "Mobile",
+      "company": "Company",
+      "nationality": "Nationality",
+      "country": "Country",
+      "guest_type": "Guest Type",
+      "vip_level": "VIP Level",
+      "lead_source": "Lead Source",
+      "select_placeholder": "-- Select --",
+      "none_placeholder": "-- None --",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "create": "Create"
+    },
+    "capture": {
+      "title": "AI Guest Capture",
+      "instructions": "Paste an email, booking request, or any inquiry message. AI will extract guest and inquiry information automatically.",
+      "placeholder": "Paste the email or message here…",
+      "cancel": "Cancel",
+      "extract": "Extract",
+      "extracting": "Extracting…",
+      "review_hint": "AI extracted the following. Review and edit before creating.",
+      "fields": {
+        "customer_name": "Guest Name",
+        "email": "Email",
+        "phone": "Phone",
+        "company": "Company",
+        "country": "Country",
+        "nationality": "Nationality",
+        "guest_type": "Guest Type",
+        "vip_level": "VIP Level",
+        "source": "Source"
+      },
+      "notes": "Notes",
+      "back": "Back",
+      "create_guest": "Create Guest"
+    },
+    "toasts": {
+      "created": "Guest created",
+      "deleted": "Deleted",
+      "error": "Error",
+      "export_failed": "Export failed",
+      "backfill_failed": "Backfill failed",
+      "delete_confirm": "Delete this guest?",
+      "extract_failed": "Failed to extract data",
+      "ai_failed": "AI extraction failed",
+      "captured_for": "Guest created for {{name}}",
+      "create_failed": "Failed to create guest"
+    }
+  },
+
+  "guest_detail": {
+    "back": "Back to Guests",
+    "not_found": "Guest not found or failed to load.",
+    "vip_prefix": "VIP {{level}}",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "stats": {
+      "total_stays": "Total Stays",
+      "total_revenue": "Total Revenue",
+      "last_stay": "Last Stay",
+      "inquiries": "Inquiries",
+      "na": "N/A"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "inquiries": "Inquiries",
+      "reservations": "Reservations",
+      "activities": "Activities"
+    },
+    "sections": {
+      "identity": "Identity",
+      "contact": "Contact Information",
+      "preferences": "Preferences",
+      "tags": "Tags",
+      "notes": "Notes",
+      "no_tags": "No tags",
+      "no_notes": "No notes yet."
+    },
+    "fields": {
+      "full_name": "Full Name",
+      "company": "Company",
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "guest_type": "Guest Type",
+      "vip_level": "VIP Level",
+      "email": "Email",
+      "phone": "Phone",
+      "country": "Country",
+      "city": "City",
+      "address": "Address",
+      "room_type": "Room Type",
+      "floor": "Floor",
+      "language": "Language",
+      "dietary": "Dietary",
+      "source": "Source"
+    },
+    "save": "Save Changes",
+    "saving": "Saving…",
+    "toast_updated": "Guest updated",
+    "toast_save_failed": "Failed to save guest",
+    "inquiries_empty": "No inquiries found.",
+    "reservations_empty": "No reservations found.",
+    "inquiry_default": "Inquiry #{{n}}",
+    "inquiry_status": {
+      "resolved": "resolved",
+      "pending": "pending",
+      "open": "open"
+    },
+    "reservations_table": {
+      "confirmation": "Confirmation",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "room": "Room",
+      "status": "Status",
+      "amount": "Amount",
+      "status_confirmed": "confirmed",
+      "status_cancelled": "cancelled",
+      "status_unknown": "unknown"
+    }
+  },
+
   "analytics": {
     "title": "Analytics",
     "subtitle": "Deep dive into loyalty & CRM performance",
