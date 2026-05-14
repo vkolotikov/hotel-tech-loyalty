@@ -1,0 +1,261 @@
+{
+  "app": {
+    "name": "Hotel Tech",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "error_generic": "Something went wrong",
+    "retry": "Retry",
+    "language": "Language"
+  },
+
+  "actions": {
+    "save": "Save",
+    "save_changes": "Save changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "create": "Create",
+    "update": "Update",
+    "remove": "Remove",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "filters": "Filters",
+    "clear": "Clear",
+    "clear_all": "Clear all",
+    "refresh": "Refresh",
+    "reset": "Reset",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "duplicate": "Duplicate",
+    "export": "Export",
+    "import": "Import",
+    "upload": "Upload",
+    "download": "Download",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "view": "View",
+    "details": "Details",
+    "more": "More",
+    "show_more": "Show more",
+    "show_less": "Show less",
+    "select": "Select",
+    "select_all": "Select all",
+    "deselect_all": "Deselect all",
+    "open": "Open",
+    "preview": "Preview",
+    "discard": "Discard",
+    "send": "Send",
+    "yes": "Yes",
+    "no": "No",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "active": "Active",
+    "inactive": "Inactive",
+    "draft": "Draft",
+    "published": "Published"
+  },
+
+  "status": {
+    "ok": "OK",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "success": "Success",
+    "pending": "Pending",
+    "completed": "Completed",
+    "in_progress": "In progress",
+    "failed": "Failed",
+    "online": "Online",
+    "offline": "Offline"
+  },
+
+  "nav": {
+    "groups": {
+      "overview": "Overview",
+      "ai_chat": "AI Chat",
+      "members_loyalty": "Members & Loyalty",
+      "bookings": "Bookings",
+      "crm_marketing": "CRM & Marketing",
+      "operations": "Operations",
+      "system": "System"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "analytics": "Analytics",
+      "ai_insights": "AI Insights",
+      "engagement": "Engagement",
+      "chatbot_setup": "Chatbot Setup",
+      "members": "Members",
+      "program": "Program",
+      "rewards": "Rewards",
+      "campaigns": "Campaigns",
+      "reservations": "Reservations",
+      "services": "Services",
+      "rooms_services": "Rooms & Services",
+      "masters": "Masters",
+      "extras": "Extras",
+      "payments": "Payments",
+      "leads_inquiries": "Leads & Inquiries",
+      "tasks": "Tasks",
+      "reports": "Reports",
+      "lead_forms": "Lead forms",
+      "companies": "Companies",
+      "reviews": "Reviews",
+      "planner": "Planner",
+      "brands": "Brands",
+      "properties": "Properties",
+      "scan": "Scan",
+      "billing": "Billing",
+      "audit_log": "Audit Log",
+      "settings": "Settings"
+    }
+  },
+
+  "topbar": {
+    "search_placeholder": "Search members, guests, bookings…",
+    "notifications": "Notifications",
+    "no_notifications": "No notifications",
+    "mark_all_read": "Mark all read",
+    "profile": "Profile",
+    "logout": "Log out",
+    "switch_brand": "Switch brand",
+    "all_brands": "All brands"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back",
+      "email": "Email",
+      "password": "Password",
+      "remember_me": "Remember me",
+      "forgot_password": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "no_account": "Don't have an account?",
+      "create_account": "Create one",
+      "invalid_credentials": "Invalid email or password"
+    },
+    "register": {
+      "title": "Create an account",
+      "name": "Your name",
+      "company": "Company / hotel name",
+      "submit": "Create account",
+      "have_account": "Already have an account?",
+      "sign_in": "Sign in"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "We'll email you a link to reset your password.",
+      "submit": "Send reset link",
+      "sent": "Check your inbox for the reset link.",
+      "back_to_login": "Back to sign in"
+    },
+    "reset": {
+      "title": "Set a new password",
+      "new_password": "New password",
+      "confirm_password": "Confirm password",
+      "submit": "Update password",
+      "mismatch": "Passwords don't match"
+    }
+  },
+
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "kpis": {
+      "members": "Members",
+      "new_this_month": "New this month",
+      "points_issued": "Points issued",
+      "points_redeemed": "Points redeemed",
+      "active_bookings": "Active bookings",
+      "monthly_revenue": "Monthly revenue",
+      "conversion_rate": "Conversion rate"
+    },
+    "sections": {
+      "recent_activity": "Recent activity",
+      "top_members": "Top members",
+      "upcoming_stays": "Upcoming stays",
+      "ai_insights": "AI insights",
+      "tasks_today": "Tasks today",
+      "leads_pipeline": "Leads pipeline"
+    },
+    "empty": {
+      "no_activity": "No recent activity yet.",
+      "no_leads": "No open leads.",
+      "no_tasks": "No tasks today."
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your platform configuration, integrations, and branding",
+    "save_changes": "Save changes",
+    "discard": "Discard",
+    "language": "Interface language",
+    "language_help": "Pick the language used for the admin console. Each staff member can choose their own.",
+    "tabs": {
+      "general": "General",
+      "branding": "Branding",
+      "loyalty": "Loyalty",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "booking": "Booking",
+      "pipelines": "Pipelines",
+      "planner": "Planner",
+      "menu": "Menu",
+      "team": "Team",
+      "mobile_app": "Mobile App",
+      "documentation": "Documentation",
+      "ai_usage": "AI Usage",
+      "ai_system": "AI & System"
+    }
+  },
+
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "any": "Any",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "this_week": "This week",
+    "this_month": "This month",
+    "last_month": "Last month",
+    "last_7_days": "Last 7 days",
+    "last_30_days": "Last 30 days",
+    "last_90_days": "Last 90 days",
+    "no_results": "No results found",
+    "no_data": "No data yet",
+    "and_more": "and {{count}} more",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status",
+    "date": "Date",
+    "created": "Created",
+    "updated": "Updated",
+    "actions": "Actions",
+    "type": "Type",
+    "amount": "Amount",
+    "total": "Total",
+    "notes": "Notes",
+    "description": "Description"
+  },
+
+  "toasts": {
+    "saved": "Saved",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "created": "Created",
+    "copied": "Copied to clipboard",
+    "error": "Something went wrong"
+  }
+}

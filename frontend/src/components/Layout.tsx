@@ -24,13 +24,24 @@ import { useSubscription } from '../hooks/useSubscription'
 import { useSettings } from '../lib/crmSettings'
 import { BrandSwitcher } from './BrandSwitcher'
 import { MemberQuickSearch } from './MemberQuickSearch'
+import { LangSwitcher } from './LangSwitcher'
+import { useTranslation } from 'react-i18next'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
 
 interface NavItem {
   path: string
-  label: string
+  /**
+   * i18n key (e.g. `nav.items.dashboard`). Resolved with `t()` at
+   * render time — see `getDisplayLabel()` further down. Keeping the
+   * key in the structural list (rather than threading translated
+   * strings through here) means the list stays language-agnostic and
+   * fine to use from useMemo / route maps.
+   */
+  labelKey: string
+  /** English fallback for places that don't have i18n in context. */
+  defaultLabel: string
   icon: any
   gate: NavGate
   product?: string   // required SaaS product slug
@@ -39,7 +50,8 @@ interface NavItem {
 }
 
 interface NavGroup {
-  label: string
+  labelKey: string
+  defaultLabel: string
   /** Per-group accent — drives the colored dot in the header + the
    *  tinted active-item background. Keeps groups visually distinct
    *  without making the sidebar look cartoony. */
@@ -49,88 +61,88 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    label: 'Overview',
+    labelKey: 'nav.groups.overview', defaultLabel: 'Overview',
     accent: '#60a5fa', // blue
     items: [
-      { path: '/',          label: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
+      { path: '/',          labelKey: 'nav.items.dashboard',    defaultLabel: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
       // Analytics is plain charts/KPIs (no LLM) so it gates only on the
       // staff `can_view_analytics` flag, not on the `ai_insights` plan
       // feature. Previously admins on a plan without the AI feature were
       // hidden from Analytics even though that page does no AI work.
-      { path: '/analytics', label: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
+      { path: '/analytics', labelKey: 'nav.items.analytics',    defaultLabel: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
       // AI Insights does call the LLM (CrmAiService) — the ai_insights
       // feature flag stays here, so plans without AI don't see it.
-      { path: '/ai',        label: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
+      { path: '/ai',        labelKey: 'nav.items.ai_insights',  defaultLabel: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
     ],
   },
   {
-    label: 'AI Chat',
+    labelKey: 'nav.groups.ai_chat', defaultLabel: 'AI Chat',
     accent: '#a78bfa', // violet
     items: [
-      { path: '/engagement',     label: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat',
+      { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat',
         altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
-      { path: '/chatbot-setup',  label: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat' },
+      { path: '/chatbot-setup',  labelKey: 'nav.items.chatbot_setup',  defaultLabel: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat' },
     ],
   },
   {
-    label: 'Members & Loyalty',
+    labelKey: 'nav.groups.members_loyalty', defaultLabel: 'Members & Loyalty',
     accent: '#fbbf24', // gold
     items: [
       // 4-hub consolidation. Each hub is a tabbed container — see
       // pages/hubs/* for the per-tab routing. Legacy paths like
       // /tiers, /offers, /referrals etc. still work; they redirect
       // into the right hub tab.
-      { path: '/members',   label: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
-      { path: '/program',   label: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
-      { path: '/rewards',   label: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },
-      { path: '/campaigns', label: 'Campaigns', icon: Mail,    gate: 'admin', product: 'loyalty', altPaths: ['/email-campaigns'] },
+      { path: '/members',   labelKey: 'nav.items.members',   defaultLabel: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
+      { path: '/program',   labelKey: 'nav.items.program',   defaultLabel: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
+      { path: '/rewards',   labelKey: 'nav.items.rewards',   defaultLabel: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },
+      { path: '/campaigns', labelKey: 'nav.items.campaigns', defaultLabel: 'Campaigns', icon: Mail,   gate: 'admin', product: 'loyalty', altPaths: ['/email-campaigns'] },
     ],
   },
   {
-    label: 'Bookings',
+    labelKey: 'nav.groups.bookings', defaultLabel: 'Bookings',
     accent: '#34d399', // emerald
     items: [
       // Reservations & Services each surface own resource. The List ↔ Calendar
       // toggle lives inside the page; the dropped /calendar legacy entry was
       // a duplicate of the in-page Timeline view.
-      { path: '/bookings',          label: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
-      { path: '/service-bookings',  label: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
-      { path: '/booking-rooms',     label: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
-      { path: '/service-masters',   label: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
-      { path: '/booking-extras',    label: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
-      { path: '/bookings/payments', label: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
+      { path: '/bookings',          labelKey: 'nav.items.reservations',    defaultLabel: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
+      { path: '/service-bookings',  labelKey: 'nav.items.services',        defaultLabel: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
+      { path: '/booking-rooms',     labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
+      { path: '/service-masters',   labelKey: 'nav.items.masters',         defaultLabel: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
+      { path: '/booking-extras',    labelKey: 'nav.items.extras',          defaultLabel: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
+      { path: '/bookings/payments', labelKey: 'nav.items.payments',        defaultLabel: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
     ],
   },
   {
-    label: 'CRM & Marketing',
+    labelKey: 'nav.groups.crm_marketing', defaultLabel: 'CRM & Marketing',
     accent: '#f472b6', // pink
     items: [
-      { path: '/inquiries',     label: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
-      { path: '/tasks',         label: 'Tasks',             icon: ListChecks, gate: 'all' },
-      { path: '/reports',       label: 'Reports',           icon: TrendingUp, gate: 'admin' },
-      { path: '/lead-forms',    label: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },
-      { path: '/corporate',     label: 'Companies',         icon: Briefcase, gate: 'admin' },
-      { path: '/notifications', label: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
-      { path: '/reviews',       label: 'Reviews',           icon: Star,      gate: 'admin' },
+      { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
+      { path: '/tasks',         labelKey: 'nav.items.tasks',           defaultLabel: 'Tasks',             icon: ListChecks, gate: 'all' },
+      { path: '/reports',       labelKey: 'nav.items.reports',         defaultLabel: 'Reports',           icon: TrendingUp, gate: 'admin' },
+      { path: '/lead-forms',    labelKey: 'nav.items.lead_forms',      defaultLabel: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },
+      { path: '/corporate',     labelKey: 'nav.items.companies',       defaultLabel: 'Companies',         icon: Briefcase, gate: 'admin' },
+      { path: '/notifications', labelKey: 'nav.items.campaigns',       defaultLabel: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
+      { path: '/reviews',       labelKey: 'nav.items.reviews',         defaultLabel: 'Reviews',           icon: Star,      gate: 'admin' },
     ],
   },
   {
-    label: 'Operations',
+    labelKey: 'nav.groups.operations', defaultLabel: 'Operations',
     accent: '#22d3ee', // cyan
     items: [
-      { path: '/planner',    label: 'Planner',    icon: ClipboardList, gate: 'all' },
-      { path: '/brands',     label: 'Brands',     icon: Briefcase,     gate: 'admin' },
-      { path: '/properties', label: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
-      { path: '/scan',       label: 'Scan',       icon: Scan,          gate: 'all' },
+      { path: '/planner',    labelKey: 'nav.items.planner',    defaultLabel: 'Planner',    icon: ClipboardList, gate: 'all' },
+      { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Briefcase,     gate: 'admin' },
+      { path: '/properties', labelKey: 'nav.items.properties', defaultLabel: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
+      { path: '/scan',       labelKey: 'nav.items.scan',       defaultLabel: 'Scan',       icon: Scan,          gate: 'all' },
     ],
   },
   {
-    label: 'System',
+    labelKey: 'nav.groups.system', defaultLabel: 'System',
     accent: '#9ca3af', // slate
     items: [
-      { path: '/billing',   label: 'Billing',   icon: CreditCard, gate: 'admin' },
-      { path: '/audit-log', label: 'Audit Log', icon: ScrollText, gate: 'admin' },
-      { path: '/settings',  label: 'Settings',  icon: Settings,   gate: 'admin' },
+      { path: '/billing',   labelKey: 'nav.items.billing',    defaultLabel: 'Billing',   icon: CreditCard, gate: 'admin' },
+      { path: '/audit-log', labelKey: 'nav.items.audit_log',  defaultLabel: 'Audit Log', icon: ScrollText, gate: 'admin' },
+      { path: '/settings',  labelKey: 'nav.items.settings',   defaultLabel: 'Settings',  icon: Settings,   gate: 'admin' },
     ],
   },
 ]
@@ -154,6 +166,7 @@ export function canAccess(gate: NavGate, staff: { role: string; can_manage_offer
 const SIDEBAR_KEY = 'loyalty-sidebar-collapsed'
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -245,7 +258,7 @@ export function Layout({ children }: { children: ReactNode }) {
         return (i.altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))
       })
       if (match) {
-        setExpandedGroups(prev => ({ ...prev, [group.label]: true }))
+        setExpandedGroups(prev => ({ ...prev, [group.defaultLabel]: true }))
         break
       }
     }
@@ -358,9 +371,12 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const visibleGroups = navGroups
     .filter(group => {
-      if (ALWAYS_VISIBLE.has(group.label)) return true
-      if (hasPerUserWhitelist && !userAllowed!.includes(group.label)) return false
-      if (hiddenNavGroups.includes(group.label)) return false
+      // Identity stays in English (`defaultLabel`) so the saved
+      // whitelist + hidden-list keys are language-stable. Only the
+      // displayed text comes from i18n.
+      if (ALWAYS_VISIBLE.has(group.defaultLabel)) return true
+      if (hasPerUserWhitelist && !userAllowed!.includes(group.defaultLabel)) return false
+      if (hiddenNavGroups.includes(group.defaultLabel)) return false
       return true
     })
     .map(group => ({
@@ -425,8 +441,9 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
-          {visibleGroups.map(({ label, items, accent }) => {
-            const isOpen = displayCollapsed || expandedGroups[label] !== false // default open
+          {visibleGroups.map(({ labelKey, defaultLabel, items, accent }) => {
+            const groupLabel = t(labelKey, defaultLabel)
+            const isOpen = displayCollapsed || expandedGroups[defaultLabel] !== false // default open
             // hex8 helper — convert "#rrggbb" to rgba with the supplied alpha.
             // Used for the active-state tint so each group's highlight
             // colour reads as a translucent wash of the accent.
@@ -438,18 +455,18 @@ export function Layout({ children }: { children: ReactNode }) {
               return `rgba(${r},${g},${b},${a})`
             }
             return (
-              <div key={label} className="mb-3 last:mb-1">
+              <div key={defaultLabel} className="mb-3 last:mb-1">
                 {/* Group header — colored dot + bolder label so the
                     seven sections read as distinct sections at a glance.
                     Collapsed sidebar shows only a thin accent line. */}
                 {!displayCollapsed ? (
                   <button
-                    onClick={() => toggleGroup(label)}
+                    onClick={() => toggleGroup(defaultLabel)}
                     className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/[0.02] rounded-lg transition-colors group"
                     style={{ color: tint(0.9) }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="flex-1 text-left">{groupLabel}</span>
                     <ChevronDown size={11} className={clsx('transition-transform opacity-50 group-hover:opacity-100', isOpen ? '' : '-rotate-90')} />
                   </button>
                 ) : (
@@ -457,7 +474,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 )}
 
                 {/* Group items */}
-                {isOpen && items.map(({ path, label: itemLabel, icon: Icon, altPaths }) => {
+                {isOpen && items.map(({ path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths }) => {
+                  const itemLabel = t(itemLabelKey, itemDefault)
                   const active = path === '/'
                     ? location.pathname === '/'
                     : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p)))
@@ -524,14 +542,17 @@ export function Layout({ children }: { children: ReactNode }) {
               </div>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            title={displayCollapsed ? 'Logout' : undefined}
-            className={clsx('flex items-center gap-2 text-t-secondary hover:text-white text-xs transition-colors', displayCollapsed ? 'justify-center w-full' : '')}
-          >
-            <LogOut size={15} />
-            {!displayCollapsed && 'Logout'}
-          </button>
+          <div className={clsx('flex items-center gap-3', displayCollapsed ? 'flex-col' : 'justify-between')}>
+            <button
+              onClick={handleLogout}
+              title={displayCollapsed ? t('topbar.logout', 'Log out') : undefined}
+              className={clsx('flex items-center gap-2 text-t-secondary hover:text-white text-xs transition-colors', displayCollapsed ? 'justify-center w-full' : '')}
+            >
+              <LogOut size={15} />
+              {!displayCollapsed && t('topbar.logout', 'Log out')}
+            </button>
+            <LangSwitcher collapsed={displayCollapsed} />
+          </div>
         </div>
       </aside>
 

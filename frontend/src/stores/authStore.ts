@@ -1,11 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { applyServerLanguage } from '../i18n'
 
 interface User {
   id: number
   name: string
   email: string
   user_type: string
+  language?: string | null
 }
 
 interface Staff {
@@ -43,6 +45,10 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (token, user, staff) => {
         localStorage.setItem('auth_token', token)
         set({ token, user, staff })
+        // Sync the user's saved language preference to i18n so the same
+        // staff member sees the same locale on every device. No-op when
+        // user.language is missing or doesn't match a supported locale.
+        applyServerLanguage(user.language ?? null)
       },
       logout: () => {
         localStorage.removeItem('auth_token')

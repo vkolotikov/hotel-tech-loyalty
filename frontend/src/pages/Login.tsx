@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Lock, Mail, User, Building2, Check, Phone,
   ShieldCheck, Eye, EyeOff, ArrowLeft,
@@ -115,6 +116,7 @@ export function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
+  const { t } = useTranslation()
 
   // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
   // (not the shared axios `api` instance) because its global 401 interceptor
@@ -562,7 +564,7 @@ export function Login() {
             <>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.login.email', 'Email')}</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
@@ -574,15 +576,15 @@ export function Login() {
                 </div>
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <label className="block text-[13px] font-medium text-slate-300">Password</label>
+                    <label className="block text-[13px] font-medium text-slate-300">{t('auth.login.password', 'Password')}</label>
                     <button type="button" onClick={() => { navigate('/forgot-password'); setError('') }}
-                      className="text-xs text-blue-400 hover:text-blue-300">Forgot password?</button>
+                      className="text-xs text-blue-400 hover:text-blue-300">{t('auth.login.forgot_password', 'Forgot password?')}</button>
                   </div>
                   <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                      required placeholder="Enter password"
+                      required placeholder={t('auth.login.password', 'Password')}
                       className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                     <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
@@ -594,12 +596,12 @@ export function Login() {
                 </div>
                 <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
-                  {loading ? 'Signing in…' : 'Sign In'}
+                  {loading ? t('auth.login.submitting', 'Signing in…') : t('auth.login.submit', 'Sign in')}
                 </button>
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
-                New to HotelTech?{' '}
-                <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Start free trial</button>
+                {t('auth.login.no_account', "Don't have an account?")}{' '}
+                <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.login.create_account', 'Create one')}</button>
               </p>
             </>
           )}

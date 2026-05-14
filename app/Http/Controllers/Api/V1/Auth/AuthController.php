@@ -379,6 +379,9 @@ class AuthController extends Controller
             'phone'     => $user->phone,
             'user_type' => $user->user_type,
             'avatar_url'=> $user->avatar_url,
+            // Admin SPA reads this on bootstrap to set the i18n locale.
+            // Stored as a 2-letter code (en/ru/de/fr/es); see MeController.
+            'language'  => $user->language ?: 'en',
             'loyalty_member' => $member,
             'staff'     => $staff,
         ];

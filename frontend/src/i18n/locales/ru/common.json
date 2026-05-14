@@ -1,0 +1,261 @@
+{
+  "app": {
+    "name": "Hotel Tech",
+    "loading": "Загрузка…",
+    "saving": "Сохранение…",
+    "error_generic": "Что-то пошло не так",
+    "retry": "Повторить",
+    "language": "Язык"
+  },
+
+  "actions": {
+    "save": "Сохранить",
+    "save_changes": "Сохранить изменения",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Изменить",
+    "add": "Добавить",
+    "create": "Создать",
+    "update": "Обновить",
+    "remove": "Удалить",
+    "close": "Закрыть",
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Назад",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "filters": "Фильтры",
+    "clear": "Очистить",
+    "clear_all": "Очистить всё",
+    "refresh": "Обновить",
+    "reset": "Сбросить",
+    "submit": "Отправить",
+    "confirm": "Подтвердить",
+    "duplicate": "Дублировать",
+    "export": "Экспорт",
+    "import": "Импорт",
+    "upload": "Загрузить",
+    "download": "Скачать",
+    "copy": "Копировать",
+    "copied": "Скопировано!",
+    "view": "Просмотр",
+    "details": "Подробнее",
+    "more": "Ещё",
+    "show_more": "Показать больше",
+    "show_less": "Свернуть",
+    "select": "Выбрать",
+    "select_all": "Выбрать все",
+    "deselect_all": "Снять выделение",
+    "open": "Открыть",
+    "preview": "Предпросмотр",
+    "discard": "Отменить",
+    "send": "Отправить",
+    "yes": "Да",
+    "no": "Нет",
+    "enabled": "Включено",
+    "disabled": "Отключено",
+    "active": "Активно",
+    "inactive": "Неактивно",
+    "draft": "Черновик",
+    "published": "Опубликовано"
+  },
+
+  "status": {
+    "ok": "ОК",
+    "error": "Ошибка",
+    "warning": "Предупреждение",
+    "info": "Информация",
+    "success": "Успешно",
+    "pending": "В ожидании",
+    "completed": "Завершено",
+    "in_progress": "В работе",
+    "failed": "Ошибка",
+    "online": "Онлайн",
+    "offline": "Офлайн"
+  },
+
+  "nav": {
+    "groups": {
+      "overview": "Обзор",
+      "ai_chat": "AI Чат",
+      "members_loyalty": "Участники и лояльность",
+      "bookings": "Бронирования",
+      "crm_marketing": "CRM и маркетинг",
+      "operations": "Операции",
+      "system": "Система"
+    },
+    "items": {
+      "dashboard": "Главная",
+      "analytics": "Аналитика",
+      "ai_insights": "AI инсайты",
+      "engagement": "Взаимодействие",
+      "chatbot_setup": "Настройка чат-бота",
+      "members": "Участники",
+      "program": "Программа",
+      "rewards": "Награды",
+      "campaigns": "Кампании",
+      "reservations": "Бронирования",
+      "services": "Услуги",
+      "rooms_services": "Номера и услуги",
+      "masters": "Мастера",
+      "extras": "Дополнения",
+      "payments": "Платежи",
+      "leads_inquiries": "Лиды и запросы",
+      "tasks": "Задачи",
+      "reports": "Отчёты",
+      "lead_forms": "Формы заявок",
+      "companies": "Компании",
+      "reviews": "Отзывы",
+      "planner": "Планировщик",
+      "brands": "Бренды",
+      "properties": "Объекты",
+      "scan": "Сканер",
+      "billing": "Биллинг",
+      "audit_log": "Журнал действий",
+      "settings": "Настройки"
+    }
+  },
+
+  "topbar": {
+    "search_placeholder": "Поиск участников, гостей, броней…",
+    "notifications": "Уведомления",
+    "no_notifications": "Нет уведомлений",
+    "mark_all_read": "Отметить всё как прочитанное",
+    "profile": "Профиль",
+    "logout": "Выйти",
+    "switch_brand": "Переключить бренд",
+    "all_brands": "Все бренды"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Вход",
+      "subtitle": "С возвращением",
+      "email": "Email",
+      "password": "Пароль",
+      "remember_me": "Запомнить меня",
+      "forgot_password": "Забыли пароль?",
+      "submit": "Войти",
+      "submitting": "Вход…",
+      "no_account": "Нет аккаунта?",
+      "create_account": "Создать",
+      "invalid_credentials": "Неверный email или пароль"
+    },
+    "register": {
+      "title": "Создать аккаунт",
+      "name": "Ваше имя",
+      "company": "Название компании / отеля",
+      "submit": "Создать аккаунт",
+      "have_account": "Уже есть аккаунт?",
+      "sign_in": "Войти"
+    },
+    "forgot": {
+      "title": "Сброс пароля",
+      "subtitle": "Мы отправим вам ссылку для сброса пароля.",
+      "submit": "Отправить ссылку",
+      "sent": "Проверьте почту — там ссылка для сброса.",
+      "back_to_login": "Назад к входу"
+    },
+    "reset": {
+      "title": "Новый пароль",
+      "new_password": "Новый пароль",
+      "confirm_password": "Подтвердите пароль",
+      "submit": "Обновить пароль",
+      "mismatch": "Пароли не совпадают"
+    }
+  },
+
+  "dashboard": {
+    "title": "Главная",
+    "welcome": "С возвращением, {{name}}",
+    "kpis": {
+      "members": "Участники",
+      "new_this_month": "Новых за месяц",
+      "points_issued": "Начислено баллов",
+      "points_redeemed": "Использовано баллов",
+      "active_bookings": "Активные брони",
+      "monthly_revenue": "Доход за месяц",
+      "conversion_rate": "Конверсия"
+    },
+    "sections": {
+      "recent_activity": "Недавняя активность",
+      "top_members": "Топ участников",
+      "upcoming_stays": "Ближайшие заезды",
+      "ai_insights": "AI инсайты",
+      "tasks_today": "Задачи на сегодня",
+      "leads_pipeline": "Воронка лидов"
+    },
+    "empty": {
+      "no_activity": "Пока нет активности.",
+      "no_leads": "Открытых лидов нет.",
+      "no_tasks": "На сегодня задач нет."
+    }
+  },
+
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Конфигурация платформы, интеграции и брендинг",
+    "save_changes": "Сохранить изменения",
+    "discard": "Отменить",
+    "language": "Язык интерфейса",
+    "language_help": "Язык админ-консоли. Каждый сотрудник выбирает свой.",
+    "tabs": {
+      "general": "Общие",
+      "branding": "Брендинг",
+      "loyalty": "Лояльность",
+      "notifications": "Уведомления",
+      "integrations": "Интеграции",
+      "booking": "Бронирование",
+      "pipelines": "Воронки",
+      "planner": "Планировщик",
+      "menu": "Меню",
+      "team": "Команда",
+      "mobile_app": "Мобильное приложение",
+      "documentation": "Документация",
+      "ai_usage": "Использование AI",
+      "ai_system": "AI и система"
+    }
+  },
+
+  "common": {
+    "yes": "Да",
+    "no": "Нет",
+    "all": "Все",
+    "none": "Нет",
+    "any": "Любой",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "tomorrow": "Завтра",
+    "this_week": "Эта неделя",
+    "this_month": "Этот месяц",
+    "last_month": "Прошлый месяц",
+    "last_7_days": "За 7 дней",
+    "last_30_days": "За 30 дней",
+    "last_90_days": "За 90 дней",
+    "no_results": "Ничего не найдено",
+    "no_data": "Данных пока нет",
+    "and_more": "и ещё {{count}}",
+    "name": "Имя",
+    "email": "Email",
+    "phone": "Телефон",
+    "status": "Статус",
+    "date": "Дата",
+    "created": "Создано",
+    "updated": "Обновлено",
+    "actions": "Действия",
+    "type": "Тип",
+    "amount": "Сумма",
+    "total": "Итого",
+    "notes": "Заметки",
+    "description": "Описание"
+  },
+
+  "toasts": {
+    "saved": "Сохранено",
+    "updated": "Обновлено",
+    "deleted": "Удалено",
+    "created": "Создано",
+    "copied": "Скопировано в буфер",
+    "error": "Что-то пошло не так"
+  }
+}

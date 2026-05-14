@@ -13,6 +13,7 @@ import {
   BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList, Activity,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import { useSubscription } from '../hooks/useSubscription'
 import { BookingTab } from '../components/settings/BookingTab'
 import { PipelinesAdmin } from '../components/PipelinesAdmin'
@@ -240,6 +241,7 @@ export function Settings() {
   const isSuperAdmin = staff?.role === 'super_admin'
   const { hasFeature, hasProduct } = useSubscription()
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('general')
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({})
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
@@ -1816,20 +1818,20 @@ export function Settings() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-t-secondary mt-0.5">Manage your platform configuration, integrations, and branding</p>
+          <h1 className="text-2xl font-bold text-white">{t('settings.title', 'Settings')}</h1>
+          <p className="text-sm text-t-secondary mt-0.5">{t('settings.subtitle', 'Manage your platform configuration, integrations, and branding')}</p>
         </div>
         {hasChanges && (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditedSettings({})}
               className={btnPrimary + ' bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:bg-white/[0.08]'}>
-              <RotateCcw size={14} /> Discard
+              <RotateCcw size={14} /> {t('settings.discard', 'Discard')}
             </button>
             <button onClick={handleSave} disabled={saveMutation.isPending}
               className={btnPrimary + ' text-white border border-emerald-500/30 hover:border-emerald-500/50'}
               style={{ background: 'linear-gradient(135deg, rgba(116,200,149,0.25), rgba(116,200,149,0.1))' }}>
               {saveMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-              Save Changes
+              {t('settings.save_changes', 'Save changes')}
             </button>
           </div>
         )}
@@ -1845,12 +1847,15 @@ export function Settings() {
         }).map(tab => {
           const Icon = tab.icon
           const active = activeTab === tab.id
+          // Tab labels live in i18n at `settings.tabs.<id>`; missing keys
+          // fall through to the structural English label.
+          const label = t(`settings.tabs.${tab.id}`, tab.label)
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                 active ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'
               }`}>
-              <Icon size={14} /> {tab.label}
+              <Icon size={14} /> {label}
             </button>
           )
         })}
