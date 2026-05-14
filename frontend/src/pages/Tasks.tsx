@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
@@ -59,6 +60,7 @@ const STATUS_CHIPS: { id: Status; label: string; color: string }[] = [
 
 export function Tasks() {
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [status, setStatus] = useState<Status>('open')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Task | 'new' | null>(null)
@@ -106,16 +108,16 @@ export function Tasks() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks-list'] })
       qc.invalidateQueries({ queryKey: ['inquiry'] }) // any open lead-detail page
-      toast.success('Task completed')
+      toast.success(t('tasks.toasts.completed', 'Task completed'))
     },
-    onError: () => toast.error('Could not complete'),
+    onError: () => toast.error(t('tasks.toasts.complete_fail', 'Could not complete')),
   })
 
   const reopenMut = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/tasks/${id}/reopen`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks-list'] })
-      toast.success('Reopened')
+      toast.success(t('tasks.toasts.reopened', 'Reopened'))
     },
   })
 
@@ -123,7 +125,7 @@ export function Tasks() {
     mutationFn: (id: number) => api.delete(`/v1/admin/tasks/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks-list'] })
-      toast.success('Task deleted')
+      toast.success(t('tasks.toasts.deleted', 'Task deleted'))
     },
   })
 
@@ -132,17 +134,19 @@ export function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">Tasks</h1>
+          <h1 className="text-2xl font-bold text-white">{t('tasks.title', 'Tasks')}</h1>
           <p className="text-sm text-t-secondary mt-0.5">
-            {overdueCount?.meta?.total ? `${overdueCount.meta.total} overdue · ` : ''}
-            {todayCount?.meta?.total ? `${todayCount.meta.total} due today` : 'Stay on top of your follow-ups'}
+            {overdueCount?.meta?.total ? t('tasks.subtitle.overdue_count', { count: overdueCount.meta.total, defaultValue: '{{count}} overdue · ' }) : ''}
+            {todayCount?.meta?.total
+              ? t('tasks.subtitle.due_today', { count: todayCount.meta.total, defaultValue: '{{count}} due today' })
+              : t('tasks.subtitle.default', 'Stay on top of your follow-ups')}
           </p>
         </div>
         <button
           onClick={() => setEditing('new')}
           className="bg-accent text-black font-bold rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-accent/90"
         >
-          <Plus size={15} /> New task
+          <Plus size={15} /> {t('tasks.new_task', 'New task')}
         </button>
       </div>
 
@@ -161,7 +165,7 @@ export function Tasks() {
               }`}
               style={active ? { background: chip.color, borderColor: chip.color } : {}}
             >
-              {chip.label}
+              {t(`tasks.status_chips.${chip.id}`, chip.label)}
             </button>
           )
         })}
@@ -173,7 +177,7 @@ export function Tasks() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search…"
+            placeholder={t('tasks.search_placeholder', 'Search…')}
             className="bg-dark-surface border border-dark-border rounded-lg pl-7 pr-3 py-1.5 text-xs outline-none focus:border-accent w-44"
           />
         </div>
@@ -181,31 +185,34 @@ export function Tasks() {
 
       {/* Body */}
       {isLoading ? (
-        <div className="text-center py-16 text-sm text-t-secondary">Loading tasks…</div>
+        <div className="text-center py-16 text-sm text-t-secondary">{t('tasks.loading', 'Loading tasks…')}</div>
       ) : tasks.length === 0 ? (
         <EmptyState status={status} onCreate={() => setEditing('new')} />
       ) : (
         <div className="space-y-5">
           {groups.map(g => (
-            <div key={g.label}>
+            <div key={g.key}>
               <h3 className="flex items-center gap-2 mb-2 text-[11px] uppercase tracking-wider font-bold text-t-secondary">
                 <span
                   className="w-1.5 h-1.5 rounded-full"
                   style={{ background: g.color }}
                 />
-                {g.label}
+                {t(`tasks.groups.${g.key}`, g.label)}
                 <span className="text-t-secondary/60 font-normal">({g.tasks.length})</span>
               </h3>
               <div className="space-y-1.5">
-                {g.tasks.map(t => (
+                {/* Loop var renamed from `t` → `task` to avoid shadowing
+                    the i18n hook's `t` destructured at the top of this
+                    component. */}
+                {g.tasks.map(task => (
                   <TaskCard
-                    key={t.id}
-                    task={t}
-                    onComplete={() => completeMut.mutate(t.id)}
-                    onReopen={() => reopenMut.mutate(t.id)}
-                    onEdit={() => setEditing(t)}
+                    key={task.id}
+                    task={task}
+                    onComplete={() => completeMut.mutate(task.id)}
+                    onReopen={() => reopenMut.mutate(task.id)}
+                    onEdit={() => setEditing(task)}
                     onDelete={() => {
-                      if (window.confirm(`Delete "${t.title}"?`)) deleteMut.mutate(t.id)
+                      if (window.confirm(t('tasks.delete_confirm', { title: task.title, defaultValue: 'Delete "{{title}}"?' }))) deleteMut.mutate(task.id)
                     }}
                   />
                 ))}
@@ -238,7 +245,9 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   const meta = TASK_TYPES[task.type] ?? TASK_TYPES.custom
+  const typeLabel = t(`tasks.types.${task.type}`, meta.label)
   const Icon = meta.icon
   const completed = !!task.completed_at
   const overdue = !completed && task.due_at && new Date(task.due_at) < new Date()
@@ -260,7 +269,7 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
             ? 'bg-emerald-500 border-emerald-500'
             : 'border-dark-border hover:border-emerald-400'
         }`}
-        title={completed ? 'Reopen' : 'Mark complete'}
+        title={completed ? t('tasks.tooltips.reopen', 'Reopen') : t('tasks.tooltips.mark_complete', 'Mark complete')}
       >
         {completed && <CheckCircle2 size={12} className="text-black" />}
       </button>
@@ -281,14 +290,14 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
         )}
         <div className="flex items-center gap-2 mt-1 text-[11px] text-t-secondary flex-wrap">
           <span className="uppercase tracking-wide font-bold" style={{ color: meta.color }}>
-            {meta.label}
+            {typeLabel}
           </span>
           {task.due_at && (
             <>
               <span>·</span>
               <span className={overdue ? 'text-red-400 font-bold' : ''}>
                 {overdue && <AlertCircle size={10} className="inline mr-0.5" />}
-                {formatDue(task.due_at, completed)}
+                {formatDue(task.due_at, completed, t)}
               </span>
             </>
           )}
@@ -306,7 +315,7 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
                 onClick={e => e.stopPropagation()}
                 className="text-accent hover:underline"
               >
-                Inquiry #{task.inquiry_id}
+                {t('tasks.card.inquiry_link', { id: task.inquiry_id, defaultValue: 'Inquiry #{{id}}' })}
               </Link>
             </>
           )}
@@ -324,7 +333,7 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
           <button
             onClick={onReopen}
             className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
-            title="Reopen"
+            title={t('tasks.tooltips.reopen', 'Reopen')}
           >
             <RotateCcw size={13} />
           </button>
@@ -332,7 +341,7 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
         <button
           onClick={onDelete}
           className="p-1.5 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
-          title="Delete"
+          title={t('tasks.tooltips.delete', 'Delete')}
         >
           <Trash2 size={13} />
         </button>
@@ -345,13 +354,14 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
 /* ── Empty state ────────────────────────────────────────────── */
 
 function EmptyState({ status, onCreate }: { status: Status; onCreate: () => void }) {
+  const { t } = useTranslation()
   const message = status === 'overdue'
-    ? 'Nothing overdue — keep it that way.'
+    ? t('tasks.empty.overdue',   'Nothing overdue — keep it that way.')
     : status === 'due_today'
-      ? 'Nothing due today.'
+      ? t('tasks.empty.due_today',  'Nothing due today.')
       : status === 'completed'
-        ? 'No completed tasks yet.'
-        : 'No tasks. Add the next thing you need to do.'
+        ? t('tasks.empty.completed', 'No completed tasks yet.')
+        : t('tasks.empty.default',   'No tasks. Add the next thing you need to do.')
   return (
     <div className="text-center py-20 bg-dark-surface border border-dashed border-dark-border rounded-xl">
       <ListChecks size={32} className="text-t-secondary/40 mx-auto mb-3" />
@@ -361,7 +371,7 @@ function EmptyState({ status, onCreate }: { status: Status; onCreate: () => void
           onClick={onCreate}
           className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm hover:bg-accent/90 inline-flex items-center gap-2"
         >
-          <Plus size={14} /> New task
+          <Plus size={14} /> {t('tasks.new_task', 'New task')}
         </button>
       )}
     </div>
@@ -371,6 +381,8 @@ function EmptyState({ status, onCreate }: { status: Status; onCreate: () => void
 /* ── Helpers ────────────────────────────────────────────────── */
 
 interface Group {
+  /** i18n key suffix under `tasks.groups.<key>` — also used as React key. */
+  key: string
   label: string
   color: string
   tasks: Task[]
@@ -383,13 +395,13 @@ function groupByDay(tasks: Task[], byCompleted: boolean): Group[] {
   const endOfWeek = new Date(startOfToday); endOfWeek.setDate(endOfWeek.getDate() + 7)
 
   const buckets: Record<string, Group> = {
-    overdue:  { label: 'Overdue',     color: '#ef4444', tasks: [] },
-    today:    { label: 'Today',       color: '#f59e0b', tasks: [] },
-    tomorrow: { label: 'Tomorrow',    color: '#3b82f6', tasks: [] },
-    week:     { label: 'This week',   color: '#22d3ee', tasks: [] },
-    later:    { label: 'Later',       color: '#94a3b8', tasks: [] },
-    none:     { label: 'No due date', color: '#94a3b8', tasks: [] },
-    done:     { label: 'Completed',   color: '#10b981', tasks: [] },
+    overdue:  { key: 'overdue',     label: 'Overdue',     color: '#ef4444', tasks: [] },
+    today:    { key: 'today',       label: 'Today',       color: '#f59e0b', tasks: [] },
+    tomorrow: { key: 'tomorrow',    label: 'Tomorrow',    color: '#3b82f6', tasks: [] },
+    week:     { key: 'this_week',   label: 'This week',   color: '#22d3ee', tasks: [] },
+    later:    { key: 'later',       label: 'Later',       color: '#94a3b8', tasks: [] },
+    none:     { key: 'no_due_date', label: 'No due date', color: '#94a3b8', tasks: [] },
+    done:     { key: 'completed',   label: 'Completed',   color: '#10b981', tasks: [] },
   }
 
   for (const t of tasks) {
@@ -416,7 +428,12 @@ function groupByDay(tasks: Task[], byCompleted: boolean): Group[] {
   return order.map(k => buckets[k]).filter(g => g.tasks.length > 0)
 }
 
-function formatDue(iso: string, completed: boolean): string {
+/**
+ * Format a due-at timestamp as a relative phrase ("in 3m", "2h ago", …)
+ * with localised strings. The TFunction is threaded through from the
+ * caller so this helper stays a pure function.
+ */
+function formatDue(iso: string, completed: boolean, t: (k: string, opts?: Record<string, unknown>) => string): string {
   const d = new Date(iso)
   const diffMs = d.getTime() - Date.now()
   const absMs = Math.abs(diffMs)
@@ -424,10 +441,16 @@ function formatDue(iso: string, completed: boolean): string {
   const mins = Math.floor(absMs / 60_000)
 
   if (completed) return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (mins < 60) return past ? `${mins}m ago` : `in ${mins}m`
+  if (mins < 60) return past
+    ? t('tasks.due.minutes_ago', { count: mins, defaultValue: '{{count}}m ago' })
+    : t('tasks.due.in_minutes', { count: mins, defaultValue: 'in {{count}}m' })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return past ? `${hours}h ago` : `in ${hours}h`
+  if (hours < 24) return past
+    ? t('tasks.due.hours_ago', { count: hours, defaultValue: '{{count}}h ago' })
+    : t('tasks.due.in_hours', { count: hours, defaultValue: 'in {{count}}h' })
   const days = Math.floor(hours / 24)
-  if (days < 7) return past ? `${days}d ago` : `in ${days}d`
+  if (days < 7) return past
+    ? t('tasks.due.days_ago', { count: days, defaultValue: '{{count}}d ago' })
+    : t('tasks.due.in_days', { count: days, defaultValue: 'in {{count}}d' })
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }

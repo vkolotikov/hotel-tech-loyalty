@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   X, Phone, Mail, Calendar as CalendarIcon, FileText, ChevronRight,
   Building2, ListChecks,
@@ -53,6 +54,7 @@ const TASK_TYPES: Record<string, { label: string; icon: any; color: string }> = 
 }
 
 export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) {
+  const { t } = useTranslation()
   const isNew = !task
   const [type, setType] = useState(task?.type ?? 'follow_up')
   const [title, setTitle] = useState(task?.title ?? '')
@@ -81,15 +83,15 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
         : api.put(`/v1/admin/tasks/${task!.id}`, payload)
     },
     onSuccess: () => {
-      toast.success(isNew ? 'Task created' : 'Task updated')
+      toast.success(isNew ? t('taskDrawer.toasts.created', 'Task created') : t('taskDrawer.toasts.updated', 'Task updated'))
       onSaved()
     },
-    onError: () => toast.error('Save failed'),
+    onError: () => toast.error(t('taskDrawer.toasts.save_failed', 'Save failed')),
   })
 
   const submit = () => {
     if (!title.trim()) {
-      toast.error('Title is required')
+      toast.error(t('taskDrawer.toasts.title_required', 'Title is required'))
       return
     }
     save.mutate()
@@ -105,7 +107,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
-          <h2 className="text-lg font-bold text-white">{isNew ? 'New task' : 'Edit task'}</h2>
+          <h2 className="text-lg font-bold text-white">{isNew ? t('taskDrawer.title_new', 'New task') : t('taskDrawer.title_edit', 'Edit task')}</h2>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
             <X size={16} />
           </button>
@@ -114,7 +116,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-              Type
+              {t('taskDrawer.labels.type', 'Type')}
             </label>
             <div className="grid grid-cols-3 gap-1.5">
               {Object.entries(TASK_TYPES).map(([key, m]) => {
@@ -130,7 +132,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
                     style={active ? { background: m.color, borderColor: m.color } : {}}
                   >
                     <Icon size={14} />
-                    {m.label}
+                    {t(`tasks.types.${key}`, m.label)}
                   </button>
                 )
               })}
@@ -139,12 +141,12 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
 
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-              Title
+              {t('taskDrawer.labels.title', 'Title')}
             </label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Send proposal · Follow up after site visit · …"
+              placeholder={t('taskDrawer.placeholders.title', 'Send proposal · Follow up after site visit · …')}
               autoFocus={isNew}
               className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent"
             />
@@ -152,20 +154,20 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
 
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-              Notes (optional)
+              {t('taskDrawer.labels.notes', 'Notes (optional)')}
             </label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={4}
-              placeholder="Anything the agent picking this up should know."
+              placeholder={t('taskDrawer.placeholders.notes', 'Anything the agent picking this up should know.')}
               className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none"
             />
           </div>
 
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
-              Due
+              {t('taskDrawer.labels.due', 'Due')}
             </label>
             <input
               type="datetime-local"
@@ -176,11 +178,11 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
             <div className="flex gap-1.5 mt-2 flex-wrap">
               {QUICK_DUES.map(qd => (
                 <button
-                  key={qd.label}
+                  key={qd.key}
                   onClick={() => setDueAt(qd.compute())}
                   className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-t-secondary hover:text-white hover:border-dark-border/80"
                 >
-                  {qd.label}
+                  {t(`taskDrawer.quick_dues.${qd.key}`, qd.label)}
                 </button>
               ))}
             </div>
@@ -196,13 +198,13 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
 
           {(task?.inquiry_id ?? defaultInquiryId) && (
             <div className="bg-dark-bg border border-dark-border rounded-md p-3 text-xs text-t-secondary">
-              <p className="font-semibold text-white mb-1">Linked inquiry</p>
+              <p className="font-semibold text-white mb-1">{t('taskDrawer.linked_inquiry', 'Linked inquiry')}</p>
               <Link
                 to={`/inquiries/${task?.inquiry_id ?? defaultInquiryId}`}
                 className="text-accent hover:underline"
                 onClick={onClose}
               >
-                Open inquiry #{task?.inquiry_id ?? defaultInquiryId} →
+                {t('taskDrawer.open_inquiry', { id: task?.inquiry_id ?? defaultInquiryId, defaultValue: 'Open inquiry #{{id}} →' })}
               </Link>
             </div>
           )}
@@ -210,14 +212,16 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
 
         <div className="border-t border-dark-border p-4 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-t-secondary hover:text-white">
-            Cancel
+            {t('taskDrawer.actions.cancel', 'Cancel')}
           </button>
           <button
             onClick={submit}
             disabled={save.isPending || !title.trim()}
             className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 hover:bg-accent/90"
           >
-            {save.isPending ? 'Saving…' : isNew ? 'Create' : 'Save'}
+            {save.isPending ? t('taskDrawer.actions.saving', 'Saving…')
+              : isNew ? t('taskDrawer.actions.create', 'Create')
+              : t('taskDrawer.actions.save', 'Save')}
           </button>
         </div>
       </div>
@@ -225,26 +229,33 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
   )
 }
 
-const QUICK_DUES = [
+// Quick-due chip presets. `key` maps to `taskDrawer.quick_dues.<key>` in
+// the locale files. `label` is the English fallback rendered when the
+// locale is missing the key. Times are 24h: 17:00 = 5pm, 09:00 = 9am.
+const QUICK_DUES: { key: string; label: string; compute: () => string }[] = [
   {
+    key: 'in_1h',
     label: 'In 1h',
     compute: () => {
       const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return toLocalDt(d)
     },
   },
   {
+    key: 'today_5pm',
     label: 'Today 5pm',
     compute: () => {
       const d = new Date(); d.setHours(17, 0, 0, 0); return toLocalDt(d)
     },
   },
   {
+    key: 'tomorrow_9am',
     label: 'Tomorrow 9am',
     compute: () => {
       const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return toLocalDt(d)
     },
   },
   {
+    key: 'in_1_week',
     label: 'In 1 week',
     compute: () => {
       const d = new Date(); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0, 0); return toLocalDt(d)

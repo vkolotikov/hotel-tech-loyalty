@@ -225,6 +225,108 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "tasks": {
+    "title": "Aufgaben",
+    "subtitle": {
+      "overdue_count": "{{count}} überfällig · ",
+      "due_today": "{{count}} heute fällig",
+      "default": "Behalten Sie Ihre Nachfassaktionen im Blick"
+    },
+    "new_task": "Neue Aufgabe",
+    "search_placeholder": "Suchen…",
+    "loading": "Aufgaben werden geladen…",
+    "delete_confirm": "„{{title}}\" löschen?",
+    "status_chips": {
+      "open": "Offen",
+      "overdue": "Überfällig",
+      "due_today": "Heute",
+      "due_soon": "Bald",
+      "completed": "Erledigt",
+      "all": "Alle"
+    },
+    "groups": {
+      "overdue": "Überfällig",
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "this_week": "Diese Woche",
+      "later": "Später",
+      "no_due_date": "Ohne Fälligkeit",
+      "completed": "Erledigt"
+    },
+    "types": {
+      "call": "Anruf",
+      "email": "E-Mail",
+      "meeting": "Meeting",
+      "send_proposal": "Angebot senden",
+      "follow_up": "Nachfassen",
+      "site_visit": "Vor-Ort-Besuch",
+      "custom": "Eigene"
+    },
+    "tooltips": {
+      "reopen": "Wieder öffnen",
+      "mark_complete": "Als erledigt markieren",
+      "delete": "Löschen"
+    },
+    "card": {
+      "inquiry_link": "Anfrage #{{id}}"
+    },
+    "due": {
+      "in_minutes": "in {{count}} Min",
+      "minutes_ago": "vor {{count}} Min",
+      "in_hours": "in {{count}} Std",
+      "hours_ago": "vor {{count}} Std",
+      "in_days": "in {{count}} T",
+      "days_ago": "vor {{count}} T"
+    },
+    "empty": {
+      "overdue": "Nichts überfällig — bleiben Sie dran.",
+      "due_today": "Heute nichts fällig.",
+      "completed": "Noch keine erledigten Aufgaben.",
+      "default": "Keine Aufgaben. Fügen Sie das Nächste hinzu."
+    },
+    "toasts": {
+      "completed": "Aufgabe erledigt",
+      "complete_fail": "Konnte nicht abgeschlossen werden",
+      "reopened": "Wieder geöffnet",
+      "deleted": "Aufgabe gelöscht"
+    }
+  },
+
+  "taskDrawer": {
+    "title_new": "Neue Aufgabe",
+    "title_edit": "Aufgabe bearbeiten",
+    "labels": {
+      "type": "Typ",
+      "title": "Titel",
+      "notes": "Notizen (optional)",
+      "due": "Fällig"
+    },
+    "placeholders": {
+      "title": "Angebot senden · Nach Vor-Ort-Besuch nachfassen · …",
+      "notes": "Was die übernehmende Person wissen sollte."
+    },
+    "quick_dues": {
+      "in_1h": "In 1 Std",
+      "today_5pm": "Heute 17:00",
+      "tomorrow_9am": "Morgen 09:00",
+      "in_1_week": "In 1 Woche"
+    },
+    "linked_inquiry": "Verknüpfte Anfrage",
+    "open_inquiry": "Anfrage #{{id}} öffnen →",
+    "actions": {
+      "cancel": "Abbrechen",
+      "saving": "Speichern…",
+      "create": "Erstellen",
+      "save": "Speichern"
+    },
+    "toasts": {
+      "created": "Aufgabe erstellt",
+      "updated": "Aufgabe aktualisiert",
+      "title_required": "Titel ist erforderlich",
+      "save_failed": "Speichern fehlgeschlagen"
+    }
+  },
+
   "planner": {
     "title": "Dienstplan",
     "subtitle": {

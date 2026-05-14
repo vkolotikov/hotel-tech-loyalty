@@ -225,6 +225,108 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "tasks": {
+    "title": "Tâches",
+    "subtitle": {
+      "overdue_count": "{{count}} en retard · ",
+      "due_today": "{{count}} pour aujourd'hui",
+      "default": "Gardez vos relances sous contrôle"
+    },
+    "new_task": "Nouvelle tâche",
+    "search_placeholder": "Rechercher…",
+    "loading": "Chargement des tâches…",
+    "delete_confirm": "Supprimer « {{title}} » ?",
+    "status_chips": {
+      "open": "Ouvertes",
+      "overdue": "En retard",
+      "due_today": "Aujourd'hui",
+      "due_soon": "Bientôt",
+      "completed": "Terminées",
+      "all": "Toutes"
+    },
+    "groups": {
+      "overdue": "En retard",
+      "today": "Aujourd'hui",
+      "tomorrow": "Demain",
+      "this_week": "Cette semaine",
+      "later": "Plus tard",
+      "no_due_date": "Sans échéance",
+      "completed": "Terminées"
+    },
+    "types": {
+      "call": "Appel",
+      "email": "E-mail",
+      "meeting": "Réunion",
+      "send_proposal": "Envoyer une proposition",
+      "follow_up": "Relance",
+      "site_visit": "Visite sur site",
+      "custom": "Personnalisée"
+    },
+    "tooltips": {
+      "reopen": "Rouvrir",
+      "mark_complete": "Marquer comme terminée",
+      "delete": "Supprimer"
+    },
+    "card": {
+      "inquiry_link": "Demande #{{id}}"
+    },
+    "due": {
+      "in_minutes": "dans {{count}} min",
+      "minutes_ago": "il y a {{count}} min",
+      "in_hours": "dans {{count}} h",
+      "hours_ago": "il y a {{count}} h",
+      "in_days": "dans {{count}} j",
+      "days_ago": "il y a {{count}} j"
+    },
+    "empty": {
+      "overdue": "Rien en retard — gardez le cap.",
+      "due_today": "Rien à faire aujourd'hui.",
+      "completed": "Aucune tâche terminée pour l'instant.",
+      "default": "Aucune tâche. Ajoutez ce qu'il faut faire ensuite."
+    },
+    "toasts": {
+      "completed": "Tâche terminée",
+      "complete_fail": "Impossible de terminer",
+      "reopened": "Rouverte",
+      "deleted": "Tâche supprimée"
+    }
+  },
+
+  "taskDrawer": {
+    "title_new": "Nouvelle tâche",
+    "title_edit": "Modifier la tâche",
+    "labels": {
+      "type": "Type",
+      "title": "Titre",
+      "notes": "Notes (facultatives)",
+      "due": "Échéance"
+    },
+    "placeholders": {
+      "title": "Envoyer une proposition · Relance après visite · …",
+      "notes": "Tout ce que l'agent reprenant la tâche doit savoir."
+    },
+    "quick_dues": {
+      "in_1h": "Dans 1h",
+      "today_5pm": "Aujourd'hui 17h",
+      "tomorrow_9am": "Demain 9h",
+      "in_1_week": "Dans 1 semaine"
+    },
+    "linked_inquiry": "Demande liée",
+    "open_inquiry": "Ouvrir la demande #{{id}} →",
+    "actions": {
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "create": "Créer",
+      "save": "Enregistrer"
+    },
+    "toasts": {
+      "created": "Tâche créée",
+      "updated": "Tâche mise à jour",
+      "title_required": "Le titre est obligatoire",
+      "save_failed": "Échec de l'enregistrement"
+    }
+  },
+
   "planner": {
     "title": "Planning de travail",
     "subtitle": {

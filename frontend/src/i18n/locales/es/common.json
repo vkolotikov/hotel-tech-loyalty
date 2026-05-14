@@ -225,6 +225,108 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "tasks": {
+    "title": "Tareas",
+    "subtitle": {
+      "overdue_count": "{{count}} atrasadas · ",
+      "due_today": "{{count}} para hoy",
+      "default": "Mantén el control de tus seguimientos"
+    },
+    "new_task": "Nueva tarea",
+    "search_placeholder": "Buscar…",
+    "loading": "Cargando tareas…",
+    "delete_confirm": "¿Eliminar «{{title}}»?",
+    "status_chips": {
+      "open": "Abiertas",
+      "overdue": "Atrasadas",
+      "due_today": "Hoy",
+      "due_soon": "Pronto",
+      "completed": "Completadas",
+      "all": "Todas"
+    },
+    "groups": {
+      "overdue": "Atrasadas",
+      "today": "Hoy",
+      "tomorrow": "Mañana",
+      "this_week": "Esta semana",
+      "later": "Más tarde",
+      "no_due_date": "Sin fecha",
+      "completed": "Completadas"
+    },
+    "types": {
+      "call": "Llamada",
+      "email": "Email",
+      "meeting": "Reunión",
+      "send_proposal": "Enviar propuesta",
+      "follow_up": "Seguimiento",
+      "site_visit": "Visita",
+      "custom": "Personalizada"
+    },
+    "tooltips": {
+      "reopen": "Reabrir",
+      "mark_complete": "Marcar completada",
+      "delete": "Eliminar"
+    },
+    "card": {
+      "inquiry_link": "Consulta #{{id}}"
+    },
+    "due": {
+      "in_minutes": "en {{count}} min",
+      "minutes_ago": "hace {{count}} min",
+      "in_hours": "en {{count}} h",
+      "hours_ago": "hace {{count}} h",
+      "in_days": "en {{count}} d",
+      "days_ago": "hace {{count}} d"
+    },
+    "empty": {
+      "overdue": "Nada atrasado — sigue así.",
+      "due_today": "Nada para hoy.",
+      "completed": "Sin tareas completadas aún.",
+      "default": "Sin tareas. Añade lo siguiente que hay que hacer."
+    },
+    "toasts": {
+      "completed": "Tarea completada",
+      "complete_fail": "No se pudo completar",
+      "reopened": "Reabierta",
+      "deleted": "Tarea eliminada"
+    }
+  },
+
+  "taskDrawer": {
+    "title_new": "Nueva tarea",
+    "title_edit": "Editar tarea",
+    "labels": {
+      "type": "Tipo",
+      "title": "Título",
+      "notes": "Notas (opcional)",
+      "due": "Vence"
+    },
+    "placeholders": {
+      "title": "Enviar propuesta · Seguimiento tras visita · …",
+      "notes": "Lo que debe saber quien retome la tarea."
+    },
+    "quick_dues": {
+      "in_1h": "En 1h",
+      "today_5pm": "Hoy 17:00",
+      "tomorrow_9am": "Mañana 9:00",
+      "in_1_week": "En 1 semana"
+    },
+    "linked_inquiry": "Consulta vinculada",
+    "open_inquiry": "Abrir consulta #{{id}} →",
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "create": "Crear",
+      "save": "Guardar"
+    },
+    "toasts": {
+      "created": "Tarea creada",
+      "updated": "Tarea actualizada",
+      "title_required": "El título es obligatorio",
+      "save_failed": "Error al guardar"
+    }
+  },
+
   "planner": {
     "title": "Horario de trabajo",
     "subtitle": {

@@ -227,6 +227,108 @@
     "no_activity": "Пока нет активности."
   },
 
+  "tasks": {
+    "title": "Задачи",
+    "subtitle": {
+      "overdue_count": "{{count}} просрочено · ",
+      "due_today": "на сегодня {{count}}",
+      "default": "Следите за вашими делами"
+    },
+    "new_task": "Новая задача",
+    "search_placeholder": "Поиск…",
+    "loading": "Загрузка задач…",
+    "delete_confirm": "Удалить «{{title}}»?",
+    "status_chips": {
+      "open": "Открытые",
+      "overdue": "Просрочено",
+      "due_today": "Сегодня",
+      "due_soon": "Скоро",
+      "completed": "Завершено",
+      "all": "Все"
+    },
+    "groups": {
+      "overdue": "Просрочено",
+      "today": "Сегодня",
+      "tomorrow": "Завтра",
+      "this_week": "Эта неделя",
+      "later": "Позже",
+      "no_due_date": "Без срока",
+      "completed": "Завершено"
+    },
+    "types": {
+      "call": "Звонок",
+      "email": "Email",
+      "meeting": "Встреча",
+      "send_proposal": "Отправить предложение",
+      "follow_up": "Перезвон",
+      "site_visit": "Визит на объект",
+      "custom": "Своё"
+    },
+    "tooltips": {
+      "reopen": "Открыть заново",
+      "mark_complete": "Отметить выполненной",
+      "delete": "Удалить"
+    },
+    "card": {
+      "inquiry_link": "Запрос #{{id}}"
+    },
+    "due": {
+      "in_minutes": "через {{count}} мин",
+      "minutes_ago": "{{count}} мин назад",
+      "in_hours": "через {{count}} ч",
+      "hours_ago": "{{count}} ч назад",
+      "in_days": "через {{count}} д",
+      "days_ago": "{{count}} д назад"
+    },
+    "empty": {
+      "overdue": "Просроченного нет — так держать.",
+      "due_today": "На сегодня ничего.",
+      "completed": "Завершённых задач пока нет.",
+      "default": "Задач нет. Добавьте следующее дело."
+    },
+    "toasts": {
+      "completed": "Задача выполнена",
+      "complete_fail": "Не удалось выполнить",
+      "reopened": "Открыто заново",
+      "deleted": "Задача удалена"
+    }
+  },
+
+  "taskDrawer": {
+    "title_new": "Новая задача",
+    "title_edit": "Изменить задачу",
+    "labels": {
+      "type": "Тип",
+      "title": "Название",
+      "notes": "Заметки (необязательно)",
+      "due": "Срок"
+    },
+    "placeholders": {
+      "title": "Отправить предложение · Перезвон после визита · …",
+      "notes": "Что нужно знать сотруднику, который возьмёт задачу."
+    },
+    "quick_dues": {
+      "in_1h": "Через 1ч",
+      "today_5pm": "Сегодня 17:00",
+      "tomorrow_9am": "Завтра 09:00",
+      "in_1_week": "Через неделю"
+    },
+    "linked_inquiry": "Связанный запрос",
+    "open_inquiry": "Открыть запрос #{{id}} →",
+    "actions": {
+      "cancel": "Отмена",
+      "saving": "Сохраняем…",
+      "create": "Создать",
+      "save": "Сохранить"
+    },
+    "toasts": {
+      "created": "Задача создана",
+      "updated": "Задача обновлена",
+      "title_required": "Название обязательно",
+      "save_failed": "Не удалось сохранить"
+    }
+  },
+
   "planner": {
     "title": "Расписание работы",
     "subtitle": {

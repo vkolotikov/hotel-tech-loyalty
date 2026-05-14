@@ -225,6 +225,108 @@
     "no_activity": "No recent activity yet."
   },
 
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": {
+      "overdue_count": "{{count}} overdue · ",
+      "due_today": "{{count}} due today",
+      "default": "Stay on top of your follow-ups"
+    },
+    "new_task": "New task",
+    "search_placeholder": "Search…",
+    "loading": "Loading tasks…",
+    "delete_confirm": "Delete \"{{title}}\"?",
+    "status_chips": {
+      "open": "Open",
+      "overdue": "Overdue",
+      "due_today": "Today",
+      "due_soon": "Soon",
+      "completed": "Completed",
+      "all": "All"
+    },
+    "groups": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "this_week": "This week",
+      "later": "Later",
+      "no_due_date": "No due date",
+      "completed": "Completed"
+    },
+    "types": {
+      "call": "Call",
+      "email": "Email",
+      "meeting": "Meeting",
+      "send_proposal": "Send proposal",
+      "follow_up": "Follow-up",
+      "site_visit": "Site visit",
+      "custom": "Custom"
+    },
+    "tooltips": {
+      "reopen": "Reopen",
+      "mark_complete": "Mark complete",
+      "delete": "Delete"
+    },
+    "card": {
+      "inquiry_link": "Inquiry #{{id}}"
+    },
+    "due": {
+      "in_minutes": "in {{count}}m",
+      "minutes_ago": "{{count}}m ago",
+      "in_hours": "in {{count}}h",
+      "hours_ago": "{{count}}h ago",
+      "in_days": "in {{count}}d",
+      "days_ago": "{{count}}d ago"
+    },
+    "empty": {
+      "overdue": "Nothing overdue — keep it that way.",
+      "due_today": "Nothing due today.",
+      "completed": "No completed tasks yet.",
+      "default": "No tasks. Add the next thing you need to do."
+    },
+    "toasts": {
+      "completed": "Task completed",
+      "complete_fail": "Could not complete",
+      "reopened": "Reopened",
+      "deleted": "Task deleted"
+    }
+  },
+
+  "taskDrawer": {
+    "title_new": "New task",
+    "title_edit": "Edit task",
+    "labels": {
+      "type": "Type",
+      "title": "Title",
+      "notes": "Notes (optional)",
+      "due": "Due"
+    },
+    "placeholders": {
+      "title": "Send proposal · Follow up after site visit · …",
+      "notes": "Anything the agent picking this up should know."
+    },
+    "quick_dues": {
+      "in_1h": "In 1h",
+      "today_5pm": "Today 5pm",
+      "tomorrow_9am": "Tomorrow 9am",
+      "in_1_week": "In 1 week"
+    },
+    "linked_inquiry": "Linked inquiry",
+    "open_inquiry": "Open inquiry #{{id}} →",
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "create": "Create",
+      "save": "Save"
+    },
+    "toasts": {
+      "created": "Task created",
+      "updated": "Task updated",
+      "title_required": "Title is required",
+      "save_failed": "Save failed"
+    }
+  },
+
   "planner": {
     "title": "Work Schedule",
     "subtitle": {
