@@ -225,6 +225,199 @@
     "no_activity": "No recent activity yet."
   },
 
+  "bookings": {
+    "title": "Reservations",
+    "subtitle": "PMS reservations synced from your booking channels",
+    "actions": {
+      "export_csv": "Export CSV",
+      "export_csv_tooltip": "Download CSV of the current filtered list (or selected rows)",
+      "submission_log": "Submission log",
+      "sync_pms": "Sync PMS",
+      "syncing": "Syncing…"
+    },
+    "view": {
+      "list": "List",
+      "timeline": "Timeline"
+    },
+    "today": {
+      "label": "Today",
+      "arrivals": "Arrivals Today",
+      "in_house": "In-House",
+      "departures": "Departures Today",
+      "tomorrow": "Tomorrow",
+      "click_to_view": "Click to view",
+      "no_check_ins": "No check-ins",
+      "currently_staying": "Currently staying",
+      "no_guests": "No guests on-site",
+      "no_check_outs": "No check-outs",
+      "arrivals_prestage": "Arrivals — pre-stage rooms",
+      "in_house_guests": "In-House Guests",
+      "close": "Close",
+      "empty_segment": "No bookings in this segment."
+    },
+    "pms_banner": {
+      "deactivated": "{{name}} integration is deactivated",
+      "deactivated_sub": "Synced reservations are hidden while the integration is off. Your data in {{name}} is untouched.",
+      "open_settings": "Open settings →",
+      "pms_fallback": "PMS",
+      "pms_fallback_long": "the PMS"
+    },
+    "period": {
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
+    "all_units": "All Units",
+    "charts": {
+      "payment_mix": "Payment Mix",
+      "arrival_pace": "Arrival Pace",
+      "arrival_pace_total": "{{count}} total",
+      "unit_performance": "Unit Performance",
+      "channel_mix": "Channel Mix"
+    },
+    "panels": {
+      "upcoming_arrivals": "Upcoming Arrivals",
+      "recent_unpaid": "Recent Unpaid",
+      "recent_submissions": "Recent Submissions",
+      "sync_health": "Sync Health",
+      "connected": "CONNECTED",
+      "offline": "OFFLINE",
+      "provider": "Provider",
+      "mirrored_bookings": "Mirrored Bookings",
+      "last_sync": "Last Sync",
+      "never": "Never"
+    },
+    "filters": {
+      "search_placeholder": "Search guest, email, reference…",
+      "all_statuses": "All Statuses",
+      "status": {
+        "new": "New",
+        "confirmed": "Confirmed",
+        "checked_in": "Checked In",
+        "checked_out": "Checked Out",
+        "cancelled": "Cancelled",
+        "no_show": "No Show"
+      },
+      "all_payments": "All Payments",
+      "payment": {
+        "open": "Open",
+        "paid": "Paid",
+        "pending": "Pending",
+        "invoice_waiting": "Invoice Waiting",
+        "channel_managed": "Channel Managed"
+      }
+    },
+    "table": {
+      "guest": "Guest",
+      "unit": "Unit",
+      "arrival": "Arrival",
+      "departure": "Departure",
+      "total": "Total",
+      "balance": "Balance",
+      "channel": "Channel",
+      "status": "Status",
+      "payment": "Payment",
+      "view": "View",
+      "no_results": "No bookings found.",
+      "settled": "SETTLED",
+      "nights_short": "({{count}}n)"
+    },
+    "pagination": "Page {{page}} of {{total}} · {{count}} total",
+    "bulk": {
+      "selected_one": "{{count}} selected",
+      "selected_other": "{{count}} selected",
+      "mark_paid": "Mark Paid",
+      "cancel": "Cancel",
+      "export": "Export",
+      "clear_selection": "Clear selection",
+      "cancel_confirm_one": "Cancel {{count}} reservation? This cannot be undone in bulk.",
+      "cancel_confirm_other": "Cancel {{count}} reservations? This cannot be undone in bulk."
+    }
+  },
+
+  "bookingDetail": {
+    "not_found": "Booking not found",
+    "header": {
+      "reservation_badge": "Reservation",
+      "unknown_unit": "Unknown unit",
+      "payment_page": "Payment Page",
+      "smoobu": "Smoobu",
+      "refresh": "Refresh"
+    },
+    "guest": {
+      "title": "Guest Information",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "view_crm": "View CRM Profile →"
+    },
+    "stay": {
+      "title": "Stay Details",
+      "arrival": "Arrival",
+      "departure": "Departure",
+      "nights": "Nights",
+      "guests": "Guests",
+      "guests_value": "{{adults}} adults, {{children}} children"
+    },
+    "financial": {
+      "title": "Financial Overview",
+      "total": "Total",
+      "paid": "Paid",
+      "balance": "Balance",
+      "settled": "Settled",
+      "deposit": "Deposit",
+      "prepayment": "Prepayment",
+      "payment_status_label": "Payment Status:",
+      "intent_id": "Intent ID",
+      "method": "Method",
+      "charged": "Charged",
+      "refunded": "Refunded",
+      "refunded_at": "Refunded at",
+      "refund_id": "Refund ID",
+      "price_breakdown": "Price Breakdown"
+    },
+    "notes": {
+      "title": "Internal Notes",
+      "placeholder": "Add a note…",
+      "staff_fallback": "Staff",
+      "empty": "No notes yet."
+    },
+    "submissions_title": "Submission History",
+    "operations": {
+      "title": "Operations",
+      "status": "Status",
+      "invoice": "Invoice",
+      "payment": "Payment",
+      "paid_amount": "Paid (€)"
+    },
+    "meta": {
+      "title": "Details",
+      "reference": "Reference",
+      "reservation": "Reservation",
+      "type": "Type",
+      "channel": "Channel",
+      "unit": "Unit",
+      "state": "State",
+      "synced": "Synced",
+      "created": "Created"
+    },
+    "refund": {
+      "title": "Issue refund",
+      "subtitle": "Stripe will return funds in 5–10 business days",
+      "amount_label": "Amount",
+      "amount_hint": "(leave empty for full refund of {{total}})",
+      "reason_label": "Reason",
+      "reason_optional": "(optional)",
+      "reasons": {
+        "none": "— No reason —",
+        "requested_by_customer": "Requested by customer",
+        "duplicate": "Duplicate charge",
+        "fraudulent": "Fraudulent"
+      },
+      "mock_warning": "This is a mock booking — no real refund will be issued. The payment status will just flip to <code>refunded</code>."
+    }
+  },
+
   "inquiryDetail": {
     "back": "Back",
     "lost_reason_prefix": "Lost: {{reason}}",

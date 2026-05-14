@@ -225,6 +225,199 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "bookings": {
+    "title": "Reservas",
+    "subtitle": "Reservas PMS sincronizadas desde tus canales",
+    "actions": {
+      "export_csv": "Exportar CSV",
+      "export_csv_tooltip": "Descargar CSV de la lista filtrada (o filas seleccionadas)",
+      "submission_log": "Registro de envíos",
+      "sync_pms": "Sincronizar PMS",
+      "syncing": "Sincronizando…"
+    },
+    "view": {
+      "list": "Lista",
+      "timeline": "Línea de tiempo"
+    },
+    "today": {
+      "label": "Hoy",
+      "arrivals": "Llegadas hoy",
+      "in_house": "En el hotel",
+      "departures": "Salidas hoy",
+      "tomorrow": "Mañana",
+      "click_to_view": "Clic para ver",
+      "no_check_ins": "Sin llegadas",
+      "currently_staying": "Actualmente alojados",
+      "no_guests": "Sin huéspedes en el hotel",
+      "no_check_outs": "Sin salidas",
+      "arrivals_prestage": "Llegadas — preparar habitaciones",
+      "in_house_guests": "Huéspedes en el hotel",
+      "close": "Cerrar",
+      "empty_segment": "No hay reservas en este segmento."
+    },
+    "pms_banner": {
+      "deactivated": "La integración con {{name}} está desactivada",
+      "deactivated_sub": "Las reservas sincronizadas están ocultas mientras la integración esté apagada. Tus datos en {{name}} no se modifican.",
+      "open_settings": "Abrir ajustes →",
+      "pms_fallback": "PMS",
+      "pms_fallback_long": "el PMS"
+    },
+    "period": {
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año"
+    },
+    "all_units": "Todas las unidades",
+    "charts": {
+      "payment_mix": "Mezcla de pagos",
+      "arrival_pace": "Ritmo de llegadas",
+      "arrival_pace_total": "{{count}} en total",
+      "unit_performance": "Rendimiento por unidad",
+      "channel_mix": "Mezcla de canales"
+    },
+    "panels": {
+      "upcoming_arrivals": "Próximas llegadas",
+      "recent_unpaid": "Recientes sin pagar",
+      "recent_submissions": "Envíos recientes",
+      "sync_health": "Estado de sincronización",
+      "connected": "CONECTADO",
+      "offline": "DESCONECTADO",
+      "provider": "Proveedor",
+      "mirrored_bookings": "Reservas espejadas",
+      "last_sync": "Última sincronización",
+      "never": "Nunca"
+    },
+    "filters": {
+      "search_placeholder": "Buscar cliente, email, referencia…",
+      "all_statuses": "Todos los estados",
+      "status": {
+        "new": "Nueva",
+        "confirmed": "Confirmada",
+        "checked_in": "Registrado",
+        "checked_out": "Salió",
+        "cancelled": "Cancelada",
+        "no_show": "No se presentó"
+      },
+      "all_payments": "Todos los pagos",
+      "payment": {
+        "open": "Abierto",
+        "paid": "Pagado",
+        "pending": "Pendiente",
+        "invoice_waiting": "Esperando factura",
+        "channel_managed": "Gestionado por canal"
+      }
+    },
+    "table": {
+      "guest": "Cliente",
+      "unit": "Unidad",
+      "arrival": "Llegada",
+      "departure": "Salida",
+      "total": "Total",
+      "balance": "Saldo",
+      "channel": "Canal",
+      "status": "Estado",
+      "payment": "Pago",
+      "view": "Ver",
+      "no_results": "No se encontraron reservas.",
+      "settled": "LIQUIDADO",
+      "nights_short": "({{count}}n)"
+    },
+    "pagination": "Página {{page}} de {{total}} · {{count}} en total",
+    "bulk": {
+      "selected_one": "{{count}} seleccionada",
+      "selected_other": "{{count}} seleccionadas",
+      "mark_paid": "Marcar pagada",
+      "cancel": "Cancelar",
+      "export": "Exportar",
+      "clear_selection": "Quitar selección",
+      "cancel_confirm_one": "¿Cancelar {{count}} reserva? Esta acción no se puede deshacer en lote.",
+      "cancel_confirm_other": "¿Cancelar {{count}} reservas? Esta acción no se puede deshacer en lote."
+    }
+  },
+
+  "bookingDetail": {
+    "not_found": "Reserva no encontrada",
+    "header": {
+      "reservation_badge": "Reserva",
+      "unknown_unit": "Unidad desconocida",
+      "payment_page": "Página de pago",
+      "smoobu": "Smoobu",
+      "refresh": "Actualizar"
+    },
+    "guest": {
+      "title": "Información del cliente",
+      "name": "Nombre",
+      "email": "Email",
+      "phone": "Teléfono",
+      "view_crm": "Ver perfil CRM →"
+    },
+    "stay": {
+      "title": "Detalles de la estancia",
+      "arrival": "Llegada",
+      "departure": "Salida",
+      "nights": "Noches",
+      "guests": "Huéspedes",
+      "guests_value": "{{adults}} adultos, {{children}} niños"
+    },
+    "financial": {
+      "title": "Resumen financiero",
+      "total": "Total",
+      "paid": "Pagado",
+      "balance": "Saldo",
+      "settled": "Liquidado",
+      "deposit": "Depósito",
+      "prepayment": "Prepago",
+      "payment_status_label": "Estado de pago:",
+      "intent_id": "ID de intención",
+      "method": "Método",
+      "charged": "Cobrado",
+      "refunded": "Reembolsado",
+      "refunded_at": "Reembolsado el",
+      "refund_id": "ID de reembolso",
+      "price_breakdown": "Desglose de precio"
+    },
+    "notes": {
+      "title": "Notas internas",
+      "placeholder": "Añadir una nota…",
+      "staff_fallback": "Personal",
+      "empty": "Aún sin notas."
+    },
+    "submissions_title": "Historial de envíos",
+    "operations": {
+      "title": "Operaciones",
+      "status": "Estado",
+      "invoice": "Factura",
+      "payment": "Pago",
+      "paid_amount": "Pagado (€)"
+    },
+    "meta": {
+      "title": "Detalles",
+      "reference": "Referencia",
+      "reservation": "Reserva",
+      "type": "Tipo",
+      "channel": "Canal",
+      "unit": "Unidad",
+      "state": "Estado",
+      "synced": "Sincronizado",
+      "created": "Creado"
+    },
+    "refund": {
+      "title": "Emitir reembolso",
+      "subtitle": "Stripe devolverá los fondos en 5–10 días hábiles",
+      "amount_label": "Importe",
+      "amount_hint": "(dejar vacío para reembolso total de {{total}})",
+      "reason_label": "Motivo",
+      "reason_optional": "(opcional)",
+      "reasons": {
+        "none": "— Sin motivo —",
+        "requested_by_customer": "Solicitado por el cliente",
+        "duplicate": "Cargo duplicado",
+        "fraudulent": "Fraudulento"
+      },
+      "mock_warning": "Esta es una reserva de prueba — no se emitirá un reembolso real. El estado de pago simplemente pasará a <code>refunded</code>."
+    }
+  },
+
   "inquiryDetail": {
     "back": "Atrás",
     "lost_reason_prefix": "Perdida: {{reason}}",

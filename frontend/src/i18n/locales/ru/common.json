@@ -227,6 +227,203 @@
     "no_activity": "Пока нет активности."
   },
 
+  "bookings": {
+    "title": "Бронирования",
+    "subtitle": "Брони PMS, синхронизированные с каналами продаж",
+    "actions": {
+      "export_csv": "Экспорт CSV",
+      "export_csv_tooltip": "Скачать CSV отфильтрованного списка (или выбранных строк)",
+      "submission_log": "Журнал отправок",
+      "sync_pms": "Синхронизировать PMS",
+      "syncing": "Синхронизация…"
+    },
+    "view": {
+      "list": "Список",
+      "timeline": "Шкала"
+    },
+    "today": {
+      "label": "Сегодня",
+      "arrivals": "Заезды сегодня",
+      "in_house": "В отеле",
+      "departures": "Выезды сегодня",
+      "tomorrow": "Завтра",
+      "click_to_view": "Нажмите, чтобы открыть",
+      "no_check_ins": "Заездов нет",
+      "currently_staying": "Сейчас проживают",
+      "no_guests": "Гостей нет",
+      "no_check_outs": "Выездов нет",
+      "arrivals_prestage": "Заезды — подготовьте номера",
+      "in_house_guests": "Гости в отеле",
+      "close": "Закрыть",
+      "empty_segment": "В этом сегменте броней нет."
+    },
+    "pms_banner": {
+      "deactivated": "Интеграция {{name}} отключена",
+      "deactivated_sub": "Синхронизированные брони скрыты, пока интеграция выключена. Данные в {{name}} не меняются.",
+      "open_settings": "Открыть настройки →",
+      "pms_fallback": "PMS",
+      "pms_fallback_long": "PMS"
+    },
+    "period": {
+      "week": "Неделя",
+      "month": "Месяц",
+      "year": "Год"
+    },
+    "all_units": "Все объекты",
+    "charts": {
+      "payment_mix": "Структура платежей",
+      "arrival_pace": "Темп заездов",
+      "arrival_pace_total": "всего {{count}}",
+      "unit_performance": "Результаты по объектам",
+      "channel_mix": "Каналы продаж"
+    },
+    "panels": {
+      "upcoming_arrivals": "Ближайшие заезды",
+      "recent_unpaid": "Недавние неоплаченные",
+      "recent_submissions": "Последние отправки",
+      "sync_health": "Состояние синхронизации",
+      "connected": "ПОДКЛЮЧЕНО",
+      "offline": "ОТКЛЮЧЕНО",
+      "provider": "Провайдер",
+      "mirrored_bookings": "Зеркалированных броней",
+      "last_sync": "Последняя синхронизация",
+      "never": "Никогда"
+    },
+    "filters": {
+      "search_placeholder": "Поиск по гостю, email, номеру…",
+      "all_statuses": "Все статусы",
+      "status": {
+        "new": "Новая",
+        "confirmed": "Подтверждена",
+        "checked_in": "Заехал",
+        "checked_out": "Выехал",
+        "cancelled": "Отменена",
+        "no_show": "Не приехал"
+      },
+      "all_payments": "Все платежи",
+      "payment": {
+        "open": "Открыто",
+        "paid": "Оплачено",
+        "pending": "В ожидании",
+        "invoice_waiting": "Ждёт счёт",
+        "channel_managed": "Платит канал"
+      }
+    },
+    "table": {
+      "guest": "Гость",
+      "unit": "Объект",
+      "arrival": "Заезд",
+      "departure": "Выезд",
+      "total": "Итого",
+      "balance": "Остаток",
+      "channel": "Канал",
+      "status": "Статус",
+      "payment": "Оплата",
+      "view": "Открыть",
+      "no_results": "Броней не найдено.",
+      "settled": "ОПЛАЧЕНО",
+      "nights_short": "({{count}}н)"
+    },
+    "pagination": "Страница {{page}} из {{total}} · всего {{count}}",
+    "bulk": {
+      "selected_one": "выбрано {{count}}",
+      "selected_few": "выбрано {{count}}",
+      "selected_many": "выбрано {{count}}",
+      "selected_other": "выбрано {{count}}",
+      "mark_paid": "Отметить оплаченным",
+      "cancel": "Отменить",
+      "export": "Экспорт",
+      "clear_selection": "Снять выделение",
+      "cancel_confirm_one": "Отменить {{count}} бронь? Действие нельзя отменить.",
+      "cancel_confirm_few": "Отменить {{count}} брони? Действие нельзя отменить.",
+      "cancel_confirm_many": "Отменить {{count}} броней? Действие нельзя отменить.",
+      "cancel_confirm_other": "Отменить {{count}} броней? Действие нельзя отменить."
+    }
+  },
+
+  "bookingDetail": {
+    "not_found": "Бронь не найдена",
+    "header": {
+      "reservation_badge": "Бронь",
+      "unknown_unit": "Объект не указан",
+      "payment_page": "Страница оплаты",
+      "smoobu": "Smoobu",
+      "refresh": "Обновить"
+    },
+    "guest": {
+      "title": "Информация о госте",
+      "name": "Имя",
+      "email": "Email",
+      "phone": "Телефон",
+      "view_crm": "Открыть профиль CRM →"
+    },
+    "stay": {
+      "title": "Детали проживания",
+      "arrival": "Заезд",
+      "departure": "Выезд",
+      "nights": "Ночей",
+      "guests": "Гостей",
+      "guests_value": "{{adults}} взр., {{children}} детей"
+    },
+    "financial": {
+      "title": "Финансы",
+      "total": "Итого",
+      "paid": "Оплачено",
+      "balance": "Остаток",
+      "settled": "Погашено",
+      "deposit": "Депозит",
+      "prepayment": "Предоплата",
+      "payment_status_label": "Статус оплаты:",
+      "intent_id": "ID платежа",
+      "method": "Метод",
+      "charged": "Списано",
+      "refunded": "Возвращено",
+      "refunded_at": "Время возврата",
+      "refund_id": "ID возврата",
+      "price_breakdown": "Разбивка стоимости"
+    },
+    "notes": {
+      "title": "Внутренние заметки",
+      "placeholder": "Добавить заметку…",
+      "staff_fallback": "Сотрудник",
+      "empty": "Заметок пока нет."
+    },
+    "submissions_title": "История отправок",
+    "operations": {
+      "title": "Операции",
+      "status": "Статус",
+      "invoice": "Счёт",
+      "payment": "Оплата",
+      "paid_amount": "Оплачено (€)"
+    },
+    "meta": {
+      "title": "Детали",
+      "reference": "Номер",
+      "reservation": "Бронь",
+      "type": "Тип",
+      "channel": "Канал",
+      "unit": "Объект",
+      "state": "Состояние",
+      "synced": "Синхронизировано",
+      "created": "Создано"
+    },
+    "refund": {
+      "title": "Сделать возврат",
+      "subtitle": "Stripe вернёт средства за 5–10 рабочих дней",
+      "amount_label": "Сумма",
+      "amount_hint": "(оставьте пустым для полного возврата {{total}})",
+      "reason_label": "Причина",
+      "reason_optional": "(необязательно)",
+      "reasons": {
+        "none": "— Без причины —",
+        "requested_by_customer": "По запросу клиента",
+        "duplicate": "Двойное списание",
+        "fraudulent": "Мошенничество"
+      },
+      "mock_warning": "Это тестовая бронь — реальный возврат не будет проведён. Статус оплаты просто переключится на <code>refunded</code>."
+    }
+  },
+
   "inquiryDetail": {
     "back": "Назад",
     "lost_reason_prefix": "Проигран: {{reason}}",

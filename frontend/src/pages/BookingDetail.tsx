@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { SendReviewButton } from '../components/SendReviewButton'
 import toast from 'react-hot-toast'
@@ -40,6 +41,7 @@ const selectClass = 'w-full px-3 py-2.5 bg-dark-surface border border-white/[0.0
 export function BookingDetail() {
   const { id } = useParams<{ id: string }>()
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [noteBody, setNoteBody] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
@@ -96,7 +98,7 @@ export function BookingDetail() {
   }
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="w-7 h-7 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>
-  if (!booking) return <div className="text-center text-gray-600 py-16">Booking not found</div>
+  if (!booking) return <div className="text-center text-gray-600 py-16">{t('bookingDetail.not_found', 'Booking not found')}</div>
 
   const b = booking
   const nights = b.arrival_date && b.departure_date ? Math.ceil((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000) : 0
@@ -112,30 +114,30 @@ export function BookingDetail() {
         <div className="flex-1 min-w-0">
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-1"
             style={{ background: 'rgba(var(--color-primary-rgb, 116,200,149),0.12)', color: 'rgb(var(--color-primary-rgb, 116,200,149))' }}>
-            Reservation
+            {t('bookingDetail.header.reservation_badge', 'Reservation')}
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{b.booking_reference || `#${b.reservation_id}`}</h1>
-          <p className="text-sm text-gray-500">{b.apartment_name || 'Unknown unit'}</p>
+          <p className="text-sm text-gray-500">{b.apartment_name || t('bookingDetail.header.unknown_unit', 'Unknown unit')}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {b.guest_app_url && (
             <a href={b.guest_app_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition-colors"
               style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <ExternalLink size={12} /> Payment Page
+              <ExternalLink size={12} /> {t('bookingDetail.header.payment_page', 'Payment Page')}
             </a>
           )}
           {b.reservation_id && (
             <a href={`https://login.smoobu.com/en/booking/reservations/${b.reservation_id}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition-colors"
               style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <ExternalLink size={12} /> Smoobu
+              <ExternalLink size={12} /> {t('bookingDetail.header.smoobu', 'Smoobu')}
             </a>
           )}
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> {t('bookingDetail.header.refresh', 'Refresh')}
           </button>
           {b.guest_email && (
             <SendReviewButton target={{ email: b.guest_email, name: b.guest_name }} />
@@ -151,13 +153,13 @@ export function BookingDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4 flex items-center gap-2">
-                  <User size={12} className="text-emerald-400" /> Guest Information
+                  <User size={12} className="text-emerald-400" /> {t('bookingDetail.guest.title', 'Guest Information')}
                 </h3>
                 <div className="space-y-3">
                   {[
-                    ['Name', b.guest_name],
-                    ['Email', b.guest_email],
-                    ['Phone', b.guest_phone],
+                    [t('bookingDetail.guest.name',  'Name'),  b.guest_name],
+                    [t('bookingDetail.guest.email', 'Email'), b.guest_email],
+                    [t('bookingDetail.guest.phone', 'Phone'), b.guest_phone],
                   ].map(([label, val]) => (
                     <div key={label as string} className="flex items-baseline gap-2">
                       <span className="text-[11px] text-gray-600 w-14 flex-shrink-0">{label}</span>
@@ -166,21 +168,21 @@ export function BookingDetail() {
                   ))}
                   {b.guest && (
                     <Link to={`/guests/${b.guest.id}`} className="inline-flex items-center gap-1 text-xs font-medium mt-2 text-primary-400">
-                      View CRM Profile →
+                      {t('bookingDetail.guest.view_crm', 'View CRM Profile →')}
                     </Link>
                   )}
                 </div>
               </div>
               <div>
                 <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4 flex items-center gap-2">
-                  <Calendar size={12} className="text-blue-400" /> Stay Details
+                  <Calendar size={12} className="text-blue-400" /> {t('bookingDetail.stay.title', 'Stay Details')}
                 </h3>
                 <div className="space-y-3">
                   {[
-                    ['Arrival', b.arrival_date ? new Date(b.arrival_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
-                    ['Departure', b.departure_date ? new Date(b.departure_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
-                    ['Nights', nights],
-                    ['Guests', `${b.adults || 0} adults, ${b.children || 0} children`],
+                    [t('bookingDetail.stay.arrival',   'Arrival'),   b.arrival_date ? new Date(b.arrival_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
+                    [t('bookingDetail.stay.departure', 'Departure'), b.departure_date ? new Date(b.departure_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
+                    [t('bookingDetail.stay.nights',    'Nights'),    nights],
+                    [t('bookingDetail.stay.guests',    'Guests'),    t('bookingDetail.stay.guests_value', { adults: b.adults || 0, children: b.children || 0, defaultValue: '{{adults}} adults, {{children}} children' })],
                   ].map(([label, val]) => (
                     <div key={label as string} className="flex items-baseline gap-2">
                       <span className="text-[11px] text-gray-600 w-16 flex-shrink-0">{label}</span>
@@ -198,36 +200,36 @@ export function BookingDetail() {
               <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #74c895, #d98f45)' }} />
               <div className="p-6">
                 <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-5 flex items-center gap-2">
-                  <DollarSign size={12} className="text-amber-400" /> Financial Overview
+                  <DollarSign size={12} className="text-amber-400" /> {t('bookingDetail.financial.title', 'Financial Overview')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-500 font-medium uppercase">Total</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.total', 'Total')}</div>
                     <div className="text-xl font-bold text-white mt-1 tabular-nums">{money(b.price_total)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-500 font-medium uppercase">Paid</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.paid', 'Paid')}</div>
                     <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{money(b.price_paid || 0)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-500 font-medium uppercase">Balance</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.balance', 'Balance')}</div>
                     <div className={`text-xl font-bold mt-1 tabular-nums ${balanceDue > 0 ? 'text-red-400' : 'text-emerald-400/50'}`}>
-                      {balanceDue > 0 ? money(balanceDue) : 'Settled'}
+                      {balanceDue > 0 ? money(balanceDue) : t('bookingDetail.financial.settled', 'Settled')}
                     </div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-500 font-medium uppercase">Deposit</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.deposit', 'Deposit')}</div>
                     <div className="text-sm text-white mt-1">{money(b.deposit_amount)} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-500 font-medium uppercase">Prepayment</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.prepayment', 'Prepayment')}</div>
                     <div className="text-sm text-white mt-1">{money(b.prepayment_amount)} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                 </div>
 
                 {b.payment_status && (
                   <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <span className="text-[11px] text-gray-500 font-medium">Payment Status:</span>
+                    <span className="text-[11px] text-gray-500 font-medium">{t('bookingDetail.financial.payment_status_label', 'Payment Status:')}</span>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400'}`}>
                       {formatLabel(b.payment_status)}
                     </span>
@@ -260,33 +262,33 @@ export function BookingDetail() {
                     <div className="space-y-1.5 text-xs">
                       {b.stripe_payment_intent_id && (
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500">Intent ID</span>
+                          <span className="text-gray-500">{t('bookingDetail.financial.intent_id', 'Intent ID')}</span>
                           <span className="text-gray-300 font-mono truncate text-right">{b.stripe_payment_intent_id}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Method</span>
+                        <span className="text-gray-500">{t('bookingDetail.financial.method', 'Method')}</span>
                         <span className="text-white capitalize">{b.payment_method || '—'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Charged</span>
+                        <span className="text-gray-500">{t('bookingDetail.financial.charged', 'Charged')}</span>
                         <span className="text-white tabular-nums">{money(b.price_paid || 0)}</span>
                       </div>
                       {b.refunded_amount > 0 && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-gray-500">Refunded</span>
+                            <span className="text-gray-500">{t('bookingDetail.financial.refunded', 'Refunded')}</span>
                             <span className="text-amber-300 tabular-nums">−{money(b.refunded_amount)}</span>
                           </div>
                           {b.refunded_at && (
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Refunded at</span>
+                              <span className="text-gray-500">{t('bookingDetail.financial.refunded_at', 'Refunded at')}</span>
                               <span className="text-gray-300">{new Date(b.refunded_at).toLocaleString()}</span>
                             </div>
                           )}
                           {b.last_refund_id && b.payment_method !== 'mock' && (
                             <div className="flex justify-between gap-3">
-                              <span className="text-gray-500">Refund ID</span>
+                              <span className="text-gray-500">{t('bookingDetail.financial.refund_id', 'Refund ID')}</span>
                               <span className="text-gray-300 font-mono truncate text-right">{b.last_refund_id}</span>
                             </div>
                           )}
@@ -308,7 +310,7 @@ export function BookingDetail() {
                         onClick={() => setRefundOpen(true)}
                         className="mt-3 w-full px-3 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors inline-flex items-center justify-center gap-2"
                       >
-                        <Undo2 size={12} /> Issue refund
+                        <Undo2 size={12} /> {t('bookingDetail.refund.title', 'Issue refund')}
                       </button>
                     )}
                   </div>
@@ -316,7 +318,7 @@ export function BookingDetail() {
 
                 {b.price_elements?.length > 0 && (
                   <div className="pt-4 border-t border-white/[0.06]">
-                    <div className="text-[10px] text-gray-500 font-bold uppercase mb-3">Price Breakdown</div>
+                    <div className="text-[10px] text-gray-500 font-bold uppercase mb-3">{t('bookingDetail.financial.price_breakdown', 'Price Breakdown')}</div>
                     {b.price_elements.map((pe: any) => (
                       <div key={pe.id} className="flex justify-between text-sm py-1.5">
                         <span className="text-gray-400">{pe.name || pe.element_type}</span>
@@ -344,11 +346,11 @@ export function BookingDetail() {
           {/* Notes */}
           <Card className="p-6">
             <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4 flex items-center gap-2">
-              <MessageSquare size={12} className="text-blue-400" /> Internal Notes
+              <MessageSquare size={12} className="text-blue-400" /> {t('bookingDetail.notes.title', 'Internal Notes')}
             </h3>
             <div className="flex gap-2 mb-4">
               <input type="text" value={noteBody} onChange={e => setNoteBody(e.target.value)}
-                placeholder="Add a note..."
+                placeholder={t('bookingDetail.notes.placeholder', 'Add a note…')}
                 className="flex-1 px-4 py-2.5 bg-dark-surface border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
                 onKeyDown={e => { if (e.key === 'Enter' && noteBody.trim()) addNote.mutate() }}
               />
@@ -363,21 +365,21 @@ export function BookingDetail() {
                 {b.notes.map((n: any) => (
                   <div key={n.id} className="rounded-xl p-4" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div className="flex justify-between items-start mb-1.5">
-                      <span className="text-xs font-bold text-primary-400">{n.staff?.hotel_name || 'Staff'}</span>
+                      <span className="text-xs font-bold text-primary-400">{n.staff?.hotel_name || t('bookingDetail.notes.staff_fallback', 'Staff')}</span>
                       <span className="text-[10px] text-gray-600">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="text-sm text-gray-300 leading-relaxed">{n.body}</p>
                   </div>
                 ))}
               </div>
-            ) : <p className="text-sm text-gray-600">No notes yet.</p>}
+            ) : <p className="text-sm text-gray-600">{t('bookingDetail.notes.empty', 'No notes yet.')}</p>}
           </Card>
 
           {/* Submissions */}
           {b.submissions?.length > 0 && (
             <Card className="p-6">
               <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4 flex items-center gap-2">
-                <FileText size={12} className="text-purple-400" /> Submission History
+                <FileText size={12} className="text-purple-400" /> {t('bookingDetail.submissions_title', 'Submission History')}
               </h3>
               <div className="space-y-2">
                 {b.submissions.map((s: any) => (
@@ -407,29 +409,29 @@ export function BookingDetail() {
           {/* Operations */}
           <Card className="p-5">
             <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4 flex items-center gap-2">
-              <MapPin size={12} className="text-amber-400" /> Operations
+              <MapPin size={12} className="text-amber-400" /> {t('bookingDetail.operations.title', 'Operations')}
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">Status</label>
+                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.status', 'Status')}</label>
                 <select value={b.internal_status || 'new'} onChange={e => updateStatus.mutate({ internal_status: e.target.value })} className={selectClass}>
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{formatLabel(s)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">Invoice</label>
+                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.invoice', 'Invoice')}</label>
                 <select value={b.invoice_state || 'not_applicable'} onChange={e => updateStatus.mutate({ invoice_state: e.target.value })} className={selectClass}>
                   {INVOICE_OPTIONS.map(s => <option key={s} value={s}>{formatLabel(s)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">Payment</label>
+                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.payment', 'Payment')}</label>
                 <select value={b.payment_status || 'pending'} onChange={e => updateStatus.mutate({ payment_status: e.target.value })} className={selectClass}>
                   {PAYMENT_STATUS_OPTIONS.map(s => <option key={s} value={s}>{formatLabel(s)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">Paid (€)</label>
+                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.paid_amount', 'Paid (€)')}</label>
                 <input key={`paid-${b.price_paid}`} type="number" step="0.01" min="0" defaultValue={b.price_paid || 0}
                   onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v !== (b.price_paid || 0)) updateStatus.mutate({ price_paid: v }) }}
                   className={selectClass} />
@@ -439,17 +441,17 @@ export function BookingDetail() {
 
           {/* Meta */}
           <Card className="p-5">
-            <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4">Details</h3>
+            <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-4">{t('bookingDetail.meta.title', 'Details')}</h3>
             <div className="space-y-3">
               {[
-                ['Reference', b.booking_reference],
-                ['Reservation', b.reservation_id],
-                ['Type', b.booking_type],
-                ['Channel', b.channel_name],
-                ['Unit', b.apartment_name],
-                ['State', b.booking_state],
-                ['Synced', b.synced_at ? new Date(b.synced_at).toLocaleString() : null],
-                ['Created', b.created_at ? new Date(b.created_at).toLocaleString() : null],
+                [t('bookingDetail.meta.reference',   'Reference'),   b.booking_reference],
+                [t('bookingDetail.meta.reservation', 'Reservation'), b.reservation_id],
+                [t('bookingDetail.meta.type',        'Type'),        b.booking_type],
+                [t('bookingDetail.meta.channel',     'Channel'),     b.channel_name],
+                [t('bookingDetail.meta.unit',        'Unit'),        b.apartment_name],
+                [t('bookingDetail.meta.state',       'State'),       b.booking_state],
+                [t('bookingDetail.meta.synced',      'Synced'),      b.synced_at ? new Date(b.synced_at).toLocaleString() : null],
+                [t('bookingDetail.meta.created',     'Created'),     b.created_at ? new Date(b.created_at).toLocaleString() : null],
               ].filter(([, v]) => v).map(([label, val]) => (
                 <div key={label as string} className="flex justify-between text-sm">
                   <span className="text-gray-500 text-xs">{label}</span>
@@ -471,8 +473,8 @@ export function BookingDetail() {
                   <Undo2 size={15} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Issue refund</p>
-                  <p className="text-[11px] text-t-secondary">Stripe will return funds in 5–10 business days</p>
+                  <p className="text-sm font-bold text-white">{t('bookingDetail.refund.title', 'Issue refund')}</p>
+                  <p className="text-[11px] text-t-secondary">{t('bookingDetail.refund.subtitle', 'Stripe will return funds in 5–10 business days')}</p>
                 </div>
               </div>
               <button onClick={() => setRefundOpen(false)} className="text-[#636366] hover:text-white"><X size={18} /></button>
@@ -480,7 +482,7 @@ export function BookingDetail() {
             <div className="p-5 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">
-                  Amount <span className="text-[#636366] font-normal">(leave empty for full refund of {money(b.price_total || 0)})</span>
+                  {t('bookingDetail.refund.amount_label', 'Amount')} <span className="text-[#636366] font-normal">{t('bookingDetail.refund.amount_hint', { total: money(b.price_total || 0), defaultValue: '(leave empty for full refund of {{total}})' })}</span>
                 </label>
                 <input
                   type="number"
@@ -493,16 +495,16 @@ export function BookingDetail() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Reason <span className="text-[#636366] font-normal">(optional)</span></label>
+                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">{t('bookingDetail.refund.reason_label', 'Reason')} <span className="text-[#636366] font-normal">{t('bookingDetail.refund.reason_optional', '(optional)')}</span></label>
                 <select
                   value={refundReason}
                   onChange={e => setRefundReason(e.target.value as any)}
                   className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                 >
-                  <option value="">— No reason —</option>
-                  <option value="requested_by_customer">Requested by customer</option>
-                  <option value="duplicate">Duplicate charge</option>
-                  <option value="fraudulent">Fraudulent</option>
+                  <option value="">{t('bookingDetail.refund.reasons.none', '— No reason —')}</option>
+                  <option value="requested_by_customer">{t('bookingDetail.refund.reasons.requested_by_customer', 'Requested by customer')}</option>
+                  <option value="duplicate">{t('bookingDetail.refund.reasons.duplicate', 'Duplicate charge')}</option>
+                  <option value="fraudulent">{t('bookingDetail.refund.reasons.fraudulent', 'Fraudulent')}</option>
                 </select>
               </div>
               {b.payment_method === 'mock' && (
@@ -512,7 +514,7 @@ export function BookingDetail() {
               )}
             </div>
             <div className="flex justify-end gap-2 p-4 border-t border-dark-border">
-              <button onClick={() => setRefundOpen(false)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button onClick={() => setRefundOpen(false)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('actions.cancel', 'Cancel')}</button>
               <button
                 onClick={() => refundMutation.mutate({
                   amount: refundAmount ? Number(refundAmount) : undefined,

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -226,6 +227,7 @@ function ChannelList({ data }: { data: { label: string; count: number }[] }) {
 /* ── Main Component ──────────────────────────────────────────────── */
 
 export function Bookings() {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [paymentStatus, setPaymentStatus] = useState('')
@@ -386,25 +388,25 @@ export function Bookings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-sm text-t-secondary mt-0.5">PMS reservations synced from your booking channels</p>
+          <h1 className="text-2xl font-bold text-white">{t('bookings.title', 'Reservations')}</h1>
+          <p className="text-sm text-t-secondary mt-0.5">{t('bookings.subtitle', 'PMS reservations synced from your booking channels')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={exportCsv} disabled={bulkBusy}
             className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50"
-            title="Download CSV of the current filtered list (or selected rows)">
+            title={t('bookings.actions.export_csv_tooltip', 'Download CSV of the current filtered list (or selected rows)')}>
             <Download size={16} />
-            Export CSV
+            {t('bookings.actions.export_csv', 'Export CSV')}
           </button>
           <Link to="/bookings/submissions"
             className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
             <FileText size={16} />
-            Submission log
+            {t('bookings.actions.submission_log', 'Submission log')}
           </Link>
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors">
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing...' : 'Sync PMS'}
+            {syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync_pms', 'Sync PMS')}
           </button>
         </div>
       </div>
@@ -413,8 +415,8 @@ export function Bookings() {
           reservations data — list is the standard table, Timeline opens
           the rooms × days Smoobu-style grid at /bookings/calendar. */}
       <ViewToggle options={[
-        { to: '/bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
-        { to: '/bookings/calendar', label: 'Timeline', icon: <CalendarRange size={12} className="-ml-0.5" /> },
+        { to: '/bookings',          label: t('bookings.view.list',     'List'),     icon: <ListIcon size={12} className="-ml-0.5" /> },
+        { to: '/bookings/calendar', label: t('bookings.view.timeline', 'Timeline'), icon: <CalendarRange size={12} className="-ml-0.5" /> },
       ]} />
 
       {/* Today — front-of-house snapshot. Distinct from the period KPIs
@@ -422,13 +424,13 @@ export function Bookings() {
           leaving, plus a tomorrow preview so staff can pre-stage rooms. */}
       {today && (
         <DailyOpsBar
-          title="Today"
+          title={t('bookings.today.label', 'Today')}
           hint={today.date}
           tiles={[
-            { key: 'arrivals',      label: 'Arrivals Today',  value: today.arrivals_today?.count ?? 0,   sub: today.arrivals_today?.count ? 'Click to view' : 'No check-ins',   tone: 'emerald', icon: <LogIn size={12} />,        active: dailyFocus === 'arrivals',   onClick: () => setDailyFocus(dailyFocus === 'arrivals' ? '' : 'arrivals') },
-            { key: 'in_house',      label: 'In-House',        value: today.in_house?.count ?? 0,         sub: today.in_house?.count ? 'Currently staying' : 'No guests on-site', tone: 'blue',    icon: <Hotel size={12} />,        active: dailyFocus === 'in_house',   onClick: () => setDailyFocus(dailyFocus === 'in_house' ? '' : 'in_house') },
-            { key: 'departures',    label: 'Departures Today',value: today.departures_today?.count ?? 0, sub: today.departures_today?.count ? 'Click to view' : 'No check-outs', tone: 'orange',  icon: <LogOut size={12} />,       active: dailyFocus === 'departures', onClick: () => setDailyFocus(dailyFocus === 'departures' ? '' : 'departures') },
-            { key: 'tomorrow',      label: 'Tomorrow',        value: today.arrivals_tomorrow_count ?? 0, sub: 'Arrivals — pre-stage rooms',                                       tone: 'amber',   icon: <CalendarPlus size={12} /> },
+            { key: 'arrivals',      label: t('bookings.today.arrivals',   'Arrivals Today'),   value: today.arrivals_today?.count ?? 0,   sub: today.arrivals_today?.count   ? t('bookings.today.click_to_view',     'Click to view')        : t('bookings.today.no_check_ins',  'No check-ins'),       tone: 'emerald', icon: <LogIn size={12} />,        active: dailyFocus === 'arrivals',   onClick: () => setDailyFocus(dailyFocus === 'arrivals' ? '' : 'arrivals') },
+            { key: 'in_house',      label: t('bookings.today.in_house',   'In-House'),         value: today.in_house?.count ?? 0,         sub: today.in_house?.count         ? t('bookings.today.currently_staying', 'Currently staying')    : t('bookings.today.no_guests',     'No guests on-site'),  tone: 'blue',    icon: <Hotel size={12} />,        active: dailyFocus === 'in_house',   onClick: () => setDailyFocus(dailyFocus === 'in_house' ? '' : 'in_house') },
+            { key: 'departures',    label: t('bookings.today.departures', 'Departures Today'), value: today.departures_today?.count ?? 0, sub: today.departures_today?.count ? t('bookings.today.click_to_view',     'Click to view')        : t('bookings.today.no_check_outs', 'No check-outs'),      tone: 'orange',  icon: <LogOut size={12} />,       active: dailyFocus === 'departures', onClick: () => setDailyFocus(dailyFocus === 'departures' ? '' : 'departures') },
+            { key: 'tomorrow',      label: t('bookings.today.tomorrow',   'Tomorrow'),         value: today.arrivals_tomorrow_count ?? 0, sub: t('bookings.today.arrivals_prestage', 'Arrivals — pre-stage rooms'),                                                                                                                tone: 'amber',   icon: <CalendarPlus size={12} /> },
           ]}
         />
       )}
@@ -441,9 +443,11 @@ export function Bookings() {
           style={{ background: 'rgba(18,24,22,0.96)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-              {dailyFocus === 'arrivals' ? 'Arrivals Today' : dailyFocus === 'in_house' ? 'In-House Guests' : 'Departures Today'}
+              {dailyFocus === 'arrivals' ? t('bookings.today.arrivals', 'Arrivals Today')
+                : dailyFocus === 'in_house' ? t('bookings.today.in_house_guests', 'In-House Guests')
+                : t('bookings.today.departures', 'Departures Today')}
             </span>
-            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">{t('bookings.today.close', 'Close')}</button>
           </div>
           <div className="divide-y divide-white/[0.04]">
             {(dailyFocus === 'arrivals' ? today.arrivals_today?.guests
@@ -471,7 +475,7 @@ export function Bookings() {
             {!((dailyFocus === 'arrivals' ? today.arrivals_today?.guests
                 : dailyFocus === 'in_house' ? today.in_house?.guests
                 : today.departures_today?.guests)?.length) && (
-              <div className="px-4 py-6 text-center text-xs text-gray-600">No bookings in this segment.</div>
+              <div className="px-4 py-6 text-center text-xs text-gray-600">{t('bookings.today.empty_segment', 'No bookings in this segment.')}</div>
             )}
           </div>
         </div>
@@ -482,28 +486,28 @@ export function Bookings() {
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
           <AlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-amber-200 font-medium">{dashboard.syncHealth.pmsName || 'PMS'} integration is deactivated</p>
-            <p className="text-xs text-amber-200/70 mt-0.5">Synced reservations are hidden while the integration is off. Your data in {dashboard.syncHealth.pmsName || 'the PMS'} is untouched.</p>
+            <p className="text-sm text-amber-200 font-medium">{t('bookings.pms_banner.deactivated', { name: dashboard.syncHealth.pmsName || t('bookings.pms_banner.pms_fallback', 'PMS'), defaultValue: '{{name}} integration is deactivated' })}</p>
+            <p className="text-xs text-amber-200/70 mt-0.5">{t('bookings.pms_banner.deactivated_sub', { name: dashboard.syncHealth.pmsName || t('bookings.pms_banner.pms_fallback_long', 'the PMS'), defaultValue: 'Synced reservations are hidden while the integration is off. Your data in {{name}} is untouched.' })}</p>
           </div>
-          <Link to="/settings" className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline whitespace-nowrap">Open settings →</Link>
+          <Link to="/settings" className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline whitespace-nowrap">{t('bookings.pms_banner.open_settings', 'Open settings →')}</Link>
         </div>
       )}
 
       {/* Period tabs + unit filter */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="inline-flex p-1 rounded-lg bg-dark-surface border border-dark-border">
-          {['week', 'month', 'year'].map(p => (
+          {(['week', 'month', 'year'] as const).map(p => (
             <button key={p} onClick={() => { setPeriod(p); setPage(1) }}
               className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${period === p
                 ? 'bg-primary-600 text-white'
                 : 'text-t-secondary hover:text-white'}`}>
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {t(`bookings.period.${p}`, p.charAt(0).toUpperCase() + p.slice(1))}
             </button>
           ))}
         </div>
         {units.length > 0 && (
           <select value={unitId} onChange={e => { setUnitId(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
-            <option value="" style={optStyle}>All Units</option>
+            <option value="" style={optStyle}>{t('bookings.all_units', 'All Units')}</option>
             {units.map((u: any) => <option key={u.id} value={u.id} style={optStyle}>{u.name}</option>)}
           </select>
         )}
@@ -538,28 +542,28 @@ export function Bookings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {(a!.paymentMix?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Payment Mix</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.payment_mix', 'Payment Mix')}</h3>
               <DonutChart data={a!.paymentMix || []} />
             </Card>
           )}
           {(a!.arrivalPace?.total ?? 0) > 0 && (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">Arrival Pace</h3>
-                <span className="text-xs text-[#636366] tabular-nums">{a!.arrivalPace?.total ?? 0} total</span>
+                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">{t('bookings.charts.arrival_pace', 'Arrival Pace')}</h3>
+                <span className="text-xs text-[#636366] tabular-nums">{t('bookings.charts.arrival_pace_total', { count: a!.arrivalPace?.total ?? 0, defaultValue: '{{count}} total' })}</span>
               </div>
               <BarChart data={a!.arrivalPace?.days || []} />
             </Card>
           )}
           {(a!.unitPerformance?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Unit Performance</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.unit_performance', 'Unit Performance')}</h3>
               <HorizontalBars data={a!.unitPerformance || []} />
             </Card>
           )}
           {(a!.channelMix?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">Channel Mix</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.channel_mix', 'Channel Mix')}</h3>
               <ChannelList data={a!.channelMix || []} />
             </Card>
           )}
@@ -572,7 +576,7 @@ export function Bookings() {
           {/* Upcoming Arrivals */}
           {(dashboard.arrivals?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Upcoming Arrivals</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.upcoming_arrivals', 'Upcoming Arrivals')}</h3>
               <div className="space-y-2">
                 {dashboard.arrivals.map((a: any) => (
                   <Link key={a.id} to={`/bookings/${a.id}`}
@@ -598,7 +602,7 @@ export function Bookings() {
           {/* Recent Unpaid */}
           {(dashboard.recentUnpaidBookings?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Recent Unpaid</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.recent_unpaid', 'Recent Unpaid')}</h3>
               <div className="space-y-2">
                 {dashboard.recentUnpaidBookings.map((b: any) => (
                   <Link key={b.id} to={`/bookings/${b.id}`}
@@ -620,7 +624,7 @@ export function Bookings() {
           {/* Recent Submissions */}
           {(dashboard.recentSubmissions?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">Recent Submissions</h3>
+              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.recent_submissions', 'Recent Submissions')}</h3>
               <div className="space-y-2">
                 {dashboard.recentSubmissions.map((s: any) => (
                   <div key={s.id} className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border">
@@ -652,28 +656,28 @@ export function Bookings() {
           {dashboard.syncHealth && (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">Sync Health</h3>
+                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">{t('bookings.panels.sync_health', 'Sync Health')}</h3>
                 <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${dashboard.syncHealth.pmsEnabled
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                   : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
                   <Wifi size={10} />
-                  {dashboard.syncHealth.pmsEnabled ? 'CONNECTED' : 'OFFLINE'}
+                  {dashboard.syncHealth.pmsEnabled ? t('bookings.panels.connected', 'CONNECTED') : t('bookings.panels.offline', 'OFFLINE')}
                 </span>
               </div>
               <div className="space-y-3">
                 {dashboard.syncHealth.pmsName && (
                   <div className="flex justify-between items-center pb-3 border-b border-dark-border">
-                    <span className="text-sm text-t-secondary">Provider</span>
+                    <span className="text-sm text-t-secondary">{t('bookings.panels.provider', 'Provider')}</span>
                     <span className="text-sm text-white font-medium">{dashboard.syncHealth.pmsName}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-t-secondary">Mirrored Bookings</span>
+                  <span className="text-sm text-t-secondary">{t('bookings.panels.mirrored_bookings', 'Mirrored Bookings')}</span>
                   <span className="text-lg font-bold text-white tabular-nums">{dashboard.syncHealth.mirroredBookingCount}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-t-secondary">Last Sync</span>
-                  <span className="text-sm text-white">{dashboard.syncHealth.lastSyncAt ? new Date(dashboard.syncHealth.lastSyncAt).toLocaleString() : 'Never'}</span>
+                  <span className="text-sm text-t-secondary">{t('bookings.panels.last_sync', 'Last Sync')}</span>
+                  <span className="text-sm text-white">{dashboard.syncHealth.lastSyncAt ? new Date(dashboard.syncHealth.lastSyncAt).toLocaleString() : t('bookings.panels.never', 'Never')}</span>
                 </div>
               </div>
             </Card>
@@ -687,26 +691,26 @@ export function Bookings() {
           <div className="relative flex-1 min-w-[220px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search guest, email, reference..."
+              placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
               className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
-            <option value=""           style={optStyle}>All Statuses</option>
-            <option value="new"        style={optStyle}>New</option>
-            <option value="confirmed"  style={optStyle}>Confirmed</option>
-            <option value="checked-in" style={optStyle}>Checked In</option>
-            <option value="checked-out" style={optStyle}>Checked Out</option>
-            <option value="cancelled"  style={optStyle}>Cancelled</option>
-            <option value="no-show"    style={optStyle}>No Show</option>
+            <option value=""           style={optStyle}>{t('bookings.filters.all_statuses', 'All Statuses')}</option>
+            <option value="new"        style={optStyle}>{t('bookings.filters.status.new',         'New')}</option>
+            <option value="confirmed"  style={optStyle}>{t('bookings.filters.status.confirmed',   'Confirmed')}</option>
+            <option value="checked-in" style={optStyle}>{t('bookings.filters.status.checked_in',  'Checked In')}</option>
+            <option value="checked-out" style={optStyle}>{t('bookings.filters.status.checked_out', 'Checked Out')}</option>
+            <option value="cancelled"  style={optStyle}>{t('bookings.filters.status.cancelled',   'Cancelled')}</option>
+            <option value="no-show"    style={optStyle}>{t('bookings.filters.status.no_show',     'No Show')}</option>
           </select>
           <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
-            <option value=""        style={optStyle}>All Payments</option>
-            <option value="open"    style={optStyle}>Open</option>
-            <option value="paid"    style={optStyle}>Paid</option>
-            <option value="pending" style={optStyle}>Pending</option>
-            <option value="invoice_waiting" style={optStyle}>Invoice Waiting</option>
-            <option value="channel_managed" style={optStyle}>Channel Managed</option>
+            <option value=""        style={optStyle}>{t('bookings.filters.all_payments', 'All Payments')}</option>
+            <option value="open"    style={optStyle}>{t('bookings.filters.payment.open',            'Open')}</option>
+            <option value="paid"    style={optStyle}>{t('bookings.filters.payment.paid',            'Paid')}</option>
+            <option value="pending" style={optStyle}>{t('bookings.filters.payment.pending',         'Pending')}</option>
+            <option value="invoice_waiting" style={optStyle}>{t('bookings.filters.payment.invoice_waiting', 'Invoice Waiting')}</option>
+            <option value="channel_managed" style={optStyle}>{t('bookings.filters.payment.channel_managed', 'Channel Managed')}</option>
           </select>
         </div>
       </Card>
@@ -721,11 +725,11 @@ export function Bookings() {
                   <input type="checkbox" checked={allOnPageSelected} onChange={togglePageSelection}
                     className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
                 </th>
-                <th className="text-left p-4">Guest</th><th className="text-left p-4">Unit</th>
-                <th className="text-left p-4">Arrival</th><th className="text-left p-4">Departure</th>
-                <th className="text-right p-4">Total</th><th className="text-right p-4">Balance</th>
-                <th className="text-left p-4">Channel</th><th className="text-left p-4">Status</th>
-                <th className="text-left p-4">Payment</th><th className="text-center p-4">View</th>
+                <th className="text-left p-4">{t('bookings.table.guest', 'Guest')}</th><th className="text-left p-4">{t('bookings.table.unit', 'Unit')}</th>
+                <th className="text-left p-4">{t('bookings.table.arrival', 'Arrival')}</th><th className="text-left p-4">{t('bookings.table.departure', 'Departure')}</th>
+                <th className="text-right p-4">{t('bookings.table.total', 'Total')}</th><th className="text-right p-4">{t('bookings.table.balance', 'Balance')}</th>
+                <th className="text-left p-4">{t('bookings.table.channel', 'Channel')}</th><th className="text-left p-4">{t('bookings.table.status', 'Status')}</th>
+                <th className="text-left p-4">{t('bookings.table.payment', 'Payment')}</th><th className="text-center p-4">{t('bookings.table.view', 'View')}</th>
               </tr>
             </thead>
             <tbody>
@@ -734,7 +738,7 @@ export function Bookings() {
                   <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">No bookings found.</td></tr>
+                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</td></tr>
               ) : bookings.map((b: any) => {
                 const payStatus = derivePaymentStatus(b)
                 const nights = b.arrival_date && b.departure_date
@@ -762,7 +766,7 @@ export function Bookings() {
                   <td className="p-4 text-right tabular-nums">
                     {b.balance_due > 0
                       ? <span className="text-red-400 font-semibold">{money(b.balance_due)}</span>
-                      : <span className="text-emerald-400/60 text-[10px] font-bold">SETTLED</span>}
+                      : <span className="text-emerald-400/60 text-[10px] font-bold">{t('bookings.table.settled', 'SETTLED')}</span>}
                   </td>
                   <td className="p-4 text-[#636366] text-xs">{b.channel_name || '—'}</td>
                   <td className="p-4">
@@ -778,7 +782,7 @@ export function Bookings() {
                   <td className="p-4 text-center">
                     <Link to={`/bookings/${b.id}`}
                       className="inline-flex items-center gap-1 text-xs font-medium transition-colors text-primary-400 hover:text-primary-300">
-                      <Eye size={13} /> View
+                      <Eye size={13} /> {t('bookings.table.view', 'View')}
                     </Link>
                   </td>
                 </tr>
@@ -790,7 +794,7 @@ export function Bookings() {
 
         {lastPage > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-dark-border">
-            <span className="text-xs text-[#636366]">Page {page} of {lastPage} · {data?.total ?? 0} total</span>
+            <span className="text-xs text-[#636366]">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
             <div className="flex gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                 className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
@@ -813,24 +817,24 @@ export function Bookings() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-dark-surface border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
           style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">
-            {selected.size} selected
+            {t('bookings.bulk.selected', { count: selected.size, defaultValue: '{{count}} selected' })}
           </span>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => runBulk('mark_paid')} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
-            <CheckCheck size={13} /> Mark Paid
+            <CheckCheck size={13} /> {t('bookings.bulk.mark_paid', 'Mark Paid')}
           </button>
-          <button onClick={() => runBulk('cancel', undefined, `Cancel ${selected.size} reservation${selected.size === 1 ? '' : 's'}? This cannot be undone in bulk.`)}
+          <button onClick={() => runBulk('cancel', undefined, t('bookings.bulk.cancel_confirm', { count: selected.size, defaultValue: 'Cancel {{count}} reservations? This cannot be undone in bulk.' }))}
             disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
-            <Trash2 size={13} /> Cancel
+            <Trash2 size={13} /> {t('bookings.bulk.cancel', 'Cancel')}
           </button>
           <button onClick={exportCsv} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors">
-            <Download size={13} /> Export
+            <Download size={13} /> {t('bookings.bulk.export', 'Export')}
           </button>
           <div className="h-5 w-px bg-white/10" />
-          <button onClick={() => setSelected(new Set())} title="Clear selection"
+          <button onClick={() => setSelected(new Set())} title={t('bookings.bulk.clear_selection', 'Clear selection')}
             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
             <XIcon size={14} />
           </button>
