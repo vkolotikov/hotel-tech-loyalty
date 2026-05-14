@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square, Users, TrendingUp, Coins, Crown, ArrowUpDown, MessageCircle, Gift } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
@@ -77,6 +78,7 @@ export function Members() {
 
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { t } = useTranslation()
 
   // Gate render: while we don't know yet, show nothing; once we
   // know, either show the wizard or fall through to the real page.
@@ -241,28 +243,30 @@ export function Members() {
   const kpis = [
     {
       key: 'active',
-      label: 'Active members',
+      label: t('members.kpis.active_members', 'Active members'),
       value: statsData ? `${statsData.active_count} / ${statsData.total_count}` : '—',
       icon: Users,
       tint: 'text-blue-400',
     },
     {
       key: 'new',
-      label: 'New this month',
+      label: t('members.kpis.new_this_month', 'New this month'),
       value: statsData?.new_this_month ?? '—',
       icon: TrendingUp,
       tint: 'text-emerald-400',
     },
     {
       key: 'avg',
-      label: 'Avg points',
+      label: t('members.kpis.avg_points', 'Avg points'),
       value: statsData ? statsData.avg_points.toLocaleString() : '—',
       icon: Coins,
       tint: 'text-amber-400',
     },
     {
       key: 'top',
-      label: statsData?.top_tier_name ? `In ${statsData.top_tier_name}` : 'Top tier',
+      label: statsData?.top_tier_name
+        ? t('members.kpis.in_tier', { tier: statsData.top_tier_name, defaultValue: 'In {{tier}}' })
+        : t('members.kpis.top_tier', 'Top tier'),
       value: statsData ? `${statsData.top_tier_pct}%` : '—',
       icon: Crown,
       tint: 'text-purple-400',
@@ -273,8 +277,8 @@ export function Members() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Members</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{(data as any)?.total ?? 0} total members</p>
+          <h1 className="text-2xl font-bold text-white">{t('members.title', 'Members')}</h1>
+          <p className="text-sm text-t-secondary mt-0.5">{t('members.total', { count: (data as any)?.total ?? 0, defaultValue: '{{count}} total members' })}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -282,21 +286,21 @@ export function Members() {
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Upload size={16} />
-            Import CSV
+            {t('members.actions.import_csv', 'Import CSV')}
           </button>
           <button
             onClick={() => triggerExport('/v1/admin/members/export', { search, tier_id: tierId || undefined })}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Download size={16} />
-            Export
+            {t('members.actions.export', 'Export')}
           </button>
           <button
             onClick={() => setShowCreate(true)}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
           >
             <Plus size={16} />
-            Add Member
+            {t('members.actions.add_member', 'Add Member')}
           </button>
         </div>
       </div>
@@ -323,7 +327,7 @@ export function Members() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
             <input
               type="text"
-              placeholder="Search by name, email, or member number..."
+              placeholder={t('members.search_placeholder', 'Search by name, email, or member number…')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setUrlParam('page', undefined) }}
               className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -336,10 +340,10 @@ export function Members() {
               onChange={(e) => setUrlParam('sort_by', e.target.value === 'recent' ? undefined : e.target.value)}
               className="appearance-none bg-[#1e1e1e] border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="recent">Recently joined</option>
-              <option value="points">Points high → low</option>
-              <option value="name">Name A → Z</option>
-              <option value="last_activity">Last activity</option>
+              <option value="recent">{t('members.sort.recent', 'Recently joined')}</option>
+              <option value="points">{t('members.sort.points', 'Points high → low')}</option>
+              <option value="name">{t('members.sort.name', 'Name A → Z')}</option>
+              <option value="last_activity">{t('members.sort.last_activity', 'Last activity')}</option>
             </select>
           </div>
         </div>
@@ -355,7 +359,7 @@ export function Members() {
                   : 'bg-dark-surface2 text-t-secondary border border-dark-border hover:text-white'
               }`}
             >
-              All tiers
+              {t('members.filters.all_tiers', 'All tiers')}
               <span className="text-[10px] text-t-secondary font-normal">{statsData?.total_count ?? '—'}</span>
             </button>
             {tierBreakdown.map(t => {
@@ -381,9 +385,9 @@ export function Members() {
 
           <div className="inline-flex bg-dark-surface2 border border-dark-border rounded-lg p-0.5 self-start lg:self-auto">
             {[
-              { val: '',  label: 'All' },
-              { val: '1', label: 'Active' },
-              { val: '0', label: 'Inactive' },
+              { val: '',  label: t('members.filters.all',      'All') },
+              { val: '1', label: t('members.filters.active',   'Active') },
+              { val: '0', label: t('members.filters.inactive', 'Inactive') },
             ].map(opt => (
               <button
                 key={opt.val}
@@ -409,7 +413,7 @@ export function Members() {
             ))
           ) : (data as any)?.data?.length === 0 ? (
             <p className="text-center text-[#636366] py-8 text-sm">
-              No members yet. {search && 'Try a different search term.'}
+              {t('members.empty.no_members', 'No members yet.')} {search && t('members.empty.try_different_search', 'Try a different search term.')}
             </p>
           ) : (
             ((data as any)?.data ?? []).map((m: any) => (
@@ -440,7 +444,7 @@ export function Members() {
                   <TierBadge tier={m.tier?.name} color={m.tier?.color_hex} />
                   <span className="text-xs font-semibold text-white">{m.current_points?.toLocaleString()} pts</span>
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
-                    {m.is_active ? 'Active' : 'Inactive'}
+                    {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                   </span>
                 </div>
               </div>
@@ -457,19 +461,19 @@ export function Members() {
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSelectAll() }}
                     className="text-t-secondary hover:text-white"
-                    title={allVisibleSelected ? 'Deselect page' : 'Select page'}
+                    title={allVisibleSelected ? t('members.deselect_page', 'Deselect page') : t('members.select_page', 'Select page')}
                   >
                     {allVisibleSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                   </button>
                 </th>
-                <th className="pb-3 font-medium">Member</th>
-                <th className="pb-3 font-medium">Phone</th>
-                <th className="pb-3 font-medium">Source</th>
-                <th className="pb-3 font-medium">Tier</th>
-                <th className="pb-3 font-medium">Points</th>
-                <th className="pb-3 font-medium">Joined</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 text-right pr-2">Actions</th>
+                <th className="pb-3 font-medium">{t('members.table.member',  'Member')}</th>
+                <th className="pb-3 font-medium">{t('members.table.phone',   'Phone')}</th>
+                <th className="pb-3 font-medium">{t('members.table.source',  'Source')}</th>
+                <th className="pb-3 font-medium">{t('members.table.tier',    'Tier')}</th>
+                <th className="pb-3 font-medium">{t('members.table.points',  'Points')}</th>
+                <th className="pb-3 font-medium">{t('members.table.joined',  'Joined')}</th>
+                <th className="pb-3 font-medium">{t('members.table.status',  'Status')}</th>
+                <th className="pb-3 text-right pr-2">{t('members.table.actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
@@ -527,20 +531,20 @@ export function Members() {
                     <td className="py-3 text-t-secondary text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
                     <td className="py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
-                        {m.is_active ? 'Active' : 'Inactive'}
+                        {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                       </span>
                     </td>
                     <td className="py-3 pr-2">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          title="Award points"
+                          title={t('members.actions.award_points', 'Award points')}
                           onClick={(e) => { e.stopPropagation(); setQuickAward({ id: m.id, name: m.user?.name ?? 'this member' }) }}
                           className="p-1.5 rounded-md text-emerald-400 hover:bg-emerald-500/15 transition-colors"
                         >
                           <Gift size={14} />
                         </button>
                         <button
-                          title="Send message"
+                          title={t('members.actions.send_message', 'Send message')}
                           onClick={(e) => {
                             e.stopPropagation()
                             setSelectedIds(new Set([m.id]))

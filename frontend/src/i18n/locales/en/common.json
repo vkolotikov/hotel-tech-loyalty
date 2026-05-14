@@ -225,6 +225,56 @@
     "no_activity": "No recent activity yet."
   },
 
+  "members": {
+    "title": "Members",
+    "total_one": "{{count}} total member",
+    "total_other": "{{count}} total members",
+    "actions": {
+      "import_csv": "Import CSV",
+      "export": "Export",
+      "add_member": "Add Member",
+      "award_points": "Award points",
+      "send_message": "Send message"
+    },
+    "kpis": {
+      "active_members": "Active members",
+      "new_this_month": "New this month",
+      "avg_points": "Avg points",
+      "top_tier": "Top tier",
+      "in_tier": "In {{tier}}"
+    },
+    "search_placeholder": "Search by name, email, or member number…",
+    "sort": {
+      "recent": "Recently joined",
+      "points": "Points high → low",
+      "name": "Name A → Z",
+      "last_activity": "Last activity"
+    },
+    "filters": {
+      "all_tiers": "All tiers",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "member": "Member",
+      "phone": "Phone",
+      "source": "Source",
+      "tier": "Tier",
+      "points": "Points",
+      "joined": "Joined",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": {
+      "no_members": "No members yet.",
+      "try_different_search": "Try a different search term."
+    },
+    "select_page": "Select page",
+    "deselect_page": "Deselect page",
+    "points_short": "pts"
+  },
+
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your platform configuration, integrations, and branding",

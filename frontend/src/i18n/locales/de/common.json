@@ -225,6 +225,56 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "members": {
+    "title": "Mitglieder",
+    "total_one": "{{count}} Mitglied insgesamt",
+    "total_other": "{{count}} Mitglieder insgesamt",
+    "actions": {
+      "import_csv": "CSV importieren",
+      "export": "Exportieren",
+      "add_member": "Mitglied hinzufügen",
+      "award_points": "Punkte vergeben",
+      "send_message": "Nachricht senden"
+    },
+    "kpis": {
+      "active_members": "Aktive Mitglieder",
+      "new_this_month": "Neue diesen Monat",
+      "avg_points": "Ø Punkte",
+      "top_tier": "Oberste Stufe",
+      "in_tier": "In Stufe {{tier}}"
+    },
+    "search_placeholder": "Suche nach Name, E-Mail oder Mitgliedsnummer…",
+    "sort": {
+      "recent": "Zuletzt beigetreten",
+      "points": "Punkte: hoch → niedrig",
+      "name": "Name A → Z",
+      "last_activity": "Letzte Aktivität"
+    },
+    "filters": {
+      "all_tiers": "Alle Stufen",
+      "all": "Alle",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "table": {
+      "member": "Mitglied",
+      "phone": "Telefon",
+      "source": "Quelle",
+      "tier": "Stufe",
+      "points": "Punkte",
+      "joined": "Beigetreten",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "empty": {
+      "no_members": "Noch keine Mitglieder.",
+      "try_different_search": "Versuchen Sie einen anderen Suchbegriff."
+    },
+    "select_page": "Seite auswählen",
+    "deselect_page": "Auswahl aufheben",
+    "points_short": "Pkt"
+  },
+
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Plattformkonfiguration, Integrationen und Branding verwalten",

@@ -225,6 +225,56 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "members": {
+    "title": "Membres",
+    "total_one": "{{count}} membre au total",
+    "total_other": "{{count}} membres au total",
+    "actions": {
+      "import_csv": "Importer CSV",
+      "export": "Exporter",
+      "add_member": "Ajouter un membre",
+      "award_points": "Attribuer des points",
+      "send_message": "Envoyer un message"
+    },
+    "kpis": {
+      "active_members": "Membres actifs",
+      "new_this_month": "Nouveaux ce mois-ci",
+      "avg_points": "Points moyens",
+      "top_tier": "Niveau le plus élevé",
+      "in_tier": "Au niveau {{tier}}"
+    },
+    "search_placeholder": "Rechercher par nom, e-mail ou numéro de membre…",
+    "sort": {
+      "recent": "Récemment inscrits",
+      "points": "Points : décroissant",
+      "name": "Nom A → Z",
+      "last_activity": "Dernière activité"
+    },
+    "filters": {
+      "all_tiers": "Tous les niveaux",
+      "all": "Tous",
+      "active": "Actifs",
+      "inactive": "Inactifs"
+    },
+    "table": {
+      "member": "Membre",
+      "phone": "Téléphone",
+      "source": "Source",
+      "tier": "Niveau",
+      "points": "Points",
+      "joined": "Inscription",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "empty": {
+      "no_members": "Aucun membre pour le moment.",
+      "try_different_search": "Essayez un autre terme."
+    },
+    "select_page": "Sélectionner la page",
+    "deselect_page": "Désélectionner",
+    "points_short": "pts"
+  },
+
   "settings": {
     "title": "Paramètres",
     "subtitle": "Gérer la configuration, les intégrations et le branding",

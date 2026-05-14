@@ -227,6 +227,58 @@
     "no_activity": "Пока нет активности."
   },
 
+  "members": {
+    "title": "Участники",
+    "total_one": "{{count}} участник всего",
+    "total_few": "{{count}} участника всего",
+    "total_many": "{{count}} участников всего",
+    "total_other": "{{count}} участников всего",
+    "actions": {
+      "import_csv": "Импорт CSV",
+      "export": "Экспорт",
+      "add_member": "Добавить участника",
+      "award_points": "Начислить баллы",
+      "send_message": "Отправить сообщение"
+    },
+    "kpis": {
+      "active_members": "Активные участники",
+      "new_this_month": "Новых за месяц",
+      "avg_points": "Среднее баллов",
+      "top_tier": "Высший уровень",
+      "in_tier": "В уровне {{tier}}"
+    },
+    "search_placeholder": "Поиск по имени, email или номеру…",
+    "sort": {
+      "recent": "Недавно вступившие",
+      "points": "Баллы: больше → меньше",
+      "name": "Имя А → Я",
+      "last_activity": "Последняя активность"
+    },
+    "filters": {
+      "all_tiers": "Все уровни",
+      "all": "Все",
+      "active": "Активные",
+      "inactive": "Неактивные"
+    },
+    "table": {
+      "member": "Участник",
+      "phone": "Телефон",
+      "source": "Источник",
+      "tier": "Уровень",
+      "points": "Баллы",
+      "joined": "Дата вступления",
+      "status": "Статус",
+      "actions": "Действия"
+    },
+    "empty": {
+      "no_members": "Участников пока нет.",
+      "try_different_search": "Попробуйте другой запрос."
+    },
+    "select_page": "Выбрать страницу",
+    "deselect_page": "Снять выделение",
+    "points_short": "б"
+  },
+
   "settings": {
     "title": "Настройки",
     "subtitle": "Конфигурация платформы, интеграции и брендинг",
