@@ -167,29 +167,64 @@
 
   "dashboard": {
     "title": "Главная",
-    "welcome": "С возвращением, {{name}}",
+    "greeting": {
+      "morning": "Доброе утро",
+      "afternoon": "Добрый день",
+      "evening": "Добрый вечер"
+    },
+    "actions": {
+      "scan_card": "Сканировать карту",
+      "send_campaign": "Отправить рассылку"
+    },
+    "needs_attention": "Требует внимания",
+    "all_clear": "Всё в порядке.",
+    "all_clear_sub": "Сейчас ничего не ждёт вашего внимания.",
+    "alerts": {
+      "waiting_chats": "Ждут ответа",
+      "unassigned_chats": "Без оператора",
+      "pending_bookings": "Брони на подтверждение",
+      "new_leads_today": "Новые лиды сегодня",
+      "active_inquiries": "Активные запросы"
+    },
+    "schedule": {
+      "title": "Расписание на сегодня",
+      "events_one": "{{count}} событие",
+      "events_few": "{{count}} события",
+      "events_many": "{{count}} событий",
+      "events_other": "{{count}} событий",
+      "nothing_today": "На сегодня ничего не запланировано.",
+      "future_hint": "Здесь появятся будущие заезды и услуги.",
+      "arrivals": "Заезды",
+      "departures": "Выезды",
+      "services": "Услуги",
+      "none_today": "Сегодня нет.",
+      "with": "у {{name}}",
+      "more": "ещё {{count}}"
+    },
     "kpis": {
+      "active_members": "Активные участники",
+      "total_count": "всего {{count}}",
+      "revenue_mtd": "Доход (с начала месяца)",
+      "this_month": "В этом месяце",
+      "active_30d": "Активные за 30 дней",
+      "percent_of_base": "{{percent}}% от базы",
+      "pipeline": "Воронка",
+      "open_count": "{{count}} открытых"
+    },
+    "quick_access": "Быстрый доступ",
+    "quick": {
       "members": "Участники",
-      "new_this_month": "Новых за месяц",
-      "points_issued": "Начислено баллов",
-      "points_redeemed": "Использовано баллов",
-      "active_bookings": "Активные брони",
-      "monthly_revenue": "Доход за месяц",
-      "conversion_rate": "Конверсия"
+      "bookings": "Брони",
+      "calendar": "Календарь",
+      "services": "Услуги",
+      "inbox": "Сообщения",
+      "offers": "Предложения",
+      "analytics": "Аналитика",
+      "ai_insights": "AI инсайты"
     },
-    "sections": {
-      "recent_activity": "Недавняя активность",
-      "top_members": "Топ участников",
-      "upcoming_stays": "Ближайшие заезды",
-      "ai_insights": "AI инсайты",
-      "tasks_today": "Задачи на сегодня",
-      "leads_pipeline": "Воронка лидов"
-    },
-    "empty": {
-      "no_activity": "Пока нет активности.",
-      "no_leads": "Открытых лидов нет.",
-      "no_tasks": "На сегодня задач нет."
-    }
+    "recent_activity": "Недавняя активность",
+    "view_all": "Показать все",
+    "no_activity": "Пока нет активности."
   },
 
   "settings": {

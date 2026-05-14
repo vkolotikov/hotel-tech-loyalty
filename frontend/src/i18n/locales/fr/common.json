@@ -167,29 +167,62 @@
 
   "dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Bon retour, {{name}}",
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir"
+    },
+    "actions": {
+      "scan_card": "Scanner la carte",
+      "send_campaign": "Envoyer une campagne"
+    },
+    "needs_attention": "Demande votre attention",
+    "all_clear": "Tout est en ordre.",
+    "all_clear_sub": "Rien ne vous attend pour le moment.",
+    "alerts": {
+      "waiting_chats": "Chats en attente",
+      "unassigned_chats": "Chats non assignés",
+      "pending_bookings": "Réservations en attente",
+      "new_leads_today": "Nouveaux leads aujourd'hui",
+      "active_inquiries": "Demandes actives"
+    },
+    "schedule": {
+      "title": "Programme du jour",
+      "events_one": "{{count}} événement",
+      "events_other": "{{count}} événements",
+      "nothing_today": "Rien de prévu pour aujourd'hui.",
+      "future_hint": "Les arrivées et services à venir apparaîtront ici.",
+      "arrivals": "Arrivées",
+      "departures": "Départs",
+      "services": "Services",
+      "none_today": "Aucun aujourd'hui.",
+      "with": "avec {{name}}",
+      "more": "{{count}} de plus"
+    },
     "kpis": {
+      "active_members": "Membres actifs",
+      "total_count": "{{count}} au total",
+      "revenue_mtd": "Revenu (mois en cours)",
+      "this_month": "Ce mois-ci",
+      "active_30d": "Actifs sur 30 j",
+      "percent_of_base": "{{percent}}% de la base",
+      "pipeline": "Pipeline",
+      "open_count": "{{count}} ouverts"
+    },
+    "quick_access": "Accès rapide",
+    "quick": {
       "members": "Membres",
-      "new_this_month": "Nouveaux ce mois-ci",
-      "points_issued": "Points attribués",
-      "points_redeemed": "Points utilisés",
-      "active_bookings": "Réservations actives",
-      "monthly_revenue": "Revenu mensuel",
-      "conversion_rate": "Taux de conversion"
+      "bookings": "Réservations",
+      "calendar": "Calendrier",
+      "services": "Services",
+      "inbox": "Messagerie",
+      "offers": "Offres",
+      "analytics": "Analyses",
+      "ai_insights": "Insights IA"
     },
-    "sections": {
-      "recent_activity": "Activité récente",
-      "top_members": "Meilleurs membres",
-      "upcoming_stays": "Séjours à venir",
-      "ai_insights": "Insights IA",
-      "tasks_today": "Tâches du jour",
-      "leads_pipeline": "Pipeline des leads"
-    },
-    "empty": {
-      "no_activity": "Aucune activité récente.",
-      "no_leads": "Aucun lead ouvert.",
-      "no_tasks": "Aucune tâche aujourd'hui."
-    }
+    "recent_activity": "Activité récente",
+    "view_all": "Tout voir",
+    "no_activity": "Aucune activité récente."
   },
 
   "settings": {

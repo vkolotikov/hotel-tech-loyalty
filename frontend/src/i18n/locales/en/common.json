@@ -167,29 +167,62 @@
 
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome back, {{name}}",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "actions": {
+      "scan_card": "Scan Card",
+      "send_campaign": "Send Campaign"
+    },
+    "needs_attention": "Needs your attention",
+    "all_clear": "All clear.",
+    "all_clear_sub": "Nothing waiting on you right now.",
+    "alerts": {
+      "waiting_chats": "Waiting Chats",
+      "unassigned_chats": "Unassigned Chats",
+      "pending_bookings": "Pending Bookings",
+      "new_leads_today": "New Leads Today",
+      "active_inquiries": "Active Inquiries"
+    },
+    "schedule": {
+      "title": "Today's schedule",
+      "events_one": "{{count}} event",
+      "events_other": "{{count}} events",
+      "nothing_today": "Nothing on the books for today.",
+      "future_hint": "Future arrivals and services will appear here.",
+      "arrivals": "Arrivals",
+      "departures": "Departures",
+      "services": "Services",
+      "none_today": "None today.",
+      "with": "with {{name}}",
+      "more": "{{count}} more"
+    },
     "kpis": {
+      "active_members": "Active Members",
+      "total_count": "{{count}} total",
+      "revenue_mtd": "Revenue (MTD)",
+      "this_month": "This month",
+      "active_30d": "Active in 30d",
+      "percent_of_base": "{{percent}}% of base",
+      "pipeline": "Pipeline",
+      "open_count": "{{count}} open"
+    },
+    "quick_access": "Quick access",
+    "quick": {
       "members": "Members",
-      "new_this_month": "New this month",
-      "points_issued": "Points issued",
-      "points_redeemed": "Points redeemed",
-      "active_bookings": "Active bookings",
-      "monthly_revenue": "Monthly revenue",
-      "conversion_rate": "Conversion rate"
+      "bookings": "Bookings",
+      "calendar": "Calendar",
+      "services": "Services",
+      "inbox": "Inbox",
+      "offers": "Offers",
+      "analytics": "Analytics",
+      "ai_insights": "AI Insights"
     },
-    "sections": {
-      "recent_activity": "Recent activity",
-      "top_members": "Top members",
-      "upcoming_stays": "Upcoming stays",
-      "ai_insights": "AI insights",
-      "tasks_today": "Tasks today",
-      "leads_pipeline": "Leads pipeline"
-    },
-    "empty": {
-      "no_activity": "No recent activity yet.",
-      "no_leads": "No open leads.",
-      "no_tasks": "No tasks today."
-    }
+    "recent_activity": "Recent activity",
+    "view_all": "View all",
+    "no_activity": "No recent activity yet."
   },
 
   "settings": {

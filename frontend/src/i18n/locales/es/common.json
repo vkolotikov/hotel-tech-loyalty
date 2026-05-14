@@ -167,29 +167,62 @@
 
   "dashboard": {
     "title": "Panel",
-    "welcome": "Bienvenido de vuelta, {{name}}",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
+    "actions": {
+      "scan_card": "Escanear tarjeta",
+      "send_campaign": "Enviar campaña"
+    },
+    "needs_attention": "Requiere tu atención",
+    "all_clear": "Todo en orden.",
+    "all_clear_sub": "Ahora mismo no hay nada esperando.",
+    "alerts": {
+      "waiting_chats": "Chats en espera",
+      "unassigned_chats": "Chats sin asignar",
+      "pending_bookings": "Reservas pendientes",
+      "new_leads_today": "Leads nuevos hoy",
+      "active_inquiries": "Consultas activas"
+    },
+    "schedule": {
+      "title": "Agenda de hoy",
+      "events_one": "{{count}} evento",
+      "events_other": "{{count}} eventos",
+      "nothing_today": "Nada en la agenda para hoy.",
+      "future_hint": "Las próximas llegadas y servicios aparecerán aquí.",
+      "arrivals": "Llegadas",
+      "departures": "Salidas",
+      "services": "Servicios",
+      "none_today": "Ninguno hoy.",
+      "with": "con {{name}}",
+      "more": "{{count}} más"
+    },
     "kpis": {
+      "active_members": "Miembros activos",
+      "total_count": "{{count}} en total",
+      "revenue_mtd": "Ingresos (mes actual)",
+      "this_month": "Este mes",
+      "active_30d": "Activos en 30 días",
+      "percent_of_base": "{{percent}}% de la base",
+      "pipeline": "Pipeline",
+      "open_count": "{{count}} abiertas"
+    },
+    "quick_access": "Acceso rápido",
+    "quick": {
       "members": "Miembros",
-      "new_this_month": "Nuevos este mes",
-      "points_issued": "Puntos emitidos",
-      "points_redeemed": "Puntos canjeados",
-      "active_bookings": "Reservas activas",
-      "monthly_revenue": "Ingresos mensuales",
-      "conversion_rate": "Tasa de conversión"
+      "bookings": "Reservas",
+      "calendar": "Calendario",
+      "services": "Servicios",
+      "inbox": "Bandeja",
+      "offers": "Ofertas",
+      "analytics": "Analíticas",
+      "ai_insights": "Insights IA"
     },
-    "sections": {
-      "recent_activity": "Actividad reciente",
-      "top_members": "Mejores miembros",
-      "upcoming_stays": "Próximas estancias",
-      "ai_insights": "Insights IA",
-      "tasks_today": "Tareas de hoy",
-      "leads_pipeline": "Pipeline de leads"
-    },
-    "empty": {
-      "no_activity": "Sin actividad reciente.",
-      "no_leads": "No hay leads abiertos.",
-      "no_tasks": "No hay tareas hoy."
-    }
+    "recent_activity": "Actividad reciente",
+    "view_all": "Ver todo",
+    "no_activity": "Sin actividad reciente."
   },
 
   "settings": {

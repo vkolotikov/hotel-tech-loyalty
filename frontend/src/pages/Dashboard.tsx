@@ -8,6 +8,7 @@ import {
   Hotel, ShieldCheck, Sparkle, FileText, DollarSign, UserCheck,
   PackageCheck, MessageCircle, Timer, Activity,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { money } from '../lib/money'
 
@@ -60,15 +61,21 @@ function thisMonthIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function timeOfDayGreeting(): string {
+/**
+ * Returns the i18n key for the current time-of-day greeting. Callers
+ * resolve via `t()` so the greeting localises along with everything
+ * else on the page.
+ */
+function timeOfDayGreetingKey(): 'dashboard.greeting.morning' | 'dashboard.greeting.afternoon' | 'dashboard.greeting.evening' {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 12) return 'dashboard.greeting.morning'
+  if (h < 18) return 'dashboard.greeting.afternoon'
+  return 'dashboard.greeting.evening'
 }
 
 export function Dashboard() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const { data: kpis } = useQuery({
     queryKey: ['dashboard-kpis'],
@@ -124,13 +131,13 @@ export function Dashboard() {
   const alerts = useMemo(() => {
     const items: { key: string; label: string; value: number; color: string; icon: any; route: string }[] = []
     const op = liveOps ?? {}
-    if ((op.waiting_chats ?? 0) > 0)        items.push({ key: 'wait',  label: 'Waiting Chats',     value: op.waiting_chats,        color: '#ff375f', icon: Timer,         route: '/chat-inbox' })
-    if ((op.unassigned_chats ?? 0) > 0)     items.push({ key: 'unas',  label: 'Unassigned Chats',  value: op.unassigned_chats,     color: '#f59e0b', icon: MessageCircle, route: '/chat-inbox' })
-    if ((op.pending_submissions ?? 0) > 0)  items.push({ key: 'sub',   label: 'Pending Bookings',  value: op.pending_submissions,  color: '#a855f7', icon: PackageCheck,  route: '/bookings/submissions' })
-    if ((op.new_leads_today ?? 0) > 0)      items.push({ key: 'leads', label: 'New Leads Today',   value: op.new_leads_today,      color: '#3b82f6', icon: UserCheck,     route: '/visitors' })
-    if ((kpis?.active_inquiries ?? 0) > 0)  items.push({ key: 'inq',   label: 'Active Inquiries',  value: kpis.active_inquiries,   color: '#06b6d4', icon: FileText,      route: '/inquiries' })
+    if ((op.waiting_chats ?? 0) > 0)        items.push({ key: 'wait',  label: t('dashboard.alerts.waiting_chats', 'Waiting Chats'),       value: op.waiting_chats,        color: '#ff375f', icon: Timer,         route: '/chat-inbox' })
+    if ((op.unassigned_chats ?? 0) > 0)     items.push({ key: 'unas',  label: t('dashboard.alerts.unassigned_chats', 'Unassigned Chats'), value: op.unassigned_chats,     color: '#f59e0b', icon: MessageCircle, route: '/chat-inbox' })
+    if ((op.pending_submissions ?? 0) > 0)  items.push({ key: 'sub',   label: t('dashboard.alerts.pending_bookings', 'Pending Bookings'), value: op.pending_submissions,  color: '#a855f7', icon: PackageCheck,  route: '/bookings/submissions' })
+    if ((op.new_leads_today ?? 0) > 0)      items.push({ key: 'leads', label: t('dashboard.alerts.new_leads_today', 'New Leads Today'),   value: op.new_leads_today,      color: '#3b82f6', icon: UserCheck,     route: '/visitors' })
+    if ((kpis?.active_inquiries ?? 0) > 0)  items.push({ key: 'inq',   label: t('dashboard.alerts.active_inquiries', 'Active Inquiries'), value: kpis.active_inquiries,   color: '#06b6d4', icon: FileText,      route: '/inquiries' })
     return items
-  }, [liveOps, kpis])
+  }, [liveOps, kpis, t])
 
   const arrivalsList = arrivals ?? []
   const departuresList = departures ?? []
@@ -141,7 +148,7 @@ export function Dashboard() {
       {/* ───────────── Header ───────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">{timeOfDayGreeting()}</h1>
+          <h1 className="text-2xl font-bold text-white">{t(timeOfDayGreetingKey())}</h1>
           <p className="text-t-secondary text-sm mt-1 flex items-center gap-1.5">
             <Calendar size={13} />
             {format(new Date(), 'EEEE, MMMM d, yyyy')}
@@ -150,23 +157,23 @@ export function Dashboard() {
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => navigate('/scan')}
             className="flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
-            <Scan size={15} /> Scan Card
+            <Scan size={15} /> {t('dashboard.actions.scan_card', 'Scan Card')}
           </button>
           <button onClick={() => navigate('/notifications')}
             className="flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-            <Bell size={15} /> Send Campaign
+            <Bell size={15} /> {t('dashboard.actions.send_campaign', 'Send Campaign')}
           </button>
         </div>
       </div>
 
       {/* ───────────── Needs Attention ───────────── */}
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">Needs your attention</p>
+        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">{t('dashboard.needs_attention', 'Needs your attention')}</p>
         {alerts.length === 0 ? (
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-dark-surface border border-emerald-500/15 text-sm">
             <CheckCircle2 size={16} className="text-emerald-400" />
-            <span className="text-emerald-200">All clear.</span>
-            <span className="text-t-secondary">Nothing waiting on you right now.</span>
+            <span className="text-emerald-200">{t('dashboard.all_clear', 'All clear.')}</span>
+            <span className="text-t-secondary">{t('dashboard.all_clear_sub', 'Nothing waiting on you right now.')}</span>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -197,11 +204,11 @@ export function Dashboard() {
                 <Calendar size={17} />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Today's schedule</p>
+                <p className="text-sm font-bold text-white">{t('dashboard.schedule.title', "Today's schedule")}</p>
                 <p className="text-[11px] text-[#636366]">{format(new Date(), 'EEEE · MMMM d')}</p>
               </div>
             </div>
-            <span className="text-[11px] font-semibold text-t-secondary">{totalToday} events</span>
+            <span className="text-[11px] font-semibold text-t-secondary">{t('dashboard.schedule.events', { count: totalToday, defaultValue: '{{count}} events' })}</span>
           </div>
 
           {totalToday === 0 ? (
@@ -209,16 +216,18 @@ export function Dashboard() {
               <div className="inline-flex w-12 h-12 rounded-full bg-dark-surface2 items-center justify-center mb-3">
                 <Calendar size={20} className="text-[#636366]" />
               </div>
-              <p className="text-sm text-t-secondary">Nothing on the books for today.</p>
-              <p className="text-[11px] text-[#636366] mt-1">Future arrivals and services will appear here.</p>
+              <p className="text-sm text-t-secondary">{t('dashboard.schedule.nothing_today', 'Nothing on the books for today.')}</p>
+              <p className="text-[11px] text-[#636366] mt-1">{t('dashboard.schedule.future_hint', 'Future arrivals and services will appear here.')}</p>
             </div>
           ) : (
             <div className="divide-y divide-dark-border">
               <ScheduleSection
-                title="Arrivals"
+                title={t('dashboard.schedule.arrivals', 'Arrivals')}
                 count={arrivalsList.length}
                 icon={ArrowUpRight}
                 accent="#32d74b"
+                emptyLabel={t('dashboard.schedule.none_today', 'None today.')}
+                moreLabel={(n) => t('dashboard.schedule.more', { count: n, defaultValue: '{{count}} more' })}
                 rows={arrivalsList.slice(0, 4).map((a: any) => ({
                   key: 'a' + a.id,
                   initial: a.guest_name?.charAt(0) ?? '?',
@@ -232,10 +241,12 @@ export function Dashboard() {
                 onViewAll={() => navigate('/reservations')}
               />
               <ScheduleSection
-                title="Departures"
+                title={t('dashboard.schedule.departures', 'Departures')}
                 count={departuresList.length}
                 icon={ArrowDownRight}
                 accent="#ff375f"
+                emptyLabel={t('dashboard.schedule.none_today', 'None today.')}
+                moreLabel={(n) => t('dashboard.schedule.more', { count: n, defaultValue: '{{count}} more' })}
                 rows={departuresList.slice(0, 4).map((d: any) => ({
                   key: 'd' + d.id,
                   initial: d.guest_name?.charAt(0) ?? '?',
@@ -249,10 +260,12 @@ export function Dashboard() {
                 onViewAll={() => navigate('/reservations')}
               />
               <ScheduleSection
-                title="Services"
+                title={t('dashboard.schedule.services', 'Services')}
                 count={todayServices.length}
                 icon={Sparkle}
                 accent="#9a7ef0"
+                emptyLabel={t('dashboard.schedule.none_today', 'None today.')}
+                moreLabel={(n) => t('dashboard.schedule.more', { count: n, defaultValue: '{{count}} more' })}
                 rows={todayServices.slice(0, 4).map((s: any) => ({
                   key: 's' + s.id,
                   initial: (s.guest_name || s.customer_name || 'G').charAt(0),
@@ -261,7 +274,7 @@ export function Dashboard() {
                   secondary: [
                     s.start_at ? new Date(s.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
                     s.service_name,
-                    s.master_name && `with ${s.master_name}`,
+                    s.master_name && t('dashboard.schedule.with', { name: s.master_name, defaultValue: 'with {{name}}' }),
                   ].filter(Boolean).join(' · '),
                   meta: null,
                   metaColor: '#9a7ef0',
@@ -276,33 +289,33 @@ export function Dashboard() {
         {/* Numbers that matter — 2x2 stat grid */}
         <div className="grid grid-cols-2 gap-3 content-start">
           <KpiTile
-            label="Active Members"
+            label={t('dashboard.kpis.active_members', 'Active Members')}
             value={(kpis?.engaged_members ?? 0).toLocaleString()}
-            sub={kpis ? `${(kpis.total_members ?? 0).toLocaleString()} total` : undefined}
+            sub={kpis ? t('dashboard.kpis.total_count', { count: kpis.total_members ?? 0, defaultValue: '{{count}} total' }) : undefined}
             icon={Users}
             accent="#3b82f6"
             onClick={() => navigate('/members')}
           />
           <KpiTile
-            label="Revenue (MTD)"
+            label={t('dashboard.kpis.revenue_mtd', 'Revenue (MTD)')}
             value={kpis ? money(kpis.revenue_this_month ?? 0) : '—'}
-            sub="This month"
+            sub={t('dashboard.kpis.this_month', 'This month')}
             icon={DollarSign}
             accent="#10b981"
             onClick={() => navigate('/analytics')}
           />
           <KpiTile
-            label="Active in 30d"
+            label={t('dashboard.kpis.active_30d', 'Active in 30d')}
             value={(kpis?.engaged_members_30d ?? 0).toLocaleString()}
-            sub={kpis?.total_members ? `${Math.round(((kpis.engaged_members_30d ?? 0) / kpis.total_members) * 100)}% of base` : undefined}
+            sub={kpis?.total_members ? t('dashboard.kpis.percent_of_base', { percent: Math.round(((kpis.engaged_members_30d ?? 0) / kpis.total_members) * 100), defaultValue: '{{percent}}% of base' }) : undefined}
             icon={Activity}
             accent="#06b6d4"
             onClick={() => navigate('/analytics')}
           />
           <KpiTile
-            label="Pipeline"
+            label={t('dashboard.kpis.pipeline', 'Pipeline')}
             value={kpis ? money(kpis.pipeline_value ?? 0) : '—'}
-            sub={kpis ? `${kpis.active_inquiries ?? 0} open` : undefined}
+            sub={kpis ? t('dashboard.kpis.open_count', { count: kpis.active_inquiries ?? 0, defaultValue: '{{count}} open' }) : undefined}
             icon={Hotel}
             accent="#a855f7"
             onClick={() => navigate('/inquiries')}
@@ -312,17 +325,17 @@ export function Dashboard() {
 
       {/* ───────────── Quick Access (8 nav tiles) ───────────── */}
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">Quick access</p>
+        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">{t('dashboard.quick_access', 'Quick access')}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {[
-            { to: '/members',          label: 'Members',     icon: Users,         color: '#3b82f6' },
-            { to: '/bookings',         label: 'Bookings',    icon: Hotel,         color: '#10b981' },
-            { to: '/bookings/calendar',label: 'Calendar',    icon: Calendar,      color: '#06b6d4' },
-            { to: '/service-bookings', label: 'Services',    icon: Sparkle,       color: '#9a7ef0' },
-            { to: '/chat-inbox',       label: 'Inbox',       icon: MessageSquare, color: '#f59e0b' },
-            { to: '/offers',           label: 'Offers',      icon: Gift,          color: '#ec4899' },
-            { to: '/analytics',        label: 'Analytics',   icon: BarChart3,     color: '#a855f7' },
-            { to: '/ai',               label: 'AI Insights', icon: Sparkles,      color: '#c9a84c' },
+            { to: '/members',          label: t('dashboard.quick.members',     'Members'),     icon: Users,         color: '#3b82f6' },
+            { to: '/bookings',         label: t('dashboard.quick.bookings',    'Bookings'),    icon: Hotel,         color: '#10b981' },
+            { to: '/bookings/calendar',label: t('dashboard.quick.calendar',    'Calendar'),    icon: Calendar,      color: '#06b6d4' },
+            { to: '/service-bookings', label: t('dashboard.quick.services',    'Services'),    icon: Sparkle,       color: '#9a7ef0' },
+            { to: '/chat-inbox',       label: t('dashboard.quick.inbox',       'Inbox'),       icon: MessageSquare, color: '#f59e0b' },
+            { to: '/offers',           label: t('dashboard.quick.offers',      'Offers'),      icon: Gift,          color: '#ec4899' },
+            { to: '/analytics',        label: t('dashboard.quick.analytics',   'Analytics'),   icon: BarChart3,     color: '#a855f7' },
+            { to: '/ai',               label: t('dashboard.quick.ai_insights', 'AI Insights'), icon: Sparkles,      color: '#c9a84c' },
           ].map(item => {
             const Icon = item.icon
             return (
@@ -346,14 +359,14 @@ export function Dashboard() {
             <div className="w-9 h-9 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-400">
               <Activity size={17} />
             </div>
-            <p className="text-sm font-bold text-white">Recent activity</p>
+            <p className="text-sm font-bold text-white">{t('dashboard.recent_activity', 'Recent activity')}</p>
           </div>
           <button onClick={() => navigate('/audit-log')} className="text-[11px] text-primary-400 hover:text-primary-300 flex items-center gap-0.5 font-semibold">
-            View all <ChevronRight size={11} />
+            {t('dashboard.view_all', 'View all')} <ChevronRight size={11} />
           </button>
         </div>
         {((recentActivity ?? []).length === 0) ? (
-          <div className="px-5 py-10 text-center text-sm text-[#636366]">No recent activity yet.</div>
+          <div className="px-5 py-10 text-center text-sm text-[#636366]">{t('dashboard.no_activity', 'No recent activity yet.')}</div>
         ) : (
           <div className="divide-y divide-dark-border">
             {(recentActivity ?? []).slice(0, 8).map((act: any, i: number) => {
@@ -397,7 +410,7 @@ interface ScheduleRow {
 }
 
 function ScheduleSection({
-  title, count, icon: Icon, accent, rows, onViewAll,
+  title, count, icon: Icon, accent, rows, onViewAll, emptyLabel, moreLabel,
 }: {
   title: string
   count: number
@@ -405,6 +418,8 @@ function ScheduleSection({
   accent: string
   rows: ScheduleRow[]
   onViewAll: () => void
+  emptyLabel: string
+  moreLabel: (n: number) => string
 }) {
   return (
     <div>
@@ -419,12 +434,12 @@ function ScheduleSection({
         </div>
         {count > 4 && (
           <button onClick={onViewAll} className="text-[10px] text-primary-400 hover:text-primary-300 font-semibold flex items-center gap-0.5">
-            +{count - 4} more <ChevronRight size={10} />
+            +{moreLabel(count - 4)} <ChevronRight size={10} />
           </button>
         )}
       </div>
       {count === 0 ? (
-        <p className="px-5 pb-3 text-[11px] text-[#636366]">None today.</p>
+        <p className="px-5 pb-3 text-[11px] text-[#636366]">{emptyLabel}</p>
       ) : (
         <div>
           {rows.map(r => (
