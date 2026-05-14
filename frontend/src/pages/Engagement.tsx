@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
@@ -76,6 +77,10 @@ interface KpiResp {
   ai_handled: KpiCard
 }
 
+// Module-level filter taxonomy. The `label` here is the English fallback;
+// the component resolves the localised label via t(`engagement.filters.${key}`)
+// at render time. Keeping the structural list out of the component keeps
+// it cheap to import for tests and other helpers.
 const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
   { key: 'priority',    label: 'Priority',     icon: Sparkles                 },
   { key: 'online',      label: 'Online',       icon: Wifi,  tone: 'green'     },
@@ -94,8 +99,17 @@ const INTENT_FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'support',         label: 'Support' },
 ]
 
+/** Maps a FilterKey to its i18n key under `engagement.filters.*`. The
+ * top-row chips live at `.priority/.online/...` and intent chips live
+ * one level deeper at `.intent.<key>`. */
+function filterLabelKey(k: FilterKey): string {
+  const intentKeys = ['booking_inquiry', 'info_request', 'complaint', 'cancellation', 'support'] as const
+  return (intentKeys as readonly string[]).includes(k) ? `engagement.filters.intent.${k}` : `engagement.filters.${k}`
+}
+
 export function Engagement() {
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const { brands } = useBrandStore()
 
   const [filter, setFilter] = useState<FilterKey>('priority')
@@ -191,9 +205,11 @@ export function Engagement() {
     mutationFn: (enabled: boolean) => api.put('/v1/admin/me/preferences', { wants_daily_summary: enabled }),
     onSuccess: (_data, enabled) => {
       qc.invalidateQueries({ queryKey: ['me', 'preferences'] })
-      toast.success(enabled ? 'Daily summary email turned on' : 'Daily summary email turned off')
+      toast.success(enabled
+        ? t('engagement.toasts.daily_summary_on',  'Daily summary email turned on')
+        : t('engagement.toasts.daily_summary_off', 'Daily summary email turned off'))
     },
-    onError: () => toast.error('Failed to update preference'),
+    onError: () => toast.error(t('engagement.toasts.daily_summary_fail', 'Failed to update preference')),
   })
 
   return (
@@ -203,24 +219,24 @@ export function Engagement() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2.5">
             <Sparkles size={20} className="text-accent" />
-            Engagement
+            {t('engagement.title', 'Engagement')}
           </h1>
           <p className="text-sm text-t-secondary mt-1">
-            Visitors and conversations in one place — sorted so the rows that need attention surface first.
+            {t('engagement.subtitle', 'Visitors and conversations in one place — sorted so the rows that need attention surface first.')}
           </p>
         </div>
         <div className="flex items-center gap-2 self-start">
           {/* Notification permission status chip — clickable when default */}
           {permission === 'granted' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-500/10 border border-green-500/40 rounded-lg text-xs text-green-400" title="Browser notifications enabled — you'll be pinged when a hot lead arrives">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-500/10 border border-green-500/40 rounded-lg text-xs text-green-400" title={t('engagement.alerts_on_tooltip', "Browser notifications enabled — you'll be pinged when a hot lead arrives")}>
               <BellRing size={13} />
-              Alerts on
+              {t('engagement.alerts_on', 'Alerts on')}
             </div>
           )}
           {permission === 'denied' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/40 rounded-lg text-xs text-red-400" title="Notifications were blocked. Re-enable in your browser site settings.">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/40 rounded-lg text-xs text-red-400" title={t('engagement.alerts_blocked_tooltip', 'Notifications were blocked. Re-enable in your browser site settings.')}>
               <BellOff size={13} />
-              Alerts blocked
+              {t('engagement.alerts_blocked', 'Alerts blocked')}
             </div>
           )}
           {/* Phase 4 v3 — daily summary email toggle */}
@@ -228,8 +244,8 @@ export function Engagement() {
             onClick={() => setDailySummary.mutate(!prefs?.wants_daily_summary)}
             disabled={setDailySummary.isPending}
             title={prefs?.wants_daily_summary
-              ? 'Daily summary email is on. Click to turn off.'
-              : 'Get a morning email summary every day at 8am local time. Click to enable.'}
+              ? t('engagement.daily_email_on_tooltip',  'Daily summary email is on. Click to turn off.')
+              : t('engagement.daily_email_off_tooltip', 'Get a morning email summary every day at 8am local time. Click to enable.')}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
               prefs?.wants_daily_summary
                 ? 'bg-blue-500/10 border border-blue-500/40 text-blue-400'
@@ -237,15 +253,15 @@ export function Engagement() {
             }`}
           >
             <Mail size={13} />
-            {prefs?.wants_daily_summary ? 'Daily email on' : 'Daily email'}
+            {prefs?.wants_daily_summary ? t('engagement.daily_email_on', 'Daily email on') : t('engagement.daily_email', 'Daily email')}
           </button>
           <Link
             to="/engagement/live"
             className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors"
-            title="Open the live wall — fullscreen monitor view"
+            title={t('engagement.live_wall_tooltip', 'Open the live wall — fullscreen monitor view')}
           >
             <Monitor size={14} />
-            Live wall
+            {t('engagement.live_wall', 'Live wall')}
           </Link>
           <button
             onClick={() => {
@@ -255,7 +271,7 @@ export function Engagement() {
             className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-            Refresh
+            {t('engagement.refresh', 'Refresh')}
           </button>
         </div>
       </div>
@@ -269,9 +285,9 @@ export function Engagement() {
             <Bell size={15} className="text-amber-300" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Get pinged the moment a hot lead arrives</p>
+            <p className="text-sm font-semibold">{t('engagement.perm_banner.title', 'Get pinged the moment a hot lead arrives')}</p>
             <p className="text-xs text-t-secondary mt-0.5">
-              Enable browser notifications and we'll alert you even when this tab isn't focused — perfect for catching booking-page visitors.
+              {t('engagement.perm_banner.sub', "Enable browser notifications and we'll alert you even when this tab isn't focused — perfect for catching booking-page visitors.")}
             </p>
           </div>
           <button
@@ -281,7 +297,7 @@ export function Engagement() {
             }}
             className="bg-accent text-black font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-accent/90 transition-colors"
           >
-            Enable
+            {t('engagement.perm_banner.enable', 'Enable')}
           </button>
           <button
             onClick={() => {
@@ -289,7 +305,7 @@ export function Engagement() {
               setPermBannerDismissed(true)
             }}
             className="p-1 text-t-secondary hover:text-white"
-            aria-label="Dismiss"
+            aria-label={t('engagement.perm_banner.dismiss', 'Dismiss')}
           >
             <X size={14} />
           </button>
@@ -300,7 +316,7 @@ export function Engagement() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiTile
           icon={Wifi}
-          label="Online now"
+          label={t('engagement.kpis.online_now', 'Online now')}
           value={kpis?.data.online_now.value ?? 0}
           detail={kpis?.data.online_now.detail}
           color="#22c55e"
@@ -309,7 +325,7 @@ export function Engagement() {
         />
         <KpiTile
           icon={Star}
-          label="Leads"
+          label={t('engagement.kpis.leads', 'Leads')}
           value={kpis?.data.hot_leads.value ?? 0}
           detail={kpis?.data.hot_leads.detail}
           color="#f59e0b"
@@ -318,7 +334,7 @@ export function Engagement() {
         />
         <KpiTile
           icon={AlertCircle}
-          label="Unanswered"
+          label={t('engagement.kpis.unanswered', 'Unanswered')}
           value={kpis?.data.unanswered.value ?? 0}
           detail={kpis?.data.unanswered.detail}
           color="#ef4444"
@@ -327,7 +343,7 @@ export function Engagement() {
         />
         <KpiTile
           icon={Bot}
-          label="AI handled today"
+          label={t('engagement.kpis.ai_handled_today', 'AI handled today')}
           value={kpis?.data.ai_handled.value ?? 0}
           detail={kpis?.data.ai_handled.detail}
           color="#8b5cf6"
@@ -352,7 +368,7 @@ export function Engagement() {
                 style={{ height: 32 }}
               >
                 <f.icon size={12} className={active ? '' : tone} />
-                {f.label}
+                {t(filterLabelKey(f.key), f.label)}
               </button>
             )
           })}
@@ -363,7 +379,7 @@ export function Engagement() {
             org may see empty results until the chats accumulate. */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ flexShrink: 0 }}>
           <span className="text-[9px] uppercase tracking-wide font-bold text-t-secondary whitespace-nowrap pl-1 pr-1">
-            By intent
+            {t('engagement.filters.by_intent', 'By intent')}
           </span>
           {INTENT_FILTERS.map(f => {
             const active = filter === f.key
@@ -381,7 +397,7 @@ export function Engagement() {
                 style={{ height: 28 }}
               >
                 <Ic size={11} />
-                {f.label}
+                {t(filterLabelKey(f.key), f.label)}
               </button>
             )
           })}
@@ -391,7 +407,7 @@ export function Engagement() {
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Search by name, email, phone, IP, city, or page…"
+            placeholder={t('engagement.filters.search_placeholder', 'Search by name, email, phone, IP, city, or page…')}
             className="w-full bg-dark-bg border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors"
           />
         </div>
@@ -399,7 +415,7 @@ export function Engagement() {
 
       {/* List */}
       {isLoading ? (
-        <div className="text-center py-12 text-t-secondary text-sm">Loading…</div>
+        <div className="text-center py-12 text-t-secondary text-sm">{t('engagement.loading', 'Loading…')}</div>
       ) : rows.length === 0 ? (
         <EmptyState filter={filter} hasBrandFilter={brands.length > 1} />
       ) : (
@@ -419,7 +435,7 @@ export function Engagement() {
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between text-xs text-t-secondary px-1">
           <span>
-            Page {meta.current_page} of {meta.last_page} · {meta.total.toLocaleString()} {meta.total === 1 ? 'row' : 'rows'}
+            {t('engagement.pagination', { page: meta.current_page, total: meta.last_page, count: meta.total, defaultValue: 'Page {{page}} of {{total}} · {{count}} rows' })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -477,6 +493,7 @@ function KpiTile({
 }
 
 function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: number, conversationId: number | null) => void }) {
+  const { t } = useTranslation()
   const isWaiting = r.conversation
     && r.conversation.status === 'active'
     && !r.conversation.assigned_to
@@ -488,14 +505,14 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
       const sender = r.conversation.last_message_sender === 'visitor'
         ? r.effective_name.split(' ')[0]
         : r.conversation.last_message_sender === 'ai'
-        ? 'AI'
-        : 'Agent'
+        ? t('engagement.row.ai_sender', 'AI')
+        : t('engagement.row.agent_sender', 'Agent')
       return `${sender}: ${r.conversation.last_message_preview}`
     }
-    if (r.is_online && r.current_page_title) return `Currently: ${r.current_page_title}`
-    if (r.is_online && r.current_page) return `Currently: ${r.current_page}`
-    return 'Browsing — no chat yet'
-  }, [r])
+    if (r.is_online && r.current_page_title) return t('engagement.row.currently', { page: r.current_page_title, defaultValue: 'Currently: {{page}}' })
+    if (r.is_online && r.current_page) return t('engagement.row.currently', { page: r.current_page, defaultValue: 'Currently: {{page}}' })
+    return t('engagement.row.browsing_no_chat', 'Browsing — no chat yet')
+  }, [r, t])
 
   const onClick = () => {
     // Phase 2: open the in-page drawer. The drawer auto-selects the
@@ -534,12 +551,12 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             {r.has_phone && <Phone size={11} className="text-emerald-400" />}
             {r.is_hot_lead && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/40 animate-pulse">
-                <Sparkles size={9} /> HOT
+                <Sparkles size={9} /> {t('engagement.row.hot', 'HOT')}
               </span>
             )}
             {r.is_lead && !r.is_hot_lead && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
-                <Star size={9} /> LEAD
+                <Star size={9} /> {t('engagement.row.lead', 'LEAD')}
               </span>
             )}
             {r.conversation?.intent_tag && INTENT_META[r.conversation.intent_tag] && (
@@ -553,12 +570,12 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             )}
             {r.conversation?.unread_admin_count ? (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/15 text-red-400 border border-red-500/40">
-                {r.conversation.unread_admin_count} new
+                {t('engagement.row.unread_count', { count: r.conversation.unread_admin_count, defaultValue: '{{count}} new' })}
               </span>
             ) : null}
             {isWaiting && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
-                WAITING
+                {t('engagement.row.waiting', 'WAITING')}
               </span>
             )}
             <BrandBadge brandId={r.brand_id} />
@@ -576,7 +593,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             )}
             {r.visit_count > 1 && (
               <span className="flex items-center gap-1">
-                <Eye size={10} /> {r.visit_count} visits
+                <Eye size={10} /> {t('engagement.row.visits', { count: r.visit_count, defaultValue: '{{count}} visits' })}
               </span>
             )}
             {r.messages_count > 0 && (
@@ -599,7 +616,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             </span>
             {r.conversation.ai_enabled && (
               <span className="text-[9px] text-purple-400 flex items-center gap-1">
-                <Bot size={9} /> AI on
+                <Bot size={9} /> {t('engagement.row.ai_on', 'AI on')}
               </span>
             )}
           </div>
@@ -610,7 +627,11 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
 }
 
 function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFilter: boolean }) {
-  const messages: Record<FilterKey, { title: string; sub: string }> = {
+  const { t } = useTranslation()
+  // English fallbacks kept inline so the page still reads if the locale
+  // file is missing a key. Keep in sync with engagement.empty.* in the
+  // locale JSON.
+  const fallbacks: Record<FilterKey, { title: string; sub: string }> = {
     priority:        { title: 'Nothing needs attention',     sub: 'No online visitors, leads, or active chats right now.' },
     online:          { title: 'No one is online',             sub: 'Visitors will appear here in real time when they hit the chat widget.' },
     has_contact:     { title: 'No leads captured yet',        sub: 'Anyone who leaves an email or phone number lands here.' },
@@ -624,17 +645,19 @@ function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFil
     cancellation:    { title: 'No cancellation requests',     sub: 'Visitors asking to cancel a booking surface here once tagged.' },
     support:         { title: 'No support requests',          sub: 'General support conversations land here once tagged.' },
   }
-  const m = messages[filter]
+  const fb = fallbacks[filter]
+  const title = t(`engagement.empty.${filter}.title`, fb.title)
+  const sub = t(`engagement.empty.${filter}.sub`, fb.sub)
   return (
     <div className="text-center py-16 px-6">
       <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-4">
         <Sparkles size={22} className="text-accent" />
       </div>
-      <h2 className="text-base font-semibold mb-2">{m.title}</h2>
-      <p className="text-sm text-t-secondary max-w-md mx-auto">{m.sub}</p>
+      <h2 className="text-base font-semibold mb-2">{title}</h2>
+      <p className="text-sm text-t-secondary max-w-md mx-auto">{sub}</p>
       {hasBrandFilter && (
         <p className="text-xs text-t-secondary mt-3 italic">
-          Tip: pick a different brand from the top-bar switcher to see its engagement.
+          {t('engagement.empty.brand_tip', 'Tip: pick a different brand from the top-bar switcher to see its engagement.')}
         </p>
       )}
     </div>

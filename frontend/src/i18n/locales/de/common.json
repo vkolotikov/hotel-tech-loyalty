@@ -225,6 +225,90 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "engagement": {
+    "title": "Engagement",
+    "subtitle": "Besucher und Gespräche an einem Ort — sortiert, damit wichtige Zeilen oben erscheinen.",
+    "alerts_on": "Hinweise an",
+    "alerts_on_tooltip": "Browser-Benachrichtigungen aktiviert — Sie werden bei einem heißen Lead benachrichtigt",
+    "alerts_blocked": "Hinweise blockiert",
+    "alerts_blocked_tooltip": "Benachrichtigungen wurden blockiert. Aktivieren Sie sie in den Site-Einstellungen Ihres Browsers.",
+    "daily_email": "Tägliche E-Mail",
+    "daily_email_on": "Tägliche E-Mail an",
+    "daily_email_off_tooltip": "Erhalten Sie täglich um 8 Uhr Ortszeit eine E-Mail-Zusammenfassung. Klicken zum Aktivieren.",
+    "daily_email_on_tooltip": "Tägliche Zusammenfassung ist aktiv. Klicken zum Deaktivieren.",
+    "live_wall": "Live-Wand",
+    "live_wall_tooltip": "Live-Wand öffnen — Vollbild-Monitoransicht",
+    "refresh": "Aktualisieren",
+    "perm_banner": {
+      "title": "Werden Sie benachrichtigt, sobald ein heißer Lead eintrifft",
+      "sub": "Aktivieren Sie Browser-Benachrichtigungen — wir benachrichtigen Sie auch, wenn dieser Tab nicht im Fokus ist. Ideal für Buchungsseiten-Besucher.",
+      "enable": "Aktivieren",
+      "dismiss": "Schließen"
+    },
+    "kpis": {
+      "online_now": "Jetzt online",
+      "leads": "Leads",
+      "unanswered": "Unbeantwortet",
+      "ai_handled_today": "KI heute bearbeitet"
+    },
+    "filters": {
+      "priority": "Priorität",
+      "online": "Online",
+      "has_contact": "Mit Kontakt",
+      "active_chat": "Aktiver Chat",
+      "hot_lead": "Heiße Leads",
+      "anonymous": "Anonym",
+      "resolved": "Erledigt",
+      "by_intent": "Nach Absicht",
+      "intent": {
+        "booking_inquiry": "Buchung",
+        "info_request": "Info",
+        "complaint": "Beschwerde",
+        "cancellation": "Stornierung",
+        "support": "Support"
+      },
+      "search_placeholder": "Suche nach Name, E-Mail, Telefon, IP, Stadt oder Seite…"
+    },
+    "loading": "Wird geladen…",
+    "row": {
+      "ai_sender": "KI",
+      "agent_sender": "Agent",
+      "currently": "Aktuell: {{page}}",
+      "browsing_no_chat": "Besucht — noch kein Chat",
+      "online_now": "Jetzt online",
+      "browsing_page": "Besucht {{page}}",
+      "hot": "HEISS",
+      "lead": "LEAD",
+      "waiting": "WARTEND",
+      "unread_count": "{{count}} neu",
+      "ai_on": "KI an",
+      "visits_one": "{{count}} Besuch",
+      "visits_other": "{{count}} Besuche"
+    },
+    "pagination_one": "Seite {{page}} von {{total}} · {{count}} Zeile",
+    "pagination_other": "Seite {{page}} von {{total}} · {{count}} Zeilen",
+    "empty": {
+      "priority":        { "title": "Nichts erfordert Aufmerksamkeit",      "sub": "Aktuell keine Online-Besucher, Leads oder aktive Chats." },
+      "online":          { "title": "Niemand ist online",                    "sub": "Besucher erscheinen hier in Echtzeit, sobald sie das Chat-Widget öffnen." },
+      "has_contact":     { "title": "Noch keine Leads erfasst",              "sub": "Wer eine E-Mail oder Telefonnummer hinterlässt, landet hier." },
+      "active_chat":     { "title": "Keine aktiven Chats",                   "sub": "Offene Gespräche erscheinen hier." },
+      "hot_lead":        { "title": "Aktuell keine heißen Leads",            "sub": "Besucher mit erfasstem Kontakt + starkem Kaufsignal (Buchungsseiten-Besuch, 3+ Nachrichten, jetzt online) erscheinen hier." },
+      "anonymous":       { "title": "Keine anonymen Besucher",               "sub": "Besucher ohne Kontaktdaten, die in der Prioritätsansicht ausgeblendet sind, erscheinen hier." },
+      "resolved":        { "title": "Keine abgeschlossenen Gespräche",       "sub": "Geschlossene Chats landen hier zur Referenz." },
+      "booking_inquiry": { "title": "Keine Buchungsanfragen",                "sub": "Von der KI als buchungsbezogen markierte Gespräche landen hier. Tags erscheinen nach 3+ Nachrichten." },
+      "info_request":    { "title": "Keine Informationsanfragen",            "sub": "Besucher mit allgemeinen Fragen erscheinen hier nach KI-Tagging." },
+      "complaint":       { "title": "Keine Beschwerden",                     "sub": "Von Besuchern gemeldete Probleme landen hier nach Tagging." },
+      "cancellation":    { "title": "Keine Stornierungsanfragen",            "sub": "Besucher, die eine Buchung stornieren möchten, erscheinen hier nach Tagging." },
+      "support":         { "title": "Keine Support-Anfragen",                "sub": "Allgemeine Support-Gespräche landen hier nach Tagging." },
+      "brand_tip": "Tipp: Wählen Sie oben eine andere Marke aus, um deren Engagement zu sehen."
+    },
+    "toasts": {
+      "daily_summary_on":  "Tägliche Zusammenfassung aktiviert",
+      "daily_summary_off": "Tägliche Zusammenfassung deaktiviert",
+      "daily_summary_fail": "Einstellung konnte nicht aktualisiert werden"
+    }
+  },
+
   "bookings": {
     "title": "Reservierungen",
     "subtitle": "PMS-Reservierungen aus Ihren Buchungskanälen synchronisiert",

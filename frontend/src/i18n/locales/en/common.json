@@ -225,6 +225,90 @@
     "no_activity": "No recent activity yet."
   },
 
+  "engagement": {
+    "title": "Engagement",
+    "subtitle": "Visitors and conversations in one place — sorted so the rows that need attention surface first.",
+    "alerts_on": "Alerts on",
+    "alerts_on_tooltip": "Browser notifications enabled — you'll be pinged when a hot lead arrives",
+    "alerts_blocked": "Alerts blocked",
+    "alerts_blocked_tooltip": "Notifications were blocked. Re-enable in your browser site settings.",
+    "daily_email": "Daily email",
+    "daily_email_on": "Daily email on",
+    "daily_email_off_tooltip": "Get a morning email summary every day at 8am local time. Click to enable.",
+    "daily_email_on_tooltip": "Daily summary email is on. Click to turn off.",
+    "live_wall": "Live wall",
+    "live_wall_tooltip": "Open the live wall — fullscreen monitor view",
+    "refresh": "Refresh",
+    "perm_banner": {
+      "title": "Get pinged the moment a hot lead arrives",
+      "sub": "Enable browser notifications and we'll alert you even when this tab isn't focused — perfect for catching booking-page visitors.",
+      "enable": "Enable",
+      "dismiss": "Dismiss"
+    },
+    "kpis": {
+      "online_now": "Online now",
+      "leads": "Leads",
+      "unanswered": "Unanswered",
+      "ai_handled_today": "AI handled today"
+    },
+    "filters": {
+      "priority": "Priority",
+      "online": "Online",
+      "has_contact": "Has contact",
+      "active_chat": "Active chat",
+      "hot_lead": "Hot leads",
+      "anonymous": "Anonymous",
+      "resolved": "Resolved",
+      "by_intent": "By intent",
+      "intent": {
+        "booking_inquiry": "Booking",
+        "info_request": "Info",
+        "complaint": "Complaint",
+        "cancellation": "Cancellation",
+        "support": "Support"
+      },
+      "search_placeholder": "Search by name, email, phone, IP, city, or page…"
+    },
+    "loading": "Loading…",
+    "row": {
+      "ai_sender": "AI",
+      "agent_sender": "Agent",
+      "currently": "Currently: {{page}}",
+      "browsing_no_chat": "Browsing — no chat yet",
+      "online_now": "Online now",
+      "browsing_page": "Browsing {{page}}",
+      "hot": "HOT",
+      "lead": "LEAD",
+      "waiting": "WAITING",
+      "unread_count": "{{count}} new",
+      "ai_on": "AI on",
+      "visits_one": "{{count}} visit",
+      "visits_other": "{{count}} visits"
+    },
+    "pagination_one": "Page {{page}} of {{total}} · {{count}} row",
+    "pagination_other": "Page {{page}} of {{total}} · {{count}} rows",
+    "empty": {
+      "priority":        { "title": "Nothing needs attention",     "sub": "No online visitors, leads, or active chats right now." },
+      "online":          { "title": "No one is online",            "sub": "Visitors will appear here in real time when they hit the chat widget." },
+      "has_contact":     { "title": "No leads captured yet",       "sub": "Anyone who leaves an email or phone number lands here." },
+      "active_chat":     { "title": "No active chats",             "sub": "Open conversations will appear here." },
+      "hot_lead":        { "title": "No hot leads right now",      "sub": "Visitors with a captured contact + a strong buying signal (booking page visit, 3+ messages, online now) surface here." },
+      "anonymous":       { "title": "No anonymous browsers",       "sub": "Visitors without contact info, hidden from the priority view, surface here." },
+      "resolved":        { "title": "No resolved conversations",   "sub": "Closed chats land here for reference." },
+      "booking_inquiry": { "title": "No booking inquiries",        "sub": "Conversations the AI tagged as booking-related land here. Tags appear after 3+ messages." },
+      "info_request":    { "title": "No info requests",            "sub": "Visitors asking general questions surface here once their chat has been AI-tagged." },
+      "complaint":       { "title": "No complaints",               "sub": "Issues raised by visitors land here once tagged." },
+      "cancellation":    { "title": "No cancellation requests",    "sub": "Visitors asking to cancel a booking surface here once tagged." },
+      "support":         { "title": "No support requests",         "sub": "General support conversations land here once tagged." },
+      "brand_tip": "Tip: pick a different brand from the top-bar switcher to see its engagement."
+    },
+    "toasts": {
+      "daily_summary_on":  "Daily summary email turned on",
+      "daily_summary_off": "Daily summary email turned off",
+      "daily_summary_fail": "Failed to update preference"
+    }
+  },
+
   "bookings": {
     "title": "Reservations",
     "subtitle": "PMS reservations synced from your booking channels",

@@ -225,6 +225,90 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "engagement": {
+    "title": "Engagement",
+    "subtitle": "Visiteurs et conversations en un seul endroit — triés pour faire remonter les lignes prioritaires.",
+    "alerts_on": "Alertes activées",
+    "alerts_on_tooltip": "Notifications du navigateur activées — vous serez prévenu dès qu'un lead chaud arrive",
+    "alerts_blocked": "Alertes bloquées",
+    "alerts_blocked_tooltip": "Notifications bloquées. Réactivez-les dans les paramètres du site dans votre navigateur.",
+    "daily_email": "E-mail quotidien",
+    "daily_email_on": "E-mail quotidien activé",
+    "daily_email_off_tooltip": "Recevez un résumé chaque matin à 8h heure locale. Cliquez pour activer.",
+    "daily_email_on_tooltip": "Le résumé quotidien est activé. Cliquez pour désactiver.",
+    "live_wall": "Mur live",
+    "live_wall_tooltip": "Ouvrir le mur live — vue plein écran",
+    "refresh": "Actualiser",
+    "perm_banner": {
+      "title": "Recevez une alerte dès qu'un lead chaud arrive",
+      "sub": "Activez les notifications du navigateur et nous vous alerterons même si cet onglet n'est pas actif — parfait pour les visiteurs de la page de réservation.",
+      "enable": "Activer",
+      "dismiss": "Fermer"
+    },
+    "kpis": {
+      "online_now": "En ligne maintenant",
+      "leads": "Leads",
+      "unanswered": "Sans réponse",
+      "ai_handled_today": "Traités par l'IA aujourd'hui"
+    },
+    "filters": {
+      "priority": "Priorité",
+      "online": "En ligne",
+      "has_contact": "Avec contact",
+      "active_chat": "Chat actif",
+      "hot_lead": "Leads chauds",
+      "anonymous": "Anonymes",
+      "resolved": "Résolus",
+      "by_intent": "Par intention",
+      "intent": {
+        "booking_inquiry": "Réservation",
+        "info_request": "Info",
+        "complaint": "Réclamation",
+        "cancellation": "Annulation",
+        "support": "Support"
+      },
+      "search_placeholder": "Rechercher par nom, e-mail, téléphone, IP, ville ou page…"
+    },
+    "loading": "Chargement…",
+    "row": {
+      "ai_sender": "IA",
+      "agent_sender": "Agent",
+      "currently": "Actuellement : {{page}}",
+      "browsing_no_chat": "Navigue — aucun chat encore",
+      "online_now": "En ligne maintenant",
+      "browsing_page": "Navigue sur {{page}}",
+      "hot": "CHAUD",
+      "lead": "LEAD",
+      "waiting": "EN ATTENTE",
+      "unread_count": "{{count}} nouveaux",
+      "ai_on": "IA active",
+      "visits_one": "{{count}} visite",
+      "visits_other": "{{count}} visites"
+    },
+    "pagination_one": "Page {{page}} sur {{total}} · {{count}} ligne",
+    "pagination_other": "Page {{page}} sur {{total}} · {{count}} lignes",
+    "empty": {
+      "priority":        { "title": "Rien à traiter",                       "sub": "Aucun visiteur en ligne, lead ou chat actif pour l'instant." },
+      "online":          { "title": "Personne en ligne",                    "sub": "Les visiteurs apparaîtront ici en temps réel lorsqu'ils ouvriront le chat." },
+      "has_contact":     { "title": "Aucun lead capturé",                   "sub": "Toute personne laissant un e-mail ou un téléphone apparaît ici." },
+      "active_chat":     { "title": "Aucun chat actif",                     "sub": "Les conversations ouvertes apparaîtront ici." },
+      "hot_lead":        { "title": "Aucun lead chaud pour l'instant",      "sub": "Les visiteurs avec contact capturé + signal d'achat fort (page de réservation, 3+ messages, en ligne) apparaissent ici." },
+      "anonymous":       { "title": "Aucun visiteur anonyme",               "sub": "Les visiteurs sans contact, masqués de la vue Priorité, apparaissent ici." },
+      "resolved":        { "title": "Aucune conversation résolue",          "sub": "Les chats clôturés restent ici pour référence." },
+      "booking_inquiry": { "title": "Aucune demande de réservation",        "sub": "Les conversations étiquetées par l'IA comme liées à une réservation apparaissent ici. Les étiquettes apparaissent après 3+ messages." },
+      "info_request":    { "title": "Aucune demande d'information",         "sub": "Les visiteurs posant des questions générales apparaissent ici après étiquetage IA." },
+      "complaint":       { "title": "Aucune réclamation",                   "sub": "Les problèmes signalés par les visiteurs apparaissent ici après étiquetage." },
+      "cancellation":    { "title": "Aucune demande d'annulation",          "sub": "Les visiteurs souhaitant annuler une réservation apparaissent ici après étiquetage." },
+      "support":         { "title": "Aucune demande de support",            "sub": "Les conversations de support général apparaissent ici après étiquetage." },
+      "brand_tip": "Astuce : choisissez une autre marque dans le sélecteur en haut pour voir son engagement."
+    },
+    "toasts": {
+      "daily_summary_on":  "Résumé quotidien activé",
+      "daily_summary_off": "Résumé quotidien désactivé",
+      "daily_summary_fail": "Impossible de mettre à jour la préférence"
+    }
+  },
+
   "bookings": {
     "title": "Réservations",
     "subtitle": "Réservations PMS synchronisées depuis vos canaux de réservation",
