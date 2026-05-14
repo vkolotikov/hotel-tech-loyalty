@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
@@ -80,6 +81,7 @@ const EMPTY_FORM = {
 export function Inquiries() {
   const qc = useQueryClient()
   const settings = useSettings()
+  const { t } = useTranslation()
   // Field-visibility config — admin toggles in Settings → Pipeline Layout
   // pick which Add Inquiry fields and which list columns are shown.
   // useSettings deep-merges with defaults so missing keys are safe.
@@ -355,21 +357,30 @@ export function Inquiries() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">Sales Pipeline</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t('inquiries.title', 'Sales Pipeline')}</h1>
+          {/* Subtitle reconstructed from atomic labels so the colour
+              structure (blue/amber/emerald per stage) survives translation.
+              Numbers stay separately styled; localised noun labels follow. */}
           <p className="text-xs md:text-sm text-t-secondary mt-0.5">
-            {meta.total ?? 0} total · <span className="text-blue-400">{stageCounts.leads} leads</span> · <span className="text-amber-400">{stageCounts.deals} active deals</span> · <span className="text-emerald-400">{stageCounts.closed} closed</span>
+            {meta.total ?? 0} {t('inquiries.stat_labels.total', 'total')}
+            <span> · </span>
+            <span className="text-blue-400">{stageCounts.leads}</span> {t('inquiries.stat_labels.leads', 'leads')}
+            <span> · </span>
+            <span className="text-amber-400">{stageCounts.deals}</span> {t('inquiries.stat_labels.deals', 'active deals')}
+            <span> · </span>
+            <span className="text-emerald-400">{stageCounts.closed}</span> {t('inquiries.stat_labels.closed', 'closed')}
           </p>
         </div>
         {/* Action buttons wrap on mobile, condense labels at narrow widths */}
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors">
-            <Sparkles size={14} /> <span className="hidden sm:inline">AI Capture</span><span className="sm:hidden">AI</span>
+            <Sparkles size={14} /> <span className="hidden sm:inline">{t('inquiries.actions.ai_capture', 'AI Capture')}</span><span className="sm:hidden">{t('inquiries.actions.ai_short', 'AI')}</span>
           </button>
           <button onClick={handleExport} disabled={exporting} className="flex items-center gap-1.5 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-            <Download size={14} /> <span className="hidden sm:inline">Export</span>
+            <Download size={14} /> <span className="hidden sm:inline">{t('inquiries.actions.export', 'Export')}</span>
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors">
-            <Plus size={15} /> <span className="hidden sm:inline">Add Inquiry</span><span className="sm:hidden">Add</span>
+            <Plus size={15} /> <span className="hidden sm:inline">{t('inquiries.actions.add', 'Add Inquiry')}</span><span className="sm:hidden">{t('inquiries.actions.add_short', 'Add')}</span>
           </button>
         </div>
       </div>
@@ -391,21 +402,21 @@ export function Inquiries() {
           return (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2.5 flex items-center gap-3 text-xs">
               <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
-              <span className="text-emerald-300 font-bold uppercase tracking-wider text-[10px]">Today</span>
-              <span className="text-gray-300">All caught up — no overdue, no tasks due today, no new leads in the last 24h.</span>
+              <span className="text-emerald-300 font-bold uppercase tracking-wider text-[10px]">{t('inquiries.today.label', 'Today')}</span>
+              <span className="text-gray-300">{t('inquiries.today.all_caught_up', 'All caught up — no overdue, no tasks due today, no new leads in the last 24h.')}</span>
               <span className="ml-auto text-[10px] text-gray-600">{today.date}</span>
             </div>
           )
         }
         return (
           <DailyOpsBar
-            title="Today"
+            title={t('inquiries.today.label', 'Today')}
             hint={today.date}
             tiles={[
-              { key: 'overdue',   label: 'Overdue',   value: today.overdue?.count ?? 0,   sub: today.overdue?.count ? 'Click to view' : 'All caught up',         tone: (today.overdue?.count ?? 0) > 0 ? 'red' : 'gray', icon: <AlertCircle size={12} />, active: dailyFocus === 'overdue',   onClick: () => setDailyFocus(dailyFocus === 'overdue' ? '' : 'overdue') },
-              { key: 'today',     label: 'Due Today', value: today.today?.count ?? 0,     sub: today.today?.count ? 'Tasks scheduled' : 'Nothing due today',     tone: 'amber',  icon: <Clock size={12} />,         active: dailyFocus === 'today',     onClick: () => setDailyFocus(dailyFocus === 'today' ? '' : 'today') },
-              { key: 'soon',      label: 'Due Soon',  value: today.soon?.count ?? 0,      sub: 'Next 3 days',                                                    tone: 'blue',   icon: <CalendarIcon size={12} />,  active: dailyFocus === 'soon',      onClick: () => setDailyFocus(dailyFocus === 'soon' ? '' : 'soon') },
-              { key: 'new_leads', label: 'New Leads', value: today.new_leads?.count ?? 0, sub: 'Last 24 h',                                                      tone: 'emerald', icon: <Sparkles size={12} />,     active: dailyFocus === 'new_leads', onClick: () => setDailyFocus(dailyFocus === 'new_leads' ? '' : 'new_leads') },
+              { key: 'overdue',   label: t('inquiries.today.tiles.overdue',   'Overdue'),   value: today.overdue?.count ?? 0,   sub: today.overdue?.count ? t('inquiries.today.tile_subs.click_to_view', 'Click to view') : t('inquiries.today.tile_subs.all_caught_up', 'All caught up'),         tone: (today.overdue?.count ?? 0) > 0 ? 'red' : 'gray', icon: <AlertCircle size={12} />, active: dailyFocus === 'overdue',   onClick: () => setDailyFocus(dailyFocus === 'overdue' ? '' : 'overdue') },
+              { key: 'today',     label: t('inquiries.today.tiles.due_today', 'Due Today'), value: today.today?.count ?? 0,     sub: today.today?.count ? t('inquiries.today.tile_subs.tasks_scheduled', 'Tasks scheduled') : t('inquiries.today.tile_subs.nothing_today', 'Nothing due today'),     tone: 'amber',  icon: <Clock size={12} />,         active: dailyFocus === 'today',     onClick: () => setDailyFocus(dailyFocus === 'today' ? '' : 'today') },
+              { key: 'soon',      label: t('inquiries.today.tiles.due_soon',  'Due Soon'),  value: today.soon?.count ?? 0,      sub: t('inquiries.today.tile_subs.next_3_days', 'Next 3 days'),                                                    tone: 'blue',   icon: <CalendarIcon size={12} />,  active: dailyFocus === 'soon',      onClick: () => setDailyFocus(dailyFocus === 'soon' ? '' : 'soon') },
+              { key: 'new_leads', label: t('inquiries.today.tiles.new_leads', 'New Leads'), value: today.new_leads?.count ?? 0, sub: t('inquiries.today.tile_subs.last_24h',   'Last 24 h'),                                                      tone: 'emerald', icon: <Sparkles size={12} />,     active: dailyFocus === 'new_leads', onClick: () => setDailyFocus(dailyFocus === 'new_leads' ? '' : 'new_leads') },
             ]}
           />
         )
@@ -417,9 +428,12 @@ export function Inquiries() {
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-              {dailyFocus === 'overdue' ? 'Overdue Tasks' : dailyFocus === 'today' ? "Today's Tasks" : dailyFocus === 'soon' ? 'Due Soon (3 days)' : 'New Leads (24 h)'}
+              {dailyFocus === 'overdue' ? t('inquiries.today.focus.overdue', 'Overdue Tasks')
+                : dailyFocus === 'today' ? t('inquiries.today.focus.today', "Today's Tasks")
+                : dailyFocus === 'soon' ? t('inquiries.today.focus.soon', 'Due Soon (3 days)')
+                : t('inquiries.today.focus.new_leads', 'New Leads (24 h)')}
             </span>
-            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">Close</button>
+            <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">{t('inquiries.today.focus.close', 'Close')}</button>
           </div>
           <div className="divide-y divide-white/[0.04]">
             {(() => {
@@ -427,7 +441,7 @@ export function Inquiries() {
                 ? (today.new_leads?.leads ?? [])
                 : (today[dailyFocus]?.tasks ?? [])
               if (items.length === 0) {
-                return <div className="px-4 py-6 text-center text-xs text-gray-600">Nothing here right now.</div>
+                return <div className="px-4 py-6 text-center text-xs text-gray-600">{t('inquiries.today.focus.empty', 'Nothing here right now.')}</div>
               }
               return items.map((inq: any) => (
                 <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
@@ -444,7 +458,7 @@ export function Inquiries() {
                     )}
                     <ContactActions email={inq.guest?.email} phone={inq.guest?.phone} compact />
                     {inq.next_task_type && !inq.next_task_completed && dailyFocus !== 'new_leads' && (
-                      <button onClick={() => completeMutation.mutate(inq.id)} title="Mark task done"
+                      <button onClick={() => completeMutation.mutate(inq.id)} title={t('inquiries.table.mark_task_done', 'Mark task done')}
                         className="p-1 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
                         <CheckCircle2 size={13} />
                       </button>
@@ -513,53 +527,53 @@ export function Inquiries() {
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search guest, company..." className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('inquiries.filters.search_placeholder', 'Search guest, company…')} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           {view === 'list' && (
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Statuses</option>
+              <option value="">{t('inquiries.filters.all_statuses', 'All Statuses')}</option>
               {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
             </select>
           )}
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
-            <Filter size={14} /> Filters {hasFilters ? '●' : ''}
+            <Filter size={14} /> {t('inquiries.filters.filters_label', 'Filters')} {hasFilters ? '●' : ''}
           </button>
         </div>
 
         {showFilters && (
           <div className="flex flex-wrap gap-2 items-center">
             <select value={priority} onChange={e => { setPriority(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Priorities</option>
+              <option value="">{t('inquiries.filters.all_priorities', 'All Priorities')}</option>
               {settings.priorities.map(p => <option key={p}>{p}</option>)}
             </select>
             <select value={inquiryType} onChange={e => { setInquiryType(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Types</option>
+              <option value="">{t('inquiries.filters.all_types', 'All Types')}</option>
               {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
             </select>
             <select value={propertyId} onChange={e => { setPropertyId(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Properties</option>
+              <option value="">{t('inquiries.filters.all_properties', 'All Properties')}</option>
               {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select value={assignedTo} onChange={e => { setAssignedTo(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Owners</option>
+              <option value="">{t('inquiries.filters.all_owners', 'All Owners')}</option>
               {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
             </select>
             <select value={source} onChange={e => { setSource(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">All Sources</option>
+              <option value="">{t('inquiries.filters.all_sources', 'All Sources')}</option>
               {SYSTEM_SOURCES.map(s => <option key={s} value={s}>{SOURCE_BADGES[s].label}</option>)}
               {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={taskDue} onChange={e => { setTaskDue(e.target.value); setPage(1) }} className={filterSel}>
-              <option value="">Any Task</option>
-              <option value="today">Due Today</option>
-              <option value="overdue">Overdue</option>
-              <option value="soon">Due Soon (3d)</option>
+              <option value="">{t('inquiries.filters.any_task', 'Any Task')}</option>
+              <option value="today">{t('inquiries.filters.due_today', 'Due Today')}</option>
+              <option value="overdue">{t('inquiries.filters.overdue', 'Overdue')}</option>
+              <option value="soon">{t('inquiries.filters.due_soon_3d', 'Due Soon (3d)')}</option>
             </select>
             <label className="flex items-center gap-2 text-sm text-t-secondary cursor-pointer">
               <input type="checkbox" checked={activeOnly} onChange={e => { setActiveOnly(e.target.checked); setPage(1) }} className="accent-primary-500" />
-              Active only
+              {t('inquiries.filters.active_only', 'Active only')}
             </label>
-            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setActiveOnly(false); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">Clear</button>}
+            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setActiveOnly(false); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -585,25 +599,25 @@ export function Inquiries() {
                       className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
                   </th>
                 )}
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Guest</th>
-                {fieldCfg.list.stay && <SortHeader col="check_in" label="Stay" />}
-                {fieldCfg.list.value && <SortHeader col="total_value" label="Value" />}
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Status</th>
-                {fieldCfg.list.owner && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Owner</th>}
-                {fieldCfg.list.touches && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Touches</th>}
-                {fieldCfg.list.next_task && <SortHeader col="next_task_due" label="Next Task" />}
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.guest', 'Guest')}</th>
+                {fieldCfg.list.stay && <SortHeader col="check_in" label={t('inquiries.table.stay', 'Stay')} />}
+                {fieldCfg.list.value && <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} />}
+                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.status', 'Status')}</th>
+                {fieldCfg.list.owner && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.owner', 'Owner')}</th>}
+                {fieldCfg.list.touches && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.touches', 'Touches')}</th>}
+                {fieldCfg.list.next_task && <SortHeader col="next_task_due" label={t('inquiries.table.next_task', 'Next Task')} />}
                 {listColumns.map(col => (
                   <th key={col.id} className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap" title={col.help_text ?? undefined}>
                     {col.label}
                   </th>
                 ))}
-                <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">Actions</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.actions', 'Actions')}</th>
                 <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">Loading...</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">No inquiries found</td></tr>}
+              {isLoading && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">{t('inquiries.table.loading', 'Loading…')}</td></tr>}
+              {!isLoading && inquiries.length === 0 && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">{t('inquiries.table.no_results', 'No inquiries found')}</td></tr>}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                 const nights = inq.check_in && inq.check_out
@@ -703,7 +717,7 @@ export function Inquiries() {
                                 ? null
                                 : { id: inq.id, type: 'status', anchor: rect })
                             }}
-                            title="Click to change status"
+                            title={t('inquiries.table.click_to_change_status', 'Click to change status')}
                             style={stageStyle}
                             className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${stageClass}`}>
                             {inq.status} <ChevronDown size={9} />
@@ -717,7 +731,7 @@ export function Inquiries() {
                             ? null
                             : { id: inq.id, type: 'priority', anchor: rect })
                         }}
-                        title="Click to change priority"
+                        title={t('inquiries.table.click_to_change_priority', 'Click to change priority')}
                         className={`block text-[10px] mt-1 font-bold hover:underline ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}
                       >
                         {inq.priority ?? '—'}
@@ -747,7 +761,7 @@ export function Inquiries() {
                             </div>
                           </div>
                         ) : inq.next_task_completed ? (
-                          <span className="text-xs text-green-400">Done</span>
+                          <span className="text-xs text-green-400">{t('inquiries.table.task_done', 'Done')}</span>
                         ) : <span className="text-xs text-gray-700">—</span>}
                       </td>
                     )}
@@ -780,7 +794,7 @@ export function Inquiries() {
                             ? null
                             : { id: inq.id, type: 'action', anchor: rect })
                         }}
-                        title="More" className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
+                        title={t('inquiries.table.more', 'More')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
                         <MoreHorizontal size={14} />
                       </button>
                     </td>
@@ -819,7 +833,7 @@ export function Inquiries() {
                 </div>
                 <div className="flex-1 p-2 space-y-2 min-h-[120px]">
                   {cards.length === 0 && (
-                    <div className="text-center text-[10px] text-gray-700 py-4">Drop cards here</div>
+                    <div className="text-center text-[10px] text-gray-700 py-4">{t('inquiries.table.drop_cards_here', 'Drop cards here')}</div>
                   )}
                   {cards.map((inq: any) => {
                     const isDragging = dragging === inq.id

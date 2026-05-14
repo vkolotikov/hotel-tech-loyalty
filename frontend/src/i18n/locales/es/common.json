@@ -225,6 +225,87 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "inquiries": {
+    "title": "Pipeline de ventas",
+    "subtitle": "{{total}} en total · {{leads}} leads · {{deals}} acuerdos activos · {{closed}} cerrados",
+    "stat_labels": {
+      "total": "en total",
+      "leads": "leads",
+      "deals": "acuerdos activos",
+      "closed": "cerrados"
+    },
+    "actions": {
+      "ai_capture": "Captura IA",
+      "ai_short": "IA",
+      "export": "Exportar",
+      "add": "Añadir consulta",
+      "add_short": "Añadir"
+    },
+    "today": {
+      "label": "Hoy",
+      "all_caught_up": "Todo al día — sin retrasos, sin tareas para hoy, sin nuevos leads en las últimas 24 h.",
+      "tiles": {
+        "overdue": "Atrasadas",
+        "due_today": "Vencen hoy",
+        "due_soon": "Pronto",
+        "new_leads": "Leads nuevos"
+      },
+      "tile_subs": {
+        "click_to_view": "Clic para ver",
+        "all_caught_up": "Todo al día",
+        "tasks_scheduled": "Tareas programadas",
+        "nothing_today": "Hoy no hay nada",
+        "next_3_days": "Próximos 3 días",
+        "last_24h": "Últimas 24 h"
+      },
+      "focus": {
+        "overdue": "Tareas atrasadas",
+        "today": "Tareas de hoy",
+        "soon": "Pronto (3 días)",
+        "new_leads": "Leads nuevos (24 h)",
+        "close": "Cerrar",
+        "empty": "Aquí no hay nada ahora mismo."
+      }
+    },
+    "filters": {
+      "search_placeholder": "Buscar cliente, empresa…",
+      "all_statuses": "Todos los estados",
+      "all_priorities": "Todas las prioridades",
+      "all_types": "Todos los tipos",
+      "all_properties": "Todas las propiedades",
+      "all_owners": "Todos los responsables",
+      "all_sources": "Todos los orígenes",
+      "any_task": "Cualquier tarea",
+      "due_today": "Hoy",
+      "overdue": "Atrasada",
+      "due_soon_3d": "Pronto (3 d)",
+      "active_only": "Solo activas",
+      "filters_label": "Filtros",
+      "clear": "Limpiar"
+    },
+    "table": {
+      "guest": "Cliente",
+      "stay": "Estancia",
+      "value": "Valor",
+      "status": "Estado",
+      "owner": "Responsable",
+      "touches": "Contactos",
+      "next_task": "Próxima tarea",
+      "actions": "Acciones",
+      "loading": "Cargando…",
+      "no_results": "No se encontraron consultas",
+      "nights_short": "{{count}}n",
+      "rooms_one": "{{count}} habitación",
+      "rooms_other": "{{count}} habitaciones",
+      "click_to_change_status": "Clic para cambiar el estado",
+      "click_to_change_priority": "Clic para cambiar la prioridad",
+      "more": "Más",
+      "mark_task_done": "Marcar como hecha",
+      "task_done": "Hecho",
+      "drop_cards_here": "Suelta las tarjetas aquí"
+    }
+  },
+
   "memberDetail": {
     "ai_analysis": "Análisis IA",
     "analyzing": "Analizando…",

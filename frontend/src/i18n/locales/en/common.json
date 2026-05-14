@@ -225,6 +225,87 @@
     "no_activity": "No recent activity yet."
   },
 
+  "inquiries": {
+    "title": "Sales Pipeline",
+    "subtitle": "{{total}} total · {{leads}} leads · {{deals}} active deals · {{closed}} closed",
+    "stat_labels": {
+      "total": "total",
+      "leads": "leads",
+      "deals": "active deals",
+      "closed": "closed"
+    },
+    "actions": {
+      "ai_capture": "AI Capture",
+      "ai_short": "AI",
+      "export": "Export",
+      "add": "Add Inquiry",
+      "add_short": "Add"
+    },
+    "today": {
+      "label": "Today",
+      "all_caught_up": "All caught up — no overdue, no tasks due today, no new leads in the last 24h.",
+      "tiles": {
+        "overdue": "Overdue",
+        "due_today": "Due Today",
+        "due_soon": "Due Soon",
+        "new_leads": "New Leads"
+      },
+      "tile_subs": {
+        "click_to_view": "Click to view",
+        "all_caught_up": "All caught up",
+        "tasks_scheduled": "Tasks scheduled",
+        "nothing_today": "Nothing due today",
+        "next_3_days": "Next 3 days",
+        "last_24h": "Last 24 h"
+      },
+      "focus": {
+        "overdue": "Overdue Tasks",
+        "today": "Today's Tasks",
+        "soon": "Due Soon (3 days)",
+        "new_leads": "New Leads (24 h)",
+        "close": "Close",
+        "empty": "Nothing here right now."
+      }
+    },
+    "filters": {
+      "search_placeholder": "Search guest, company…",
+      "all_statuses": "All Statuses",
+      "all_priorities": "All Priorities",
+      "all_types": "All Types",
+      "all_properties": "All Properties",
+      "all_owners": "All Owners",
+      "all_sources": "All Sources",
+      "any_task": "Any Task",
+      "due_today": "Due Today",
+      "overdue": "Overdue",
+      "due_soon_3d": "Due Soon (3d)",
+      "active_only": "Active only",
+      "filters_label": "Filters",
+      "clear": "Clear"
+    },
+    "table": {
+      "guest": "Guest",
+      "stay": "Stay",
+      "value": "Value",
+      "status": "Status",
+      "owner": "Owner",
+      "touches": "Touches",
+      "next_task": "Next Task",
+      "actions": "Actions",
+      "loading": "Loading…",
+      "no_results": "No inquiries found",
+      "nights_short": "{{count}}n",
+      "rooms_one": "{{count}} room",
+      "rooms_other": "{{count}} rooms",
+      "click_to_change_status": "Click to change status",
+      "click_to_change_priority": "Click to change priority",
+      "more": "More",
+      "mark_task_done": "Mark task done",
+      "task_done": "Done",
+      "drop_cards_here": "Drop cards here"
+    }
+  },
+
   "memberDetail": {
     "ai_analysis": "AI Analysis",
     "analyzing": "Analyzing…",

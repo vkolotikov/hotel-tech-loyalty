@@ -225,6 +225,87 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "inquiries": {
+    "title": "Pipeline commercial",
+    "subtitle": "{{total}} au total · {{leads}} leads · {{deals}} affaires en cours · {{closed}} clôturées",
+    "stat_labels": {
+      "total": "au total",
+      "leads": "leads",
+      "deals": "affaires en cours",
+      "closed": "clôturées"
+    },
+    "actions": {
+      "ai_capture": "Capture IA",
+      "ai_short": "IA",
+      "export": "Exporter",
+      "add": "Ajouter une demande",
+      "add_short": "Ajouter"
+    },
+    "today": {
+      "label": "Aujourd'hui",
+      "all_caught_up": "Tout est à jour — aucun retard, rien à faire aujourd'hui, aucun nouveau lead ces 24 dernières heures.",
+      "tiles": {
+        "overdue": "En retard",
+        "due_today": "À faire aujourd'hui",
+        "due_soon": "Bientôt",
+        "new_leads": "Nouveaux leads"
+      },
+      "tile_subs": {
+        "click_to_view": "Cliquez pour voir",
+        "all_caught_up": "Tout est à jour",
+        "tasks_scheduled": "Tâches planifiées",
+        "nothing_today": "Rien à faire aujourd'hui",
+        "next_3_days": "3 prochains jours",
+        "last_24h": "Dernières 24 h"
+      },
+      "focus": {
+        "overdue": "Tâches en retard",
+        "today": "Tâches du jour",
+        "soon": "Bientôt (3 jours)",
+        "new_leads": "Nouveaux leads (24 h)",
+        "close": "Fermer",
+        "empty": "Rien ici pour l'instant."
+      }
+    },
+    "filters": {
+      "search_placeholder": "Rechercher un client, une entreprise…",
+      "all_statuses": "Tous les statuts",
+      "all_priorities": "Toutes les priorités",
+      "all_types": "Tous les types",
+      "all_properties": "Tous les établissements",
+      "all_owners": "Tous les propriétaires",
+      "all_sources": "Toutes les sources",
+      "any_task": "Toute tâche",
+      "due_today": "Aujourd'hui",
+      "overdue": "En retard",
+      "due_soon_3d": "Bientôt (3 j)",
+      "active_only": "Actifs uniquement",
+      "filters_label": "Filtres",
+      "clear": "Effacer"
+    },
+    "table": {
+      "guest": "Client",
+      "stay": "Séjour",
+      "value": "Valeur",
+      "status": "Statut",
+      "owner": "Propriétaire",
+      "touches": "Contacts",
+      "next_task": "Prochaine tâche",
+      "actions": "Actions",
+      "loading": "Chargement…",
+      "no_results": "Aucune demande trouvée",
+      "nights_short": "{{count}}n",
+      "rooms_one": "{{count}} chambre",
+      "rooms_other": "{{count}} chambres",
+      "click_to_change_status": "Cliquez pour changer le statut",
+      "click_to_change_priority": "Cliquez pour changer la priorité",
+      "more": "Plus",
+      "mark_task_done": "Marquer comme fait",
+      "task_done": "Fait",
+      "drop_cards_here": "Déposez les cartes ici"
+    }
+  },
+
   "memberDetail": {
     "ai_analysis": "Analyse IA",
     "analyzing": "Analyse…",

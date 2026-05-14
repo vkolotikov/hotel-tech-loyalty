@@ -225,6 +225,87 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "inquiries": {
+    "title": "Vertriebs-Pipeline",
+    "subtitle": "{{total}} insgesamt · {{leads}} Leads · {{deals}} aktive Deals · {{closed}} abgeschlossen",
+    "stat_labels": {
+      "total": "insgesamt",
+      "leads": "Leads",
+      "deals": "aktive Deals",
+      "closed": "abgeschlossen"
+    },
+    "actions": {
+      "ai_capture": "KI-Erfassung",
+      "ai_short": "KI",
+      "export": "Exportieren",
+      "add": "Anfrage hinzufügen",
+      "add_short": "Hinzufügen"
+    },
+    "today": {
+      "label": "Heute",
+      "all_caught_up": "Alles erledigt — keine überfälligen Aufgaben, nichts heute fällig, keine neuen Leads in den letzten 24 h.",
+      "tiles": {
+        "overdue": "Überfällig",
+        "due_today": "Heute fällig",
+        "due_soon": "Bald fällig",
+        "new_leads": "Neue Leads"
+      },
+      "tile_subs": {
+        "click_to_view": "Klicken zum Anzeigen",
+        "all_caught_up": "Alles erledigt",
+        "tasks_scheduled": "Aufgaben geplant",
+        "nothing_today": "Heute nichts fällig",
+        "next_3_days": "Nächste 3 Tage",
+        "last_24h": "Letzte 24 h"
+      },
+      "focus": {
+        "overdue": "Überfällige Aufgaben",
+        "today": "Heutige Aufgaben",
+        "soon": "Bald fällig (3 Tage)",
+        "new_leads": "Neue Leads (24 h)",
+        "close": "Schließen",
+        "empty": "Im Moment ist hier nichts."
+      }
+    },
+    "filters": {
+      "search_placeholder": "Gast, Firma suchen…",
+      "all_statuses": "Alle Status",
+      "all_priorities": "Alle Prioritäten",
+      "all_types": "Alle Typen",
+      "all_properties": "Alle Objekte",
+      "all_owners": "Alle Betreuer",
+      "all_sources": "Alle Quellen",
+      "any_task": "Jede Aufgabe",
+      "due_today": "Heute fällig",
+      "overdue": "Überfällig",
+      "due_soon_3d": "Bald fällig (3 T)",
+      "active_only": "Nur aktive",
+      "filters_label": "Filter",
+      "clear": "Leeren"
+    },
+    "table": {
+      "guest": "Gast",
+      "stay": "Aufenthalt",
+      "value": "Wert",
+      "status": "Status",
+      "owner": "Betreuer",
+      "touches": "Kontakte",
+      "next_task": "Nächste Aufgabe",
+      "actions": "Aktionen",
+      "loading": "Wird geladen…",
+      "no_results": "Keine Anfragen gefunden",
+      "nights_short": "{{count}}N",
+      "rooms_one": "{{count}} Zimmer",
+      "rooms_other": "{{count}} Zimmer",
+      "click_to_change_status": "Klicken zum Ändern des Status",
+      "click_to_change_priority": "Klicken zum Ändern der Priorität",
+      "more": "Mehr",
+      "mark_task_done": "Aufgabe als erledigt markieren",
+      "task_done": "Erledigt",
+      "drop_cards_here": "Karten hierher ziehen"
+    }
+  },
+
   "memberDetail": {
     "ai_analysis": "KI-Analyse",
     "analyzing": "Analysiere…",

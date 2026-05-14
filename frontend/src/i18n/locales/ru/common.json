@@ -227,6 +227,89 @@
     "no_activity": "Пока нет активности."
   },
 
+  "inquiries": {
+    "title": "Воронка продаж",
+    "subtitle": "{{total}} всего · {{leads}} лидов · {{deals}} активных сделок · {{closed}} закрытых",
+    "stat_labels": {
+      "total": "всего",
+      "leads": "лидов",
+      "deals": "активных сделок",
+      "closed": "закрытых"
+    },
+    "actions": {
+      "ai_capture": "AI захват",
+      "ai_short": "AI",
+      "export": "Экспорт",
+      "add": "Добавить запрос",
+      "add_short": "Добавить"
+    },
+    "today": {
+      "label": "Сегодня",
+      "all_caught_up": "Всё под контролем — просроченных нет, на сегодня задач нет, новых лидов за сутки нет.",
+      "tiles": {
+        "overdue": "Просрочено",
+        "due_today": "На сегодня",
+        "due_soon": "Скоро",
+        "new_leads": "Новые лиды"
+      },
+      "tile_subs": {
+        "click_to_view": "Нажмите, чтобы открыть",
+        "all_caught_up": "Всё в порядке",
+        "tasks_scheduled": "Запланировано задач",
+        "nothing_today": "На сегодня ничего",
+        "next_3_days": "Ближайшие 3 дня",
+        "last_24h": "За 24 ч"
+      },
+      "focus": {
+        "overdue": "Просроченные задачи",
+        "today": "Задачи на сегодня",
+        "soon": "Скоро (3 дня)",
+        "new_leads": "Новые лиды (24 ч)",
+        "close": "Закрыть",
+        "empty": "Сейчас здесь пусто."
+      }
+    },
+    "filters": {
+      "search_placeholder": "Поиск по гостю, компании…",
+      "all_statuses": "Все статусы",
+      "all_priorities": "Все приоритеты",
+      "all_types": "Все типы",
+      "all_properties": "Все объекты",
+      "all_owners": "Все менеджеры",
+      "all_sources": "Все источники",
+      "any_task": "Любая задача",
+      "due_today": "На сегодня",
+      "overdue": "Просрочено",
+      "due_soon_3d": "Скоро (3 дня)",
+      "active_only": "Только активные",
+      "filters_label": "Фильтры",
+      "clear": "Очистить"
+    },
+    "table": {
+      "guest": "Гость",
+      "stay": "Заезд",
+      "value": "Сумма",
+      "status": "Статус",
+      "owner": "Менеджер",
+      "touches": "Касания",
+      "next_task": "Следующая задача",
+      "actions": "Действия",
+      "loading": "Загрузка…",
+      "no_results": "Запросы не найдены",
+      "nights_short": "{{count}}н",
+      "rooms_one": "{{count}} номер",
+      "rooms_few": "{{count}} номера",
+      "rooms_many": "{{count}} номеров",
+      "rooms_other": "{{count}} номеров",
+      "click_to_change_status": "Нажмите, чтобы изменить статус",
+      "click_to_change_priority": "Нажмите, чтобы изменить приоритет",
+      "more": "Ещё",
+      "mark_task_done": "Отметить как выполненное",
+      "task_done": "Готово",
+      "drop_cards_here": "Перетащите карточки сюда"
+    }
+  },
+
   "memberDetail": {
     "ai_analysis": "AI-анализ",
     "analyzing": "Анализ…",
