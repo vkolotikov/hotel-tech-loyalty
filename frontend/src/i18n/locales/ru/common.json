@@ -227,6 +227,106 @@
     "no_activity": "Пока нет активности."
   },
 
+  "planner": {
+    "title": "Расписание работы",
+    "subtitle": {
+      "week_range": "Неделя {{start}} — {{end}}",
+      "statistics": "Статистика"
+    },
+    "tabs": {
+      "day": "День",
+      "schedule": "Расписание",
+      "month": "Месяц",
+      "stats": "Статистика"
+    },
+    "actions": {
+      "add": "Добавить",
+      "today": "Сегодня",
+      "all_team": "Вся команда",
+      "unassigned": "Не назначено",
+      "quick_add": "Быстро добавить",
+      "mark_done": "Отметить выполненной",
+      "block_task": "Заблокировать",
+      "edit": "Изменить",
+      "delete": "Удалить"
+    },
+    "timeline": {
+      "title": "Шкала",
+      "width_hint": "Ширина = длительность задачи"
+    },
+    "empty": {
+      "no_tasks_today": "Задач на этот день нет",
+      "create_first": "Создайте первую задачу",
+      "no_data": "Нет данных",
+      "loading": "Загрузка…"
+    },
+    "subtasks": {
+      "title": "Подзадачи",
+      "placeholder": "Добавить подзадачу…"
+    },
+    "details": {
+      "status_label": "Статус:"
+    },
+    "notes": {
+      "day_notes": "Заметки дня",
+      "todays_note": "Заметка на сегодня",
+      "placeholder_day": "Запишите заметки на этот день…",
+      "placeholder_today": "Добавьте заметки на сегодня…"
+    },
+    "overview": "Обзор",
+    "team": "Команда",
+    "templates": {
+      "manage_tooltip": "Управление шаблонами",
+      "pick_a_template": "Выберите шаблон",
+      "no_templates": "Шаблонов пока нет — начните с наших предложений:",
+      "manage": "Управление шаблонами",
+      "name_placeholder": "Название шаблона (напр. Утренний брифинг)",
+      "title_placeholder": "Название задачи (то, что увидят в задаче)",
+      "category_placeholder": "Категория",
+      "group_placeholder": "Группа",
+      "duration_placeholder": "Длительность (мин)",
+      "description_placeholder": "Описание (необязательно)",
+      "priorities": {
+        "low": "Низкий",
+        "medium": "Средний",
+        "high": "Высокий",
+        "urgent": "Срочно"
+      }
+    },
+    "task_quick_add": {
+      "title_placeholder": "Название задачи…",
+      "title_placeholder_dotted": "Название задачи...",
+      "submit": "Добавить"
+    },
+    "stats": {
+      "from": "С",
+      "to": "По",
+      "by_employee": "По сотрудникам",
+      "by_group": "По группам"
+    },
+    "duplicate_modal": {
+      "title": "Дублировать задачу",
+      "target_date": "Новая дата",
+      "assign_to": "Назначить",
+      "keep_original": "Оставить исходного"
+    },
+    "move_modal": {
+      "title": "Перенести задачу",
+      "new_date": "Новая дата",
+      "reassign": "Переназначить",
+      "keep_current": "Оставить текущего"
+    },
+    "drawer": {
+      "type_label": "Тип",
+      "title_label": "Название",
+      "title_placeholder": "Что нужно сделать?",
+      "unassigned_option": "Не назначено",
+      "duration_label": "Длительность",
+      "repeat_until_label": "Повторять до (необязательно)",
+      "description_placeholder": "Что важно знать тому, кто возьмёт задачу."
+    }
+  },
+
   "engagement": {
     "title": "Взаимодействие",
     "subtitle": "Посетители и переписки в одном месте — самые важные строки сверху.",

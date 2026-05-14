@@ -225,6 +225,106 @@
     "no_activity": "Aucune activité récente."
   },
 
+  "planner": {
+    "title": "Planning de travail",
+    "subtitle": {
+      "week_range": "Semaine {{start}} — {{end}}",
+      "statistics": "Statistiques"
+    },
+    "tabs": {
+      "day": "Jour",
+      "schedule": "Planning",
+      "month": "Mois",
+      "stats": "Stats"
+    },
+    "actions": {
+      "add": "Ajouter",
+      "today": "Aujourd'hui",
+      "all_team": "Toute l'équipe",
+      "unassigned": "Non assignée",
+      "quick_add": "Ajout rapide",
+      "mark_done": "Marquer comme terminée",
+      "block_task": "Bloquer la tâche",
+      "edit": "Modifier",
+      "delete": "Supprimer"
+    },
+    "timeline": {
+      "title": "Chronologie",
+      "width_hint": "Largeur = durée de la tâche"
+    },
+    "empty": {
+      "no_tasks_today": "Aucune tâche pour ce jour",
+      "create_first": "Créer votre première tâche",
+      "no_data": "Aucune donnée",
+      "loading": "Chargement…"
+    },
+    "subtasks": {
+      "title": "Sous-tâches",
+      "placeholder": "Ajouter une sous-tâche…"
+    },
+    "details": {
+      "status_label": "Statut :"
+    },
+    "notes": {
+      "day_notes": "Notes du jour",
+      "todays_note": "Note du jour",
+      "placeholder_day": "Écrivez les notes pour ce jour…",
+      "placeholder_today": "Ajoutez des notes pour aujourd'hui…"
+    },
+    "overview": "Vue d'ensemble",
+    "team": "Équipe",
+    "templates": {
+      "manage_tooltip": "Gérer les modèles",
+      "pick_a_template": "Choisir un modèle",
+      "no_templates": "Aucun modèle pour l'instant — commencez avec nos suggestions :",
+      "manage": "Gérer les modèles",
+      "name_placeholder": "Nom du modèle (ex. Briefing matinal)",
+      "title_placeholder": "Titre de la tâche (ce qui apparaîtra sur la tâche)",
+      "category_placeholder": "Catégorie",
+      "group_placeholder": "Groupe",
+      "duration_placeholder": "Durée (min)",
+      "description_placeholder": "Description (facultatif)",
+      "priorities": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      }
+    },
+    "task_quick_add": {
+      "title_placeholder": "Titre de la tâche…",
+      "title_placeholder_dotted": "Titre de la tâche...",
+      "submit": "Ajouter"
+    },
+    "stats": {
+      "from": "Du",
+      "to": "Au",
+      "by_employee": "Par employé",
+      "by_group": "Par groupe"
+    },
+    "duplicate_modal": {
+      "title": "Dupliquer la tâche",
+      "target_date": "Date cible",
+      "assign_to": "Assigner à",
+      "keep_original": "Garder l'original"
+    },
+    "move_modal": {
+      "title": "Déplacer la tâche",
+      "new_date": "Nouvelle date",
+      "reassign": "Réassigner",
+      "keep_current": "Garder la personne actuelle"
+    },
+    "drawer": {
+      "type_label": "Type",
+      "title_label": "Titre",
+      "title_placeholder": "Que faut-il faire ?",
+      "unassigned_option": "Non assignée",
+      "duration_label": "Durée",
+      "repeat_until_label": "Répéter jusqu'au (facultatif)",
+      "description_placeholder": "Tout ce que la personne reprenant la tâche doit savoir."
+    }
+  },
+
   "engagement": {
     "title": "Engagement",
     "subtitle": "Visiteurs et conversations en un seul endroit — triés pour faire remonter les lignes prioritaires.",

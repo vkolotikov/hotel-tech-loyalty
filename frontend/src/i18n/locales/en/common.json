@@ -225,6 +225,106 @@
     "no_activity": "No recent activity yet."
   },
 
+  "planner": {
+    "title": "Work Schedule",
+    "subtitle": {
+      "week_range": "Week {{start}} — {{end}}",
+      "statistics": "Statistics"
+    },
+    "tabs": {
+      "day": "Day",
+      "schedule": "Schedule",
+      "month": "Month",
+      "stats": "Stats"
+    },
+    "actions": {
+      "add": "Add",
+      "today": "Today",
+      "all_team": "All Team",
+      "unassigned": "Unassigned",
+      "quick_add": "Quick add",
+      "mark_done": "Mark Done",
+      "block_task": "Block Task",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "width_hint": "Width = task duration"
+    },
+    "empty": {
+      "no_tasks_today": "No tasks for this day",
+      "create_first": "Create your first task",
+      "no_data": "No data",
+      "loading": "Loading…"
+    },
+    "subtasks": {
+      "title": "Subtasks",
+      "placeholder": "Add a subtask…"
+    },
+    "details": {
+      "status_label": "Status:"
+    },
+    "notes": {
+      "day_notes": "Day Notes",
+      "todays_note": "Today's Note",
+      "placeholder_day": "Write notes for this day…",
+      "placeholder_today": "Add notes for today…"
+    },
+    "overview": "Overview",
+    "team": "Team",
+    "templates": {
+      "manage_tooltip": "Manage templates",
+      "pick_a_template": "Pick a template",
+      "no_templates": "No templates yet — start with our suggestions:",
+      "manage": "Manage templates",
+      "name_placeholder": "Template name (e.g. Morning briefing)",
+      "title_placeholder": "Task title (what shows on the task)",
+      "category_placeholder": "Category",
+      "group_placeholder": "Group",
+      "duration_placeholder": "Duration (min)",
+      "description_placeholder": "Description (optional)",
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      }
+    },
+    "task_quick_add": {
+      "title_placeholder": "Task title…",
+      "title_placeholder_dotted": "Task title...",
+      "submit": "Add"
+    },
+    "stats": {
+      "from": "From",
+      "to": "To",
+      "by_employee": "By Employee",
+      "by_group": "By Group"
+    },
+    "duplicate_modal": {
+      "title": "Duplicate Task",
+      "target_date": "Target Date",
+      "assign_to": "Assign To",
+      "keep_original": "Keep original"
+    },
+    "move_modal": {
+      "title": "Move Task",
+      "new_date": "New Date",
+      "reassign": "Reassign",
+      "keep_current": "Keep current"
+    },
+    "drawer": {
+      "type_label": "Type",
+      "title_label": "Title",
+      "title_placeholder": "What needs to be done?",
+      "unassigned_option": "Unassigned",
+      "duration_label": "Duration",
+      "repeat_until_label": "Repeat until (optional)",
+      "description_placeholder": "Anything the staff picking this up should know."
+    }
+  },
+
   "engagement": {
     "title": "Engagement",
     "subtitle": "Visitors and conversations in one place — sorted so the rows that need attention surface first.",

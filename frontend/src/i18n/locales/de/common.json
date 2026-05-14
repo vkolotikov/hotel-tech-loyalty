@@ -225,6 +225,106 @@
     "no_activity": "Noch keine aktuelle Aktivität."
   },
 
+  "planner": {
+    "title": "Dienstplan",
+    "subtitle": {
+      "week_range": "Woche {{start}} — {{end}}",
+      "statistics": "Statistiken"
+    },
+    "tabs": {
+      "day": "Tag",
+      "schedule": "Plan",
+      "month": "Monat",
+      "stats": "Statistiken"
+    },
+    "actions": {
+      "add": "Hinzufügen",
+      "today": "Heute",
+      "all_team": "Gesamtes Team",
+      "unassigned": "Nicht zugewiesen",
+      "quick_add": "Schnell hinzufügen",
+      "mark_done": "Als erledigt markieren",
+      "block_task": "Aufgabe blockieren",
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    },
+    "timeline": {
+      "title": "Zeitleiste",
+      "width_hint": "Breite = Aufgabendauer"
+    },
+    "empty": {
+      "no_tasks_today": "Keine Aufgaben für diesen Tag",
+      "create_first": "Erste Aufgabe erstellen",
+      "no_data": "Keine Daten",
+      "loading": "Wird geladen…"
+    },
+    "subtasks": {
+      "title": "Teilaufgaben",
+      "placeholder": "Teilaufgabe hinzufügen…"
+    },
+    "details": {
+      "status_label": "Status:"
+    },
+    "notes": {
+      "day_notes": "Tagesnotizen",
+      "todays_note": "Heutige Notiz",
+      "placeholder_day": "Notizen für diesen Tag schreiben…",
+      "placeholder_today": "Notizen für heute hinzufügen…"
+    },
+    "overview": "Übersicht",
+    "team": "Team",
+    "templates": {
+      "manage_tooltip": "Vorlagen verwalten",
+      "pick_a_template": "Vorlage auswählen",
+      "no_templates": "Noch keine Vorlagen — beginnen Sie mit unseren Vorschlägen:",
+      "manage": "Vorlagen verwalten",
+      "name_placeholder": "Vorlagenname (z. B. Morgen-Briefing)",
+      "title_placeholder": "Aufgabentitel (was in der Aufgabe erscheint)",
+      "category_placeholder": "Kategorie",
+      "group_placeholder": "Gruppe",
+      "duration_placeholder": "Dauer (Min)",
+      "description_placeholder": "Beschreibung (optional)",
+      "priorities": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "urgent": "Dringend"
+      }
+    },
+    "task_quick_add": {
+      "title_placeholder": "Aufgabentitel…",
+      "title_placeholder_dotted": "Aufgabentitel...",
+      "submit": "Hinzufügen"
+    },
+    "stats": {
+      "from": "Von",
+      "to": "Bis",
+      "by_employee": "Nach Mitarbeiter",
+      "by_group": "Nach Gruppe"
+    },
+    "duplicate_modal": {
+      "title": "Aufgabe duplizieren",
+      "target_date": "Zieldatum",
+      "assign_to": "Zuweisen an",
+      "keep_original": "Original behalten"
+    },
+    "move_modal": {
+      "title": "Aufgabe verschieben",
+      "new_date": "Neues Datum",
+      "reassign": "Neu zuweisen",
+      "keep_current": "Aktuelle Person behalten"
+    },
+    "drawer": {
+      "type_label": "Typ",
+      "title_label": "Titel",
+      "title_placeholder": "Was muss erledigt werden?",
+      "unassigned_option": "Nicht zugewiesen",
+      "duration_label": "Dauer",
+      "repeat_until_label": "Wiederholen bis (optional)",
+      "description_placeholder": "Was die übernehmende Person wissen sollte."
+    }
+  },
+
   "engagement": {
     "title": "Engagement",
     "subtitle": "Besucher und Gespräche an einem Ort — sortiert, damit wichtige Zeilen oben erscheinen.",

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import { useAuthStore } from '../stores/authStore'
@@ -774,6 +775,7 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
 
 export function Planner() {
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const settings = useSettings()
   const { user } = useAuthStore()
   const myName = user?.name ?? ''
@@ -1117,8 +1119,12 @@ export function Planner() {
   const subtitle = tab === 'day'
     ? new Date(currentDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     : tab === 'schedule'
-    ? `Week ${new Date(weekStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(fmtDate(weekDates[6]) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    : tab === 'month' ? `${MONTHS[monthYear.month]} ${monthYear.year}` : 'Statistics'
+    ? t('planner.subtitle.week_range', {
+        start: new Date(weekStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        end: new Date(fmtDate(weekDates[6]) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        defaultValue: 'Week {{start}} — {{end}}',
+      })
+    : tab === 'month' ? `${MONTHS[monthYear.month]} ${monthYear.year}` : t('planner.subtitle.statistics', 'Statistics')
 
   /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
@@ -1133,7 +1139,7 @@ export function Planner() {
       <div className="space-y-3 md:space-y-0 md:flex md:items-center md:justify-between md:flex-wrap md:gap-3">
         <div className="flex items-start justify-between md:block gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg md:text-xl font-semibold text-white">Work Schedule</h1>
+            <h1 className="text-lg md:text-xl font-semibold text-white">{t('planner.title', 'Work Schedule')}</h1>
             <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{subtitle}</p>
           </div>
           {/* Mobile-only: Add button next to title to save a row */}
@@ -1142,7 +1148,7 @@ export function Planner() {
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
               className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
             >
-              <Plus size={16} /> Add
+              <Plus size={16} /> {t('planner.actions.add', 'Add')}
             </button>
           )}
         </div>
@@ -1151,15 +1157,15 @@ export function Planner() {
           {/* Tabs — horizontal scroll on cramped phones */}
           <div className="flex rounded-xl border border-dark-border overflow-x-auto bg-dark-surface w-full sm:w-auto">
             {([
-              ['day', CalendarDays, 'Day'],
-              ['schedule', Calendar, 'Schedule'],
-              ['month', CalendarRange, 'Month'],
-              ['stats', BarChart2, 'Stats'],
-            ] as const).map(([t, Icon, label]) => (
+              ['day', CalendarDays, t('planner.tabs.day', 'Day')],
+              ['schedule', Calendar, t('planner.tabs.schedule', 'Schedule')],
+              ['month', CalendarRange, t('planner.tabs.month', 'Month')],
+              ['stats', BarChart2, t('planner.tabs.stats', 'Stats')],
+            ] as const).map(([tabKey, Icon, label]) => (
               <button
-                key={t}
-                onClick={() => setTab(t as Tab)}
-                className={'flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' + (tab === t ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
+                key={tabKey}
+                onClick={() => setTab(tabKey as Tab)}
+                className={'flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' + (tab === tabKey ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
               >
                 <Icon size={14} /> {label}
               </button>
@@ -1168,12 +1174,12 @@ export function Planner() {
 
           {tab !== 'stats' && <>
             <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
-              <option value="">All Team</option>
+              <option value="">{t('planner.actions.all_team', 'All Team')}</option>
               {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
             </select>
             <div className="flex items-center gap-1">
               <button onClick={() => navigate(-1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronLeft size={16} /></button>
-              <button onClick={goToday} className="px-3 py-2 rounded-lg border border-dark-border text-sm text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all font-medium">Today</button>
+              <button onClick={goToday} className="px-3 py-2 rounded-lg border border-dark-border text-sm text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all font-medium">{t('planner.actions.today', 'Today')}</button>
               <button onClick={() => navigate(1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronRight size={16} /></button>
             </div>
             {/* Desktop-only Add (mobile already has one above) */}
@@ -1181,7 +1187,7 @@ export function Planner() {
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
               className="hidden md:flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors"
             >
-              <Plus size={16} /> Add
+              <Plus size={16} /> {t('planner.actions.add', 'Add')}
             </button>
           </>}
         </div>
@@ -1219,8 +1225,8 @@ export function Planner() {
             {tasks.some((t: any) => t.start_time) && (
               <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">Timeline</h3>
-                  <span className="text-[10px] text-gray-500">Width = task duration</span>
+                  <h3 className="text-sm font-semibold text-white">{t('planner.timeline.title', 'Timeline')}</h3>
+                  <span className="text-[10px] text-gray-500">{t('planner.timeline.width_hint', 'Width = task duration')}</span>
                 </div>
                 <div className="space-y-2">
                   {[...tasks].filter((t: any) => t.start_time).sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? '')).map((task: any) => {
@@ -1269,8 +1275,8 @@ export function Planner() {
               {tasks.length === 0 && (
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-12 text-center">
                   <CalendarDays size={40} className="mx-auto text-gray-700 mb-3" />
-                  <p className="text-gray-500 text-sm">No tasks for this day</p>
-                  <button onClick={() => openCreate(currentDate)} className="mt-3 text-sm text-primary-400 hover:text-primary-300 font-medium">Create your first task</button>
+                  <p className="text-gray-500 text-sm">{t('planner.empty.no_tasks_today', 'No tasks for this day')}</p>
+                  <button onClick={() => openCreate(currentDate)} className="mt-3 text-sm text-primary-400 hover:text-primary-300 font-medium">{t('planner.empty.create_first', 'Create your first task')}</button>
                 </div>
               )}
               {[...tasks].sort((a: any, b: any) => {
@@ -1305,16 +1311,16 @@ export function Planner() {
             <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-primary-400" />
-                <span className="text-sm font-semibold text-white">Day Notes</span>
+                <span className="text-sm font-semibold text-white">{t('planner.notes.day_notes', 'Day Notes')}</span>
               </div>
               <textarea key={currentDate} defaultValue={dayNote?.note_text ?? ''}
                 onBlur={e => upsertNoteMutation.mutate({ note_date: currentDate, note_text: e.target.value })}
-                rows={4} placeholder="Write notes for this day..."
+                rows={4} placeholder={t('planner.notes.placeholder_day', 'Write notes for this day…')}
                 className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none leading-relaxed" />
             </div>
 
             <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Overview</h3>
+              <h3 className="text-sm font-semibold text-white mb-3">{t('planner.overview', 'Overview')}</h3>
               <div className="space-y-3">
                 {[
                   ['Total', tasks.length, 'text-white'],
@@ -1332,7 +1338,7 @@ export function Planner() {
 
             {!employee && tasks.length > 0 && (
               <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-white mb-3">Team</h3>
+                <h3 className="text-sm font-semibold text-white mb-3">{t('planner.team', 'Team')}</h3>
                 <div className="space-y-2">
                   {Object.entries(tasks.reduce((acc: any, t: any) => {
                     const n = t.employee_name || 'Unassigned'; if (!acc[n]) acc[n] = { total: 0, done: 0 }
@@ -1360,11 +1366,11 @@ export function Planner() {
           <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <FileText size={14} className="text-primary-400" />
-              <span className="text-sm font-medium text-white">Today's Note</span>
+              <span className="text-sm font-medium text-white">{t('planner.notes.todays_note', "Today's Note")}</span>
             </div>
             <textarea key={`note-${weekStart}`} defaultValue={dayNote?.note_text ?? ''}
               onBlur={e => upsertNoteMutation.mutate({ note_date: today, note_text: e.target.value })}
-              rows={2} placeholder="Add notes for today..."
+              rows={2} placeholder={t('planner.notes.placeholder_today', 'Add notes for today…')}
               className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none" />
           </div>
 
@@ -1535,7 +1541,7 @@ export function Planner() {
                 <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
                     <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
-                    <span className="text-sm font-medium text-gray-500 italic">Unassigned</span>
+                    <span className="text-sm font-medium text-gray-500 italic">{t('planner.actions.unassigned', 'Unassigned')}</span>
                   </div>
                   {weekDates.map((date) => {
                     const dateStr = fmtDate(date)
@@ -1673,7 +1679,7 @@ export function Planner() {
                         <button
                           onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
                           className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
-                          title="Quick add">
+                          title={t('planner.actions.quick_add', 'Quick add')}>
                           <Plus size={11} />
                         </button>
                       </div>
@@ -1726,8 +1732,8 @@ export function Planner() {
       {tab === 'stats' && (
         <div className="space-y-5">
           <div className="flex gap-3 items-end flex-wrap">
-            <div><label className="block text-xs text-gray-400 mb-1">From</label><input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} /></div>
-            <div><label className="block text-xs text-gray-400 mb-1">To</label><input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} /></div>
+            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} /></div>
+            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} /></div>
           </div>
           {stats && (() => {
             const total = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
@@ -1745,7 +1751,7 @@ export function Planner() {
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">By Employee</h2>
+                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_employee', 'By Employee')}</h2>
                   {stats.by_employee.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={stats.by_employee} layout="vertical">
@@ -1756,10 +1762,10 @@ export function Planner() {
                         <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Remaining" stackId="a" />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
+                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
                 </div>
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">By Group</h2>
+                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_group', 'By Group')}</h2>
                   {stats.by_group.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={stats.by_group}>
@@ -1770,7 +1776,7 @@ export function Planner() {
                         <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">No data</div>}
+                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
                 </div>
               </div>
             </>)
@@ -1782,14 +1788,14 @@ export function Planner() {
       {copyTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setCopyTarget(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-white mb-4">Duplicate Task</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">{t('planner.duplicate_modal.title', 'Duplicate Task')}</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); copyMutation.mutate({ id: copyTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') ?? '' }) }} className="space-y-4">
-              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Target Date</label><input required type="date" name="task_date" defaultValue={copyTarget.date} className={inp} /></div>
-              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Assign To</label>
-                <select name="employee_name" className={inp}><option value="">Keep original</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.duplicate_modal.target_date', 'Target Date')}</label><input required type="date" name="task_date" defaultValue={copyTarget.date} className={inp} /></div>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.duplicate_modal.assign_to', 'Assign To')}</label>
+                <select name="employee_name" className={inp}><option value="">{t('planner.duplicate_modal.keep_original', 'Keep original')}</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setCopyTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
+                <button type="button" onClick={() => setCopyTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
                 <button type="submit" disabled={copyMutation.isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{copyMutation.isPending ? 'Duplicating...' : 'Duplicate'}</button>
               </div>
             </form>
@@ -1801,14 +1807,14 @@ export function Planner() {
       {moveTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setMoveTarget(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-white mb-4">Move Task</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">{t('planner.move_modal.title', 'Move Task')}</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); moveMutation.mutate({ id: moveTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') || undefined }) }} className="space-y-4">
-              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">New Date</label><input required type="date" name="task_date" defaultValue={moveTarget.date} className={inp} /></div>
-              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">Reassign</label>
-                <select name="employee_name" className={inp}><option value="">Keep current</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.move_modal.new_date', 'New Date')}</label><input required type="date" name="task_date" defaultValue={moveTarget.date} className={inp} /></div>
+              <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.move_modal.reassign', 'Reassign')}</label>
+                <select name="employee_name" className={inp}><option value="">{t('planner.move_modal.keep_current', 'Keep current')}</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setMoveTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">Cancel</button>
+                <button type="button" onClick={() => setMoveTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
                 <button type="submit" disabled={moveMutation.isPending} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{moveMutation.isPending ? 'Moving...' : 'Move'}</button>
               </div>
             </form>
@@ -1869,7 +1875,7 @@ export function Planner() {
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="flex-1 overflow-y-auto p-4 space-y-4">
               {/* Type / Group icon grid */}
               <div>
-                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Type</label>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.type_label', 'Type')}</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {groups.map(g => {
                     const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
@@ -1927,9 +1933,9 @@ export function Planner() {
 
               {/* Title */}
               <div>
-                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Title</label>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.title_label', 'Title')}</label>
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="What needs to be done?"
+                  placeholder={t('planner.drawer.title_placeholder', 'What needs to be done?')}
                   autoFocus={!editTask}
                   className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500" />
               </div>
@@ -1940,7 +1946,7 @@ export function Planner() {
                   <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><User size={11} /> Assign to</label>
                   <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))}
                     className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500">
-                    <option value="">Unassigned</option>
+                    <option value="">{t('planner.drawer.unassigned_option', 'Unassigned')}</option>
                     {myName && <option value={myName}>{myName} (me)</option>}
                     {settings.employees.filter((e: string) => e !== myName).map((emp: string) => <option key={emp}>{emp}</option>)}
                   </select>
@@ -2006,7 +2012,7 @@ export function Planner() {
 
               {/* Duration chips */}
               <div>
-                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Duration</label>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.duration_label', 'Duration')}</label>
                 <div className="flex flex-wrap gap-1.5">
                   {DURATION_CHIPS.map(d => {
                     const active = Number(form.duration_minutes) === d.minutes
@@ -2048,7 +2054,7 @@ export function Planner() {
                 </div>
                 {form.recurring && form.recurring !== 'none' && (
                   <div className="mt-2">
-                    <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Repeat until (optional)</label>
+                    <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">{t('planner.drawer.repeat_until_label', 'Repeat until (optional)')}</label>
                     <input type="date" value={form.recurring_end_date || ''}
                       onChange={e => setForm(f => ({ ...f, recurring_end_date: e.target.value }))}
                       className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
@@ -2060,7 +2066,7 @@ export function Planner() {
               <div>
                 <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Notes (optional)</label>
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="Anything the staff picking this up should know."
+                  rows={3} placeholder={t('planner.drawer.description_placeholder', 'Anything the staff picking this up should know.')}
                   className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500 resize-none" />
               </div>
 

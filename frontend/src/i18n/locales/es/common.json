@@ -225,6 +225,106 @@
     "no_activity": "Sin actividad reciente."
   },
 
+  "planner": {
+    "title": "Horario de trabajo",
+    "subtitle": {
+      "week_range": "Semana {{start}} — {{end}}",
+      "statistics": "Estadísticas"
+    },
+    "tabs": {
+      "day": "Día",
+      "schedule": "Horario",
+      "month": "Mes",
+      "stats": "Estadísticas"
+    },
+    "actions": {
+      "add": "Añadir",
+      "today": "Hoy",
+      "all_team": "Todo el equipo",
+      "unassigned": "Sin asignar",
+      "quick_add": "Añadir rápido",
+      "mark_done": "Marcar hecha",
+      "block_task": "Bloquear tarea",
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "timeline": {
+      "title": "Cronología",
+      "width_hint": "Ancho = duración de la tarea"
+    },
+    "empty": {
+      "no_tasks_today": "No hay tareas para este día",
+      "create_first": "Crea tu primera tarea",
+      "no_data": "Sin datos",
+      "loading": "Cargando…"
+    },
+    "subtasks": {
+      "title": "Subtareas",
+      "placeholder": "Añadir una subtarea…"
+    },
+    "details": {
+      "status_label": "Estado:"
+    },
+    "notes": {
+      "day_notes": "Notas del día",
+      "todays_note": "Nota de hoy",
+      "placeholder_day": "Escribe notas para este día…",
+      "placeholder_today": "Añade notas para hoy…"
+    },
+    "overview": "Resumen",
+    "team": "Equipo",
+    "templates": {
+      "manage_tooltip": "Gestionar plantillas",
+      "pick_a_template": "Elegir una plantilla",
+      "no_templates": "Aún no hay plantillas — empieza con nuestras sugerencias:",
+      "manage": "Gestionar plantillas",
+      "name_placeholder": "Nombre de la plantilla (p. ej. Briefing matutino)",
+      "title_placeholder": "Título de la tarea (lo que se verá en la tarea)",
+      "category_placeholder": "Categoría",
+      "group_placeholder": "Grupo",
+      "duration_placeholder": "Duración (min)",
+      "description_placeholder": "Descripción (opcional)",
+      "priorities": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
+    },
+    "task_quick_add": {
+      "title_placeholder": "Título de la tarea…",
+      "title_placeholder_dotted": "Título de la tarea...",
+      "submit": "Añadir"
+    },
+    "stats": {
+      "from": "Desde",
+      "to": "Hasta",
+      "by_employee": "Por empleado",
+      "by_group": "Por grupo"
+    },
+    "duplicate_modal": {
+      "title": "Duplicar tarea",
+      "target_date": "Fecha objetivo",
+      "assign_to": "Asignar a",
+      "keep_original": "Mantener al original"
+    },
+    "move_modal": {
+      "title": "Mover tarea",
+      "new_date": "Nueva fecha",
+      "reassign": "Reasignar",
+      "keep_current": "Mantener al actual"
+    },
+    "drawer": {
+      "type_label": "Tipo",
+      "title_label": "Título",
+      "title_placeholder": "¿Qué hay que hacer?",
+      "unassigned_option": "Sin asignar",
+      "duration_label": "Duración",
+      "repeat_until_label": "Repetir hasta (opcional)",
+      "description_placeholder": "Lo que debe saber la persona que asuma la tarea."
+    }
+  },
+
   "engagement": {
     "title": "Engagement",
     "subtitle": "Visitantes y conversaciones en un solo lugar — ordenados para que las filas prioritarias suban primero.",
