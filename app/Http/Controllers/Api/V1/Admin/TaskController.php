@@ -85,7 +85,45 @@ class TaskController extends Controller
         $task = Task::create($data);
         $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
 
+        // Mirror to the linked inquiry's denormalised next-task columns
+        // so the leads list row updates immediately. The Inquiries page
+        // reads next_task_type/due/notes off the inquiry row (no join);
+        // without this sync, freshly-created tasks are invisible there.
+        $this->syncInquiryNextTask($task->inquiry_id);
+
         return response()->json($task, 201);
+    }
+
+    /**
+     * Refresh inquiry.next_task_* from the earliest-due open task
+     * linked to it. Called on task create / update / complete / delete.
+     */
+    protected function syncInquiryNextTask(?int $inquiryId): void
+    {
+        if (!$inquiryId) return;
+        $inquiry = \App\Models\Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->find($inquiryId);
+        if (!$inquiry) return;
+
+        $next = Task::where('inquiry_id', $inquiryId)
+            ->whereNull('completed_at')
+            ->orderByRaw('due_at IS NULL, due_at ASC')
+            ->first();
+
+        if ($next) {
+            $inquiry->forceFill([
+                'next_task_type'      => $next->title,
+                'next_task_due'       => $next->due_at?->toDateString(),
+                'next_task_notes'     => $next->description,
+                'next_task_completed' => false,
+            ])->save();
+        } else {
+            $inquiry->forceFill([
+                'next_task_type'      => null,
+                'next_task_due'       => null,
+                'next_task_notes'     => null,
+                'next_task_completed' => false,
+            ])->save();
+        }
     }
 
     public function update(Request $request, Task $task): JsonResponse
@@ -105,6 +143,7 @@ class TaskController extends Controller
 
         $task->fill($data)->save();
         $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
+        $this->syncInquiryNextTask($task->inquiry_id);
 
         return response()->json($task);
     }
@@ -144,18 +183,22 @@ class TaskController extends Controller
         }
 
         $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
+        $this->syncInquiryNextTask($task->inquiry_id);
         return response()->json($task);
     }
 
     public function reopen(Task $task): JsonResponse
     {
         $task->forceFill(['completed_at' => null, 'outcome' => null])->save();
+        $this->syncInquiryNextTask($task->inquiry_id);
         return response()->json($task->fresh());
     }
 
     public function destroy(Task $task): JsonResponse
     {
+        $inquiryId = $task->inquiry_id;
         $task->delete();
+        $this->syncInquiryNextTask($inquiryId);
         return response()->json(['message' => 'Task deleted']);
     }
 }

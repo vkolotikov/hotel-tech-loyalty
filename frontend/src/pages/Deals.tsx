@@ -49,8 +49,12 @@ export function Deals() {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sort, setSort] = useState<'due_date' | 'amount' | 'created'>('due_date')
   const [page, setPage] = useState(1)
-  const [openStageMenu, setOpenStageMenu] = useState<number | null>(null)
-  const [openPaymentMenu, setOpenPaymentMenu] = useState<number | null>(null)
+  // Dropdown anchors carry the button's bounding rect so we can render
+  // the menu as `position: fixed` outside the horizontally-scrolling
+  // table wrapper. Without this, dropdowns get clipped at the right
+  // edge of the scroller.
+  const [openStageMenu, setOpenStageMenu]   = useState<{ id: number; rect: DOMRect } | null>(null)
+  const [openPaymentMenu, setOpenPaymentMenu] = useState<{ id: number; rect: DOMRect } | null>(null)
   const [exporting, setExporting] = useState(false)
 
   // Translate the active filter pill into the controller's query params.
@@ -327,22 +331,15 @@ export function Deals() {
                     </td>
 
                     {/* Payment */}
-                    <td className="px-4 py-3 relative" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setOpenPaymentMenu(openPaymentMenu === d.id ? null : d.id)}
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <button onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenPaymentMenu(openPaymentMenu?.id === d.id ? null : { id: d.id, rect })
+                        }}
                         className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${payment?.bg ?? 'bg-dark-surface3'} ${payment?.text ?? 'text-t-secondary'} hover:brightness-110 transition`}>
                         {payment?.label ?? t('deals.row.no_payment', 'Set status')}
                         <ChevronDown size={9} />
                       </button>
-                      {openPaymentMenu === d.id && (
-                        <div className="absolute z-30 mt-1 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[140px] overflow-hidden">
-                          {Object.entries(PAYMENT_META).map(([key, meta]) => (
-                            <button key={key} onClick={() => { paymentMutation.mutate({ id: d.id, status: key }); setOpenPaymentMenu(null) }}
-                              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${meta.text}`}>
-                              {meta.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                       {d.payment_status === 'paid' && d.last_contacted_at && (
                         <div className="text-[10px] text-gray-500 mt-0.5">{fmtDate(d.last_contacted_at)}</div>
                       )}
@@ -352,27 +349,16 @@ export function Deals() {
                     </td>
 
                     {/* Fulfillment stage + progress bar */}
-                    <td className="px-4 py-3 max-w-[220px] relative" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setOpenStageMenu(openStageMenu === d.id ? null : d.id)}
+                    <td className="px-4 py-3 max-w-[220px]" onClick={e => e.stopPropagation()}>
+                      <button onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenStageMenu(openStageMenu?.id === d.id ? null : { id: d.id, rect })
+                        }}
                         className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-semibold border hover:brightness-110 transition"
                         style={{ background: (stage?.color ?? '#666') + '20', color: stage?.color ?? '#a0a0a0', borderColor: (stage?.color ?? '#666') + '50' }}>
                         {stage ? <><stage.icon size={9} /> {t(`deals.stages.${stage.key}`, stage.label)}</> : t('deals.row.set_stage', 'Set stage')}
                         <ChevronDown size={9} />
                       </button>
-                      {openStageMenu === d.id && (
-                        <div className="absolute z-30 mt-1 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[180px] overflow-hidden">
-                          {STAGES.map(s => {
-                            const Icon = s.icon
-                            return (
-                              <button key={s.key} onClick={() => { stageMutation.mutate({ id: d.id, stage: s.key }); setOpenStageMenu(null) }}
-                                className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-dark-surface2"
-                                style={{ color: s.color }}>
-                                <Icon size={11} /> {t(`deals.stages.${s.key}`, s.label)}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
                       <div className="flex gap-0.5 mt-1.5 max-w-[160px]">
                         {progress.map((p, i) => (
                           <div key={i} className="h-1 flex-1 rounded-full"
@@ -472,6 +458,44 @@ export function Deals() {
           </div>
         )}
       </div>
+
+      {/* Fixed-position dropdown menus — rendered outside the table so
+          the horizontal-scroll wrapper can't clip them. Anchored to the
+          trigger button's getBoundingClientRect() captured on click. */}
+      {openStageMenu && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'fixed', top: openStageMenu.rect.bottom + 4, left: openStageMenu.rect.left, zIndex: 60 }}
+          className="bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[180px] overflow-hidden"
+        >
+          {STAGES.map(s => {
+            const Icon = s.icon
+            return (
+              <button key={s.key}
+                onClick={() => { stageMutation.mutate({ id: openStageMenu.id, stage: s.key }); setOpenStageMenu(null) }}
+                className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-dark-surface2"
+                style={{ color: s.color }}>
+                <Icon size={11} /> {t(`deals.stages.${s.key}`, s.label)}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {openPaymentMenu && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'fixed', top: openPaymentMenu.rect.bottom + 4, left: openPaymentMenu.rect.left, zIndex: 60 }}
+          className="bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[140px] overflow-hidden"
+        >
+          {Object.entries(PAYMENT_META).map(([key, meta]) => (
+            <button key={key}
+              onClick={() => { paymentMutation.mutate({ id: openPaymentMenu.id, status: key }); setOpenPaymentMenu(null) }}
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${meta.text}`}>
+              {meta.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
