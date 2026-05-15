@@ -1255,6 +1255,222 @@
     }
   },
 
+  "rewards": {
+    "title": "Prämien",
+    "subtitle": "Self-Service-Katalog, in dem Mitglieder ihre Punkte ausgeben. Bestand und Pro-Mitglied-Limits werden atomar durchgesetzt.",
+    "add": "Prämie hinzufügen",
+    "tabs": {
+      "catalog": "Katalog",
+      "redemptions": "Einlösungen"
+    },
+    "form": {
+      "edit_title": "Prämie bearbeiten",
+      "new_title": "Neue Prämie",
+      "name": "Name *",
+      "category": "Kategorie",
+      "category_placeholder": "Aufenthalt / Restaurant / Spa…",
+      "points_cost": "Punktepreis *",
+      "description": "Beschreibung",
+      "terms": "Bedingungen",
+      "terms_optional": "(optional)",
+      "terms_placeholder": "Vorbehaltlich Verfügbarkeit. Nicht mit anderen Angeboten kombinierbar…",
+      "stock": "Bestand",
+      "stock_hint": "Leer = unbegrenzt",
+      "per_member_limit": "Limit pro Mitglied",
+      "expires": "Läuft ab",
+      "active_visible": "Aktiv (für Mitglieder sichtbar)",
+      "image": "Bild",
+      "cancel": "Abbrechen",
+      "saving": "Speichert…",
+      "update": "Aktualisieren",
+      "create": "Erstellen"
+    },
+    "catalog": {
+      "search_placeholder": "Prämien nach Name oder Kategorie suchen…",
+      "empty": "Noch keine Prämien. Klicken Sie auf „Prämie hinzufügen“, um den Katalog zu füllen.",
+      "stock_unlimited": "∞",
+      "stock_label": "Bestand: {{value}}",
+      "claimed": "{{fulfilled}}/{{total}} eingelöst",
+      "expires": "bis {{date}}",
+      "active": "Aktiv",
+      "hidden": "Ausgeblendet",
+      "edit_title": "Bearbeiten",
+      "delete_title": "Löschen",
+      "delete_confirm": "„{{name}}“ löschen?"
+    },
+    "redemptions": {
+      "search_placeholder": "Suche nach Code, Mitgliedsname oder E-Mail…",
+      "all_status": "Alle Status",
+      "pending": "Ausstehend",
+      "fulfilled": "Eingelöst",
+      "cancelled": "Storniert",
+      "table": {
+        "code": "Code",
+        "member": "Mitglied",
+        "reward": "Prämie",
+        "points": "Punkte",
+        "status": "Status",
+        "when": "Wann"
+      },
+      "empty": "Noch keine Einlösungen.",
+      "fulfill_title": "Als eingelöst markieren",
+      "cancel_title": "Stornieren + erstatten",
+      "cancel_confirm": "Diese Einlösung stornieren? Punkte werden erstattet.",
+      "statuses": {
+        "pending": "ausstehend",
+        "fulfilled": "eingelöst",
+        "cancelled": "storniert"
+      }
+    },
+    "toasts": {
+      "updated": "Prämie aktualisiert",
+      "created": "Prämie erstellt",
+      "save_failed": "Speichern fehlgeschlagen",
+      "toggle_failed": "Umschalten fehlgeschlagen",
+      "deleted": "Prämie gelöscht",
+      "delete_failed": "Löschen fehlgeschlagen",
+      "fulfilled": "Als eingelöst markiert",
+      "fulfill_failed": "Einlösung fehlgeschlagen",
+      "cancelled": "Storniert (Punkte erstattet, falls ausstehend)",
+      "cancel_failed": "Stornierung fehlgeschlagen"
+    }
+  },
+
+  "referrals": {
+    "title": "Empfehlungen",
+    "subtitle": "Einladungen zwischen Mitgliedern. Boni werden automatisch vergeben, wenn ein neues Mitglied mit einem Empfehlungscode registriert.",
+    "stats": {
+      "total": "Empfehlungen gesamt",
+      "last_30_days": "Letzte 30 Tage",
+      "points_referrers": "Punkte an Werber",
+      "points_referees": "Punkte an Geworbene"
+    },
+    "top_referrers": {
+      "title": "Top-Werber",
+      "all_time": "gesamt"
+    },
+    "search_placeholder": "Werber oder Geworbenen nach Name / E-Mail suchen…",
+    "all_status": "Alle Status",
+    "statuses": {
+      "rewarded": "Belohnt",
+      "pending": "Ausstehend",
+      "qualified": "Qualifiziert"
+    },
+    "table": {
+      "referrer": "Werber",
+      "referee": "Geworbener",
+      "status": "Status",
+      "referrer_pts": "Punkte Werber",
+      "referee_pts": "Punkte Geworbener",
+      "when": "Wann"
+    },
+    "empty_search": "Keine Empfehlungen entsprechen der Suche.",
+    "empty_default": "Noch keine Empfehlungen. Teilen Sie den Empfehlungscode aus einer beliebigen Mitgliederseite, um zu starten.",
+    "pagination": "Zeige {{from}}–{{to}} von {{total}}",
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+
+  "segments": {
+    "title": "Mitglieder-Segmente",
+    "subtitle": "Speichern Sie wiederverwendbare Zielgruppen für Push- + E-Mail-Kampagnen. Bearbeiten Sie eine Definition — die Liste wird sofort neu berechnet.",
+    "new": "Neues Segment",
+    "form": {
+      "edit_title": "Segment bearbeiten",
+      "new_title": "Neues Segment",
+      "name": "Name *",
+      "name_placeholder": "z.B. Gold-Stufe, ruhig 60+ Tage",
+      "description": "Beschreibung",
+      "description_placeholder": "Optionale Kurzbeschreibung",
+      "filters": "Filter",
+      "match_all": "alle erfüllen (AND)",
+      "match_any": "mindestens einer (OR)",
+      "add_filter": "Filter hinzufügen",
+      "no_filters": "Noch keine Filter. Klicken Sie auf „Filter hinzufügen“. Ein leeres Segment umfasst jedes aktive Mitglied.",
+      "preview": "Vorschau",
+      "cancel": "Abbrechen",
+      "saving": "Speichert…",
+      "update": "Aktualisieren",
+      "create": "Erstellen"
+    },
+    "filter_types": {
+      "tier": "Stufe",
+      "activity": "Aktivität",
+      "current_points": "Aktuelle Punkte",
+      "lifetime_points": "Gesamtpunkte",
+      "joined": "Beitrittsdatum",
+      "redemptions": "Prämieneinlösungen",
+      "earn": "Verdiente Transaktionen"
+    },
+    "filter_ops": {
+      "in": "ist eines von",
+      "not_in": "ist nicht eines von",
+      "active_within": "aktiv innerhalb (Tage)",
+      "inactive_over": "inaktiv über (Tage)",
+      "min": "mindestens",
+      "max": "höchstens",
+      "after": "am oder nach",
+      "before": "vor",
+      "any": "hat mindestens eines",
+      "none": "hat keines"
+    },
+    "value_placeholders": {
+      "days": "Tage",
+      "points": "Punkte"
+    },
+    "preview_result": {
+      "matching": "{{count}} passende Mitglieder",
+      "shown": "· erste {{count}} angezeigt",
+      "preview_failed": "Vorschau fehlgeschlagen"
+    },
+    "list": {
+      "loading": "Lädt…",
+      "empty": "Noch keine Segmente gespeichert. Klicken Sie auf „Neues Segment“, um Ihr erstes zu erstellen.",
+      "name": "Name",
+      "filters_col": "Filter",
+      "audience": "Zielgruppe",
+      "last_sent": "Zuletzt gesendet",
+      "total_sent": "Gesamt gesendet",
+      "filters_count_one": "{{count}} Filter · {{operator}}",
+      "filters_count_other": "{{count}} Filter · {{operator}}",
+      "never": "Nie",
+      "send": "Senden",
+      "edit_title": "Bearbeiten",
+      "delete_title": "Löschen",
+      "delete_confirm": "Segment „{{name}}“ löschen?"
+    },
+    "send": {
+      "title": "An „{{name}}“ senden",
+      "audience": "Zielgruppe: ~{{count}} Mitglieder",
+      "audience_unknown": "Zielgruppe: ~? Mitglieder",
+      "category": "Kategorie",
+      "categories": {
+        "transactional": "Transaktional (immer zugestellt)",
+        "offers": "Angebote",
+        "points": "Punkte",
+        "tier": "Stufe",
+        "stays": "Aufenthalte"
+      },
+      "category_hint": "Mitglieder, die diese Kategorie abbestellt haben, werden übersprungen (transaktionale ignorieren Abmeldungen).",
+      "campaign_title": "Titel",
+      "title_placeholder": "Eine Überraschung für unsere Gold-Mitglieder",
+      "message": "Nachricht",
+      "message_placeholder": "Dieses Wochenende doppelte Punkte auf jeden Aufenthalt.",
+      "also_email": "Auch als E-Mail senden",
+      "cancel": "Abbrechen",
+      "send_button": "Kampagne senden"
+    },
+    "toasts": {
+      "updated": "Segment aktualisiert",
+      "created": "Segment erstellt",
+      "save_failed": "Speichern fehlgeschlagen",
+      "deleted": "Segment gelöscht",
+      "delete_failed": "Löschen fehlgeschlagen",
+      "sent": "Gesendet — Push: {{push}}, E-Mail: {{email}}, übersprungen: {{skipped}}",
+      "send_failed": "Senden fehlgeschlagen"
+    }
+  },
+
   "offers": {
     "title": "Sonderangebote",
     "create": "Angebot erstellen",

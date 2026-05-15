@@ -1255,6 +1255,222 @@
     }
   },
 
+  "rewards": {
+    "title": "Récompenses",
+    "subtitle": "Catalogue libre-service où les membres dépensent leurs points. Stock et limites par membre appliqués de manière atomique.",
+    "add": "Ajouter une récompense",
+    "tabs": {
+      "catalog": "Catalogue",
+      "redemptions": "Échanges"
+    },
+    "form": {
+      "edit_title": "Modifier la récompense",
+      "new_title": "Nouvelle récompense",
+      "name": "Nom *",
+      "category": "Catégorie",
+      "category_placeholder": "Séjour / Restauration / Spa…",
+      "points_cost": "Coût en points *",
+      "description": "Description",
+      "terms": "Conditions",
+      "terms_optional": "(optionnel)",
+      "terms_placeholder": "Sous réserve de disponibilité. Non cumulable avec d'autres offres…",
+      "stock": "Stock",
+      "stock_hint": "Vide = illimité",
+      "per_member_limit": "Limite par membre",
+      "expires": "Expire le",
+      "active_visible": "Active (visible des membres)",
+      "image": "Image",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    },
+    "catalog": {
+      "search_placeholder": "Rechercher des récompenses par nom ou catégorie…",
+      "empty": "Pas encore de récompenses. Cliquez sur « Ajouter une récompense » pour remplir le catalogue.",
+      "stock_unlimited": "∞",
+      "stock_label": "Stock : {{value}}",
+      "claimed": "{{fulfilled}}/{{total}} réclamés",
+      "expires": "exp {{date}}",
+      "active": "Active",
+      "hidden": "Masquée",
+      "edit_title": "Modifier",
+      "delete_title": "Supprimer",
+      "delete_confirm": "Supprimer « {{name}} » ?"
+    },
+    "redemptions": {
+      "search_placeholder": "Rechercher par code, nom ou email…",
+      "all_status": "Tous les statuts",
+      "pending": "En attente",
+      "fulfilled": "Honoré",
+      "cancelled": "Annulé",
+      "table": {
+        "code": "Code",
+        "member": "Membre",
+        "reward": "Récompense",
+        "points": "Points",
+        "status": "Statut",
+        "when": "Quand"
+      },
+      "empty": "Aucun échange pour l'instant.",
+      "fulfill_title": "Marquer comme honoré",
+      "cancel_title": "Annuler + rembourser",
+      "cancel_confirm": "Annuler cet échange ? Les points seront remboursés.",
+      "statuses": {
+        "pending": "en attente",
+        "fulfilled": "honoré",
+        "cancelled": "annulé"
+      }
+    },
+    "toasts": {
+      "updated": "Récompense mise à jour",
+      "created": "Récompense créée",
+      "save_failed": "Échec de l'enregistrement",
+      "toggle_failed": "Échec de la bascule",
+      "deleted": "Récompense supprimée",
+      "delete_failed": "Échec de la suppression",
+      "fulfilled": "Marqué comme honoré",
+      "fulfill_failed": "Échec de l'honoraire",
+      "cancelled": "Annulé (points remboursés si en attente)",
+      "cancel_failed": "Échec de l'annulation"
+    }
+  },
+
+  "referrals": {
+    "title": "Parrainages",
+    "subtitle": "Invitations entre membres. Les bonus sont attribués automatiquement quand un nouveau membre s'inscrit avec un code de parrainage.",
+    "stats": {
+      "total": "Parrainages totaux",
+      "last_30_days": "30 derniers jours",
+      "points_referrers": "Points versés aux parrains",
+      "points_referees": "Points versés aux filleuls"
+    },
+    "top_referrers": {
+      "title": "Top parrains",
+      "all_time": "tout temps"
+    },
+    "search_placeholder": "Rechercher parrain ou filleul par nom / email…",
+    "all_status": "Tous les statuts",
+    "statuses": {
+      "rewarded": "Récompensé",
+      "pending": "En attente",
+      "qualified": "Qualifié"
+    },
+    "table": {
+      "referrer": "Parrain",
+      "referee": "Filleul",
+      "status": "Statut",
+      "referrer_pts": "Pts parrain",
+      "referee_pts": "Pts filleul",
+      "when": "Quand"
+    },
+    "empty_search": "Aucun parrainage ne correspond à cette recherche.",
+    "empty_default": "Pas encore de parrainages. Partagez le code de parrainage depuis n'importe quelle fiche membre pour commencer.",
+    "pagination": "Affichage {{from}}–{{to}} sur {{total}}",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+
+  "segments": {
+    "title": "Segments de membres",
+    "subtitle": "Sauvegardez des listes cibles réutilisables pour les campagnes push + email. Modifiez une définition et la liste se réévalue à la volée.",
+    "new": "Nouveau segment",
+    "form": {
+      "edit_title": "Modifier le segment",
+      "new_title": "Nouveau segment",
+      "name": "Nom *",
+      "name_placeholder": "ex. Gold, silence 60+ jours",
+      "description": "Description",
+      "description_placeholder": "Description optionnelle",
+      "filters": "Filtres",
+      "match_all": "tout correspond (AND)",
+      "match_any": "au moins un (OR)",
+      "add_filter": "Ajouter un filtre",
+      "no_filters": "Pas encore de filtres. Cliquez sur « Ajouter un filtre ». Un segment vide inclut tout membre actif.",
+      "preview": "Aperçu",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    },
+    "filter_types": {
+      "tier": "Niveau",
+      "activity": "Activité",
+      "current_points": "Points actuels",
+      "lifetime_points": "Points cumulés",
+      "joined": "Date d'inscription",
+      "redemptions": "Échanges de récompenses",
+      "earn": "Transactions de gain"
+    },
+    "filter_ops": {
+      "in": "est l'un de",
+      "not_in": "n'est pas l'un de",
+      "active_within": "actif depuis (jours)",
+      "inactive_over": "inactif depuis plus de (jours)",
+      "min": "au moins",
+      "max": "au plus",
+      "after": "à partir de",
+      "before": "avant",
+      "any": "en a au moins un",
+      "none": "n'en a aucun"
+    },
+    "value_placeholders": {
+      "days": "jours",
+      "points": "points"
+    },
+    "preview_result": {
+      "matching": "{{count}} membres correspondants",
+      "shown": "· {{count}} premiers affichés",
+      "preview_failed": "Échec de l'aperçu"
+    },
+    "list": {
+      "loading": "Chargement…",
+      "empty": "Pas encore de segments enregistrés. Cliquez sur « Nouveau segment » pour créer le premier.",
+      "name": "Nom",
+      "filters_col": "Filtres",
+      "audience": "Audience",
+      "last_sent": "Dernier envoi",
+      "total_sent": "Total envoyé",
+      "filters_count_one": "{{count}} filtre · {{operator}}",
+      "filters_count_other": "{{count}} filtres · {{operator}}",
+      "never": "Jamais",
+      "send": "Envoyer",
+      "edit_title": "Modifier",
+      "delete_title": "Supprimer",
+      "delete_confirm": "Supprimer le segment « {{name}} » ?"
+    },
+    "send": {
+      "title": "Envoyer à « {{name}} »",
+      "audience": "Audience : ~{{count}} membres",
+      "audience_unknown": "Audience : ~? membres",
+      "category": "Catégorie",
+      "categories": {
+        "transactional": "Transactionnel (toujours délivré)",
+        "offers": "Offres",
+        "points": "Points",
+        "tier": "Niveau",
+        "stays": "Séjours"
+      },
+      "category_hint": "Les membres désabonnés de cette catégorie seront ignorés (transactionnel ignore les désabonnements).",
+      "campaign_title": "Titre",
+      "title_placeholder": "Une surprise pour nos membres Gold",
+      "message": "Message",
+      "message_placeholder": "Double points ce week-end sur chaque séjour.",
+      "also_email": "Envoyer aussi par email",
+      "cancel": "Annuler",
+      "send_button": "Envoyer la campagne"
+    },
+    "toasts": {
+      "updated": "Segment mis à jour",
+      "created": "Segment créé",
+      "save_failed": "Échec de l'enregistrement",
+      "deleted": "Segment supprimé",
+      "delete_failed": "Échec de la suppression",
+      "sent": "Envoyé — push : {{push}}, email : {{email}}, ignorés : {{skipped}}",
+      "send_failed": "Échec de l'envoi"
+    }
+  },
+
   "offers": {
     "title": "Offres spéciales",
     "create": "Créer une offre",

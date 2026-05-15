@@ -1255,6 +1255,222 @@
     }
   },
 
+  "rewards": {
+    "title": "Recompensas",
+    "subtitle": "Catálogo de autoservicio donde los miembros gastan sus puntos. El stock y los límites por miembro se aplican atómicamente.",
+    "add": "Añadir recompensa",
+    "tabs": {
+      "catalog": "Catálogo",
+      "redemptions": "Canjes"
+    },
+    "form": {
+      "edit_title": "Editar recompensa",
+      "new_title": "Nueva recompensa",
+      "name": "Nombre *",
+      "category": "Categoría",
+      "category_placeholder": "Estancia / Restauración / Spa…",
+      "points_cost": "Coste en puntos *",
+      "description": "Descripción",
+      "terms": "Términos",
+      "terms_optional": "(opcional)",
+      "terms_placeholder": "Sujeto a disponibilidad. No se combina con otras ofertas…",
+      "stock": "Stock",
+      "stock_hint": "Vacío = ilimitado",
+      "per_member_limit": "Límite por miembro",
+      "expires": "Caduca",
+      "active_visible": "Activa (visible para miembros)",
+      "image": "Imagen",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "update": "Actualizar",
+      "create": "Crear"
+    },
+    "catalog": {
+      "search_placeholder": "Buscar recompensas por nombre o categoría…",
+      "empty": "Aún no hay recompensas. Haz clic en «Añadir recompensa» para empezar.",
+      "stock_unlimited": "∞",
+      "stock_label": "Stock: {{value}}",
+      "claimed": "{{fulfilled}}/{{total}} canjeados",
+      "expires": "cad. {{date}}",
+      "active": "Activa",
+      "hidden": "Oculta",
+      "edit_title": "Editar",
+      "delete_title": "Eliminar",
+      "delete_confirm": "¿Eliminar «{{name}}»?"
+    },
+    "redemptions": {
+      "search_placeholder": "Buscar por código, nombre o email…",
+      "all_status": "Todos los estados",
+      "pending": "Pendiente",
+      "fulfilled": "Cumplido",
+      "cancelled": "Cancelado",
+      "table": {
+        "code": "Código",
+        "member": "Miembro",
+        "reward": "Recompensa",
+        "points": "Puntos",
+        "status": "Estado",
+        "when": "Cuándo"
+      },
+      "empty": "Aún no hay canjes.",
+      "fulfill_title": "Marcar como cumplido",
+      "cancel_title": "Cancelar + reembolsar",
+      "cancel_confirm": "¿Cancelar este canje? Se reembolsarán los puntos.",
+      "statuses": {
+        "pending": "pendiente",
+        "fulfilled": "cumplido",
+        "cancelled": "cancelado"
+      }
+    },
+    "toasts": {
+      "updated": "Recompensa actualizada",
+      "created": "Recompensa creada",
+      "save_failed": "Error al guardar",
+      "toggle_failed": "Error al cambiar",
+      "deleted": "Recompensa eliminada",
+      "delete_failed": "Error al eliminar",
+      "fulfilled": "Marcada como cumplida",
+      "fulfill_failed": "Error al cumplir",
+      "cancelled": "Cancelado (puntos reembolsados si estaba pendiente)",
+      "cancel_failed": "Error al cancelar"
+    }
+  },
+
+  "referrals": {
+    "title": "Referidos",
+    "subtitle": "Invitaciones miembro a miembro. Los bonos se otorgan automáticamente cuando un nuevo miembro se registra con un código de referido.",
+    "stats": {
+      "total": "Total de referidos",
+      "last_30_days": "Últimos 30 días",
+      "points_referrers": "Puntos pagados a referidores",
+      "points_referees": "Puntos pagados a referidos"
+    },
+    "top_referrers": {
+      "title": "Top referidores",
+      "all_time": "todo el tiempo"
+    },
+    "search_placeholder": "Buscar referidor o referido por nombre / email…",
+    "all_status": "Todos los estados",
+    "statuses": {
+      "rewarded": "Recompensado",
+      "pending": "Pendiente",
+      "qualified": "Calificado"
+    },
+    "table": {
+      "referrer": "Referidor",
+      "referee": "Referido",
+      "status": "Estado",
+      "referrer_pts": "Pts referidor",
+      "referee_pts": "Pts referido",
+      "when": "Cuándo"
+    },
+    "empty_search": "Ningún referido coincide con esta búsqueda.",
+    "empty_default": "Aún no hay referidos. Comparte el código de referido desde cualquier ficha de miembro para empezar.",
+    "pagination": "Mostrando {{from}}–{{to}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente"
+  },
+
+  "segments": {
+    "title": "Segmentos de miembros",
+    "subtitle": "Guarda listas objetivo reutilizables para campañas push + email. Edita una definición y la lista se reevalúa al instante.",
+    "new": "Nuevo segmento",
+    "form": {
+      "edit_title": "Editar segmento",
+      "new_title": "Nuevo segmento",
+      "name": "Nombre *",
+      "name_placeholder": "p. ej. Gold, silencio 60+ días",
+      "description": "Descripción",
+      "description_placeholder": "Descripción opcional",
+      "filters": "Filtros",
+      "match_all": "coincide con todo (AND)",
+      "match_any": "coincide con alguno (OR)",
+      "add_filter": "Añadir filtro",
+      "no_filters": "Aún no hay filtros. Haz clic en «Añadir filtro». Un segmento vacío incluye a todos los miembros activos.",
+      "preview": "Vista previa",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "update": "Actualizar",
+      "create": "Crear"
+    },
+    "filter_types": {
+      "tier": "Nivel",
+      "activity": "Actividad",
+      "current_points": "Puntos actuales",
+      "lifetime_points": "Puntos acumulados",
+      "joined": "Fecha de alta",
+      "redemptions": "Canjes de recompensas",
+      "earn": "Transacciones de ganancia"
+    },
+    "filter_ops": {
+      "in": "es uno de",
+      "not_in": "no es uno de",
+      "active_within": "activo en los últimos (días)",
+      "inactive_over": "inactivo más de (días)",
+      "min": "al menos",
+      "max": "como máximo",
+      "after": "a partir de",
+      "before": "antes de",
+      "any": "tiene al menos uno",
+      "none": "no tiene ninguno"
+    },
+    "value_placeholders": {
+      "days": "días",
+      "points": "puntos"
+    },
+    "preview_result": {
+      "matching": "{{count}} miembros coincidentes",
+      "shown": "· primeros {{count}} mostrados",
+      "preview_failed": "Error de vista previa"
+    },
+    "list": {
+      "loading": "Cargando…",
+      "empty": "Aún no hay segmentos guardados. Haz clic en «Nuevo segmento» para crear el primero.",
+      "name": "Nombre",
+      "filters_col": "Filtros",
+      "audience": "Audiencia",
+      "last_sent": "Último envío",
+      "total_sent": "Total enviado",
+      "filters_count_one": "{{count}} filtro · {{operator}}",
+      "filters_count_other": "{{count}} filtros · {{operator}}",
+      "never": "Nunca",
+      "send": "Enviar",
+      "edit_title": "Editar",
+      "delete_title": "Eliminar",
+      "delete_confirm": "¿Eliminar el segmento «{{name}}»?"
+    },
+    "send": {
+      "title": "Enviar a «{{name}}»",
+      "audience": "Audiencia: ~{{count}} miembros",
+      "audience_unknown": "Audiencia: ~? miembros",
+      "category": "Categoría",
+      "categories": {
+        "transactional": "Transaccional (siempre se entrega)",
+        "offers": "Ofertas",
+        "points": "Puntos",
+        "tier": "Nivel",
+        "stays": "Estancias"
+      },
+      "category_hint": "Los miembros que se hayan dado de baja de esta categoría serán omitidos (transaccional ignora bajas).",
+      "campaign_title": "Título",
+      "title_placeholder": "Una sorpresa para nuestros miembros Gold",
+      "message": "Mensaje",
+      "message_placeholder": "Doble puntos este fin de semana en cada estancia.",
+      "also_email": "Enviar también por email",
+      "cancel": "Cancelar",
+      "send_button": "Enviar campaña"
+    },
+    "toasts": {
+      "updated": "Segmento actualizado",
+      "created": "Segmento creado",
+      "save_failed": "Error al guardar",
+      "deleted": "Segmento eliminado",
+      "delete_failed": "Error al eliminar",
+      "sent": "Enviado — push: {{push}}, email: {{email}}, omitidos: {{skipped}}",
+      "send_failed": "Error al enviar"
+    }
+  },
+
   "offers": {
     "title": "Ofertas especiales",
     "create": "Crear oferta",

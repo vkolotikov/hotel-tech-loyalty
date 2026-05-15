@@ -1255,6 +1255,222 @@
     }
   },
 
+  "rewards": {
+    "title": "Rewards",
+    "subtitle": "Self-serve catalog members can spend their points on. Stock and per-member limits enforced atomically.",
+    "add": "Add Reward",
+    "tabs": {
+      "catalog": "Catalog",
+      "redemptions": "Redemptions"
+    },
+    "form": {
+      "edit_title": "Edit reward",
+      "new_title": "New reward",
+      "name": "Name *",
+      "category": "Category",
+      "category_placeholder": "Stay / Dining / Spa…",
+      "points_cost": "Points cost *",
+      "description": "Description",
+      "terms": "Terms",
+      "terms_optional": "(optional)",
+      "terms_placeholder": "Subject to availability. Cannot be combined with other offers…",
+      "stock": "Stock",
+      "stock_hint": "Empty = unlimited",
+      "per_member_limit": "Per-member limit",
+      "expires": "Expires",
+      "active_visible": "Active (visible to members)",
+      "image": "Image",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "update": "Update",
+      "create": "Create"
+    },
+    "catalog": {
+      "search_placeholder": "Search rewards by name or category…",
+      "empty": "No rewards yet. Click \"Add Reward\" to seed the catalog.",
+      "stock_unlimited": "∞",
+      "stock_label": "Stock: {{value}}",
+      "claimed": "{{fulfilled}}/{{total}} claimed",
+      "expires": "exp {{date}}",
+      "active": "Active",
+      "hidden": "Hidden",
+      "edit_title": "Edit",
+      "delete_title": "Delete",
+      "delete_confirm": "Delete \"{{name}}\"?"
+    },
+    "redemptions": {
+      "search_placeholder": "Search by code, member name or email…",
+      "all_status": "All status",
+      "pending": "Pending",
+      "fulfilled": "Fulfilled",
+      "cancelled": "Cancelled",
+      "table": {
+        "code": "Code",
+        "member": "Member",
+        "reward": "Reward",
+        "points": "Points",
+        "status": "Status",
+        "when": "When"
+      },
+      "empty": "No redemptions yet.",
+      "fulfill_title": "Mark fulfilled",
+      "cancel_title": "Cancel + refund",
+      "cancel_confirm": "Cancel this redemption? Points will be refunded.",
+      "statuses": {
+        "pending": "pending",
+        "fulfilled": "fulfilled",
+        "cancelled": "cancelled"
+      }
+    },
+    "toasts": {
+      "updated": "Reward updated",
+      "created": "Reward created",
+      "save_failed": "Save failed",
+      "toggle_failed": "Toggle failed",
+      "deleted": "Reward deleted",
+      "delete_failed": "Delete failed",
+      "fulfilled": "Marked fulfilled",
+      "fulfill_failed": "Fulfill failed",
+      "cancelled": "Cancelled (points refunded if pending)",
+      "cancel_failed": "Cancel failed"
+    }
+  },
+
+  "referrals": {
+    "title": "Referrals",
+    "subtitle": "Member-to-member invites. Bonuses are awarded automatically when a new member registers using a referral code.",
+    "stats": {
+      "total": "Total referrals",
+      "last_30_days": "Last 30 days",
+      "points_referrers": "Points paid to referrers",
+      "points_referees": "Points paid to referees"
+    },
+    "top_referrers": {
+      "title": "Top referrers",
+      "all_time": "all-time"
+    },
+    "search_placeholder": "Search referrer or referee by name / email…",
+    "all_status": "All status",
+    "statuses": {
+      "rewarded": "Rewarded",
+      "pending": "Pending",
+      "qualified": "Qualified"
+    },
+    "table": {
+      "referrer": "Referrer",
+      "referee": "Referee",
+      "status": "Status",
+      "referrer_pts": "Referrer pts",
+      "referee_pts": "Referee pts",
+      "when": "When"
+    },
+    "empty_search": "No referrals match this search.",
+    "empty_default": "No referrals yet. Share the referral code from any member detail page to start.",
+    "pagination": "Showing {{from}}–{{to}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+
+  "segments": {
+    "title": "Member segments",
+    "subtitle": "Save reusable target lists for push + email campaigns. Edit a definition and the list re-evaluates on the fly.",
+    "new": "New segment",
+    "form": {
+      "edit_title": "Edit segment",
+      "new_title": "New segment",
+      "name": "Name *",
+      "name_placeholder": "e.g. Gold tier, quiet 60+ days",
+      "description": "Description",
+      "description_placeholder": "Optional one-liner",
+      "filters": "Filters",
+      "match_all": "match all (AND)",
+      "match_any": "match any (OR)",
+      "add_filter": "Add filter",
+      "no_filters": "No filters yet. Click \"Add filter\" to start. An empty segment matches every active member.",
+      "preview": "Preview",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "update": "Update",
+      "create": "Create"
+    },
+    "filter_types": {
+      "tier": "Tier",
+      "activity": "Activity",
+      "current_points": "Current points",
+      "lifetime_points": "Lifetime points",
+      "joined": "Joined date",
+      "redemptions": "Reward redemptions",
+      "earn": "Earn transactions"
+    },
+    "filter_ops": {
+      "in": "is one of",
+      "not_in": "is not one of",
+      "active_within": "active within (days)",
+      "inactive_over": "inactive for over (days)",
+      "min": "at least",
+      "max": "at most",
+      "after": "on or after",
+      "before": "before",
+      "any": "has at least one",
+      "none": "has none"
+    },
+    "value_placeholders": {
+      "days": "days",
+      "points": "points"
+    },
+    "preview_result": {
+      "matching": "{{count}} matching members",
+      "shown": "· first {{count}} shown",
+      "preview_failed": "Preview failed"
+    },
+    "list": {
+      "loading": "Loading…",
+      "empty": "No saved segments yet. Click \"New segment\" to create your first.",
+      "name": "Name",
+      "filters_col": "Filters",
+      "audience": "Audience",
+      "last_sent": "Last sent",
+      "total_sent": "Total sent",
+      "filters_count_one": "{{count}} filter · {{operator}}",
+      "filters_count_other": "{{count}} filters · {{operator}}",
+      "never": "Never",
+      "send": "Send",
+      "edit_title": "Edit",
+      "delete_title": "Delete",
+      "delete_confirm": "Delete segment \"{{name}}\"?"
+    },
+    "send": {
+      "title": "Send to \"{{name}}\"",
+      "audience": "Audience: ~{{count}} members",
+      "audience_unknown": "Audience: ~? members",
+      "category": "Category",
+      "categories": {
+        "transactional": "Transactional (always delivered)",
+        "offers": "Offers",
+        "points": "Points",
+        "tier": "Tier",
+        "stays": "Stays"
+      },
+      "category_hint": "Members opted-out of this category will be skipped (transactional ignores opt-outs).",
+      "campaign_title": "Title",
+      "title_placeholder": "A surprise for our Gold members",
+      "message": "Message",
+      "message_placeholder": "Double points this weekend on every stay.",
+      "also_email": "Also send as email",
+      "cancel": "Cancel",
+      "send_button": "Send campaign"
+    },
+    "toasts": {
+      "updated": "Segment updated",
+      "created": "Segment created",
+      "save_failed": "Save failed",
+      "deleted": "Segment deleted",
+      "delete_failed": "Delete failed",
+      "sent": "Sent — push: {{push}}, email: {{email}}, skipped: {{skipped}}",
+      "send_failed": "Send failed"
+    }
+  },
+
   "offers": {
     "title": "Special Offers",
     "create": "Create Offer",
