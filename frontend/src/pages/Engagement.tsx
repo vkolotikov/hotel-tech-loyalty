@@ -491,14 +491,18 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
   }
 
   const flag = r.country ? countryFlag(r.country) : null
-  // De-emphasise the "Anonymous" prefix — most rows are anonymous, so
-  // promoting it to bold-white makes the row feel cluttered. Instead
-  // render a small grey tag and lead with the actual identifier
-  // (city / country / IP). When the visitor IS named, keep the name.
   const isAnonymous = /^Anonymous(\s|$)/i.test(r.effective_name)
-  // Lead line for anonymous rows: City · Country, falling back to
-  // the visitor IP when geolocation hasn't resolved yet.
+  // Lead line for anonymous rows: prefer the city when available,
+  // falling back to country, then IP. We display "City, Country" as
+  // a distinct location chip on every row regardless of anonymity, so
+  // staff can scan geography at a glance.
   const anonHeadline = r.city || r.country || r.visitor_ip || 'Unknown'
+  // "Riga, Latvia" / "Latvia" / null — used by the location chip.
+  const locationLabel =
+    r.city && r.country ? `${r.city}, ${r.country}` :
+    r.country ? r.country :
+    r.city ? r.city :
+    null
 
   return (
     <button
@@ -533,8 +537,16 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             ) : (
               <>
                 <span className="font-semibold text-sm truncate">{r.effective_name}</span>
-                {flag && <span className="text-[11px]" title={r.country ?? undefined}>{flag}</span>}
-                {r.country && <span className="text-[10px] text-t-secondary">{r.city ? `${r.city}, ${r.country}` : r.country}</span>}
+                {/* Named visitors get a separate location chip so their
+                    name stays the lead. Anonymous rows already show the
+                    geography in the headline above, so we skip the chip
+                    for them to avoid the duplicate. */}
+                {locationLabel && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-dark-bg border border-dark-border text-white">
+                    {flag ? <span className="text-[12px] leading-none">{flag}</span> : <MapPin size={9} className="text-t-secondary" />}
+                    <span className="truncate max-w-[160px]">{locationLabel}</span>
+                  </span>
+                )}
               </>
             )}
             {r.has_email && <Mail size={11} className="text-blue-400" />}
