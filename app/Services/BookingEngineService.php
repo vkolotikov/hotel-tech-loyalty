@@ -859,6 +859,45 @@ class BookingEngineService
             ]);
         }
 
+        // 1b) Admin notification — broadcast the booking to the hotel's
+        //     admin team so no reservation slips through unnoticed. Fails
+        //     soft: SMTP problems can't break the guest's flow.
+        try {
+            app(\App\Services\AdminNotificationService::class)->send(
+                $orgId,
+                new \App\Mail\AdminBookingNotificationMail(
+                    kind:             'room',
+                    hotelName:        $hotelName,
+                    bookingReference: $response['booking_reference'] ?? $response['reservation_id'] ?? '—',
+                    guestName:        $guestName,
+                    guestEmail:       $email,
+                    guestPhone:       $guest['phone'] ?? null,
+                    unitName:         $payload['unit_name'] ?? 'Room',
+                    checkIn:          $payload['check_in'] ?? null,
+                    checkOut:         $payload['check_out'] ?? null,
+                    nights:           (int) ($payload['nights'] ?? 1),
+                    adults:           (int) ($payload['adults'] ?? 2),
+                    children:         (int) ($payload['children'] ?? 0),
+                    serviceName:      null,
+                    masterName:       null,
+                    startAt:          null,
+                    durationMinutes:  null,
+                    partySize:        null,
+                    baseTotal:        (float) ($payload['room_total'] ?? 0),
+                    extrasTotal:      (float) ($payload['extras_total'] ?? 0),
+                    grossTotal:       (float) ($payload['gross_total'] ?? 0),
+                    currency:         $payload['currency'] ?? 'EUR',
+                    extras:           $extrasBreakdown,
+                    specialRequests:  $payload['special_requests'] ?? null,
+                    paymentStatus:    $response['payment_status'] ?? null,
+                ),
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Admin room-booking notification failed', [
+                'org_id' => $orgId, 'error' => $e->getMessage(),
+            ]);
+        }
+
         // 2) Membership Invitation Email — only on first contact.
         //    Skip if `welcomed_at` is already set on the member record. That
         //    flag is stamped here on first send AND backfilled from

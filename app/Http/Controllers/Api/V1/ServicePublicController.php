@@ -625,6 +625,50 @@ class ServicePublicController extends Controller
             ]);
         }
 
+        // 1b) Admin notification — broadcast the service booking to the
+        //     hotel's admin team so no appointment slips through.
+        try {
+            $extrasArr = $booking->extras->map(fn ($x) => [
+                'name'     => $x->name,
+                'quantity' => (int) $x->quantity,
+                'total'    => (float) $x->line_total,
+            ])->toArray();
+
+            app(\App\Services\AdminNotificationService::class)->send(
+                $orgId,
+                new \App\Mail\AdminBookingNotificationMail(
+                    kind:             'service',
+                    hotelName:        $hotelName,
+                    bookingReference: $booking->booking_reference ?? '—',
+                    guestName:        $guestName,
+                    guestEmail:       $email,
+                    guestPhone:       $booking->customer_phone,
+                    unitName:         null,
+                    checkIn:          null,
+                    checkOut:         null,
+                    nights:           null,
+                    adults:           null,
+                    children:         null,
+                    serviceName:      $booking->service?->name ?? 'Service',
+                    masterName:       $booking->master?->name,
+                    startAt:          $booking->start_at?->toIso8601String(),
+                    durationMinutes:  (int) $booking->duration_minutes,
+                    partySize:        (int) $booking->party_size,
+                    baseTotal:        (float) $booking->service_price,
+                    extrasTotal:      (float) $booking->extras_total,
+                    grossTotal:       (float) $booking->total_amount,
+                    currency:         $booking->currency ?? 'EUR',
+                    extras:           $extrasArr,
+                    specialRequests:  $booking->notes ?? null,
+                    paymentStatus:    $booking->payment_status ?? null,
+                ),
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('Admin service-booking notification failed', [
+                'org_id' => $orgId, 'error' => $e->getMessage(),
+            ]);
+        }
+
         // 2) Membership welcome — only on first contact (welcomed_at null).
         try {
             $member = \App\Models\LoyaltyMember::withoutGlobalScopes()
