@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon, Users as UsersIcon, AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight, ListChecks } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon, ListChecks } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
@@ -197,14 +197,8 @@ export function Inquiries() {
     refetchInterval: 120_000,
   })
 
-  // KPI strip — 5 headline numbers for the leads-pipeline redesign.
-  // Cached client-side 60s since the deltas don't move that fast.
-  const { data: kpis } = useQuery<any>({
-    queryKey: ['inquiries-kpis'],
-    queryFn: () => api.get('/v1/admin/inquiries/kpis').then(r => r.data),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-  })
+  // KPI data has moved to /analytics → Leads tab. Same /v1/admin/
+  // inquiries/kpis endpoint powers it there.
 
   // Per-row expand state — controlled by chevron click on each list row.
   // Single inquiry expanded at a time keeps vertical footprint bounded.
@@ -424,35 +418,9 @@ export function Inquiries() {
         </div>
       </div>
 
-      {/* Compact KPI strip — 5 numbers in a single horizontal bar. The
-          old card-grid version ate too much vertical space above the
-          table; richer analytics live on /reports. Wraps on narrow
-          screens. */}
-      {kpis && (
-        <div className="bg-dark-surface border border-dark-border rounded-xl px-3 py-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-          {[
-            { key: 'total',     label: t('inquiries.kpis.total', 'Total'),                value: (kpis.total ?? 0).toLocaleString(),                                                                                  delta: kpis.total_delta_pct,                                          icon: <UsersIcon size={14} />,      tint: 'text-blue-400' },
-            { key: 'due_today', label: t('inquiries.kpis.due_today', 'Due Today'),        value: (kpis.due_today ?? 0).toLocaleString(),                                                                              delta: null,                                                          icon: <Clock size={14} />,          tint: 'text-amber-400' },
-            { key: 'overdue',   label: t('inquiries.kpis.overdue', 'Overdue'),            value: (kpis.overdue ?? 0).toLocaleString(),                                                                                delta: null,                                                          icon: <AlertTriangle size={14} />,  tint: (kpis.overdue ?? 0) > 0 ? 'text-red-400' : 'text-gray-500' },
-            { key: 'value',     label: t('inquiries.kpis.est_value', 'Value'),            value: `${settings.currency_symbol}${(kpis.estimated_value ?? 0).toLocaleString()}`,                                       delta: null,                                                          icon: <DollarSign size={14} />,     tint: 'text-emerald-400' },
-            { key: 'new_week',  label: t('inquiries.kpis.new_this_week', 'New / week'),   value: (kpis.new_this_week ?? 0).toLocaleString(),                                                                          delta: kpis.new_delta_pct,                                            icon: <Sparkles size={14} />,       tint: 'text-purple-400' },
-          ].map((m, i) => (
-            <div key={m.key} className={`flex items-center gap-2 ${i > 0 ? 'border-l border-dark-border pl-5' : ''}`}>
-              <span className={m.tint}>{m.icon}</span>
-              <span className="text-[11px] uppercase tracking-wide text-t-secondary">{m.label}</span>
-              <span className="font-bold text-white tabular-nums">{m.value}</span>
-              {m.delta != null && (
-                <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${m.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {m.delta >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}{Math.abs(m.delta)}%
-                </span>
-              )}
-            </div>
-          ))}
-          <Link to="/reports" className="ml-auto text-[11px] text-primary-400 hover:text-primary-300 hover:underline whitespace-nowrap">
-            {t('inquiries.kpis.full_report', 'Full report →')}
-          </Link>
-        </div>
-      )}
+      {/* KPI strip moved to /analytics → Leads tab so this page stays a
+          focused workflow view. The TODAY operational bar below still
+          surfaces what needs action right now. */}
 
       {/* Today snapshot — the morning-of view: what's overdue, what's
           due today, what's coming up, and the freshest leads. Click a

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
-  AlertCircle, Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
+  Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -65,17 +65,7 @@ interface EngagementRow {
   priority_score: number
 }
 
-interface KpiCard {
-  value: number
-  detail: string
-}
-
-interface KpiResp {
-  online_now: KpiCard
-  hot_leads: KpiCard
-  unanswered: KpiCard
-  ai_handled: KpiCard
-}
+// KpiCard / KpiResp types moved with the tiles to /analytics → Chat tab.
 
 // Module-level filter taxonomy. The `label` here is the English fallback;
 // the component resolves the localised label via t(`engagement.filters.${key}`)
@@ -139,14 +129,8 @@ export function Engagement() {
     return () => window.removeEventListener('engagement:open', handler as EventListener)
   }, [])
 
-  // KPI cards — Phase 4 tightens to 15s. React-query auto-pauses polling
-  // when the browser tab is hidden so we don't spend API quota on a tab
-  // nobody is looking at.
-  const { data: kpis } = useQuery<{ data: KpiResp }>({
-    queryKey: ['engagement', 'kpis'],
-    queryFn: () => api.get('/v1/admin/engagement/kpis').then(r => r.data),
-    refetchInterval: 15_000,
-  })
+  // KPI tiles have moved to /analytics → Chat tab. The same data is
+  // still polled from /v1/admin/engagement/kpis there.
 
   // Feed — Phase 4 tightens to 5s when the tab is visible. Combined with
   // useHotLeadAlert below this gives a near-realtime "hot lead arrived"
@@ -312,43 +296,9 @@ export function Engagement() {
         </div>
       )}
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiTile
-          icon={Wifi}
-          label={t('engagement.kpis.online_now', 'Online now')}
-          value={kpis?.data.online_now.value ?? 0}
-          detail={kpis?.data.online_now.detail}
-          color="#22c55e"
-          onClick={() => { setFilter('online'); setPage(1) }}
-          active={filter === 'online'}
-        />
-        <KpiTile
-          icon={Star}
-          label={t('engagement.kpis.leads', 'Leads')}
-          value={kpis?.data.hot_leads.value ?? 0}
-          detail={kpis?.data.hot_leads.detail}
-          color="#f59e0b"
-          onClick={() => { setFilter('has_contact'); setPage(1) }}
-          active={filter === 'has_contact'}
-        />
-        <KpiTile
-          icon={AlertCircle}
-          label={t('engagement.kpis.unanswered', 'Unanswered')}
-          value={kpis?.data.unanswered.value ?? 0}
-          detail={kpis?.data.unanswered.detail}
-          color="#ef4444"
-          onClick={() => { setFilter('active_chat'); setPage(1) }}
-          active={filter === 'active_chat'}
-        />
-        <KpiTile
-          icon={Bot}
-          label={t('engagement.kpis.ai_handled_today', 'AI handled today')}
-          value={kpis?.data.ai_handled.value ?? 0}
-          detail={kpis?.data.ai_handled.detail}
-          color="#8b5cf6"
-        />
-      </div>
+      {/* KPI tiles moved to /analytics → Chat tab. Filter chips below
+          carry the same filtering action without the duplicated stat
+          numbers. */}
 
       {/* Filter chips + search */}
       <div className="flex flex-col gap-3 bg-dark-surface border border-dark-border rounded-xl p-3">
@@ -460,37 +410,6 @@ export function Engagement() {
 }
 
 /* ── Sub-components ─────────────────────────────────────────── */
-
-function KpiTile({
-  icon: Icon, label, value, detail, color, onClick, active,
-}: {
-  icon: any; label: string; value: number; detail?: string; color: string;
-  onClick?: () => void; active?: boolean;
-}) {
-  const Wrapper: any = onClick ? 'button' : 'div'
-  return (
-    <Wrapper
-      onClick={onClick}
-      className={`text-left bg-dark-surface border rounded-xl p-4 transition-colors ${
-        onClick ? 'cursor-pointer hover:bg-dark-surface2' : ''
-      } ${active ? 'border-accent' : 'border-dark-border'}`}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: color + '22', border: `1px solid ${color}55` }}
-        >
-          <Icon size={15} style={{ color }} />
-        </div>
-        <span className="text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-          {label}
-        </span>
-      </div>
-      <div className="mt-2 text-2xl font-bold text-white">{value.toLocaleString()}</div>
-      {detail && <div className="text-[11px] text-t-secondary mt-0.5 truncate">{detail}</div>}
-    </Wrapper>
-  )
-}
 
 function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: number, conversationId: number | null) => void }) {
   const { t } = useTranslation()

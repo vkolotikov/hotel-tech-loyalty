@@ -16,7 +16,8 @@ import {
   Users, Award, TrendingUp, DollarSign, Download, Activity,
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
   BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
-  TrendingDown, MoveRight, ChevronRight, Mail
+  TrendingDown, MoveRight, ChevronRight, Mail, MessageCircle, Package,
+  Sparkles, Bot, Wifi, CreditCard, Settings2, PlayCircle, PackageCheck, CheckCircle2,
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -52,7 +53,7 @@ const CRM_PERIOD_OPTIONS = [
   { labelKey: 'months_12', value: 'months12' },
 ] as const
 
-type ActiveTab = 'overview' | 'points' | 'members' | 'bookings' | 'pipeline' | 'venues'
+type ActiveTab = 'overview' | 'chat' | 'leads' | 'deals' | 'points' | 'members' | 'bookings' | 'pipeline' | 'venues'
 
 export function Analytics() {
   const { t } = useTranslation()
@@ -234,12 +235,35 @@ export function Analytics() {
 
   const tabs: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'overview', label: t('analytics.tabs.overview', 'Overview'), icon: <BarChart3 size={15} /> },
+    { id: 'chat',     label: t('analytics.tabs.chat', 'Chat'),         icon: <MessageCircle size={15} /> },
+    { id: 'leads',    label: t('analytics.tabs.leads', 'Leads'),       icon: <Briefcase size={15} /> },
+    { id: 'deals',    label: t('analytics.tabs.deals', 'Deals'),       icon: <Package size={15} /> },
     { id: 'points', label: t('analytics.tabs.points', 'Points & Rewards'), icon: <Award size={15} /> },
     { id: 'members', label: t('analytics.tabs.members', 'Members'), icon: <Users size={15} /> },
     { id: 'bookings', label: t('analytics.tabs.bookings', 'Bookings & Revenue'), icon: <Hotel size={15} /> },
     { id: 'pipeline', label: t('analytics.tabs.pipeline', 'CRM Pipeline'), icon: <Briefcase size={15} /> },
     { id: 'venues', label: t('analytics.tabs.venues', 'Venues & Guests'), icon: <MapPin size={15} /> },
   ]
+
+  // Lazy-fetch the data behind each operational page's stats so the
+  // analytics tab can render them without each operational page also
+  // showing the same numbers. enabled: keeps these queries idle until
+  // the user opens the relevant tab.
+  const { data: chatKpis } = useQuery<any>({
+    queryKey: ['analytics-chat-kpis'],
+    queryFn: () => api.get('/v1/admin/engagement/kpis').then(r => r.data),
+    enabled: activeTab === 'chat',
+  })
+  const { data: leadsKpis } = useQuery<any>({
+    queryKey: ['analytics-leads-kpis'],
+    queryFn: () => api.get('/v1/admin/inquiries/kpis').then(r => r.data),
+    enabled: activeTab === 'leads',
+  })
+  const { data: dealsKpis } = useQuery<any>({
+    queryKey: ['analytics-deals-kpis'],
+    queryFn: () => api.get('/v1/admin/deals/kpis').then(r => r.data),
+    enabled: activeTab === 'deals',
+  })
 
   return (
     <div className="space-y-6">
@@ -1337,6 +1361,103 @@ export function Analytics() {
             </Card>
           )}
         </>
+      )}
+
+      {/* ════════════════ CHAT TAB ════════════════
+          Stats moved out of /engagement so the operational page stays
+          focused on the conversation feed. Same /v1/admin/engagement/kpis
+          endpoint powers both. */}
+      {activeTab === 'chat' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            { key: 'online_now',  label: t('analytics.chat.online_now', 'Online now'),       icon: <Wifi size={18} />,        tint: 'text-emerald-400', bg: 'bg-emerald-500/15', value: chatKpis?.data?.online_now?.value ?? 0, sub: chatKpis?.data?.online_now?.detail },
+            { key: 'leads',       label: t('analytics.chat.leads', 'Leads'),                 icon: <Sparkles size={18} />,    tint: 'text-amber-400',   bg: 'bg-amber-500/15',   value: chatKpis?.data?.hot_leads?.value ?? 0,  sub: chatKpis?.data?.hot_leads?.detail },
+            { key: 'unanswered',  label: t('analytics.chat.unanswered', 'Unanswered'),       icon: <AlertTriangle size={18}/>, tint: 'text-red-400',    bg: 'bg-red-500/15',     value: chatKpis?.data?.unanswered?.value ?? 0, sub: chatKpis?.data?.unanswered?.detail },
+            { key: 'ai_handled',  label: t('analytics.chat.ai_handled_today', 'AI handled today'), icon: <Bot size={18} />,  tint: 'text-purple-400',  bg: 'bg-purple-500/15',  value: chatKpis?.data?.ai_handled?.value ?? 0, sub: chatKpis?.data?.ai_handled?.detail },
+          ].map(c => (
+            <Card key={c.key}>
+              <div className="flex items-start justify-between mb-3">
+                <span className="text-[11px] uppercase tracking-wider text-t-secondary">{c.label}</span>
+                <div className={`p-2 rounded-lg ${c.bg} ${c.tint}`}>{c.icon}</div>
+              </div>
+              <p className="text-3xl font-bold text-white tabular-nums">{Number(c.value).toLocaleString()}</p>
+              {c.sub && <p className="text-xs text-t-secondary mt-1">{c.sub}</p>}
+            </Card>
+          ))}
+          <div className="md:col-span-2 xl:col-span-4 text-xs text-t-secondary">
+            <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ LEADS TAB ════════════════
+          Same /v1/admin/inquiries/kpis endpoint that used to populate the
+          KPI strip on /inquiries. PipelineInsights (the deeper analytics
+          card) is rendered on /reports — link out from here. */}
+      {activeTab === 'leads' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
+            {[
+              { key: 'total',     label: t('analytics.leads.total', 'Total Leads'),      icon: <Users size={18} />,         tint: 'text-blue-400',    bg: 'bg-blue-500/15',    value: leadsKpis?.total ?? 0,            delta: leadsKpis?.total_delta_pct, sub: t('analytics.leads.vs_last_month', 'vs last month') },
+              { key: 'due',       label: t('analytics.leads.due_today', 'Due Today'),    icon: <Clock size={18} />,         tint: 'text-amber-400',   bg: 'bg-amber-500/15',   value: leadsKpis?.due_today ?? 0 },
+              { key: 'overdue',   label: t('analytics.leads.overdue', 'Overdue'),        icon: <AlertTriangle size={18} />, tint: 'text-red-400',     bg: 'bg-red-500/15',     value: leadsKpis?.overdue ?? 0 },
+              { key: 'value',     label: t('analytics.leads.est_value', 'Estimated Value'), icon: <DollarSign size={18} />, tint: 'text-emerald-400', bg: 'bg-emerald-500/15', value: leadsKpis?.estimated_value ?? 0, money: true },
+              { key: 'new',       label: t('analytics.leads.new_this_week', 'New This Week'), icon: <Sparkles size={18} />, tint: 'text-purple-400',  bg: 'bg-purple-500/15',  value: leadsKpis?.new_this_week ?? 0,    delta: leadsKpis?.new_delta_pct, sub: t('analytics.leads.vs_last_week', 'vs last week') },
+            ].map(c => (
+              <Card key={c.key}>
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-[11px] uppercase tracking-wider text-t-secondary">{c.label}</span>
+                  <div className={`p-2 rounded-lg ${c.bg} ${c.tint}`}>{c.icon}</div>
+                </div>
+                <p className="text-3xl font-bold text-white tabular-nums">
+                  {c.money ? `$${Number(c.value).toLocaleString()}` : Number(c.value).toLocaleString()}
+                </p>
+                {c.delta != null && (
+                  <div className={`flex items-center gap-1 text-[11px] mt-1 ${c.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {c.delta >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                    <span className="font-semibold">{Math.abs(c.delta)}%</span>
+                    <span className="text-t-secondary">{c.sub}</span>
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+          <div className="text-xs text-t-secondary">
+            <Link to="/reports" className="text-primary-400 hover:underline">{t('analytics.leads.deep_dive', 'Pipeline deep-dive on Reports →')}</Link>
+            <span className="mx-2 text-gray-700">·</span>
+            <Link to="/inquiries" className="text-primary-400 hover:underline">{t('analytics.leads.open_pipeline', 'Open the Leads pipeline →')}</Link>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ DEALS TAB ════════════════
+          Mirrors the /v1/admin/deals/kpis shape from the Deals page.
+          KPI grid moved here so /deals stays a focused workflow page. */}
+      {activeTab === 'deals' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+            {[
+              { key: 'total',  label: t('analytics.deals.total', 'Total Deals'),                icon: <Package size={16} />,        tint: 'text-blue-400',    bg: 'bg-blue-500/15',    value: dealsKpis?.total ?? 0, sub: t('analytics.deals.all_active', 'All active deals') },
+              { key: 'await',  label: t('analytics.deals.awaiting_payment', 'Awaiting Payment'), icon: <CreditCard size={16} />,    tint: 'text-amber-400',   bg: 'bg-amber-500/15',   value: dealsKpis?.awaiting_payment?.count ?? 0, sub: dealsKpis?.awaiting_payment?.value != null ? `$${Number(dealsKpis.awaiting_payment.value).toLocaleString()}` : '' },
+              { key: 'prep',   label: t('analytics.deals.preparation', 'Preparation'),          icon: <Settings2 size={16} />,      tint: 'text-purple-400',  bg: 'bg-purple-500/15',  value: dealsKpis?.design_needed?.count ?? 0,    sub: dealsKpis?.design_needed?.value != null ? `$${Number(dealsKpis.design_needed.value).toLocaleString()}` : '' },
+              { key: 'prog',   label: t('analytics.deals.in_progress', 'In Progress'),          icon: <PlayCircle size={16} />,     tint: 'text-sky-400',     bg: 'bg-sky-500/15',     value: dealsKpis?.in_production?.count ?? 0,    sub: dealsKpis?.in_production?.value != null ? `$${Number(dealsKpis.in_production.value).toLocaleString()}` : '' },
+              { key: 'ready',  label: t('analytics.deals.ready', 'Ready'),                      icon: <PackageCheck size={16} />,   tint: 'text-emerald-400', bg: 'bg-emerald-500/15', value: dealsKpis?.ready_to_ship?.count ?? 0,    sub: dealsKpis?.ready_to_ship?.value != null ? `$${Number(dealsKpis.ready_to_ship.value).toLocaleString()}` : '' },
+              { key: 'done',   label: t('analytics.deals.completed_month', 'Completed This Month'), icon: <CheckCircle2 size={16} />, tint: 'text-green-400',   bg: 'bg-green-500/15',   value: dealsKpis?.completed_month?.count ?? 0, sub: dealsKpis?.completed_month?.value != null ? `$${Number(dealsKpis.completed_month.value).toLocaleString()}` : '' },
+            ].map(c => (
+              <Card key={c.key}>
+                <div className="flex items-start gap-2 mb-2">
+                  <div className={`p-2 rounded-lg ${c.bg} ${c.tint}`}>{c.icon}</div>
+                  <span className="text-[11px] text-t-secondary leading-tight">{c.label}</span>
+                </div>
+                <p className="text-2xl font-bold text-white tabular-nums">{Number(c.value).toLocaleString()}</p>
+                {c.sub && <p className="text-[11px] text-t-secondary mt-1">{c.sub}</p>}
+              </Card>
+            ))}
+          </div>
+          <div className="text-xs text-t-secondary">
+            <Link to="/deals" className="text-primary-400 hover:underline">{t('analytics.deals.open_deals', 'Open the Deals pipeline →')}</Link>
+          </div>
+        </div>
       )}
     </div>
   )

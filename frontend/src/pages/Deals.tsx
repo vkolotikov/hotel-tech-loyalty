@@ -182,33 +182,9 @@ export function Deals() {
         </div>
       </div>
 
-      {/* 6 KPI cards — Total / Awaiting Payment / Design Needed /
-          In Production / Ready to Ship / Completed This Month.
-          Top tile labels match the screenshot exactly. */}
-      {kpis && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { key: 'total',  label: t('deals.kpis.total', 'Total Deals'),                value: kpis.total ?? 0, sub: t('deals.kpis.all_active', 'All active deals'), tint: 'text-blue-400',   bg: 'bg-blue-500/15',   icon: Package },
-            { key: 'await',  label: t('deals.kpis.awaiting_payment', 'Awaiting Payment'), value: kpis.awaiting_payment?.count ?? 0, sub: currency(kpis.awaiting_payment?.value), tint: 'text-amber-400',  bg: 'bg-amber-500/15',  icon: CreditCard },
-            { key: 'design', label: t('deals.kpis.preparation', 'Preparation'),          value: kpis.design_needed?.count ?? 0,    sub: currency(kpis.design_needed?.value),    tint: 'text-purple-400', bg: 'bg-purple-500/15', icon: Settings2 },
-            { key: 'prod',   label: t('deals.kpis.in_progress', 'In Progress'),          value: kpis.in_production?.count ?? 0,    sub: currency(kpis.in_production?.value),    tint: 'text-sky-400',    bg: 'bg-sky-500/15',    icon: PlayCircle },
-            { key: 'ship',   label: t('deals.kpis.ready', 'Ready'),                      value: kpis.ready_to_ship?.count ?? 0,    sub: currency(kpis.ready_to_ship?.value),    tint: 'text-emerald-400', bg: 'bg-emerald-500/15', icon: PackageCheck },
-            { key: 'done',   label: t('deals.kpis.completed_month', 'Completed This Month'), value: kpis.completed_month?.count ?? 0, sub: currency(kpis.completed_month?.value), tint: 'text-green-400',  bg: 'bg-green-500/15', icon: CheckCircle2 },
-          ].map(card => {
-            const Icon = card.icon
-            return (
-              <div key={card.key} className="bg-dark-surface rounded-xl border border-dark-border p-4">
-                <div className="flex items-start gap-2 mb-2">
-                  <div className={`p-2 rounded-lg ${card.bg} ${card.tint}`}><Icon size={16} /></div>
-                  <span className="text-[11px] text-t-secondary leading-tight">{card.label}</span>
-                </div>
-                <p className="text-2xl font-bold text-white tabular-nums">{card.value}</p>
-                <p className="text-[11px] text-t-secondary mt-1">{card.sub}</p>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* KPI cards moved to /analytics → Deals tab so this page stays a
+          focused workflow view. Filter pills below still surface live
+          counts where they matter for filtering. */}
 
       {/* Filter pills + sort */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
