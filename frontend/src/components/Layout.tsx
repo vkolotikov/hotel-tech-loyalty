@@ -9,7 +9,7 @@ import {
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
   Crown, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
-  ListChecks, FilePlus2,
+  FilePlus2,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package, Star,
   UserCog, AlertTriangle, Scissors,
@@ -119,7 +119,9 @@ const navGroups: NavGroup[] = [
     items: [
       { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
       { path: '/deals',         labelKey: 'nav.items.deals',           defaultLabel: 'Deals',             icon: Package,   gate: 'all' },
-      { path: '/tasks',         labelKey: 'nav.items.tasks',           defaultLabel: 'Tasks',             icon: ListChecks, gate: 'all' },
+      // Standalone /tasks page removed — tasks now live inside the
+      // Leads + Deals expanded rows. Route stays as a redirect to keep
+      // any external bookmarks from 404'ing.
       // Reports moved under /analytics → Leads tab. Sidebar entry removed
       // to keep all analytics surfaces in one place.
       { path: '/lead-forms',    labelKey: 'nav.items.lead_forms',      defaultLabel: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },

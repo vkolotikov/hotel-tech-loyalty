@@ -69,7 +69,7 @@ class TaskController extends Controller
             'inquiry_id'           => 'nullable|integer|exists:inquiries,id',
             'guest_id'             => 'nullable|integer|exists:guests,id',
             'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'type'                 => 'nullable|string|in:call,email,meeting,send_proposal,follow_up,site_visit,custom',
+            'type'                 => 'nullable|string|in:call,email,meeting,whatsapp,sms,video_call,send_proposal,follow_up,site_visit,demo,contract,discovery,custom',
             'title'                => 'required|string|max:200',
             'description'          => 'nullable|string|max:4000',
             'due_at'               => 'nullable|date',
@@ -129,7 +129,7 @@ class TaskController extends Controller
     public function update(Request $request, Task $task): JsonResponse
     {
         $data = $request->validate([
-            'type'        => 'sometimes|string|in:call,email,meeting,send_proposal,follow_up,site_visit,custom',
+            'type'        => 'sometimes|string|in:call,email,meeting,whatsapp,sms,video_call,send_proposal,follow_up,site_visit,demo,contract,discovery,custom',
             'title'       => 'sometimes|string|max:200',
             'description' => 'sometimes|nullable|string|max:4000',
             'due_at'      => 'sometimes|nullable|date',

@@ -11,6 +11,9 @@ import {
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat,
   Wrench, Coffee, Briefcase, BedDouble, PartyPopper, ConciergeBell, Sparkles, Phone,
+  // Channel-type icons for the new comms-channel row in the drawer.
+  Phone as PhoneIcon, Mail as MailIcon, MessageCircle as WhatsAppIcon,
+  MessageSquare as SmsIcon, Video as VideoIcon, User as UserIcon,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
@@ -1889,6 +1892,38 @@ export function Planner() {
                         style={active ? { background: meta.color, borderColor: meta.color } : {}}>
                         <Icon size={14} />
                         {g}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Channel — optional communication channel for this task.
+                  Mirrors the lead TaskDrawer so staff can categorise the
+                  comms style (call / email / etc.) independently of the
+                  ops group (Housekeeping / Front Desk / etc.). Stored in
+                  task_category. */}
+              <div>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.channel_label', 'Channel')}</label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {([
+                    { key: 'call',      label: 'Call',     icon: PhoneIcon,    color: '#22d3ee' },
+                    { key: 'email',     label: 'Email',    icon: MailIcon,     color: '#a78bfa' },
+                    { key: 'whatsapp',  label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366' },
+                    { key: 'sms',       label: 'SMS',      icon: SmsIcon,      color: '#8b5cf6' },
+                    { key: 'video',     label: 'Video',    icon: VideoIcon,    color: '#06b6d4' },
+                    { key: 'in_person', label: 'In-person', icon: UserIcon,    color: '#fbbf24' },
+                  ] as const).map(c => {
+                    const active = (form.task_category || '') === c.key
+                    const Icon = c.icon
+                    return (
+                      <button key={c.key} type="button"
+                        onClick={() => setForm(f => ({ ...f, task_category: active ? '' : c.key }))}
+                        className={'flex flex-col items-center gap-0.5 p-1.5 rounded-md border text-[10px] font-semibold transition ' +
+                          (active ? 'text-black' : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
+                        style={active ? { background: c.color, borderColor: c.color } : {}}>
+                        <Icon size={13} />
+                        {c.label}
                       </button>
                     )
                   })}

@@ -52,7 +52,7 @@ const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brand
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
-const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })))
+// Tasks page deprecated — see /tasks redirect below.
 // Reports component is now lazy-loaded inside Analytics.tsx (Leads tab).
 const LeadForms = lazy(() => import('./pages/LeadForms').then(m => ({ default: m.LeadForms })))
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
@@ -252,7 +252,9 @@ export default function App() {
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
           <Route path="/deals" element={<LazyRoute><Deals /></LazyRoute>} />
-          <Route path="/tasks" element={<LazyRoute><Tasks /></LazyRoute>} />
+          {/* Tasks page removed — tasks live inside Leads + Deals now.
+              Redirect any stray external bookmark back to leads. */}
+          <Route path="/tasks" element={<Navigate to="/inquiries" replace />} />
           {/* Reports moved into /analytics. Redirect preserves existing
               bookmarks + the "Pipeline deep-dive" link patterns. */}
           <Route path="/reports" element={<Navigate to="/analytics?tab=leads" replace />} />
