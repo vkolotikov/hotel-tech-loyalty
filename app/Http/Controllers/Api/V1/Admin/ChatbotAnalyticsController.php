@@ -34,12 +34,17 @@ class ChatbotAnalyticsController extends Controller
         $avgMessages    = $overview['avg_messages'];
 
         // ── Daily conversation trend + previous-period overlay ─────────────
-        // Two queries (current + previous) keyed by relative day-offset so
-        // the chart can compare apples-to-apples regardless of calendar
-        // weeks. Both arrays are length $days, indexed by day-from-start.
+        // Three series per day: total conversations, engaged
+        // conversations (visitor sent ≥1 message), AI-resolved count.
+        // Plus the previous-period total for the comparison overlay.
         $trendRows = ChatConversation::where('organization_id', $orgId)
             ->where('created_at', '>=', $from)
-            ->select(DB::raw("DATE(created_at) as date"), DB::raw('COUNT(*) as count'))
+            ->select(
+                DB::raw("DATE(created_at) as date"),
+                DB::raw('COUNT(*) as count'),
+                DB::raw("SUM(CASE WHEN messages_count > 0 THEN 1 ELSE 0 END) as engaged_count"),
+                DB::raw("SUM(CASE WHEN status = 'resolved' AND assigned_to IS NULL THEN 1 ELSE 0 END) as ai_resolved_count")
+            )
             ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('date')
             ->get()
@@ -57,10 +62,17 @@ class ChatbotAnalyticsController extends Controller
         for ($i = $days - 1; $i >= 0; $i--) {
             $date    = now()->subDays($i)->format('Y-m-d');
             $prevDate = now()->subDays($i + $days)->format('Y-m-d');
+            $row = $trendRows[$date] ?? null;
+            $total = (int) ($row->count ?? 0);
+            $eng   = (int) ($row->engaged_count ?? 0);
+            $aiRes = (int) ($row->ai_resolved_count ?? 0);
             $trend[] = [
-                'date'      => $date,
-                'count'     => (int) ($trendRows[$date]->count ?? 0),
-                'prevCount' => (int) ($prevTrendRows[$prevDate]->count ?? 0),
+                'date'          => $date,
+                'count'         => $total,
+                'engagedCount'  => $eng,
+                'aiResolved'    => $aiRes,
+                'aiResolutionRate' => $total > 0 ? round(($aiRes / $total) * 100, 1) : 0,
+                'prevCount'     => (int) ($prevTrendRows[$prevDate]->count ?? 0),
             ];
         }
 
@@ -154,6 +166,30 @@ class ChatbotAnalyticsController extends Controller
             'count'  => (int) $r->count,
         ])->sortByDesc('count')->values();
 
+        // ── Conversation length distribution ─────────────────────────────────
+        // Buckets: 0 msg / 1–2 / 3–5 / 6–10 / 11–20 / 21+. Helps spot
+        // whether visitors bail early (AI greeter only) or carry full
+        // conversations.
+        $lenRow = ChatConversation::where('organization_id', $orgId)
+            ->where('created_at', '>=', $from)
+            ->selectRaw("
+                SUM(CASE WHEN messages_count = 0 THEN 1 ELSE 0 END) as b0,
+                SUM(CASE WHEN messages_count BETWEEN 1 AND 2 THEN 1 ELSE 0 END) as b1,
+                SUM(CASE WHEN messages_count BETWEEN 3 AND 5 THEN 1 ELSE 0 END) as b2,
+                SUM(CASE WHEN messages_count BETWEEN 6 AND 10 THEN 1 ELSE 0 END) as b3,
+                SUM(CASE WHEN messages_count BETWEEN 11 AND 20 THEN 1 ELSE 0 END) as b4,
+                SUM(CASE WHEN messages_count > 20 THEN 1 ELSE 0 END) as b5
+            ")
+            ->first();
+        $lengthDistribution = [
+            ['bucket' => 'none',  'label' => '0 msg',  'count' => (int) ($lenRow->b0 ?? 0)],
+            ['bucket' => '1_2',   'label' => '1–2',    'count' => (int) ($lenRow->b1 ?? 0)],
+            ['bucket' => '3_5',   'label' => '3–5',    'count' => (int) ($lenRow->b2 ?? 0)],
+            ['bucket' => '6_10',  'label' => '6–10',   'count' => (int) ($lenRow->b3 ?? 0)],
+            ['bucket' => '11_20', 'label' => '11–20',  'count' => (int) ($lenRow->b4 ?? 0)],
+            ['bucket' => '21_up', 'label' => '21+',    'count' => (int) ($lenRow->b5 ?? 0)],
+        ];
+
         // ── Lead-capture funnel ──────────────────────────────────────────────
         // Conversations → with any visitor message → with contact captured →
         // confirmed lead. Lets the chart show drop-off at each stage.
@@ -194,6 +230,7 @@ class ChatbotAnalyticsController extends Controller
             'weekday_distribution'=> $weekday,
             'intent_breakdown'    => $intentBreakdown,
             'funnel'              => $funnel,
+            'length_distribution' => $lengthDistribution,
         ]);
     }
 

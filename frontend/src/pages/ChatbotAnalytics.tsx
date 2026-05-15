@@ -32,7 +32,15 @@ interface Overview {
   lead_conversion_rate: number
   human_escalation_rate: number
 }
-interface TrendPoint  { date: string; count: number; prevCount: number }
+interface TrendPoint  {
+  date: string
+  count: number
+  engagedCount: number
+  aiResolved: number
+  aiResolutionRate: number
+  prevCount: number
+}
+interface LengthBucket { bucket: string; label: string; count: number }
 interface HourlyPoint { hour: number; label: string; count: number }
 interface WeekdayPoint{ dow: number; label: string; count: number }
 interface PageRow     { page_url: string; count: number }
@@ -51,6 +59,7 @@ interface Analytics {
   weekday_distribution: WeekdayPoint[]
   intent_breakdown: IntentRow[]
   funnel: FunnelRow[]
+  length_distribution: LengthBucket[]
 }
 
 /** % delta vs previous period — pct + direction tone for display. */
@@ -218,13 +227,16 @@ export function ChatbotAnalytics() {
             )}
           </div>
 
-          {/* Conversation Trend — current period with previous-period overlay */}
+          {/* Conversation Trend — current period vs previous-period overlay,
+              plus an Engaged series (visitor sent ≥1 message) so staff
+              can see how many conversations actually got interaction
+              vs total bot-greeter touches. */}
           <div className="bg-dark-card border border-dark-border rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-4">
               {t('chatbot_analytics.trend_title', 'Conversation Trend')}
               <span className="text-[10px] text-t-secondary font-normal ml-2">{t('chatbot_analytics.vs_previous', 'vs previous period')}</span>
             </h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={data.trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
@@ -238,13 +250,65 @@ export function ChatbotAnalytics() {
                 <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
                 <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={{ color: '#8e8e93' }} />
                 <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
-                <Area type="monotone" dataKey="count" name={t('chatbot_analytics.series.current', 'Current')}
+                <Area type="monotone" dataKey="count" name={t('chatbot_analytics.series.total', 'Total')}
                   stroke="#3b82f6" fill="url(#convGrad)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="prevCount" name={t('chatbot_analytics.series.previous', 'Previous')}
+                <Line type="monotone" dataKey="engagedCount" name={t('chatbot_analytics.series.engaged', 'Engaged (visitor replied)')}
+                  stroke="#22c55e" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="prevCount" name={t('chatbot_analytics.series.previous', 'Previous period')}
                   stroke="#8e8e93" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+
+          {/* AI Resolution Rate trend — % of daily conversations the
+              AI closed without human handoff. Surfaces drift in
+              answer-quality over time at a glance. */}
+          <div className="bg-dark-card border border-dark-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-1">{t('chatbot_analytics.resolution_trend_title', 'AI Resolution Rate Trend')}</h3>
+            <p className="text-[11px] text-t-secondary mb-3">{t('chatbot_analytics.resolution_trend_sub', 'Daily share of conversations resolved by AI without human handoff')}</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={data.trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="resRateGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#a855f7" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8e8e93' }}
+                  tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
+                <YAxis yAxisId="left"  domain={[0, 100]} tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={v => `${v}%`} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                <Tooltip contentStyle={CHART_TOOLTIP} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                <Area  yAxisId="left"  type="monotone" dataKey="aiResolutionRate" name={t('chatbot_analytics.series.resolution_rate', 'Resolution rate %')} stroke="#a855f7" fill="url(#resRateGrad)" strokeWidth={2} dot={false} />
+                <Line  yAxisId="right" type="monotone" dataKey="aiResolved"       name={t('chatbot_analytics.series.ai_resolved_count', 'AI resolved (count)')} stroke="#22c55e" strokeWidth={1.5} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Conversation length distribution — bucketed visitor-message
+              counts. Heavy left-skew means most visitors bounce after
+              the greeter; right-skew means engaged conversations. */}
+          {data.length_distribution && data.length_distribution.length > 0 && (
+            <div className="bg-dark-card border border-dark-border rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-white mb-1">{t('chatbot_analytics.length_dist_title', 'Conversation Length Distribution')}</h3>
+              <p className="text-[11px] text-t-secondary mb-3">{t('chatbot_analytics.length_dist_sub', 'How many visitor messages each conversation reached')}</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={data.length_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Bar dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')} radius={[3, 3, 0, 0]}>
+                    {data.length_distribution.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Row: Hourly + Weekday */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

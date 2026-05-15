@@ -24,7 +24,7 @@ import {
   ArrowUpRight, ArrowDownRight, Clock, Target, PieChart as PieIcon,
   BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
   TrendingDown, MoveRight, ChevronRight, Mail, MessageCircle, Package,
-  Sparkles, Bot, Wifi, CreditCard, Settings2, PlayCircle, PackageCheck, CheckCircle2,
+  Sparkles, CreditCard, Settings2, PlayCircle, PackageCheck, CheckCircle2,
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -256,11 +256,9 @@ export function Analytics() {
   // analytics tab can render them without each operational page also
   // showing the same numbers. enabled: keeps these queries idle until
   // the user opens the relevant tab.
-  const { data: chatKpis } = useQuery<any>({
-    queryKey: ['analytics-chat-kpis'],
-    queryFn: () => api.get('/v1/admin/engagement/kpis').then(r => r.data),
-    enabled: activeTab === 'chat',
-  })
+  // chat KPIs query removed — the 4 ops tiles are no longer rendered
+  // on the Chat tab. Engagement page still polls /engagement/kpis
+  // directly if needed.
   const { data: leadsKpis } = useQuery<any>({
     queryKey: ['analytics-leads-kpis'],
     queryFn: () => api.get('/v1/admin/inquiries/kpis').then(r => r.data),
@@ -1389,25 +1387,12 @@ export function Analytics() {
           endpoint powers both. */}
       {activeTab === 'chat' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {[
-            { key: 'online_now',  label: t('analytics.chat.online_now', 'Online now'),       icon: <Wifi size={18} />,        tint: 'text-emerald-400', bg: 'bg-emerald-500/15', value: chatKpis?.data?.online_now?.value ?? 0, sub: chatKpis?.data?.online_now?.detail },
-            { key: 'leads',       label: t('analytics.chat.leads', 'Leads'),                 icon: <Sparkles size={18} />,    tint: 'text-amber-400',   bg: 'bg-amber-500/15',   value: chatKpis?.data?.hot_leads?.value ?? 0,  sub: chatKpis?.data?.hot_leads?.detail },
-            { key: 'unanswered',  label: t('analytics.chat.unanswered', 'Unanswered'),       icon: <AlertTriangle size={18}/>, tint: 'text-red-400',    bg: 'bg-red-500/15',     value: chatKpis?.data?.unanswered?.value ?? 0, sub: chatKpis?.data?.unanswered?.detail },
-            { key: 'ai_handled',  label: t('analytics.chat.ai_handled_today', 'AI handled today'), icon: <Bot size={18} />,  tint: 'text-purple-400',  bg: 'bg-purple-500/15',  value: chatKpis?.data?.ai_handled?.value ?? 0, sub: chatKpis?.data?.ai_handled?.detail },
-          ].map(c => (
-            <Card key={c.key}>
-              <div className="flex items-start justify-between mb-3">
-                <span className="text-[11px] uppercase tracking-wider text-t-secondary">{c.label}</span>
-                <div className={`p-2 rounded-lg ${c.bg} ${c.tint}`}>{c.icon}</div>
-              </div>
-              <p className="text-3xl font-bold text-white tabular-nums">{Number(c.value).toLocaleString()}</p>
-              {c.sub && <p className="text-xs text-t-secondary mt-1">{c.sub}</p>}
-            </Card>
-          ))}
-            <div className="md:col-span-2 xl:col-span-4 text-xs text-t-secondary">
-              <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
-            </div>
+          {/* The four small KPI tiles (Online now / Leads / Unanswered /
+              AI handled today) were removed per user request — they
+              read as operational, not analytical. Engagement feed is
+              still one click away. */}
+          <div className="text-xs text-t-secondary">
+            <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
           </div>
 
           {/* AI cost trend — combined cost (filled area) + call count
