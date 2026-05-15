@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Line, ComposedChart, Legend,
 } from 'recharts'
 import { api } from '../lib/api'
 import {
-  MessageSquare, UserCheck, Bot, Users, ArrowUpRight,
-  Clock, Globe, LayoutList, TrendingUp,
+  MessageSquare, UserCheck, Bot, Users, ArrowUpRight, ArrowDownRight,
+  Clock, Globe, LayoutList, TrendingUp, CalendarDays, Tags, Filter as FilterIcon,
 } from 'lucide-react'
 
 const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 10, color: '#fff' }
@@ -29,30 +30,57 @@ interface Overview {
   avg_messages: number
   ai_resolution_rate: number
   lead_conversion_rate: number
+  human_escalation_rate: number
 }
-interface TrendPoint  { date: string; count: number }
+interface TrendPoint  { date: string; count: number; prevCount: number }
 interface HourlyPoint { hour: number; label: string; count: number }
-interface PageRow      { page_url: string; count: number }
-interface CountryRow   { country: string; count: number }
+interface WeekdayPoint{ dow: number; label: string; count: number }
+interface PageRow     { page_url: string; count: number }
+interface CountryRow  { country: string; count: number }
+interface IntentRow   { intent: string; count: number }
+interface FunnelRow   { stage: string; count: number }
 interface Analytics {
   overview: Overview
+  previous_overview: Overview
+  period_days: number
   trend: TrendPoint[]
   status_breakdown: Record<string, number>
   top_pages: PageRow[]
   top_countries: CountryRow[]
   hourly_distribution: HourlyPoint[]
+  weekday_distribution: WeekdayPoint[]
+  intent_breakdown: IntentRow[]
+  funnel: FunnelRow[]
+}
+
+/** % delta vs previous period — pct + direction tone for display. */
+function deltaOf(curr: number, prev: number): { pct: number; positive: boolean } | null {
+  if (prev === 0 && curr === 0) return null
+  if (prev === 0) return { pct: 100, positive: curr > 0 }
+  const pct = Math.round(((curr - prev) / prev) * 100)
+  return { pct: Math.abs(pct), positive: curr >= prev }
 }
 
 function StatCard({
-  icon: Icon, label, value, sub, color = 'text-primary-400',
-}: { icon: any; label: string; value: string | number; sub?: string; color?: string }) {
+  icon: Icon, label, value, sub, color = 'text-primary-400', delta,
+}: {
+  icon: any; label: string; value: string | number; sub?: string; color?: string
+  delta?: { pct: number; positive: boolean } | null
+}) {
   return (
     <div className="bg-dark-card border border-dark-border rounded-xl p-4">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-t-secondary mb-1">{label}</p>
           <p className={`text-2xl font-bold ${color}`}>{value}</p>
-          {sub && <p className="text-xs text-t-secondary mt-0.5">{sub}</p>}
+          {delta && (
+            <p className={`text-[11px] font-semibold mt-0.5 inline-flex items-center gap-0.5 ${delta.positive ? 'text-emerald-400' : 'text-red-400'}`}>
+              {delta.positive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+              {delta.pct}%
+              <span className="text-t-secondary font-normal ml-1">vs prev</span>
+            </p>
+          )}
+          {!delta && sub && <p className="text-xs text-t-secondary mt-0.5">{sub}</p>}
         </div>
         <div className="p-2 bg-dark-hover rounded-lg">
           <Icon size={18} className={color} />
@@ -72,6 +100,18 @@ function shortUrl(url: string): string {
   }
 }
 
+// 7 canonical intents + fallback. Keep in sync with intentMeta.ts.
+const INTENT_LABELS: Record<string, string> = {
+  booking_inquiry: 'Booking',
+  info_request:    'Info',
+  complaint:       'Complaint',
+  cancellation:    'Cancellation',
+  support:         'Support',
+  spam:            'Spam',
+  other:           'Other',
+  untagged:        'Untagged',
+}
+
 export function ChatbotAnalytics() {
   const { t } = useTranslation()
   const [days, setDays] = useState(30)
@@ -82,9 +122,20 @@ export function ChatbotAnalytics() {
   })
 
   const ov = data?.overview
+  const prev = data?.previous_overview
   const statusData = data
     ? Object.entries(data.status_breakdown).map(([name, value]) => ({ name, value }))
     : []
+
+  // Build the funnel widths off the top stage so each row's bar is
+  // proportionate to the entry point of the funnel.
+  const funnelTop = data?.funnel?.[0]?.count ?? 0
+  const funnelLabels: Record<string, string> = {
+    conversations: t('chatbot_analytics.funnel.conversations', 'Conversations'),
+    engaged:       t('chatbot_analytics.funnel.engaged', 'Engaged (sent message)'),
+    with_contact:  t('chatbot_analytics.funnel.with_contact', 'Shared contact'),
+    lead_captured: t('chatbot_analytics.funnel.lead_captured', 'Lead captured'),
+  }
 
   return (
     <div className="space-y-5">
@@ -110,27 +161,71 @@ export function ChatbotAnalytics() {
         <div className="text-center text-t-secondary py-12">{t('chatbot_analytics.no_data', 'No data available')}</div>
       ) : (
         <>
-          {/* KPI Cards */}
+          {/* KPI Cards — each card carries a vs-previous-period delta */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <StatCard icon={MessageSquare} label={t('chatbot_analytics.kpis.total_conversations', 'Total Conversations')} value={ov!.total_conversations} color="text-blue-400" />
-            <StatCard icon={UserCheck}    label={t('chatbot_analytics.kpis.leads_captured', 'Leads Captured')}      value={ov!.leads_captured}
-              sub={t('chatbot_analytics.kpis.conversion_sub', { rate: ov!.lead_conversion_rate, defaultValue: '{{rate}}% conversion' })} color="text-green-400" />
-            <StatCard icon={Bot}          label={t('chatbot_analytics.kpis.ai_resolved', 'AI Resolved')}         value={ov!.ai_resolved}
-              sub={t('chatbot_analytics.kpis.rate_sub', { rate: ov!.ai_resolution_rate, defaultValue: '{{rate}}% rate' })} color="text-purple-400" />
-            <StatCard icon={Users}        label={t('chatbot_analytics.kpis.escalated', 'Escalated to Human')}  value={ov!.human_escalated} color="text-amber-400" />
-            <StatCard icon={TrendingUp}   label={t('chatbot_analytics.kpis.avg_messages', 'Avg Messages / Chat')} value={ov!.avg_messages} color="text-cyan-400" />
-            <StatCard icon={ArrowUpRight} label={t('chatbot_analytics.kpis.lead_conversion', 'Lead Conversion')}     value={`${ov!.lead_conversion_rate}%`} color="text-emerald-400" />
-            <StatCard icon={Bot}          label={t('chatbot_analytics.kpis.ai_resolution_rate', 'AI Resolution Rate')}  value={`${ov!.ai_resolution_rate}%`} color="text-indigo-400" />
-            <StatCard icon={ArrowUpRight} label={t('chatbot_analytics.kpis.human_escalation_rate', 'Human Escalation Rate')}
-              value={ov!.total_conversations > 0 ? `${Math.round((ov!.human_escalated / ov!.total_conversations) * 100)}%` : '0%'}
-              color="text-rose-400" />
+            <StatCard icon={MessageSquare} color="text-blue-400"    label={t('chatbot_analytics.kpis.total_conversations', 'Total Conversations')} value={ov!.total_conversations}
+              delta={deltaOf(ov!.total_conversations, prev!.total_conversations)} />
+            <StatCard icon={UserCheck}     color="text-green-400"   label={t('chatbot_analytics.kpis.leads_captured', 'Leads Captured')} value={ov!.leads_captured}
+              delta={deltaOf(ov!.leads_captured, prev!.leads_captured)} />
+            <StatCard icon={Bot}           color="text-purple-400"  label={t('chatbot_analytics.kpis.ai_resolved', 'AI Resolved')} value={ov!.ai_resolved}
+              delta={deltaOf(ov!.ai_resolved, prev!.ai_resolved)} />
+            <StatCard icon={Users}         color="text-amber-400"   label={t('chatbot_analytics.kpis.escalated', 'Escalated to Human')} value={ov!.human_escalated}
+              delta={deltaOf(ov!.human_escalated, prev!.human_escalated)} />
+            <StatCard icon={TrendingUp}    color="text-cyan-400"    label={t('chatbot_analytics.kpis.avg_messages', 'Avg Messages / Chat')} value={ov!.avg_messages}
+              delta={deltaOf(ov!.avg_messages, prev!.avg_messages)} />
+            <StatCard icon={ArrowUpRight}  color="text-emerald-400" label={t('chatbot_analytics.kpis.lead_conversion', 'Lead Conversion')} value={`${ov!.lead_conversion_rate}%`}
+              delta={deltaOf(ov!.lead_conversion_rate, prev!.lead_conversion_rate)} />
+            <StatCard icon={Bot}           color="text-indigo-400"  label={t('chatbot_analytics.kpis.ai_resolution_rate', 'AI Resolution Rate')} value={`${ov!.ai_resolution_rate}%`}
+              delta={deltaOf(ov!.ai_resolution_rate, prev!.ai_resolution_rate)} />
+            <StatCard icon={ArrowUpRight}  color="text-rose-400"    label={t('chatbot_analytics.kpis.human_escalation_rate', 'Human Escalation Rate')} value={`${ov!.human_escalation_rate}%`}
+              delta={deltaOf(ov!.human_escalation_rate, prev!.human_escalation_rate)} />
           </div>
 
-          {/* Conversation Trend */}
+          {/* Lead Funnel */}
           <div className="bg-dark-card border border-dark-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">{t('chatbot_analytics.trend_title', 'Conversation Trend')}</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={data.trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <div className="flex items-center gap-2 mb-4">
+              <FilterIcon size={14} className="text-t-secondary" />
+              <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.funnel_title', 'Lead Capture Funnel')}</h3>
+            </div>
+            {funnelTop > 0 ? (
+              <div className="space-y-2">
+                {data.funnel.map((row, i) => {
+                  const prevCount = i > 0 ? data.funnel[i - 1].count : row.count
+                  const pct = funnelTop > 0 ? Math.round((row.count / funnelTop) * 100) : 0
+                  const dropFromPrev = prevCount > 0 ? Math.round((row.count / prevCount) * 100) : 100
+                  return (
+                    <div key={row.stage} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white font-medium">{funnelLabels[row.stage] ?? row.stage}</span>
+                        <span className="flex items-center gap-3">
+                          <span className="text-white font-bold tabular-nums">{row.count.toLocaleString()}</span>
+                          <span className="text-t-secondary tabular-nums w-12 text-right">{pct}%</span>
+                          {i > 0 && <span className={`text-[10px] tabular-nums w-12 text-right ${dropFromPrev >= 80 ? 'text-emerald-400' : dropFromPrev >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                            {dropFromPrev}%
+                          </span>}
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-dark-hover rounded-full overflow-hidden">
+                        <div className="h-full rounded-full"
+                          style={{ width: `${pct}%`, background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-t-secondary text-sm py-4 text-center">{t('chatbot_analytics.no_funnel', 'No conversations to funnel yet')}</p>
+            )}
+          </div>
+
+          {/* Conversation Trend — current period with previous-period overlay */}
+          <div className="bg-dark-card border border-dark-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-4">
+              {t('chatbot_analytics.trend_title', 'Conversation Trend')}
+              <span className="text-[10px] text-t-secondary font-normal ml-2">{t('chatbot_analytics.vs_previous', 'vs previous period')}</span>
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={data.trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
@@ -142,13 +237,16 @@ export function ChatbotAnalytics() {
                   tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
                 <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={{ color: '#8e8e93' }} />
-                <Area type="monotone" dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')}
+                <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                <Area type="monotone" dataKey="count" name={t('chatbot_analytics.series.current', 'Current')}
                   stroke="#3b82f6" fill="url(#convGrad)" strokeWidth={2} dot={false} />
-              </AreaChart>
+                <Line type="monotone" dataKey="prevCount" name={t('chatbot_analytics.series.previous', 'Previous')}
+                  stroke="#8e8e93" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Row: Hourly distribution + Status breakdown */}
+          {/* Row: Hourly + Weekday */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-4">
@@ -158,8 +256,7 @@ export function ChatbotAnalytics() {
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={data.hourly_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                  <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#8e8e93' }}
-                    interval={3} />
+                  <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#8e8e93' }} interval={3} />
                   <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
                   <Tooltip contentStyle={CHART_TOOLTIP} />
                   <Bar dataKey="count" name={t('chatbot_analytics.series.messages', 'Messages')} fill="#6366f1" radius={[3, 3, 0, 0]} />
@@ -167,6 +264,25 @@ export function ChatbotAnalytics() {
               </ResponsiveContainer>
             </div>
 
+            <div className="bg-dark-card border border-dark-border rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarDays size={14} className="text-t-secondary" />
+                <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.weekday', 'Day-of-Week Activity')}</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={data.weekday_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Bar dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')} fill="#22c55e" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Row: Status breakdown + Intent breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">{t('chatbot_analytics.status_breakdown', 'Status Breakdown')}</h3>
               {statusData.length > 0 ? (
@@ -196,6 +312,41 @@ export function ChatbotAnalytics() {
                 </div>
               ) : (
                 <p className="text-t-secondary text-sm py-8 text-center">{t('chatbot_analytics.no_conversations', 'No conversations yet')}</p>
+              )}
+            </div>
+
+            <div className="bg-dark-card border border-dark-border rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Tags size={14} className="text-t-secondary" />
+                <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.intent_breakdown', 'Intent Breakdown')}</h3>
+              </div>
+              {data.intent_breakdown.length > 0 ? (
+                <div className="flex items-center gap-4">
+                  <ResponsiveContainer width="50%" height={160}>
+                    <PieChart>
+                      <Pie data={data.intent_breakdown} dataKey="count" nameKey="intent"
+                        cx="50%" cy="50%" outerRadius={65} innerRadius={35}>
+                        {data.intent_breakdown.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any, _n, p) => [v, INTENT_LABELS[p.payload.intent] ?? p.payload.intent]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-2">
+                    {data.intent_breakdown.map((r, i) => (
+                      <div key={r.intent} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="text-t-secondary">{INTENT_LABELS[r.intent] ?? r.intent}</span>
+                        </span>
+                        <span className="text-white font-medium">{r.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-t-secondary text-sm py-8 text-center">{t('chatbot_analytics.no_intents', 'No intent data yet')}</p>
               )}
             </div>
           </div>
