@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon, ListChecks } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon, ListChecks, Pencil } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
@@ -742,12 +742,12 @@ export function Inquiries() {
                           explicitly so staff can spot rows that need
                           enrichment from the chat dialog. */}
                       {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) ? (
-                        <div className="mt-2">
-                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} />
+                        <div className="mt-1.5">
+                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
                         </div>
                       ) : (
-                        <div className="mt-2 text-[10px] text-gray-700 italic">
-                          {t('inquiries.row.no_contacts', 'No contact info yet — open the chat conversation to capture')}
+                        <div className="mt-1.5 text-[10px] text-gray-700 italic">
+                          {t('inquiries.row.no_contacts', 'No contact info yet')}
                         </div>
                       )}
                     </td>
@@ -834,43 +834,21 @@ export function Inquiries() {
 
                     {fieldCfg.list.next_task && (
                       <td className="px-4 py-3">
-                        {inq.next_task_type && !inq.next_task_completed ? (
-                          <button
-                            type="button"
-                            onClick={() => setTaskDrawer({ inquiryId: inq.id, task: {
-                              id: 0,
-                              inquiry_id: inq.id,
-                              title: inq.next_task_type,
-                              due_at: inq.next_task_due,
-                              notes: inq.next_task_notes,
-                            } })}
-                            title={t('inquiries.table.click_to_edit_task', 'Click to edit task')}
-                            className={`group flex items-center gap-1 px-2 py-1 -mx-2 -my-1 rounded-lg hover:bg-white/[0.04] transition-colors text-left ${isOverdue ? 'text-red-300' : 'text-gray-300'}`}
-                          >
-                            {isOverdue && <AlertCircle size={11} className="text-red-400 flex-shrink-0" />}
-                            <div>
-                              <div className="text-xs whitespace-nowrap group-hover:underline">{inq.next_task_type}</div>
-                              {inq.next_task_due && <div className={`text-[10px] ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
-                            </div>
-                          </button>
-                        ) : inq.next_task_completed ? (
-                          <button
-                            type="button"
-                            onClick={() => setTaskDrawer({ inquiryId: inq.id })}
-                            className="text-xs text-green-400 hover:underline inline-flex items-center gap-1"
-                          >
-                            <CheckCircle2 size={10} /> {t('inquiries.table.task_done', 'Done')}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setTaskDrawer({ inquiryId: inq.id })}
-                            title={t('inquiries.table.click_to_add_task', 'Add task')}
-                            className="text-[11px] text-[#636366] hover:text-primary-400 inline-flex items-center gap-1"
-                          >
-                            <Plus size={10} /> {t('inquiries.table.add_task', 'Add')}
-                          </button>
-                        )}
+                        <NextTaskCard
+                          inquiry={inq}
+                          isOverdue={isOverdue}
+                          onAdd={() => setTaskDrawer({ inquiryId: inq.id })}
+                          onEdit={() => setTaskDrawer({ inquiryId: inq.id, task: {
+                            id: 0,
+                            inquiry_id: inq.id,
+                            title: inq.next_task_type,
+                            due_at: inq.next_task_due,
+                            notes: inq.next_task_notes,
+                          } })}
+                          onComplete={() => completeMutation.mutate(inq.id)}
+                          onCancel={() => cancelNextTaskMutation.mutate(inq.id)}
+                          t={t}
+                        />
                       </td>
                     )}
 
@@ -1646,6 +1624,100 @@ export function Inquiries() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * Compact next-task card for the leads list. Renders three states:
+ *   - Active task → title + due chip + Done / Edit / Cancel icon buttons
+ *   - Completed   → green badge + "Add another" hint
+ *   - Empty       → "+ Add task" placeholder
+ *
+ * Due date is normalised to a human "Today / Tomorrow / Mar 15 / Overdue"
+ * label so the raw ISO `2026-05-15T00:00:00.000000Z` never reaches the
+ * user. Icons replace the verb labels for a tighter row.
+ */
+function NextTaskCard({
+  inquiry: inq,
+  isOverdue,
+  onAdd, onEdit, onComplete, onCancel,
+  t,
+}: {
+  inquiry: any
+  isOverdue: boolean
+  onAdd: () => void
+  onEdit: () => void
+  onComplete: () => void
+  onCancel: () => void
+  t: any
+}) {
+  if (inq.next_task_completed) {
+    return (
+      <div className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <CheckCircle2 size={10} /> {t('inquiries.table.task_done', 'Done')}
+        </span>
+        <button type="button" onClick={onAdd}
+          className="text-[10px] text-[#636366] hover:text-primary-400 inline-flex items-center gap-1">
+          <Plus size={10} /> {t('inquiries.table.add_another', 'Add another')}
+        </button>
+      </div>
+    )
+  }
+  if (!inq.next_task_type) {
+    return (
+      <button type="button" onClick={onAdd}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-dark-border text-[11px] text-[#636366] hover:text-primary-400 hover:border-primary-500/50 transition-colors">
+        <Plus size={11} /> {t('inquiries.table.add_task', 'Add task')}
+      </button>
+    )
+  }
+
+  const due = inq.next_task_due ? new Date(inq.next_task_due) : null
+  let dueLabel: string | null = null
+  if (due && !isNaN(due.getTime())) {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const d2 = new Date(due); d2.setHours(0, 0, 0, 0)
+    const diffDays = Math.round((d2.getTime() - today.getTime()) / 86_400_000)
+    if (diffDays < 0)      dueLabel = t('inquiries.table.due_overdue', 'Overdue')
+    else if (diffDays === 0) dueLabel = t('inquiries.table.due_today', 'Today')
+    else if (diffDays === 1) dueLabel = t('inquiries.table.due_tomorrow', 'Tomorrow')
+    else if (diffDays < 7)   dueLabel = due.toLocaleDateString(undefined, { weekday: 'short' })
+    else                     dueLabel = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
+
+  return (
+    <div className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1.5 ${isOverdue ? 'border-red-500/30 bg-red-500/[0.06]' : 'border-dark-border bg-white/[0.02]'}`}>
+      <div className="min-w-0">
+        <button type="button" onClick={onEdit}
+          className="text-xs font-medium text-white hover:text-primary-400 truncate text-left block max-w-[160px]"
+          title={inq.next_task_type}>
+          {inq.next_task_type}
+        </button>
+        {dueLabel && (
+          <div className={`text-[10px] font-semibold ${isOverdue ? 'text-red-400' : 'text-[#9a9aa0]'}`}>
+            {dueLabel}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-0.5 pl-1 border-l border-dark-border">
+        <button type="button" onClick={onComplete}
+          title={t('inquiries.table.mark_done', 'Mark done')}
+          className="p-1 rounded hover:bg-emerald-500/15 text-emerald-400 transition-colors">
+          <CheckCircle2 size={12} />
+        </button>
+        <button type="button" onClick={onEdit}
+          title={t('inquiries.table.edit_task', 'Edit task')}
+          className="p-1 rounded hover:bg-primary-500/15 text-primary-400 transition-colors">
+          <Pencil size={11} />
+        </button>
+        <button type="button" onClick={onCancel}
+          title={t('inquiries.table.cancel_task', 'Cancel task')}
+          className="p-1 rounded hover:bg-red-500/15 text-red-400 transition-colors">
+          <XIcon size={12} />
+        </button>
+      </div>
     </div>
   )
 }
