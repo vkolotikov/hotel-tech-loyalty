@@ -1,4 +1,4 @@
-import { Phone, Mail, MessageSquare, MessageCircle } from 'lucide-react'
+import { Phone, Mail, MessageCircle } from 'lucide-react'
 
 interface Props {
   email?: string | null
@@ -30,7 +30,6 @@ export function ContactActions({ email, phone, whatsapp, compact = false }: Prop
   }
   if (phoneDigits) {
     items.push({ key: 'call', href: `tel:${phoneDigits}`, label: 'Call', icon: Phone, tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/25' })
-    items.push({ key: 'sms', href: `sms:${phoneDigits}`, label: 'SMS', icon: MessageSquare, tone: 'bg-violet-500/15 text-violet-300 border-violet-500/25 hover:bg-violet-500/25' })
   }
   if (waDigits) {
     items.push({ key: 'whatsapp', href: `https://wa.me/${waDigits}`, label: 'WhatsApp', icon: MessageCircle, tone: 'bg-[#25D366]/15 text-[#25D366] border-[#25D366]/25 hover:bg-[#25D366]/25', ext: true })

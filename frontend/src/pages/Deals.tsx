@@ -7,19 +7,24 @@ import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import {
   Package, Download, Upload, Plus, ChevronLeft, ChevronRight, ChevronDown,
-  CreditCard, Palette, FileImage, Factory, Truck, CheckCircle2, MoreHorizontal,
+  CreditCard, Settings2, PlayCircle, Eye, PackageCheck, CheckCircle2, MoreHorizontal,
   Mail, Phone, AlertTriangle,
 } from 'lucide-react'
 
 // 5 active stages + completed terminal. Order matters: drives the
 // progress-bar segmentation on each row.
+//
+// Backend keys are kept stable for historical rows; the user-facing
+// labels are intentionally generic so the same pipeline can fit
+// hotels, agencies, manufacturing, services, etc. A future Settings
+// → Deals tab will let admins rename each label per-org.
 const STAGES = [
-  { key: 'payment_pending', label: 'Payment Pending', color: '#f59e0b', icon: CreditCard },
-  { key: 'design_needed',   label: 'Design Needed',   color: '#a855f7', icon: Palette },
-  { key: 'design_sent',     label: 'Design Sent',     color: '#3b82f6', icon: FileImage },
-  { key: 'in_production',   label: 'In Production',   color: '#0ea5e9', icon: Factory },
-  { key: 'ready_to_ship',   label: 'Ready to Ship',   color: '#10b981', icon: Truck },
-  { key: 'completed',       label: 'Completed',       color: '#22c55e', icon: CheckCircle2 },
+  { key: 'payment_pending', label: 'Awaiting Payment', color: '#f59e0b', icon: CreditCard },
+  { key: 'design_needed',   label: 'Preparation',      color: '#a855f7', icon: Settings2 },
+  { key: 'design_sent',     label: 'Review',           color: '#3b82f6', icon: Eye },
+  { key: 'in_production',   label: 'In Progress',      color: '#0ea5e9', icon: PlayCircle },
+  { key: 'ready_to_ship',   label: 'Ready',            color: '#10b981', icon: PackageCheck },
+  { key: 'completed',       label: 'Completed',        color: '#22c55e', icon: CheckCircle2 },
 ] as const
 
 // Map stage key → color/label/icon for cell rendering.
@@ -181,9 +186,9 @@ export function Deals() {
           {[
             { key: 'total',  label: t('deals.kpis.total', 'Total Deals'),                value: kpis.total ?? 0, sub: t('deals.kpis.all_active', 'All active deals'), tint: 'text-blue-400',   bg: 'bg-blue-500/15',   icon: Package },
             { key: 'await',  label: t('deals.kpis.awaiting_payment', 'Awaiting Payment'), value: kpis.awaiting_payment?.count ?? 0, sub: currency(kpis.awaiting_payment?.value), tint: 'text-amber-400',  bg: 'bg-amber-500/15',  icon: CreditCard },
-            { key: 'design', label: t('deals.kpis.design_needed', 'Design Needed'),      value: kpis.design_needed?.count ?? 0,    sub: currency(kpis.design_needed?.value),    tint: 'text-purple-400', bg: 'bg-purple-500/15', icon: Palette },
-            { key: 'prod',   label: t('deals.kpis.in_production', 'In Production'),      value: kpis.in_production?.count ?? 0,    sub: currency(kpis.in_production?.value),    tint: 'text-sky-400',    bg: 'bg-sky-500/15',    icon: Factory },
-            { key: 'ship',   label: t('deals.kpis.ready_to_ship', 'Ready to Ship'),      value: kpis.ready_to_ship?.count ?? 0,    sub: currency(kpis.ready_to_ship?.value),    tint: 'text-emerald-400', bg: 'bg-emerald-500/15', icon: Truck },
+            { key: 'design', label: t('deals.kpis.preparation', 'Preparation'),          value: kpis.design_needed?.count ?? 0,    sub: currency(kpis.design_needed?.value),    tint: 'text-purple-400', bg: 'bg-purple-500/15', icon: Settings2 },
+            { key: 'prod',   label: t('deals.kpis.in_progress', 'In Progress'),          value: kpis.in_production?.count ?? 0,    sub: currency(kpis.in_production?.value),    tint: 'text-sky-400',    bg: 'bg-sky-500/15',    icon: PlayCircle },
+            { key: 'ship',   label: t('deals.kpis.ready', 'Ready'),                      value: kpis.ready_to_ship?.count ?? 0,    sub: currency(kpis.ready_to_ship?.value),    tint: 'text-emerald-400', bg: 'bg-emerald-500/15', icon: PackageCheck },
             { key: 'done',   label: t('deals.kpis.completed_month', 'Completed This Month'), value: kpis.completed_month?.count ?? 0, sub: currency(kpis.completed_month?.value), tint: 'text-green-400',  bg: 'bg-green-500/15', icon: CheckCircle2 },
           ].map(card => {
             const Icon = card.icon
@@ -207,8 +212,8 @@ export function Deals() {
           {([
             { key: 'all' as FilterKey,             label: t('deals.filters.all', 'All'),                     count: kpis?.total ?? 0 },
             { key: 'payment_pending' as FilterKey, label: t('deals.filters.awaiting_payment', 'Awaiting Payment'), count: kpis?.awaiting_payment?.count ?? 0 },
-            { key: 'design_needed' as FilterKey,   label: t('deals.filters.design_needed', 'Design Needed'), count: kpis?.design_needed?.count ?? 0 },
-            { key: 'in_production' as FilterKey,   label: t('deals.filters.in_production', 'In Production'), count: kpis?.in_production?.count ?? 0 },
+            { key: 'design_needed' as FilterKey,   label: t('deals.filters.preparation', 'Preparation'),     count: kpis?.design_needed?.count ?? 0 },
+            { key: 'in_production' as FilterKey,   label: t('deals.filters.in_progress', 'In Progress'),     count: kpis?.in_production?.count ?? 0 },
             { key: 'overdue' as FilterKey,         label: t('deals.filters.overdue', 'Overdue'),             count: null, tone: 'red' },
             { key: 'high_value' as FilterKey,      label: t('deals.filters.high_value', 'High Value'),       count: null, tone: 'emerald' },
           ]).map(p => {
@@ -241,10 +246,14 @@ export function Deals() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      {/* Table — outer wrapper keeps the rounded border via clip-path
+          rather than overflow-hidden, so the stage/payment dropdowns
+          (absolute-positioned inside the table) don't get clipped on
+          the right edge. Inner div handles horizontal scrolling on
+          narrow viewports. */}
+      <div className="bg-dark-surface border border-dark-border rounded-xl">
+        <div className="overflow-x-auto rounded-xl">
+          <table className="w-full text-sm min-w-[1100px]">
             <thead>
               <tr className="border-b border-dark-border">
                 <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.deal_customer', 'Deal / Customer')}</th>

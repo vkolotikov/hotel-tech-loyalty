@@ -424,38 +424,33 @@ export function Inquiries() {
         </div>
       </div>
 
-      {/* KPI headline strip — 5 numbers with deltas that staff care
-          about at-a-glance. Renders only once the kpis query lands;
-          while loading we fall through to the existing layout so the
-          page never jumps around. */}
+      {/* Compact KPI strip — 5 numbers in a single horizontal bar. The
+          old card-grid version ate too much vertical space above the
+          table; richer analytics live on /reports. Wraps on narrow
+          screens. */}
       {kpis && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+        <div className="bg-dark-surface border border-dark-border rounded-xl px-3 py-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           {[
-            { key: 'total',     label: t('inquiries.kpis.total', 'Total Leads'),       value: (kpis.total ?? 0).toLocaleString(),                                                                                  sub: kpis.total_delta_pct != null ? { pct: kpis.total_delta_pct, suffix: t('inquiries.kpis.vs_last_month', 'vs last month') } : null,                                  icon: <UsersIcon size={18} />,      tint: 'text-blue-400',     bg: 'bg-blue-500/15' },
-            { key: 'due_today', label: t('inquiries.kpis.due_today', 'Due Today'),     value: (kpis.due_today ?? 0).toLocaleString(),                                                                              sub: kpis.due_today > 0 ? { text: t('inquiries.kpis.urgent_followups', 'Urgent follow-ups') } : { text: t('inquiries.kpis.no_followups', 'Nothing due today') },         icon: <Clock size={18} />,          tint: 'text-amber-400',    bg: 'bg-amber-500/15' },
-            { key: 'overdue',   label: t('inquiries.kpis.overdue', 'Overdue'),         value: (kpis.overdue ?? 0).toLocaleString(),                                                                                sub: kpis.overdue > 0 ? { text: t('inquiries.kpis.needs_attention', 'Needs attention') } : { text: t('inquiries.kpis.all_caught_up', 'All caught up') },                icon: <AlertTriangle size={18} />,  tint: 'text-red-400',      bg: 'bg-red-500/15' },
-            { key: 'value',     label: t('inquiries.kpis.est_value', 'Estimated Value'), value: `${settings.currency_symbol}${(kpis.estimated_value ?? 0).toLocaleString()}`,                                       sub: { text: t('inquiries.kpis.total_pipeline_value', 'Total pipeline value') },                                                                                       icon: <DollarSign size={18} />,     tint: 'text-emerald-400',  bg: 'bg-emerald-500/15' },
-            { key: 'new_week',  label: t('inquiries.kpis.new_this_week', 'New This Week'), value: (kpis.new_this_week ?? 0).toLocaleString(),                                                                        sub: kpis.new_delta_pct != null ? { pct: kpis.new_delta_pct, suffix: t('inquiries.kpis.vs_last_week', 'vs last week') } : null,                                       icon: <Sparkles size={18} />,       tint: 'text-purple-400',   bg: 'bg-purple-500/15' },
-          ].map(card => (
-            <div key={card.key} className="bg-dark-surface rounded-xl border border-dark-border p-4">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-[11px] uppercase tracking-wider text-t-secondary">{card.label}</span>
-                <div className={`p-1.5 rounded-lg ${card.bg} ${card.tint}`}>{card.icon}</div>
-              </div>
-              <p className="text-2xl font-bold text-white tabular-nums">{card.value}</p>
-              {card.sub && (
-                'pct' in card.sub ? (
-                  <div className={`flex items-center gap-1 text-[11px] mt-1 ${card.sub.pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {card.sub.pct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                    <span className="font-semibold">{Math.abs(card.sub.pct)}%</span>
-                    <span className="text-t-secondary">{card.sub.suffix}</span>
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-t-secondary mt-1">{card.sub.text}</p>
-                )
+            { key: 'total',     label: t('inquiries.kpis.total', 'Total'),                value: (kpis.total ?? 0).toLocaleString(),                                                                                  delta: kpis.total_delta_pct,                                          icon: <UsersIcon size={14} />,      tint: 'text-blue-400' },
+            { key: 'due_today', label: t('inquiries.kpis.due_today', 'Due Today'),        value: (kpis.due_today ?? 0).toLocaleString(),                                                                              delta: null,                                                          icon: <Clock size={14} />,          tint: 'text-amber-400' },
+            { key: 'overdue',   label: t('inquiries.kpis.overdue', 'Overdue'),            value: (kpis.overdue ?? 0).toLocaleString(),                                                                                delta: null,                                                          icon: <AlertTriangle size={14} />,  tint: (kpis.overdue ?? 0) > 0 ? 'text-red-400' : 'text-gray-500' },
+            { key: 'value',     label: t('inquiries.kpis.est_value', 'Value'),            value: `${settings.currency_symbol}${(kpis.estimated_value ?? 0).toLocaleString()}`,                                       delta: null,                                                          icon: <DollarSign size={14} />,     tint: 'text-emerald-400' },
+            { key: 'new_week',  label: t('inquiries.kpis.new_this_week', 'New / week'),   value: (kpis.new_this_week ?? 0).toLocaleString(),                                                                          delta: kpis.new_delta_pct,                                            icon: <Sparkles size={14} />,       tint: 'text-purple-400' },
+          ].map((m, i) => (
+            <div key={m.key} className={`flex items-center gap-2 ${i > 0 ? 'border-l border-dark-border pl-5' : ''}`}>
+              <span className={m.tint}>{m.icon}</span>
+              <span className="text-[11px] uppercase tracking-wide text-t-secondary">{m.label}</span>
+              <span className="font-bold text-white tabular-nums">{m.value}</span>
+              {m.delta != null && (
+                <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${m.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {m.delta >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}{Math.abs(m.delta)}%
+                </span>
               )}
             </div>
           ))}
+          <Link to="/reports" className="ml-auto text-[11px] text-primary-400 hover:text-primary-300 hover:underline whitespace-nowrap">
+            {t('inquiries.kpis.full_report', 'Full report →')}
+          </Link>
         </div>
       )}
 
