@@ -492,17 +492,16 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
 
   const flag = r.country ? countryFlag(r.country) : null
   const isAnonymous = /^Anonymous(\s|$)/i.test(r.effective_name)
-  // Lead line for anonymous rows: prefer the city when available,
-  // falling back to country, then IP. We display "City, Country" as
-  // a distinct location chip on every row regardless of anonymity, so
-  // staff can scan geography at a glance.
-  const anonHeadline = r.city || r.country || r.visitor_ip || 'Unknown'
-  // "Riga, Latvia" / "Latvia" / null — used by the location chip.
+  // "Riga, Latvia" / "Latvia" / "Riga" / null — used as both the
+  // anonymous headline and the named-row location chip.
   const locationLabel =
     r.city && r.country ? `${r.city}, ${r.country}` :
     r.country ? r.country :
     r.city ? r.city :
     null
+  // Anonymous headline: show the full City, Country pair when both
+  // exist (was just city). Falls back to IP, then "Unknown".
+  const anonHeadline = locationLabel ?? r.visitor_ip ?? 'Unknown'
 
   return (
     <button
@@ -531,6 +530,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
           <div className="flex items-center gap-2 flex-wrap">
             {isAnonymous ? (
               <>
+                {flag && <span className="text-[13px] leading-none" title={r.country ?? undefined}>{flag}</span>}
                 <span className="font-semibold text-sm text-white truncate">{anonHeadline}</span>
                 <span className="text-[10px] uppercase tracking-wide text-t-secondary/70 font-medium">{t('engagement.row.anon', 'Anonymous')}</span>
               </>

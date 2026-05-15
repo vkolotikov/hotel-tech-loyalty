@@ -231,7 +231,14 @@ class EngagementFeedService
                 });
                 break;
             case 'active_chat':
-                $query->whereHas('conversations', fn ($q) => $q->whereIn('status', ['active', 'waiting']));
+                // A chat only counts as "active" once the visitor has
+                // actually sent at least one message. Without this the
+                // tab fills with empty conversations created by the
+                // widget on page-load (greeter only), which is what
+                // the user reported as "empty chats in this tab".
+                $query->whereHas('conversations', fn ($q) => $q
+                    ->whereIn('status', ['active', 'waiting'])
+                    ->whereHas('messages', fn ($m) => $m->where('sender_type', 'visitor')));
                 break;
             case 'hot_lead':
                 // Hot lead = signals strong enough that an agent should look NOW.
@@ -269,11 +276,39 @@ class EngagementFeedService
                 $query->whereHas('conversations', fn ($q) => $q->where('status', 'resolved'));
                 break;
             case 'priority':
+                // "Priority" = rows the agent actually needs to look at.
+                // Tightened (was matching every online anonymous browser).
+                // A visitor is priority when ANY of:
+                //   - captured contact (email / phone / is_lead)
+                //   - active or waiting conversation WITH a visitor message
+                //   - online AND on a booking/rooms/services page
+                // Anonymous online drifters on the homepage no longer
+                // surface here — they're still reachable via Online /
+                // Anonymous filters.
+                $query->where(function ($q) use ($threshold) {
+                    $q->where(function ($qq) {
+                        $qq->whereNotNull('email')
+                           ->orWhereNotNull('phone')
+                           ->orWhere('is_lead', true);
+                    })
+                    ->orWhereHas('conversations', fn ($c) => $c
+                        ->whereIn('status', ['active', 'waiting'])
+                        ->whereHas('messages', fn ($m) => $m->where('sender_type', 'visitor')))
+                    ->orWhere(function ($qq) use ($threshold) {
+                        $qq->where('last_seen_at', '>=', $threshold)
+                           ->where(function ($qqq) {
+                               $qqq->where('current_page', 'ILIKE', '%/book%')
+                                   ->orWhere('current_page', 'ILIKE', '%/rooms%')
+                                   ->orWhere('current_page', 'ILIKE', '%/services%')
+                                   ->orWhere('current_page', 'ILIKE', '%/checkout%');
+                           });
+                    });
+                });
+                break;
             case 'all':
             default:
-                // Smart-priority default: hide pure-anonymous offline browsers
-                // by default (decision #4 in ENGAGEMENT_HUB_PLAN.md). Anonymous
-                // browsers are still reachable via the "Anonymous" filter chip.
+                // Legacy "all" — wider net than priority but still hides
+                // pure-anonymous offline browsers.
                 $query->where(function ($q) use ($threshold) {
                     $q->where('last_seen_at', '>=', $threshold)
                       ->orWhere('is_lead', true)
