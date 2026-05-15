@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate, BarChart2 } from 'lucide-react'
+import { Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate } from 'lucide-react'
 
 const ChatbotConfig     = lazy(() => import('./ChatbotConfig').then(m => ({ default: m.ChatbotConfig })))
 const KnowledgeBase     = lazy(() => import('./KnowledgeBase').then(m => ({ default: m.KnowledgeBase })))
@@ -9,9 +9,9 @@ const Training          = lazy(() => import('./Training').then(m => ({ default: 
 const TestAi            = lazy(() => import('./ChatbotTestAi').then(m => ({ default: m.ChatbotTestAi })))
 const CannedReplies     = lazy(() => import('./CannedReplies').then(m => ({ default: m.CannedReplies })))
 const ChatbotWidget     = lazy(() => import('./ChatbotWidget').then(m => ({ default: m.ChatbotWidget })))
-const ChatbotAnalytics  = lazy(() => import('./ChatbotAnalytics').then(m => ({ default: m.ChatbotAnalytics })))
 
-type Tab = 'config' | 'knowledge' | 'widget' | 'canned' | 'popups' | 'training' | 'test' | 'analytics'
+// Chatbot analytics moved to /analytics → Chat tab. No tab here.
+type Tab = 'config' | 'knowledge' | 'widget' | 'canned' | 'popups' | 'training' | 'test'
 
 const TABS: { key: Tab; labelKey: string; fallback: string; icon: any }[] = [
   { key: 'config',    labelKey: 'chatbot_setup.tabs.config',    fallback: 'Behavior & Model', icon: Bot },
@@ -21,7 +21,6 @@ const TABS: { key: Tab; labelKey: string; fallback: string; icon: any }[] = [
   { key: 'popups',    labelKey: 'chatbot_setup.tabs.popups',    fallback: 'Popup Rules',      icon: Zap },
   { key: 'training',  labelKey: 'chatbot_setup.tabs.training',  fallback: 'AI Training',      icon: GraduationCap },
   { key: 'test',      labelKey: 'chatbot_setup.tabs.test',      fallback: 'Test the AI',      icon: MessageCircleQuestion },
-  { key: 'analytics', labelKey: 'chatbot_setup.tabs.analytics', fallback: 'Analytics',        icon: BarChart2 },
 ]
 
 // Persist last tab so the page restores its previous view across navigations.
@@ -67,7 +66,6 @@ export function ChatbotSetup() {
         {tab === 'popups'    && <PopupRules />}
         {tab === 'training'  && <Training />}
         {tab === 'test'      && <TestAi />}
-        {tab === 'analytics' && <ChatbotAnalytics />}
       </Suspense>
     </div>
   )

@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+// The deep chatbot analytics view used to live as a tab inside
+// /chatbot-setup. Moved here so all analytics live under one roof.
+const ChatbotAnalytics = lazy(() => import('./ChatbotAnalytics').then(m => ({ default: m.ChatbotAnalytics })))
 import toast from 'react-hot-toast'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -1368,7 +1372,8 @@ export function Analytics() {
           focused on the conversation feed. Same /v1/admin/engagement/kpis
           endpoint powers both. */}
       {activeTab === 'chat' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {[
             { key: 'online_now',  label: t('analytics.chat.online_now', 'Online now'),       icon: <Wifi size={18} />,        tint: 'text-emerald-400', bg: 'bg-emerald-500/15', value: chatKpis?.data?.online_now?.value ?? 0, sub: chatKpis?.data?.online_now?.detail },
             { key: 'leads',       label: t('analytics.chat.leads', 'Leads'),                 icon: <Sparkles size={18} />,    tint: 'text-amber-400',   bg: 'bg-amber-500/15',   value: chatKpis?.data?.hot_leads?.value ?? 0,  sub: chatKpis?.data?.hot_leads?.detail },
@@ -1384,8 +1389,18 @@ export function Analytics() {
               {c.sub && <p className="text-xs text-t-secondary mt-1">{c.sub}</p>}
             </Card>
           ))}
-          <div className="md:col-span-2 xl:col-span-4 text-xs text-t-secondary">
-            <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
+            <div className="md:col-span-2 xl:col-span-4 text-xs text-t-secondary">
+              <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
+            </div>
+          </div>
+
+          {/* Deeper chatbot analytics — conversation volume, AI resolution
+              rate, lead capture, intent breakdown, top pages, etc.
+              Relocated from /chatbot-setup → Analytics tab. */}
+          <div className="pt-2 border-t border-dark-border">
+            <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+              <ChatbotAnalytics />
+            </Suspense>
           </div>
         </div>
       )}
