@@ -176,7 +176,7 @@ class DealController extends Controller
             'stage' => 'required|string|in:' . implode(',', self::STAGES),
         ]);
 
-        $inquiry = Inquiry::findOrFail($id);
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $oldStage = $inquiry->fulfillment_stage;
         $inquiry->fulfillment_stage = $validated['stage'];
 
@@ -213,7 +213,7 @@ class DealController extends Controller
             'paid_amount'    => 'nullable|numeric|min:0',
         ]);
 
-        $inquiry = Inquiry::findOrFail($id);
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         if (array_key_exists('payment_status', $validated)) {
             $inquiry->payment_status = $validated['payment_status'];
         }

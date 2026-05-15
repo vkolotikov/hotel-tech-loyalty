@@ -5,12 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Scopes\BrandScope;
 use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
 class Inquiry extends Model
 {
     use BelongsToOrganization, BelongsToBrand;
+
+    /**
+     * Override implicit route binding so admin routes resolve an
+     * inquiry regardless of the active brand context.
+     *
+     * Inquiries are org-scoped with brand attribution (see CLAUDE.md
+     * → Multi-Brand) — the `brand_id` column is for reporting and
+     * UI badge tinting, not access control. Org safety is provided
+     * by TenantScope which still applies here. Without this override
+     * `/v1/admin/inquiries/{inquiry}` 404s for any inquiry whose
+     * brand_id differs from the SPA's current brand selector — a
+     * confusing failure mode for cancel/convert/edit flows.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return static::withoutGlobalScope(BrandScope::class)
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->first() ?? abort(404);
+    }
 
     protected $fillable = [
         'organization_id', 'brand_id', 'guest_id', 'corporate_account_id', 'property_id', 'inquiry_type', 'source',

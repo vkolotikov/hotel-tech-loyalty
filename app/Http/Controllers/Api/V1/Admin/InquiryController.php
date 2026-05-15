@@ -30,8 +30,12 @@ class InquiryController extends Controller
         // stage's `color` field instead of the hardcoded STATUS_COLORS
         // map. Falls back to the legacy mapping when no stage is bound
         // (legacy or imported rows).
+        // Guest needs email + phone + mobile in the list so the row's
+        // Email / WhatsApp / Call pill buttons can light up. Without
+        // these fields, chat-captured leads (which DO populate phone
+        // via the widget capture flow) silently appear contactless.
         $query = Inquiry::with([
-            'guest:id,full_name,company,vip_level,nationality',
+            'guest:id,full_name,company,email,phone,mobile,vip_level,nationality',
             'property:id,name,code',
             'corporateAccount:id,company_name',
             'pipelineStage:id,name,color,kind',

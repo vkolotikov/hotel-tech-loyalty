@@ -13,6 +13,7 @@ import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQ
 import { BrandBadge } from '../components/BrandBadge'
 import { SavedViews } from '../components/SavedViews'
 import { CustomFieldsForm, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
+import { TaskDrawer } from '../components/TaskDrawer'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -208,6 +209,29 @@ export function Inquiries() {
   // Per-row expand state — controlled by chevron click on each list row.
   // Single inquiry expanded at a time keeps vertical footprint bounded.
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
+
+  // TaskDrawer state — opens with a target inquiry id (for adds) and
+  // optionally an existing task to edit. Drawer takes over the right
+  // pane regardless of which row is expanded.
+  const [taskDrawer, setTaskDrawer] = useState<{ inquiryId: number; task?: any } | null>(null)
+
+  // Cancel-task helper — clears the legacy next_task_* columns on
+  // the inquiry via the existing update endpoint. The CRM v2 tasks
+  // table (one-to-many tasks per inquiry) handles cancel via the
+  // TaskDrawer; this one is for the inline `next_task` field that
+  // older flows still write to.
+  const cancelNextTaskMutation = useMutation({
+    mutationFn: (id: number) => api.put(`/v1/admin/inquiries/${id}`, {
+      next_task_type: null, next_task_due: null, next_task_notes: null, next_task_completed: false,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
+      toast.success(t('inquiries.toasts.task_cancelled', 'Task cancelled'))
+    },
+    onError: () => toast.error(t('inquiries.toasts.task_cancel_failed', 'Failed to cancel task')),
+  })
 
   // Per-custom-field validation errors from the backend, surfaced
   // inline beneath the relevant input. Cleared on next submit.
@@ -747,9 +771,20 @@ export function Inquiries() {
                         )}
                         <BrandBadge brandId={inq.brand_id} />
                       </div>
-                      {(inq.guest?.email || inq.guest?.phone) && (
-                        <div className="mt-1.5">
-                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
+                      {/* Always-visible quick-contact pills. ContactActions
+                          renders Email / Call / SMS / WhatsApp depending on
+                          which channels are populated; chat-captured leads
+                          typically have phone (so WhatsApp lights up) and
+                          email-form leads have email. Empty state surfaces
+                          explicitly so staff can spot rows that need
+                          enrichment from the chat dialog. */}
+                      {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) ? (
+                        <div className="mt-2">
+                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} />
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-[10px] text-gray-700 italic">
+                          {t('inquiries.row.no_contacts', 'No contact info yet — open the chat conversation to capture')}
                         </div>
                       )}
                     </td>
@@ -921,7 +956,15 @@ export function Inquiries() {
                             {inq.last_contacted_at && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.last_contact', 'Last contact')}: </span>{new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                           </div>
                           <div className="space-y-1.5">
-                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.next_task', 'Next task')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold flex items-center justify-between">
+                              <span>{t('inquiries.row.expanded.next_task', 'Next task')}</span>
+                              <button
+                                onClick={() => setTaskDrawer({ inquiryId: inq.id })}
+                                className="text-[10px] text-primary-400 hover:text-primary-300 inline-flex items-center gap-1 normal-case tracking-normal"
+                              >
+                                <Plus size={10} /> {t('inquiries.row.expanded.add_task', 'Add task')}
+                              </button>
+                            </div>
                             {inq.next_task_type && !inq.next_task_completed ? (
                               <div className={`rounded-lg border p-3 ${isOverdue ? 'border-red-500/40 bg-red-500/5' : 'border-dark-border bg-dark-surface2'}`}>
                                 <div className="flex items-center gap-2 mb-1">
@@ -929,17 +972,41 @@ export function Inquiries() {
                                   <span className="text-white font-semibold">{inq.next_task_type}</span>
                                 </div>
                                 {inq.next_task_due && <div className={isOverdue ? 'text-red-400' : 'text-t-secondary'}>{t('inquiries.row.expanded.due', 'Due')} {inq.next_task_due}</div>}
-                                <button
-                                  onClick={() => completeMutation.mutate(inq.id)}
-                                  className="mt-2 text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
-                                >
-                                  <CheckCircle2 size={11} /> {t('inquiries.row.expanded.mark_done', 'Mark done')}
-                                </button>
+                                {inq.next_task_notes && <div className="text-t-secondary mt-1 italic line-clamp-2">{inq.next_task_notes}</div>}
+                                <div className="flex items-center gap-3 mt-2">
+                                  <button
+                                    onClick={() => completeMutation.mutate(inq.id)}
+                                    className="text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+                                  >
+                                    <CheckCircle2 size={11} /> {t('inquiries.row.expanded.mark_done', 'Mark done')}
+                                  </button>
+                                  <button
+                                    onClick={() => setTaskDrawer({ inquiryId: inq.id, task: {
+                                      id: 0,
+                                      inquiry_id: inq.id,
+                                      title: inq.next_task_type,
+                                      due_at: inq.next_task_due,
+                                      notes: inq.next_task_notes,
+                                    } })}
+                                    className="text-[11px] text-primary-400 hover:text-primary-300 inline-flex items-center gap-1"
+                                  >
+                                    {t('inquiries.row.expanded.edit', 'Edit')}
+                                  </button>
+                                  <button
+                                    onClick={() => cancelNextTaskMutation.mutate(inq.id)}
+                                    className="text-[11px] text-red-400 hover:text-red-300 inline-flex items-center gap-1 ml-auto"
+                                  >
+                                    <XIcon size={10} /> {t('inquiries.row.expanded.cancel_task', 'Cancel')}
+                                  </button>
+                                </div>
                               </div>
                             ) : inq.next_task_completed ? (
-                              <div className="text-emerald-400">{t('inquiries.row.expanded.task_done', 'Task complete')}</div>
+                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
+                                <CheckCircle2 size={12} className="text-emerald-400" />
+                                <span className="text-emerald-400">{t('inquiries.row.expanded.task_done', 'Task complete')}</span>
+                              </div>
                             ) : (
-                              <div className="text-gray-700">{t('inquiries.row.expanded.no_task', 'No task scheduled')}</div>
+                              <div className="text-gray-700 italic">{t('inquiries.row.expanded.no_task', 'No task scheduled. Click Add task to create one.')}</div>
                             )}
                             {inq.notes && (
                               <div className="pt-2">
@@ -1571,6 +1638,20 @@ export function Inquiries() {
             )}
           </div>
         </div>
+      )}
+
+      {taskDrawer && (
+        <TaskDrawer
+          task={taskDrawer.task}
+          defaultInquiryId={taskDrawer.inquiryId}
+          onClose={() => setTaskDrawer(null)}
+          onSaved={() => {
+            setTaskDrawer(null)
+            qc.invalidateQueries({ queryKey: ['inquiries'] })
+            qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+            qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
+          }}
+        />
       )}
     </div>
   )
