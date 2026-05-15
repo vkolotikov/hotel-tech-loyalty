@@ -410,6 +410,115 @@ class AnalyticsController extends Controller
         }, 'analytics-report-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
     }
 
+    /**
+     * GET /v1/admin/analytics/leads-deep?days=N
+     *
+     * Sales-pipeline metrics that go beyond what /reports already
+     * covers. Returns:
+     *   - win_rate_by_source: count/won/win_rate% per source (top 8)
+     *   - avg_value_by_source: count/avg_value per source (top 8)
+     *   - avg_value_by_owner: count/avg_value per owner (top 8)
+     *   - activity_by_owner: calls/emails/meetings/notes per owner (top 8)
+     */
+    public function leadsDeep(Request $request): JsonResponse
+    {
+        $days = max(7, min(365, (int) $request->query('days', 30)));
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        // Window query: inquiries created in the period.
+        $base = fn () => Inquiry::query()->where('created_at', '>=', $from);
+
+        // ── Win rate by source ────────────────────────────────────
+        $winRateRows = $base()
+            ->whereNotNull('source')
+            ->where('source', '!=', '')
+            ->selectRaw("source,
+                COUNT(*) as total_count,
+                SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END) as won_count")
+            ->groupBy('source')
+            ->orderByDesc('total_count')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'source'   => $r->source,
+                'total'    => (int) $r->total_count,
+                'won'      => (int) $r->won_count,
+                'win_rate' => $r->total_count > 0 ? round(($r->won_count / $r->total_count) * 100, 1) : 0,
+            ]);
+
+        // ── Avg deal value by source ──────────────────────────────
+        $avgValueBySource = $base()
+            ->whereNotNull('source')
+            ->where('source', '!=', '')
+            ->whereNotNull('total_value')
+            ->where('total_value', '>', 0)
+            ->selectRaw('source, COUNT(*) as cnt, AVG(total_value) as avg_value, SUM(total_value) as total_value')
+            ->groupBy('source')
+            ->orderByDesc('avg_value')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'source'      => $r->source,
+                'count'       => (int) $r->cnt,
+                'avg_value'   => round((float) $r->avg_value, 2),
+                'total_value' => round((float) $r->total_value, 2),
+            ]);
+
+        // ── Avg deal value by owner ───────────────────────────────
+        $avgValueByOwner = $base()
+            ->whereNotNull('assigned_to')
+            ->where('assigned_to', '!=', '')
+            ->whereNotNull('total_value')
+            ->where('total_value', '>', 0)
+            ->selectRaw('assigned_to as owner, COUNT(*) as cnt, AVG(total_value) as avg_value, SUM(total_value) as total_value')
+            ->groupBy('assigned_to')
+            ->orderByDesc('avg_value')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'owner'       => $r->owner,
+                'count'       => (int) $r->cnt,
+                'avg_value'   => round((float) $r->avg_value, 2),
+                'total_value' => round((float) $r->total_value, 2),
+            ]);
+
+        // ── Activity volume per owner ─────────────────────────────
+        // Joins activities ← inquiries to attribute by the inquiry's
+        // current owner. Activities table is append-only so the
+        // window matches the activity timestamp.
+        $activityRows = DB::table('activities')
+            ->join('inquiries', 'activities.inquiry_id', '=', 'inquiries.id')
+            ->where('activities.occurred_at', '>=', $from)
+            ->whereNotNull('inquiries.assigned_to')
+            ->where('inquiries.assigned_to', '!=', '')
+            ->selectRaw("inquiries.assigned_to as owner,
+                SUM(CASE WHEN activities.type = 'call'    THEN 1 ELSE 0 END) as calls,
+                SUM(CASE WHEN activities.type = 'email'   THEN 1 ELSE 0 END) as emails,
+                SUM(CASE WHEN activities.type = 'meeting' THEN 1 ELSE 0 END) as meetings,
+                SUM(CASE WHEN activities.type = 'note'    THEN 1 ELSE 0 END) as notes,
+                COUNT(*) as total")
+            ->groupBy('inquiries.assigned_to')
+            ->orderByDesc('total')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'owner'    => $r->owner,
+                'calls'    => (int) $r->calls,
+                'emails'   => (int) $r->emails,
+                'meetings' => (int) $r->meetings,
+                'notes'    => (int) $r->notes,
+                'total'    => (int) $r->total,
+            ]);
+
+        return response()->json([
+            'period_days'         => $days,
+            'win_rate_by_source'  => $winRateRows,
+            'avg_value_by_source' => $avgValueBySource,
+            'avg_value_by_owner'  => $avgValueByOwner,
+            'activity_by_owner'   => $activityRows,
+        ]);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private function monthStats(string $from, string $to): array

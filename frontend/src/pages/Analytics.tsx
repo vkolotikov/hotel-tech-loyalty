@@ -236,6 +236,13 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/inquiries/kpis').then(r => r.data),
     enabled: activeTab === 'leads',
   })
+  // Deeper Leads analytics — win rate by source, avg deal value by
+  // source + owner, activity-volume leaderboard. Tab-gated.
+  const { data: leadsDeep } = useQuery<any>({
+    queryKey: ['analytics-leads-deep'],
+    queryFn: () => api.get('/v1/admin/analytics/leads-deep?days=30').then(r => r.data),
+    enabled: activeTab === 'leads',
+  })
   const { data: dealsKpis } = useQuery<any>({
     queryKey: ['analytics-deals-kpis'],
     queryFn: () => api.get('/v1/admin/deals/kpis').then(r => r.data),
@@ -1256,6 +1263,120 @@ export function Analytics() {
           <div className="text-xs text-t-secondary">
             <Link to="/inquiries" className="text-primary-400 hover:underline">{t('analytics.leads.open_pipeline', 'Open the Leads pipeline →')}</Link>
           </div>
+
+          {/* Win rate by source + Avg value by source — twin chart row.
+              Win rate uses horizontal bars sorted by total volume so
+              high-volume-low-conversion sources flag themselves. */}
+          {leadsDeep && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.leads.win_rate_by_source', 'Win Rate by Source')}</h3>
+                <p className="text-[11px] text-t-secondary mb-3">{t('analytics.leads.win_rate_sub', 'Conversion % per source (last 30 days)')}</p>
+                {leadsDeep.win_rate_by_source?.length > 0 ? (
+                  <div className="space-y-2">
+                    {leadsDeep.win_rate_by_source.map((r: any, i: number) => (
+                      <div key={r.source} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="text-t-secondary tabular-nums w-5">#{i + 1}</span>
+                            <span className="text-white font-medium truncate">{r.source}</span>
+                          </span>
+                          <span className="flex items-center gap-3 flex-shrink-0">
+                            <span className="text-t-secondary tabular-nums text-[11px]">{r.won}/{r.total}</span>
+                            <span className={`font-bold tabular-nums w-12 text-right ${r.win_rate >= 30 ? 'text-emerald-400' : r.win_rate >= 15 ? 'text-amber-400' : 'text-red-400'}`}>
+                              {r.win_rate}%
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-dark-hover rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(r.win_rate, 100)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-t-secondary text-sm py-4 text-center">{t('analytics.leads.no_source_data', 'No source data yet')}</p>
+                )}
+              </Card>
+
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.leads.avg_value_by_source', 'Avg Deal Value by Source')}</h3>
+                <p className="text-[11px] text-t-secondary mb-3">{t('analytics.leads.avg_value_sub', 'Where the big-ticket leads come from')}</p>
+                {leadsDeep.avg_value_by_source?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={leadsDeep.avg_value_by_source} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={v => `$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                      <YAxis type="category" dataKey="source" tick={{ fontSize: 10, fill: '#e5e7eb' }} width={90} />
+                      <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                      <Bar dataKey="avg_value" name={t('analytics.leads.avg_value', 'Avg value')} fill="#c9a84c" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-t-secondary text-sm py-4 text-center">{t('analytics.leads.no_value_data', 'No value data yet')}</p>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* Avg deal value by owner + Activity per owner */}
+          {leadsDeep && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.leads.avg_value_by_owner', 'Avg Deal Value by Owner')}</h3>
+                <p className="text-[11px] text-t-secondary mb-3">{t('analytics.leads.avg_value_owner_sub', 'Top reps by average ticket')}</p>
+                {leadsDeep.avg_value_by_owner?.length > 0 ? (
+                  <div className="space-y-2">
+                    {leadsDeep.avg_value_by_owner.map((r: any, i: number) => {
+                      const max = leadsDeep.avg_value_by_owner[0]?.avg_value || 1
+                      return (
+                        <div key={r.owner} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="text-t-secondary tabular-nums w-5">#{i + 1}</span>
+                              <span className="text-white font-medium truncate">{r.owner}</span>
+                            </span>
+                            <span className="flex items-center gap-3 flex-shrink-0">
+                              <span className="text-t-secondary tabular-nums text-[11px]">{r.count} {r.count === 1 ? 'deal' : 'deals'}</span>
+                              <span className="text-amber-400 font-bold tabular-nums">${Number(r.avg_value).toLocaleString()}</span>
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-dark-hover rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(r.avg_value / max) * 100}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-t-secondary text-sm py-4 text-center">{t('analytics.leads.no_owner_value_data', 'No owner data yet')}</p>
+                )}
+              </Card>
+
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.leads.activity_per_owner', 'Activity Volume by Owner')}</h3>
+                <p className="text-[11px] text-t-secondary mb-3">{t('analytics.leads.activity_sub', 'Calls, emails, meetings, notes logged (last 30 days)')}</p>
+                {leadsDeep.activity_by_owner?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={leadsDeep.activity_by_owner} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                      <XAxis dataKey="owner" tick={{ fontSize: 10, fill: '#e5e7eb' }}
+                        interval={0} angle={-20} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                      <Tooltip contentStyle={CHART_TOOLTIP} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                      <Bar dataKey="calls"    name={t('analytics.leads.calls', 'Calls')}       stackId="a" fill="#22c55e" />
+                      <Bar dataKey="emails"   name={t('analytics.leads.emails', 'Emails')}     stackId="a" fill="#3b82f6" />
+                      <Bar dataKey="meetings" name={t('analytics.leads.meetings', 'Meetings')} stackId="a" fill="#f59e0b" />
+                      <Bar dataKey="notes"    name={t('analytics.leads.notes', 'Notes')}       stackId="a" fill="#8b5cf6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-t-secondary text-sm py-4 text-center">{t('analytics.leads.no_activity_data', 'No activity logged yet')}</p>
+                )}
+              </Card>
+            </div>
+          )}
 
           {/* Sales reporting deep dive — funnel, forecast, lost-reason
               breakdown, owner scoreboard, company LTV. Previously the
