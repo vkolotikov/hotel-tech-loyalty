@@ -303,6 +303,14 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
   const value = inq.total_value ? `€${Number(inq.total_value).toLocaleString()}` : '—'
   const guestName = inq.guest?.full_name ?? '—'
   const company = inq.guest?.company || inq.corporate_account?.name
+  // Lead-score chip on the detail header — mirrors the chip on the list
+  // row so staff can see at a glance how the AI rates this lead.
+  const score: number | null = typeof inq.ai_win_probability === 'number' ? inq.ai_win_probability : null
+  const scoreTone = score == null
+    ? null
+    : score >= 70 ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
+      : score >= 40 ? { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
+      : { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
 
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
@@ -311,6 +319,14 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
           <button onClick={onBack} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" aria-label={t('inquiryDetail.back', 'Back')}>
             <ArrowLeft size={18} />
           </button>
+          {scoreTone && (
+            <span
+              className={`flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg text-base font-bold tabular-nums border ${scoreTone.bg} ${scoreTone.text} ${scoreTone.border}`}
+              title={t('inquiryDetail.score_tooltip', 'AI win probability')}
+            >
+              {score}
+            </span>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-white truncate">{guestName}</h1>

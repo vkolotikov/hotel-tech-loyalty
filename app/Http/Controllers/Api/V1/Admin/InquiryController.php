@@ -291,6 +291,72 @@ class InquiryController extends Controller
     }
 
     /**
+     * GET /v1/admin/inquiries/kpis — top-of-page headline numbers for the
+     * leads pipeline redesign.
+     *
+     * Returns 5 numbers with month/week deltas:
+     *   - total          : total open inquiries (everything not Confirmed/Lost)
+     *   - due_today      : open inquiries with next_task_due == today and not done
+     *   - overdue        : open inquiries with next_task_due < today and not done
+     *   - estimated_value: sum(total_value) over open inquiries
+     *   - new_this_week  : inquiries created in last 7 days
+     *
+     * Deltas are vs prior period (last 7 days for "new", last 30 days for "total").
+     */
+    public function kpis(): JsonResponse
+    {
+        $todayStr     = now()->toDateString();
+        $weekAgo      = now()->subDays(7);
+        $twoWeeksAgo  = now()->subDays(14);
+        $monthAgo     = now()->subDays(30);
+        $twoMonthsAgo = now()->subDays(60);
+
+        $openScope = fn ($q) => $q->whereNotIn('status', ['Confirmed', 'Lost']);
+
+        $total = Inquiry::where($openScope)->count();
+        $totalMonthAgo = Inquiry::where($openScope)
+            ->where('created_at', '<', $monthAgo)
+            ->count();
+        $totalPrevMonth = Inquiry::where($openScope)
+            ->where('created_at', '<', $twoMonthsAgo)
+            ->count();
+        $totalPct = $totalPrevMonth > 0
+            ? round((($totalMonthAgo - $totalPrevMonth) / $totalPrevMonth) * 100)
+            : null;
+
+        $dueToday = Inquiry::where($openScope)
+            ->where('next_task_completed', false)
+            ->where('next_task_due', $todayStr)
+            ->count();
+
+        $overdue = Inquiry::where($openScope)
+            ->where('next_task_completed', false)
+            ->whereNotNull('next_task_due')
+            ->where('next_task_due', '<', $todayStr)
+            ->count();
+
+        $estimatedValue = (float) Inquiry::where($openScope)
+            ->whereNotNull('total_value')
+            ->sum('total_value');
+
+        $newThisWeek = Inquiry::where('created_at', '>=', $weekAgo)->count();
+        $newLastWeek = Inquiry::whereBetween('created_at', [$twoWeeksAgo, $weekAgo])->count();
+        $newPct = $newLastWeek > 0
+            ? round((($newThisWeek - $newLastWeek) / $newLastWeek) * 100)
+            : null;
+
+        return response()->json([
+            'total'           => $total,
+            'total_delta_pct' => $totalPct,
+            'due_today'       => $dueToday,
+            'overdue'         => $overdue,
+            'estimated_value' => round($estimatedValue, 2),
+            'new_this_week'   => $newThisWeek,
+            'new_delta_pct'   => $newPct,
+        ]);
+    }
+
+    /**
      * GET /v1/admin/inquiries/insights — deterministic pipeline signals.
      *
      * These are the four "where is your team losing money?" buckets a

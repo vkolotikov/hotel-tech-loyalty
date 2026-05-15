@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, Clock, Calendar as CalendarIcon, X as XIcon, Users as UsersIcon, AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight, ListChecks } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { PipelineInsights } from '../components/PipelineInsights'
@@ -196,6 +196,19 @@ export function Inquiries() {
     refetchInterval: 120_000,
   })
 
+  // KPI strip — 5 headline numbers for the leads-pipeline redesign.
+  // Cached client-side 60s since the deltas don't move that fast.
+  const { data: kpis } = useQuery<any>({
+    queryKey: ['inquiries-kpis'],
+    queryFn: () => api.get('/v1/admin/inquiries/kpis').then(r => r.data),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  })
+
+  // Per-row expand state — controlled by chevron click on each list row.
+  // Single inquiry expanded at a time keeps vertical footprint bounded.
+  const [expandedRow, setExpandedRow] = useState<number | null>(null)
+
   // Per-custom-field validation errors from the backend, surfaced
   // inline beneath the relevant input. Cleared on next submit.
   const [cfErrors, setCfErrors] = useState<Record<string, string[]>>({})
@@ -238,6 +251,7 @@ export function Inquiries() {
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-today'] })
       qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
       toast.success(
         vars.status === 'Confirmed' ? 'Marked as Won — reservation created'
         : vars.status === 'Lost'    ? 'Marked as Lost'
@@ -295,6 +309,7 @@ export function Inquiries() {
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-today'] })
       qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Bulk action failed')
     } finally { setBulkBusy(false) }
@@ -384,6 +399,41 @@ export function Inquiries() {
           </button>
         </div>
       </div>
+
+      {/* KPI headline strip — 5 numbers with deltas that staff care
+          about at-a-glance. Renders only once the kpis query lands;
+          while loading we fall through to the existing layout so the
+          page never jumps around. */}
+      {kpis && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+          {[
+            { key: 'total',     label: t('inquiries.kpis.total', 'Total Leads'),       value: (kpis.total ?? 0).toLocaleString(),                                                                                  sub: kpis.total_delta_pct != null ? { pct: kpis.total_delta_pct, suffix: t('inquiries.kpis.vs_last_month', 'vs last month') } : null,                                  icon: <UsersIcon size={18} />,      tint: 'text-blue-400',     bg: 'bg-blue-500/15' },
+            { key: 'due_today', label: t('inquiries.kpis.due_today', 'Due Today'),     value: (kpis.due_today ?? 0).toLocaleString(),                                                                              sub: kpis.due_today > 0 ? { text: t('inquiries.kpis.urgent_followups', 'Urgent follow-ups') } : { text: t('inquiries.kpis.no_followups', 'Nothing due today') },         icon: <Clock size={18} />,          tint: 'text-amber-400',    bg: 'bg-amber-500/15' },
+            { key: 'overdue',   label: t('inquiries.kpis.overdue', 'Overdue'),         value: (kpis.overdue ?? 0).toLocaleString(),                                                                                sub: kpis.overdue > 0 ? { text: t('inquiries.kpis.needs_attention', 'Needs attention') } : { text: t('inquiries.kpis.all_caught_up', 'All caught up') },                icon: <AlertTriangle size={18} />,  tint: 'text-red-400',      bg: 'bg-red-500/15' },
+            { key: 'value',     label: t('inquiries.kpis.est_value', 'Estimated Value'), value: `${settings.currency_symbol}${(kpis.estimated_value ?? 0).toLocaleString()}`,                                       sub: { text: t('inquiries.kpis.total_pipeline_value', 'Total pipeline value') },                                                                                       icon: <DollarSign size={18} />,     tint: 'text-emerald-400',  bg: 'bg-emerald-500/15' },
+            { key: 'new_week',  label: t('inquiries.kpis.new_this_week', 'New This Week'), value: (kpis.new_this_week ?? 0).toLocaleString(),                                                                        sub: kpis.new_delta_pct != null ? { pct: kpis.new_delta_pct, suffix: t('inquiries.kpis.vs_last_week', 'vs last week') } : null,                                       icon: <Sparkles size={18} />,       tint: 'text-purple-400',   bg: 'bg-purple-500/15' },
+          ].map(card => (
+            <div key={card.key} className="bg-dark-surface rounded-xl border border-dark-border p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="text-[11px] uppercase tracking-wider text-t-secondary">{card.label}</span>
+                <div className={`p-1.5 rounded-lg ${card.bg} ${card.tint}`}>{card.icon}</div>
+              </div>
+              <p className="text-2xl font-bold text-white tabular-nums">{card.value}</p>
+              {card.sub && (
+                'pct' in card.sub ? (
+                  <div className={`flex items-center gap-1 text-[11px] mt-1 ${card.sub.pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {card.sub.pct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                    <span className="font-semibold">{Math.abs(card.sub.pct)}%</span>
+                    <span className="text-t-secondary">{card.sub.suffix}</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-t-secondary mt-1">{card.sub.text}</p>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Today snapshot — the morning-of view: what's overdue, what's
           due today, what's coming up, and the freshest leads. Click a
@@ -624,8 +674,32 @@ export function Inquiries() {
                   ? Math.max(0, Math.round((new Date(inq.check_out).getTime() - new Date(inq.check_in).getTime()) / 86400000))
                   : null
                 const fmtShort = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                // Lead-score chip — sourced from InquiryAiService's
+                // ai_win_probability (0-100). Color thresholds matched to
+                // typical sales-pipeline conventions: green = solid, amber
+                // = needs nurture, red = at risk.
+                const score: number | null = (typeof inq.ai_win_probability === 'number') ? inq.ai_win_probability : null
+                const scoreColor = score == null
+                  ? null
+                  : score >= 70 ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
+                    : score >= 40 ? { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
+                    : { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
+                const isExpanded = expandedRow === inq.id
+                // Total column span for the expanded row, derived live from the
+                // visible-column toggles so the colspan stays correct when admins
+                // reshape the table via Settings → Pipeline Layout.
+                const expandColSpan = 2 // Guest + Actions trailing
+                  + (fieldCfg.list.bulk_select ? 1 : 0)
+                  + (fieldCfg.list.stay ? 1 : 0)
+                  + (fieldCfg.list.value ? 1 : 0)
+                  + 1 // Status
+                  + (fieldCfg.list.owner ? 1 : 0)
+                  + (fieldCfg.list.touches ? 1 : 0)
+                  + (fieldCfg.list.next_task ? 1 : 0)
+                  + listColumns.length
                 return (
-                  <tr key={inq.id} className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''}`}>
+                <React.Fragment key={inq.id}>
+                  <tr className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}>
                     {fieldCfg.list.bulk_select && (
                       <td className="px-3 py-3 text-center">
                         <input type="checkbox" checked={selected.has(inq.id)}
@@ -640,13 +714,23 @@ export function Inquiries() {
                         contact links. Heavy lifting in this cell so the
                         rest of the row stays narrow. CRM Phase 1: name
                         is a Link to the new lead detail page. */}
-                    <td className="px-4 py-3 max-w-[260px]">
-                      <Link
-                        to={`/inquiries/${inq.id}`}
-                        className="font-semibold text-white hover:text-accent truncate block transition-colors"
-                      >
-                        {inq.guest?.full_name ?? '—'}
-                      </Link>
+                    <td className="px-4 py-3 max-w-[280px]">
+                      <div className="flex items-center gap-2">
+                        {scoreColor && (
+                          <span
+                            className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-7 rounded-md text-[11px] font-bold tabular-nums border ${scoreColor.bg} ${scoreColor.text} ${scoreColor.border}`}
+                            title={t('inquiries.score.tooltip', 'AI win probability')}
+                          >
+                            {score}
+                          </span>
+                        )}
+                        <Link
+                          to={`/inquiries/${inq.id}`}
+                          className="font-semibold text-white hover:text-accent truncate transition-colors"
+                        >
+                          {inq.guest?.full_name ?? '—'}
+                        </Link>
+                      </div>
                       {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {inq.property?.name && (
@@ -786,19 +870,92 @@ export function Inquiries() {
                         onStatus={(id, status) => statusMutation.mutate({ id, status })} />
                     </td>
 
-                    {/* Overflow menu — task editor + view detail */}
+                    {/* Trailing column — expand toggle + overflow menu.
+                        Chevron drives the row's expanded state; the
+                        kebab keeps access to the Task editor + view
+                        detail menu. */}
                     <td className="px-2 py-3" data-menu-root>
-                      <button onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action'
-                            ? null
-                            : { id: inq.id, type: 'action', anchor: rect })
-                        }}
-                        title={t('inquiries.table.more', 'More')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
-                        <MoreHorizontal size={14} />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={() => setExpandedRow(isExpanded ? null : inq.id)}
+                          title={isExpanded ? t('inquiries.row.collapse', 'Collapse') : t('inquiries.row.expand', 'Expand')}
+                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors"
+                        >
+                          <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                        <button onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action'
+                              ? null
+                              : { id: inq.id, type: 'action', anchor: rect })
+                          }}
+                          title={t('inquiries.table.more', 'More')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
+
+                  {/* Expanded detail row — full-width drawer showing
+                      contact details, AI brief, notes, and next-task
+                      summary. Collapses by default; one row expanded at
+                      a time keeps page height bounded. */}
+                  {isExpanded && (
+                    <tr className="bg-dark-bg/40 border-b border-dark-border/50">
+                      <td colSpan={expandColSpan} className="px-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                          <div className="space-y-1.5">
+                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.customer', 'Customer')}</div>
+                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.email', 'Email')}: </span>{inq.guest?.email ?? <span className="text-gray-700">—</span>}</div>
+                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.phone', 'Phone')}: </span>{inq.guest?.phone || inq.guest?.mobile || <span className="text-gray-700">—</span>}</div>
+                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.company', 'Company')}: </span>{inq.guest?.company ?? <span className="text-gray-700">—</span>}</div>
+                            {inq.guest?.vip_level && <div className="text-gray-300"><span className="text-t-secondary">VIP: </span>{inq.guest.vip_level}</div>}
+                            {inq.guest?.nationality && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.nationality', 'Nationality')}: </span>{inq.guest.nationality}</div>}
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.opportunity', 'Opportunity')}</div>
+                            {inq.property?.name && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.property', 'Property')}: </span>{inq.property.name}</div>}
+                            {inq.inquiry_type && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.type', 'Type')}: </span>{inq.inquiry_type}</div>}
+                            {inq.source && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.source', 'Source')}: </span>{inq.source}</div>}
+                            {inq.assigned_to && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.owner', 'Owner')}: </span>{inq.assigned_to}</div>}
+                            {inq.last_contacted_at && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.last_contact', 'Last contact')}: </span>{new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.next_task', 'Next task')}</div>
+                            {inq.next_task_type && !inq.next_task_completed ? (
+                              <div className={`rounded-lg border p-3 ${isOverdue ? 'border-red-500/40 bg-red-500/5' : 'border-dark-border bg-dark-surface2'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <ListChecks size={12} className={isOverdue ? 'text-red-400' : 'text-amber-400'} />
+                                  <span className="text-white font-semibold">{inq.next_task_type}</span>
+                                </div>
+                                {inq.next_task_due && <div className={isOverdue ? 'text-red-400' : 'text-t-secondary'}>{t('inquiries.row.expanded.due', 'Due')} {inq.next_task_due}</div>}
+                                <button
+                                  onClick={() => completeMutation.mutate(inq.id)}
+                                  className="mt-2 text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+                                >
+                                  <CheckCircle2 size={11} /> {t('inquiries.row.expanded.mark_done', 'Mark done')}
+                                </button>
+                              </div>
+                            ) : inq.next_task_completed ? (
+                              <div className="text-emerald-400">{t('inquiries.row.expanded.task_done', 'Task complete')}</div>
+                            ) : (
+                              <div className="text-gray-700">{t('inquiries.row.expanded.no_task', 'No task scheduled')}</div>
+                            )}
+                            {inq.notes && (
+                              <div className="pt-2">
+                                <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold mb-1">{t('inquiries.row.expanded.notes', 'Notes')}</div>
+                                <p className="text-gray-300 whitespace-pre-wrap line-clamp-4">{inq.notes}</p>
+                              </div>
+                            )}
+                            <Link to={`/inquiries/${inq.id}`} className="inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 pt-1">
+                              <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open full detail')}
+                            </Link>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
                 )
               })}
             </tbody>

@@ -616,6 +616,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // ─── CRM: Inquiries (Sales Pipeline) ─────────────────────────────
             Route::get('inquiries/today',                 [InquiryController::class, 'today']);
             Route::get('inquiries/insights',              [InquiryController::class, 'insights']);
+            Route::get('inquiries/kpis',                  [InquiryController::class, 'kpis']);
             Route::post('inquiries/bulk',                 [InquiryController::class, 'bulk']);
             Route::get('inquiries',                       [InquiryController::class, 'index']);
             Route::post('inquiries',                      [InquiryController::class, 'store']);
