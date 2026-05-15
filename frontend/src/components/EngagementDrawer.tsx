@@ -367,8 +367,15 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
           )}
         </div>
 
-        {/* Quick action bar */}
-        <div className="border-t border-dark-border p-3 flex flex-wrap gap-2 bg-dark-surface" style={{ flexShrink: 0 }}>
+        {/* Quick action bar.
+            pb-6 + safe-area-inset-bottom keeps "Take over" / "Resolve"
+            visible above the OS taskbar/dock and the mobile home bar —
+            previously the bar sat flush against the viewport bottom and
+            the buttons overlapped with browser chrome on Windows. */}
+        <div
+          className="border-t border-dark-border px-3 pt-3 pb-6 flex flex-wrap gap-2 bg-dark-surface"
+          style={{ flexShrink: 0, paddingBottom: 'max(env(safe-area-inset-bottom), 1.5rem)' }}
+        >
           {conv ? (
             <>
               {conv.ai_enabled ? (

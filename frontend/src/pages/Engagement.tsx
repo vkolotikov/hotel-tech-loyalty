@@ -103,6 +103,7 @@ export function Engagement() {
   const { brands } = useBrandStore()
 
   const [filter, setFilter] = useState<FilterKey>('priority')
+  const [range, setRange] = useState<'today' | 'week' | 'month' | 'all'>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
@@ -139,13 +140,24 @@ export function Engagement() {
     data: EngagementRow[]
     meta: { current_page: number; last_page: number; total: number; per_page: number }
   }>({
-    queryKey: ['engagement', 'feed', filter, search, page],
+    queryKey: ['engagement', 'feed', filter, range, search, page],
     queryFn: () => api.get('/v1/admin/engagement/feed', {
-      params: { filter, search, page, per_page: 50, sort: 'priority' },
+      params: { filter, range, search, page, per_page: 50, sort: 'priority' },
     }).then(r => r.data),
     refetchInterval: 5_000,
     placeholderData: (prev) => prev,
   })
+
+  // Per-filter row counts for the current range — feeds the badge
+  // number next to each filter chip. Refresh every 30s so the badges
+  // don't drift while the feed itself polls every 5s.
+  const { data: filterCounts } = useQuery<{ data: Record<string, number> }>({
+    queryKey: ['engagement', 'filter-counts', range],
+    queryFn: () => api.get('/v1/admin/engagement/filter-counts', { params: { range } }).then(r => r.data),
+    refetchInterval: 30_000,
+    placeholderData: (prev) => prev,
+  })
+  const counts = filterCounts?.data ?? {}
 
   const rows = feed?.data ?? []
   const meta = feed?.meta
@@ -302,10 +314,36 @@ export function Engagement() {
 
       {/* Filter chips + search */}
       <div className="flex flex-col gap-3 bg-dark-surface border border-dark-border rounded-xl p-3">
+        {/* Range chips — Today / Week / Month / All. Reapplied to every
+            filter + count query so the badges + feed stay in sync. */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] uppercase tracking-wide font-bold text-t-secondary whitespace-nowrap pl-1 pr-1">
+            {t('engagement.range.label', 'Range')}
+          </span>
+          {([
+            { key: 'today', label: t('engagement.range.today', 'Today') },
+            { key: 'week',  label: t('engagement.range.week',  '7 days') },
+            { key: 'month', label: t('engagement.range.month', '30 days') },
+            { key: 'all',   label: t('engagement.range.all',   'All time') },
+          ] as const).map(r => {
+            const active = range === r.key
+            return (
+              <button key={r.key}
+                onClick={() => { setRange(r.key); setPage(1) }}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                  active ? 'bg-accent text-black' : 'bg-dark-bg text-t-secondary hover:text-white hover:bg-dark-surface2'
+                }`}>
+                {r.label}
+              </button>
+            )
+          })}
+        </div>
+
         <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ flexShrink: 0 }}>
           {FILTERS.map(f => {
             const active = filter === f.key
             const tone = f.tone === 'green' ? 'text-green-400' : f.tone === 'amber' ? 'text-amber-300' : ''
+            const n = counts[f.key] ?? null
             return (
               <button
                 key={f.key}
@@ -319,6 +357,11 @@ export function Engagement() {
               >
                 <f.icon size={12} className={active ? '' : tone} />
                 {t(filterLabelKey(f.key), f.label)}
+                {n !== null && (
+                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                    active ? 'bg-black/20 text-black' : 'bg-dark-surface2 text-t-secondary'
+                  }`}>{n}</span>
+                )}
               </button>
             )
           })}
@@ -335,6 +378,7 @@ export function Engagement() {
             const active = filter === f.key
             const meta = INTENT_META[f.key]
             const Ic = meta?.icon ?? Sparkles
+            const n = counts[f.key] ?? null
             return (
               <button
                 key={f.key}
@@ -348,6 +392,11 @@ export function Engagement() {
               >
                 <Ic size={11} />
                 {t(filterLabelKey(f.key), f.label)}
+                {n !== null && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold bg-dark-surface2/80">
+                    {n}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -442,6 +491,14 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
   }
 
   const flag = r.country ? countryFlag(r.country) : null
+  // De-emphasise the "Anonymous" prefix — most rows are anonymous, so
+  // promoting it to bold-white makes the row feel cluttered. Instead
+  // render a small grey tag and lead with the actual identifier
+  // (city / country / IP). When the visitor IS named, keep the name.
+  const isAnonymous = /^Anonymous(\s|$)/i.test(r.effective_name)
+  // Lead line for anonymous rows: City · Country, falling back to
+  // the visitor IP when geolocation hasn't resolved yet.
+  const anonHeadline = r.city || r.country || r.visitor_ip || 'Unknown'
 
   return (
     <button
@@ -451,10 +508,14 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
       }`}
     >
       <div className="flex items-start gap-3">
-        {/* Avatar / online indicator */}
+        {/* Avatar / online indicator. For named visitors the initial
+            sits inside the gold accent ring; anonymous rows get a
+            country flag (when available) so a glance gives geography. */}
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-sm font-bold text-accent">
-            {r.effective_name.charAt(0).toUpperCase()}
+            {isAnonymous && flag
+              ? <span className="text-lg leading-none">{flag}</span>
+              : r.effective_name.charAt(0).toUpperCase()}
           </div>
           {r.is_online && (
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-dark-surface animate-pulse" />
@@ -464,8 +525,18 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
         {/* Main */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm truncate">{r.effective_name}</span>
-            {flag && <span className="text-[11px]">{flag}</span>}
+            {isAnonymous ? (
+              <>
+                <span className="font-semibold text-sm text-white truncate">{anonHeadline}</span>
+                <span className="text-[10px] uppercase tracking-wide text-t-secondary/70 font-medium">{t('engagement.row.anon', 'Anonymous')}</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-sm truncate">{r.effective_name}</span>
+                {flag && <span className="text-[11px]" title={r.country ?? undefined}>{flag}</span>}
+                {r.country && <span className="text-[10px] text-t-secondary">{r.city ? `${r.city}, ${r.country}` : r.country}</span>}
+              </>
+            )}
             {r.has_email && <Mail size={11} className="text-blue-400" />}
             {r.has_phone && <Phone size={11} className="text-emerald-400" />}
             {r.is_hot_lead && (

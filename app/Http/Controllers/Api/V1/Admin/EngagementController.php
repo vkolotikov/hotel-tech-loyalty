@@ -32,6 +32,7 @@ class EngagementController extends Controller
     {
         $params = $request->validate([
             'filter'   => 'nullable|string|in:priority,all,online,has_contact,active_chat,hot_lead,anonymous,resolved,booking_inquiry,info_request,complaint,cancellation,support',
+            'range'    => 'nullable|string|in:today,week,month,all',
             'sort'     => 'nullable|string|in:priority,recent,engagement',
             'search'   => 'nullable|string|max:200',
             'page'     => 'nullable|integer|min:1',
@@ -56,6 +57,25 @@ class EngagementController extends Controller
     {
         $orgId = (int) app('current_organization_id');
         return response()->json(['data' => $this->feedService->kpis($orgId)]);
+    }
+
+    /**
+     * GET /v1/admin/engagement/filter-counts?range=today|week|month|all
+     *
+     * Returns per-filter row counts for the active range so the
+     * frontend can render "Active chat (12)" / "Online (3)" etc. Cheap:
+     * one COUNT per filter, no pagination overhead.
+     */
+    public function filterCounts(Request $request): JsonResponse
+    {
+        $params = $request->validate([
+            'range' => 'nullable|string|in:today,week,month,all',
+        ]);
+        $orgId = (int) app('current_organization_id');
+        return response()->json([
+            'data'  => $this->feedService->filterCounts($orgId, $params['range'] ?? 'all'),
+            'range' => $params['range'] ?? 'all',
+        ]);
     }
 
     /**

@@ -42,12 +42,17 @@ class EngagementFeedService
         $threshold = now()->subSeconds(self::ONLINE_THRESHOLD_SECONDS);
 
         $query = Visitor::query()
-            ->where('organization_id', $orgId)
+            ->where('organization_id', $orgId);
+
+        // Date-range gate: today | week | month | all. Applied to
+        // last_seen_at (visitor activity), with a fallback into the
+        // visitor's latest conversation timestamp so a stale-cookie
+        // returning lead still counts inside the window.
+        $this->applyRange($query, $params['range'] ?? 'all');
+
+        $query
             // Lightweight eager loads — just enough to render the row. The
             // detail drawer fetches the full conversation / journey separately.
-            // ChatConversation doesn't have last_message_preview / sender on
-            // the table itself, so we eager-load the latest message via the
-            // messages relation; same for the unread count.
             ->with([
                 'guest:id,full_name,email,phone,lifecycle_status',
                 'conversations' => fn ($q) => $q
@@ -172,7 +177,47 @@ class EngagementFeedService
         ];
     }
 
-    /* ─── filter / search ──────────────────────────────────────────────── */
+    /**
+     * Per-filter row counts for the active range.
+     * Cheap: just COUNTs each filter clause separately. Used by the
+     * frontend to show "Active chat (12)" / "Online (3)" etc.
+     */
+    public function filterCounts(int $orgId, string $range = 'all'): array
+    {
+        $threshold = now()->subSeconds(self::ONLINE_THRESHOLD_SECONDS);
+        $filters = ['priority', 'online', 'has_contact', 'active_chat', 'hot_lead',
+                    'anonymous', 'resolved',
+                    'booking_inquiry', 'info_request', 'complaint', 'cancellation', 'support'];
+        $counts = [];
+        foreach ($filters as $f) {
+            $q = Visitor::query()->where('organization_id', $orgId);
+            $this->applyRange($q, $range);
+            $this->applyFilter($q, $f, $threshold);
+            $counts[$f] = $q->count();
+        }
+        return $counts;
+    }
+
+    /* ─── range / filter / search ───────────────────────────────────────── */
+
+    private function applyRange($query, string $range): void
+    {
+        $from = match ($range) {
+            'today' => now()->startOfDay(),
+            'week'  => now()->subDays(7),
+            'month' => now()->subDays(30),
+            default => null,
+        };
+        if (!$from) return;
+
+        // Match either visitor activity OR a conversation message in
+        // the window — that way a returning visitor whose cookie hasn't
+        // refreshed still surfaces if they had a chat today.
+        $query->where(function ($q) use ($from) {
+            $q->where('last_seen_at', '>=', $from)
+              ->orWhereHas('conversations', fn ($c) => $c->where('last_message_at', '>=', $from));
+        });
+    }
 
     private function applyFilter($query, string $filter, \Carbon\Carbon $threshold): void
     {
