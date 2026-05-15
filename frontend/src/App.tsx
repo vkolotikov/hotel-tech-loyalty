@@ -51,6 +51,7 @@ const Properties = lazy(() => import('./pages/Properties').then(m => ({ default:
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
+const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
 const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })))
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })))
 const LeadForms = lazy(() => import('./pages/LeadForms').then(m => ({ default: m.LeadForms })))
@@ -250,6 +251,7 @@ export default function App() {
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
+          <Route path="/deals" element={<LazyRoute><Deals /></LazyRoute>} />
           <Route path="/tasks" element={<LazyRoute><Tasks /></LazyRoute>} />
           <Route path="/reports" element={<LazyRoute><Reports /></LazyRoute>} />
           <Route path="/lead-forms" element={<LazyRoute><LeadForms /></LazyRoute>} />

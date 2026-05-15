@@ -617,6 +617,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('inquiries/today',                 [InquiryController::class, 'today']);
             Route::get('inquiries/insights',              [InquiryController::class, 'insights']);
             Route::get('inquiries/kpis',                  [InquiryController::class, 'kpis']);
+
+            // ─── CRM: Deals & Fulfillment ────────────────────────────────────
+            Route::get('deals',                           [\App\Http\Controllers\Api\V1\Admin\DealController::class, 'index']);
+            Route::get('deals/kpis',                      [\App\Http\Controllers\Api\V1\Admin\DealController::class, 'kpis']);
+            Route::patch('deals/{id}/stage',              [\App\Http\Controllers\Api\V1\Admin\DealController::class, 'updateStage']);
+            Route::patch('deals/{id}/payment',            [\App\Http\Controllers\Api\V1\Admin\DealController::class, 'updatePayment']);
             Route::post('inquiries/bulk',                 [InquiryController::class, 'bulk']);
             Route::get('inquiries',                       [InquiryController::class, 'index']);
             Route::post('inquiries',                      [InquiryController::class, 'store']);

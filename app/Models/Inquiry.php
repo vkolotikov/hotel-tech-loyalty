@@ -32,22 +32,30 @@ class Inquiry extends Model
         // CRM Phase 10 — link to the lead-capture form that created
         // this inquiry, so the funnel report can attribute leads.
         'lead_form_id',
+        // Deals & Fulfillment (2026-05-15) — once an inquiry is won, it
+        // walks a fulfillment workflow tracked on the same row.
+        'fulfillment_stage', 'payment_status', 'paid_amount',
+        'fulfillment_started_at', 'fulfillment_completed_at',
     ];
 
     protected $casts = [
-        'check_in'            => 'date',
-        'check_out'           => 'date',
-        'next_task_due'       => 'date',
-        'last_contacted_at'   => 'date',
-        'next_task_completed' => 'boolean',
-        'catering_required'   => 'boolean',
-        'av_required'         => 'boolean',
-        'rate_offered'        => 'decimal:2',
-        'total_value'         => 'decimal:2',
+        'check_in'                  => 'date',
+        'check_out'                 => 'date',
+        'next_task_due'             => 'date',
+        'last_contacted_at'         => 'date',
+        'next_task_completed'       => 'boolean',
+        'catering_required'         => 'boolean',
+        'av_required'               => 'boolean',
+        'rate_offered'              => 'decimal:2',
+        'total_value'               => 'decimal:2',
         // CRM Phase 1 casts
-        'ai_brief_at'         => 'datetime',
-        'ai_win_probability'  => 'integer',
-        'custom_data'         => 'array',
+        'ai_brief_at'               => 'datetime',
+        'ai_win_probability'        => 'integer',
+        'custom_data'               => 'array',
+        // Deals & Fulfillment casts
+        'paid_amount'               => 'decimal:2',
+        'fulfillment_started_at'    => 'datetime',
+        'fulfillment_completed_at'  => 'datetime',
     ];
 
     public function guest(): BelongsTo

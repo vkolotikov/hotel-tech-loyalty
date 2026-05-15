@@ -118,6 +118,7 @@ const navGroups: NavGroup[] = [
     accent: '#f472b6', // pink
     items: [
       { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
+      { path: '/deals',         labelKey: 'nav.items.deals',           defaultLabel: 'Deals',             icon: Package,   gate: 'all' },
       { path: '/tasks',         labelKey: 'nav.items.tasks',           defaultLabel: 'Tasks',             icon: ListChecks, gate: 'all' },
       { path: '/reports',       labelKey: 'nav.items.reports',         defaultLabel: 'Reports',           icon: TrendingUp, gate: 'admin' },
       { path: '/lead-forms',    labelKey: 'nav.items.lead_forms',      defaultLabel: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },
