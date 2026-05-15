@@ -60,7 +60,13 @@ const CRM_PERIOD_OPTIONS = [
   { labelKey: 'months_12', value: 'months12' },
 ] as const
 
-type ActiveTab = 'overview' | 'chat' | 'leads' | 'deals' | 'points' | 'members' | 'bookings' | 'pipeline' | 'venues'
+// CRM Pipeline tab dropped — its content (funnel, forecast, lost-reason
+// breakdown, owner board, company LTV) is fully covered by Reports
+// embedded inside the Leads tab.
+// Members + Points & Rewards merged into a single "Loyalty" tab (the
+// tab id stays 'members' to avoid breaking saved selections; only the
+// label changes).
+type ActiveTab = 'overview' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
 
 export function Analytics() {
   const { t } = useTranslation()
@@ -150,42 +156,14 @@ export function Analytics() {
     queryFn: () => api.get(`/v1/admin/analytics/hotel-ops?days=${bookingDays}`).then(r => r.data),
   })
 
-  // Conversion funnel — stage-by-stage rollup with conversion rates
-  // and time-to-close. Cheap to render so we leave it always-fetched.
-  const { data: inquiryFunnel } = useQuery<any>({
-    queryKey: ['analytics-inquiry-funnel'],
-    queryFn: () => api.get('/v1/admin/analytics/inquiry-funnel?months=6').then(r => r.data),
-    enabled: activeTab === 'pipeline',
-  })
+  // CRM Pipeline tab was dropped. The queries it fed
+  // (inquiryFunnel, crmTrends, inquiryPipeline, bookingChannels,
+  // revenueComparison, revByProperty) are gone with it — the same data
+  // now lives in /reports embedded under the Leads tab.
 
   const { data: expiryForecast } = useQuery({
     queryKey: ['analytics-expiry-forecast'],
     queryFn: () => api.get('/v1/admin/analytics/expiry-forecast?months=6').then(r => r.data),
-  })
-
-  // CRM queries
-  const { data: crmTrends } = useQuery({
-    queryKey: ['analytics-crm-trends', crmPeriod],
-    queryFn: () => api.get(`/v1/admin/analytics/crm-trends?period=${crmPeriod}`).then(r => r.data),
-    enabled: activeTab === 'pipeline' || activeTab === 'overview',
-  })
-
-  const { data: inquiryPipeline } = useQuery({
-    queryKey: ['analytics-inquiry-pipeline'],
-    queryFn: () => api.get('/v1/admin/analytics/inquiry-pipeline').then(r => r.data),
-    enabled: activeTab === 'pipeline' || activeTab === 'overview',
-  })
-
-  const { data: bookingChannels } = useQuery({
-    queryKey: ['analytics-booking-channels'],
-    queryFn: () => api.get('/v1/admin/analytics/booking-channels').then(r => r.data),
-    enabled: activeTab === 'pipeline',
-  })
-
-  const { data: revenueComparison } = useQuery({
-    queryKey: ['analytics-revenue-comparison'],
-    queryFn: () => api.get('/v1/admin/analytics/revenue-comparison').then(r => r.data),
-    enabled: activeTab === 'pipeline',
   })
 
   const { data: occupancy } = useQuery({
@@ -212,11 +190,7 @@ export function Analytics() {
     enabled: activeTab === 'venues',
   })
 
-  const { data: revByProperty } = useQuery({
-    queryKey: ['analytics-rev-by-property'],
-    queryFn: () => api.get('/v1/admin/analytics/revenue-by-property').then(r => r.data),
-    enabled: activeTab === 'venues' || activeTab === 'pipeline',
-  })
+  // revByProperty was only used by the dropped Pipeline tab.
 
   const qc = useQueryClient()
 
@@ -245,11 +219,9 @@ export function Analytics() {
     { id: 'chat',     label: t('analytics.tabs.chat', 'Chat'),         icon: <MessageCircle size={15} /> },
     { id: 'leads',    label: t('analytics.tabs.leads', 'Leads'),       icon: <Briefcase size={15} /> },
     { id: 'deals',    label: t('analytics.tabs.deals', 'Deals'),       icon: <Package size={15} /> },
-    { id: 'points', label: t('analytics.tabs.points', 'Points & Rewards'), icon: <Award size={15} /> },
-    { id: 'members', label: t('analytics.tabs.members', 'Members'), icon: <Users size={15} /> },
+    { id: 'members',  label: t('analytics.tabs.loyalty', 'Loyalty'),   icon: <Award size={15} /> },
     { id: 'bookings', label: t('analytics.tabs.bookings', 'Bookings & Revenue'), icon: <Hotel size={15} /> },
-    { id: 'pipeline', label: t('analytics.tabs.pipeline', 'CRM Pipeline'), icon: <Briefcase size={15} /> },
-    { id: 'venues', label: t('analytics.tabs.venues', 'Venues & Guests'), icon: <MapPin size={15} /> },
+    { id: 'venues',   label: t('analytics.tabs.venues', 'Venues & Guests'), icon: <MapPin size={15} /> },
   ]
 
   // Lazy-fetch the data behind each operational page's stats so the
@@ -518,7 +490,10 @@ export function Analytics() {
       )}
 
       {/* ════════════════ POINTS TAB ════════════════ */}
-      {activeTab === 'points' && (
+      {/* Points & Rewards content is now rendered inside the unified
+          Loyalty tab (id 'members'). The standalone 'points' tab was
+          dropped per user direction. */}
+      {activeTab === 'members' && (
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
@@ -1058,200 +1033,7 @@ export function Analytics() {
         </>
       )}
 
-      {/* ════════════════ CRM PIPELINE TAB ════════════════ */}
-      {activeTab === 'pipeline' && (
-        <>
-          {/* MoM Comparison Cards */}
-          {revenueComparison && (
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-              {[
-                { key: 'revenue', label: t('analytics.kpis.revenue', 'Revenue'), curr: revenueComparison.current.total_revenue, pct: revenueComparison.changes.revenue_pct, fmt: (v: number) => `$${Number(v).toLocaleString()}` },
-                { key: 'bookings', label: t('analytics.kpis.bookings', 'Bookings'), curr: revenueComparison.current.total_bookings, pct: revenueComparison.changes.bookings_pct, fmt: (v: number) => v.toLocaleString() },
-                { key: 'avg_rate', label: t('analytics.kpis.avg_rate', 'Avg Rate'), curr: revenueComparison.current.avg_rate, pct: revenueComparison.changes.rate_pct, fmt: (v: number) => `$${Number(v).toFixed(0)}` },
-                { key: 'new_guests', label: t('analytics.kpis.new_guests', 'New Guests'), curr: revenueComparison.current.new_guests, pct: revenueComparison.changes.guests_pct, fmt: (v: number) => v.toLocaleString() },
-              ].map(item => (
-                <div key={item.key} className="bg-dark-surface rounded-xl border border-dark-border p-5">
-                  <p className="text-xs text-t-secondary mb-2">{item.label}</p>
-                  <p className="text-2xl font-bold text-white">{item.fmt(item.curr)}</p>
-                  <div className={`flex items-center gap-1 text-xs mt-1 ${item.pct >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
-                    {item.pct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    <span>{t('analytics.kpis.vs_last_month', { pct: Math.abs(item.pct), defaultValue: '{{pct}}% vs last month' })}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Performance Trends */}
-          <Card>
-            <div className="flex items-center justify-between mb-5">
-              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.performance_trends', 'Performance Trends')}</h3><p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.performance_trends_sub', 'Guests, inquiries, and conversions over time')}</p></div>
-              <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
-                {CRM_PERIOD_OPTIONS.map(p => (
-                  <button key={p.value} onClick={() => setCrmPeriod(p.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
-                    {t(`analytics.periods.${p.labelKey}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={crmTrends ?? []}>
-                <defs>
-                  <linearGradient id="gGuests" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
-                  <linearGradient id="gInq" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
-                  <linearGradient id="gConf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-                <Legend />
-                <Area type="monotone" dataKey="new_guests" stroke="#3b82f6" strokeWidth={2} fill="url(#gGuests)" name={t('analytics.series.new_guests', 'New Guests')} />
-                <Area type="monotone" dataKey="new_inquiries" stroke="#f59e0b" strokeWidth={2} fill="url(#gInq)" name={t('analytics.series.inquiries', 'Inquiries')} />
-                <Area type="monotone" dataKey="confirmed_inquiries" stroke="#32d74b" strokeWidth={2} fill="url(#gConf)" name={t('analytics.series.confirmed', 'Confirmed')} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Conversion Funnel — stage-by-stage rollup with conversion
-              rates between adjacent stages, plus win rate and avg
-              time-to-close. Honest metric: New is the widest bar
-              (everyone who entered) and each subsequent stage rolls
-              up everyone who reached it OR beyond, so a closed deal
-              still counts toward earlier stages it passed through. */}
-          {inquiryFunnel && (
-            <Card>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                    <Briefcase size={16} className="text-purple-400" /> {t('analytics.cards.conversion_funnel', 'Conversion Funnel')}
-                  </h3>
-                  <p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.conversion_funnel_sub', { months: inquiryFunnel.months, won: inquiryFunnel.won, lost: inquiryFunnel.lost, defaultValue: 'Last {{months}} months · {{won}} won, {{lost}} lost' })}</p>
-                </div>
-                <div className="flex gap-6 text-right">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-[#636366]">{t('analytics.cards.win_rate', 'Win Rate')}</p>
-                    <p className="text-2xl font-bold text-emerald-400 tabular-nums">{inquiryFunnel.win_rate_pct}%</p>
-                  </div>
-                  {inquiryFunnel.avg_days_to_close !== null && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#636366]">{t('analytics.cards.avg_days_to_close', 'Avg Days to Close')}</p>
-                      <p className="text-2xl font-bold text-blue-400 tabular-nums">{inquiryFunnel.avg_days_to_close}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                {(inquiryFunnel.stages ?? []).map((s: any, i: number) => {
-                  const max = inquiryFunnel.stages[0]?.count || 1
-                  const widthPct = max > 0 ? Math.max(2, (s.count / max) * 100) : 2
-                  const isWin = s.stage === 'Confirmed'
-                  return (
-                    <div key={s.stage} className="flex items-center gap-3">
-                      <div className="w-32 text-xs text-t-secondary truncate">{s.stage}</div>
-                      <div className="flex-1 relative h-7 bg-dark-surface2 rounded-lg overflow-hidden">
-                        <div className="h-full rounded-lg flex items-center justify-end px-2"
-                          style={{
-                            width: `${widthPct}%`,
-                            background: isWin
-                              ? 'linear-gradient(90deg, rgba(34,197,94,0.4), rgba(34,197,94,0.7))'
-                              : `linear-gradient(90deg, rgba(99,102,241,${0.3 + (s.stages?.length ? 0 : i * 0.05)}), rgba(168,85,247,${0.5 + i * 0.05}))`,
-                          }}>
-                          <span className="text-[11px] font-bold text-white tabular-nums">{s.count}</span>
-                        </div>
-                      </div>
-                      <div className="w-24 text-right text-xs">
-                        {i > 0 && (
-                          <span className={`tabular-nums font-semibold ${s.rate_from_prev >= 60 ? 'text-emerald-400' : s.rate_from_prev >= 30 ? 'text-amber-400' : 'text-red-400'}`}>
-                            {s.rate_from_prev}%
-                          </span>
-                        )}
-                        {i === 0 && <span className="text-[#636366]">{t('analytics.funnel_start', 'start')}</span>}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-          )}
-
-          {/* Inquiry Pipeline + Booking Channels */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Briefcase size={16} className="text-blue-400" /> {t('analytics.cards.inquiry_pipeline', 'Inquiry Pipeline')}</h3>
-              <div className="flex gap-6 items-center">
-                <ResponsiveContainer width="45%" height={220}>
-                  <PieChart>
-                    <Pie data={inquiryPipeline ?? []} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
-                      {(inquiryPipeline ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-2">
-                  {(inquiryPipeline ?? []).map((s: any, i: number) => (
-                    <div key={s.status} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                      <span className="text-xs text-[#e0e0e0] flex-1">{s.status}</span>
-                      <span className="text-xs font-semibold text-white">{s.count}</span>
-                      <span className="text-xs text-[#636366] w-16 text-right">${Number(s.value).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><BarChart3 size={16} className="text-[#32d74b]" /> {t('analytics.cards.booking_channels', 'Booking Channels')}</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={bookingChannels ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="channel" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [name === 'revenue' ? `$${Number(v).toLocaleString()}` : v, name === 'revenue' ? t('analytics.series.revenue', 'Revenue') : t('analytics.series.bookings', 'Bookings')]} />
-                  <Legend />
-                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('analytics.series.bookings', 'Bookings')} />
-                  <Bar dataKey="revenue" fill="#32d74b" radius={[4, 4, 0, 0]} name={t('analytics.series.revenue', 'Revenue')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
-
-          {/* Revenue by Property */}
-          <Card>
-            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Hotel size={16} className="text-purple-400" /> {t('analytics.cards.revenue_by_property', 'Revenue by Property')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-t-secondary text-xs uppercase tracking-wide border-b border-dark-border">
-                    <th className="pb-3 font-semibold">{t('analytics.table.property', 'Property')}</th>
-                    <th className="pb-3 font-semibold text-right">{t('analytics.kpis.bookings', 'Bookings')}</th>
-                    <th className="pb-3 font-semibold text-right">{t('analytics.kpis.revenue', 'Revenue')}</th>
-                    <th className="pb-3 font-semibold text-right">{t('analytics.table.avg_rate', 'Avg Rate')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-border">
-                  {(revByProperty ?? []).map((p: any, i: number) => (
-                    <tr key={i} className="hover:bg-dark-surface2 transition-colors">
-                      <td className="py-3">
-                        <p className="font-semibold text-white">{p.name}</p>
-                        <p className="text-xs text-[#636366]">{p.code}</p>
-                      </td>
-                      <td className="py-3 text-right text-[#a0a0a0]">{p.bookings}</td>
-                      <td className="py-3 text-right font-semibold text-white">${Number(p.revenue).toLocaleString()}</td>
-                      <td className="py-3 text-right text-[#a0a0a0]">${Number(p.avg_rate).toFixed(0)}</td>
-                    </tr>
-                  ))}
-                  {(revByProperty ?? []).length === 0 && (
-                    <tr><td colSpan={4} className="py-6 text-center text-[#636366]">{t('analytics.cards.no_property_data', 'No property data available')}</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
-      )}
+      {/* CRM Pipeline tab removed — Reports embedded under the Leads tab carries the funnel, forecast, lost-reason breakdown, owner scoreboard and company LTV cards. */}
 
       {/* ════════════════ VENUES & GUESTS TAB ════════════════ */}
       {activeTab === 'venues' && (
