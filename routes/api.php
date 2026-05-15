@@ -464,6 +464,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('analytics/venue-utilization',    [AnalyticsController::class, 'venueUtilization']);
             Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
             Route::get('analytics/leads-deep',           [AnalyticsController::class, 'leadsDeep']);
+            Route::get('analytics/overview-trends',      [AnalyticsController::class, 'overviewTrends']);
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
             Route::get('campaigns/{id}',                  [AdminNotificationController::class, 'show']);

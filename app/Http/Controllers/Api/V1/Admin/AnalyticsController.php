@@ -519,6 +519,86 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    /**
+     * GET /v1/admin/analytics/overview-trends?days=N
+     *
+     * Tiny per-KPI series + previous-period totals so the Overview
+     * tab's four cards can render a sparkline and a vs-prev delta.
+     * Keeps /overview untouched and queries are scoped tight (single
+     * GROUP BY per series, indexed columns only).
+     */
+    public function overviewTrends(Request $request): JsonResponse
+    {
+        $days = max(7, min(90, (int) $request->query('days', 30)));
+        $from = now()->subDays($days - 1)->startOfDay();
+        $prevFrom = (clone $from)->subDays($days);
+        $prevTo   = (clone $from)->subSecond();
+
+        $fillDays = function ($rows, ?callable $valueGetter = null) use ($days) {
+            $out = [];
+            $valueGetter ??= fn ($r) => (int) ($r->count ?? 0);
+            for ($i = $days - 1; $i >= 0; $i--) {
+                $d = now()->subDays($i)->format('Y-m-d');
+                $out[] = ['date' => $d, 'value' => $rows[$d] ? $valueGetter($rows[$d]) : 0];
+            }
+            return $out;
+        };
+
+        // ── Members (new joins per day) ──
+        $membersRows = \App\Models\LoyaltyMember::where('joined_at', '>=', $from)
+            ->selectRaw('DATE(joined_at) as date, COUNT(*) as count')
+            ->groupBy('date')->get()->keyBy('date');
+        $membersTrend = $fillDays($membersRows);
+        $prevMembers  = (int) \App\Models\LoyaltyMember::whereBetween('joined_at', [$prevFrom, $prevTo])->count();
+        $currMembers  = (int) \App\Models\LoyaltyMember::where('joined_at', '>=', $from)->count();
+
+        // ── Points issued per day ──
+        $pointsRows = \App\Models\PointsTransaction::where('is_reversed', false)
+            ->where('points', '>', 0)
+            ->where('created_at', '>=', $from)
+            ->selectRaw('DATE(created_at) as date, SUM(points) as total')
+            ->groupBy('date')->get()->keyBy('date');
+        $pointsTrend = $fillDays($pointsRows, fn ($r) => (int) ($r->total ?? 0));
+        $prevPoints = (int) \App\Models\PointsTransaction::where('is_reversed', false)
+            ->where('points', '>', 0)
+            ->whereBetween('created_at', [$prevFrom, $prevTo])
+            ->sum('points');
+        $currPoints = (int) \App\Models\PointsTransaction::where('is_reversed', false)
+            ->where('points', '>', 0)
+            ->where('created_at', '>=', $from)
+            ->sum('points');
+
+        // ── Stays (bookings created per day) ──
+        $staysRows = \App\Models\Booking::where('created_at', '>=', $from)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')->get()->keyBy('date');
+        $staysTrend = $fillDays($staysRows);
+        $prevStays = (int) \App\Models\Booking::whereBetween('created_at', [$prevFrom, $prevTo])->count();
+        $currStays = (int) \App\Models\Booking::where('created_at', '>=', $from)->count();
+
+        // ── Revenue (booking total_amount per day) ──
+        $revenueRows = \App\Models\Booking::where('created_at', '>=', $from)
+            ->selectRaw('DATE(created_at) as date, COALESCE(SUM(total_amount), 0) as total')
+            ->groupBy('date')->get()->keyBy('date');
+        $revenueTrend = $fillDays($revenueRows, fn ($r) => round((float) ($r->total ?? 0), 2));
+        $prevRevenue = (float) \App\Models\Booking::whereBetween('created_at', [$prevFrom, $prevTo])->sum('total_amount');
+        $currRevenue = (float) \App\Models\Booking::where('created_at', '>=', $from)->sum('total_amount');
+
+        $pct = function ($curr, $prev) {
+            if ($prev <= 0 && $curr <= 0) return null;
+            if ($prev <= 0) return 100;
+            return (int) round((($curr - $prev) / $prev) * 100);
+        };
+
+        return response()->json([
+            'period_days' => $days,
+            'members'  => ['trend' => $membersTrend,  'current' => $currMembers,  'previous' => $prevMembers,  'delta_pct' => $pct($currMembers,  $prevMembers)],
+            'points'   => ['trend' => $pointsTrend,   'current' => $currPoints,   'previous' => $prevPoints,   'delta_pct' => $pct($currPoints,   $prevPoints)],
+            'stays'    => ['trend' => $staysTrend,    'current' => $currStays,    'previous' => $prevStays,    'delta_pct' => $pct($currStays,    $prevStays)],
+            'revenue'  => ['trend' => $revenueTrend,  'current' => round($currRevenue, 2), 'previous' => round($prevRevenue, 2), 'delta_pct' => $pct($currRevenue, $prevRevenue)],
+        ]);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private function monthStats(string $from, string $to): array

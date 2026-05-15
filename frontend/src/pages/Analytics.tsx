@@ -243,6 +243,13 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/analytics/leads-deep?days=30').then(r => r.data),
     enabled: activeTab === 'leads',
   })
+  // Per-KPI trend + previous-period totals so the 4 Overview cards
+  // can render an inline sparkline + delta-vs-previous chip.
+  const { data: overviewTrends } = useQuery<any>({
+    queryKey: ['analytics-overview-trends'],
+    queryFn: () => api.get('/v1/admin/analytics/overview-trends?days=30').then(r => r.data),
+    enabled: activeTab === 'overview',
+  })
   const { data: dealsKpis } = useQuery<any>({
     queryKey: ['analytics-deals-kpis'],
     queryFn: () => api.get('/v1/admin/deals/kpis').then(r => r.data),
@@ -319,17 +326,47 @@ export function Analytics() {
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { key: 'total_members', label: t('analytics.kpis.total_members', 'Total Members'), value: kpis?.total_members?.toLocaleString() ?? '—', icon: <Users size={18} />, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-              { key: 'avg_points', label: t('analytics.kpis.avg_points_per_member', 'Avg Points / Member'), value: kpis?.avg_points_per_member?.toLocaleString() ?? '—', icon: <Award size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
-              { key: 'active_stays', label: t('analytics.kpis.active_stays', 'Active Stays'), value: kpis?.active_stays ?? '—', icon: <TrendingUp size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
-              { key: 'revenue_month', label: t('analytics.kpis.revenue_month', 'Revenue (Month)'), value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—', icon: <DollarSign size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15' },
-            ].map(m => (
-              <div key={m.key} className="bg-dark-surface rounded-xl border border-dark-border p-5">
-                <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
-                <p className="text-2xl font-bold text-white">{m.value}</p>
-                <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
-              </div>
-            ))}
+              { key: 'total_members', label: t('analytics.kpis.total_members', 'Total Members'),       value: kpis?.total_members?.toLocaleString() ?? '—',                                       icon: <Users size={18} />,       color: 'text-blue-400',   bg: 'bg-blue-500/15',     sparkColor: '#3b82f6', trend: overviewTrends?.members,  isMoney: false },
+              { key: 'avg_points',    label: t('analytics.kpis.avg_points_per_member', 'Avg Points / Member'), value: kpis?.avg_points_per_member?.toLocaleString() ?? '—',                          icon: <Award size={18} />,       color: 'text-amber-400',  bg: 'bg-amber-500/15',    sparkColor: '#f59e0b', trend: overviewTrends?.points,   isMoney: false },
+              { key: 'active_stays',  label: t('analytics.kpis.active_stays', 'Active Stays'),         value: kpis?.active_stays ?? '—',                                                         icon: <TrendingUp size={18} />,  color: 'text-[#32d74b]',  bg: 'bg-[#32d74b]/15',    sparkColor: '#22c55e', trend: overviewTrends?.stays,    isMoney: false },
+              { key: 'revenue_month', label: t('analytics.kpis.revenue_month', 'Revenue (Month)'),     value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—',               icon: <DollarSign size={18} />,  color: 'text-purple-400', bg: 'bg-purple-500/15',   sparkColor: '#a855f7', trend: overviewTrends?.revenue,  isMoney: true  },
+            ].map(m => {
+              const delta = m.trend?.delta_pct
+              return (
+                <div key={m.key} className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color}`}>{m.icon}</div>
+                    {delta != null && (
+                      <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold tabular-nums ${
+                        delta >= 0 ? 'text-emerald-400' : 'text-red-400'
+                      }`}>
+                        {delta >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                        {Math.abs(delta)}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xl font-bold text-white">{m.value}</p>
+                  <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
+                  {/* Inline 30-day sparkline. Hidden until trend lands so
+                      we don't flash an empty box. */}
+                  {m.trend?.trend && m.trend.trend.length > 0 && (
+                    <div className="mt-2 -mx-1 -mb-1">
+                      <ResponsiveContainer width="100%" height={36}>
+                        <AreaChart data={m.trend.trend} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id={`spark-${m.key}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%"  stopColor={m.sparkColor} stopOpacity={0.4} />
+                              <stop offset="95%" stopColor={m.sparkColor} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <Area type="monotone" dataKey="value" stroke={m.sparkColor} fill={`url(#spark-${m.key})`} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {/* Points Activity */}
