@@ -271,6 +271,19 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/deals/kpis').then(r => r.data),
     enabled: activeTab === 'deals',
   })
+  // Deeper deals analytics — revenue trend, stage distribution, top
+  // customers, cycle time, stuck deals.
+  const { data: dealsAnalytics } = useQuery<any>({
+    queryKey: ['analytics-deals-analytics'],
+    queryFn: () => api.get('/v1/admin/deals/analytics?days=30').then(r => r.data),
+    enabled: activeTab === 'deals',
+  })
+  // AI cost trend for the Chat tab.
+  const { data: aiUsageSeries } = useQuery<any>({
+    queryKey: ['analytics-ai-usage-series'],
+    queryFn: () => api.get('/v1/admin/ai-usage/series?days=30').then(r => r.data),
+    enabled: activeTab === 'chat',
+  })
 
   return (
     <div className="space-y-6">
@@ -1397,6 +1410,39 @@ export function Analytics() {
             </div>
           </div>
 
+          {/* AI cost trend — combined cost (filled area) + call count
+              (line) over 30 days. Surfaces both spend curve and call
+              volume so admins spot a price spike that's volume-driven
+              vs a per-call model change. */}
+          {aiUsageSeries?.data && aiUsageSeries.data.length > 0 && (
+            <Card>
+              <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.chat.ai_cost_title', 'AI Cost & Call Volume (30d)')}</h3>
+              <p className="text-[11px] text-t-secondary mb-3">{t('analytics.chat.ai_cost_sub', 'Daily AI spend in USD with overlaid call count')}</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={aiUsageSeries.data.map((d: any) => ({
+                  day: String(d.day).slice(5, 10),
+                  cost: (d.cost_cents ?? 0) / 100,
+                  calls: d.calls ?? 0,
+                }))} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="aiCostGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={v => `$${v.toFixed(2)}`} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any, name: any) => String(name).includes('Cost') ? `$${Number(v).toFixed(2)}` : v as any} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                  <Area yAxisId="left"  type="monotone" dataKey="cost"  name={t('analytics.chat.cost_usd', 'Cost')}  stroke="#22c55e" fill="url(#aiCostGrad)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="right" type="monotone" dataKey="calls" name={t('analytics.chat.calls', 'Calls')} stroke="#f59e0b" strokeWidth={1.5} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
           {/* Deeper chatbot analytics — conversation volume, AI resolution
               rate, lead capture, intent breakdown, top pages, etc.
               Relocated from /chatbot-setup → Analytics tab. */}
@@ -1482,6 +1528,153 @@ export function Analytics() {
           <div className="text-xs text-t-secondary">
             <Link to="/deals" className="text-primary-400 hover:underline">{t('analytics.deals.open_deals', 'Open the Deals pipeline →')}</Link>
           </div>
+
+          {/* Secondary KPIs derived from the deeper analytics endpoint —
+              cycle time and stuck deals get their own headline tiles. */}
+          {dealsAnalytics && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card>
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-[11px] uppercase tracking-wider text-t-secondary">{t('analytics.deals.cycle_time', 'Avg Fulfillment Cycle')}</span>
+                  <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400"><Clock size={16} /></div>
+                </div>
+                <p className="text-3xl font-bold text-white tabular-nums">
+                  {(dealsAnalytics.cycle_time_days ?? 0).toFixed(1)} <span className="text-sm font-normal text-t-secondary">{t('analytics.deals.days', 'days')}</span>
+                </p>
+                <p className="text-xs text-t-secondary mt-1">{t('analytics.deals.cycle_sub', 'Avg time from start to completion (last 30d)')}</p>
+              </Card>
+              <Card>
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-[11px] uppercase tracking-wider text-t-secondary">{t('analytics.deals.stuck_deals', 'Stuck Deals')}</span>
+                  <div className="p-2 rounded-lg bg-red-500/15 text-red-400"><AlertTriangle size={16} /></div>
+                </div>
+                <p className="text-3xl font-bold text-white tabular-nums">{(dealsAnalytics.stuck_deals ?? 0).toLocaleString()}</p>
+                <p className="text-xs text-t-secondary mt-1">{t('analytics.deals.stuck_sub', 'Open deals with overdue follow-up')}</p>
+              </Card>
+            </div>
+          )}
+
+          {/* Revenue trend — daily revenue won (completed deals) +
+              count of new deals entering fulfillment. */}
+          {dealsAnalytics?.revenue_trend && (
+            <Card>
+              <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.deals.revenue_title', 'Revenue Won vs New Deals (30d)')}</h3>
+              <p className="text-[11px] text-t-secondary mb-3">{t('analytics.deals.revenue_sub', 'Daily revenue from completed deals with new-deal volume overlay')}</p>
+              <ResponsiveContainer width="100%" height={240}>
+                <ComposedChart data={dealsAnalytics.revenue_trend.map((d: any, i: number) => ({
+                  day: String(d.date).slice(5, 10),
+                  revenue: d.revenue,
+                  new_deals: dealsAnalytics.new_deal_trend?.[i]?.count ?? 0,
+                }))} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="dealRevGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                  <Area yAxisId="left"  type="monotone" dataKey="revenue"   name={t('analytics.deals.revenue', 'Revenue won')} stroke="#10b981" fill="url(#dealRevGrad)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="right" type="monotone" dataKey="new_deals" name={t('analytics.deals.new_deals', 'New deals')}   stroke="#f59e0b" strokeWidth={1.5} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
+          {/* Stage distribution stacked bar + payment-status donut. */}
+          {dealsAnalytics && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-3">{t('analytics.deals.stage_dist', 'Pipeline Value by Stage')}</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={dealsAnalytics.stage_distribution} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#8e8e93' }}
+                      tickFormatter={s => ({
+                        payment_pending: 'Pay',
+                        design_needed:   'Prep',
+                        design_sent:     'Review',
+                        in_production:   'Progress',
+                        ready_to_ship:   'Ready',
+                        completed:       'Done',
+                      } as any)[s] ?? s} />
+                    <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
+                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                    <Bar yAxisId="left"  dataKey="count"   name={t('analytics.deals.count', 'Deals')}   fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="revenue" name={t('analytics.deals.value', 'Value $')} fill="#10b981" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              <Card>
+                <h3 className="text-sm font-semibold text-white mb-3">{t('analytics.deals.payment_dist', 'Payment Status (open deals)')}</h3>
+                {dealsAnalytics.payment_distribution?.length > 0 ? (
+                  <div className="flex items-center gap-4">
+                    <ResponsiveContainer width="50%" height={180}>
+                      <PieChart>
+                        <Pie data={dealsAnalytics.payment_distribution} dataKey="count" nameKey="status"
+                          cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
+                          {dealsAnalytics.payment_distribution.map((_: any, i: number) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={CHART_TOOLTIP} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex-1 space-y-2">
+                      {dealsAnalytics.payment_distribution.map((p: any, i: number) => (
+                        <div key={p.status} className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                            <span className="text-t-secondary capitalize">{String(p.status).replace('_', ' ')}</span>
+                          </span>
+                          <span className="text-white font-medium">{p.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-t-secondary text-sm py-8 text-center">{t('analytics.deals.no_payment_data', 'No open deals')}</p>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* Top customers by deal revenue */}
+          {dealsAnalytics?.top_customers?.length > 0 && (
+            <Card>
+              <h3 className="text-sm font-semibold text-white mb-3">{t('analytics.deals.top_customers', 'Top Customers by Deal Value')}</h3>
+              <div className="space-y-2">
+                {dealsAnalytics.top_customers.map((c: any, i: number) => {
+                  const max = dealsAnalytics.top_customers[0].revenue || 1
+                  return (
+                    <div key={c.guest_id} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="text-t-secondary tabular-nums w-5">#{i + 1}</span>
+                          <span className="text-white font-medium truncate">{c.name}</span>
+                          {c.company && <span className="text-t-secondary truncate">· {c.company}</span>}
+                        </span>
+                        <span className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-t-secondary tabular-nums">{c.deals} {c.deals === 1 ? 'deal' : 'deals'}</span>
+                          <span className="text-emerald-400 font-bold tabular-nums">${Number(c.revenue).toLocaleString()}</span>
+                        </span>
+                      </div>
+                      <div className="h-1 bg-dark-hover rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(c.revenue / max) * 100}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
         </div>
       )}
     </div>

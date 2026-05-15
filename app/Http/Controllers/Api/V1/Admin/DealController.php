@@ -166,6 +166,138 @@ class DealController extends Controller
     }
 
     /**
+     * GET /v1/admin/deals/analytics?days=N — deeper analytics for the
+     * /analytics → Deals tab. Returns:
+     *   - revenue_trend: daily sum of total_value for deals completed
+     *     in the window (won-deal momentum graph)
+     *   - new_deal_trend: daily count of deals entering fulfillment
+     *   - stage_distribution: count + sum(total_value) per stage right
+     *     now (for stacked bar chart)
+     *   - payment_distribution: count by payment_status
+     *   - cycle_time_days: avg days from fulfillment_started_at to
+     *     fulfillment_completed_at for deals completed in the window
+     *   - top_customers: top 10 customers by total deal value
+     *   - stuck_deals: count of open deals where next_task_due is
+     *     overdue (proxy for stalled fulfillment)
+     */
+    public function analytics(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $days = max(7, min(365, (int) $request->query('days', 30)));
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        $base = fn () => Inquiry::query()->where(function ($q) {
+            $q->whereNotNull('fulfillment_stage')
+              ->orWhere('status', 'Confirmed')
+              ->orWhereHas('pipelineStage', fn ($p) => $p->where('kind', 'won'));
+        });
+
+        // Daily revenue won (completed in window)
+        $revenueRows = $base()
+            ->whereNotNull('fulfillment_completed_at')
+            ->where('fulfillment_completed_at', '>=', $from)
+            ->selectRaw('DATE(fulfillment_completed_at) as day, COUNT(*) as cnt, COALESCE(SUM(total_value), 0) as revenue')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy('day');
+
+        // Daily new deals (entered fulfillment in window — proxy: created_at)
+        $newRows = $base()
+            ->where('created_at', '>=', $from)
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as cnt')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy('day');
+
+        $revenueTrend = [];
+        $newTrend     = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $d = now()->subDays($i)->format('Y-m-d');
+            $revenueTrend[] = [
+                'date'    => $d,
+                'count'   => (int) ($revenueRows[$d]->cnt ?? 0),
+                'revenue' => round((float) ($revenueRows[$d]->revenue ?? 0), 2),
+            ];
+            $newTrend[] = [
+                'date'  => $d,
+                'count' => (int) ($newRows[$d]->cnt ?? 0),
+            ];
+        }
+
+        // Stage distribution (current snapshot)
+        $stageRows = $base()
+            ->whereNotNull('fulfillment_stage')
+            ->selectRaw('fulfillment_stage as stage, COUNT(*) as cnt, COALESCE(SUM(total_value), 0) as revenue')
+            ->groupBy('fulfillment_stage')
+            ->get();
+
+        $stageDistribution = [];
+        foreach (self::STAGES as $stage) {
+            $row = $stageRows->firstWhere('stage', $stage);
+            $stageDistribution[] = [
+                'stage'   => $stage,
+                'count'   => $row ? (int) $row->cnt : 0,
+                'revenue' => $row ? round((float) $row->revenue, 2) : 0,
+            ];
+        }
+
+        // Payment status distribution (open deals only)
+        $paymentRows = $base()
+            ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
+            ->selectRaw('COALESCE(payment_status, \'unset\') as status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->get()
+            ->map(fn ($r) => ['status' => $r->status, 'count' => (int) $r->cnt]);
+
+        // Avg cycle time in days (completed deals in window)
+        $cycleRow = $base()
+            ->whereNotNull('fulfillment_started_at')
+            ->whereNotNull('fulfillment_completed_at')
+            ->where('fulfillment_completed_at', '>=', $from)
+            ->selectRaw('AVG(EXTRACT(EPOCH FROM (fulfillment_completed_at - fulfillment_started_at)) / 86400.0) as days')
+            ->first();
+        $cycleTimeDays = round((float) ($cycleRow->days ?? 0), 1);
+
+        // Top customers by deal value (window-agnostic — lifetime value
+        // of the deals on this customer)
+        $topCustomers = $base()
+            ->whereNotNull('guest_id')
+            ->with('guest:id,full_name,company')
+            ->selectRaw('guest_id, COUNT(*) as deals, COALESCE(SUM(total_value), 0) as revenue')
+            ->groupBy('guest_id')
+            ->orderByDesc('revenue')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => [
+                'guest_id' => $r->guest_id,
+                'name'     => $r->guest?->full_name ?? '—',
+                'company'  => $r->guest?->company,
+                'deals'    => (int) $r->deals,
+                'revenue'  => round((float) $r->revenue, 2),
+            ]);
+
+        // Stuck deals — open, with an overdue next_task_due
+        $stuckDeals = $base()
+            ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
+            ->where('next_task_completed', false)
+            ->whereNotNull('next_task_due')
+            ->where('next_task_due', '<', now()->toDateString())
+            ->count();
+
+        return response()->json([
+            'period_days'         => $days,
+            'revenue_trend'       => $revenueTrend,
+            'new_deal_trend'      => $newTrend,
+            'stage_distribution'  => $stageDistribution,
+            'payment_distribution'=> $paymentRows,
+            'cycle_time_days'     => $cycleTimeDays,
+            'top_customers'       => $topCustomers,
+            'stuck_deals'         => $stuckDeals,
+        ]);
+    }
+
+    /**
      * PATCH /v1/admin/deals/{id}/stage — advance the fulfillment stage.
      * Stamps fulfillment_started_at on first stage entry, and
      * fulfillment_completed_at when the deal hits `completed`.
