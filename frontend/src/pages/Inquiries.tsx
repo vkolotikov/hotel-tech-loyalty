@@ -872,16 +872,42 @@ export function Inquiries() {
                     {fieldCfg.list.next_task && (
                       <td className="px-4 py-3">
                         {inq.next_task_type && !inq.next_task_completed ? (
-                          <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setTaskDrawer({ inquiryId: inq.id, task: {
+                              id: 0,
+                              inquiry_id: inq.id,
+                              title: inq.next_task_type,
+                              due_at: inq.next_task_due,
+                              notes: inq.next_task_notes,
+                            } })}
+                            title={t('inquiries.table.click_to_edit_task', 'Click to edit task')}
+                            className={`group flex items-center gap-1 px-2 py-1 -mx-2 -my-1 rounded-lg hover:bg-white/[0.04] transition-colors text-left ${isOverdue ? 'text-red-300' : 'text-gray-300'}`}
+                          >
                             {isOverdue && <AlertCircle size={11} className="text-red-400 flex-shrink-0" />}
                             <div>
-                              <div className="text-xs text-gray-300 whitespace-nowrap">{inq.next_task_type}</div>
+                              <div className="text-xs whitespace-nowrap group-hover:underline">{inq.next_task_type}</div>
                               {inq.next_task_due && <div className={`text-[10px] ${isOverdue ? 'text-red-400' : 'text-[#636366]'}`}>{inq.next_task_due}</div>}
                             </div>
-                          </div>
+                          </button>
                         ) : inq.next_task_completed ? (
-                          <span className="text-xs text-green-400">{t('inquiries.table.task_done', 'Done')}</span>
-                        ) : <span className="text-xs text-gray-700">—</span>}
+                          <button
+                            type="button"
+                            onClick={() => setTaskDrawer({ inquiryId: inq.id })}
+                            className="text-xs text-green-400 hover:underline inline-flex items-center gap-1"
+                          >
+                            <CheckCircle2 size={10} /> {t('inquiries.table.task_done', 'Done')}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setTaskDrawer({ inquiryId: inq.id })}
+                            title={t('inquiries.table.click_to_add_task', 'Add task')}
+                            className="text-[11px] text-[#636366] hover:text-primary-400 inline-flex items-center gap-1"
+                          >
+                            <Plus size={10} /> {t('inquiries.table.add_task', 'Add')}
+                          </button>
+                        )}
                       </td>
                     )}
 
@@ -941,11 +967,15 @@ export function Inquiries() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                           <div className="space-y-1.5">
                             <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.customer', 'Customer')}</div>
-                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.email', 'Email')}: </span>{inq.guest?.email ?? <span className="text-gray-700">—</span>}</div>
-                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.phone', 'Phone')}: </span>{inq.guest?.phone || inq.guest?.mobile || <span className="text-gray-700">—</span>}</div>
+                            {/* Contact pills are already shown in the Guest cell —
+                                no need to repeat email/phone here. Keep this
+                                column for company + VIP + nationality only. */}
                             <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.company', 'Company')}: </span>{inq.guest?.company ?? <span className="text-gray-700">—</span>}</div>
                             {inq.guest?.vip_level && <div className="text-gray-300"><span className="text-t-secondary">VIP: </span>{inq.guest.vip_level}</div>}
                             {inq.guest?.nationality && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.nationality', 'Nationality')}: </span>{inq.guest.nationality}</div>}
+                            {!inq.guest?.company && !inq.guest?.vip_level && !inq.guest?.nationality && (
+                              <div className="text-gray-700 italic text-[11px]">{t('inquiries.row.expanded.no_extra_details', 'No additional details')}</div>
+                            )}
                           </div>
                           <div className="space-y-1.5">
                             <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.opportunity', 'Opportunity')}</div>

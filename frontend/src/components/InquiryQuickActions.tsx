@@ -1,7 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Phone, Mail, MessageCircle, MessageSquare, Trophy, XCircle } from 'lucide-react'
-import { api } from '../lib/api'
-import toast from 'react-hot-toast'
+import { Phone, Mail, Trophy, XCircle } from 'lucide-react'
+// Phone + Mail are still used by InquiryTouchSummary below.
 
 interface Props {
   inquiry: any
@@ -9,50 +7,14 @@ interface Props {
 }
 
 /**
- * Inline contact-action row for an inquiry.
+ * Won / Lost shortcuts for the inquiry row.
  *
- * Each touch button does TWO things in one click:
- *   1. opens the external app (tel:, mailto:, sms:, https://wa.me/)
- *   2. POSTs to /log-contact so we increment the channel counter,
- *      bump last_contacted_at, and mirror the event to the guest's
- *      activity timeline.
- *
- * Buttons are disabled when the contact field is missing — no point
- * wasting a click on a tel: link with no number. Won/Lost are status
- * shortcuts that go through the parent's status handler so the
- * existing "auto-create reservation on Confirmed" flow still fires.
+ * Contact actions (call / email / WhatsApp / SMS) live in the Guest
+ * cell's ContactActions component — we used to render them here too,
+ * which duplicated the icons on every row. Keep this strictly for the
+ * stage shortcuts so the row stays clean.
  */
 export function InquiryQuickActions({ inquiry, onStatus }: Props) {
-  const qc = useQueryClient()
-  const phone = inquiry.guest?.phone || inquiry.guest?.mobile
-  const email = inquiry.guest?.email
-  const phoneDigits = phone ? phone.replace(/[^\d+]/g, '') : null
-  const waDigits    = phone ? phone.replace(/[^\d+]/g, '').replace(/^\+/, '') : null
-
-  const log = useMutation({
-    mutationFn: (channel: 'call' | 'email' | 'sms' | 'whatsapp') =>
-      api.post(`/v1/admin/inquiries/${inquiry.id}/log-contact`, { channel }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiries'] })
-      qc.invalidateQueries({ queryKey: ['inquiries-today'] })
-      qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
-    },
-    onError: () => toast.error('Could not log contact'),
-  })
-
-  // Keep the click handler tight: open the external action via a
-  // synthetic anchor (so popup blockers treat it as user-initiated)
-  // and fire the log call in parallel.
-  const openAndLog = (href: string, channel: 'call' | 'email' | 'sms' | 'whatsapp', external = false) => {
-    const a = document.createElement('a')
-    a.href = href
-    if (external) { a.target = '_blank'; a.rel = 'noopener noreferrer' }
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    log.mutate(channel)
-  }
-
   const won  = inquiry.status === 'Confirmed'
   const lost = inquiry.status === 'Lost'
 
@@ -60,31 +22,6 @@ export function InquiryQuickActions({ inquiry, onStatus }: Props) {
 
   return (
     <div className="flex items-center gap-1">
-      <button onClick={() => phoneDigits && openAndLog(`tel:${phoneDigits}`, 'call')}
-        disabled={!phoneDigits}
-        title={phoneDigits ? `Call · ${phone}` : 'No phone number'}
-        className={`${btn} text-emerald-300 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/25`}>
-        <Phone size={12} />
-      </button>
-      <button onClick={() => email && openAndLog(`mailto:${email}`, 'email')}
-        disabled={!email}
-        title={email ? `Email · ${email}` : 'No email'}
-        className={`${btn} text-blue-300 bg-blue-500/10 border-blue-500/25 hover:bg-blue-500/25`}>
-        <Mail size={12} />
-      </button>
-      <button onClick={() => waDigits && openAndLog(`https://wa.me/${waDigits}`, 'whatsapp', true)}
-        disabled={!waDigits}
-        title={waDigits ? `WhatsApp · ${phone}` : 'No phone for WhatsApp'}
-        className={`${btn} text-[#25D366] bg-[#25D366]/10 border-[#25D366]/25 hover:bg-[#25D366]/25`}>
-        <MessageCircle size={12} />
-      </button>
-      <button onClick={() => phoneDigits && openAndLog(`sms:${phoneDigits}`, 'sms')}
-        disabled={!phoneDigits}
-        title={phoneDigits ? `SMS · ${phone}` : 'No phone for SMS'}
-        className={`${btn} text-violet-300 bg-violet-500/10 border-violet-500/25 hover:bg-violet-500/25`}>
-        <MessageSquare size={12} />
-      </button>
-      <div className="w-px h-4 bg-white/10 mx-1" />
       <button onClick={() => onStatus && onStatus(inquiry.id, 'Confirmed')}
         disabled={won || !onStatus}
         title={won ? 'Already Won' : 'Mark as Won (creates reservation)'}

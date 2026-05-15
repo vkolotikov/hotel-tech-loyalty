@@ -156,8 +156,15 @@ class InquiryController extends Controller
         return response()->json($inquiry);
     }
 
-    public function update(Request $request, Inquiry $inquiry): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
+        // Explicit binding + BrandScope opt-out. Implicit binding has
+        // repeatedly produced prod-only 404s on this codebase (lead-forms
+        // Phase 10, planner v2.1) — the inquiry's brand_id can be null
+        // or differ from the SPA's current brand selector, which a stale
+        // route cache turns into a 404 even with resolveRouteBinding.
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+
         $v = $request->validate([
             'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
             'property_id'          => 'nullable|integer|exists:properties,id',
@@ -228,14 +235,16 @@ class InquiryController extends Controller
         return response()->json($inquiry->fresh()->load(['guest:id,full_name', 'property:id,name,code']));
     }
 
-    public function destroy(Inquiry $inquiry): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $inquiry->delete();
         return response()->json(['message' => 'Inquiry deleted']);
     }
 
-    public function completeTask(Inquiry $inquiry): JsonResponse
+    public function completeTask(int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $inquiry->update(['next_task_completed' => true]);
         return response()->json(['success' => true]);
     }
@@ -250,8 +259,9 @@ class InquiryController extends Controller
      * activity timeline + journey view both pick it up. Channels:
      * call | email | sms | whatsapp.
      */
-    public function logContact(Request $request, Inquiry $inquiry): JsonResponse
+    public function logContact(Request $request, int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $validated = $request->validate([
             'channel' => 'required|string|in:call,email,sms,whatsapp',
             'note'    => 'nullable|string|max:500',
@@ -620,8 +630,9 @@ class InquiryController extends Controller
      * `?refresh=1` (or body `force_refresh=true`) forces a new
      * OpenAI call.
      */
-    public function aiBrief(Request $request, Inquiry $inquiry): JsonResponse
+    public function aiBrief(Request $request, int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $force = (bool) ($request->get('refresh') ?? $request->get('force_refresh'));
         return response()->json($this->ai->briefForInquiry($inquiry, $force));
     }
@@ -635,8 +646,9 @@ class InquiryController extends Controller
      * Idempotent — returns the existing reservation if one is already
      * linked.
      */
-    public function markWon(Request $request, Inquiry $inquiry): JsonResponse
+    public function markWon(Request $request, int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $request->validate([
             'note' => 'nullable|string|max:1000',
         ]);
@@ -717,8 +729,9 @@ class InquiryController extends Controller
      * pipeline reporting (Phase 4) gets explainable funnel-leak
      * data. Optional free-text note appended to the activity row.
      */
-    public function markLost(Request $request, Inquiry $inquiry): JsonResponse
+    public function markLost(Request $request, int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $validated = $request->validate([
             'lost_reason_id' => 'required|integer|exists:inquiry_lost_reasons,id',
             'note'           => 'nullable|string|max:1000',
@@ -785,8 +798,9 @@ class InquiryController extends Controller
      * Returns the matched lost_reason_id + label + confidence + a one-
      * sentence rationale showing what evidence the model picked up on.
      */
-    public function guessLostReason(Inquiry $inquiry): JsonResponse
+    public function guessLostReason(int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         return response()->json($this->ai->guessLostReason($inquiry));
     }
 
@@ -795,8 +809,9 @@ class InquiryController extends Controller
      * subject + body the agent can paste into an email composer or
      * the activity timeline. CRM Phase 5.
      */
-    public function draftProposal(Inquiry $inquiry): JsonResponse
+    public function draftProposal(int $id): JsonResponse
     {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         return response()->json($this->ai->draftProposal($inquiry));
     }
 }
