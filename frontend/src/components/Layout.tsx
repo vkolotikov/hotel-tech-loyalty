@@ -9,7 +9,7 @@ import {
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
   Crown, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
-  ListChecks, TrendingUp, FilePlus2,
+  ListChecks, FilePlus2,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package, Star,
   UserCog, AlertTriangle, Scissors,
@@ -120,7 +120,8 @@ const navGroups: NavGroup[] = [
       { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
       { path: '/deals',         labelKey: 'nav.items.deals',           defaultLabel: 'Deals',             icon: Package,   gate: 'all' },
       { path: '/tasks',         labelKey: 'nav.items.tasks',           defaultLabel: 'Tasks',             icon: ListChecks, gate: 'all' },
-      { path: '/reports',       labelKey: 'nav.items.reports',         defaultLabel: 'Reports',           icon: TrendingUp, gate: 'admin' },
+      // Reports moved under /analytics → Leads tab. Sidebar entry removed
+      // to keep all analytics surfaces in one place.
       { path: '/lead-forms',    labelKey: 'nav.items.lead_forms',      defaultLabel: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },
       { path: '/corporate',     labelKey: 'nav.items.companies',       defaultLabel: 'Companies',         icon: Briefcase, gate: 'admin' },
       { path: '/notifications', labelKey: 'nav.items.campaigns',       defaultLabel: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },

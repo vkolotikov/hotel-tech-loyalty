@@ -53,7 +53,7 @@ const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ defaul
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
 const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })))
-const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })))
+// Reports component is now lazy-loaded inside Analytics.tsx (Leads tab).
 const LeadForms = lazy(() => import('./pages/LeadForms').then(m => ({ default: m.LeadForms })))
 const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
@@ -253,7 +253,9 @@ export default function App() {
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
           <Route path="/deals" element={<LazyRoute><Deals /></LazyRoute>} />
           <Route path="/tasks" element={<LazyRoute><Tasks /></LazyRoute>} />
-          <Route path="/reports" element={<LazyRoute><Reports /></LazyRoute>} />
+          {/* Reports moved into /analytics. Redirect preserves existing
+              bookmarks + the "Pipeline deep-dive" link patterns. */}
+          <Route path="/reports" element={<Navigate to="/analytics?tab=leads" replace />} />
           <Route path="/lead-forms" element={<LazyRoute><LeadForms /></LazyRoute>} />
           <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
           <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />

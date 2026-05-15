@@ -5,6 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 // The deep chatbot analytics view used to live as a tab inside
 // /chatbot-setup. Moved here so all analytics live under one roof.
 const ChatbotAnalytics = lazy(() => import('./ChatbotAnalytics').then(m => ({ default: m.ChatbotAnalytics })))
+// CRM sales reporting (funnel / forecast / lost-reasons / owner board /
+// company LTV). Previously /reports — moved into the Leads tab here.
+const Reports = lazy(() => import('./Reports').then(m => ({ default: m.Reports })))
 import toast from 'react-hot-toast'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -1438,9 +1441,16 @@ export function Analytics() {
             ))}
           </div>
           <div className="text-xs text-t-secondary">
-            <Link to="/reports" className="text-primary-400 hover:underline">{t('analytics.leads.deep_dive', 'Pipeline deep-dive on Reports →')}</Link>
-            <span className="mx-2 text-gray-700">·</span>
             <Link to="/inquiries" className="text-primary-400 hover:underline">{t('analytics.leads.open_pipeline', 'Open the Leads pipeline →')}</Link>
+          </div>
+
+          {/* Sales reporting deep dive — funnel, forecast, lost-reason
+              breakdown, owner scoreboard, company LTV. Previously the
+              standalone /reports page. */}
+          <div className="pt-2 border-t border-dark-border">
+            <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+              <Reports />
+            </Suspense>
           </div>
         </div>
       )}
