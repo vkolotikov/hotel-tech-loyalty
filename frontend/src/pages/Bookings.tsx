@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, CheckCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ViewToggle } from '../components/ViewToggle'
@@ -573,28 +573,50 @@ export function Bookings() {
       {/* Bottom panels — 2 columns */}
       {dashboard && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Upcoming Arrivals */}
+          {/* Upcoming Arrivals — enriched row with channel + money. */}
           {(dashboard.arrivals?.length > 0) && (
             <Card className="p-5">
               <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.upcoming_arrivals', 'Upcoming Arrivals')}</h3>
               <div className="space-y-2">
-                {dashboard.arrivals.map((a: any) => (
-                  <Link key={a.id} to={`/bookings/${a.id}`}
-                    className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-white truncate">{a.guest_name || 'Unknown'}</div>
-                      <div className="text-xs text-[#636366] mt-0.5">{a.apartment_name || '—'} · {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</div>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-3">
-                      <div className="text-xs font-medium text-primary-400">{fmtDateShort(a.arrival_date)}</div>
-                      {a.payment_status && (
-                        <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[a.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                          {payLabel(a.payment_status)}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
+                {dashboard.arrivals.map((a: any) => {
+                  const total = Number(a.price_total ?? 0)
+                  const paid  = Number(a.price_paid ?? 0)
+                  const balance = Math.max(0, total - paid)
+                  return (
+                    <Link key={a.id} to={`/bookings/${a.id}`}
+                      className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-white truncate">{a.guest_name || 'Unknown'}</span>
+                          {a.channel_name && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                              {a.channel_name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-[#636366] mt-0.5 flex items-center gap-2 flex-wrap">
+                          <span className="truncate">{a.apartment_name || '—'}</span>
+                          <span>· {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</span>
+                          <span>· {fmtDateShort(a.arrival_date)} → {fmtDateShort(a.departure_date)}</span>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        {total > 0 && (
+                          <div className="text-xs tabular-nums">
+                            <span className="text-emerald-400 font-semibold">{money(paid)}</span>
+                            <span className="text-[#636366]"> / </span>
+                            <span className={balance > 0 ? 'text-red-400' : 'text-[#636366]'}>{money(total)}</span>
+                          </div>
+                        )}
+                        {a.payment_status && (
+                          <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[a.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+                            {payLabel(a.payment_status)}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
               </div>
             </Card>
           )}
@@ -621,36 +643,9 @@ export function Bookings() {
             </Card>
           )}
 
-          {/* Recent Submissions */}
-          {(dashboard.recentSubmissions?.length > 0) && (
-            <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.recent_submissions', 'Recent Submissions')}</h3>
-              <div className="space-y-2">
-                {dashboard.recentSubmissions.map((s: any) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border">
-                    <div className="min-w-0 flex items-center gap-2.5">
-                      {s.outcome === 'success'
-                        ? <CheckCircle size={16} className="text-emerald-400 flex-shrink-0" />
-                        : <XCircle size={16} className="text-red-400 flex-shrink-0" />}
-                      <div className="min-w-0">
-                        <div className="text-sm text-white font-medium truncate">{s.guest_name || '—'}</div>
-                        {(s.unit_name || s.check_in) && (
-                          <div className="text-xs text-[#636366] truncate">
-                            {s.unit_name || '—'}
-                            {s.check_in && s.check_out && ` · ${fmtDateShort(s.check_in)} → ${fmtDateShort(s.check_out)}`}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-3">
-                      {s.gross_total ? <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total)}</div> : null}
-                      <div className="text-[10px] text-[#636366]">{new Date(s.created_at).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* Recent Submissions panel removed — the "Website Reservations"
+              dedicated table further down now carries the same info in a
+              richer, scannable format. */}
 
           {/* Sync Health */}
           {dashboard.syncHealth && (
@@ -683,6 +678,73 @@ export function Bookings() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* Website Reservations — direct bookings made via the public
+          widget. Separate from the unified table below so the direct-
+          channel volume (no OTA commission) reads at a glance. */}
+      {dashboard?.websiteBookings && dashboard.websiteBookings.length > 0 && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white">{t('bookings.panels.website_reservations', 'Website Reservations')}</h3>
+              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
+              {t('bookings.panels.website_count', { count: dashboard.websiteBookings.length, defaultValue: '{{count}} recent' })}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-dark-border">
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.guest', 'Guest')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.unit', 'Unit')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.stay', 'Stay')}</th>
+                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.total', 'Total')}</th>
+                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.paid', 'Paid')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.payment', 'Payment')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.booked', 'Booked')}</th>
+                  <th className="text-center p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {dashboard.websiteBookings.map((b: any) => {
+                  const paid = Number(b.price_paid ?? 0)
+                  const total = Number(b.price_total ?? 0)
+                  return (
+                    <tr key={b.id} className="border-b border-dark-border/60 hover:bg-dark-surface2/40 transition-colors">
+                      <td className="p-3">
+                        <div className="text-sm text-white font-medium truncate max-w-[180px]">{b.guest_name || '—'}</div>
+                        {b.guest_email && <div className="text-[11px] text-[#636366] truncate max-w-[180px]">{b.guest_email}</div>}
+                      </td>
+                      <td className="p-3 text-xs text-[#a0a0a0] truncate max-w-[180px]">{b.apartment_name || '—'}</td>
+                      <td className="p-3 text-xs text-[#a0a0a0] whitespace-nowrap">
+                        {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
+                        {(b.adults != null) && <span className="text-[#636366]"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span>}
+                      </td>
+                      <td className="p-3 text-right text-sm text-white font-semibold tabular-nums">{money(total)}</td>
+                      <td className={`p-3 text-right text-sm tabular-nums ${paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-[#a0a0a0]'}`}>{money(paid)}</td>
+                      <td className="p-3">
+                        {b.payment_status && (
+                          <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+                            {payLabel(b.payment_status)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-xs text-[#636366] whitespace-nowrap">{b.source_created_at ? new Date(b.source_created_at).toLocaleDateString() : '—'}</td>
+                      <td className="p-3 text-center">
+                        <Link to={`/bookings/${b.id}`} className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300">
+                          <Eye size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       {/* Search & Filters */}

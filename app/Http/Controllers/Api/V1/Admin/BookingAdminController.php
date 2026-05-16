@@ -197,13 +197,32 @@ class BookingAdminController extends Controller
             ->get(['id', 'outcome', 'guest_name', 'unit_name', 'check_in', 'check_out',
                    'gross_total', 'payment_method', 'created_at']);
 
-        // Upcoming arrivals (next 7 days)
+        // Upcoming arrivals (next 7 days). Enriched with channel + money so
+        // the dashboard panel can show "Booking.com · €420 paid / €602" at
+        // a glance — was previously dates + pax only.
         $arrivalsQuery = BookingMirror::whereBetween('arrival_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
             ->where('booking_state', '!=', 'cancelled')
             ->orderBy('arrival_date')
             ->limit(10);
         if ($unitId) $arrivalsQuery = $arrivalsQuery->where('apartment_id', $unitId);
-        $arrivals = $arrivalsQuery->get(['id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date', 'adults', 'children', 'internal_status', 'payment_status']);
+        $arrivals = $arrivalsQuery->get([
+            'id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date',
+            'adults', 'children', 'internal_status', 'payment_status',
+            'channel_name', 'price_total', 'price_paid', 'booking_reference',
+        ]);
+
+        // Website reservations — last 20 bookings made via the public
+        // widget. Channel_name is stamped 'Website' by the widget's
+        // confirm() flow. Shown as a dedicated table in the admin so the
+        // direct-channel volume is one click away.
+        $websiteBookings = BookingMirror::where('channel_name', 'Website')
+            ->orderByDesc('source_created_at')
+            ->limit(20)
+            ->get([
+                'id', 'guest_name', 'guest_email', 'apartment_name', 'arrival_date', 'departure_date',
+                'adults', 'children', 'price_total', 'price_paid', 'payment_status',
+                'internal_status', 'booking_reference', 'source_created_at',
+            ]);
 
         // Sync health
         $lastSync = AuditLog::where('action', 'like', 'booking.%')->orderByDesc('created_at')->first();
@@ -239,6 +258,7 @@ class BookingAdminController extends Controller
             'arrivals'             => $arrivals,
             'recentUnpaidBookings' => $recentUnpaid,
             'recentSubmissions'    => $recentSubs,
+            'websiteBookings'      => $websiteBookings,
             'syncHealth' => (function () use ($lastSync, $mirrorCount) {
                 $pms = app(PmsResolver::class)->activePms();
                 return [
