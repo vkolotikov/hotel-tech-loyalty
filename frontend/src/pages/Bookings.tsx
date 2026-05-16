@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon, LayoutDashboard, Globe, AlarmClock, CreditCard, Mail, Phone } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, LayoutDashboard, Globe, AlarmClock, CreditCard, Mail, Phone } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 // ViewToggle removed — List / Timeline links live inside the tab bar.
@@ -11,7 +11,10 @@ import { money } from '../lib/money'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
-function fmtDate(d: string | null | undefined): string {
+// fmtDate (full year) replaced everywhere by fmtDateShort — kept the
+// helper here in case translations / detail pages want to reuse it.
+// @ts-expect-error keep for reference; intentionally unused.
+function _fmtDate(d: string | null | undefined): string {
   if (!d) return '—'
   try {
     const date = new Date(d)
@@ -254,7 +257,8 @@ export function Bookings() {
   const [dailyFocus, setDailyFocus] = useState<'' | 'arrivals' | 'in_house' | 'departures'>('')
   // Bulk selection — Set<id>. Cleared whenever filters change so a
   // selection can't accidentally apply to rows the user can no longer see.
-  const [selected, setSelected] = useState<Set<number>>(new Set())
+  // Bulk-selection state removed alongside the checkbox column.
+  // exportCsv still uses bulkBusy as a generic loading flag.
   const [bulkBusy, setBulkBusy] = useState(false)
 
   // Period → from/to date range. Same shape the backend dashboard uses,
@@ -319,43 +323,18 @@ export function Bookings() {
   const lastPage = data?.last_page ?? 1
   const units = data?.filters?.units ?? dashboard?.filters?.units ?? []
 
-  const allOnPageSelected = bookings.length > 0 && bookings.every((b: any) => selected.has(b.id))
-  const togglePageSelection = () => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (allOnPageSelected) bookings.forEach((b: any) => next.delete(b.id))
-      else                   bookings.forEach((b: any) => next.add(b.id))
-      return next
-    })
-  }
-  const toggleRow = (id: number) => setSelected(prev => {
-    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
-  })
-
-  const runBulk = async (action: string, value?: string, confirmMsg?: string) => {
-    if (selected.size === 0) return
-    if (confirmMsg && !window.confirm(confirmMsg)) return
-    setBulkBusy(true)
-    try {
-      const { data: res } = await api.post('/v1/admin/bookings/bulk', {
-        ids: Array.from(selected), action, value,
-      })
-      toast.success(res.message || 'Updated')
-      setSelected(new Set())
-      refetch()
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Bulk action failed')
-    } finally { setBulkBusy(false) }
-  }
+  // Bulk selection + bulk-action helpers removed alongside the
+  // checkbox column. Inline status/payment edits replace them.
 
   const exportCsv = async () => {
     setBulkBusy(true)
     try {
-      // Selection wins; otherwise we send the live filter state so
-      // "Export all" matches what the user sees on screen.
-      const body: any = selected.size > 0
-        ? { ids: Array.from(selected) }
-        : { search, status, payment_status: paymentStatus, unit_id: unitId, from: periodRange.from, to: periodRange.to }
+      // Export uses the current filter state so the CSV matches what
+      // the user sees on screen.
+      const body = {
+        search, status, payment_status: paymentStatus, unit_id: unitId,
+        from: periodRange.from, to: periodRange.to,
+      }
       const res = await api.post('/v1/admin/bookings/export', body, { responseType: 'blob' })
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' })
       const url = URL.createObjectURL(blob)
@@ -909,34 +888,63 @@ export function Bookings() {
         </div>
       )}
 
-      {/* Search & Filters */}
-      <Card className="p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-              placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
-              className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
-            <option value=""           style={optStyle}>{t('bookings.filters.all_statuses', 'All Statuses')}</option>
-            <option value="new"        style={optStyle}>{t('bookings.filters.status.new',         'New')}</option>
-            <option value="confirmed"  style={optStyle}>{t('bookings.filters.status.confirmed',   'Confirmed')}</option>
-            <option value="checked-in" style={optStyle}>{t('bookings.filters.status.checked_in',  'Checked In')}</option>
-            <option value="checked-out" style={optStyle}>{t('bookings.filters.status.checked_out', 'Checked Out')}</option>
-            <option value="cancelled"  style={optStyle}>{t('bookings.filters.status.cancelled',   'Cancelled')}</option>
-            <option value="no-show"    style={optStyle}>{t('bookings.filters.status.no_show',     'No Show')}</option>
-          </select>
-          <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className={selectClass} style={selectStyle}>
-            <option value=""        style={optStyle}>{t('bookings.filters.all_payments', 'All Payments')}</option>
-            <option value="open"    style={optStyle}>{t('bookings.filters.payment.open',            'Open')}</option>
-            <option value="paid"    style={optStyle}>{t('bookings.filters.payment.paid',            'Paid')}</option>
-            <option value="pending" style={optStyle}>{t('bookings.filters.payment.pending',         'Pending')}</option>
-            <option value="invoice_waiting" style={optStyle}>{t('bookings.filters.payment.invoice_waiting', 'Invoice Waiting')}</option>
-            <option value="channel_managed" style={optStyle}>{t('bookings.filters.payment.channel_managed', 'Channel Managed')}</option>
-          </select>
+      {/* ─── Modern filter bar ──────────────────────────────────
+          Combined: search input + status pill row + payment pill row
+          + channel pill row. Each pill toggles in-place; the live
+          query re-fires immediately. No more dropdowns, no checkboxes. */}
+      <Card className="p-4 space-y-3">
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+          <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+            placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
+            className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
+
+        {/* Status pill row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] uppercase tracking-wider font-bold text-[#636366] pr-1">{t('bookings.filters.status_label', 'Status')}</span>
+          {([
+            { v: '',            label: t('bookings.filters.all_statuses',    'All'),         tone: 'gray' },
+            { v: 'new',         label: t('bookings.filters.status.new',         'New'),         tone: 'blue' },
+            { v: 'confirmed',   label: t('bookings.filters.status.confirmed',   'Confirmed'),   tone: 'emerald' },
+            { v: 'checked-in',  label: t('bookings.filters.status.checked_in',  'Checked In'),  tone: 'green' },
+            { v: 'checked-out', label: t('bookings.filters.status.checked_out', 'Checked Out'), tone: 'gray' },
+            { v: 'cancelled',   label: t('bookings.filters.status.cancelled',   'Cancelled'),   tone: 'red' },
+            { v: 'no-show',     label: t('bookings.filters.status.no_show',     'No Show'),     tone: 'orange' },
+          ]).map(p => {
+            const active = status === p.v
+            return (
+              <button key={p.v || 'all'} onClick={() => { setStatus(p.v); setPage(1) }}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                  active ? `${STATUS_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40'}` : 'bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white'
+                }`}>{p.label}</button>
+            )
+          })}
+        </div>
+
+        {/* Payment pill row — hidden on Unpaid tab (already filtered). */}
+        {tab !== 'unpaid' && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[9px] uppercase tracking-wider font-bold text-[#636366] pr-1">{t('bookings.filters.payment_label', 'Payment')}</span>
+            {([
+              { v: '',                  label: t('bookings.filters.all_payments', 'All') },
+              { v: 'paid',              label: t('bookings.filters.payment.paid',              'Paid') },
+              { v: 'open',              label: t('bookings.filters.payment.open',              'Open') },
+              { v: 'pending',           label: t('bookings.filters.payment.pending',           'Pending') },
+              { v: 'invoice_waiting',   label: t('bookings.filters.payment.invoice_waiting',   'Invoice') },
+              { v: 'channel_managed',   label: t('bookings.filters.payment.channel_managed',   'Channel') },
+            ]).map(p => {
+              const active = paymentStatus === p.v
+              return (
+                <button key={p.v || 'all'} onClick={() => { setPaymentStatus(p.v); setPage(1) }}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                    active ? (PAY_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40') : 'bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white'
+                  }`}>{p.label}</button>
+              )
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Table */}
@@ -945,73 +953,26 @@ export function Bookings() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-[#636366] font-bold bg-[#1a1a1a]">
-                <th className="text-center p-4 w-10">
-                  <input type="checkbox" checked={allOnPageSelected} onChange={togglePageSelection}
-                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                </th>
-                <th className="text-left p-4">{t('bookings.table.guest', 'Guest')}</th><th className="text-left p-4">{t('bookings.table.unit', 'Unit')}</th>
-                <th className="text-left p-4">{t('bookings.table.arrival', 'Arrival')}</th><th className="text-left p-4">{t('bookings.table.departure', 'Departure')}</th>
-                <th className="text-right p-4">{t('bookings.table.total', 'Total')}</th><th className="text-right p-4">{t('bookings.table.balance', 'Balance')}</th>
-                <th className="text-left p-4">{t('bookings.table.channel', 'Channel')}</th><th className="text-left p-4">{t('bookings.table.status', 'Status')}</th>
-                <th className="text-left p-4">{t('bookings.table.payment', 'Payment')}</th><th className="text-center p-4">{t('bookings.table.view', 'View')}</th>
+                <th className="text-left p-4">{t('bookings.table.guest', 'Guest')}</th>
+                <th className="text-left p-4">{t('bookings.table.unit', 'Unit')}</th>
+                <th className="text-left p-4">{t('bookings.table.stay', 'Stay')}</th>
+                <th className="text-right p-4">{t('bookings.table.amount', 'Amount')}</th>
+                <th className="text-left p-4">{t('bookings.table.channel', 'Channel')}</th>
+                <th className="text-left p-4">{t('bookings.table.status', 'Status')}</th>
+                <th className="text-left p-4">{t('bookings.table.payment', 'Payment')}</th>
+                <th className="text-center p-4 w-10"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">
+                <tr><td colSpan={8} className="p-12 text-center text-[#636366]">
                   <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={11} className="p-12 text-center text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</td></tr>
-              ) : bookings.map((b: any) => {
-                const payStatus = derivePaymentStatus(b)
-                const nights = b.arrival_date && b.departure_date
-                  ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
-                  : null
-                return (
-                <tr key={b.id} className={`border-b border-dark-border hover:bg-dark-surface2/50 transition-colors ${selected.has(b.id) ? 'bg-primary-500/[0.04]' : ''}`}>
-                  <td className="p-4 text-center">
-                    <input type="checkbox" checked={selected.has(b.id)} onChange={() => toggleRow(b.id)}
-                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                  </td>
-                  <td className="p-4">
-                    <div className="text-white font-medium">{b.guest_name || '—'}</div>
-                    <div className="text-[#636366] text-xs">{b.guest_email || ''}</div>
-                  </td>
-                  <td className="p-4 text-t-secondary text-xs">{b.apartment_name || '—'}</td>
-                  <td className="p-4 text-t-secondary text-xs tabular-nums">{fmtDate(b.arrival_date)}</td>
-                  <td className="p-4 text-xs tabular-nums">
-                    <span className="text-t-secondary">{fmtDate(b.departure_date)}</span>
-                    {nights && <span className="text-[#636366] ml-1.5">({nights}n)</span>}
-                  </td>
-                  <td className="p-4 text-right text-white font-semibold tabular-nums">
-                    {money(b.price_total)}
-                  </td>
-                  <td className="p-4 text-right tabular-nums">
-                    {b.balance_due > 0
-                      ? <span className="text-red-400 font-semibold">{money(b.balance_due)}</span>
-                      : <span className="text-emerald-400/60 text-[10px] font-bold">{t('bookings.table.settled', 'SETTLED')}</span>}
-                  </td>
-                  <td className="p-4 text-[#636366] text-xs">{b.channel_name || '—'}</td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_PILL[b.internal_status] || STATUS_PILL[b.booking_state] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                      {(b.internal_status || b.booking_state || 'new').replace(/-/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${PAY_PILL[payStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                      {payLabel(payStatus)}
-                    </span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <Link to={`/bookings/${b.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium transition-colors text-primary-400 hover:text-primary-300">
-                      <Eye size={13} /> {t('bookings.table.view', 'View')}
-                    </Link>
-                  </td>
-                </tr>
-                )
-              })}
+                <tr><td colSpan={8} className="p-12 text-center text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</td></tr>
+              ) : bookings.map((b: any) => (
+                <ReservationRow key={b.id} b={b} t={t} refetch={refetch} />
+              ))}
             </tbody>
           </table>
         </div>
@@ -1034,39 +995,173 @@ export function Bookings() {
       </Card>
 
       </>}{/* ════════════════ /ALL / UNPAID TABS ════════════════ */}
-
-      {/* Bulk action floating bar — appears once any row is selected.
-          Confirmation prompts on destructive actions (cancel) since the
-          row count makes accidental clicks costly. Export uses the
-          selection if any, otherwise the live filter set. */}
-      {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-dark-surface border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
-          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-          <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">
-            {t('bookings.bulk.selected', { count: selected.size, defaultValue: '{{count}} selected' })}
-          </span>
-          <div className="h-5 w-px bg-white/10" />
-          <button onClick={() => runBulk('mark_paid')} disabled={bulkBusy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
-            <CheckCheck size={13} /> {t('bookings.bulk.mark_paid', 'Mark Paid')}
-          </button>
-          <button onClick={() => runBulk('cancel', undefined, t('bookings.bulk.cancel_confirm', { count: selected.size, defaultValue: 'Cancel {{count}} reservations? This cannot be undone in bulk.' }))}
-            disabled={bulkBusy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
-            <Trash2 size={13} /> {t('bookings.bulk.cancel', 'Cancel')}
-          </button>
-          <button onClick={exportCsv} disabled={bulkBusy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors">
-            <Download size={13} /> {t('bookings.bulk.export', 'Export')}
-          </button>
-          <div className="h-5 w-px bg-white/10" />
-          <button onClick={() => setSelected(new Set())} title={t('bookings.bulk.clear_selection', 'Clear selection')}
-            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
-            <XIcon size={14} />
-          </button>
-        </div>
-      )}
     </div>
+  )
+}
+
+/* ── ReservationRow ────────────────────────────────────────────────
+   Modern row for the All / Unpaid tab table.
+   - Channel chip with brand tint
+   - Compact two-line stay (dates + nights + pax)
+   - Money: paid in green / total + balance below
+   - INLINE-EDITABLE Status + Payment dropdowns — PATCH /bookings/:id/status
+   - Quick View link
+   No checkboxes, no bulk bar — the user wants direct interaction.
+*/
+function ReservationRow({ b, t, refetch }: {
+  b: any
+  t: (k: string, def?: any) => any
+  refetch: () => void
+}) {
+  const [statusOpen, setStatusOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+  const [savingStatus, setSavingStatus] = useState(false)
+  const [savingPay, setSavingPay] = useState(false)
+
+  const total = Number(b.price_total ?? 0)
+  const paid  = Number(b.price_paid ?? 0)
+  const balance = Math.max(0, total - paid)
+  const nights = b.arrival_date && b.departure_date
+    ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
+    : null
+  const payState = derivePaymentStatus(b)
+  const internalStatus = b.internal_status || b.booking_state || 'new'
+
+  const channelTone = (() => {
+    const c = (b.channel_name ?? '').toLowerCase()
+    if (c.includes('booking.com'))   return 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+    if (c.includes('airbnb'))        return 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+    if (c.includes('website'))       return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+    if (c.includes('direct'))        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+    if (c.includes('expedia'))       return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+    return 'bg-gray-500/15 text-gray-300 border-gray-500/30'
+  })()
+
+  const patch = async (payload: Record<string, any>, setBusy: (b: boolean) => void) => {
+    setBusy(true)
+    try {
+      await api.patch(`/v1/admin/bookings/${b.id}/status`, payload)
+      toast.success(t('bookings.row.updated', 'Updated'))
+      refetch()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || t('bookings.row.update_failed', 'Update failed'))
+    } finally { setBusy(false) }
+  }
+
+  const STATUS_OPTIONS = ['new', 'confirmed', 'checked-in', 'checked-out', 'cancelled', 'no-show']
+  const PAYMENT_OPTIONS = ['paid', 'open', 'pending', 'invoice_waiting', 'channel_managed']
+
+  return (
+    <tr className="border-b border-dark-border/60 hover:bg-dark-surface2/40 transition-colors">
+      {/* Guest */}
+      <td className="p-4">
+        <div className="text-sm text-white font-medium truncate max-w-[200px]">{b.guest_name || '—'}</div>
+        {b.guest_email && <div className="text-[11px] text-[#636366] truncate max-w-[200px]">{b.guest_email}</div>}
+      </td>
+
+      {/* Unit */}
+      <td className="p-4 text-xs text-[#a0a0a0] truncate max-w-[160px]">{b.apartment_name || '—'}</td>
+
+      {/* Stay (combined arrival → departure + nights + pax) */}
+      <td className="p-4 text-xs whitespace-nowrap">
+        <div className="text-[#e0e0e0] tabular-nums">
+          {fmtDateShort(b.arrival_date)} <span className="text-[#636366]">→</span> {fmtDateShort(b.departure_date)}
+        </div>
+        <div className="text-[10px] text-[#636366] mt-0.5">
+          {nights ? `${nights}n` : ''}
+          {b.adults != null ? ` · ${b.adults}A${b.children > 0 ? ` ${b.children}C` : ''}` : ''}
+        </div>
+      </td>
+
+      {/* Amount — total + paid/balance below */}
+      <td className="p-4 text-right tabular-nums whitespace-nowrap">
+        <div className="text-sm font-semibold text-white">{money(total)}</div>
+        <div className="text-[10px] mt-0.5">
+          {balance > 0
+            ? <span className="text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
+            : total > 0 ? <span className="text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
+                        : <span className="text-[#636366]">—</span>}
+        </div>
+      </td>
+
+      {/* Channel chip */}
+      <td className="p-4">
+        {b.channel_name ? (
+          <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${channelTone}`}>
+            {b.channel_name}
+          </span>
+        ) : <span className="text-[#636366] text-xs">—</span>}
+      </td>
+
+      {/* Status — inline-editable dropdown */}
+      <td className="p-4 relative">
+        <button onClick={() => { setStatusOpen(o => !o); setPayOpen(false) }} disabled={savingStatus}
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${STATUS_PILL[internalStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+          {internalStatus.replace(/-/g, ' ')}
+          <ChevronLeft size={9} className="rotate-[270deg]" />
+        </button>
+        {statusOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+            <div className="absolute z-20 mt-1 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[150px] overflow-hidden">
+              {STATUS_OPTIONS.map(s => (
+                <button key={s} onClick={() => { setStatusOpen(false); patch({ internal_status: s }, setSavingStatus) }}
+                  className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${
+                    s === internalStatus ? 'text-white font-bold' : 'text-t-secondary'
+                  }`}>
+                  <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${
+                    s === 'new'         ? 'bg-blue-400'    :
+                    s === 'confirmed'   ? 'bg-emerald-400' :
+                    s === 'checked-in'  ? 'bg-green-400'   :
+                    s === 'checked-out' ? 'bg-gray-400'    :
+                    s === 'cancelled'   ? 'bg-red-400'     : 'bg-orange-400'
+                  }`} />
+                  {s.replace(/-/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </td>
+
+      {/* Payment — inline-editable dropdown */}
+      <td className="p-4 relative">
+        <button onClick={() => { setPayOpen(o => !o); setStatusOpen(false) }} disabled={savingPay}
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+          {payLabel(payState)}
+          <ChevronLeft size={9} className="rotate-[270deg]" />
+        </button>
+        {payOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setPayOpen(false)} />
+            <div className="absolute z-20 mt-1 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[160px] overflow-hidden">
+              {PAYMENT_OPTIONS.map(p => (
+                <button key={p} onClick={() => { setPayOpen(false); patch({ payment_status: p }, setSavingPay) }}
+                  className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${
+                    p === payState ? 'text-white font-bold' : 'text-t-secondary'
+                  }`}>
+                  <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${
+                    p === 'paid' ? 'bg-emerald-400' :
+                    p === 'pending' ? 'bg-amber-400' :
+                    p === 'invoice_waiting' ? 'bg-blue-400' :
+                    p === 'channel_managed' ? 'bg-purple-400' : 'bg-gray-400'
+                  }`} />
+                  {payLabel(p)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </td>
+
+      {/* View */}
+      <td className="p-4 text-center">
+        <Link to={`/bookings/${b.id}`}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white transition-colors">
+          <Eye size={13} />
+        </Link>
+      </td>
+    </tr>
   )
 }
 
