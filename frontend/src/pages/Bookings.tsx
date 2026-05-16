@@ -389,24 +389,27 @@ export function Bookings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — stacks title above action buttons on mobile to
+          prevent the buttons from wrapping into multi-line stacks. */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('bookings.title', 'Reservations')}</h1>
-          <p className="text-sm text-t-secondary mt-0.5">{t('bookings.subtitle', 'PMS reservations synced from your booking channels')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">{t('bookings.title', 'Reservations')}</h1>
+          <p className="text-xs sm:text-sm text-t-secondary mt-0.5">{t('bookings.subtitle', 'PMS reservations synced from your booking channels')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button onClick={exportCsv} disabled={bulkBusy}
-            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50"
-            title={t('bookings.actions.export_csv_tooltip', 'Download CSV of the current filtered list (or selected rows)')}>
-            <Download size={16} />
-            {t('bookings.actions.export_csv', 'Export CSV')}
+            className="flex items-center gap-1.5 bg-dark-surface border border-dark-border text-[#e0e0e0] px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50 whitespace-nowrap"
+            title={t('bookings.actions.export_csv_tooltip', 'Download CSV of the current filtered list')}>
+            <Download size={15} />
+            <span className="hidden sm:inline">{t('bookings.actions.export_csv', 'Export CSV')}</span>
+            <span className="sm:hidden">{t('bookings.actions.export', 'Export')}</span>
           </button>
           {/* Submission log link moved into the tab row. */}
           <button onClick={handleSync} disabled={syncing}
-            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors">
-            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync_pms', 'Sync PMS')}
+            className="flex items-center gap-1.5 bg-primary-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+            <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">{syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync_pms', 'Sync PMS')}</span>
+            <span className="sm:hidden">{syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync', 'Sync')}</span>
           </button>
         </div>
       </div>
@@ -947,9 +950,12 @@ export function Bookings() {
         )}
       </Card>
 
-      {/* Table */}
+      {/* Table on tablet+; stacked cards on mobile. Same data, two
+          renderers — keeps the dense desktop layout while fixing the
+          unreadable horizontal-scroll table on phone-sized viewports. */}
       <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop / tablet table — md and up. */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-[#636366] font-bold bg-[#1a1a1a]">
@@ -977,6 +983,18 @@ export function Bookings() {
           </table>
         </div>
 
+        {/* Mobile cards — below md. Stacks every row as a tap-friendly
+            card with the same data shown in the table cells. */}
+        <div className="md:hidden divide-y divide-dark-border">
+          {isLoading ? (
+            <div className="p-12 text-center"><div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
+          ) : bookings.length === 0 ? (
+            <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</div>
+          ) : bookings.map((b: any) => (
+            <ReservationCard key={b.id} b={b} t={t} refetch={refetch} />
+          ))}
+        </div>
+
         {lastPage > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-dark-border">
             <span className="text-xs text-[#636366]">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
@@ -995,6 +1013,158 @@ export function Bookings() {
       </Card>
 
       </>}{/* ════════════════ /ALL / UNPAID TABS ════════════════ */}
+    </div>
+  )
+}
+
+/* ── ReservationCard ───────────────────────────────────────────────
+   Mobile-friendly stacked card. Same data as ReservationRow but
+   wrapped vertically so it reads cleanly on phones (and the mobile-
+   admin WebView). Inline Status + Payment dropdowns kept — they're
+   the highest-frequency mutations and useful on the road. Channel +
+   payment-progress bar give scan-ability without horizontal scroll.
+*/
+function ReservationCard({ b, t, refetch }: {
+  b: any
+  t: (k: string, def?: any) => any
+  refetch: () => void
+}) {
+  const [statusOpen, setStatusOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const total = Number(b.price_total ?? 0)
+  const paid  = Number(b.price_paid ?? 0)
+  const balance = Math.max(0, total - paid)
+  const paidPct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const nights = b.arrival_date && b.departure_date
+    ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
+    : null
+  const payState = derivePaymentStatus(b)
+  const internalStatus = b.internal_status || b.booking_state || 'new'
+
+  const channelTone = (() => {
+    const c = (b.channel_name ?? '').toLowerCase()
+    if (c.includes('booking.com'))   return 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+    if (c.includes('airbnb'))        return 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+    if (c.includes('website'))       return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+    if (c.includes('direct'))        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+    if (c.includes('expedia'))       return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+    return 'bg-gray-500/15 text-gray-300 border-gray-500/30'
+  })()
+
+  const barTone = paidPct >= 100 ? 'bg-emerald-500' : paidPct > 0 ? 'bg-amber-500' : 'bg-red-500/60'
+
+  const patch = async (payload: Record<string, any>) => {
+    setBusy(true)
+    try {
+      await api.patch(`/v1/admin/bookings/${b.id}/status`, payload)
+      toast.success(t('bookings.row.updated', 'Updated'))
+      refetch()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || t('bookings.row.update_failed', 'Update failed'))
+    } finally { setBusy(false) }
+  }
+
+  const STATUS_OPTIONS = ['new', 'confirmed', 'checked-in', 'checked-out', 'cancelled', 'no-show']
+  const PAYMENT_OPTIONS = ['paid', 'open', 'pending', 'invoice_waiting', 'channel_managed']
+
+  return (
+    <div className="p-4">
+      {/* Top line: guest name + view link */}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
+          {b.guest_email && <div className="text-[11px] text-[#636366] truncate">{b.guest_email}</div>}
+        </div>
+        <Link to={`/bookings/${b.id}`}
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white transition-colors flex-shrink-0">
+          <Eye size={14} />
+        </Link>
+      </div>
+
+      {/* Channel chip + Unit + Stay */}
+      <div className="flex items-center gap-2 flex-wrap mb-2.5">
+        {b.channel_name && (
+          <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${channelTone}`}>
+            {b.channel_name}
+          </span>
+        )}
+        {b.apartment_name && <span className="text-[11px] text-[#a0a0a0] truncate max-w-[140px]">{b.apartment_name}</span>}
+      </div>
+      <div className="text-[11px] text-[#9a9a9a] mb-2.5 tabular-nums">
+        {fmtDateShort(b.arrival_date)} <span className="text-[#636366]">→</span> {fmtDateShort(b.departure_date)}
+        {nights ? <span className="text-[#636366]"> · {nights}n</span> : null}
+        {b.adults != null ? <span className="text-[#636366]"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span> : null}
+      </div>
+
+      {/* Money + progress bar */}
+      <div className="mb-3">
+        <div className="flex items-baseline justify-between text-xs tabular-nums">
+          <span>
+            <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
+            <span className="text-[#636366]"> / </span>
+            <span className="text-[#a0a0a0]">{money(total)}</span>
+          </span>
+          {balance > 0 ? (
+            <span className="text-[10px] text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
+          ) : total > 0 ? (
+            <span className="text-[10px] text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
+          ) : null}
+        </div>
+        <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+          <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
+        </div>
+      </div>
+
+      {/* Status + Payment inline editors */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <button onClick={() => { setStatusOpen(o => !o); setPayOpen(false) }} disabled={busy}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${STATUS_PILL[internalStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+            {internalStatus.replace(/-/g, ' ')}
+            <ChevronLeft size={9} className="rotate-[270deg]" />
+          </button>
+          {statusOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+              <div className="absolute z-20 mt-1 left-0 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[150px] overflow-hidden">
+                {STATUS_OPTIONS.map(s => (
+                  <button key={s} onClick={() => { setStatusOpen(false); patch({ internal_status: s }) }}
+                    className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${
+                      s === internalStatus ? 'text-white font-bold' : 'text-t-secondary'
+                    }`}>
+                    {s.replace(/-/g, ' ')}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="relative">
+          <button onClick={() => { setPayOpen(o => !o); setStatusOpen(false) }} disabled={busy}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+            {payLabel(payState)}
+            <ChevronLeft size={9} className="rotate-[270deg]" />
+          </button>
+          {payOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setPayOpen(false)} />
+              <div className="absolute z-20 mt-1 left-0 bg-dark-surface border border-dark-border rounded-lg shadow-xl min-w-[160px] overflow-hidden">
+                {PAYMENT_OPTIONS.map(p => (
+                  <button key={p} onClick={() => { setPayOpen(false); patch({ payment_status: p }) }}
+                    className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-dark-surface2 ${
+                      p === payState ? 'text-white font-bold' : 'text-t-secondary'
+                    }`}>
+                    {payLabel(p)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

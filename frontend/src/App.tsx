@@ -282,7 +282,10 @@ export default function App() {
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <Suspense fallback={null}><AiChat /></Suspense>
+        {/* AiChat is the floating admin AI button. Hidden on mobile —
+            the mobile backend app has its own UI primitives + lower-
+            powered devices, and the admin AI is a desktop-shift tool. */}
+        <div className="hidden md:block"><Suspense fallback={null}><AiChat /></Suspense></div>
       </BrowserRouter>
     </QueryClientProvider>
   )
