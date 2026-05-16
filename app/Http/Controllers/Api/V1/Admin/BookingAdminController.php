@@ -299,6 +299,11 @@ class BookingAdminController extends Controller
         if ($state = $request->input('booking_state')) {
             $query->where('booking_state', $state);
         }
+        // Channel filter: case-insensitive LIKE so 'Website' / 'website' /
+        // 'Booking.com' / 'booking.com' all match the stored label.
+        if ($channel = $request->input('channel')) {
+            $query->whereRaw('LOWER(channel_name) LIKE ?', ['%' . strtolower($channel) . '%']);
+        }
         if ($from = $request->input('from')) {
             $query->where('arrival_date', '>=', $from);
         }

@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon, LayoutDashboard, Globe, AlarmClock, CreditCard, Mail, Phone } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ViewToggle } from '../components/ViewToggle'
+// ViewToggle removed — List / Timeline links live inside the tab bar.
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
 
@@ -290,7 +290,11 @@ export function Bookings() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['bookings-engine', params, tab],
     queryFn: () => api.get('/v1/admin/bookings', { params }).then(r => r.data),
-    // Only the All / Website / Unpaid tabs use the paginated list.
+    // All / Website / Unpaid all consume the paginated list. Website
+    // adds `channel=Website` to params (server does case-insensitive
+    // LIKE so 'Website' / 'website' / future label variants all match);
+    // Unpaid forces payment_status=open. Overview + Arrivals don't
+    // fetch this query at all.
     enabled: tab === 'all' || tab === 'website' || tab === 'unpaid',
   })
 
@@ -419,11 +423,7 @@ export function Bookings() {
             <Download size={16} />
             {t('bookings.actions.export_csv', 'Export CSV')}
           </button>
-          <Link to="/bookings/submissions"
-            className="flex items-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
-            <FileText size={16} />
-            {t('bookings.actions.submission_log', 'Submission log')}
-          </Link>
+          {/* Submission log link moved into the tab row. */}
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors">
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
@@ -432,15 +432,10 @@ export function Bookings() {
         </div>
       </div>
 
-      {/* List ↔ Timeline view toggle. */}
-      <ViewToggle options={[
-        { to: '/bookings',          label: t('bookings.view.list',     'List'),     icon: <ListIcon size={12} className="-ml-0.5" /> },
-        { to: '/bookings/calendar', label: t('bookings.view.timeline', 'Timeline'), icon: <CalendarRange size={12} className="-ml-0.5" /> },
-      ]} />
-
-      {/* Tab navigation — Overview / All / Website / Arrivals / Unpaid.
-          Counts pull from the dashboard payload so the badges reflect
-          live data without extra queries. */}
+      {/* Unified tab bar — Overview / All / Website / Arrivals / Unpaid
+          on the left; Timeline + Submission Log on the right as link-
+          tabs (they navigate to separate pages). Counts pulled from
+          the dashboard payload so badges reflect live data. */}
       {(() => {
         const totalCount    = dashboard?.kpis?.find((k: any) => k.key === 'total_bookings')?.value ?? null
         const websiteCount  = dashboard?.websiteBookings?.length ?? null
@@ -472,6 +467,18 @@ export function Bookings() {
                 </button>
               )
             })}
+            <div className="flex-1" />
+            {/* Right-aligned link tabs — these navigate to separate
+                pages rather than switching the local tab state, so they
+                style as ghost buttons with an outbound arrow look. */}
+            <Link to="/bookings/calendar"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors">
+              <CalendarRange size={14} />{t('bookings.view.timeline', 'Timeline')}
+            </Link>
+            <Link to="/bookings/submissions"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors">
+              <FileText size={14} />{t('bookings.view.submission_log', 'Submission log')}
+            </Link>
           </div>
         )
       })()}
@@ -767,7 +774,10 @@ export function Bookings() {
       )}
 
       {/* ════════════════ WEBSITE TAB ════════════════
-          Direct bookings made via the public widget. */}
+          Direct bookings made via the public widget. Uses the same
+          paginated /bookings list as All — filtered server-side by
+          channel=Website (case-insensitive) — so the full set is
+          browseable, not just the 20 most-recent. */}
       {tab === 'website' && (
         <Card className="p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
@@ -776,16 +786,46 @@ export function Bookings() {
               <p className="text-xs text-[#636366] mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-              {t('bookings.panels.website_count', { count: dashboard?.websiteBookings?.length ?? 0, defaultValue: '{{count}} recent' })}
+              {t('bookings.panels.website_count_total', { count: data?.total ?? 0, defaultValue: '{{count}} total' })}
             </span>
           </div>
+
+          {/* Search box specific to the website tab — keeps the filter
+              UX consistent across tabs. */}
+          <div className="px-5 py-3 border-b border-dark-border">
+            <div className="relative max-w-md">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+                placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
+                className="w-full pl-9 pr-3 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+          </div>
+
           <div className="divide-y divide-dark-border">
-            {(dashboard?.websiteBookings?.length ?? 0) === 0 ? (
+            {isLoading ? (
+              <div className="p-12 text-center"><div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
+            ) : bookings.length === 0 ? (
               <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.panels.website_empty', 'No website bookings yet. Share your booking widget URL to start collecting direct reservations.')}</div>
-            ) : dashboard.websiteBookings.map((b: any) => (
+            ) : bookings.map((b: any) => (
               <CompactBookingRow key={b.id} b={b} t={t} variant="website" />
             ))}
           </div>
+
+          {lastPage > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-dark-border">
+              <span className="text-xs text-[#636366]">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
+              <div className="flex gap-1">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                  <ChevronLeft size={14} />
+                </button>
+                <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
+                  className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
