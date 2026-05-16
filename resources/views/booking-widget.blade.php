@@ -1449,6 +1449,25 @@ function updatePayButton() {
   }
 }
 
+/**
+ * Show a payment error banner via direct DOM manipulation — avoids
+ * a full render() that would tear out the Stripe iframe. Used inside
+ * the doPayAndConfirm flow when the user can still retry on the same
+ * mounted Element (validation error, network blip, etc.).
+ */
+function showPaymentError(msg) {
+  // Use the existing inline error slot under the card form. If it's
+  // missing for any reason fall through to render() so the user
+  // doesn't lose the error silently.
+  var inline = document.getElementById('stripe-card-errors');
+  if (inline) {
+    inline.textContent = msg || '';
+    return;
+  }
+  state.paymentError = msg;
+  render();
+}
+
 function doPayAndConfirm() {
   if (!state.stripeInstance || !state.stripeElements || !state.paymentIntentClientSecret) {
     state.paymentError = 'Payment not initialized. Please go back and try again.';
@@ -1468,7 +1487,16 @@ function doPayAndConfirm() {
 
   state.paymentProcessing = true;
   state.paymentError = null;
-  render();
+  // Do NOT render() here — confirmPayment reads from the live iframe
+  // and render() would $app.innerHTML the DOM, detaching the iframe
+  // before Stripe finishes reading it (this was the immediate cause
+  // of the post-click 'Element not mounted' IntegrationError).
+  // updatePayButton() flips the button to its 'Processing…' state
+  // without touching the iframe's parent.
+  updatePayButton();
+  // Also clear any visible error toast at the top without re-render.
+  var errBanner = document.getElementById('stripe-card-errors');
+  if (errBanner) errBanner.textContent = '';
 
   state.stripeInstance.confirmPayment({
     elements: state.stripeElements,
@@ -1486,8 +1514,10 @@ function doPayAndConfirm() {
   }).then(function(result) {
     if (result.error) {
       state.paymentProcessing = false;
-      state.paymentError = result.error.message || 'Payment failed. Please try again.';
-      render();
+      // Keep the iframe mounted so the user can retry — show the
+      // error inline rather than rerunning render().
+      showPaymentError(result.error.message || 'Payment failed. Please try again.');
+      updatePayButton();
       return;
     }
 
@@ -1520,14 +1550,13 @@ function doPayAndConfirm() {
       render();
     });
   }).catch(function(err) {
-    // confirmPayment itself rejected — usually an IntegrationError
-    // (Element not mounted / not ready / unmounted mid-call) or a
-    // network drop. Without this catch the Pay button hangs on
-    // "Processing…" forever because the success branch never fires.
+    // confirmPayment itself rejected — typically an IntegrationError
+    // (Element not ready) or a network drop. Don't full-render — the
+    // iframe is probably still alive and the user can retry.
     state.paymentProcessing = false;
-    state.paymentError = (err && err.message)
-      || 'Payment could not start. Please go back to the previous step and try again.';
-    render();
+    showPaymentError((err && err.message)
+      || 'Payment could not start. Please refresh and try again.');
+    updatePayButton();
   });
 }
 
