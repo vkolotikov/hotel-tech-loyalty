@@ -30,6 +30,9 @@ class SmoobuClient
     private ?string $baseUrl     = null;
     private ?string $apiKey      = null;
     private ?string $channelId   = null;
+    /** Cached output of resolveDirectChannelId() so the booking flow
+     *  doesn't repeat /channels on every confirm. */
+    private int $resolvedDirectChannelId = 0;
     private int $timeout         = 30;
     private ?bool $isMock        = null;
     private ?int $loadedForOrg   = null;
@@ -91,6 +94,9 @@ class SmoobuClient
         $this->timeout   = (int) config('services.smoobu.timeout', 30);
         $this->loadedForOrg   = $orgId;
         $this->loadedForBrand = $brandId;
+        // Reset per-tenant caches so a long-lived SmoobuClient instance
+        // doesn't carry one org's resolved channel into the next.
+        $this->resolvedDirectChannelId = 0;
 
         if ($this->isMock) {
             Log::info('SmoobuClient running in MOCK mode', [
@@ -102,6 +108,80 @@ class SmoobuClient
 
     public function isMock(): bool { $this->boot(); return (bool) $this->isMock; }
     public function channelId(): string { $this->boot(); return (string) $this->channelId; }
+
+    /**
+     * Resolve the channel id to use when CREATING reservations.
+     *
+     * Smoobu's POST /reservations needs a real channel id. If the admin
+     * hasn't configured one (or set it to 0), Smoobu attributes the
+     * reservation to a generic "Blocked Channel" — the booking shows
+     * up grey on the calendar and is filtered out of the New
+     * Reservations list. We saw exactly this in the wild.
+     *
+     * Resolution order:
+     *   1. Admin-configured booking_smoobu_channel_id (per-brand → per-org).
+     *   2. Auto-detect from GET /channels — look for an entry that is
+     *      manually-usable and not blocked. We accept entries whose
+     *      name matches direct/website/manual/api patterns OR whose
+     *      `is_blocked_channel` flag is explicitly false.
+     *   3. Last resort: cast to (int) which yields 0 so the caller can
+     *      still attempt the call (Smoobu will return a clear error
+     *      that propagates to the admin).
+     *
+     * Result is cached for the lifetime of this SmoobuClient instance
+     * to avoid /channels round-trips on every booking.
+     */
+    public function resolveDirectChannelId(): int
+    {
+        $this->boot();
+
+        // 1. Configured value wins.
+        if (!empty($this->channelId) && ((int) $this->channelId) > 0) {
+            return (int) $this->channelId;
+        }
+
+        // Cached lookup — set on first successful resolution.
+        if (!empty($this->resolvedDirectChannelId)) {
+            return $this->resolvedDirectChannelId;
+        }
+
+        // Mock mode: synthesize a placeholder so the local-only
+        // booking flow doesn't crash.
+        if ($this->isMock) {
+            return $this->resolvedDirectChannelId = 1;
+        }
+
+        // 2. Ask Smoobu.
+        try {
+            $resp = $this->get('/channels');
+            $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
+            $namePatterns = ['/direct/i', '/website/i', '/manual/i', '/\bapi\b/i'];
+            foreach ($items as $ch) {
+                $id   = (int) ($ch['id'] ?? 0);
+                $name = (string) ($ch['name'] ?? '');
+                $isBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
+                if ($id <= 0 || $isBlocked) continue;
+                foreach ($namePatterns as $p) {
+                    if (preg_match($p, $name)) {
+                        return $this->resolvedDirectChannelId = $id;
+                    }
+                }
+            }
+            // No name match — pick the first non-blocked channel.
+            foreach ($items as $ch) {
+                $id   = (int) ($ch['id'] ?? 0);
+                $isBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
+                if ($id > 0 && !$isBlocked) {
+                    return $this->resolvedDirectChannelId = $id;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SmoobuClient: /channels lookup failed', ['error' => $e->getMessage()]);
+        }
+
+        // 3. Give up — let the caller hit Smoobu with 0 and surface the error.
+        return 0;
+    }
 
     public function getRates(string $checkIn, string $checkOut, array $unitIds = []): array
     {

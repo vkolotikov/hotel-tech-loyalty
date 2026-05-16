@@ -253,20 +253,76 @@ class BookingEngineService
             $pmsResult = null;
             $pmsFatal = null;
             try {
-                $pmsResult = $this->smoobu->createReservation([
+                $grossTotal = (float) $payload['gross_total'];
+                // Channel resolution: prefer the configured channel id;
+                // otherwise auto-detect the Direct booking channel via
+                // /channels so the reservation lands in Smoobu's New
+                // Reservations list rather than the "Blocked Channel"
+                // bucket. SmoobuClient caches the resolution.
+                $channelId = (int) ($this->smoobu->resolveDirectChannelId() ?: 0);
+
+                // Smoobu API: price-paid marks the booking as paid.
+                // Compute "is this booking paid?" inline — the full
+                // $paymentStatus variable isn't resolved until after this
+                // PMS call, but the upstream signals we need are already
+                // on $data (Stripe path sets payment_intent_id; manual /
+                // mock paths set payment_status='paid' explicitly).
+                $isPaid = (($data['payment_status'] ?? null) === 'paid')
+                       || !empty($data['payment_intent_id']);
+                $paidAmount = $isPaid ? $grossTotal : 0.0;
+
+                // Notice = guest's special-requests text. Smoobu shows
+                // this prominently in the reservation detail and in the
+                // calendar's hover popup.
+                $notice = trim((string) ($data['special_requests'] ?? $guest['special_requests'] ?? ''));
+
+                // Build a richer extras line for the assistant notice so
+                // staff see what to prepare without opening our admin.
+                // Hold's extras payload is just [{id, quantity}, ...] — we
+                // resolve the names via the catalog for readability.
+                $assistantNoticeLines = [];
+                if (!empty($payload['extras']) && is_array($payload['extras'])) {
+                    $catalog = collect($this->loadExtrasConfig());
+                    foreach ($payload['extras'] as $ex) {
+                        $extraId = (string) ($ex['id'] ?? '');
+                        $qty     = max(1, (int) ($ex['quantity'] ?? 1));
+                        $def     = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
+                        $name    = (string) ($def['name'] ?? $extraId);
+                        if ($name !== '') {
+                            $assistantNoticeLines[] = $name . ($qty > 1 ? " ×{$qty}" : '');
+                        }
+                    }
+                }
+                $assistantNotice = empty($assistantNoticeLines)
+                    ? null
+                    : 'Extras: ' . implode(', ', $assistantNoticeLines);
+
+                $smoobuPayload = [
                     'apartmentId'   => $payload['unit_id'],
                     'arrivalDate'   => $payload['check_in'],
                     'departureDate' => $payload['check_out'],
-                    'channelId'     => (int) ($this->smoobu->channelId() ?: 0),
+                    'channelId'     => $channelId,
                     'firstName'     => $guest['first_name'] ?? '',
                     'lastName'      => $guest['last_name'] ?? '',
                     'email'         => $guest['email'] ?? '',
                     'phone'         => $guest['phone'] ?? '',
+                    'country'       => $guest['country'] ?? null,
                     'adults'        => (int) $payload['adults'],
                     'children'      => (int) $payload['children'],
-                    'price'         => (float) $payload['gross_total'],
+                    'price'         => $grossTotal,
+                    'price-paid'    => $paidAmount,
                     'language'      => 'en',
-                ]);
+                    'notice'        => $notice ?: null,
+                    'assistant-notice' => $assistantNotice,
+                    // type=reservation tells Smoobu this is a real
+                    // booking (vs a blocked-channel placeholder). Some
+                    // accounts default to blocked-channel without it.
+                    'type'          => 'reservation',
+                ];
+                // Strip nulls so Smoobu doesn't complain about empty
+                // optional fields.
+                $smoobuPayload = array_filter($smoobuPayload, fn ($v) => $v !== null && $v !== '');
+                $pmsResult = $this->smoobu->createReservation($smoobuPayload);
             } catch (\Throwable $e) {
                 $msg = $e->getMessage();
                 // Heuristic: any error mentioning availability /

@@ -1533,6 +1533,7 @@ function doPayAndConfirm() {
         email: state.email.trim(),
         phone: state.phone.trim()
       },
+      special_requests: state.requests ? state.requests.trim() : null,
       payment_intent_id: state.paymentIntentId,
       payment_method: 'stripe',
       source: state.source

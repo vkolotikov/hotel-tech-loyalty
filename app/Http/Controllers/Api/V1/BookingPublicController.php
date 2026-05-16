@@ -385,6 +385,7 @@ class BookingPublicController extends Controller
             'guest.phone'          => 'nullable|string|max:40',
             'payment_method'       => 'nullable|string|max:40',
             'payment_intent_id'    => 'nullable|string|max:255',
+            'special_requests'     => 'nullable|string|max:2000',
         ]);
 
         // Mock mode: any booking confirmed while booking_mock_mode=true gets
