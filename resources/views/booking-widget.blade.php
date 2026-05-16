@@ -417,6 +417,7 @@ var state = {
   stripeInstance: null,
   stripeElements: null,
   cardElement: null,
+  stripeReady: false,
   paymentIntentClientSecret: null,
   paymentIntentId: null,
   paymentProcessing: false,
@@ -1066,8 +1067,17 @@ function renderPayment() {
 
   h += '<div class="btn-row">';
   h += '<button class="btn btn-outline" id="w-back4">' + svgArrowLeft() + ' Back</button>';
-  h += '<button class="btn btn-primary" id="w-pay"' + (state.paymentProcessing ? ' disabled' : '') + '>';
-  h += state.paymentProcessing ? spinner() + ' Processing...' : svgLock() + ' Pay & Confirm';
+  // Pay disabled until Stripe Element emits `ready` — kills the
+  // "Processing…" hang when the card form hasn't finished loading.
+  var payDisabled = state.paymentProcessing || !state.stripeReady;
+  h += '<button class="btn btn-primary" id="w-pay"' + (payDisabled ? ' disabled' : '') + '>';
+  if (state.paymentProcessing) {
+    h += spinner() + ' Processing...';
+  } else if (!state.stripeReady) {
+    h += spinner() + ' Loading card form...';
+  } else {
+    h += svgLock() + ' Pay & Confirm';
+  }
   h += '</button></div>';
   h += '</div>';
 
@@ -1333,14 +1343,28 @@ function unmountStripeElement() {
     state.cardElement = null;
   }
   state.stripeElements = null;
+  state.stripeReady = false;
 }
 
 function mountStripeElement() {
   unmountStripeElement();
 
   if (!state.stripeInstance || !state.paymentIntentClientSecret) return;
+
+  // The DOM container is created by the most recent render() pass.
+  // On step 5 the render flushes synchronously before we get here,
+  // but defensively guard for it anyway.
   var container = document.getElementById('stripe-card-element');
-  if (!container) return;
+  if (!container) {
+    // Race-condition rescue: try again on the next animation frame.
+    requestAnimationFrame(mountStripeElement);
+    return;
+  }
+
+  // `stripeReady` gates the Pay button so a confirm() can never fire
+  // before the Element finishes loading. Reset on every (re)mount.
+  state.stripeReady = false;
+  render();
 
   var appearance = {
     theme: (state.style && state.style.theme === 'dark') ? 'night' : 'stripe',
@@ -1358,15 +1382,40 @@ function mountStripeElement() {
   state.cardElement = state.stripeElements.create('payment');
   state.cardElement.mount('#stripe-card-element');
 
+  state.cardElement.on('ready', function() {
+    state.stripeReady = true;
+    render();
+  });
+
   state.cardElement.on('change', function(event) {
     var errEl = document.getElementById('stripe-card-errors');
     if (errEl) errEl.textContent = event.error ? event.error.message : '';
+  });
+
+  // If the element fails to load entirely (network, blocked iframe,
+  // stale clientSecret), surface a useful message instead of leaving
+  // the user stuck on a forever-spinning Pay button.
+  state.cardElement.on('loaderror', function(event) {
+    var msg = (event && event.error && event.error.message) || 'Card form failed to load. Please go back and try again.';
+    state.paymentError = msg;
+    state.stripeReady = false;
+    render();
   });
 }
 
 function doPayAndConfirm() {
   if (!state.stripeInstance || !state.stripeElements || !state.paymentIntentClientSecret) {
     state.paymentError = 'Payment not initialized. Please go back and try again.';
+    render();
+    return;
+  }
+  // Block the confirm() call until the Stripe Element has actually
+  // emitted `ready`. Without this gate, an early click (or a stale
+  // cached intent that never finishes loading) throws Stripe's
+  // "Element not mounted" IntegrationError and the page hangs on
+  // \"Processing…\" forever.
+  if (!state.stripeReady) {
+    state.paymentError = 'Card form is still loading. Please wait a moment and try again.';
     render();
     return;
   }
@@ -1424,6 +1473,15 @@ function doPayAndConfirm() {
       state.paymentError = 'Payment was processed but booking confirmation failed. Please contact support.';
       render();
     });
+  }).catch(function(err) {
+    // confirmPayment itself rejected — usually an IntegrationError
+    // (Element not mounted / not ready / unmounted mid-call) or a
+    // network drop. Without this catch the Pay button hangs on
+    // "Processing…" forever because the success branch never fires.
+    state.paymentProcessing = false;
+    state.paymentError = (err && err.message)
+      || 'Payment could not start. Please go back to the previous step and try again.';
+    render();
   });
 }
 

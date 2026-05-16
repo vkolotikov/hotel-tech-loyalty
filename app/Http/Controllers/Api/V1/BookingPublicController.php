@@ -267,21 +267,52 @@ class BookingPublicController extends Controller
         $checkOut = $payload['check_out'] ?? '';
 
         // Reuse the cached PaymentIntent when it still matches the
-        // current amount. Without this, every back-nav / page-reload /
-        // validation retry creates a fresh intent and burns a slot of
-        // the per-IP throttle. The user reported hitting "Too Many
-        // Attempts" mid-checkout; this is the root cause.
-        // Amount is matched in cents to avoid float-comparison foot-guns.
+        // current amount AND is still in a reusable status. Without
+        // the status guard, an intent that's already succeeded or in a
+        // terminal state would be returned again — Stripe Elements
+        // can't initialise on a finalised intent and the front-end
+        // throws "Element not mounted / ready not emitted" the moment
+        // confirmPayment fires.
+        //
+        // Reusable statuses (Stripe docs):
+        //   - requires_payment_method (fresh, no method yet)
+        //   - requires_confirmation
+        //   - requires_action (3DS step incomplete)
+        // Terminal / non-reusable:
+        //   - processing, succeeded, canceled
         $cachedId      = $payload['stripe_payment_intent_id'] ?? null;
         $cachedSecret  = $payload['stripe_client_secret'] ?? null;
         $cachedAmount  = isset($payload['stripe_amount_cents']) ? (int) $payload['stripe_amount_cents'] : null;
         $currentCents  = (int) round($amount * 100);
         if ($cachedId && $cachedSecret && $cachedAmount === $currentCents) {
-            return response()->json([
-                'client_secret'     => $cachedSecret,
-                'payment_intent_id' => $cachedId,
-                'reused'            => true,
-            ]);
+            try {
+                $existing = $stripe->retrievePaymentIntent($cachedId);
+                $reusable = in_array(
+                    $existing->status,
+                    ['requires_payment_method', 'requires_confirmation', 'requires_action'],
+                    true,
+                );
+                if ($reusable) {
+                    return response()->json([
+                        'client_secret'     => $cachedSecret,
+                        'payment_intent_id' => $cachedId,
+                        'reused'            => true,
+                    ]);
+                }
+                // Terminal status — fall through to create a fresh intent.
+                \Illuminate\Support\Facades\Log::info('Cached PaymentIntent not reusable, creating fresh', [
+                    'hold_token' => $validated['hold_token'],
+                    'old_id'     => $cachedId,
+                    'status'     => $existing->status,
+                ]);
+            } catch (\Throwable $e) {
+                // Stripe lookup failed (network / deleted / wrong key) —
+                // safer to create a new intent than gamble on a stale one.
+                \Illuminate\Support\Facades\Log::warning('Stripe retrieve failed during cache check; creating fresh', [
+                    'hold_token' => $validated['hold_token'],
+                    'error'      => $e->getMessage(),
+                ]);
+            }
         }
 
         try {
