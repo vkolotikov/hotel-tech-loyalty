@@ -262,12 +262,8 @@ export function Analytics() {
     queryFn: () => api.get('/v1/admin/deals/analytics?days=30').then(r => r.data),
     enabled: activeTab === 'deals',
   })
-  // AI cost trend for the Chat tab.
-  const { data: aiUsageSeries } = useQuery<any>({
-    queryKey: ['analytics-ai-usage-series'],
-    queryFn: () => api.get('/v1/admin/ai-usage/series?days=30').then(r => r.data),
-    enabled: activeTab === 'chat',
-  })
+  // AI cost trend query removed — the card was dropped from the Chat
+  // tab. Same data still lives at Settings → AI Usage.
 
   return (
     <div className="space-y-6">
@@ -1221,38 +1217,9 @@ export function Analytics() {
             <Link to="/engagement" className="text-primary-400 hover:underline">{t('analytics.chat.open_engagement', 'Open the Engagement feed →')}</Link>
           </div>
 
-          {/* AI cost trend — combined cost (filled area) + call count
-              (line) over 30 days. Surfaces both spend curve and call
-              volume so admins spot a price spike that's volume-driven
-              vs a per-call model change. */}
-          {aiUsageSeries?.data && aiUsageSeries.data.length > 0 && (
-            <Card>
-              <h3 className="text-sm font-semibold text-white mb-1">{t('analytics.chat.ai_cost_title', 'AI Cost & Call Volume (30d)')}</h3>
-              <p className="text-[11px] text-t-secondary mb-3">{t('analytics.chat.ai_cost_sub', 'Daily AI spend in USD with overlaid call count')}</p>
-              <ResponsiveContainer width="100%" height={220}>
-                <ComposedChart data={aiUsageSeries.data.map((d: any) => ({
-                  day: String(d.day).slice(5, 10),
-                  cost: (d.cost_cents ?? 0) / 100,
-                  calls: d.calls ?? 0,
-                }))} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="aiCostGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={v => `$${v.toFixed(2)}`} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any, name: any) => String(name).includes('Cost') ? `$${Number(v).toFixed(2)}` : v as any} />
-                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
-                  <Area yAxisId="left"  type="monotone" dataKey="cost"  name={t('analytics.chat.cost_usd', 'Cost')}  stroke="#22c55e" fill="url(#aiCostGrad)" strokeWidth={2} dot={false} />
-                  <Line yAxisId="right" type="monotone" dataKey="calls" name={t('analytics.chat.calls', 'Calls')} stroke="#f59e0b" strokeWidth={1.5} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </Card>
-          )}
+          {/* AI Cost & Call Volume card removed per user request.
+              The same series is still available on Settings → AI Usage
+              for admins who need it. */}
 
           {/* Deeper chatbot analytics — conversation volume, AI resolution
               rate, lead capture, intent breakdown, top pages, etc.
