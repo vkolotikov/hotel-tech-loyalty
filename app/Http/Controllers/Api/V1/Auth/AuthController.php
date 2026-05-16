@@ -1131,24 +1131,61 @@ class AuthController extends Controller
             return response()->json(['error' => 'Could not authenticate with billing service'], 422);
         }
 
-        $this->syncEntitlementsFromSaas($request, $saasToken);
-
-        // Bust the CheckSubscription cache so the next request sees fresh state.
         $user = $request->user();
         $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
-        if ($org && $org->saas_org_id) {
+        if (!$org) {
+            return response()->json(['error' => 'No organization on the current user'], 422);
+        }
+
+        // Run the bootstrap fetch inline so we can tell the SPA whether SaaS
+        // actually responded. Calling syncEntitlementsFromSaas() would swallow
+        // every error and return 200 with stale data — which is the failure
+        // mode this endpoint exists to prevent.
+        try {
+            $bootstrap = Http::withToken($saasToken)->timeout(8)
+                ->get("{$saasApi}/tools/bootstrap");
+
+            if (!$bootstrap->successful()) {
+                return response()->json([
+                    'error'  => 'Billing service returned ' . $bootstrap->status(),
+                    'status' => $org->subscription_status,
+                ], 502);
+            }
+
+            $data = $bootstrap->json();
+            $sub  = $data['subscription'] ?? null;
+            if ($sub) {
+                $org->plan_slug           = $sub['plan']['slug'] ?? null;
+                $org->subscription_status = $sub['status'] ?? null;
+                $org->trial_end           = $sub['trialEnd'] ?? null;
+                $org->period_end          = $sub['currentPeriodEnd'] ?? null;
+            }
+            $org->entitled_products      = $data['entitled_product_slugs'] ?? [];
+            $org->plan_features          = (array) ($data['features'] ?? []);
+            $org->entitlements_synced_at = now();
+            $org->save();
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'error'  => 'Could not reach billing service',
+                'status' => $org->subscription_status,
+            ], 502);
+        }
+
+        // Bust the CheckSubscription cache so the next request sees fresh state.
+        if ($org->saas_org_id) {
             \Illuminate\Support\Facades\Cache::forget("subscription_status:{$org->saas_org_id}");
         }
 
         return response()->json([
             'success' => true,
             'subscription' => [
-                'status'   => $org?->subscription_status,
-                'plan'     => $org?->plan_slug,
-                'trialEnd' => $org?->trial_end?->toIso8601String(),
-                'periodEnd'=> $org?->period_end?->toIso8601String(),
-                'features' => $org?->plan_features ?? [],
-                'products' => $org?->entitled_products ?? [],
+                'status'   => $org->subscription_status,
+                'plan'     => $org->plan_slug,
+                'trialEnd' => $org->trial_end?->toIso8601String(),
+                'periodEnd'=> $org->period_end?->toIso8601String(),
+                'features' => $org->plan_features ?? [],
+                'products' => $org->entitled_products ?? [],
             ],
         ]);
     }

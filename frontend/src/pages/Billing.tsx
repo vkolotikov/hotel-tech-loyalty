@@ -118,11 +118,17 @@ export function Billing() {
       // and entitled_products reflect the just-purchased plan without waiting
       // for the 5-min middleware staleness window. Without this, the user may
       // see "feature locked" toasts for ~5 minutes after a successful upgrade.
-      api.post('/v1/auth/billing/refresh').catch(() => { /* best-effort */ }).finally(() => {
-        queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
-        window.history.replaceState({}, '', window.location.pathname)
-        setTimeout(() => navigate('/'), 800)
-      })
+      api.post('/v1/auth/billing/refresh')
+        .catch(() => {
+          // The webhook will eventually sync the entitlements anyway — this is
+          // just an immediacy nicety. Tell the user the page may need a moment.
+          toast('New plan features may take a few minutes to appear.', { icon: 'ℹ️' })
+        })
+        .finally(() => {
+          queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+          window.history.replaceState({}, '', window.location.pathname)
+          setTimeout(() => navigate('/'), 800)
+        })
     } else if (params.get('canceled') === '1') {
       toast('Checkout was canceled. No charges were made.')
       window.history.replaceState({}, '', window.location.pathname)
