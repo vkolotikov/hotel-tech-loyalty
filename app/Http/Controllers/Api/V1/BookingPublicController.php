@@ -550,6 +550,66 @@ class BookingPublicController extends Controller
                     'payment_method' => 'stripe',
                     'price_paid'     => $intent->amount / 100,
                 ]);
+            } elseif (!$mirror && $holdToken && $orgId) {
+                // ORPHAN RECOVERY: Stripe charged the guest but our
+                // /confirm endpoint never ran (process killed mid-
+                // commit, network drop after Stripe but before DB
+                // write, etc.). Without recovery, the guest is out of
+                // money and has no booking. The metadata we stamped
+                // when creating the intent carries enough to
+                // reconstruct a mirror row + email the guest.
+                try {
+                    $hold = \App\Models\BookingHold::withoutGlobalScopes()
+                        ->where('organization_id', (int) $orgId)
+                        ->where('hold_token', $holdToken)
+                        ->first();
+
+                    if ($hold) {
+                        // Bind tenant context so any downstream writes
+                        // (mirror create, audit log, email send) land
+                        // in the right org.
+                        app()->instance('current_organization_id', (int) $orgId);
+
+                        $payload = $hold->payload_json ?? [];
+                        \App\Models\BookingMirror::create([
+                            'organization_id'   => (int) $orgId,
+                            'reservation_id'    => 'ORPHAN-' . substr($intent->id, -10),
+                            'booking_reference' => 'PI-' . substr($intent->id, -8),
+                            'booking_type'      => 'reservation',
+                            'booking_state'     => 'confirmed',
+                            'apartment_id'      => $payload['unit_id'] ?? null,
+                            'apartment_name'    => $payload['unit_name'] ?? ($intent->metadata->unit_name ?? 'Room'),
+                            'channel_name'      => 'Website',
+                            'guest_name'        => trim(($payload['guest']['first_name'] ?? '') . ' ' . ($payload['guest']['last_name'] ?? '')) ?: ($intent->charges?->data[0]?->billing_details?->name ?? null),
+                            'guest_email'       => $payload['guest']['email'] ?? ($intent->charges?->data[0]?->billing_details?->email ?? null),
+                            'guest_phone'       => $payload['guest']['phone'] ?? null,
+                            'adults'            => $payload['adults'] ?? null,
+                            'children'          => $payload['children'] ?? null,
+                            'arrival_date'      => $payload['check_in'] ?? ($intent->metadata->check_in ?? null),
+                            'departure_date'    => $payload['check_out'] ?? ($intent->metadata->check_out ?? null),
+                            'price_total'       => $intent->amount / 100,
+                            'price_paid'        => $intent->amount / 100,
+                            'payment_status'    => 'paid',
+                            'payment_method'    => 'stripe',
+                            'stripe_payment_intent_id' => $intent->id,
+                            // pending_pms_sync flags it for the retry
+                            // cron — Smoobu wasn't called yet.
+                            'internal_status'   => 'pending_pms_sync',
+                            'synced_at'         => null,
+                        ]);
+
+                        \Illuminate\Support\Facades\Log::warning('Stripe orphan recovered — mirror created from PI metadata', [
+                            'org_id'     => $orgId,
+                            'pi_id'      => $intent->id,
+                            'hold_token' => $holdToken,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Stripe orphan-recovery failed', [
+                        'pi_id' => $intent->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // NOTE: audit_logs.subject_id is unsignedBigInteger — Stripe

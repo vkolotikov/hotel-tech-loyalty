@@ -116,6 +116,34 @@ class BookingEngineService
             }
         }
 
+        // Orphan-recovery: if Stripe charged the guest but our /confirm
+        // crashed mid-write (DB blip / process kill / network drop) the
+        // widget retries against the same PaymentIntent. Look the
+        // mirror up by stripe_payment_intent_id — if it already exists
+        // for this org, return its response shape so the retry
+        // resolves cleanly without double-charging or double-creating.
+        $piId = $data['payment_intent_id'] ?? null;
+        if ($piId && $orgId) {
+            $existingMirror = BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('stripe_payment_intent_id', $piId)
+                ->first();
+            if ($existingMirror) {
+                return [
+                    'reservation_id'    => $existingMirror->reservation_id,
+                    'booking_reference' => $existingMirror->booking_reference,
+                    'mirror_id'         => $existingMirror->id,
+                    'check_in'          => $existingMirror->arrival_date?->toDateString(),
+                    'check_out'         => $existingMirror->departure_date?->toDateString(),
+                    'gross_total'       => (float) ($existingMirror->price_total ?? 0),
+                    'currency'          => 'EUR',
+                    'pms_synced'        => $existingMirror->internal_status !== 'pending_pms_sync',
+                    'replayed'          => true,
+                    'replay_source'     => 'payment_intent',
+                ];
+            }
+        }
+
         $holdToken = $data['hold_token'];
         $holdQuery = BookingHold::where('hold_token', $holdToken);
         if ($orgId) {
@@ -486,11 +514,41 @@ class BookingEngineService
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
                 if ($e->getCode() === '23505') {
-                    \Illuminate\Support\Facades\Log::error('Idempotency-key race produced a duplicate booking — manual cancel required', [
+                    \Illuminate\Support\Facades\Log::error('Idempotency-key race produced a duplicate booking — auto-healing', [
                         'org_id'           => $orgId,
                         'idempotency_key'  => $idempotencyKey,
                         'duplicate_mirror_id' => $mirror->id ?? null,
                     ]);
+
+                    // SELF-HEAL: our duplicate already committed locally
+                    // AND was pushed to Smoobu. Cancel the Smoobu side
+                    // and soft-delete the mirror so it doesn't double-
+                    // hold inventory or appear in admin reports.
+                    if ($mirror) {
+                        try {
+                            if (!empty($mirror->reservation_id)
+                                && !str_starts_with((string) $mirror->reservation_id, 'LOCAL-')) {
+                                $this->smoobu->cancelReservation((string) $mirror->reservation_id);
+                            }
+                        } catch (\Throwable $cancelErr) {
+                            \Illuminate\Support\Facades\Log::warning('Idempotency loser — Smoobu cancel failed; manual intervention', [
+                                'reservation_id' => $mirror->reservation_id,
+                                'error' => $cancelErr->getMessage(),
+                            ]);
+                        }
+                        try {
+                            $mirror->forceFill([
+                                'booking_state'   => 'cancelled',
+                                'internal_status' => 'cancelled',
+                            ])->save();
+                        } catch (\Throwable $delErr) {
+                            \Illuminate\Support\Facades\Log::warning('Idempotency loser — mirror state update failed', [
+                                'mirror_id' => $mirror->id,
+                                'error'     => $delErr->getMessage(),
+                            ]);
+                        }
+                    }
+
                     $existing = BookingIdempotencyKey::withoutGlobalScopes()
                         ->where('organization_id', $orgId)
                         ->where('idempotency_key', $idempotencyKey)

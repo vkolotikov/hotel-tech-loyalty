@@ -1799,6 +1799,30 @@ apiGet('config').then(function(data) {
   if (urlParams.adults) state.adults = Math.max(1, Math.min(20, parseInt(urlParams.adults) || 2));
   if (urlParams.children) state.children = Math.max(0, Math.min(10, parseInt(urlParams.children) || 0));
 
+  // 3D Secure return — Stripe redirects back to return_url with
+  // ?payment_intent=… on the query string after the guest completes
+  // 3DS at their bank. The mirror is normally created by /confirm
+  // before the redirect kicks in, but if the user closed the tab
+  // mid-3DS or has a slow bank, the server-side webhook will
+  // eventually orphan-recover. Either way, on landing back here we
+  // jump straight to the success step so the guest sees a clear
+  // confirmation instead of restarting from step 1.
+  if (urlParams.payment_intent && urlParams.redirect_status === 'succeeded') {
+    state.step = successStep();
+    state.confirmation = state.confirmation || {
+      booking_reference: 'PI-' + String(urlParams.payment_intent).slice(-8),
+      payment_intent_id: urlParams.payment_intent,
+    };
+    render();
+    return;
+  }
+  if (urlParams.payment_intent && urlParams.redirect_status === 'failed') {
+    state.paymentError = 'Your bank declined the 3-D Secure verification. Please try a different card.';
+    state.step = 5;
+    render();
+    return;
+  }
+
   render();
 
   // If a room is pre-selected via URL, auto-search and jump to step 2
