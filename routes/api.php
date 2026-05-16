@@ -215,6 +215,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('billing/checkout',     [AuthController::class, 'billingCheckout']);
             Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
             Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
+            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh']);
             Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial']);
         });
 

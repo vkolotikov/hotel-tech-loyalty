@@ -1110,6 +1110,50 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /v1/auth/billing/refresh — Force a fresh entitlement pull from SaaS.
+     *
+     * Called by the loyalty SPA after the customer returns from Stripe Checkout
+     * (`/billing?success=1`). Without this, the org keeps reading the cached
+     * pre-upgrade plan_features / entitled_products until the 5-min staleness
+     * window expires, which makes "I just paid but the new features aren't on"
+     * a real complaint. Also busts the CheckSubscription cache so PAST_DUE /
+     * EXPIRED status flips to ACTIVE without waiting 60s.
+     */
+    public function billingRefresh(Request $request): JsonResponse
+    {
+        $saasApi = config('services.saas.api_url');
+        if (!$saasApi) {
+            return response()->json(['error' => 'Billing not configured'], 400);
+        }
+
+        $saasToken = $this->getSaasToken($request);
+        if (!$saasToken) {
+            return response()->json(['error' => 'Could not authenticate with billing service'], 422);
+        }
+
+        $this->syncEntitlementsFromSaas($request, $saasToken);
+
+        // Bust the CheckSubscription cache so the next request sees fresh state.
+        $user = $request->user();
+        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
+        if ($org && $org->saas_org_id) {
+            \Illuminate\Support\Facades\Cache::forget("subscription_status:{$org->saas_org_id}");
+        }
+
+        return response()->json([
+            'success' => true,
+            'subscription' => [
+                'status'   => $org?->subscription_status,
+                'plan'     => $org?->plan_slug,
+                'trialEnd' => $org?->trial_end?->toIso8601String(),
+                'periodEnd'=> $org?->period_end?->toIso8601String(),
+                'features' => $org?->plan_features ?? [],
+                'products' => $org?->entitled_products ?? [],
+            ],
+        ]);
+    }
+
+    /**
      * Canonical product list per plan — mirrors apps/saas/backend's v3 plan matrix
      * (reset_plans_to_v3 migration). Used when SaaS is unreachable so the local
      * fallback doesn't grant every plan the same entitlements.

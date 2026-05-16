@@ -157,9 +157,19 @@ class CheckSubscription
             ], 403);
         }
 
-        // Path 3: No SaaS config at all (pure local dev) — allow through
+        // Path 3: No SaaS config at all (pure local dev) — allow through.
+        // In production, treat missing SaaS config as a misconfiguration and
+        // fail closed — otherwise an accidentally-blanked SAAS_API_URL on
+        // prod would unlock every user.
         $saasApi = config('services.saas.api_url');
         if (!$saasApi) {
+            if (app()->environment('production')) {
+                \Log::critical('CheckSubscription: SAAS_API_URL not configured in production — failing closed');
+                return response()->json([
+                    'error' => 'subscription_required',
+                    'message' => 'Subscription service is temporarily unavailable. Please try again shortly.',
+                ], 503);
+            }
             return $next($request);
         }
 
@@ -174,7 +184,12 @@ class CheckSubscription
     {
         $saasApiUrl = config('services.saas.api_url');
         if (!$saasApiUrl) {
-            // SaaS not configured — allow through (dev mode)
+            // SaaS not configured — fine for local dev, dangerous on prod.
+            // In production this means a misconfigured deploy; fail closed.
+            if (app()->environment('production')) {
+                \Log::critical('CheckSubscription::fetchSubscriptionStatus: SAAS_API_URL not configured in production');
+                return ['status' => 'EXPIRED', 'fallback' => 'misconfigured'];
+            }
             return ['status' => 'ACTIVE', 'plan' => 'dev'];
         }
 

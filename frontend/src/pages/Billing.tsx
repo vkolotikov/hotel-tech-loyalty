@@ -114,10 +114,15 @@ export function Billing() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('success') === '1') {
       toast.success('Payment successful! Your subscription is now active.')
-      queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
-      window.history.replaceState({}, '', window.location.pathname)
-      // Navigate home so the subscription wall is gone
-      setTimeout(() => navigate('/'), 1000)
+      // Force a backend entitlement re-sync so the org's cached plan_features
+      // and entitled_products reflect the just-purchased plan without waiting
+      // for the 5-min middleware staleness window. Without this, the user may
+      // see "feature locked" toasts for ~5 minutes after a successful upgrade.
+      api.post('/v1/auth/billing/refresh').catch(() => { /* best-effort */ }).finally(() => {
+        queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
+        window.history.replaceState({}, '', window.location.pathname)
+        setTimeout(() => navigate('/'), 800)
+      })
     } else if (params.get('canceled') === '1') {
       toast('Checkout was canceled. No charges were made.')
       window.history.replaceState({}, '', window.location.pathname)
