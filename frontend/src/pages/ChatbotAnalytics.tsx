@@ -41,8 +41,8 @@ interface TrendPoint  {
   prevCount: number
 }
 interface LengthBucket { bucket: string; label: string; count: number }
-interface HourlyPoint { hour: number; label: string; count: number }
-interface WeekdayPoint{ dow: number; label: string; count: number }
+interface HourlyPoint  { hour: number; label: string; count: number; conversations: number; visitors: number; replies: number }
+interface WeekdayPoint { dow: number;  label: string; count: number; conversations: number; visitors: number; replies: number }
 interface PageRow     { page_url: string; count: number }
 interface CountryRow  { country: string; count: number }
 interface IntentRow   { intent: string; count: number }
@@ -299,7 +299,7 @@ export function ChatbotAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
                   <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#8e8e93' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
                   <Bar dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')} radius={[3, 3, 0, 0]}>
                     {data.length_distribution.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -310,20 +310,25 @@ export function ChatbotAnalytics() {
             </div>
           )}
 
-          {/* Row: Hourly + Weekday */}
+          {/* Row: Hourly + Weekday — both now render 3 series side by
+              side (visitors / conversations / replies) with a subtle
+              hover tint instead of the default white cursor block. */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-dark-card border border-dark-border rounded-xl p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={14} className="text-t-secondary" />
                 <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.peak_hours', 'Peak Hours')}</h3>
               </div>
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data.hourly_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
                   <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#8e8e93' }} interval={3} />
                   <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
-                  <Bar dataKey="count" name={t('chatbot_analytics.series.messages', 'Messages')} fill="#6366f1" radius={[3, 3, 0, 0]} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(99,102,241,0.08)' }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                  <Bar dataKey="visitors"      name={t('chatbot_analytics.series.visitors', 'Visitors')}           fill="#6366f1" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="conversations" name={t('chatbot_analytics.series.conversations', 'Conversations')} fill="#22c55e" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="replies"       name={t('chatbot_analytics.series.replies', 'Replies')}             fill="#f59e0b" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -333,13 +338,16 @@ export function ChatbotAnalytics() {
                 <CalendarDays size={14} className="text-t-secondary" />
                 <h3 className="text-sm font-semibold text-white">{t('chatbot_analytics.weekday', 'Day-of-Week Activity')}</h3>
               </div>
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data.weekday_distribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
                   <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#8e8e93' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
-                  <Bar dataKey="count" name={t('chatbot_analytics.series.conversations', 'Conversations')} fill="#22c55e" radius={[3, 3, 0, 0]} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(34,197,94,0.08)' }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                  <Bar dataKey="visitors"      name={t('chatbot_analytics.series.visitors', 'Visitors')}           fill="#6366f1" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="conversations" name={t('chatbot_analytics.series.conversations', 'Conversations')} fill="#22c55e" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="replies"       name={t('chatbot_analytics.series.replies', 'Replies')}             fill="#f59e0b" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -96,59 +96,82 @@ class ChatbotAnalyticsController extends Controller
             ->get();
 
         // ── Top countries ────────────────────────────────────────────────────
-        $topCountries = ChatConversation::where('organization_id', $orgId)
-            ->where('created_at', '>=', $from)
-            ->whereNotNull('visitor_country')
-            ->where('visitor_country', '!=', '')
-            ->select('visitor_country as country', DB::raw('COUNT(*) as count'))
-            ->groupBy('visitor_country')
+        // chat_conversations.visitor_country is sparsely populated — most
+        // chats inherit geo from the linked visitors table instead. Use
+        // COALESCE so the chart reflects all geo-resolved rows.
+        $topCountries = ChatConversation::from('chat_conversations as c')
+            ->leftJoin('visitors as v', 'c.visitor_id', '=', 'v.id')
+            ->where('c.organization_id', $orgId)
+            ->where('c.created_at', '>=', $from)
+            ->selectRaw("COALESCE(NULLIF(c.visitor_country, ''), NULLIF(v.country, '')) as country, COUNT(*) as count")
+            ->whereRaw("COALESCE(NULLIF(c.visitor_country, ''), NULLIF(v.country, '')) IS NOT NULL")
+            ->groupBy('country')
             ->orderByDesc('count')
             ->limit(10)
             ->get();
 
-        // ── Hourly message distribution ──────────────────────────────────────
-        $hourlyRows = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
-            ->where('chat_conversations.organization_id', $orgId)
-            ->where('chat_messages.created_at', '>=', $from)
-            ->where('chat_messages.sender_type', 'visitor')
-            ->select(
-                DB::raw("EXTRACT(HOUR FROM chat_messages.created_at)::int AS hour"),
-                DB::raw('COUNT(*) as count')
-            )
-            ->groupBy(DB::raw("EXTRACT(HOUR FROM chat_messages.created_at)::int"))
+        // ── Hourly distribution — three series ───────────────────────────────
+        // 1) conversations  = distinct conversation_id touched per hour
+        // 2) visitors       = distinct visitor_id touched per hour
+        // 3) replies        = visitor-typed messages per hour
+        $hourlyRaw = ChatMessage::from('chat_messages as m')
+            ->join('chat_conversations as c', 'm.conversation_id', '=', 'c.id')
+            ->where('c.organization_id', $orgId)
+            ->where('m.created_at', '>=', $from)
+            ->selectRaw("
+                EXTRACT(HOUR FROM m.created_at)::int AS hour,
+                COUNT(DISTINCT c.id) AS conversations,
+                COUNT(DISTINCT c.visitor_id) AS visitors,
+                SUM(CASE WHEN m.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
+            ")
+            ->groupBy(DB::raw('hour'))
             ->orderBy('hour')
             ->get()
             ->keyBy('hour');
 
         $hourly = [];
         for ($h = 0; $h < 24; $h++) {
+            $row = $hourlyRaw[$h] ?? null;
             $hourly[] = [
-                'hour'  => $h,
-                'label' => sprintf('%02d:00', $h),
-                'count' => (int) ($hourlyRows[$h]->count ?? 0),
+                'hour'          => $h,
+                'label'         => sprintf('%02d:00', $h),
+                // Legacy `count` kept for back-compat — used to be the
+                // visitor-replies count; now matches that series.
+                'count'         => (int) ($row->replies ?? 0),
+                'conversations' => (int) ($row->conversations ?? 0),
+                'visitors'      => (int) ($row->visitors ?? 0),
+                'replies'       => (int) ($row->replies ?? 0),
             ];
         }
 
         // ── Weekday distribution (Mon-Sun) ───────────────────────────────────
-        // Postgres EXTRACT(DOW) returns 0=Sunday..6=Saturday. We re-shift
-        // to 0=Monday..6=Sunday so the chart reads left-to-right naturally.
-        $weekdayRows = ChatConversation::where('organization_id', $orgId)
-            ->where('created_at', '>=', $from)
-            ->select(
-                DB::raw("EXTRACT(DOW FROM created_at)::int AS dow"),
-                DB::raw('COUNT(*) as count')
-            )
-            ->groupBy(DB::raw("EXTRACT(DOW FROM created_at)::int"))
+        // Three series per day mirroring the hourly chart:
+        //   conversations / visitors / replies.
+        $weekdayRows = ChatMessage::from('chat_messages as m')
+            ->join('chat_conversations as c', 'm.conversation_id', '=', 'c.id')
+            ->where('c.organization_id', $orgId)
+            ->where('m.created_at', '>=', $from)
+            ->selectRaw("
+                EXTRACT(DOW FROM m.created_at)::int AS dow,
+                COUNT(DISTINCT c.id) AS conversations,
+                COUNT(DISTINCT c.visitor_id) AS visitors,
+                SUM(CASE WHEN m.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
+            ")
+            ->groupBy(DB::raw('dow'))
             ->get()
             ->keyBy('dow');
 
         $weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         $weekday = [];
         foreach ([1, 2, 3, 4, 5, 6, 0] as $i => $dow) {
+            $row = $weekdayRows[$dow] ?? null;
             $weekday[] = [
-                'dow'   => $dow,
-                'label' => $weekdayLabels[$i],
-                'count' => (int) ($weekdayRows[$dow]->count ?? 0),
+                'dow'           => $dow,
+                'label'         => $weekdayLabels[$i],
+                'count'         => (int) ($row->conversations ?? 0), // legacy alias
+                'conversations' => (int) ($row->conversations ?? 0),
+                'visitors'      => (int) ($row->visitors ?? 0),
+                'replies'       => (int) ($row->replies ?? 0),
             ];
         }
 

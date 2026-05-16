@@ -1367,7 +1367,7 @@ export function Analytics() {
                       <XAxis dataKey="owner" tick={{ fontSize: 10, fill: '#e5e7eb' }}
                         interval={0} angle={-20} textAnchor="end" height={60} />
                       <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                      <Tooltip contentStyle={CHART_TOOLTIP} />
+                      <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
                       <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
                       <Bar dataKey="calls"    name={t('analytics.leads.calls', 'Calls')}       stackId="a" fill="#22c55e" />
                       <Bar dataKey="emails"   name={t('analytics.leads.emails', 'Emails')}     stackId="a" fill="#3b82f6" />
@@ -1483,7 +1483,7 @@ export function Analytics() {
               <Card>
                 <h3 className="text-sm font-semibold text-white mb-3">{t('analytics.deals.stage_dist', 'Pipeline Value by Stage')}</h3>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={dealsAnalytics.stage_distribution} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <BarChart data={dealsAnalytics.stage_distribution} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} >
                     <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
                     <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#8e8e93' }}
                       tickFormatter={s => ({
@@ -1496,7 +1496,7 @@ export function Analytics() {
                       } as any)[s] ?? s} />
                     <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: '#8e8e93' }} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
                     <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
                     <Bar yAxisId="left"  dataKey="count"   name={t('analytics.deals.count', 'Deals')}   fill="#3b82f6" radius={[3, 3, 0, 0]} />
                     <Bar yAxisId="right" dataKey="revenue" name={t('analytics.deals.value', 'Value $')} fill="#10b981" radius={[3, 3, 0, 0]} />
