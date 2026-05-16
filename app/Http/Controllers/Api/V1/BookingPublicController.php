@@ -266,6 +266,12 @@ class BookingPublicController extends Controller
         $checkIn = $payload['check_in'] ?? '';
         $checkOut = $payload['check_out'] ?? '';
 
+        // Client can force a fresh intent by passing force_new=true.
+        // Used by the widget when the Stripe Element fails to mount on
+        // the cached client_secret — bypasses the cache so we don't get
+        // stuck on a problematic intent.
+        $forceNew = (bool) $request->boolean('force_new', false);
+
         // Reuse the cached PaymentIntent when it still matches the
         // current amount AND is still in a reusable status. Without
         // the status guard, an intent that's already succeeded or in a
@@ -284,7 +290,7 @@ class BookingPublicController extends Controller
         $cachedSecret  = $payload['stripe_client_secret'] ?? null;
         $cachedAmount  = isset($payload['stripe_amount_cents']) ? (int) $payload['stripe_amount_cents'] : null;
         $currentCents  = (int) round($amount * 100);
-        if ($cachedId && $cachedSecret && $cachedAmount === $currentCents) {
+        if (!$forceNew && $cachedId && $cachedSecret && $cachedAmount === $currentCents) {
             try {
                 $existing = $stripe->retrievePaymentIntent($cachedId);
                 $reusable = in_array(

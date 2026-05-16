@@ -418,6 +418,7 @@ var state = {
   stripeElements: null,
   cardElement: null,
   stripeReady: false,
+  stripeRetried: false,
   paymentIntentClientSecret: null,
   paymentIntentId: null,
   paymentProcessing: false,
@@ -1344,6 +1345,7 @@ function unmountStripeElement() {
   }
   state.stripeElements = null;
   state.stripeReady = false;
+  state.stripeRetried = false;
 }
 
 function mountStripeElement() {
@@ -1393,11 +1395,30 @@ function mountStripeElement() {
   });
 
   // If the element fails to load entirely (network, blocked iframe,
-  // stale clientSecret), surface a useful message instead of leaving
-  // the user stuck on a forever-spinning Pay button.
+  // stale clientSecret), try once with a forced fresh PaymentIntent
+  // before giving up. Covers the case where the cached intent is
+  // technically still in a reusable status but Stripe's iframe
+  // refuses to mount on it (rare but seen).
   state.cardElement.on('loaderror', function(event) {
-    var msg = (event && event.error && event.error.message) || 'Card form failed to load. Please go back and try again.';
-    state.paymentError = msg;
+    var msg = (event && event.error && event.error.message) || 'Card form failed to load.';
+    if (!state.stripeRetried) {
+      state.stripeRetried = true;
+      apiPost('payment-intent', {
+        hold_token: state.quote ? state.quote.hold_token : '',
+        force_new: true,
+      }).then(function(data) {
+        if (data.error) { state.paymentError = data.error; render(); return; }
+        state.paymentIntentClientSecret = data.client_secret;
+        state.paymentIntentId = data.payment_intent_id;
+        mountStripeElement();
+      }).catch(function() {
+        state.paymentError = msg + ' Please go back and try again.';
+        state.stripeReady = false;
+        render();
+      });
+      return;
+    }
+    state.paymentError = msg + ' Please go back and try again.';
     state.stripeReady = false;
     render();
   });
