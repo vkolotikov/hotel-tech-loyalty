@@ -1129,7 +1129,18 @@ function bindEvents() {
   on('w-back1', 'click', function() { state.step = 1; state.error = null; render(); });
   on('w-back2', 'click', function() { state.step = 2; render(); });
   on('w-back3', 'click', function() { state.step = 3; render(); });
-  on('w-back4', 'click', function() { unmountStripeElement(); state.step = 4; state.paymentError = null; render(); });
+  on('w-back4', 'click', function() {
+    unmountStripeElement();
+    // Clear cached PaymentIntent state so re-entering the payment
+    // step always goes through the cache-check / status-verify path
+    // against the freshest hold + amount. Prevents the OLD PI from
+    // floating in memory if the user changes extras and re-quotes.
+    state.paymentIntentClientSecret = null;
+    state.paymentIntentId = null;
+    state.paymentError = null;
+    state.step = 4;
+    render();
+  });
   on('w-next2', 'click', doSelectUnit);
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);

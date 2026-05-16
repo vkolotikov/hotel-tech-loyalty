@@ -297,11 +297,16 @@ class BookingEngineService
                     ? null
                     : 'Extras: ' . implode(', ', $assistantNoticeLines);
 
+                // Refuse to push with a zero channelId — Smoobu would
+                // attribute the reservation to its internal Blocked
+                // Channel, making it invisible in New Reservations and
+                // showing it grey on the calendar. Better to drop the
+                // field entirely and let Smoobu use its account-level
+                // default API channel.
                 $smoobuPayload = [
                     'apartmentId'   => $payload['unit_id'],
                     'arrivalDate'   => $payload['check_in'],
                     'departureDate' => $payload['check_out'],
-                    'channelId'     => $channelId,
                     'firstName'     => $guest['first_name'] ?? '',
                     'lastName'      => $guest['last_name'] ?? '',
                     'email'         => $guest['email'] ?? '',
@@ -319,33 +324,53 @@ class BookingEngineService
                     // accounts default to blocked-channel without it.
                     'type'          => 'reservation',
                 ];
-                // Strip nulls so Smoobu doesn't complain about empty
-                // optional fields.
+                // Only add channelId when we resolved a non-zero one.
+                // array_filter doesn't strip integer 0, so we'd
+                // otherwise send `channelId: 0` → Blocked Channel.
+                if ($channelId > 0) {
+                    $smoobuPayload['channelId'] = $channelId;
+                }
+                // Strip nulls + empty strings so Smoobu doesn't complain
+                // about empty optional fields.
                 $smoobuPayload = array_filter($smoobuPayload, fn ($v) => $v !== null && $v !== '');
                 $pmsResult = $this->smoobu->createReservation($smoobuPayload);
             } catch (\Throwable $e) {
                 $msg = $e->getMessage();
-                // Heuristic: any error mentioning availability /
-                // unavailable / booked / conflict / 409 / 422 is
-                // treated as a hard rejection. Everything else is
-                // treated as transient and falls back to local mirror.
-                $isAvailabilityFail =
-                    preg_match('/\b(409|422|unavailable|not available|already booked|overlapping|conflict|inventory)/i', $msg);
-                if ($isAvailabilityFail) {
-                    $this->logSubmission('failure', 'pms_unavailable', $msg, $data, $requestId, $idempotencyKey);
+                // Fail-safe classification — flipped polarity from the
+                // earlier heuristic.
+                //
+                // FATAL (no local fallback): anything that looks like a
+                //   4xx response from Smoobu OR an availability/rate/
+                //   channel-manager rejection. The room may already be
+                //   taken or the rate is closed — confirming locally
+                //   would silently oversell because OTA channels can
+                //   sell over the gap.
+                //
+                // TRANSIENT (local-only mirror, pms_sync_attempts retries):
+                //   network timeouts, 5xx, rate-limit exhaustion,
+                //   anything where Smoobu didn't return a clear
+                //   business-rule rejection.
+                //
+                // Default to FATAL when uncertain — overselling is the
+                // worse failure mode.
+                $isTransient =
+                    preg_match('/\b(50[0-9]|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429)/i', $msg);
+                $pmsFatal = !$isTransient ? $msg : null;
+
+                if ($pmsFatal) {
+                    $this->logSubmission('failure', 'pms_rejected', $msg, $data, $requestId, $idempotencyKey);
                     \Illuminate\Support\Facades\Log::warning('Smoobu hard-rejected create (no local fallback)', [
                         'org_id'  => $orgId,
                         'unit_id' => $payload['unit_id'],
                         'error'   => $msg,
                     ]);
-                    $pmsFatal = $msg;
                 } else {
-                    \Illuminate\Support\Facades\Log::warning('Smoobu reservation create failed — falling back to local-only mirror', [
+                    \Illuminate\Support\Facades\Log::warning('Smoobu transient error — falling back to local-only mirror', [
                         'org_id'  => $orgId,
                         'unit_id' => $payload['unit_id'],
                         'error'   => $msg,
                     ]);
-                    $this->logSubmission('warning', 'pms_error', $msg, $data, $requestId, $idempotencyKey);
+                    $this->logSubmission('warning', 'pms_transient', $msg, $data, $requestId, $idempotencyKey);
                 }
             }
 
@@ -483,8 +508,15 @@ class BookingEngineService
         AuditLog::create([
             'action'      => 'booking.confirmed',
             'subject_type'=> 'booking_mirror',
-            'subject_id'  => $result['id'] ?? null,
-            'details'     => json_encode(['booking_reference' => $response['booking_reference']]),
+            // audit_logs.subject_id is unsignedBigInteger — Smoobu / local
+            // ids are strings, so we point at the local mirror's numeric
+            // id and stash the external reservation id in new_values.
+            'subject_id'  => $mirror->id ?? null,
+            'new_values'  => [
+                'reservation_id'    => $result['id'] ?? null,
+                'booking_reference' => $response['booking_reference'] ?? null,
+            ],
+            'description' => 'Booking confirmed · ref ' . ($response['booking_reference'] ?? '—'),
             'ip_address'  => $ip,
         ]);
 

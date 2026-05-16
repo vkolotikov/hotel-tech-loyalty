@@ -552,15 +552,20 @@ class BookingPublicController extends Controller
                 ]);
             }
 
+            // NOTE: audit_logs.subject_id is unsignedBigInteger — Stripe
+            // PI ids ('pi_…') don't fit. Stash the external id in
+            // new_values + description, leave subject_id NULL.
             \App\Models\AuditLog::create([
                 'action'       => 'booking.payment.succeeded',
                 'subject_type' => 'stripe_payment',
-                'subject_id'   => $intent->id,
-                'details'      => json_encode([
-                    'amount'     => $intent->amount,
-                    'currency'   => $intent->currency,
-                    'hold_token' => $holdToken,
-                ]),
+                'subject_id'   => null,
+                'new_values'   => [
+                    'payment_intent_id' => $intent->id,
+                    'amount'            => $intent->amount,
+                    'currency'          => $intent->currency,
+                    'hold_token'        => $holdToken,
+                ],
+                'description'  => "Stripe PI {$intent->id} succeeded (hold_token={$holdToken})",
             ]);
         } elseif ($event->type === 'payment_intent.payment_failed') {
             $intent = $event->data->object;
@@ -568,13 +573,15 @@ class BookingPublicController extends Controller
             \App\Models\AuditLog::create([
                 'action'       => 'booking.payment.failed',
                 'subject_type' => 'stripe_payment',
-                'subject_id'   => $intent->id,
-                'details'      => json_encode([
-                    'amount'        => $intent->amount,
-                    'currency'      => $intent->currency,
-                    'failure_code'  => $intent->last_payment_error?->code ?? null,
-                    'hold_token'    => $intent->metadata->hold_token ?? null,
-                ]),
+                'subject_id'   => null,
+                'new_values'   => [
+                    'payment_intent_id' => $intent->id,
+                    'amount'             => $intent->amount,
+                    'currency'           => $intent->currency,
+                    'failure_code'       => $intent->last_payment_error?->code ?? null,
+                    'hold_token'         => $intent->metadata->hold_token ?? null,
+                ],
+                'description'  => "Stripe PI {$intent->id} failed",
             ]);
         } elseif ($event->type === 'charge.refunded') {
             // Refund issued — sync our state. Fires for refunds initiated from
@@ -919,7 +926,8 @@ class BookingPublicController extends Controller
             'organization_id' => $orgId,
             'action'          => 'booking.webhook.received',
             'subject_type'    => 'booking_mirror',
-            'subject_id'      => $reservationId,
+            'subject_id'      => null, // Smoobu reservation_id is a string; stash in new_values
+            'new_values'      => ['reservation_id' => $reservationId, 'action' => $action],
             'description'     => "Webhook: {$action}" . ($reservationId ? " · res #{$reservationId}" : ''),
             'ip_address'      => $request->ip(),
         ]);
