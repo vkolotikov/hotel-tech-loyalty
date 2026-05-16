@@ -545,9 +545,10 @@ class AnalyticsController extends Controller
         };
 
         // ── Members (new joins per day) ──
+        // Postgres needs the full expression in GROUP BY, not the alias.
         $membersRows = \App\Models\LoyaltyMember::where('joined_at', '>=', $from)
             ->selectRaw('DATE(joined_at) as date, COUNT(*) as count')
-            ->groupBy('date')->get()->keyBy('date');
+            ->groupByRaw('DATE(joined_at)')->get()->keyBy('date');
         $membersTrend = $fillDays($membersRows);
         $prevMembers  = (int) \App\Models\LoyaltyMember::whereBetween('joined_at', [$prevFrom, $prevTo])->count();
         $currMembers  = (int) \App\Models\LoyaltyMember::where('joined_at', '>=', $from)->count();
@@ -557,7 +558,7 @@ class AnalyticsController extends Controller
             ->where('points', '>', 0)
             ->where('created_at', '>=', $from)
             ->selectRaw('DATE(created_at) as date, SUM(points) as total')
-            ->groupBy('date')->get()->keyBy('date');
+            ->groupByRaw('DATE(created_at)')->get()->keyBy('date');
         $pointsTrend = $fillDays($pointsRows, fn ($r) => (int) ($r->total ?? 0));
         $prevPoints = (int) \App\Models\PointsTransaction::where('is_reversed', false)
             ->where('points', '>', 0)
@@ -571,7 +572,7 @@ class AnalyticsController extends Controller
         // ── Stays (bookings created per day) ──
         $staysRows = \App\Models\Booking::where('created_at', '>=', $from)
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->groupBy('date')->get()->keyBy('date');
+            ->groupByRaw('DATE(created_at)')->get()->keyBy('date');
         $staysTrend = $fillDays($staysRows);
         $prevStays = (int) \App\Models\Booking::whereBetween('created_at', [$prevFrom, $prevTo])->count();
         $currStays = (int) \App\Models\Booking::where('created_at', '>=', $from)->count();
@@ -579,7 +580,7 @@ class AnalyticsController extends Controller
         // ── Revenue (booking total_amount per day) ──
         $revenueRows = \App\Models\Booking::where('created_at', '>=', $from)
             ->selectRaw('DATE(created_at) as date, COALESCE(SUM(total_amount), 0) as total')
-            ->groupBy('date')->get()->keyBy('date');
+            ->groupByRaw('DATE(created_at)')->get()->keyBy('date');
         $revenueTrend = $fillDays($revenueRows, fn ($r) => round((float) ($r->total ?? 0), 2));
         $prevRevenue = (float) \App\Models\Booking::whereBetween('created_at', [$prevFrom, $prevTo])->sum('total_amount');
         $currRevenue = (float) \App\Models\Booking::where('created_at', '>=', $from)->sum('total_amount');

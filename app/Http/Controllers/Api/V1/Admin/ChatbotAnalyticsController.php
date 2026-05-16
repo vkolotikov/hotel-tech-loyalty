@@ -99,13 +99,17 @@ class ChatbotAnalyticsController extends Controller
         // chat_conversations.visitor_country is sparsely populated — most
         // chats inherit geo from the linked visitors table instead. Use
         // COALESCE so the chart reflects all geo-resolved rows.
-        $topCountries = ChatConversation::from('chat_conversations as c')
-            ->leftJoin('visitors as v', 'c.visitor_id', '=', 'v.id')
-            ->where('c.organization_id', $orgId)
-            ->where('c.created_at', '>=', $from)
-            ->selectRaw("COALESCE(NULLIF(c.visitor_country, ''), NULLIF(v.country, '')) as country, COUNT(*) as count")
-            ->whereRaw("COALESCE(NULLIF(c.visitor_country, ''), NULLIF(v.country, '')) IS NOT NULL")
-            ->groupBy('country')
+        // Postgres needs the full expression in GROUP BY. Aliasing the
+        // FROM table breaks the BelongsToOrganization global scope
+        // (TenantScope adds chat_conversations.organization_id and
+        // Postgres can't resolve it when the table is aliased) so we
+        // join without aliases.
+        $topCountries = ChatConversation::leftJoin('visitors', 'chat_conversations.visitor_id', '=', 'visitors.id')
+            ->where('chat_conversations.organization_id', $orgId)
+            ->where('chat_conversations.created_at', '>=', $from)
+            ->selectRaw("COALESCE(NULLIF(chat_conversations.visitor_country, ''), NULLIF(visitors.country, '')) as country, COUNT(*) as count")
+            ->whereRaw("COALESCE(NULLIF(chat_conversations.visitor_country, ''), NULLIF(visitors.country, '')) IS NOT NULL")
+            ->groupByRaw("COALESCE(NULLIF(chat_conversations.visitor_country, ''), NULLIF(visitors.country, ''))")
             ->orderByDesc('count')
             ->limit(10)
             ->get();
@@ -114,18 +118,17 @@ class ChatbotAnalyticsController extends Controller
         // 1) conversations  = distinct conversation_id touched per hour
         // 2) visitors       = distinct visitor_id touched per hour
         // 3) replies        = visitor-typed messages per hour
-        $hourlyRaw = ChatMessage::from('chat_messages as m')
-            ->join('chat_conversations as c', 'm.conversation_id', '=', 'c.id')
-            ->where('c.organization_id', $orgId)
-            ->where('m.created_at', '>=', $from)
+        $hourlyRaw = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
+            ->where('chat_conversations.organization_id', $orgId)
+            ->where('chat_messages.created_at', '>=', $from)
             ->selectRaw("
-                EXTRACT(HOUR FROM m.created_at)::int AS hour,
-                COUNT(DISTINCT c.id) AS conversations,
-                COUNT(DISTINCT c.visitor_id) AS visitors,
-                SUM(CASE WHEN m.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
+                EXTRACT(HOUR FROM chat_messages.created_at)::int AS hour,
+                COUNT(DISTINCT chat_conversations.id) AS conversations,
+                COUNT(DISTINCT chat_conversations.visitor_id) AS visitors,
+                SUM(CASE WHEN chat_messages.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
             ")
-            ->groupBy(DB::raw('hour'))
-            ->orderBy('hour')
+            ->groupByRaw('EXTRACT(HOUR FROM chat_messages.created_at)::int')
+            ->orderByRaw('EXTRACT(HOUR FROM chat_messages.created_at)::int')
             ->get()
             ->keyBy('hour');
 
@@ -147,17 +150,16 @@ class ChatbotAnalyticsController extends Controller
         // ── Weekday distribution (Mon-Sun) ───────────────────────────────────
         // Three series per day mirroring the hourly chart:
         //   conversations / visitors / replies.
-        $weekdayRows = ChatMessage::from('chat_messages as m')
-            ->join('chat_conversations as c', 'm.conversation_id', '=', 'c.id')
-            ->where('c.organization_id', $orgId)
-            ->where('m.created_at', '>=', $from)
+        $weekdayRows = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
+            ->where('chat_conversations.organization_id', $orgId)
+            ->where('chat_messages.created_at', '>=', $from)
             ->selectRaw("
-                EXTRACT(DOW FROM m.created_at)::int AS dow,
-                COUNT(DISTINCT c.id) AS conversations,
-                COUNT(DISTINCT c.visitor_id) AS visitors,
-                SUM(CASE WHEN m.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
+                EXTRACT(DOW FROM chat_messages.created_at)::int AS dow,
+                COUNT(DISTINCT chat_conversations.id) AS conversations,
+                COUNT(DISTINCT chat_conversations.visitor_id) AS visitors,
+                SUM(CASE WHEN chat_messages.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
             ")
-            ->groupBy(DB::raw('dow'))
+            ->groupByRaw('EXTRACT(DOW FROM chat_messages.created_at)::int')
             ->get()
             ->keyBy('dow');
 
