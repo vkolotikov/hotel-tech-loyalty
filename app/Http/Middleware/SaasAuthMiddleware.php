@@ -98,7 +98,15 @@ class SaasAuthMiddleware
 
         if (!$stale) return;
 
-        $base = rtrim(config('services.saas.api_url', env('SAAS_API_URL', 'https://saas.hotel-tech.ai')), '/');
+        // services.saas.api_url already ends in `/api` per config default
+        // (https://saas.hotel-tech.ai/api). Just append `/tools/bootstrap`
+        // here — the rest of the codebase (AuthController billing proxies,
+        // ReconcileSaasOrgs, etc.) treats $saasApi the same way. Prior to
+        // this fix the path doubled to `/api/api/tools/bootstrap` and
+        // every entitlement sync via this middleware silently 404'd.
+        $base = rtrim((string) config('services.saas.api_url'), '/');
+        if (!$base) return;
+
         $token = '';
         $authHeader = $request->header('Authorization', '');
         if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
@@ -109,7 +117,7 @@ class SaasAuthMiddleware
         try {
             $resp = \Illuminate\Support\Facades\Http::timeout(3)
                 ->withToken($token)
-                ->get($base . '/api/tools/bootstrap');
+                ->get($base . '/tools/bootstrap');
 
             if (!$resp->successful()) return;
 
