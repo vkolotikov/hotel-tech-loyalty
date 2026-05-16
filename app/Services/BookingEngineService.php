@@ -1055,10 +1055,42 @@ class BookingEngineService
         }
     }
 
+    /**
+     * Catalog of extras for the active org. Mirrors the public config()
+     * endpoint's resolution order: DB table first, then legacy JSON
+     * setting, then hardcoded config. Without this matching, an extra
+     * the widget shows from the DB can't be found in calcExtras() and
+     * gross_total silently drops to room-only.
+     */
     private function loadExtrasConfig(): array
     {
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+
+        // Primary source: booking_extras table. Cast id to string so it
+        // matches the widget's stringified id payload.
+        if ($orgId) {
+            $rows = \App\Models\BookingExtra::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
+            if ($rows->isNotEmpty()) {
+                return $rows->map(fn ($e) => [
+                    'id'    => (string) $e->id,
+                    'name'  => $e->name,
+                    'price' => (float) $e->price,
+                    // calcExtras() checks `type` for per_guest pricing;
+                    // the DB column is `price_type`, so alias.
+                    'type'  => $e->price_type ?? 'per_stay',
+                    'price_type' => $e->price_type ?? 'per_stay',
+                    'lead_time_hours' => (int) ($e->lead_time_hours ?? 0),
+                ])->values()->all();
+            }
+        }
+
+        // Legacy JSON setting → finally a hardcoded config fallback.
         $json = \App\Models\HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
+            ->where('organization_id', $orgId)
             ->where('key', 'booking_extras')
             ->value('value');
 
@@ -1110,22 +1142,25 @@ class BookingEngineService
 
     private function calcExtras(array $extras, int $adults): float
     {
-        $json = \App\Models\HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', app()->bound('current_organization_id') ? app('current_organization_id') : null)
-            ->where('key', 'booking_extras')
-            ->value('value');
-
-        $allExtras = $json ? collect(json_decode($json, true)) : collect(config('booking.extras', []));
+        // Single source of truth — loadExtrasConfig() prefers the
+        // booking_extras DB table (what the widget shows) over the legacy
+        // JSON setting. Previously this method read JSON only, so
+        // DB-table extras silently summed to 0 and the gross_total /
+        // Stripe amount dropped to room-only.
+        $allExtras = collect($this->loadExtrasConfig());
         $total     = 0.0;
 
         foreach ($extras as $item) {
-            $extraId = $item['id'] ?? '';
+            $extraId = (string) ($item['id'] ?? '');
             $qty     = $item['quantity'] ?? 1;
-            $def     = $allExtras->firstWhere('id', $extraId);
+            // Compare as string so a numeric DB id matches the widget's
+            // stringified id payload regardless of which side cast it.
+            $def     = $allExtras->first(fn ($e) => (string) ($e['id'] ?? '') === $extraId);
             if (!$def) continue;
 
-            $price = $def['price'];
-            if (($def['type'] ?? 'per_stay') === 'per_guest') {
+            $price = (float) ($def['price'] ?? 0);
+            $type  = $def['price_type'] ?? $def['type'] ?? 'per_stay';
+            if ($type === 'per_guest') {
                 $total += $price * $adults * $qty;
             } else {
                 $total += $price * $qty;
