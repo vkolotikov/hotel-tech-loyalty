@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, Trash2, CheckCheck, X as XIcon, LayoutDashboard, Globe, AlarmClock, CreditCard, Mail, Phone } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ViewToggle } from '../components/ViewToggle'
 import { DailyOpsBar } from '../components/DailyOpsBar'
@@ -228,6 +228,20 @@ function ChannelList({ data }: { data: { label: string; count: number }[] }) {
 
 export function Bookings() {
   const { t } = useTranslation()
+
+  // Tab navigation — Overview / All / Website / Arrivals / Unpaid.
+  // Persisted in the URL via ?tab= so deep-links and refresh survive.
+  const [sp, setSp] = useSearchParams()
+  type TabKey = 'overview' | 'all' | 'website' | 'arrivals' | 'unpaid'
+  const tab: TabKey = (['overview', 'all', 'website', 'arrivals', 'unpaid'].includes(sp.get('tab') ?? '')
+    ? (sp.get('tab') as TabKey)
+    : 'overview')
+  const setTab = (next: TabKey) => {
+    const params = new URLSearchParams(sp)
+    params.set('tab', next)
+    setSp(params, { replace: true })
+  }
+
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [paymentStatus, setPaymentStatus] = useState('')
@@ -265,12 +279,19 @@ export function Bookings() {
   const params: any = { page, per_page: 25, from: periodRange.from, to: periodRange.to }
   if (search) params.search = search
   if (status) params.status = status
-  if (paymentStatus) params.payment_status = paymentStatus
+  // Tab-level filter overrides the dropdown when the tab itself implies
+  // a payment state — keeps the tab's purpose stable even if the user
+  // hasn't touched the dropdown.
+  const effectivePayment = tab === 'unpaid' ? 'open' : paymentStatus
+  if (effectivePayment) params.payment_status = effectivePayment
+  if (tab === 'website') params.channel = 'Website'
   if (unitId) params.unit_id = unitId
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['bookings-engine', params],
+    queryKey: ['bookings-engine', params, tab],
     queryFn: () => api.get('/v1/admin/bookings', { params }).then(r => r.data),
+    // Only the All / Website / Unpaid tabs use the paginated list.
+    enabled: tab === 'all' || tab === 'website' || tab === 'unpaid',
   })
 
   const dashParams: any = { period }
@@ -411,13 +432,52 @@ export function Bookings() {
         </div>
       </div>
 
-      {/* List ↔ Timeline view toggle. Both options operate on the same
-          reservations data — list is the standard table, Timeline opens
-          the rooms × days Smoobu-style grid at /bookings/calendar. */}
+      {/* List ↔ Timeline view toggle. */}
       <ViewToggle options={[
         { to: '/bookings',          label: t('bookings.view.list',     'List'),     icon: <ListIcon size={12} className="-ml-0.5" /> },
         { to: '/bookings/calendar', label: t('bookings.view.timeline', 'Timeline'), icon: <CalendarRange size={12} className="-ml-0.5" /> },
       ]} />
+
+      {/* Tab navigation — Overview / All / Website / Arrivals / Unpaid.
+          Counts pull from the dashboard payload so the badges reflect
+          live data without extra queries. */}
+      {(() => {
+        const totalCount    = dashboard?.kpis?.find((k: any) => k.key === 'total_bookings')?.value ?? null
+        const websiteCount  = dashboard?.websiteBookings?.length ?? null
+        const arrivalsCount = dashboard?.arrivals?.length ?? null
+        const unpaidCount   = dashboard?.kpis?.find((k: any) => k.key === 'pending_payment')?.value ?? null
+        const tabDefs: { key: TabKey; label: string; icon: any; count: number | null; tone: string }[] = [
+          { key: 'overview', label: t('bookings.tabs.overview', 'Overview'), icon: <LayoutDashboard size={14} />, count: null,         tone: 'text-primary-400' },
+          { key: 'all',      label: t('bookings.tabs.all',      'All'),      icon: <ListIcon size={14} />,        count: totalCount,    tone: 'text-blue-400' },
+          { key: 'website',  label: t('bookings.tabs.website',  'Website'),  icon: <Globe size={14} />,           count: websiteCount,  tone: 'text-cyan-400' },
+          { key: 'arrivals', label: t('bookings.tabs.arrivals', 'Arrivals'), icon: <AlarmClock size={14} />,      count: arrivalsCount, tone: 'text-emerald-400' },
+          { key: 'unpaid',   label: t('bookings.tabs.unpaid',   'Unpaid'),   icon: <CreditCard size={14} />,      count: unpaidCount,   tone: 'text-amber-400' },
+        ]
+        return (
+          <div className="flex items-center gap-1.5 bg-dark-surface border border-dark-border rounded-xl p-1 overflow-x-auto">
+            {tabDefs.map(td => {
+              const active = tab === td.key
+              return (
+                <button key={td.key} onClick={() => { setTab(td.key); setPage(1) }}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+                    active ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
+                  }`}>
+                  <span className={active ? '' : td.tone}>{td.icon}</span>
+                  {td.label}
+                  {td.count != null && td.count > 0 && (
+                    <span className={`inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
+                      active ? 'bg-white/20 text-white' : 'bg-dark-surface2 text-t-secondary'
+                    }`}>{td.count > 999 ? `${Math.round(td.count / 100) / 10}k` : td.count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )
+      })()}
+
+      {/* ════════════════ OVERVIEW TAB ════════════════ */}
+      {tab === 'overview' && <>
 
       {/* Today — front-of-house snapshot. Distinct from the period KPIs
           below: this is the now-shift view of who's arriving / staying /
@@ -680,10 +740,58 @@ export function Bookings() {
         </div>
       )}
 
-      {/* Website Reservations — direct bookings made via the public
-          widget. Separate from the unified table below so the direct-
-          channel volume (no OTA commission) reads at a glance. */}
-      {dashboard?.websiteBookings && dashboard.websiteBookings.length > 0 && (
+      </>}{/* ════════════════ /OVERVIEW TAB ════════════════ */}
+
+      {/* ════════════════ ARRIVALS TAB ════════════════
+          Dedicated view for staff working the front desk — upcoming
+          arrivals in one tall list, grouped by date with rich rows. */}
+      {tab === 'arrivals' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white">{t('bookings.tabs.arrivals_title', 'Upcoming Arrivals')}</h3>
+              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.tabs.arrivals_sub', 'Next 7 days · sorted by arrival date')}</p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              {t('bookings.tabs.arrivals_count', { count: dashboard?.arrivals?.length ?? 0, defaultValue: '{{count}} arrivals' })}
+            </span>
+          </div>
+          <div className="divide-y divide-dark-border">
+            {(dashboard?.arrivals?.length ?? 0) === 0 ? (
+              <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.tabs.arrivals_empty', 'No arrivals scheduled in the next 7 days.')}</div>
+            ) : dashboard.arrivals.map((a: any) => (
+              <CompactBookingRow key={a.id} b={a} t={t} variant="arrival" />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ════════════════ WEBSITE TAB ════════════════
+          Direct bookings made via the public widget. */}
+      {tab === 'website' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white">{t('bookings.panels.website_reservations', 'Website Reservations')}</h3>
+              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              {t('bookings.panels.website_count', { count: dashboard?.websiteBookings?.length ?? 0, defaultValue: '{{count}} recent' })}
+            </span>
+          </div>
+          <div className="divide-y divide-dark-border">
+            {(dashboard?.websiteBookings?.length ?? 0) === 0 ? (
+              <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.panels.website_empty', 'No website bookings yet. Share your booking widget URL to start collecting direct reservations.')}</div>
+            ) : dashboard.websiteBookings.map((b: any) => (
+              <CompactBookingRow key={b.id} b={b} t={t} variant="website" />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Legacy Website Reservations sub-table inside Overview removed.
+          Content lives in the dedicated Website tab above. */}
+      {false && dashboard?.websiteBookings && dashboard.websiteBookings.length > 0 && (
         <Card className="p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
             <div>
@@ -745,6 +853,20 @@ export function Bookings() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* ════════════════ ALL / UNPAID TABS ════════════════
+          Same searchable + filterable table for both tabs. Unpaid
+          forces payment_status=open via the effectivePayment guard. */}
+      {(tab === 'all' || tab === 'unpaid') && <>
+
+      {/* Tab-specific header banner — clarifies why filters might be
+          forced when the user lands on Unpaid. */}
+      {tab === 'unpaid' && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 flex items-center gap-3 text-xs">
+          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0" />
+          <span className="text-amber-200">{t('bookings.tabs.unpaid_hint', 'Showing bookings with open balances. Use the search and filters below to narrow further.')}</span>
+        </div>
       )}
 
       {/* Search & Filters */}
@@ -871,6 +993,8 @@ export function Bookings() {
         )}
       </Card>
 
+      </>}{/* ════════════════ /ALL / UNPAID TABS ════════════════ */}
+
       {/* Bulk action floating bar — appears once any row is selected.
           Confirmation prompts on destructive actions (cancel) since the
           row count makes accidental clicks costly. Export uses the
@@ -903,5 +1027,121 @@ export function Bookings() {
         </div>
       )}
     </div>
+  )
+}
+
+/* ── CompactBookingRow ─────────────────────────────────────────────
+   Single-row booking card used in the Arrivals + Website tabs. Shows
+   channel chip, dates, money (paid / total + progress bar), payment
+   status, and a View link. Designed for scan-ability — staff can see
+   booking source, balance, and stay range without reading text.
+*/
+function CompactBookingRow({
+  b, t, variant = 'all',
+}: {
+  b: any
+  t: (k: string, def?: any) => any
+  variant?: 'arrival' | 'website' | 'all'
+}) {
+  const total = Number(b.price_total ?? b.gross_total ?? 0)
+  const paid = Number(b.price_paid ?? 0)
+  const balance = Math.max(0, total - paid)
+  const paidPct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const payState = derivePaymentStatus(b)
+  const channel = b.channel_name ?? (variant === 'website' ? 'Website' : null)
+
+  // Channel chip colour — different brand colour per OTA so staff
+  // recognise the source at a glance.
+  const channelTone = (() => {
+    const c = (channel ?? '').toLowerCase()
+    if (c.includes('booking.com'))   return 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+    if (c.includes('airbnb'))         return 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+    if (c.includes('website'))        return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+    if (c.includes('direct'))         return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+    if (c.includes('expedia'))        return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+    return 'bg-gray-500/15 text-gray-300 border-gray-500/30'
+  })()
+
+  const initial = (b.guest_name ?? '?').charAt(0).toUpperCase()
+  const nights = b.arrival_date && b.departure_date
+    ? Math.max(1, Math.round((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000))
+    : null
+
+  // Progress bar tone: solid emerald when paid, amber when partial, red when nothing paid yet.
+  const barTone = paidPct >= 100 ? 'bg-emerald-500' : paidPct > 0 ? 'bg-amber-500' : 'bg-red-500/60'
+
+  return (
+    <Link to={`/bookings/${b.id}`}
+      className="flex items-center gap-4 px-5 py-3 hover:bg-dark-surface2/40 transition-colors">
+      {/* Avatar circle */}
+      <div className="w-9 h-9 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-xs font-bold text-primary-300 flex-shrink-0">
+        {initial}
+      </div>
+
+      {/* Guest + channel + meta */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</span>
+          {channel && (
+            <span className={`inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${channelTone}`}>
+              {channel}
+            </span>
+          )}
+        </div>
+        <div className="text-[11px] text-[#a0a0a0] mt-0.5 flex items-center gap-2 flex-wrap">
+          {b.guest_email && (
+            <span className="inline-flex items-center gap-1 truncate max-w-[180px]">
+              <Mail size={10} className="text-[#636366]" />{b.guest_email}
+            </span>
+          )}
+          {b.guest_phone && (
+            <span className="inline-flex items-center gap-1">
+              <Phone size={10} className="text-[#636366]" />{b.guest_phone}
+            </span>
+          )}
+          {b.apartment_name && <span className="text-[#636366]">· {b.apartment_name}</span>}
+        </div>
+      </div>
+
+      {/* Stay */}
+      <div className="hidden md:block text-right flex-shrink-0 min-w-[140px]">
+        <div className="text-xs text-[#e0e0e0] tabular-nums whitespace-nowrap">
+          {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
+        </div>
+        <div className="text-[10px] text-[#636366]">
+          {nights ? `${nights}n` : ''}
+          {b.adults != null ? ` · ${b.adults}A${b.children > 0 ? ` ${b.children}C` : ''}` : ''}
+        </div>
+      </div>
+
+      {/* Money + progress bar */}
+      <div className="text-right flex-shrink-0 min-w-[150px]">
+        <div className="text-xs tabular-nums whitespace-nowrap">
+          <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
+          <span className="text-[#636366]"> / </span>
+          <span className="text-[#a0a0a0]">{money(total)}</span>
+        </div>
+        <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+          <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
+        </div>
+        {balance > 0 && total > 0 && (
+          <div className="text-[10px] text-red-400 font-semibold mt-1 tabular-nums">{money(balance)} {t('bookings.row.due', 'due')}</div>
+        )}
+      </div>
+
+      {/* Status pill */}
+      <div className="hidden sm:block flex-shrink-0">
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+          {payLabel(payState)}
+        </span>
+      </div>
+
+      {/* View */}
+      <div className="flex-shrink-0">
+        <span className="p-1.5 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white inline-flex">
+          <Eye size={13} />
+        </span>
+      </div>
+    </Link>
   )
 }
