@@ -1363,10 +1363,13 @@ function mountStripeElement() {
     return;
   }
 
-  // `stripeReady` gates the Pay button so a confirm() can never fire
-  // before the Element finishes loading. Reset on every (re)mount.
   state.stripeReady = false;
-  render();
+  // IMPORTANT: do NOT call render() inside the Stripe Element
+  // lifecycle (mount / ready / change). render() does `$app.innerHTML =
+  // html` — that detaches the iframe Stripe just mounted, and
+  // confirmPayment then fails with the "Element not mounted" error.
+  // The Pay button is updated below via direct DOM manipulation.
+  updatePayButton();
 
   var appearance = {
     theme: (state.style && state.style.theme === 'dark') ? 'night' : 'stripe',
@@ -1386,7 +1389,9 @@ function mountStripeElement() {
 
   state.cardElement.on('ready', function() {
     state.stripeReady = true;
-    render();
+    // Direct DOM update — re-rendering would tear out the iframe we
+    // just mounted.
+    updatePayButton();
   });
 
   state.cardElement.on('change', function(event) {
@@ -1422,6 +1427,26 @@ function mountStripeElement() {
     state.stripeReady = false;
     render();
   });
+}
+
+/**
+ * Update the Pay & Confirm button without a full render. Safe to
+ * call during the Stripe Element lifecycle because it touches only
+ * the button's attributes / inner HTML — leaves the iframe parent
+ * untouched.
+ */
+function updatePayButton() {
+  var btn = document.getElementById('w-pay');
+  if (!btn) return;
+  var payDisabled = state.paymentProcessing || !state.stripeReady;
+  btn.disabled = payDisabled;
+  if (state.paymentProcessing) {
+    btn.innerHTML = spinner() + ' Processing...';
+  } else if (!state.stripeReady) {
+    btn.innerHTML = spinner() + ' Loading card form...';
+  } else {
+    btn.innerHTML = svgLock() + ' Pay & Confirm';
+  }
 }
 
 function doPayAndConfirm() {
