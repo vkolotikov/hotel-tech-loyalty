@@ -487,15 +487,24 @@ class BookingEngineService
      */
     public function syncReservationsFromPms(?string $from = null, ?string $to = null): array
     {
-        // Arrival window — widened from the old ±3/+12 to ±12/+18.
-        // The ±12 lower bound is mostly belt-and-braces; modifiedFrom
-        // pass 2 is the real safety net for stale updates.
-        $from = $from ?? now()->subMonths(12)->format('Y-m-d');
+        // Arrival window — focused on future arrivals + a tiny 3-day
+        // lookback so today's check-ins / check-outs / yesterday's
+        // late-arriving cancellations are still caught. Past bookings
+        // (older than 3 days) are stable in the mirror and don't need
+        // to be repulled every 5 min — they're covered by pass 2
+        // (modifiedFrom) which catches any retro-edits in Smoobu.
+        //
+        // Before: -12 months → +18 months (about 30 months of rows
+        // each pass). After: -3 days → +18 months (about a 95% drop
+        // in row volume for an active hotel) — faster syncs, lower
+        // Smoobu API quota burn, lower DB write pressure.
+        $from = $from ?? now()->subDays(3)->format('Y-m-d');
         $to   = $to   ?? now()->addMonths(18)->format('Y-m-d');
 
-        // Pass 2 looks at everything modified in the last 30 days.
-        // Cron runs every 10 min so this is generous — but a longer
-        // window costs nothing (pagination still stops at empty).
+        // Pass 2 still looks at everything modified in the last 30 days
+        // — this catches retro-edits Smoobu side (payment status flips
+        // on past stays, cancellations of long-lead future bookings
+        // outside the +18m window).
         $modifiedFrom = now()->subDays(30)->format('Y-m-d');
 
         $synced = 0;
@@ -526,6 +535,34 @@ class BookingEngineService
         $synced += $r2['synced'];
         $errors += $r2['errors'];
         $passesSummary['modified_recent'] = $r2;
+
+        // Stamp a real "sync completed" audit log so the Sync Health
+        // panel + AI tools can show when the cron actually ran last —
+        // previously the dashboard read the most recent `booking.*`
+        // audit row, which gave the last *confirmed booking* time, not
+        // the last *sync*. A booking-quiet org would show stale "Last
+        // Sync" timestamps despite the cron firing every 5 min.
+        try {
+            $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+            if ($orgId) {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.synced',
+                    'new_values'      => [
+                        'synced'        => $synced,
+                        'errors'        => $errors,
+                        'from'          => $from,
+                        'to'            => $to,
+                        'modified_from' => $modifiedFrom,
+                    ],
+                    'description'     => sprintf('Synced %d reservations from Smoobu (%s → %s).', $synced, $from, $to),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Non-fatal — the sync succeeded, just don't block on
+            // observability.
+            \Illuminate\Support\Facades\Log::warning('Sync audit log failed', ['error' => $e->getMessage()]);
+        }
 
         return [
             'synced'        => $synced,
