@@ -718,6 +718,34 @@ class BookingEngineService
         $apartment = is_array($data['apartment'] ?? null) ? $data['apartment'] : [];
         $channel   = is_array($data['channel']   ?? null) ? $data['channel']   : [];
 
+        // Preserve the "Website" channel stamp across re-syncs.
+        // Background: when our widget pushes a reservation to Smoobu we
+        // tag the BookingMirror with channel_name='Website'. The Smoobu
+        // sync runs every 5 min and re-fetches the same reservation —
+        // its channel.name comes back as whatever Smoobu calls the
+        // channel internally (usually "Direct booking"). Without this
+        // pin, every widget booking silently gets re-labelled as
+        // "Direct booking" and disappears from the admin's Website
+        // tab. Detection rule: if the existing mirror already says
+        // "Website" OR has a Stripe intent (only widget creates those),
+        // keep "Website" — otherwise trust Smoobu's label.
+        $existingChannel = null;
+        $existingHadStripe = false;
+        if (!empty($data['id'])) {
+            $existing = BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('reservation_id', $clip((string) $data['id'], 30))
+                ->first(['channel_name', 'stripe_payment_intent_id']);
+            if ($existing) {
+                $existingChannel    = $existing->channel_name;
+                $existingHadStripe  = !empty($existing->stripe_payment_intent_id);
+            }
+        }
+        $smoobuChannel = $clip($strOrNull($channel['name'] ?? null), 80);
+        $resolvedChannel = ($existingChannel === 'Website' || $existingHadStripe)
+            ? 'Website'
+            : $smoobuChannel;
+
         $mirror = BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => $clip((string) $data['id'], 30)],
             [
@@ -727,7 +755,7 @@ class BookingEngineService
                 'apartment_id'       => $clip($strOrNull($apartment['id'] ?? null), 20),
                 'apartment_name'     => $clip($strOrNull($apartment['name'] ?? null), 180),
                 'channel_id'         => $clip($strOrNull($channel['id'] ?? null), 20),
-                'channel_name'       => $clip($strOrNull($channel['name'] ?? null), 80),
+                'channel_name'       => $resolvedChannel,
                 'guest_id'           => $guestId,
                 'guest_name'         => $clip($strOrNull($data['guest-name'] ?? null), 180),
                 'guest_email'        => $clip($strOrNull($data['email'] ?? null), 180),
