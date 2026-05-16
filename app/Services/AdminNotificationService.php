@@ -72,7 +72,11 @@ class AdminNotificationService
             return 0;
         }
         try {
-            Mail::to($emails)->send($mailable);
+            // Queue rather than send: with queue=redis/database, admin
+            // notifications survive a transient SMTP failure (the
+            // worker retries) and don't block the guest's confirm()
+            // response while a slow mailer churns through them.
+            Mail::to($emails)->queue($mailable);
             return count($emails);
         } catch (\Throwable $e) {
             Log::warning('Admin notification send failed', [

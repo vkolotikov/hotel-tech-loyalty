@@ -1043,9 +1043,13 @@ class BookingEngineService
             }
         }
 
-        // 1) Booking Confirmation Email
+        // 1) Booking Confirmation Email — queued for durability. With
+        //    queue=sync (default on fresh installs) this runs inline like
+        //    ->send() did; with queue=redis/database the worker handles
+        //    retries on transient SMTP failures and survives a process
+        //    kill between DB commit and email send.
         try {
-            Mail::to($email)->send(new BookingConfirmationMail(
+            Mail::to($email)->queue(new BookingConfirmationMail(
                 guestName: $guestName,
                 hotelName: $hotelName,
                 bookingReference: $response['booking_reference'] ?? $response['reservation_id'] ?? '—',
@@ -1131,7 +1135,7 @@ class BookingEngineService
                     'expires_at' => now()->addHours(48),
                 ]);
 
-                Mail::to($email)->send(new BookingMembershipMail(
+                Mail::to($email)->queue(new BookingMembershipMail(
                     guestName: $guestName,
                     hotelName: $hotelName,
                     memberNumber: $member->member_number,
@@ -1338,8 +1342,18 @@ class BookingEngineService
 
         if ($rows->isEmpty()) return;
 
-        $checkInTs = strtotime($checkIn . ' 00:00:00');
-        $hoursUntilCheckIn = max(0, (int) (($checkInTs - time()) / 3600));
+        // Compute hours-until-check-in in the HOTEL's timezone, not the
+        // server's. A 24h lead-time extra against a Latvia hotel
+        // (UTC+2/3) was being mis-measured on a UTC server, either
+        // rejecting valid bookings or allowing under-prepared ones
+        // depending on the time of day.
+        $hotelTz = \App\Models\HotelSetting::getValue('hotel_timezone', 'UTC') ?: 'UTC';
+        try {
+            $checkInLocal = \Illuminate\Support\Carbon::parse($checkIn . ' 00:00:00', $hotelTz);
+        } catch (\Throwable $e) {
+            $checkInLocal = \Illuminate\Support\Carbon::parse($checkIn . ' 00:00:00'); // server tz fallback
+        }
+        $hoursUntilCheckIn = max(0, (int) now()->diffInHours($checkInLocal, false));
 
         foreach ($rows as $row) {
             $required = (int) ($row->lead_time_hours ?? 0);

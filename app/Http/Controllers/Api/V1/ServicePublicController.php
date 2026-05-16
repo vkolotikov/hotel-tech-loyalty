@@ -602,7 +602,7 @@ class ServicePublicController extends Controller
             ])->toArray();
 
             \Illuminate\Support\Facades\Mail::to($email)
-                ->send(new \App\Mail\ServiceBookingConfirmationMail(
+                ->queue(new \App\Mail\ServiceBookingConfirmationMail(
                     guestName: $guestName,
                     hotelName: $hotelName,
                     bookingReference: $booking->booking_reference ?? '—',
@@ -687,7 +687,7 @@ class ServicePublicController extends Controller
                 ]);
 
                 \Illuminate\Support\Facades\Mail::to($email)
-                    ->send(new \App\Mail\BookingMembershipMail(
+                    ->queue(new \App\Mail\BookingMembershipMail(
                         guestName: $guestName,
                         hotelName: $hotelName,
                         memberNumber: $member->member_number,
