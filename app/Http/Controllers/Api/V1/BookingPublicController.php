@@ -244,6 +244,31 @@ class BookingPublicController extends Controller
             ], 400);
         }
 
+        // Detect test/live key mismatch — by far the most common cause
+        // of \"We could not retrieve data from the specified Element\".
+        // Stripe Elements load with the publishable key on the client
+        // side, but PaymentIntents are created with the secret key. If
+        // pk is test and sk is live (or vice versa) the iframe loads
+        // but can't read the intent — the user sees an empty card form
+        // and a confusing IntegrationError. Catch this server-side and
+        // return a clear, actionable error.
+        $pubKey = (string) $stripe->publishableKey();
+        $pubMode = str_starts_with($pubKey, 'pk_live_') ? 'live'
+                 : (str_starts_with($pubKey, 'pk_test_') ? 'test' : null);
+        // Peek at the secret key without exposing it — just the prefix.
+        $secretRow = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'stripe_secret_key')
+            ->first();
+        $secKey = (string) ($secretRow?->value ?? '');
+        $secMode = str_starts_with($secKey, 'sk_live_') ? 'live'
+                 : (str_starts_with($secKey, 'sk_test_') ? 'test' : null);
+        if ($pubMode && $secMode && $pubMode !== $secMode) {
+            return response()->json([
+                'error' => "Stripe keys mismatch — your publishable key is in {$pubMode} mode but the secret key is in {$secMode} mode. Open Settings → Integrations and ensure both keys come from the same Stripe account / mode.",
+            ], 400);
+        }
+
         if (!$orgId) {
             return response()->json(['error' => 'Organization context required.'], 400);
         }
