@@ -257,12 +257,7 @@ class BookingPublicController extends Controller
         }
 
         // Extend the hold so a guest sitting on the Stripe Elements payment
-        // screen doesn't lose their cart at the 10-min mark. We push
-        // expires_at to "now + 15 min" rather than adding-on, so a guest
-        // who reaches this endpoint at 9:30 doesn't suddenly get only 30s
-        // (the original hold) — they get a fresh 15-min window to complete
-        // the card form. Quote→intent is typically <2s, so the original
-        // hold is rarely close to expiry, but this guards the slow path.
+        // screen doesn't lose their cart at the 10-min mark.
         $hold->update(['expires_at' => now()->addMinutes(15)]);
 
         $payload = $hold->payload_json;
@@ -270,6 +265,24 @@ class BookingPublicController extends Controller
         $unitName = $payload['unit_name'] ?? 'Room';
         $checkIn = $payload['check_in'] ?? '';
         $checkOut = $payload['check_out'] ?? '';
+
+        // Reuse the cached PaymentIntent when it still matches the
+        // current amount. Without this, every back-nav / page-reload /
+        // validation retry creates a fresh intent and burns a slot of
+        // the per-IP throttle. The user reported hitting "Too Many
+        // Attempts" mid-checkout; this is the root cause.
+        // Amount is matched in cents to avoid float-comparison foot-guns.
+        $cachedId      = $payload['stripe_payment_intent_id'] ?? null;
+        $cachedSecret  = $payload['stripe_client_secret'] ?? null;
+        $cachedAmount  = isset($payload['stripe_amount_cents']) ? (int) $payload['stripe_amount_cents'] : null;
+        $currentCents  = (int) round($amount * 100);
+        if ($cachedId && $cachedSecret && $cachedAmount === $currentCents) {
+            return response()->json([
+                'client_secret'     => $cachedSecret,
+                'payment_intent_id' => $cachedId,
+                'reused'            => true,
+            ]);
+        }
 
         try {
             $intent = $stripe->createPaymentIntent(
@@ -283,6 +296,13 @@ class BookingPublicController extends Controller
                     'check_out'  => $checkOut,
                 ],
             );
+
+            // Cache on the hold so subsequent retries return without
+            // creating a new Stripe intent.
+            $payload['stripe_payment_intent_id'] = $intent['payment_intent_id'] ?? null;
+            $payload['stripe_client_secret']     = $intent['client_secret'] ?? null;
+            $payload['stripe_amount_cents']      = $currentCents;
+            $hold->update(['payload_json' => $payload]);
 
             return response()->json($intent);
         } catch (\Throwable $e) {

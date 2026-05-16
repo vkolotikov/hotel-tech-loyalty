@@ -132,10 +132,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('quote',                [BookingPublicController::class, 'quote']);
         // Tighter throttle on the money-moving endpoints so a brute-force
         // attacker can't burn through the 60/min shared bucket and starve
-        // legit guests. 10/min per IP is generous for a human guest (one
-        // booking takes 1-2 minutes end to end) but blunts abuse.
-        Route::post('payment-intent', [BookingPublicController::class, 'paymentIntent'])->middleware('throttle:10,1');
-        Route::post('confirm',        [BookingPublicController::class, 'confirm'])->middleware('throttle:10,1');
+        // legit guests. 30/min per IP — wide enough for a fumbled human
+        // checkout (validation retries, back-nav, reloads), still narrow
+        // enough to blunt abuse.
+        Route::post('payment-intent', [BookingPublicController::class, 'paymentIntent'])->middleware('throttle:30,1');
+        Route::post('confirm',        [BookingPublicController::class, 'confirm'])->middleware('throttle:30,1');
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/stripe',      [BookingPublicController::class, 'stripeWebhook']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
@@ -147,9 +148,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('availability',    [ServicePublicController::class, 'availability']);
         Route::get('calendar',        [ServicePublicController::class, 'calendar']);
         Route::post('quote',          [ServicePublicController::class, 'quote']);
-        // Same money-moving tighter throttle as the booking widget.
-        Route::post('payment-intent', [ServicePublicController::class, 'paymentIntent'])->middleware('throttle:10,1');
-        Route::post('confirm',        [ServicePublicController::class, 'confirm'])->middleware('throttle:10,1');
+        // Same money-moving throttle as the booking widget (30/min).
+        Route::post('payment-intent', [ServicePublicController::class, 'paymentIntent'])->middleware('throttle:30,1');
+        Route::post('confirm',        [ServicePublicController::class, 'confirm'])->middleware('throttle:30,1');
     });
 
     // ─── Public Review API ─────────────────────────────────────────────────────
