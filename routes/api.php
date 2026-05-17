@@ -214,12 +214,17 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('subscription',  [AuthController::class, 'subscription']);
             // Money-touching billing proxies — each call hits SaaS + Stripe.
             // Inner throttle so a malicious client can't churn Checkout/Portal
-            // sessions or otherwise pound the SaaS billing surface.
-            Route::post('billing/checkout',     [AuthController::class, 'billingCheckout'])->middleware('throttle:10,1');
-            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware('throttle:10,1');
-            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware('throttle:10,1');
-            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware('throttle:30,1');
-            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware('throttle:10,1');
+            // sessions or otherwise pound the SaaS billing surface, but loose
+            // enough to absorb React StrictMode double-renders, navigation
+            // re-triggers, and user retries after a transient SaaS hiccup
+            // (10/min was too tight — caught real users clicking Subscribe
+            // and hitting 429). Outer 120/min group throttle still bounds
+            // total session activity.
+            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout'])->middleware('throttle:30,1');
+            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware('throttle:30,1');
+            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware('throttle:30,1');
+            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware('throttle:60,1');
+            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware('throttle:30,1');
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
