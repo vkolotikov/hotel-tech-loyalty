@@ -1043,7 +1043,14 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $loyaltyUrl = config('app.url', 'https://loyalty.hotel-tech.ai');
+        // Pull our own public URL from APP_URL. Pre-fix we fell back to the
+        // production loyalty domain when APP_URL was blank — a staging or
+        // preview deploy with an empty APP_URL would silently route paying
+        // customers' Stripe Checkout success/cancel redirects to prod.
+        $loyaltyUrl = $this->resolveLoyaltyUrl();
+        if (!$loyaltyUrl) {
+            return response()->json(['error' => 'Loyalty URL not configured (APP_URL missing)'], 500);
+        }
 
         try {
             $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/activate", [
@@ -1091,7 +1098,10 @@ class AuthController extends Controller
             return response()->json(['error' => 'Could not connect to billing system. Please try again.'], 422);
         }
 
-        $loyaltyUrl = config('app.url', 'https://loyalty.hotel-tech.ai');
+        $loyaltyUrl = $this->resolveLoyaltyUrl();
+        if (!$loyaltyUrl) {
+            return response()->json(['error' => 'Loyalty URL not configured (APP_URL missing)'], 500);
+        }
 
         try {
             $response = Http::withToken($saasToken)->timeout(10)->post("{$saasApi}/billing/portal", [
@@ -1350,6 +1360,25 @@ class AuthController extends Controller
     }
 
     /**
+     * Resolve this app's public URL (used for Stripe Checkout return URLs).
+     * Returns null when APP_URL is missing in production — caller decides what
+     * to do; we never silently fall back to the production loyalty domain
+     * from a staging / preview deploy.
+     */
+    private function resolveLoyaltyUrl(): ?string
+    {
+        $url = trim((string) config('app.url'));
+        if ($url) return rtrim($url, '/');
+
+        // Dev convenience: in non-prod, fall back to the request origin so
+        // local tunneling / preview environments still work without config.
+        if (!app()->environment('production')) {
+            return rtrim(request()->getSchemeAndHttpHost(), '/');
+        }
+        return null;
+    }
+
+    /**
      * Ensure the local organization exists on SaaS.
      * If it doesn't have a saas_org_id, register the user+org on SaaS
      * and store the returned IDs. Returns a SaaS JWT on success.
@@ -1371,8 +1400,13 @@ class AuthController extends Controller
             return $this->getSaasToken($request);
         }
 
-        // Not linked — register on SaaS to create the org there
-        $tempPassword = 'SaasLink_' . substr(hash('sha256', $user->email . config('app.key')), 0, 16);
+        // Not linked — register on SaaS to create the org there. Use a fresh
+        // random password rather than deriving from app.key + email: that
+        // older scheme meant anyone with APP_KEY could compute every linked
+        // user's SaaS password. The password is never used again after this
+        // call — subsequent loyalty→SaaS auth goes through service-lookup /
+        // service-verify-password which are HMAC-signed.
+        $tempPassword = \Illuminate\Support\Str::random(40);
 
         try {
             $response = Http::connectTimeout(2)->timeout(4)->post("{$saasApi}/auth/register", [

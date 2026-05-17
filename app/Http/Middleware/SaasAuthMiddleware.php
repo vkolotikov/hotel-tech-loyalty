@@ -133,7 +133,15 @@ class SaasAuthMiddleware
             $org->entitlements_synced_at = now();
             $org->save();
         } catch (\Throwable $e) {
-            \Log::debug('SaasAuthMiddleware: entitlement sync failed: ' . $e->getMessage());
+            // Sync failure is best-effort — we never block the request on it,
+            // and a previously cached set of entitlements keeps the org running.
+            // Bump from debug to warning so the failure is visible in prod log
+            // aggregators (most filter debug-level out): an undiagnosed sync
+            // outage means plan upgrades silently fail to propagate.
+            \Log::warning('SaasAuthMiddleware: entitlement sync failed', [
+                'org_id' => $org->id,
+                'error'  => $e->getMessage(),
+            ]);
         }
     }
 

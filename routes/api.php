@@ -212,11 +212,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::delete('logout',     [AuthController::class, 'logout']);
             Route::post('push-token',   [AuthController::class, 'updatePushToken']);
             Route::get('subscription',  [AuthController::class, 'subscription']);
-            Route::post('billing/checkout',     [AuthController::class, 'billingCheckout']);
-            Route::post('billing/activate',    [AuthController::class, 'billingActivate']);
-            Route::post('billing/portal',      [AuthController::class, 'billingPortal']);
-            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh']);
-            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial']);
+            // Money-touching billing proxies — each call hits SaaS + Stripe.
+            // Inner throttle so a malicious client can't churn Checkout/Portal
+            // sessions or otherwise pound the SaaS billing surface.
+            Route::post('billing/checkout',     [AuthController::class, 'billingCheckout'])->middleware('throttle:10,1');
+            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware('throttle:10,1');
+            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware('throttle:10,1');
+            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware('throttle:30,1');
+            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware('throttle:10,1');
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
