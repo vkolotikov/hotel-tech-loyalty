@@ -14,66 +14,10 @@ interface PlanData {
   monthlyAmount: number; yearlyAmount: number; currency: string; trialDays: number
 }
 
-// All possible features across all plans — each plan marks which are included
-const ALL_FEATURES = [
-  { key: 'crm', label: 'Guest CRM' },
-  { key: 'loyalty', label: 'Loyalty program' },
-  { key: 'booking', label: 'Booking engine' },
-  { key: 'chatbot', label: 'AI chatbot for website' },
-  { key: 'properties', label: 'Multi-property support' },
-  { key: 'analytics', label: 'Advanced analytics & AI insights' },
-  { key: 'nfc', label: 'NFC member cards' },
-  { key: 'api', label: 'API access & integrations' },
-  { key: 'branding', label: 'White-label branding' },
-  { key: 'support', label: 'Priority support' },
-  { key: 'sla', label: 'SLA guarantee (99.9%)' },
-  { key: 'onboarding', label: 'Dedicated onboarding' },
-] as const
-
-const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
-  starter: {
-    crm: 'Up to 500 profiles',
-    loyalty: 'Basic (1 tier)',
-    booking: false,
-    chatbot: false,
-    properties: 'Single property',
-    analytics: false,
-    nfc: false,
-    api: false,
-    branding: false,
-    support: 'Email support',
-    sla: false,
-    onboarding: false,
-  },
-  growth: {
-    crm: 'Unlimited profiles',
-    loyalty: 'Up to 5 tiers',
-    booking: 'With online payments',
-    chatbot: true,
-    properties: 'Up to 3 properties',
-    analytics: true,
-    nfc: true,
-    api: false,
-    branding: false,
-    support: 'Email & chat',
-    sla: false,
-    onboarding: false,
-  },
-  enterprise: {
-    crm: 'Unlimited profiles',
-    loyalty: 'Custom tiers & rules',
-    booking: 'With online payments',
-    chatbot: true,
-    properties: 'Unlimited',
-    analytics: true,
-    nfc: true,
-    api: true,
-    branding: true,
-    support: 'Dedicated manager',
-    sla: true,
-    onboarding: true,
-  },
-}
+// Plan feature taxonomy is shared with the public /register trial-view
+// plan picker (Login.tsx) so admins and prospects see the same
+// comparison. Edit it in lib/planFeatures.ts.
+import { ALL_FEATURES, PLAN_FEATURES } from '../lib/planFeatures'
 
 const FALLBACK_PLANS: PlanData[] = [
   { id: 'starter', name: 'Starter', slug: 'starter', description: 'For boutique hotels and single properties getting started with guest data and a basic loyalty program. CRM, loyalty tiers and points, manual campaigns. No AI.', monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7 },

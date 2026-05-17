@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Lock, Mail, User, Building2, Check, Phone,
-  ShieldCheck, Eye, EyeOff, ArrowLeft,
+  Lock, Mail, User, Building2, Check, X, Phone,
+  ShieldCheck, Eye, EyeOff, ArrowLeft, Globe, ChevronDown,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
+import { SUPPORTED_LANGUAGES, type LangCode } from '../i18n'
+import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES } from '../lib/planFeatures'
 
 const BRAND_LOGO_URL =
   (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
@@ -36,6 +38,61 @@ function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact
       <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
       <span className="text-[17px] font-semibold">HotelTech</span>
     </Wrapper>
+  )
+}
+
+/**
+ * Compact language switcher used inside the auth card header. Public
+ * (no auth required) — the full LangSwitcher in src/components is
+ * sidebar-only because it syncs to the user's server-side preference
+ * via /v1/admin/me/preferences. Here we just flip i18n in memory and
+ * rely on i18next-browser-languagedetector to persist to localStorage.
+ * On successful registration the chosen language is passed to the
+ * /v1/auth/trial endpoint so it's stored as the user's preference.
+ */
+function InlineLangPicker({ i18n }: { i18n: any }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const current = SUPPORTED_LANGUAGES.find(l => l.code === i18n.language)
+    ?? SUPPORTED_LANGUAGES.find(l => l.code === i18n.resolvedLanguage)
+    ?? SUPPORTED_LANGUAGES[0]
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-white/[0.08] hover:border-white/20 text-xs text-slate-300 transition"
+      >
+        <Globe size={13} className="text-slate-500" />
+        <span className="text-base leading-none">{current.flag}</span>
+        <span className="uppercase tracking-wider text-[10px]">{current.code}</span>
+        <ChevronDown size={12} className={'text-slate-500 transition-transform ' + (open ? 'rotate-180' : '')} />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1.5 min-w-[170px] rounded-lg border border-white/[0.08] bg-slate-900/95 backdrop-blur-md shadow-xl py-1 z-50">
+          {SUPPORTED_LANGUAGES.map((l: { code: LangCode; label: string; flag: string }) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => { i18n.changeLanguage(l.code); setOpen(false) }}
+              className={'flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors ' +
+                (l.code === current.code ? 'text-white' : 'text-slate-400')}
+            >
+              <span className="text-base leading-none">{l.flag}</span>
+              <span className="flex-1 text-left">{l.label}</span>
+              {l.code === current.code && <Check size={12} className="text-blue-400" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -116,7 +173,7 @@ export function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
   // (not the shared axios `api` instance) because its global 401 interceptor
@@ -276,6 +333,9 @@ export function Login() {
         hotel_name: hotelName,
         plan: selectedPlan,
         billing_interval: billingInterval,
+        // Persist signup language as the new user's preference so they
+        // land in the admin in the right locale on first sign-in.
+        language: i18n.language?.split('-')[0] || 'en',
       })
       setAuth(data.token, data.user, data.staff)
       navigate('/')
@@ -540,18 +600,22 @@ export function Login() {
           <BrandMark onClick={() => navigate('/login')} compact />
         </div>
 
-        <div className="w-full max-w-[440px] mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
-          {(isForgot || isReset) && (
-            <button
-              onClick={() => { navigate('/login'); setError('') }}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-4"
-            >
-              <ArrowLeft size={14} /> Back to sign in
-            </button>
-          )}
-
-          <h1 className="text-[26px] leading-tight tracking-tight font-semibold text-white mb-1.5">{formTitle}</h1>
-          <p className="text-sm text-slate-400 mb-6">{formSubtitle}</p>
+        <div className={`w-full mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? 'max-w-[440px] lg:max-w-[940px]' : 'max-w-[440px]'}`}>
+          <div className="flex items-start justify-between gap-3 mb-6">
+            <div className="min-w-0">
+              {(isForgot || isReset) && (
+                <button
+                  onClick={() => { navigate('/login'); setError('') }}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-3"
+                >
+                  <ArrowLeft size={14} /> Back to sign in
+                </button>
+              )}
+              <h1 className="text-[26px] leading-tight tracking-tight font-semibold text-white mb-1.5">{formTitle}</h1>
+              <p className="text-sm text-slate-400">{formSubtitle}</p>
+            </div>
+            <InlineLangPicker i18n={i18n} />
+          </div>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -665,37 +729,99 @@ export function Login() {
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-2">Plan</label>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>Monthly</span>
-                    <button type="button" onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
-                      className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
-                      <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
-                    </button>
-                    <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-slate-500')}>
-                      Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
-                    </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-[13px] font-medium text-slate-300">Choose your plan</label>
+                    <div className="flex items-center gap-2">
+                      <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>Monthly</span>
+                      <button type="button" onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
+                        className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
+                        <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+                      </button>
+                      <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-slate-500')}>
+                        Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  {/* Full feature comparison — same taxonomy as the admin
+                      Billing page so prospects see exactly what they'll
+                      get once they sign in. Click any card to select. */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {plans.length === 0
                       ? [0, 1, 2].map((i) => (
-                          <div key={i} className="rounded-lg border border-white/[0.1] bg-slate-950/50 p-2.5 text-center animate-pulse">
-                            <div className="h-3 w-12 mx-auto bg-white/10 rounded" />
-                            <div className="h-2 w-14 mx-auto bg-white/5 rounded mt-1.5" />
-                            <div className="h-2 w-10 mx-auto bg-white/5 rounded mt-1.5" />
+                          <div key={i} className="rounded-xl border border-white/[0.08] bg-slate-950/50 p-4 animate-pulse">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-6 w-24 bg-white/10 rounded mt-3" />
+                            <div className="space-y-2 mt-4">
+                              {Array.from({ length: 6 }).map((_, j) => (
+                                <div key={j} className="h-3 w-full bg-white/5 rounded" />
+                              ))}
+                            </div>
                           </div>
                         ))
-                      : plans.map((p) => (
-                          <button key={p.slug} type="button" onClick={() => setSelectedPlan(p.slug)}
-                            className={'rounded-lg border p-2.5 text-center transition-all ' +
-                              (selectedPlan === p.slug
-                                ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30'
-                                : 'border-white/[0.1] bg-slate-950/50 hover:border-white/25')}>
-                            <div className="text-xs font-semibold text-white">{p.name}</div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">{getPlanPrice(p)}/mo</div>
-                            <div className="text-[10px] text-blue-400 mt-0.5">{p.trialDays}d trial</div>
-                          </button>
-                        ))}
+                      : plans.map((p) => {
+                          const isSelected = selectedPlan === p.slug
+                          const isPopular = p.slug === POPULAR_PLAN_SLUG
+                          const features = PLAN_FEATURES[p.slug] || {}
+                          const tagline = p.description || PLAN_TAGLINES[p.slug] || ''
+                          return (
+                            <button
+                              key={p.slug}
+                              type="button"
+                              onClick={() => setSelectedPlan(p.slug)}
+                              className={
+                                'relative rounded-xl border p-4 text-left transition-all flex flex-col ' +
+                                (isSelected
+                                  ? 'border-blue-500 bg-blue-500/[0.06] ring-1 ring-blue-500/30'
+                                  : isPopular
+                                    ? 'border-blue-500/30 bg-blue-500/[0.02] hover:border-blue-500/60'
+                                    : 'border-white/[0.08] bg-slate-950/50 hover:border-white/25')
+                              }
+                            >
+                              {isPopular && !isSelected && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  Most Popular
+                                </div>
+                              )}
+                              {isSelected && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                  <Check size={10} /> Selected
+                                </div>
+                              )}
+
+                              <div className="font-semibold text-white text-sm">{p.name}</div>
+                              <div className="mt-1.5 mb-0.5">
+                                <span className="text-xl font-bold text-white">{getPlanPrice(p)}</span>
+                                <span className="text-slate-400 text-[11px]">/mo{billingInterval === 'yearly' ? ' billed yearly' : ''}</span>
+                              </div>
+                              {tagline && (
+                                <p className="text-[11px] leading-snug text-slate-400 mb-3 mt-1 line-clamp-4">{tagline}</p>
+                              )}
+
+                              <div className="space-y-1 mb-3 flex-1">
+                                {ALL_FEATURES.map((f) => {
+                                  const val = features[f.key]
+                                  const included = val !== false
+                                  const detail = typeof val === 'string' ? val : null
+                                  return (
+                                    <div key={f.key} className={'flex items-start gap-1.5 text-[11px] ' + (!included ? 'opacity-40' : '')}>
+                                      {included
+                                        ? <Check size={10} className="text-green-400 shrink-0 mt-0.5" />
+                                        : <X size={10} className="text-slate-500 shrink-0 mt-0.5" />}
+                                      <span className={included ? 'text-slate-300' : 'text-slate-500 line-through'}>
+                                        {f.label}{detail ? ` — ${detail}` : ''}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+
+                              <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-white/[0.05]">
+                                {p.trialDays}-day free trial included
+                              </div>
+                            </button>
+                          )
+                        })}
                   </div>
                 </div>
 

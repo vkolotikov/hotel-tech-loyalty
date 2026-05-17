@@ -526,6 +526,10 @@ class AuthController extends Controller
             'password'   => 'required|string|min:8',
             'hotel_name' => 'required|string|max:191',
             'plan'       => 'nullable|string|max:50',
+            // Language preference picked at signup — persisted on the user
+            // so they get the right locale on every device the first time
+            // they sign in. Whitelist matches MeController::SUPPORTED_LANGUAGES.
+            'language'   => 'nullable|string|in:en,ru,de,fr,es',
         ]);
 
         $validated['email'] = strtolower(trim($validated['email']));
@@ -617,6 +621,7 @@ class AuthController extends Controller
             // their trial signup (they had a half-set-up account), honor the
             // password they just typed — otherwise they'll be locked out.
             $localUser = $existingUser;
+            $signupLang = $validated['language'] ?? 'en';
             if (!$localUser) {
                 $localUser = User::create([
                     'name'            => $validated['name'],
@@ -625,6 +630,7 @@ class AuthController extends Controller
                     'password'        => Hash::make($validated['password']),
                     'user_type'       => 'staff',
                     'organization_id' => $org->id,
+                    'language'        => $signupLang,
                 ]);
             } else {
                 $updates = [
@@ -634,6 +640,9 @@ class AuthController extends Controller
                 ];
                 if (!$localUser->organization_id) {
                     $updates['organization_id'] = $org->id;
+                }
+                if (!$localUser->language) {
+                    $updates['language'] = $signupLang;
                 }
                 $localUser->update($updates);
             }
