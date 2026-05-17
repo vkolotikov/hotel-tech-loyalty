@@ -713,8 +713,15 @@ class AuthController extends Controller
 
         try {
             $planLabel = ucfirst($planSlug);
-            $loginUrl = config('app.frontend_url', config('app.url', 'https://loyalty.hotel-tech.ai'));
-            Mail::to($validated['email'])->send(new WelcomeTrialMail(
+            // Pre-fix this read `config('app.frontend_url', config('app.url', ...))`
+            // — `frontend_url` isn't a defined config key so it was always null,
+            // and any env where APP_URL defaulted to http://localhost (Laravel's
+            // own default) shipped a localhost link to real customers. Use the
+            // resolveLoyaltyUrl helper which is the same one billingActivate /
+            // billingPortal use — fails closed in prod, falls back to request
+            // origin in dev so local testing still works.
+            $loginUrl = $this->resolveLoyaltyUrl() ?? 'https://loyalty.hotel-tech.ai';
+            Mail::to($validated['email'])->queue(new WelcomeTrialMail(
                 userName: $validated['name'],
                 hotelName: $validated['hotel_name'],
                 planName: $planLabel,
