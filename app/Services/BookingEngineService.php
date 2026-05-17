@@ -361,6 +361,23 @@ class BookingEngineService
                 // Strip nulls + empty strings so Smoobu doesn't complain
                 // about empty optional fields.
                 $smoobuPayload = array_filter($smoobuPayload, fn ($v) => $v !== null && $v !== '');
+
+                // Diagnostic log so admins can see exactly what hit Smoobu
+                // when a booking shows up grey/blocked on their calendar.
+                // Names + email are minimally sensitive; we don't log the
+                // notice text (may contain free-form guest PII).
+                \Illuminate\Support\Facades\Log::info('Smoobu reservation push', [
+                    'org_id'      => app()->bound('current_organization_id') ? app('current_organization_id') : null,
+                    'apartmentId' => $smoobuPayload['apartmentId'] ?? null,
+                    'channelId'   => $smoobuPayload['channelId']   ?? '(omitted — auto-detect returned 0)',
+                    'arrival'     => $smoobuPayload['arrivalDate'] ?? null,
+                    'departure'   => $smoobuPayload['departureDate'] ?? null,
+                    'price'       => $smoobuPayload['price'] ?? null,
+                    'pricePaid'   => $smoobuPayload['price-paid'] ?? null,
+                    'guestEmail'  => $smoobuPayload['email'] ?? null,
+                    'type'        => $smoobuPayload['type'] ?? null,
+                ]);
+
                 $pmsResult = $this->smoobu->createReservation($smoobuPayload);
             } catch (\Throwable $e) {
                 $msg = $e->getMessage();

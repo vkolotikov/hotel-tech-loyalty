@@ -135,7 +135,9 @@ class SmoobuClient
     {
         $this->boot();
 
-        // 1. Configured value wins.
+        // 1. Configured value wins. This is the path admins should be on —
+        //    auto-detection from /channels is unreliable because the API
+        //    response shape varies between accounts.
         if (!empty($this->channelId) && ((int) $this->channelId) > 0) {
             return (int) $this->channelId;
         }
@@ -151,36 +153,97 @@ class SmoobuClient
             return $this->resolvedDirectChannelId = 1;
         }
 
-        // 2. Ask Smoobu.
+        // 2. Ask Smoobu. Two-pass selection:
+        //    A) Prefer channels whose name matches direct/website/manual/api.
+        //    B) Fall back to the first non-OTA, non-blocked channel.
+        //
+        //    `is_blocked_channel` is not always present in Smoobu's
+        //    response — we can't rely on it. The reliable signal is the
+        //    NAME blacklist below: any channel whose name contains
+        //    "blocked" / "block" (English) or "блок" (Cyrillic, for
+        //    Smoobu accounts in RU/UA/LV locales) is ignored. Likewise
+        //    we skip names that clearly identify OTA channels we shouldn't
+        //    attribute our own widget bookings to.
         try {
             $resp = $this->get('/channels');
             $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
-            $namePatterns = ['/direct/i', '/website/i', '/manual/i', '/\bapi\b/i'];
+
+            // Log what we got so admins can see the actual set if they need
+            // to manually pick a channel ID. One log line per resolution.
+            Log::info('SmoobuClient: /channels resolved', [
+                'count'    => count($items),
+                'channels' => array_map(fn ($c) => [
+                    'id'   => $c['id']   ?? null,
+                    'name' => $c['name'] ?? null,
+                    'type' => $c['type'] ?? null,
+                ], $items),
+            ]);
+
+            $blockNamePattern = '/(blocked|block channel|блок)/i';
+            $otaNamePattern   = '/(booking\.?com|airbnb|expedia|vrbo|hotels?\.com|agoda|trip\.com|hostelworld|despegar)/i';
+            $directNamePattern = '/(direct|website|manual|\bapi\b|own.?website|direct.?booking)/i';
+
+            $candidates = [];
             foreach ($items as $ch) {
                 $id   = (int) ($ch['id'] ?? 0);
                 $name = (string) ($ch['name'] ?? '');
-                $isBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
-                if ($id <= 0 || $isBlocked) continue;
-                foreach ($namePatterns as $p) {
-                    if (preg_match($p, $name)) {
-                        return $this->resolvedDirectChannelId = $id;
-                    }
+                $declaredBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
+                if ($id <= 0) continue;
+                if ($declaredBlocked) continue;
+                if (preg_match($blockNamePattern, $name)) continue;
+                if (preg_match($otaNamePattern, $name)) continue;
+                $candidates[] = ['id' => $id, 'name' => $name];
+            }
+
+            // Pass A: prefer direct-style names.
+            foreach ($candidates as $c) {
+                if (preg_match($directNamePattern, $c['name'])) {
+                    Log::info('SmoobuClient: resolved direct channel by name match', $c);
+                    return $this->resolvedDirectChannelId = $c['id'];
                 }
             }
-            // No name match — pick the first non-blocked channel.
-            foreach ($items as $ch) {
-                $id   = (int) ($ch['id'] ?? 0);
-                $isBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
-                if ($id > 0 && !$isBlocked) {
-                    return $this->resolvedDirectChannelId = $id;
-                }
+            // Pass B: take the first non-OTA, non-blocked candidate.
+            if (!empty($candidates)) {
+                $pick = $candidates[0];
+                Log::info('SmoobuClient: resolved direct channel as first non-OTA fallback', $pick);
+                return $this->resolvedDirectChannelId = $pick['id'];
             }
+
+            Log::warning('SmoobuClient: no usable direct channel found', [
+                'candidates' => count($candidates),
+                'total'      => count($items),
+            ]);
         } catch (\Throwable $e) {
             Log::warning('SmoobuClient: /channels lookup failed', ['error' => $e->getMessage()]);
         }
 
-        // 3. Give up — let the caller hit Smoobu with 0 and surface the error.
+        // 3. Give up. Returning 0 makes the caller refuse the push (the
+        //    "send blocked-channel placeholder" failure mode is now visible
+        //    in BookingEngineService::confirm rather than silent).
         return 0;
+    }
+
+    /**
+     * Return raw /channels response for the admin to inspect. Used by the
+     * Settings → Integrations → Smoobu "Discover channels" picker so admins
+     * can copy the right channel ID into booking_smoobu_channel_id rather
+     * than relying on auto-detection.
+     */
+    public function listChannels(): array
+    {
+        $this->boot();
+        if ($this->isMock) {
+            return [
+                'channels' => [
+                    ['id' => 1, 'name' => 'Direct booking (mock)'],
+                    ['id' => 2, 'name' => 'Booking.com (mock)'],
+                ],
+                'note' => 'Mock mode — configure booking_smoobu_api_key to fetch real channels.',
+            ];
+        }
+        $resp = $this->get('/channels');
+        $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
+        return ['channels' => $items];
     }
 
     public function getRates(string $checkIn, string $checkOut, array $unitIds = []): array

@@ -976,6 +976,38 @@ class BookingAdminController extends Controller
         }
     }
 
+    /**
+     * GET /v1/admin/bookings/smoobu-channels — list the org's Smoobu channels.
+     *
+     * Surfaces the raw `/channels` response from Smoobu so the admin can pick
+     * the correct channel id for booking_smoobu_channel_id. Without this they
+     * have to call the Smoobu API by hand to find out their direct-booking
+     * channel id, which is the most common reason new-account bookings end
+     * up grey-coded as "Blocked Channel" on the Smoobu calendar.
+     *
+     * Also returns the auto-detected suggestion so the UI can pre-select it.
+     */
+    public function smoobuChannels(SmoobuClient $smoobu): JsonResponse
+    {
+        try {
+            $resp = $smoobu->listChannels();
+            $suggested = $smoobu->resolveDirectChannelId();
+            return response()->json([
+                'channels'   => $resp['channels'] ?? [],
+                'suggested'  => $suggested > 0 ? $suggested : null,
+                'configured' => $smoobu->channelId() ?: null,
+                'note'       => $resp['note'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Smoobu channels lookup failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'error' => 'Failed to fetch channels: ' . $e->getMessage(),
+            ], 502);
+        }
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private function paymentStateLabel(string $key): string

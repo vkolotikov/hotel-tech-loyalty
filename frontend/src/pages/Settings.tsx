@@ -250,6 +250,8 @@ export function Settings() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [syncingNow, setSyncingNow] = useState<string | null>(null)
   const [showSyncHistory, setShowSyncHistory] = useState<Set<string>>(new Set())
+  const [smoobuChannels, setSmoobuChannels] = useState<{ channels: any[]; suggested: number | null; configured: string | null } | null>(null)
+  const [loadingSmoobuChannels, setLoadingSmoobuChannels] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
@@ -1391,6 +1393,74 @@ export function Settings() {
                   </div>
                 )
               })()}
+              {/* Discover Smoobu channels — fetches GET /channels and lets
+                  the admin pick the correct direct-booking channel id.
+                  Without this, widget bookings end up grey-coded as
+                  Smoobu's "Blocked Channel" because our auto-detect can't
+                  reliably tell apart direct/website/manual channels from
+                  blocked / OTA ones across every account setup. */}
+              {section.id === 'smoobu' && hasAnyValue && isEnabled && (
+                <div className="mt-3 mb-1 rounded-xl border border-amber-500/15 bg-amber-500/[0.03] p-3 text-xs">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 text-amber-300/90">
+                      <Calendar size={12} />
+                      <span className="font-semibold uppercase tracking-wider text-[10px]">Smoobu channel</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setLoadingSmoobuChannels(true)
+                        try {
+                          const { data } = await api.get('/v1/admin/bookings/smoobu-channels')
+                          setSmoobuChannels(data)
+                        } catch (e: any) {
+                          toast.error(e?.response?.data?.error || 'Could not fetch channels')
+                        }
+                        setLoadingSmoobuChannels(false)
+                      }}
+                      disabled={loadingSmoobuChannels}
+                      className={btnPrimary + ' bg-amber-500/15 text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 text-[11px] px-3 py-1.5 disabled:opacity-40'}>
+                      {loadingSmoobuChannels ? <><RefreshCw size={11} className="animate-spin" /> Loading…</> : <><RefreshCw size={11} /> Discover channels</>}
+                    </button>
+                  </div>
+                  <p className="text-gray-500 text-[11px] mb-2 leading-relaxed">
+                    Widget bookings need to be attributed to a specific Smoobu channel. If the Channel ID below is blank or wrong, new bookings show up grey-striped on the Smoobu calendar as <strong className="text-amber-400">"Blocked Channel"</strong> and don't appear in New Reservations. Click <strong>Discover channels</strong> to list your Smoobu channels, then click the one to use.
+                  </p>
+                  {smoobuChannels && (
+                    <div className="mt-2 space-y-1">
+                      {smoobuChannels.channels.length === 0 && (
+                        <p className="text-gray-500 italic">No channels returned — check API key + base URL.</p>
+                      )}
+                      {smoobuChannels.channels.map((c: any) => {
+                        const id = String(c.id ?? '')
+                        const name = String(c.name ?? '(unnamed)')
+                        const type = String(c.type ?? '')
+                        const isConfigured = id === smoobuChannels.configured
+                        const isSuggested = smoobuChannels.suggested && Number(id) === smoobuChannels.suggested
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => {
+                              setEditedSettings(prev => ({ ...prev, booking_smoobu_channel_id: id }))
+                              toast.success(`Channel ID ${id} ready — click Save to apply`)
+                            }}
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left text-[11px] transition-colors ${isConfigured ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-black/30 border border-white/[0.04] hover:border-amber-500/30'}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <code className="font-mono text-amber-300 font-semibold">{id}</code>
+                              <span className="text-gray-300 truncate">{name}</span>
+                              {type && <span className="text-gray-600 text-[10px] uppercase tracking-wider">{type}</span>}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {isConfigured && <span className="text-emerald-400 text-[10px] uppercase tracking-wider">Active</span>}
+                              {!isConfigured && isSuggested && <span className="text-blue-400 text-[10px] uppercase tracking-wider">Suggested</span>}
+                              {!isConfigured && <span className="text-gray-500 text-[10px]">Click to use</span>}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Sync health — surfaced for integrations that have a sync
                   pipeline (currently Smoobu). Last sync time + counts +
                   collapsible history mean staff can spot silent failures

@@ -796,6 +796,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('bookings/payments',               [BookingAdminController::class, 'payments']);
             Route::post('bookings/sync',                  [BookingAdminController::class, 'syncAll']);
             Route::post('bookings/sync-apartments',       [BookingAdminController::class, 'syncApartments']);
+            Route::get('bookings/smoobu-channels',        [BookingAdminController::class, 'smoobuChannels']);
             Route::post('bookings/bulk',                  [BookingAdminController::class, 'bulk']);
             Route::post('bookings/export',                [BookingAdminController::class, 'export']);
             Route::post('bookings/manual',                [BookingAdminController::class, 'manualCreate']);
