@@ -82,6 +82,16 @@ export function useRealtimeEvents() {
     const isHotLead = event.type === 'hot_lead'
     const actionUrl = (event.data as { action_url?: string } | null)?.action_url
 
+    // Toast dedup id — react-hot-toast replaces existing toasts with the
+    // same id rather than stacking. Crucial for hot_lead which can fire
+    // from BOTH this hook (server event) AND useHotLeadAlert (client
+    // diff detection). Same id pattern as useHotLeadAlert so the two
+    // collapse into a single visible toast.
+    const visitorId = (event.data as { visitor_id?: number } | null)?.visitor_id
+    const toastId = isHotLead && visitorId
+      ? `hot-lead-${visitorId}`
+      : `realtime-${event.type}-${event.time}`
+
     toast.custom(
       (t) => (
         <div
@@ -125,6 +135,10 @@ export function useRealtimeEvents() {
               </div>
             )}
           </div>
+          {/* Dismiss button — proper hit target + visible background
+              + hover state so it's findable on dark surfaces. The
+              previous version was a flat × on a transparent background
+              that visually disappeared. */}
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -132,21 +146,29 @@ export function useRealtimeEvents() {
             }}
             aria-label="Dismiss"
             style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#8a8a92',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: '#e5e5e7',
               cursor: 'pointer',
               fontSize: 16,
               lineHeight: 1,
-              padding: 2,
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              padding: 0,
               marginLeft: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'background 150ms',
             }}
-          >
-            ×
-          </button>
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+          >×</button>
         </div>
       ),
-      { duration: isHotLead ? 8000 : 5000 }
+      { duration: isHotLead ? 8000 : 5000, id: toastId }
     )
 
     // Browser notification for the events that warrant "ping me even when

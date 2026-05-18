@@ -11,7 +11,8 @@ import toast from 'react-hot-toast'
  * human-readable name for a row id (used in the toast/notification copy).
  *
  * The hook fires:
- *   - in-app toast (bottom-right)
+ *   - in-app toast (bottom-right) — dismissible × button, click to
+ *     navigate to /engagement
  *   - browser Notification API (only when permission is granted)
  *
  * Browser notifications fire even when the admin SPA tab is in the
@@ -19,11 +20,20 @@ import toast from 'react-hot-toast'
  * are still useful when the agent has the page open but is mid-typing
  * elsewhere.
  *
- * Suppression rules to avoid notification spam:
- *   - First snapshot after mount is treated as the baseline; nothing
- *     fires for rows that were already hot when we first loaded.
- *   - We rate-limit at 1 notification per visitor per 30s so a flapping
- *     row (online → offline → online) doesn't pummel the agent.
+ * Dedup strategy:
+ *   - Each toast uses id `hot-lead-${visitorId}` so react-hot-toast
+ *     REPLACES rather than stacks duplicates. Crucially this also
+ *     coordinates with useRealtimeEvents which fires its own toast
+ *     with the same id — server-pushed and client-detected events
+ *     for the same visitor collapse into a single visible toast.
+ *   - First snapshot after mount is the baseline; no alerts for rows
+ *     that were already hot when we loaded.
+ *   - sessionStorage tracks visitor ids we've ALREADY alerted on for
+ *     this browser session, so refreshing /engagement doesn't replay
+ *     a toast we already showed (until the session ends or 6 hours
+ *     pass, whichever comes first).
+ *   - Per-visitor rate limit of 30s on top of all of that as a final
+ *     safety net against rapid hot/cold flapping.
  */
 export interface HotLeadInfo {
   id: number
@@ -31,13 +41,47 @@ export interface HotLeadInfo {
   context?: string  // e.g. current page path, last message preview
 }
 
+const SESSION_KEY = 'hot-leads:shown'
+const SESSION_TTL_MS = 6 * 60 * 60 * 1000 // 6 hours
+
+/** Read the per-session set of visitor ids we've already alerted on. */
+function loadShown(): Map<number, number> {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return new Map()
+    const obj = JSON.parse(raw) as Record<string, number>
+    const now = Date.now()
+    const out = new Map<number, number>()
+    for (const [k, ts] of Object.entries(obj)) {
+      if (now - ts < SESSION_TTL_MS) out.set(Number(k), ts)
+    }
+    return out
+  } catch {
+    return new Map()
+  }
+}
+function saveShown(m: Map<number, number>) {
+  try {
+    const obj: Record<string, number> = {}
+    m.forEach((ts, id) => { obj[String(id)] = ts })
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(obj))
+  } catch {
+    // sessionStorage full or unavailable — never throw
+  }
+}
+
 export function useHotLeadAlert(hotIds: number[], lookup: (id: number) => HotLeadInfo | undefined): void {
   // Set of ids that were already hot last time we saw the feed. The
   // FIRST snapshot seeds this without firing alerts (so reloading the
   // page doesn't replay every hot lead currently in the org).
   const previousRef = useRef<Set<number> | null>(null)
-  // Per-visitor rate limit so a flapping row doesn't notify repeatedly.
-  const lastNotifiedAtRef = useRef<Map<number, number>>(new Map())
+  // Per-visitor rate limit so a flapping row doesn't notify repeatedly
+  // within a single session. Stored as Map<id, lastTs>.
+  const rateLimitRef = useRef<Map<number, number>>(new Map())
+  // sessionStorage-backed "already shown this session" set so a refresh
+  // within the same session doesn't replay alerts for visitors we've
+  // already pinged the user about.
+  const shownRef = useRef<Map<number, number>>(loadShown())
 
   useEffect(() => {
     const current = new Set(hotIds)
@@ -54,16 +98,31 @@ export function useHotLeadAlert(hotIds: number[], lookup: (id: number) => HotLea
     for (const id of current) {
       if (previousRef.current.has(id)) continue
 
-      const lastAt = lastNotifiedAtRef.current.get(id) ?? 0
+      // sessionStorage check — already alerted this session?
+      if (shownRef.current.has(id)) continue
+
+      const lastAt = rateLimitRef.current.get(id) ?? 0
       if (now - lastAt < RATE_LIMIT_MS) continue
-      lastNotifiedAtRef.current.set(id, now)
+      rateLimitRef.current.set(id, now)
 
       const info = lookup(id)
       if (!info) continue
 
-      // In-app toast — uses the project's react-hot-toast.
+      // Mark as shown in the session-persisted set.
+      shownRef.current.set(id, now)
+      saveShown(shownRef.current)
+
+      const toastId = `hot-lead-${id}`
+
+      // In-app toast — react-hot-toast dedupes by `id`, so if
+      // useRealtimeEvents already fired a toast for the same visitor,
+      // ours just replaces it rather than stacking a second copy.
       toast.custom((t) => (
         <div
+          onClick={() => {
+            try { window.location.assign('/engagement') } catch {}
+            toast.dismiss(t.id)
+          }}
           style={{
             background: 'linear-gradient(135deg, rgba(251,146,60,0.18), rgba(251,146,60,0.08))',
             border: '1px solid rgba(251,146,60,0.45)',
@@ -74,10 +133,12 @@ export function useHotLeadAlert(hotIds: number[], lookup: (id: number) => HotLea
             maxWidth: 380,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             display: 'flex',
+            alignItems: 'flex-start',
             gap: 10,
             fontSize: 13,
             opacity: t.visible ? 1 : 0,
             transition: 'opacity 200ms ease',
+            cursor: 'pointer',
           }}
         >
           <span style={{ fontSize: 18, lineHeight: 1 }}>🔥</span>
@@ -87,22 +148,57 @@ export function useHotLeadAlert(hotIds: number[], lookup: (id: number) => HotLea
             {info.context && (
               <div style={{ color: '#a0a0a8', marginTop: 2, fontSize: 11 }}>{info.context}</div>
             )}
+            <div style={{ color: '#fbbf24', fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+              Click to view →
+            </div>
           </div>
+          {/* Dismiss button — was missing before. Hovers brighter so
+              the × is actually findable on dark backgrounds. */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              toast.dismiss(t.id)
+            }}
+            aria-label="Dismiss"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: '#e5e5e7',
+              cursor: 'pointer',
+              fontSize: 16,
+              lineHeight: 1,
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'background 150ms',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+          >×</button>
         </div>
-      ), { duration: 6000 })
+      ), { duration: 6000, id: toastId })
 
       // Browser notification — only fires when the user has explicitly
-      // granted permission. Safe to call even when permission is "denied"
-      // (the call no-ops and never throws).
+      // granted permission. Tag collapses repeated alerts for the same
+      // visitor at the OS level. Safe to call even when permission is
+      // "denied" (the call no-ops and never throws).
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
         try {
           const n = new Notification('Hot lead arrived', {
             body: `${info.name}${info.context ? ' — ' + info.context : ''}`,
-            tag: `hot-lead-${id}`, // collapses repeated alerts for the same visitor
+            tag: toastId,
             silent: false,
             requireInteraction: false,
           })
-          // Auto-close after 8s so a long stack of alerts doesn't pile up.
+          n.onclick = () => {
+            try { window.focus(); window.location.assign('/engagement') } catch {}
+            n.close()
+          }
           setTimeout(() => { try { n.close() } catch {} }, 8_000)
         } catch {
           // Some browsers throw when called without a service worker on
