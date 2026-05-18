@@ -106,19 +106,24 @@
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
     #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
     #htchat-panel.hidden { opacity: 0; transform: translateY(20px) scale(0.95); pointer-events: none; }\
-    #htchat-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 52px; }\
-    #htchat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }\
-    #htchat-header-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.35); }\
+    #htchat-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 64px; box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 4px 12px -6px rgba(0,0,0,0.2); position: relative; z-index: 2; }\
+    #htchat-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }\
+    /* Avatar: 40px circle with subtle gradient + border so the fallback (initial / sparkles) stays prominent on every color background. Image overlays the gradient when present. */\
+    #htchat-header-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0.08)); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.55); box-shadow: 0 2px 6px rgba(0,0,0,0.18); font-weight: 700; font-size: 16px; color: #ffffff; letter-spacing: -0.02em; }\
     #htchat-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }\
-    #htchat-header-avatar svg { width: 16px; height: 16px; fill: white; }\
+    #htchat-header-avatar svg { width: 20px; height: 20px; fill: #ffffff; opacity: 0.95; }\
+    /* Small online-status pip on the avatar (only renders when subtitle is configured + status=online). */\
+    #htchat-header-avatar-wrap { position: relative; flex-shrink: 0; }\
+    #htchat-header-avatar-pip { position: absolute; bottom: 0; right: 0; width: 11px; height: 11px; border-radius: 50%; background: #10b981; border: 2px solid #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }\
     #htchat-header-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }\
-    #htchat-header-info h3 { font-size: 14px; font-weight: 500; line-height: 1.25; letter-spacing: -0.005em; opacity: 0.95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
-    #htchat-header-info p { font-size: 10.5px; opacity: 0.75; line-height: 1.2; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
-    #htchat-header-actions { display: flex; gap: 10px; align-items: center; margin-left: 8px; flex-shrink: 0; }\
-    #htchat-header-actions button { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }\
-    #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); }\
-    #htchat-header-actions button.active { background: rgba(255,255,255,0.3); }\
-    #htchat-header-actions button svg { width: 14px; height: 14px; fill: currentColor; }\
+    #htchat-header-info h3 { font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.12); }\
+    #htchat-header-info p { font-size: 11.5px; font-weight: 400; opacity: 0.88; line-height: 1.25; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.12); }\
+    #htchat-header-actions { display: flex; gap: 8px; align-items: center; margin-left: 10px; flex-shrink: 0; }\
+    #htchat-header-actions button { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.12); color: white; width: 32px; height: 32px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.15s, border-color 0.2s; }\
+    #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.22); }\
+    #htchat-header-actions button:active { transform: scale(0.94); }\
+    #htchat-header-actions button.active { background: rgba(255,255,255,0.32); }\
+    #htchat-header-actions button svg { width: 15px; height: 15px; fill: currentColor; }\
     #htchat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; background: #f9fafb; }\
     .htchat-msg { margin-bottom: 12px; display: flex; gap: 8px; }\
     .htchat-msg.user { justify-content: flex-end; }\
@@ -526,6 +531,7 @@
     if (inputArea && c.chat_bg_color) inputArea.style.background = c.chat_bg_color;
     // Apply configurable copy
     var headerInfo = document.getElementById('htchat-header-info');
+    var statusVal = (c.agent_status || 'online'); // shared with avatar pip below
     if (headerInfo) {
       var ht = c.header_title || c.company_name || 'AI Assistant';
       // Only show subtitle if the admin explicitly configured one. Avoids the
@@ -534,26 +540,57 @@
       var hs = (c.header_subtitle || '').trim();
       var html = '<h3>' + escapeHtml(ht) + '</h3>';
       if (hs) {
-        var statusVal = (c.agent_status || 'online');
         var statusColor = statusVal === 'online' ? '#10b981' : statusVal === 'away' ? '#f59e0b' : '#9ca3af';
-        html += '<p><span class="htchat-status-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor + ';margin-right:5px;vertical-align:middle"></span>' +
+        html += '<p><span class="htchat-status-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor + ';flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,0.18)"></span>' +
           escapeHtml(hs) + '</p>';
       }
       headerInfo.innerHTML = html;
     }
-    // Configurable assistant avatar in header
+    // Configurable assistant avatar in header. Fallback chain:
+    //   1. configured assistant_avatar image
+    //   2. on load error → company name initial (so "Forrest Glamp" gets a
+    //      bold "F" instead of a generic sparkles icon barely visible against
+    //      the header color)
+    //   3. configured but no name available → sparkles SVG
     var headerAvatar = document.getElementById('htchat-header-avatar');
+    var titleForInitial = ((c.header_title || c.company_name || '') + '').trim();
+    var initialChar = titleForInitial ? titleForInitial.charAt(0).toUpperCase() : '';
+    var initialFallback = initialChar
+      ? '<span style="font-weight:700;font-size:17px;color:#ffffff;line-height:1;letter-spacing:-0.02em">' + escapeHtml(initialChar) + '</span>'
+      : ICONS.sparkles;
     if (headerAvatar) {
       if (c.assistant_avatar) {
         var avatarImg = document.createElement('img');
         avatarImg.src = c.assistant_avatar;
         avatarImg.alt = '';
-        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:10px;object-fit:cover';
-        avatarImg.onerror = function () { headerAvatar.innerHTML = ICONS.sparkles; };
+        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover';
+        avatarImg.onerror = function () { headerAvatar.innerHTML = initialFallback; };
         headerAvatar.innerHTML = '';
         headerAvatar.appendChild(avatarImg);
       } else {
-        headerAvatar.innerHTML = ICONS.sparkles;
+        headerAvatar.innerHTML = initialFallback;
+      }
+    }
+    // Avatar-corner online status pip — only renders alongside a subtitle so
+    // the chat header doesn't look broken on a widget with no live agent.
+    var avatarWrap = document.getElementById('htchat-header-avatar-wrap');
+    if (avatarWrap) {
+      var existingPip = document.getElementById('htchat-header-avatar-pip');
+      var hasSubtitle = ((c.header_subtitle || '').trim() !== '');
+      if (hasSubtitle) {
+        if (!existingPip) {
+          var pip = document.createElement('div');
+          pip.id = 'htchat-header-avatar-pip';
+          avatarWrap.appendChild(pip);
+        }
+        var pipEl = document.getElementById('htchat-header-avatar-pip');
+        if (pipEl) {
+          pipEl.style.background = statusVal === 'online' ? '#10b981'
+            : statusVal === 'away' ? '#f59e0b'
+            : '#9ca3af';
+        }
+      } else if (existingPip) {
+        existingPip.remove();
       }
     }
     var inputEl2 = document.getElementById('htchat-input');
@@ -615,7 +652,9 @@
     panel.innerHTML = '\
       <div id="htchat-header">\
         <div id="htchat-header-left">\
-          <div id="htchat-header-avatar">' + ICONS.sparkles + '</div>\
+          <div id="htchat-header-avatar-wrap">\
+            <div id="htchat-header-avatar">' + ICONS.sparkles + '</div>\
+          </div>\
           <div id="htchat-header-info"><h3>AI Assistant</h3></div>\
         </div>\
         <div id="htchat-header-actions">\
@@ -763,13 +802,35 @@
       if (h3) h3.textContent = widgetConfig.company_name || widgetConfig.assistant_name || 'Assistant';
       if (sub) sub.textContent = (widgetConfig.agent_status === 'online') ? 'Online' : (widgetConfig.header_subtitle || '');
     }
-    // Avatar swap (only if the agent has a real avatar URL).
+    // Avatar swap. Falls back to the company-name initial when neither the
+    // active agent nor the assistant has a usable image. border-radius is
+    // 50% so the image fills the new circular avatar; the old 10px corner
+    // bled rectangles when an image was set.
     var avatarBox = document.getElementById('htchat-header-avatar');
     if (avatarBox) {
-      if (activeAgent && activeAgent.avatar) {
-        avatarBox.innerHTML = '<img src="' + activeAgent.avatar + '" alt="" style="width:100%;height:100%;border-radius:10px;object-fit:cover" />';
-      } else if (widgetConfig && widgetConfig.assistant_avatar) {
-        avatarBox.innerHTML = '<img src="' + widgetConfig.assistant_avatar + '" alt="" style="width:100%;height:100%;border-radius:10px;object-fit:cover" />';
+      var titleForInit = ((widgetConfig && (widgetConfig.header_title || widgetConfig.company_name)) || '').trim();
+      var initChar = titleForInit ? titleForInit.charAt(0).toUpperCase() : '';
+      var fallbackHtml = initChar
+        ? '<span style="font-weight:700;font-size:17px;color:#ffffff;line-height:1;letter-spacing:-0.02em">' + escapeHtml(initChar) + '</span>'
+        : ICONS.sparkles;
+
+      var src = (activeAgent && activeAgent.avatar)
+        || (widgetConfig && widgetConfig.assistant_avatar)
+        || null;
+
+      if (src) {
+        var img = document.createElement('img');
+        img.src = src;
+        img.alt = '';
+        img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover';
+        // Programmatic onerror avoids the brittle JSON-double-escape pattern
+        // we used to need for inline onerror. If the image fails to load,
+        // swap in the branded initial / sparkles fallback.
+        img.onerror = function () { avatarBox.innerHTML = fallbackHtml; };
+        avatarBox.innerHTML = '';
+        avatarBox.appendChild(img);
+      } else {
+        avatarBox.innerHTML = fallbackHtml;
       }
     }
   }
