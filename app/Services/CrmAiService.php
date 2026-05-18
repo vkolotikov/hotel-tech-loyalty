@@ -174,6 +174,65 @@ class CrmAiService
         return ['success' => false, 'error' => 'Could not extract member information from the text.'];
     }
 
+    /**
+     * Pull a CRM guest (customer) out of unstructured text — email
+     * signature, scraped contact card, manual paste from a business
+     * card photo, etc. Mirrors extractMember but with Guest-table
+     * fields (company, position_title, location, VIP/importance).
+     *
+     * Defensive on AI failure: returns `success=false` so the caller
+     * can prompt the staff to fall back to manual entry rather than
+     * shipping nulls into the database.
+     */
+    public function extractGuest(string $text): array
+    {
+        if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
+
+        $system = "You extract CRM customer (guest) information from raw unstructured text — email "
+            . "signatures, business cards, scraped contact pages, WhatsApp messages, phone notes, etc. "
+            . "This is for a hospitality CRM. Focus on people the hotel does (or might do) business with. "
+            . "Distinguish individual leisure travellers ('Individual') from B2B / corporate contacts "
+            . "('Corporate'). When in doubt about VIP / importance, leave them blank — never invent. "
+            . "Phone numbers should be normalised to international format with the country code when "
+            . "the surrounding context implies one.";
+
+        $tools = [[
+            'name' => 'save_extracted_guest',
+            'description' => 'Save the extracted guest profile.',
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'full_name'       => ['type' => 'string', 'description' => 'Full name of the person'],
+                    'first_name'      => ['type' => 'string', 'description' => 'First name if separable'],
+                    'last_name'       => ['type' => 'string', 'description' => 'Last name / surname if separable'],
+                    'email'           => ['type' => 'string', 'description' => 'Email address'],
+                    'phone'           => ['type' => 'string', 'description' => 'Phone or mobile number'],
+                    'company'         => ['type' => 'string', 'description' => 'Company / organization name (B2B contacts)'],
+                    'position_title'  => ['type' => 'string', 'description' => 'Job title / role (e.g. Director, Manager)'],
+                    'guest_type'      => ['type' => 'string', 'description' => 'Individual or Corporate', 'enum' => ['Individual', 'Corporate']],
+                    'nationality'     => ['type' => 'string', 'description' => 'Nationality if mentioned'],
+                    'country'         => ['type' => 'string', 'description' => 'Country of residence'],
+                    'city'            => ['type' => 'string', 'description' => 'City'],
+                    'vip_level'       => ['type' => 'string', 'description' => 'VIP level only if explicitly mentioned', 'enum' => ['Standard', 'VIP', 'VVIP', 'Platinum']],
+                    'importance'      => ['type' => 'string', 'description' => 'Importance only if explicitly mentioned', 'enum' => ['Normal', 'High', 'Critical']],
+                    'notes'           => ['type' => 'string', 'description' => 'Any additional context that doesn\'t fit other fields (special requests, preferences, the source of the data, etc.)'],
+                ],
+                'required' => ['full_name'],
+            ],
+        ]];
+
+        $messages = [['role' => 'user', 'content' => "Extract a CRM customer profile from this text:\n\n" . $text]];
+        $res = $this->call($system, $messages, $tools, ['type' => 'tool', 'name' => 'save_extracted_guest']);
+
+        foreach ($res['content'] ?? [] as $block) {
+            if (($block['type'] ?? '') === 'tool_use' && $block['name'] === 'save_extracted_guest') {
+                return ['success' => true, 'data' => $block['input']];
+            }
+        }
+
+        return ['success' => false, 'error' => 'Could not extract a guest profile from the text.'];
+    }
+
     public function extractCorporate(string $text): array
     {
         if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];

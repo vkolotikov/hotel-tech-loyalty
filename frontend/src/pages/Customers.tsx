@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
-  Search, Plus, X, Users, UserCheck, Briefcase, Crown, Loader2,
+  Search, X, Users, UserCheck, Briefcase, Crown, Loader2,
   ChevronRight, Filter, Star, Edit3, Trash2, Download, CheckSquare, Square,
-  Tag as TagIcon, Save, GitMerge,
+  Tag as TagIcon, Save, GitMerge, Sparkles,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, API_URL } from '../lib/api'
 import { ContactActions } from '../components/ContactActions'
+import { NewCustomerDrawer } from '../components/NewCustomerDrawer'
 import { format } from 'date-fns'
 
 /**
@@ -155,6 +156,7 @@ export function Customers() {
 
   /* ─── Inline edit drawer state ────────────────────────────────────── */
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+  const [creatingNew, setCreatingNew] = useState(false)
 
   /* ─── Mutations ───────────────────────────────────────────────────── */
   const updateMutation = useMutation({
@@ -236,10 +238,12 @@ export function Customers() {
             </Link>
           )}
           <button
-            onClick={() => navigate('/guests/new')}
+            onClick={() => setCreatingNew(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm transition-colors"
+            title="Add a customer — manually or with AI capture from pasted text"
           >
-            <Plus size={14} /> New customer
+            <Sparkles size={13} className="opacity-70" />
+            <span>New customer</span>
           </button>
         </div>
       </div>
@@ -402,6 +406,16 @@ export function Customers() {
           onClose={() => setEditingGuest(null)}
           onSave={(patch) => updateMutation.mutate({ id: editingGuest.id, patch })}
           saving={updateMutation.isPending}
+        />
+      )}
+
+      {/* New customer drawer — AI capture + manual entry. Replaces the
+          previous /guests/new navigation that 500'd because no such route
+          existed and GuestDetail's :id binding tried to load id="new". */}
+      {creatingNew && (
+        <NewCustomerDrawer
+          onClose={() => setCreatingNew(false)}
+          onCreated={(id) => { setCreatingNew(false); navigate(`/guests/${id}`) }}
         />
       )}
 

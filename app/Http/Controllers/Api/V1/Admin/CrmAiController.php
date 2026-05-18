@@ -119,6 +119,28 @@ class CrmAiController extends Controller
     }
 
     /**
+     * POST /v1/admin/crm-ai/capture-guest
+     *
+     * Pulls a CRM guest profile out of pasted text — email signature,
+     * business card, scraped page, etc. Used by the New Customer drawer
+     * on /customers so staff can capture-and-create in one step.
+     */
+    public function captureGuest(Request $request): JsonResponse
+    {
+        $request->validate([
+            'text' => 'required|string|max:10000',
+        ]);
+
+        try {
+            $result = (new CrmAiService())->extractGuest($request->input('text'));
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            Log::error('CRM AI capture-guest failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * POST /api/v1/admin/crm-ai/realtime-session
      * Creates an ephemeral OpenAI Realtime API session for voice-to-voice in admin AI chat.
      */

@@ -891,6 +891,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
             Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
+            Route::post('crm-ai/capture-guest',           [CrmAiController::class, 'captureGuest']);
 
             // ─── Documentation ───────────────────────────────────────────────
             Route::get('documentation',                   [\App\Http\Controllers\Api\V1\Admin\DocumentationController::class, 'index']);
