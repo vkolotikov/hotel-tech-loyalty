@@ -139,4 +139,9 @@ class Inquiry extends Model
     {
         return $this->hasMany(Reservation::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(InquiryAttachment::class)->orderByDesc('created_at');
+    }
 }

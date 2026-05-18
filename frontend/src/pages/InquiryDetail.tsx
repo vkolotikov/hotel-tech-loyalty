@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
+import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
+import { SendTemplateModal } from '../components/SendTemplateModal'
 import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 
 /**
@@ -61,7 +63,7 @@ interface InquiryDetail {
   ai_going_cold_risk: string | null
   ai_suggested_action: string | null
   custom_data: Record<string, any> | null
-  guest?: { id: number; full_name: string; email: string | null; phone: string | null; company: string | null }
+  guest?: { id: number; full_name: string; email: string | null; phone: string | null; company: string | null; member_id: number | null }
   property?: { id: number; name: string }
   corporate_account?: { id: number; name: string }
   pipeline?: { id: number; name: string; stages?: Stage[] }
@@ -200,6 +202,7 @@ export function InquiryDetail() {
   const [pendingWon, setPendingWon] = useState<Stage | null>(null)
   const [pendingLost, setPendingLost] = useState<Stage | null>(null)
   const [draftingProposal, setDraftingProposal] = useState(false)
+  const [sendingTemplate, setSendingTemplate] = useState(false)
   // Pre-populate the activity composer when "Use as email draft" is clicked
   // on the proposal modal. Cleared on next open.
   const [composerSeed, setComposerSeed] = useState<{ type: string; subject?: string; body: string } | null>(null)
@@ -235,6 +238,7 @@ export function InquiryDetail() {
         onBack={() => navigate(-1)}
         onPickStage={handleStagePick}
         onDraftProposal={() => setDraftingProposal(true)}
+        onSendTemplate={() => setSendingTemplate(true)}
         changing={changeStage.isPending}
       />
 
@@ -270,6 +274,14 @@ export function InquiryDetail() {
           onSuccess={() => { setPendingLost(null) }}
         />
       )}
+      {sendingTemplate && (
+        <SendTemplateModal
+          defaultTo={inq.guest?.email ?? null}
+          memberId={inq.guest?.member_id ?? null}
+          context={`To ${inq.guest?.full_name ?? 'customer'} — inquiry #${inq.id}`}
+          onClose={() => setSendingTemplate(false)}
+        />
+      )}
       {draftingProposal && (
         <ProposalModal
           inq={inq}
@@ -287,12 +299,13 @@ export function InquiryDetail() {
 
 /* ── Header ──────────────────────────────────────────────────── */
 
-function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }: {
+function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTemplate, changing }: {
   inq: InquiryDetail
   stages: Stage[]
   onBack: () => void
   onPickStage: (stage: Stage) => void
   onDraftProposal: () => void
+  onSendTemplate: () => void
   changing: boolean
 }) {
   const { t } = useTranslation()
@@ -349,6 +362,14 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, changing }:
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={onSendTemplate}
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/15 hover:text-blue-200 text-xs font-bold"
+            title={t('inquiryDetail.send_template_tooltip', 'Send an email template to this customer')}
+          >
+            <Mail size={13} />
+            {t('inquiryDetail.send_email', 'Send email')}
+          </button>
           <button
             onClick={onDraftProposal}
             className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/15 hover:text-purple-200 text-xs font-bold"
@@ -870,6 +891,8 @@ function SmartPanelCol({ inq, tasks, onCompleteTask }: {
           </div>
         )}
       </div>
+
+      <InquiryAttachmentsPanel inquiryId={inq.id} />
 
       {adding && (
         <TaskDrawer

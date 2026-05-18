@@ -7,6 +7,7 @@ import { SendReviewButton } from '../components/SendReviewButton'
 import { ContactActions } from '../components/ContactActions'
 import { ActivityTimeline } from '../components/ActivityTimeline'
 import { JourneyTimeline } from '../components/JourneyTimeline'
+import { SendTemplateModal } from '../components/SendTemplateModal'
 import { TierBadge } from '../components/ui/TierBadge'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import toast from 'react-hot-toast'
@@ -58,6 +59,7 @@ export function MemberDetail() {
 
   // Header kebab menu (Edit / Resend welcome / Toggle / Delete).
   const [kebabOpen, setKebabOpen] = useState(false)
+  const [sendingTemplate, setSendingTemplate] = useState(false)
   const kebabRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!kebabOpen) return
@@ -573,6 +575,7 @@ export function MemberDetail() {
 
       {activeTab === 'crm' && linkedGuest && (
         <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
+          {/* Header with status pills + quick-send action */}
           <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2 flex-wrap">
             <Crown size={16} className="text-primary-400" />
             <h2 className="font-semibold text-white">Linked CRM Guest</h2>
@@ -591,8 +594,21 @@ export function MemberDetail() {
                 {linkedGuest.lead_source}
               </span>
             )}
+            <div className="ml-auto">
+              {linkedGuest.email && (
+                <button
+                  onClick={() => setSendingTemplate(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/15 text-xs font-semibold"
+                  title="Send an email template to this customer"
+                >
+                  <Mail size={12} /> Send email
+                </button>
+              )}
+            </div>
           </div>
-          <div className="p-6 space-y-4">
+
+          {/* Stat row spans full width */}
+          <div className="px-6 pt-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Total Stays',  value: linkedGuest.total_stays ?? 0, color: 'text-blue-400' },
@@ -606,130 +622,158 @@ export function MemberDetail() {
                 </div>
               ))}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs pt-2 border-t border-dark-border">
-              {linkedGuest.company && (
-                <div className="flex justify-between"><span className="text-t-secondary">Company</span><span className="text-white">{linkedGuest.company}{linkedGuest.position_title ? ` · ${linkedGuest.position_title}` : ''}</span></div>
-              )}
-              {linkedGuest.guest_type && (
-                <div className="flex justify-between"><span className="text-t-secondary">Guest type</span><span className="text-white">{linkedGuest.guest_type}</span></div>
-              )}
-              {linkedGuest.owner_name && (
-                <div className="flex justify-between"><span className="text-t-secondary">Owner</span><span className="text-white">{linkedGuest.owner_name}</span></div>
-              )}
-              {linkedGuest.importance && (
-                <div className="flex justify-between"><span className="text-t-secondary">Importance</span><span className="text-white">{linkedGuest.importance}</span></div>
-              )}
-              {(linkedGuest.country || linkedGuest.city) && (
-                <div className="flex justify-between"><span className="text-t-secondary flex items-center gap-1"><MapPin size={11}/>Location</span><span className="text-white">{[linkedGuest.city, linkedGuest.country].filter(Boolean).join(', ')}</span></div>
-              )}
-              {linkedGuest.address && (
-                <div className="flex justify-between"><span className="text-t-secondary">Address</span><span className="text-white truncate ml-2">{linkedGuest.address}</span></div>
-              )}
-              {linkedGuest.preferred_room_type && (
-                <div className="flex justify-between"><span className="text-t-secondary">Pref. room</span><span className="text-white">{linkedGuest.preferred_room_type}</span></div>
-              )}
-              {linkedGuest.preferred_floor && (
-                <div className="flex justify-between"><span className="text-t-secondary">Pref. floor</span><span className="text-white">{linkedGuest.preferred_floor}</span></div>
-              )}
-              {linkedGuest.preferred_language && (
-                <div className="flex justify-between"><span className="text-t-secondary">Pref. language</span><span className="text-white">{linkedGuest.preferred_language}</span></div>
-              )}
-              {linkedGuest.dietary_preferences && (
-                <div className="flex justify-between"><span className="text-t-secondary">Dietary</span><span className="text-white truncate ml-2">{linkedGuest.dietary_preferences}</span></div>
-              )}
-              {linkedGuest.last_activity_at && (
-                <div className="flex justify-between"><span className="text-t-secondary">Last activity</span><span className="text-white">{new Date(linkedGuest.last_activity_at).toLocaleDateString()}</span></div>
-              )}
-              {linkedGuest.first_stay_date && (
-                <div className="flex justify-between"><span className="text-t-secondary">First stay</span><span className="text-white">{new Date(linkedGuest.first_stay_date).toLocaleDateString()}</span></div>
-              )}
-            </div>
-
-            {(linkedGuest.tags?.length ?? 0) > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Tag size={12} className="text-[#636366]" />
-                {linkedGuest.tags.map((t: any) => (
-                  <span key={t.id} className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary-500/15 text-primary-300">{t.name}</span>
-                ))}
-              </div>
-            )}
-
-            {linkedGuest.notes && (
-              <div className="bg-dark-surface2 rounded-lg px-3 py-2">
-                <p className="text-[11px] font-medium text-[#636366] mb-1 flex items-center gap-1"><StickyNote size={11}/> Notes</p>
-                <p className="text-xs text-[#a0a0a0] whitespace-pre-wrap">{linkedGuest.notes}</p>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
-                <Activity size={13} /> Activity Log
-              </h3>
-              <ActivityTimeline guestId={linkedGuest.id} initialActivities={linkedGuest.activities} />
-            </div>
-
-            {(linkedGuest.reservations?.length ?? 0) > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
-                  <Hotel size={13} /> Reservations
-                </h3>
-                <div className="space-y-1.5">
-                  {linkedGuest.reservations.slice(0, 5).map((r: any) => (
-                    <Link
-                      key={r.id}
-                      to={`/bookings/${r.id}`}
-                      className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
-                    >
-                      <div>
-                        <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
-                        <span className="text-[#636366] ml-2">{r.room_type}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[#a0a0a0]">{r.check_in} → {r.check_out}</span>
-                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          r.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                          r.status === 'checked_in' ? 'bg-blue-500/20 text-blue-400' :
-                          r.status === 'checked_out' ? 'bg-gray-500/20 text-gray-400' :
-                          'bg-yellow-500/20 text-yellow-400'
-                        }`}>{r.status}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {(linkedGuest.inquiries?.length ?? 0) > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-[#a0a0a0] mb-2 flex items-center gap-1.5">
-                  <FileText size={13} /> Inquiries
-                </h3>
-                <div className="space-y-1.5">
-                  {linkedGuest.inquiries.slice(0, 5).map((inq: any) => (
-                    <Link
-                      key={inq.id}
-                      to={`/inquiries/${inq.id}`}
-                      className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {inq.estimated_value && <span className="text-[#32d74b]">${Number(inq.estimated_value).toLocaleString()}</span>}
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          inq.status === 'won' ? 'bg-green-500/20 text-green-400' :
-                          inq.status === 'lost' ? 'bg-red-500/20 text-red-400' :
-                          inq.status === 'proposal' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>{inq.status}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Two-column body: profile fields on the left, activity + history on
+              the right. Stacks single-column on mobile. Each column has its
+              own consistent vertical rhythm so nothing reads as ad-hoc. */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 p-6 pt-5">
+            {/* Left: profile, tags, notes — the "who is this" column */}
+            <div className="lg:col-span-2 space-y-4">
+              <div>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2">Profile</h3>
+                <div className="grid grid-cols-1 gap-y-2 text-xs">
+                  {linkedGuest.company && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Company</span><span className="text-white text-right truncate">{linkedGuest.company}{linkedGuest.position_title ? ` · ${linkedGuest.position_title}` : ''}</span></div>
+                  )}
+                  {linkedGuest.guest_type && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Guest type</span><span className="text-white">{linkedGuest.guest_type}</span></div>
+                  )}
+                  {linkedGuest.owner_name && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Owner</span><span className="text-white">{linkedGuest.owner_name}</span></div>
+                  )}
+                  {linkedGuest.importance && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Importance</span><span className="text-white">{linkedGuest.importance}</span></div>
+                  )}
+                  {(linkedGuest.country || linkedGuest.city) && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary flex items-center gap-1"><MapPin size={11}/>Location</span><span className="text-white text-right truncate">{[linkedGuest.city, linkedGuest.country].filter(Boolean).join(', ')}</span></div>
+                  )}
+                  {linkedGuest.address && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Address</span><span className="text-white text-right truncate">{linkedGuest.address}</span></div>
+                  )}
+                  {linkedGuest.preferred_room_type && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. room</span><span className="text-white">{linkedGuest.preferred_room_type}</span></div>
+                  )}
+                  {linkedGuest.preferred_floor && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. floor</span><span className="text-white">{linkedGuest.preferred_floor}</span></div>
+                  )}
+                  {linkedGuest.preferred_language && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. language</span><span className="text-white">{linkedGuest.preferred_language}</span></div>
+                  )}
+                  {linkedGuest.dietary_preferences && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Dietary</span><span className="text-white text-right truncate">{linkedGuest.dietary_preferences}</span></div>
+                  )}
+                  {linkedGuest.last_activity_at && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">Last activity</span><span className="text-white">{new Date(linkedGuest.last_activity_at).toLocaleDateString()}</span></div>
+                  )}
+                  {linkedGuest.first_stay_date && (
+                    <div className="flex justify-between gap-3"><span className="text-t-secondary">First stay</span><span className="text-white">{new Date(linkedGuest.first_stay_date).toLocaleDateString()}</span></div>
+                  )}
+                </div>
+              </div>
+
+              {(linkedGuest.tags?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5"><Tag size={11} /> Tags</h3>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {linkedGuest.tags.map((t: any) => (
+                      <span key={t.id} className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary-500/15 text-primary-300">{t.name}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {linkedGuest.notes && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5"><StickyNote size={11} /> Notes</h3>
+                  <div className="bg-dark-surface2 rounded-lg px-3 py-2">
+                    <p className="text-xs text-[#a0a0a0] whitespace-pre-wrap">{linkedGuest.notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: activity timeline + reservations + inquiries — the
+                "what happened" column. Heavier visual weight (3/5 grid). */}
+            <div className="lg:col-span-3 space-y-4">
+              <div>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
+                  <Activity size={11} /> Activity Log
+                </h3>
+                <ActivityTimeline guestId={linkedGuest.id} initialActivities={linkedGuest.activities} />
+              </div>
+
+              {(linkedGuest.reservations?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
+                    <Hotel size={11} /> Recent Reservations
+                  </h3>
+                  <div className="space-y-1.5">
+                    {linkedGuest.reservations.slice(0, 5).map((r: any) => (
+                      <Link
+                        key={r.id}
+                        to={`/bookings/${r.id}`}
+                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                      >
+                        <div>
+                          <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
+                          <span className="text-[#636366] ml-2">{r.room_type}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[#a0a0a0]">{r.check_in} → {r.check_out}</span>
+                          <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            r.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
+                            r.status === 'checked_in' ? 'bg-blue-500/20 text-blue-400' :
+                            r.status === 'checked_out' ? 'bg-gray-500/20 text-gray-400' :
+                            'bg-yellow-500/20 text-yellow-400'
+                          }`}>{r.status}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(linkedGuest.inquiries?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
+                    <FileText size={11} /> Recent Inquiries
+                  </h3>
+                  <div className="space-y-1.5">
+                    {linkedGuest.inquiries.slice(0, 5).map((inq: any) => (
+                      <Link
+                        key={inq.id}
+                        to={`/inquiries/${inq.id}`}
+                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {inq.estimated_value && <span className="text-[#32d74b]">${Number(inq.estimated_value).toLocaleString()}</span>}
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            inq.status === 'won' ? 'bg-green-500/20 text-green-400' :
+                            inq.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                            inq.status === 'proposal' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>{inq.status}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {sendingTemplate && (
+            <SendTemplateModal
+              defaultTo={linkedGuest.email ?? null}
+              memberId={member?.id ?? null}
+              context={`To ${linkedGuest.full_name ?? linkedGuest.email}`}
+              onClose={() => setSendingTemplate(false)}
+            />
+          )}
         </div>
       )}
 

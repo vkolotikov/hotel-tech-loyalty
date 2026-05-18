@@ -16,6 +16,7 @@ import {
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { GlobalSearch } from './GlobalSearch'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
@@ -666,6 +667,9 @@ export function Layout({ children }: { children: ReactNode }) {
         hasProduct={hasProduct}
         onOpenDrawer={() => setMobileOpen(true)}
       />
+
+      {/* Cmd+K global search — mounted once, listens for the shortcut. */}
+      <GlobalSearch />
     </div>
   )
 }

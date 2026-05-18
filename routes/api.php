@@ -639,6 +639,17 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // CRM duplicate detection + merge — mirror of /v1/admin/members/{duplicates,merge}.
             Route::get('guests/duplicates',               [\App\Http\Controllers\Api\V1\Admin\GuestMergeController::class, 'suggestions']);
             Route::post('guests/merge',                   [\App\Http\Controllers\Api\V1\Admin\GuestMergeController::class, 'merge']);
+
+            // Inquiry attachments (proposals, BEOs, contracts, etc.)
+            Route::get('inquiries/{inquiry}/attachments',                [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'index']);
+            Route::post('inquiries/{inquiry}/attachments',               [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'store']);
+            Route::delete('inquiries/{inquiry}/attachments/{attachment}',[\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'destroy']);
+
+            // Unified global search (Cmd+K) — guests + inquiries + corporate + reservations
+            Route::get('search/global', [\App\Http\Controllers\Api\V1\Admin\GlobalSearchController::class, 'search']);
+
+            // Quick-send: dispatch an EmailTemplate to a single recipient
+            Route::post('email-templates/{template}/send', [\App\Http\Controllers\Api\V1\Admin\EmailTemplateController::class, 'sendOnce']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update']);
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);
