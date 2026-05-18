@@ -9,7 +9,6 @@ import {
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
   Crown, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
-  FilePlus2,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package, Star,
   UserCog, AlertTriangle, Scissors,
@@ -118,16 +117,15 @@ const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.crm_marketing', defaultLabel: 'CRM & Marketing',
     accent: '#f472b6', // pink
     items: [
-      { path: '/customers',     labelKey: 'nav.items.customers',       defaultLabel: 'Customers',         icon: Users,     gate: 'all', altPaths: ['/guests'] },
-      { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
-      { path: '/deals',         labelKey: 'nav.items.deals',           defaultLabel: 'Deals',             icon: Package,   gate: 'all' },
-      // Standalone /tasks page removed — tasks now live inside the
-      // Leads + Deals expanded rows. Route stays as a redirect to keep
-      // any external bookmarks from 404'ing.
+      // Contacts hub (Customers + Companies + Duplicates). Legacy paths
+      // /customers /guests /corporate /customers/duplicates all redirect
+      // into ?tab= on /contacts so existing bookmarks still highlight
+      // this nav entry as active.
+      { path: '/contacts',      labelKey: 'nav.items.contacts',        defaultLabel: 'Contacts',          icon: Users,     gate: 'all',   altPaths: ['/customers', '/guests', '/corporate'] },
+      // Pipeline hub (Leads & Inquiries + Deals + Lead forms).
+      { path: '/pipeline',      labelKey: 'nav.items.pipeline',        defaultLabel: 'Pipeline',          icon: FileText,  gate: 'all',   altPaths: ['/inquiries', '/deals', '/lead-forms'] },
       // Reports moved under /analytics → Leads tab. Sidebar entry removed
       // to keep all analytics surfaces in one place.
-      { path: '/lead-forms',    labelKey: 'nav.items.lead_forms',      defaultLabel: 'Lead forms',        icon: FilePlus2,  gate: 'admin' },
-      { path: '/corporate',     labelKey: 'nav.items.companies',       defaultLabel: 'Companies',         icon: Briefcase, gate: 'admin' },
       { path: '/notifications', labelKey: 'nav.items.campaigns',       defaultLabel: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
       { path: '/reviews',       labelKey: 'nav.items.reviews',         defaultLabel: 'Reviews',           icon: Star,      gate: 'admin' },
     ],

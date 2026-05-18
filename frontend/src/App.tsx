@@ -50,14 +50,12 @@ const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.S
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
-const Customers = lazy(() => import('./pages/Customers').then(m => ({ default: m.Customers })))
-const CustomerDuplicates = lazy(() => import('./pages/CustomerDuplicates').then(m => ({ default: m.CustomerDuplicates })))
-const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
-const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
-// Tasks page deprecated — see /tasks redirect below.
-// Reports component is now lazy-loaded inside Analytics.tsx (Leads tab).
-const LeadForms = lazy(() => import('./pages/LeadForms').then(m => ({ default: m.LeadForms })))
-const Corporate = lazy(() => import('./pages/Corporate').then(m => ({ default: m.Corporate })))
+// Customers, CustomerDuplicates, Inquiries, Deals, LeadForms, Corporate
+// are no longer top-level routes — they're now tabs inside ContactsHub /
+// PipelineHub which import them directly via lazy(). The hubs handle
+// the lazy-loading + Suspense boundary themselves.
+const ContactsHub = lazy(() => import('./pages/hubs/ContactsHub').then(m => ({ default: m.ContactsHub })))
+const PipelineHub = lazy(() => import('./pages/hubs/PipelineHub').then(m => ({ default: m.PipelineHub })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
 const Billing = lazy(() => import('./pages/Billing').then(m => ({ default: m.Billing })))
@@ -247,27 +245,35 @@ export default function App() {
           {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
-          {/* Customers (CRM contacts) — primary entry point; /guests is the
-              legacy alias kept alive for bookmarks. Both render Customers.
-              Detail /guests/:id stays — GuestDetail auto-redirects to
-              /members/{member_id} when a loyalty member is linked. */}
-          <Route path="/customers" element={<LazyRoute><Customers /></LazyRoute>} />
-          <Route path="/customers/duplicates" element={<LazyRoute gate="admin"><CustomerDuplicates /></LazyRoute>} />
-          <Route path="/guests" element={<LazyRoute><Customers /></LazyRoute>} />
-          <Route path="/guests/duplicates" element={<Navigate to="/customers/duplicates" replace />} />
+          {/* Contacts hub — Customers + Companies + Duplicates in one
+              tabbed page. The old standalone routes (/customers, /corporate,
+              /customers/duplicates) redirect into the hub with ?tab= so
+              bookmarks survive, while the actual list components stay
+              renderable inside the hub. Detail routes (/guests/:id,
+              /corporate/:id-ish) are unchanged — they're leaves, not
+              hub members. */}
+          <Route path="/contacts" element={<LazyRoute><ContactsHub /></LazyRoute>} />
+          <Route path="/customers" element={<Navigate to="/contacts?tab=customers" replace />} />
+          <Route path="/customers/duplicates" element={<Navigate to="/contacts?tab=duplicates" replace />} />
+          <Route path="/guests" element={<Navigate to="/contacts?tab=customers" replace />} />
+          <Route path="/guests/duplicates" element={<Navigate to="/contacts?tab=duplicates" replace />} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
-          <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
+          <Route path="/corporate" element={<Navigate to="/contacts?tab=companies" replace />} />
+
+          {/* Pipeline hub — Leads & Inquiries + Deals + Lead forms in one
+              tabbed page. Same redirect-into-hub pattern as Contacts. */}
+          <Route path="/pipeline" element={<LazyRoute><PipelineHub /></LazyRoute>} />
+          <Route path="/inquiries" element={<Navigate to="/pipeline?tab=inquiries" replace />} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
-          <Route path="/deals" element={<LazyRoute><Deals /></LazyRoute>} />
+          <Route path="/deals" element={<Navigate to="/pipeline?tab=deals" replace />} />
+          <Route path="/lead-forms" element={<Navigate to="/pipeline?tab=lead-forms" replace />} />
           {/* Tasks page removed — tasks live inside Leads + Deals now.
-              Redirect any stray external bookmark back to leads. */}
-          <Route path="/tasks" element={<Navigate to="/inquiries" replace />} />
+              Redirect any stray external bookmark back to the leads tab. */}
+          <Route path="/tasks" element={<Navigate to="/pipeline?tab=inquiries" replace />} />
           {/* Reports moved into /analytics. Redirect preserves existing
               bookmarks + the "Pipeline deep-dive" link patterns. */}
           <Route path="/reports" element={<Navigate to="/analytics?tab=leads" replace />} />
-          <Route path="/lead-forms" element={<LazyRoute><LeadForms /></LazyRoute>} />
           <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
-          <Route path="/corporate" element={<LazyRoute gate="admin"><Corporate /></LazyRoute>} />
           <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
           <Route path="/bookings" element={<LazyRoute product="booking"><Bookings /></LazyRoute>} />
