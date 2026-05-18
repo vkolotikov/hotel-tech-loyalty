@@ -51,6 +51,7 @@ const Properties = lazy(() => import('./pages/Properties').then(m => ({ default:
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
 const Customers = lazy(() => import('./pages/Customers').then(m => ({ default: m.Customers })))
+const CustomerDuplicates = lazy(() => import('./pages/CustomerDuplicates').then(m => ({ default: m.CustomerDuplicates })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
 // Tasks page deprecated — see /tasks redirect below.
@@ -251,7 +252,9 @@ export default function App() {
               Detail /guests/:id stays — GuestDetail auto-redirects to
               /members/{member_id} when a loyalty member is linked. */}
           <Route path="/customers" element={<LazyRoute><Customers /></LazyRoute>} />
+          <Route path="/customers/duplicates" element={<LazyRoute gate="admin"><CustomerDuplicates /></LazyRoute>} />
           <Route path="/guests" element={<LazyRoute><Customers /></LazyRoute>} />
+          <Route path="/guests/duplicates" element={<Navigate to="/customers/duplicates" replace />} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />

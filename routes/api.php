@@ -636,6 +636,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::delete('guests/tags/{tag}',            [GuestController::class, 'destroyTag']);
             Route::post('guests/bulk-update',             [GuestController::class, 'bulkUpdate']);
             Route::post('guests/bulk-delete',             [GuestController::class, 'bulkDelete']);
+            // CRM duplicate detection + merge — mirror of /v1/admin/members/{duplicates,merge}.
+            Route::get('guests/duplicates',               [\App\Http\Controllers\Api\V1\Admin\GuestMergeController::class, 'suggestions']);
+            Route::post('guests/merge',                   [\App\Http\Controllers\Api\V1\Admin\GuestMergeController::class, 'merge']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update']);
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);

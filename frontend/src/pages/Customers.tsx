@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   Search, Plus, X, Users, UserCheck, Briefcase, Crown, Loader2,
   ChevronRight, Filter, Star, Edit3, Trash2, Download, CheckSquare, Square,
-  Tag as TagIcon, Save,
+  Tag as TagIcon, Save, GitMerge,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, API_URL } from '../lib/api'
@@ -112,6 +112,16 @@ export function Customers() {
     placeholderData: prev => prev,
   })
 
+  // Light-touch query just to surface a "X potential duplicates" link in the
+  // header. Returns up to 50 pairs; we cap the badge display at 50+ so the
+  // banner stays compact. Stale-time 60s keeps the network noise low.
+  const { data: dupes } = useQuery<{ pairs: any[] }>({
+    queryKey: ['customer-duplicates-count'],
+    queryFn: () => api.get('/v1/admin/guests/duplicates', { params: { limit: 50 } }).then(r => r.data),
+    staleTime: 60_000,
+  })
+  const duplicateCount = dupes?.pairs?.length ?? 0
+
   const rows = data?.data ?? []
   const total = data?.total ?? 0
 
@@ -208,12 +218,30 @@ export function Customers() {
             Every guest, lead and corporate contact in one place
           </p>
         </div>
-        <button
-          onClick={() => navigate('/guests/new')}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm transition-colors"
-        >
-          <Plus size={14} /> New customer
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Duplicates badge — only shows when the backend suggests pairs.
+              Click → /customers/duplicates merge UI. Count caps at 50+
+              because that's the suggestion-fetch limit. */}
+          {duplicateCount > 0 && (
+            <Link
+              to="/customers/duplicates"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-300 font-medium text-sm transition-colors"
+              title="Review duplicate customers"
+            >
+              <GitMerge size={13} />
+              <span className="hidden sm:inline">Duplicates</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/25">
+                {duplicateCount}{dupes?.pairs?.length === 50 ? '+' : ''}
+              </span>
+            </Link>
+          )}
+          <button
+            onClick={() => navigate('/guests/new')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm transition-colors"
+          >
+            <Plus size={14} /> New customer
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
