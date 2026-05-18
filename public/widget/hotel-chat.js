@@ -116,8 +116,12 @@
     #htchat-header-avatar-wrap { position: relative; flex-shrink: 0; }\
     #htchat-header-avatar-pip { position: absolute; bottom: 0; right: 0; width: 11px; height: 11px; border-radius: 50%; background: #10b981; border: 2px solid #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }\
     #htchat-header-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }\
-    #htchat-header-info h3 { font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.12); }\
-    #htchat-header-info p { font-size: 11.5px; font-weight: 400; opacity: 0.88; line-height: 1.25; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.12); }\
+    /* Title — pure white at weight 700 with a stronger shadow so it stays\
+       readable against busy gradients (emerald template) and lighter primaries\
+       (sky / amber). Opacity removed; we control the brightness via shadow\
+       contrast instead. */\
+    #htchat-header-info h3 { font-size: 16px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 0 12px rgba(0,0,0,0.18); }\
+    #htchat-header-info p { font-size: 12px; font-weight: 500; opacity: 0.95; line-height: 1.25; margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.30); }\
     #htchat-header-actions { display: flex; gap: 8px; align-items: center; margin-left: 10px; flex-shrink: 0; }\
     #htchat-header-actions button { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.12); color: white; width: 32px; height: 32px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.15s, border-color 0.2s; }\
     #htchat-header-actions button:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.22); }\
