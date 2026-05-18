@@ -32,6 +32,39 @@ class GuestController extends Controller
         return response()->json($query->paginate($request->get('per_page', 25)));
     }
 
+    /**
+     * GET /v1/admin/guests/facets — distinct values for filter dropdowns.
+     *
+     * Returns the values that actually exist in this tenant's guest table
+     * for free-form fields (country, nationality, lead_source, owner_name,
+     * loyalty_tier). The UI uses these to populate type-ahead pickers in
+     * the More filters popover so admins aren't typing blind.
+     *
+     * Empty / null values are filtered out and results are alphabetically
+     * sorted. Capped at 200 distinct per facet to keep the response light.
+     */
+    public function facets(): JsonResponse
+    {
+        $extract = function (string $col) {
+            return Guest::query()
+                ->whereNotNull($col)
+                ->where($col, '!=', '')
+                ->distinct()
+                ->orderBy($col)
+                ->limit(200)
+                ->pluck($col)
+                ->all();
+        };
+
+        return response()->json([
+            'country'      => $extract('country'),
+            'nationality'  => $extract('nationality'),
+            'lead_source'  => $extract('lead_source'),
+            'owner_name'   => $extract('owner_name'),
+            'loyalty_tier' => $extract('loyalty_tier'),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $v = $request->validate([

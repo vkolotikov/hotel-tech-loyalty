@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   Search, X, Users, UserCheck, Briefcase, Crown, Loader2,
   ChevronRight, Filter, Star, Edit3, Trash2, Download, CheckSquare, Square,
-  Tag as TagIcon, Save, GitMerge, Sparkles,
+  Tag as TagIcon, Save, GitMerge, Sparkles, SlidersHorizontal, Calendar,
+  Globe, Mail, Phone as PhoneIcon, AtSign,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, API_URL } from '../lib/api'
@@ -77,13 +78,25 @@ export function Customers() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Filters live in URL so back / refresh / bookmark survive.
-  const q       = searchParams.get('q')       ?? ''
-  const vipOnly = searchParams.get('vip')     === '1'
-  const b2bOnly = searchParams.get('b2b')     === '1'
-  const company = searchParams.get('company') ?? ''
-  const sortIdx = parseInt(searchParams.get('sort') ?? '0', 10) || 0
-  const page    = parseInt(searchParams.get('page') ?? '1', 10) || 1
-  const sort    = SORTS[Math.min(sortIdx, SORTS.length - 1)]
+  const q                = searchParams.get('q')                ?? ''
+  const vipOnly          = searchParams.get('vip')              === '1'
+  const b2bOnly          = searchParams.get('b2b')              === '1'
+  const company          = searchParams.get('company')          ?? ''
+  const lifecycle        = searchParams.get('lifecycle')        ?? ''
+  const importance       = searchParams.get('importance')       ?? ''
+  const country          = searchParams.get('country')          ?? ''
+  const nationality      = searchParams.get('nationality')      ?? ''
+  const leadSource       = searchParams.get('lead_source')      ?? ''
+  const ownerName        = searchParams.get('owner_name')       ?? ''
+  const loyaltyTier      = searchParams.get('loyalty_tier')     ?? ''
+  const hasEmail         = searchParams.get('has_email')        === '1'
+  const hasPhone         = searchParams.get('has_phone')        === '1'
+  const minStays         = searchParams.get('min_stays')        ?? ''
+  const dateFrom         = searchParams.get('date_from')        ?? ''
+  const dateTo           = searchParams.get('date_to')          ?? ''
+  const sortIdx          = parseInt(searchParams.get('sort') ?? '0', 10) || 0
+  const page             = parseInt(searchParams.get('page') ?? '1', 10) || 1
+  const sort             = SORTS[Math.min(sortIdx, SORTS.length - 1)]
 
   const updateParam = (key: string, value: string | null) => {
     setSearchParams(prev => {
@@ -102,10 +115,40 @@ export function Customers() {
     sort: sort.key,
     dir:  sort.dir,
   }
-  if (q.trim())   params.search     = q.trim()
-  if (vipOnly)    params.vip_level  = 'VIP'
-  if (b2bOnly)    params.guest_type = 'Corporate'
-  if (company)    params.company    = company
+  if (q.trim())     params.search           = q.trim()
+  if (vipOnly)      params.vip_level        = 'VIP'
+  if (b2bOnly)      params.guest_type       = 'Corporate'
+  if (company)      params.company          = company
+  if (lifecycle)    params.lifecycle_status = lifecycle
+  if (importance)   params.importance       = importance
+  if (country)      params.country          = country
+  if (nationality)  params.nationality      = nationality
+  if (leadSource)   params.lead_source      = leadSource
+  if (ownerName)    params.owner_name       = ownerName
+  if (loyaltyTier)  params.loyalty_tier     = loyaltyTier
+  if (hasEmail)     params.has_email        = '1'
+  if (hasPhone)     params.has_phone        = '1'
+  if (minStays)     params.min_stays        = minStays
+  if (dateFrom)     params.date_from        = dateFrom
+  if (dateTo)       params.date_to          = dateTo
+
+  // List of currently-active filters — drives the chip bar + the
+  // selection reset hook below.
+  const activeFilters: { key: string; label: string; value: string }[] = []
+  if (vipOnly)      activeFilters.push({ key: 'vip',         label: 'VIPs only',     value: 'on' })
+  if (b2bOnly)      activeFilters.push({ key: 'b2b',         label: 'B2B only',      value: 'on' })
+  if (lifecycle)    activeFilters.push({ key: 'lifecycle',   label: 'Lifecycle',     value: lifecycle })
+  if (importance)   activeFilters.push({ key: 'importance',  label: 'Importance',    value: importance })
+  if (country)      activeFilters.push({ key: 'country',     label: 'Country',       value: country })
+  if (nationality)  activeFilters.push({ key: 'nationality', label: 'Nationality',   value: nationality })
+  if (leadSource)   activeFilters.push({ key: 'lead_source', label: 'Source',        value: leadSource })
+  if (ownerName)    activeFilters.push({ key: 'owner_name',  label: 'Owner',         value: ownerName })
+  if (loyaltyTier)  activeFilters.push({ key: 'loyalty_tier',label: 'Loyalty tier',  value: loyaltyTier })
+  if (hasEmail)     activeFilters.push({ key: 'has_email',   label: 'Has email',     value: 'on' })
+  if (hasPhone)     activeFilters.push({ key: 'has_phone',   label: 'Has phone',     value: 'on' })
+  if (minStays)     activeFilters.push({ key: 'min_stays',   label: 'Min stays',     value: `≥${minStays}` })
+  if (dateFrom)     activeFilters.push({ key: 'date_from',   label: 'From',          value: dateFrom })
+  if (dateTo)       activeFilters.push({ key: 'date_to',     label: 'To',            value: dateTo })
 
   const { data, isLoading, isFetching } = useQuery<IndexResponse>({
     queryKey: ['customers-list', params],
@@ -139,7 +182,21 @@ export function Customers() {
   // Set of guest ids currently checked. Cleared on filter change / page nav
   // so a stale "selected" never targets rows the user can no longer see.
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  useEffect(() => { setSelected(new Set()) }, [page, q, vipOnly, b2bOnly, company, sortIdx])
+  useEffect(() => { setSelected(new Set()) }, [
+    page, q, vipOnly, b2bOnly, company, sortIdx,
+    lifecycle, importance, country, nationality, leadSource, ownerName,
+    loyaltyTier, hasEmail, hasPhone, minStays, dateFrom, dateTo,
+  ])
+
+  /* ─── Filter popover state ─────────────────────────────────────── */
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  /* ─── Facets (distinct values for free-form dropdowns) ─────────── */
+  const { data: facets } = useQuery<{ country: string[]; nationality: string[]; lead_source: string[]; owner_name: string[]; loyalty_tier: string[] }>({
+    queryKey: ['customers-facets'],
+    queryFn: () => api.get('/v1/admin/guests/facets').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
   const toggleOne = (id: number) => setSelected(prev => {
     const next = new Set(prev)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -280,6 +337,25 @@ export function Customers() {
         <Pill active={vipOnly}  onClick={() => updateParam('vip', vipOnly ? null : '1')}  icon={Crown}>VIPs</Pill>
         <Pill active={b2bOnly}  onClick={() => updateParam('b2b', b2bOnly ? null : '1')}  icon={Briefcase}>B2B only</Pill>
 
+        {/* "More filters" toggle — opens the advanced popover. Active count
+            on the button as a small badge so admins can see at a glance
+            how many criteria are narrowing the list. */}
+        <button
+          onClick={() => setFiltersOpen(o => !o)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+            filtersOpen || activeFilters.length > 2
+              ? 'border-primary-500/40 bg-primary-500/15 text-primary-300'
+              : 'border-dark-border bg-dark-surface2 text-t-secondary hover:text-white hover:border-white/20'
+          }`}
+        >
+          <SlidersHorizontal size={11} /> More filters
+          {activeFilters.length > 2 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-500/30 text-primary-200">
+              {activeFilters.length - (vipOnly ? 1 : 0) - (b2bOnly ? 1 : 0)}
+            </span>
+          )}
+        </button>
+
         <div className="ml-auto flex items-center gap-1.5 text-xs text-t-secondary">
           <Filter size={12} />
           <select
@@ -291,6 +367,131 @@ export function Customers() {
           </select>
         </div>
       </div>
+
+      {/* Filter popover — collapses unless explicitly opened. Most days
+          staff only need the search + VIP + B2B pills; this section is
+          for the cases they want to slice by country / lifecycle / tier
+          / date range etc. */}
+      {filtersOpen && (
+        <div className="rounded-xl border border-dark-border bg-dark-surface p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <FacetSelect
+            label="Lifecycle status"
+            value={lifecycle}
+            onChange={v => updateParam('lifecycle', v)}
+            options={['Prospect', 'Lead', 'First-Time Guest', 'Returning Guest', 'VIP', 'Dormant', 'Lost']}
+            icon={Users}
+          />
+          <FacetSelect
+            label="Importance"
+            value={importance}
+            onChange={v => updateParam('importance', v)}
+            options={['Normal', 'High', 'Critical']}
+            icon={Star}
+          />
+          <FacetSelect
+            label="Loyalty tier"
+            value={loyaltyTier}
+            onChange={v => updateParam('loyalty_tier', v)}
+            options={facets?.loyalty_tier ?? []}
+            icon={Crown}
+          />
+          <FacetSelect
+            label="Country"
+            value={country}
+            onChange={v => updateParam('country', v)}
+            options={facets?.country ?? []}
+            icon={Globe}
+          />
+          <FacetSelect
+            label="Nationality"
+            value={nationality}
+            onChange={v => updateParam('nationality', v)}
+            options={facets?.nationality ?? []}
+            icon={Globe}
+          />
+          <FacetSelect
+            label="Lead source"
+            value={leadSource}
+            onChange={v => updateParam('lead_source', v)}
+            options={facets?.lead_source ?? []}
+            icon={AtSign}
+          />
+          <FacetSelect
+            label="Owner"
+            value={ownerName}
+            onChange={v => updateParam('owner_name', v)}
+            options={facets?.owner_name ?? []}
+            icon={UserCheck}
+          />
+          <label className="block">
+            <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1 flex items-center gap-1"><Star size={10} /> Min stays</span>
+            <input
+              type="number"
+              min={0}
+              value={minStays}
+              onChange={e => updateParam('min_stays', e.target.value)}
+              placeholder="any"
+              className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1 flex items-center gap-1"><Calendar size={10} /> Created from</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => updateParam('date_from', e.target.value)}
+                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1">…to</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => updateParam('date_to', e.target.value)}
+                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
+              />
+            </label>
+          </div>
+          <div className="md:col-span-3 flex items-center gap-3 pt-2 border-t border-dark-border/50">
+            <Toggle label="Has email" icon={Mail}      checked={hasEmail} onChange={v => updateParam('has_email', v ? '1' : null)} />
+            <Toggle label="Has phone" icon={PhoneIcon} checked={hasPhone} onChange={v => updateParam('has_phone', v ? '1' : null)} />
+          </div>
+        </div>
+      )}
+
+      {/* Active-filter chip bar — visible whenever any filter beyond the
+          base search is set. Each chip is independently dismissible. */}
+      {activeFilters.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-[10px] uppercase tracking-wider text-gray-500 mr-1">Active</span>
+          {activeFilters.map(f => (
+            <button
+              key={f.key}
+              onClick={() => updateParam(f.key, null)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-500/15 border border-primary-500/25 text-primary-200 hover:bg-primary-500/25 transition"
+            >
+              <span className="text-primary-300">{f.label}:</span>
+              <span className="font-medium">{f.value}</span>
+              <X size={10} className="opacity-70" />
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              setSearchParams(prev => {
+                const next = new URLSearchParams(prev)
+                ;['vip','b2b','lifecycle','importance','country','nationality','lead_source','owner_name','loyalty_tier','has_email','has_phone','min_stays','date_from','date_to','company'].forEach(k => next.delete(k))
+                next.delete('page')
+                return next
+              }, { replace: true })
+            }}
+            className="ml-1 text-[11px] text-t-secondary hover:text-white underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* Company-filter banner — visible when arriving via /customers?company=X
           from a corporate row. One-click to clear, since the filter is a
@@ -467,6 +668,58 @@ function KpiTile({ icon: Icon, label, value, accent }: { icon: any; label: strin
       </div>
       <div className="text-xl font-bold text-white tabular-nums">{value}</div>
     </div>
+  )
+}
+
+/**
+ * FacetSelect — labelled <select> for filter dropdowns. Empty string =
+ * "All", non-empty = the value the backend should filter on. Used for
+ * lifecycle / importance / loyalty tier / country / nationality / etc.
+ */
+function FacetSelect({ label, value, onChange, options, icon: Icon }: {
+  label: string
+  value: string
+  onChange: (v: string | null) => void
+  options: string[]
+  icon: any
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1 flex items-center gap-1">
+        <Icon size={10} /> {label}
+      </span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value || null)}
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+      >
+        <option value="">All</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </label>
+  )
+}
+
+/**
+ * Toggle — labelled boolean switch for has_email / has_phone style flags.
+ */
+function Toggle({ label, icon: Icon, checked, onChange }: {
+  label: string
+  icon: any
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+        checked
+          ? 'border-primary-500/40 bg-primary-500/15 text-primary-300'
+          : 'border-dark-border bg-dark-surface2 text-t-secondary hover:text-white hover:border-white/20'
+      }`}
+    >
+      <Icon size={11} /> {label}
+    </button>
   )
 }
 

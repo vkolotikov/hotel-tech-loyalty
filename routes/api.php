@@ -628,6 +628,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('guests',                          [GuestController::class, 'index']);
             Route::post('guests',                         [GuestController::class, 'store']);
             Route::get('guests/export',                   [GuestController::class, 'export']);
+            Route::get('guests/facets',                   [GuestController::class, 'facets']);
             Route::get('guests/segments',                 [GuestController::class, 'segments']);
             Route::post('guests/segments',                [GuestController::class, 'storeSegment']);
             Route::delete('guests/segments/{segment}',    [GuestController::class, 'destroySegment']);
