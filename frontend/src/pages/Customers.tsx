@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, Plus, X, Users, UserCheck, Briefcase, Crown, Loader2,
-  ChevronRight, Filter, Star,
+  ChevronRight, Filter, Star, Edit3, Trash2, Download, CheckSquare, Square,
+  Tag as TagIcon, Save,
 } from 'lucide-react'
-import { api } from '../lib/api'
+import toast from 'react-hot-toast'
+import { api, API_URL } from '../lib/api'
 import { ContactActions } from '../components/ContactActions'
 import { format } from 'date-fns'
 
@@ -70,12 +72,14 @@ const SORTS = [
 
 export function Customers() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Filters live in URL so back / refresh / bookmark survive.
   const q       = searchParams.get('q')       ?? ''
   const vipOnly = searchParams.get('vip')     === '1'
   const b2bOnly = searchParams.get('b2b')     === '1'
+  const company = searchParams.get('company') ?? ''
   const sortIdx = parseInt(searchParams.get('sort') ?? '0', 10) || 0
   const page    = parseInt(searchParams.get('page') ?? '1', 10) || 1
   const sort    = SORTS[Math.min(sortIdx, SORTS.length - 1)]
@@ -100,6 +104,7 @@ export function Customers() {
   if (q.trim())   params.search     = q.trim()
   if (vipOnly)    params.vip_level  = 'VIP'
   if (b2bOnly)    params.guest_type = 'Corporate'
+  if (company)    params.company    = company
 
   const { data, isLoading, isFetching } = useQuery<IndexResponse>({
     queryKey: ['customers-list', params],
@@ -118,6 +123,80 @@ export function Customers() {
     b2b:       rows.filter(g => g.guest_type === 'Corporate' || !!g.company).length,
     withEmail: rows.filter(g => !!g.email).length,
   }), [rows])
+
+  /* ─── Selection + bulk-ops state ──────────────────────────────────── */
+  // Set of guest ids currently checked. Cleared on filter change / page nav
+  // so a stale "selected" never targets rows the user can no longer see.
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  useEffect(() => { setSelected(new Set()) }, [page, q, vipOnly, b2bOnly, company, sortIdx])
+  const toggleOne = (id: number) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  const allPageSelected = rows.length > 0 && rows.every(r => selected.has(r.id))
+  const toggleAll = () => setSelected(prev => {
+    const next = new Set(prev)
+    if (allPageSelected) rows.forEach(r => next.delete(r.id))
+    else                  rows.forEach(r => next.add(r.id))
+    return next
+  })
+  const clearSelection = () => setSelected(new Set())
+
+  /* ─── Inline edit drawer state ────────────────────────────────────── */
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+
+  /* ─── Mutations ───────────────────────────────────────────────────── */
+  const updateMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: Partial<Guest> }) =>
+      api.put(`/v1/admin/guests/${id}`, patch).then(r => r.data),
+    onSuccess: () => {
+      toast.success('Customer updated')
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+      setEditingGuest(null)
+    },
+    onError: () => toast.error('Could not update customer'),
+  })
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: ({ ids, fields }: { ids: number[]; fields: Record<string, any> }) =>
+      api.post('/v1/admin/guests/bulk-update', { ids, fields }).then(r => r.data),
+    onSuccess: (r) => {
+      toast.success(`${r.updated} customer${r.updated === 1 ? '' : 's'} updated`)
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+      clearSelection()
+    },
+    onError: () => toast.error('Bulk update failed'),
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post('/v1/admin/guests/bulk-delete', { ids }).then(r => r.data),
+    onSuccess: (r) => {
+      toast.success(`${r.deleted} customer${r.deleted === 1 ? '' : 's'} deleted`)
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+      clearSelection()
+    },
+    onError: () => toast.error('Bulk delete failed'),
+  })
+
+  const exportSelected = () => {
+    // Reuse the existing /guests/export endpoint with `ids[]` so the CSV
+    // contains only what the admin checked. Falls through to current
+    // filter set when no selection — that's the "export everything I
+    // see" behaviour staff usually want.
+    const ids = Array.from(selected)
+    const qs = new URLSearchParams()
+    if (ids.length) {
+      ids.forEach(id => qs.append('ids[]', String(id)))
+    } else {
+      if (q.trim())  qs.set('search', q.trim())
+      if (vipOnly)   qs.set('vip_level', 'VIP')
+      if (b2bOnly)   qs.set('guest_type', 'Corporate')
+      if (company)   qs.set('company', company)
+    }
+    window.open(`${API_URL}/api/v1/admin/guests/export?${qs.toString()}`, '_blank')
+  }
 
   return (
     <div className="space-y-4">
@@ -181,9 +260,82 @@ export function Customers() {
         </div>
       </div>
 
+      {/* Company-filter banner — visible when arriving via /customers?company=X
+          from a corporate row. One-click to clear, since the filter is a
+          temporary view rather than a saved preference. */}
+      {company && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.04] px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-purple-200">
+            <Briefcase size={14} className="text-purple-400" />
+            <span>Showing customers at <strong className="text-white">{company}</strong></span>
+          </div>
+          <button
+            onClick={() => updateParam('company', null)}
+            className="inline-flex items-center gap-1 text-xs text-purple-300 hover:text-white transition"
+          >
+            <X size={11} /> Clear filter
+          </button>
+        </div>
+      )}
+
+      {/* Bulk action bar — pops in when one or more rows are selected.
+          Sticky-top so it stays in view while scrolling a long list. */}
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-20 -mx-0 rounded-lg border border-primary-500/40 bg-primary-500/[0.08] backdrop-blur px-4 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="text-sm font-medium text-white">
+            <span className="text-primary-300 font-bold">{selected.size}</span> selected
+          </div>
+          <button onClick={clearSelection} className="text-xs text-t-secondary hover:text-white">Clear</button>
+
+          <div className="flex-1" />
+
+          <button
+            onClick={() => exportSelected()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition"
+          >
+            <Download size={11} /> Export CSV
+          </button>
+          <button
+            onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { vip_level: 'VIP' } })}
+            disabled={bulkUpdateMutation.isPending}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 disabled:opacity-50 transition"
+          >
+            <Crown size={11} /> Mark as VIP
+          </button>
+          <button
+            onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { lifecycle_status: 'archived' } })}
+            disabled={bulkUpdateMutation.isPending}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-gray-500/15 text-gray-300 border border-gray-500/20 hover:bg-gray-500/25 disabled:opacity-50 transition"
+          >
+            <TagIcon size={11} /> Archive
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Delete ${selected.size} customer${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) {
+                bulkDeleteMutation.mutate(Array.from(selected))
+              }
+            }}
+            disabled={bulkDeleteMutation.isPending}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/20 hover:bg-red-500/25 disabled:opacity-50 transition"
+          >
+            <Trash2 size={11} /> Delete
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-xl border border-dark-border bg-dark-surface overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto] md:grid-cols-[2fr_2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-surface2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[auto_2fr_2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-surface2 text-[10px] font-bold uppercase tracking-wider text-gray-500 items-center">
+          <button
+            onClick={toggleAll}
+            disabled={rows.length === 0}
+            title={allPageSelected ? 'Deselect this page' : 'Select this page'}
+            className="text-gray-500 hover:text-white disabled:opacity-30"
+          >
+            {allPageSelected
+              ? <CheckSquare size={14} className="text-primary-400" />
+              : <Square size={14} />}
+          </button>
           <div>Customer</div>
           <div className="hidden md:block">Contact</div>
           <div className="hidden md:block">Company</div>
@@ -197,7 +349,7 @@ export function Customers() {
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-t-secondary">
-            {q || vipOnly || b2bOnly
+            {q || vipOnly || b2bOnly || company
               ? 'No customers match your filters.'
               : 'No customers yet. Capture your first lead via /inquiries or /lead-forms.'}
           </div>
@@ -206,11 +358,24 @@ export function Customers() {
             <Row
               key={g.id}
               guest={g}
-              onClick={() => navigate(`/guests/${g.id}`)}
+              selected={selected.has(g.id)}
+              onToggle={() => toggleOne(g.id)}
+              onEdit={() => setEditingGuest(g)}
+              onOpen={() => navigate(`/guests/${g.id}`)}
             />
           ))
         )}
       </div>
+
+      {/* Inline edit drawer */}
+      {editingGuest && (
+        <EditDrawer
+          guest={editingGuest}
+          onClose={() => setEditingGuest(null)}
+          onSave={(patch) => updateMutation.mutate({ id: editingGuest.id, patch })}
+          saving={updateMutation.isPending}
+        />
+      )}
 
       {/* Pagination */}
       {data && data.last_page > 1 && (
@@ -278,7 +443,15 @@ function Pill({ active, onClick, icon: Icon, children }: { active: boolean; onCl
   )
 }
 
-function Row({ guest, onClick }: { guest: Guest; onClick: () => void }) {
+type RowProps = {
+  guest: Guest
+  selected: boolean
+  onToggle: () => void
+  onEdit: () => void
+  onOpen: () => void
+}
+
+function Row({ guest, selected, onToggle, onEdit, onOpen }: RowProps) {
   const isVip = !!guest.vip_level && guest.vip_level !== 'Standard'
   const initials = (guest.full_name || guest.email || '?')
     .split(/\s+/)
@@ -289,9 +462,23 @@ function Row({ guest, onClick }: { guest: Guest; onClick: () => void }) {
 
   return (
     <div
-      onClick={onClick}
-      className="grid grid-cols-[1fr_auto_auto] md:grid-cols-[2fr_2fr_1fr_1fr_auto] gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 hover:bg-white/[0.02] cursor-pointer group items-center"
+      onClick={onOpen}
+      className={`grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[auto_2fr_2fr_1fr_1fr_auto] gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 cursor-pointer group items-center transition-colors ${
+        selected ? 'bg-primary-500/[0.06]' : 'hover:bg-white/[0.02]'
+      }`}
     >
+      {/* Selection checkbox — stopPropagation so clicking the box doesn't
+          also fire the row's open-detail handler. */}
+      <button
+        onClick={e => { e.stopPropagation(); onToggle() }}
+        className="text-gray-500 hover:text-white"
+        aria-label={selected ? 'Deselect row' : 'Select row'}
+      >
+        {selected
+          ? <CheckSquare size={14} className="text-primary-400" />
+          : <Square size={14} />}
+      </button>
+
       {/* Customer name + initials */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-9 h-9 rounded-full flex items-center justify-center bg-dark-surface2 border border-dark-border text-xs font-bold text-primary-300 flex-shrink-0">
@@ -346,13 +533,155 @@ function Row({ guest, onClick }: { guest: Guest; onClick: () => void }) {
             : '—'}
       </div>
 
-      {/* Mobile contact + chevron */}
-      <div className="flex items-center gap-2 justify-end md:hidden">
-        <ContactActions email={guest.email} phone={guest.phone || guest.mobile} compact />
-      </div>
-      <div className="hidden md:block">
-        <ChevronRight size={14} className="text-gray-600 group-hover:text-primary-400 transition" />
+      {/* Right-side actions */}
+      <div className="flex items-center gap-1.5 justify-end">
+        <button
+          onClick={e => { e.stopPropagation(); onEdit() }}
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-primary-300 transition"
+          title="Quick edit"
+          aria-label="Quick edit"
+        >
+          <Edit3 size={13} />
+        </button>
+        <div className="md:hidden">
+          <ContactActions email={guest.email} phone={guest.phone || guest.mobile} compact />
+        </div>
+        <ChevronRight size={14} className="hidden md:block text-gray-600 group-hover:text-primary-400 transition" />
       </div>
     </div>
+  )
+}
+
+/* ──────────────────── Quick-edit drawer ──────────────────── */
+
+type EditDrawerProps = {
+  guest: Guest
+  onClose: () => void
+  onSave: (patch: Partial<Guest>) => void
+  saving: boolean
+}
+
+function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
+  const [form, setForm] = useState({
+    full_name:      guest.full_name ?? '',
+    email:          guest.email ?? '',
+    phone:          guest.phone ?? '',
+    company:        guest.company ?? '',
+    position_title: guest.position_title ?? '',
+    vip_level:      guest.vip_level ?? 'Standard',
+    owner_name:     '' as string,
+    importance:     guest.importance ?? 'Normal',
+  })
+
+  const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }))
+
+  // Esc key to close — matches the rest of the drawer/modal patterns
+  // throughout the admin SPA.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Only send the diff — keep the PUT body small and avoid blowing
+    // away fields the drawer doesn't expose.
+    const patch: any = {}
+    if (form.full_name      !== (guest.full_name ?? ''))      patch.full_name      = form.full_name
+    if (form.email          !== (guest.email ?? ''))          patch.email          = form.email || null
+    if (form.phone          !== (guest.phone ?? ''))          patch.phone          = form.phone || null
+    if (form.company        !== (guest.company ?? ''))        patch.company        = form.company || null
+    if (form.position_title !== (guest.position_title ?? '')) patch.position_title = form.position_title || null
+    if (form.vip_level      !== (guest.vip_level ?? 'Standard')) patch.vip_level   = form.vip_level
+    if (form.importance     !== (guest.importance ?? 'Normal'))  patch.importance  = form.importance
+    onSave(patch)
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40"
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <form
+        onSubmit={submit}
+        className="fixed right-0 top-0 h-screen w-full max-w-md bg-dark-surface border-l border-dark-border shadow-2xl z-50 flex flex-col"
+      >
+        <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-gray-500">Quick edit</div>
+            <h2 className="text-base font-semibold text-white">{guest.full_name}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          <Field label="Full name" value={form.full_name}      onChange={v => set('full_name', v)} />
+          <Field label="Email"     value={form.email}          onChange={v => set('email', v)} type="email" />
+          <Field label="Phone"     value={form.phone}          onChange={v => set('phone', v)} type="tel" />
+          <Field label="Company"   value={form.company}        onChange={v => set('company', v)} />
+          <Field label="Position"  value={form.position_title} onChange={v => set('position_title', v)} />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="VIP level"   value={form.vip_level}  onChange={v => set('vip_level', v)}
+              options={['Standard', 'VIP', 'VVIP', 'Platinum']} />
+            <Select label="Importance" value={form.importance} onChange={v => set('importance', v)}
+              options={['Normal', 'High', 'Critical']} />
+          </div>
+
+          <p className="text-[11px] text-gray-500 pt-2">
+            Need more fields? Click the customer name to open the full detail page.
+          </p>
+        </div>
+
+        <div className="px-5 py-3 border-t border-dark-border flex items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded text-sm text-t-secondary hover:text-white">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            Save
+          </button>
+        </div>
+      </form>
+    </>
+  )
+}
+
+function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+      />
+    </label>
+  )
+}
+
+function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">{label}</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+      >
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </label>
   )
 }

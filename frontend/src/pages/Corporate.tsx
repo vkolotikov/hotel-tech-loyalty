@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp, Sparkles, Loader2, Users } from 'lucide-react'
 import { CustomFieldsForm, CustomFieldsDisplay } from '../components/CustomFields'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -142,7 +143,22 @@ export function Corporate() {
                     <td className="px-3 py-3 text-[#636366]">
                       {expandedId === a.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </td>
-                    <td className="px-4 py-3 text-white font-medium">{a.company_name}</td>
+                    <td className="px-4 py-3 text-white font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{a.company_name}</span>
+                        {/* Cross-link to /customers filtered by this company.
+                            stopPropagation so clicking the chip doesn't toggle
+                            the row's expand/collapse on the parent <tr>. */}
+                        <Link
+                          to={`/customers?company=${encodeURIComponent(a.company_name)}`}
+                          onClick={e => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20 hover:bg-purple-500/25 transition"
+                          title={t('corporate.row.view_customers', 'View customers at {{name}}', { name: a.company_name })}
+                        >
+                          <Users size={9} /> {t('corporate.row.customers', 'Customers')}
+                        </Link>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-[#a0a0a0]">{a.industry || '—'}</td>
                     <td className="px-4 py-3 text-gray-300">{a.contact_person || '—'}</td>
                     <td className="px-4 py-3 text-gray-300">{a.account_manager || '—'}</td>

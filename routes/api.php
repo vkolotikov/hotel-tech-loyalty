@@ -635,6 +635,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('guests/tags',                    [GuestController::class, 'storeTag']);
             Route::delete('guests/tags/{tag}',            [GuestController::class, 'destroyTag']);
             Route::post('guests/bulk-update',             [GuestController::class, 'bulkUpdate']);
+            Route::post('guests/bulk-delete',             [GuestController::class, 'bulkDelete']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update']);
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);

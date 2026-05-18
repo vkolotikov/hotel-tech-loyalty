@@ -338,11 +338,12 @@ class GuestController extends Controller
     {
         $allowedFields = [
             'vip_level', 'segment', 'status', 'language', 'nationality',
-            'notes', 'salutation', 'company',
+            'notes', 'salutation', 'company', 'lifecycle_status',
+            'importance', 'owner_name', 'guest_type',
         ];
 
         $v = $request->validate([
-            'ids'    => 'required|array|min:1',
+            'ids'    => 'required|array|min:1|max:500',
             'ids.*'  => 'integer|exists:guests,id',
             'fields' => 'required|array',
         ]);
@@ -355,6 +356,25 @@ class GuestController extends Controller
 
         Guest::whereIn('id', $v['ids'])->update($safeFields);
         return response()->json(['updated' => count($v['ids'])]);
+    }
+
+    /**
+     * POST /v1/admin/guests/bulk-delete — soft-bulk-delete by ids.
+     *
+     * Capped at 500 ids per call to bound the blast radius of an accidental
+     * bulk-select-all on a large dataset. The TenantScope global scope on
+     * the Guest model means we can't delete cross-org rows even if a staff
+     * member sent foreign ids.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'ids'   => 'required|array|min:1|max:500',
+            'ids.*' => 'integer|exists:guests,id',
+        ]);
+
+        $deleted = Guest::whereIn('id', $v['ids'])->delete();
+        return response()->json(['deleted' => $deleted]);
     }
 
     public function export(Request $request): StreamedResponse
@@ -411,6 +431,20 @@ class GuestController extends Controller
         if ($v = $request->get('tag_ids')) {
             $ids = is_array($v) ? $v : explode(',', $v);
             $query->whereHas('tags', fn($q) => $q->whereIn('guest_tags.id', $ids));
+        }
+        // `company` filter — case-insensitive partial match. Used by the
+        // Companies cross-link banner on /customers?company=Acme%20Ltd
+        // so admins can pivot from a company row into "all customers
+        // who work there".
+        if ($v = $request->get('company')) {
+            $query->where('company', 'ilike', "%{$v}%");
+        }
+        // `ids` filter — used by bulk export to write only the selected
+        // rows to CSV. Accepts either an array or a comma-separated list.
+        if ($v = $request->get('ids')) {
+            $ids = is_array($v) ? $v : explode(',', $v);
+            $ids = array_filter(array_map('intval', $ids));
+            if (!empty($ids)) $query->whereIn('id', $ids);
         }
     }
 }

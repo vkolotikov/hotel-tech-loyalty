@@ -32,10 +32,16 @@ export function GuestDetail() {
   // Now that every guest is auto-linked to a loyalty member, MemberDetail is the
   // canonical person view. Redirect there whenever the link exists; this page
   // only stays reachable for the rare orphan that has no member yet.
+  //
+  // Default landing tab = CRM Profile because users arriving via the
+  // /customers list expect customer details (inquiries / reservations /
+  // company / notes), not the loyalty-card Overview. Direct navigation
+  // from the Loyalty sidebar uses /members/:id with no `?tab=` and gets
+  // the Overview default — semantics line up with the entry point.
   useEffect(() => {
     const g: any = (guest as any)?.data ?? guest;
     if (g?.member_id) {
-      navigate(`/members/${g.member_id}`, { replace: true });
+      navigate(`/members/${g.member_id}?tab=crm`, { replace: true });
     }
   }, [guest, navigate]);
 

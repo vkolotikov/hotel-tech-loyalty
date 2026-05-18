@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
@@ -676,7 +676,11 @@ export function MemberDetail() {
                 </h3>
                 <div className="space-y-1.5">
                   {linkedGuest.reservations.slice(0, 5).map((r: any) => (
-                    <div key={r.id} className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
+                    <Link
+                      key={r.id}
+                      to={`/bookings/${r.id}`}
+                      className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                    >
                       <div>
                         <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
                         <span className="text-[#636366] ml-2">{r.room_type}</span>
@@ -690,7 +694,7 @@ export function MemberDetail() {
                           'bg-yellow-500/20 text-yellow-400'
                         }`}>{r.status}</span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -703,7 +707,11 @@ export function MemberDetail() {
                 </h3>
                 <div className="space-y-1.5">
                   {linkedGuest.inquiries.slice(0, 5).map((inq: any) => (
-                    <div key={inq.id} className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2">
+                    <Link
+                      key={inq.id}
+                      to={`/inquiries/${inq.id}`}
+                      className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                    >
                       <div className="flex-1 min-w-0">
                         <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
                       </div>
@@ -716,7 +724,7 @@ export function MemberDetail() {
                           'bg-blue-500/20 text-blue-400'
                         }`}>{inq.status}</span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
