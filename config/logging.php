@@ -54,7 +54,12 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            // Read the stack composition from LOG_STACK so Laravel Cloud's
+            // Nightwatch wiring (LOG_STACK=laravel-cloud-socket,nightwatch)
+            // takes effect without a code change per env. Falls back to
+            // `single` when the env var isn't set, matching Laravel's
+            // own default.
+            'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
 
