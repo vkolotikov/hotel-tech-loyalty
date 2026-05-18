@@ -56,6 +56,13 @@ class Inquiry extends Model
         // walks a fulfillment workflow tracked on the same row.
         'fulfillment_stage', 'payment_status', 'paid_amount',
         'fulfillment_started_at', 'fulfillment_completed_at',
+        // External-source attribution (2026-05-17) — set when an
+        // inquiry is pushed in via the public lead-intake API
+        // (POST /v1/integrations/leads). Used for idempotent retries
+        // (unique on org+source+external_id), deep-linking back to the
+        // origin system, and per-source funnel reporting.
+        'external_source', 'external_id', 'external_url',
+        'external_submitted_at', 'currency',
     ];
 
     protected $casts = [
@@ -76,6 +83,8 @@ class Inquiry extends Model
         'paid_amount'               => 'decimal:2',
         'fulfillment_started_at'    => 'datetime',
         'fulfillment_completed_at'  => 'datetime',
+        // External attribution
+        'external_submitted_at'     => 'datetime',
     ];
 
     public function guest(): BelongsTo

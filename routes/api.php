@@ -203,6 +203,19 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // ─── Public diagnostic endpoint (no auth) ────────────────────────────────
     Route::get('billing/diag', [AuthController::class, 'billingDiag']);
 
+    // ─── External integration API (Sanctum personal access tokens) ──────────
+    // For third-party systems (FDS Card Builder, Zapier, custom integrations)
+    // pushing leads or other data into the CRM. Auth is the user's personal
+    // access token; the token's owner determines which org the data lands in.
+    // Deliberately NOT under saas.auth (which expects a SaaS JWT) or brand
+    // (leads are org-scoped, not brand-scoped). 60/min cap is generous for
+    // legitimate use, tight enough to bound abuse.
+    Route::middleware(['auth:sanctum', 'tenant', 'throttle:60,1'])
+        ->prefix('integrations')
+        ->group(function () {
+            Route::post('leads', [\App\Http\Controllers\Api\V1\Integrations\LeadIntakeController::class, 'store']);
+        });
+
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
     Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'brand', 'throttle:120,1'])->group(function () {
@@ -308,6 +321,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // ─── Per-user preferences (Engagement daily summary opt-in, etc.) ──
             Route::get('me/preferences',            [MeController::class, 'preferences']);
             Route::put('me/preferences',            [MeController::class, 'updatePreferences']);
+
+            // Personal API tokens for external integrations.
+            Route::get('api-tokens',                [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'index']);
+            Route::post('api-tokens',               [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'store']);
+            Route::delete('api-tokens/{id}',        [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'destroy']);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);

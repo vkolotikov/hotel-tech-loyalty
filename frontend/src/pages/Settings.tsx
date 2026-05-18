@@ -21,6 +21,7 @@ import { PlannerSettings } from '../components/PlannerSettings'
 import { MenuSettings } from '../components/MenuSettings'
 import { TeamSettings } from '../components/TeamSettings'
 import { AiUsagePanel } from '../components/AiUsagePanel'
+import { ApiTokensPanel } from '../components/ApiTokensPanel'
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -1542,6 +1543,12 @@ export function Settings() {
 
     return (
       <div className="space-y-8">
+        {/* API tokens panel — for external systems pushing leads in. */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1 mb-3">Developer API</h3>
+          <ApiTokensPanel />
+        </div>
+
         {allSections.map(group => {
           const rendered = group.sections.map(s => renderSection(s)).filter(Boolean)
           if (rendered.length === 0) return null
