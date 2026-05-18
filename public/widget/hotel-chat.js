@@ -2148,8 +2148,28 @@
 
   // ── Popup Rules Engine ──
   var popupRules = [];
-  var firedRules = {};  // rule.id → true, prevents re-firing
-  var popupShown = false; // global — once ANY popup fires, no more popups this page load
+  // Persisted "rule already fired this session" set. Key = rule.id, value =
+  // ms timestamp. Stored in sessionStorage so navigating to another page on
+  // the same site doesn't re-fire the same proactive popup. Cleared
+  // automatically when the browser session ends (tab close), so the next
+  // visit gets a fresh chance.
+  var POPUP_FIRED_KEY    = 'htchat:popup_fired_rules';
+  var POPUP_SHOWN_KEY    = 'htchat:popup_shown_session';
+  function loadFiredRules() {
+    try {
+      var raw = sessionStorage.getItem(POPUP_FIRED_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveFiredRules(m) {
+    try { sessionStorage.setItem(POPUP_FIRED_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  var firedRules = loadFiredRules();
+  // Global "any popup fired this session" — what the user actually asked for:
+  // popup auto-opens ONCE per browsing session, not once per page. Reading from
+  // sessionStorage means refresh + cross-page navigation both inherit the flag.
+  var popupShown = false;
+  try { popupShown = sessionStorage.getItem(POPUP_SHOWN_KEY) === '1'; } catch (e) {}
   var pageOpenedAt = Date.now();
   var maxScrollPct = 0;
   var exitIntentBound = false;
@@ -2160,6 +2180,10 @@
   try { isReturningVisitor = !!localStorage.getItem(STORAGE_KEY); } catch (e) {}
 
   function loadPopupRules() {
+    // Short-circuit: a popup has already fired this session (refresh,
+    // navigation, or the user closed the panel). No need to hit the API
+    // or wire up scroll / exit-intent / time-delay listeners.
+    if (popupShown) return;
     fetch(API + '/popup-rules').then(function (r) { return r.json(); }).then(function (data) {
       popupRules = (data && data.rules) || [];
       if (popupRules.length > 0) {
@@ -2203,7 +2227,11 @@
   }
 
   function evaluateRules(triggerType, currentValue) {
-    if (popupShown) return; // one popup per page load
+    // ONE popup per SESSION, not per page load. Once any rule has fired
+    // — even on a previous page — don't auto-open again until the user
+    // closes the browser. Visitors clicking through 5 site sections
+    // shouldn't get pestered 5 times.
+    if (popupShown) return;
     for (var i = 0; i < popupRules.length; i++) {
       var rule = popupRules[i];
       if (firedRules[rule.id]) continue;
@@ -2224,9 +2252,12 @@
         if (rule.visitor_type === 'returning' && !isReturningVisitor) continue;
       }
 
-      // Fire this rule
-      firedRules[rule.id] = true;
+      // Fire this rule — and persist both flags so a refresh / navigation
+      // within the same browser session doesn't replay the popup.
+      firedRules[rule.id] = Date.now();
+      saveFiredRules(firedRules);
       popupShown = true;
+      try { sessionStorage.setItem(POPUP_SHOWN_KEY, '1'); } catch (e) {}
       showPopupMessage(rule);
       trackImpression(rule.id);
       break; // only one popup at a time
