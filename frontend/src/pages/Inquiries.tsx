@@ -483,7 +483,17 @@ export function Inquiries() {
               return items.map((inq: any) => (
                 <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-white font-semibold truncate">{inq.guest?.full_name ?? '—'}</span>
+                    {inq.guest?.id ? (
+                      <Link
+                        to={`/guests/${inq.guest.id}`}
+                        className="text-white font-semibold truncate hover:text-primary-300 transition-colors"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {inq.guest?.full_name ?? '—'}
+                      </Link>
+                    ) : (
+                      <span className="text-white font-semibold truncate">{inq.guest?.full_name ?? '—'}</span>
+                    )}
                     {inq.guest?.company && <span className="text-gray-500 text-xs truncate">· {inq.guest.company}</span>}
                     {dailyFocus !== 'new_leads' && inq.next_task_type && (
                       <span className="text-amber-400 text-xs truncate">· {inq.next_task_type}</span>
@@ -711,14 +721,27 @@ export function Inquiries() {
                             {score}
                           </span>
                         )}
-                        <Link
-                          to={`/inquiries/${inq.id}`}
-                          className="font-semibold text-white hover:text-accent truncate transition-colors"
-                        >
-                          {inq.guest?.full_name ?? '—'}
-                        </Link>
+                        {inq.guest?.id ? (
+                          <Link
+                            to={`/guests/${inq.guest.id}`}
+                            className="font-semibold text-white hover:text-primary-300 truncate transition-colors"
+                            title={t('inquiries.row.open_customer', 'Open customer')}
+                          >
+                            {inq.guest?.full_name ?? '—'}
+                          </Link>
+                        ) : (
+                          <span className="font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</span>
+                        )}
                       </div>
                       {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
+                      {/* Email + phone shown as text so staff can scan
+                          contact info without clicking the action pills. */}
+                      {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) && (
+                        <div className="text-[11px] text-gray-400 mt-0.5 truncate space-x-2">
+                          {inq.guest?.email && <span className="truncate">{inq.guest.email}</span>}
+                          {(inq.guest?.phone || inq.guest?.mobile) && <span className="text-gray-500">· {inq.guest.phone || inq.guest.mobile}</span>}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {inq.property?.name && (
                           <span className="text-[10px] text-gray-500">{inq.property.name}</span>
@@ -1040,12 +1063,32 @@ export function Inquiries() {
                         className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:bg-white/[0.04] transition-all"
                         style={{ opacity: isDragging ? 0.4 : 1 }}>
                         <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                          {inq.guest?.id ? (
+                            <Link
+                              to={`/guests/${inq.guest.id}`}
+                              className="text-sm font-semibold text-white hover:text-primary-300 truncate transition-colors"
+                              onClick={e => e.stopPropagation()}
+                              draggable={false}
+                            >
+                              {inq.guest?.full_name ?? '—'}
+                            </Link>
+                          ) : (
+                            <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                          )}
                           <span className={`text-[9px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[inq.priority] ?? 'text-gray-500'}`}>
                             {inq.priority}
                           </span>
                         </div>
                         {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate mb-1.5">{inq.guest.company}</div>}
+                        {/* Contact text on the kanban card so staff can scan
+                            without opening detail. Click pills below still
+                            handle the action side. */}
+                        {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) && (
+                          <div className="text-[10px] text-gray-500 truncate mb-1.5 space-x-1.5">
+                            {inq.guest?.email && <span>{inq.guest.email}</span>}
+                            {(inq.guest?.phone || inq.guest?.mobile) && <span>· {inq.guest.phone || inq.guest.mobile}</span>}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-400">
                           {inq.check_in && <span>{inq.check_in}{inq.check_out ? ` → ${inq.check_out}` : ''}</span>}
                           {inq.num_rooms && <span>{inq.num_rooms} room{inq.num_rooms === 1 ? '' : 's'}</span>}

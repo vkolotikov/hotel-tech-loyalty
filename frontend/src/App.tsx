@@ -50,6 +50,7 @@ const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.S
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
+const Customers = lazy(() => import('./pages/Customers').then(m => ({ default: m.Customers })))
 const Inquiries = lazy(() => import('./pages/Inquiries').then(m => ({ default: m.Inquiries })))
 const Deals = lazy(() => import('./pages/Deals').then(m => ({ default: m.Deals })))
 // Tasks page deprecated — see /tasks redirect below.
@@ -245,9 +246,12 @@ export default function App() {
           {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
-          {/* Guests + CRM Reservations consolidated — redirect list pages
-              to the unified ones, but keep deep-link detail routes alive. */}
-          <Route path="/guests" element={<Navigate to="/members" replace />} />
+          {/* Customers (CRM contacts) — primary entry point; /guests is the
+              legacy alias kept alive for bookmarks. Both render Customers.
+              Detail /guests/:id stays — GuestDetail auto-redirects to
+              /members/{member_id} when a loyalty member is linked. */}
+          <Route path="/customers" element={<LazyRoute><Customers /></LazyRoute>} />
+          <Route path="/guests" element={<LazyRoute><Customers /></LazyRoute>} />
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
           <Route path="/inquiries" element={<LazyRoute><Inquiries /></LazyRoute>} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />

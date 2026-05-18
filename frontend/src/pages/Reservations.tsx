@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -262,10 +263,26 @@ export function Reservations() {
                 <td className="px-4 py-3 text-primary-400 font-medium text-xs">{r.confirmation_no ?? '—'}</td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-white text-sm flex items-center gap-1.5 flex-wrap">
-                    {r.guest?.full_name ?? '—'}
+                    {r.guest?.id ? (
+                      <Link
+                        to={`/guests/${r.guest.id}`}
+                        className="hover:text-primary-300 transition-colors"
+                        title={t('reservations.row.open_customer', 'Open customer')}
+                      >
+                        {r.guest?.full_name ?? '—'}
+                      </Link>
+                    ) : (
+                      <span>{r.guest?.full_name ?? '—'}</span>
+                    )}
                     <BrandBadge brandId={r.brand_id} />
                   </div>
                   <div className="text-xs text-[#636366]">{r.guest?.company ?? ''}</div>
+                  {(r.guest?.email || r.guest?.phone) && (
+                    <div className="text-[11px] text-gray-500 mt-0.5 space-x-1.5">
+                      {r.guest?.email && <span>{r.guest.email}</span>}
+                      {r.guest?.phone && <span>· {r.guest.phone}</span>}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-[#a0a0a0] text-xs">{r.property?.name ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-300 text-xs">{r.check_in ?? '—'}</td>

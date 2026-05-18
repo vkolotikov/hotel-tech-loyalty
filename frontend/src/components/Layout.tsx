@@ -117,6 +117,7 @@ const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.crm_marketing', defaultLabel: 'CRM & Marketing',
     accent: '#f472b6', // pink
     items: [
+      { path: '/customers',     labelKey: 'nav.items.customers',       defaultLabel: 'Customers',         icon: Users,     gate: 'all', altPaths: ['/guests'] },
       { path: '/inquiries',     labelKey: 'nav.items.leads_inquiries', defaultLabel: 'Leads & Inquiries', icon: FileText,  gate: 'all' },
       { path: '/deals',         labelKey: 'nav.items.deals',           defaultLabel: 'Deals',             icon: Package,   gate: 'all' },
       // Standalone /tasks page removed — tasks now live inside the
