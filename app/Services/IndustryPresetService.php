@@ -134,6 +134,12 @@ class IndustryPresetService
                     ['value' => $preset['deal_layout']],
                 );
             }
+            if (!empty($preset['member_layout'])) {
+                CrmSetting::updateOrCreate(
+                    ['key' => 'member_fields'],
+                    ['value' => $preset['member_layout']],
+                );
+            }
             $summary['layout_updated'] = true;
 
             // ── 4. Track which preset is active so we can clean up
@@ -503,6 +509,20 @@ class IndustryPresetService
     ];
 
     /**
+     * Members-page defaults — everything visible. Loyalty programs
+     * make sense in nearly every industry (hotel, spa, gym,
+     * restaurant, retail), so we don't bother branching per preset.
+     * Admin can still hide individual columns per-org.
+     */
+    private const FULL_MEMBER_LAYOUT = [
+        'list' => [
+            'kpi_strip' => true,
+            'phone' => true, 'source' => true, 'tier' => true,
+            'points' => true, 'joined' => true, 'status' => true,
+        ],
+    ];
+
+    /**
      * Eight curated industry bundles. Each preset is opinionated —
      * the shapes (stage count, lost-reason taxonomy, layout) reflect
      * how that industry's sales / intake actually flows, not just a
@@ -535,6 +555,7 @@ class IndustryPresetService
             'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => null, // hotel uses built-in fields
         ],
 
@@ -562,6 +583,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'beauty',
         ],
 
@@ -589,6 +611,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'medical',
         ],
 
@@ -616,6 +639,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'legal',
         ],
 
@@ -664,6 +688,7 @@ class IndustryPresetService
             'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'real_estate',
         ],
 
@@ -690,6 +715,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'education',
         ],
 
@@ -716,6 +742,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'fitness',
         ],
 
@@ -742,6 +769,7 @@ class IndustryPresetService
             'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
             'custom_fields_key'  => 'restaurant',
         ],
     ];

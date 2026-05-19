@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Sparkles, GitBranch, Users, Building2,
+  Sparkles, GitBranch, Users, Building2, Crown,
   Save, Search, Eye, EyeOff, RotateCcw, type LucideIcon,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -9,7 +9,7 @@ import { api } from '../lib/api'
 import {
   useSettings,
   DEFAULT_INQUIRY_FIELDS, DEFAULT_CUSTOMER_FIELDS,
-  DEFAULT_CORPORATE_FIELDS, DEFAULT_DEAL_FIELDS,
+  DEFAULT_CORPORATE_FIELDS, DEFAULT_DEAL_FIELDS, DEFAULT_MEMBER_FIELDS,
 } from '../lib/crmSettings'
 
 /**
@@ -28,7 +28,7 @@ import {
  * the UI stays usable when an admin turns everything off.
  */
 
-type TabKey = 'inquiry' | 'deal' | 'customer' | 'corporate'
+type TabKey = 'inquiry' | 'deal' | 'customer' | 'corporate' | 'member'
 
 type Section = {
   /** UI label for the section ("List columns", "Add Inquiry form"). */
@@ -48,7 +48,7 @@ type TabDef = {
   /** Server defaults used as a "Reset to defaults" baseline. */
   defaults: Record<string, any>
   /** Path through the settings object to get the current config. */
-  configKey: 'inquiry_fields' | 'customer_fields' | 'corporate_fields' | 'deal_fields'
+  configKey: 'inquiry_fields' | 'customer_fields' | 'corporate_fields' | 'deal_fields' | 'member_fields'
   sections: Section[]
 }
 
@@ -205,6 +205,29 @@ const TABS: TabDef[] = [
           { key: 'custom_fields', label: 'Custom fields panel' },
           { key: 'linked_deals', label: 'Linked deals' },
           { key: 'recent_reservations', label: 'Recent reservations' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'member',
+    label: 'Members',
+    icon: Crown,
+    settingsKey: 'member_fields',
+    defaults: DEFAULT_MEMBER_FIELDS,
+    configKey: 'member_fields',
+    sections: [
+      {
+        label: 'Members page',
+        path: 'list',
+        fields: [
+          { key: 'kpi_strip', label: 'KPI strip', hint: '4 cards above the table: active / new this month / avg points / top tier %.' },
+          { key: 'phone', label: 'Phone column' },
+          { key: 'source', label: 'Source column', hint: 'Lead-source pill from the linked guest.' },
+          { key: 'tier', label: 'Tier column' },
+          { key: 'points', label: 'Points column' },
+          { key: 'joined', label: 'Joined-date column' },
+          { key: 'status', label: 'Status column', hint: 'Active / Inactive pill.' },
         ],
       },
     ],

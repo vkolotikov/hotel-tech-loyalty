@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square, Users, TrendingUp, Coins, Crown, ArrowUpDown, MessageCircle, Gift } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
-import { triggerExport } from '../lib/crmSettings'
+import { triggerExport, useSettings } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
@@ -78,6 +78,17 @@ export function Members() {
 
   const navigate = useNavigate()
   const qc = useQueryClient()
+  // Admin-toggleable list columns + KPI strip — Settings → Pipelines → Fields → Members.
+  const memberFields = useSettings().member_fields
+  // Visible column count for skeleton + empty-row colspan. Checkbox +
+  // Member + Actions are always shown (3); each togglable column adds 1.
+  const visibleMemberCols = 3
+    + (memberFields.list.phone  ? 1 : 0)
+    + (memberFields.list.source ? 1 : 0)
+    + (memberFields.list.tier   ? 1 : 0)
+    + (memberFields.list.points ? 1 : 0)
+    + (memberFields.list.joined ? 1 : 0)
+    + (memberFields.list.status ? 1 : 0)
   const { t } = useTranslation()
 
   // Gate render: while we don't know yet, show nothing; once we
@@ -306,19 +317,21 @@ export function Members() {
       </div>
 
       {/* KPI strip — at-a-glance health for the loyalty program */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map(k => (
-          <div key={k.key} className="bg-dark-surface rounded-xl border border-dark-border px-4 py-3 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg bg-dark-surface2 flex items-center justify-center ${k.tint}`}>
-              <k.icon size={16} />
+      {memberFields.list.kpi_strip && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {kpis.map(k => (
+            <div key={k.key} className="bg-dark-surface rounded-xl border border-dark-border px-4 py-3 flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg bg-dark-surface2 flex items-center justify-center ${k.tint}`}>
+                <k.icon size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-t-secondary truncate">{k.label}</p>
+                <p className="text-lg font-bold text-white truncate">{k.value}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary truncate">{k.label}</p>
-              <p className="text-lg font-bold text-white truncate">{k.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Card>
         {/* Search row + sort */}
@@ -467,12 +480,12 @@ export function Members() {
                   </button>
                 </th>
                 <th className="pb-3 font-medium">{t('members.table.member',  'Member')}</th>
-                <th className="pb-3 font-medium">{t('members.table.phone',   'Phone')}</th>
-                <th className="pb-3 font-medium">{t('members.table.source',  'Source')}</th>
-                <th className="pb-3 font-medium">{t('members.table.tier',    'Tier')}</th>
-                <th className="pb-3 font-medium">{t('members.table.points',  'Points')}</th>
-                <th className="pb-3 font-medium">{t('members.table.joined',  'Joined')}</th>
-                <th className="pb-3 font-medium">{t('members.table.status',  'Status')}</th>
+                {memberFields.list.phone  && <th className="pb-3 font-medium">{t('members.table.phone',  'Phone')}</th>}
+                {memberFields.list.source && <th className="pb-3 font-medium">{t('members.table.source', 'Source')}</th>}
+                {memberFields.list.tier   && <th className="pb-3 font-medium">{t('members.table.tier',   'Tier')}</th>}
+                {memberFields.list.points && <th className="pb-3 font-medium">{t('members.table.points', 'Points')}</th>}
+                {memberFields.list.joined && <th className="pb-3 font-medium">{t('members.table.joined', 'Joined')}</th>}
+                {memberFields.list.status && <th className="pb-3 font-medium">{t('members.table.status', 'Status')}</th>}
                 <th className="pb-3 text-right pr-2">{t('members.table.actions', 'Actions')}</th>
               </tr>
             </thead>
@@ -480,14 +493,14 @@ export function Members() {
               {isLoading ? (
                 Array(10).fill(0).map((_, i) => (
                   <tr key={i}>
-                    {Array(8).fill(0).map((_, j) => (
+                    {Array(visibleMemberCols).fill(0).map((_, j) => (
                       <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded animate-pulse w-20" /></td>
                     ))}
                   </tr>
                 ))
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-[#636366]">
+                  <td colSpan={visibleMemberCols} className="py-12 text-center text-[#636366]">
                     No members yet. {search && 'Try a different search term.'}
                   </td>
                 </tr>
@@ -518,22 +531,34 @@ export function Members() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 text-xs text-[#a0a0a0]">{m.user?.phone || m.guests?.[0]?.phone || m.guests?.[0]?.mobile || '—'}</td>
-                    <td className="py-3 text-xs">
-                      {m.guests?.[0]?.lead_source ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
-                          {m.guests[0].lead_source}
+                    {memberFields.list.phone && (
+                      <td className="py-3 text-xs text-[#a0a0a0]">{m.user?.phone || m.guests?.[0]?.phone || m.guests?.[0]?.mobile || '—'}</td>
+                    )}
+                    {memberFields.list.source && (
+                      <td className="py-3 text-xs">
+                        {m.guests?.[0]?.lead_source ? (
+                          <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
+                            {m.guests[0].lead_source}
+                          </span>
+                        ) : <span className="text-[#636366]">—</span>}
+                      </td>
+                    )}
+                    {memberFields.list.tier && (
+                      <td className="py-3"><TierBadge tier={m.tier?.name} color={m.tier?.color_hex} /></td>
+                    )}
+                    {memberFields.list.points && (
+                      <td className="py-3 font-semibold text-white">{m.current_points?.toLocaleString()}</td>
+                    )}
+                    {memberFields.list.joined && (
+                      <td className="py-3 text-t-secondary text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
+                    )}
+                    {memberFields.list.status && (
+                      <td className="py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
+                          {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                         </span>
-                      ) : <span className="text-[#636366]">—</span>}
-                    </td>
-                    <td className="py-3"><TierBadge tier={m.tier?.name} color={m.tier?.color_hex} /></td>
-                    <td className="py-3 font-semibold text-white">{m.current_points?.toLocaleString()}</td>
-                    <td className="py-3 text-t-secondary text-xs">{m.joined_at ? format(new Date(m.joined_at), 'MMM d, yyyy') : '—'}</td>
-                    <td className="py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
-                        {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
-                      </span>
-                    </td>
+                      </td>
+                    )}
                     <td className="py-3 pr-2">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button

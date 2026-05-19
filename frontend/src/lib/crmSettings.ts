@@ -114,6 +114,18 @@ export interface DealFieldConfig {
   }
 }
 
+export interface MemberFieldConfig {
+  list: {
+    kpi_strip: boolean   // 4-card health strip above the table
+    phone: boolean
+    source: boolean      // lead-source pill
+    tier: boolean
+    points: boolean
+    joined: boolean
+    status: boolean      // active/inactive pill
+  }
+}
+
 export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
   form: {
     check_in: true, check_out: true, num_rooms: true,
@@ -171,6 +183,14 @@ export const DEFAULT_DEAL_FIELDS: DealFieldConfig = {
   },
 }
 
+export const DEFAULT_MEMBER_FIELDS: MemberFieldConfig = {
+  list: {
+    kpi_strip: true,
+    phone: true, source: true, tier: true,
+    points: true, joined: true, status: true,
+  },
+}
+
 export interface CrmSettings {
   employees: string[]
   lead_owners: string[]
@@ -211,6 +231,7 @@ export interface CrmSettings {
   customer_fields: CustomerFieldConfig
   corporate_fields: CorporateFieldConfig
   deal_fields: DealFieldConfig
+  member_fields: MemberFieldConfig
 }
 
 const DEFAULTS: CrmSettings = {
@@ -250,6 +271,7 @@ const DEFAULTS: CrmSettings = {
   customer_fields: DEFAULT_CUSTOMER_FIELDS,
   corporate_fields: DEFAULT_CORPORATE_FIELDS,
   deal_fields: DEFAULT_DEAL_FIELDS,
+  member_fields: DEFAULT_MEMBER_FIELDS,
 }
 
 export function useSettings(): CrmSettings {
@@ -320,6 +342,13 @@ export function useSettings(): CrmSettings {
     }
   } else {
     merged.deal_fields = DEFAULT_DEAL_FIELDS
+  }
+  if (merged.member_fields && typeof merged.member_fields === 'object') {
+    merged.member_fields = {
+      list: { ...DEFAULT_MEMBER_FIELDS.list, ...(merged.member_fields.list ?? {}) },
+    }
+  } else {
+    merged.member_fields = DEFAULT_MEMBER_FIELDS
   }
 
   return merged
