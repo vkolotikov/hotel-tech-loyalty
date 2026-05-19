@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { api, API_URL } from '../lib/api'
 import { ContactActions } from '../components/ContactActions'
 import { NewCustomerDrawer } from '../components/NewCustomerDrawer'
+import { useSettings, type CustomerFieldConfig } from '../lib/crmSettings'
 import { format } from 'date-fns'
 
 /**
@@ -76,6 +77,9 @@ export function Customers() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
+  // Per-org column visibility — admin toggles in Settings → Pipelines → Fields → Customers.
+  // Always-shown bits (selection checkbox, name, actions) live outside this config.
+  const customerFields = useSettings().customer_fields
 
   // Filters live in URL so back / refresh / bookmark survive.
   const q                = searchParams.get('q')                ?? ''
@@ -591,6 +595,7 @@ export function Customers() {
             <Row
               key={g.id}
               guest={g}
+              fieldCfg={customerFields}
               selected={selected.has(g.id)}
               onToggle={() => toggleOne(g.id)}
               onEdit={() => setEditingGuest(g)}
@@ -740,13 +745,14 @@ function Pill({ active, onClick, icon: Icon, children }: { active: boolean; onCl
 
 type RowProps = {
   guest: Guest
+  fieldCfg: CustomerFieldConfig
   selected: boolean
   onToggle: () => void
   onEdit: () => void
   onOpen: () => void
 }
 
-function Row({ guest, selected, onToggle, onEdit, onOpen }: RowProps) {
+function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) {
   const isVip = !!guest.vip_level && guest.vip_level !== 'Standard'
   const initials = (guest.full_name || guest.email || '?')
     .split(/\s+/)
@@ -755,10 +761,22 @@ function Row({ guest, selected, onToggle, onEdit, onOpen }: RowProps) {
     .join('')
     .toUpperCase()
 
+  // Build md+ grid template dynamically — when a column is toggled off
+  // we drop its track too, otherwise the row keeps an empty gap.
+  const mdGridCols = [
+    'auto',                                     // checkbox
+    '2fr',                                      // name (always)
+    fieldCfg.list.contact  ? '2fr' : null,
+    fieldCfg.list.company  ? '1fr' : null,
+    fieldCfg.list.activity ? '1fr' : null,
+    'auto',                                     // actions
+  ].filter(Boolean).join(' ')
+
   return (
     <div
       onClick={onOpen}
-      className={`grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[auto_2fr_2fr_1fr_1fr_auto] gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 cursor-pointer group items-center transition-colors ${
+      style={{ ['--md-cols' as any]: mdGridCols }}
+      className={`grid grid-cols-[auto_1fr_auto_auto] md:[grid-template-columns:var(--md-cols)] gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 cursor-pointer group items-center transition-colors ${
         selected ? 'bg-primary-500/[0.06]' : 'hover:bg-white/[0.02]'
       }`}
     >
@@ -784,49 +802,55 @@ function Row({ guest, selected, onToggle, onEdit, onOpen }: RowProps) {
             <span className="text-sm font-semibold text-white truncate group-hover:text-primary-300 transition-colors">
               {guest.full_name}
             </span>
-            {isVip && (
+            {fieldCfg.list.vip_badge && isVip && (
               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400">
                 <Star size={9} fill="currentColor" /> VIP
               </span>
             )}
           </div>
-          {guest.position_title && (
+          {fieldCfg.list.position_title && guest.position_title && (
             <div className="text-[11px] text-gray-500 truncate">{guest.position_title}</div>
           )}
         </div>
       </div>
 
       {/* Contact (hidden on mobile, shown on md+) */}
-      <div className="hidden md:flex flex-col gap-0.5 min-w-0">
-        {guest.email && <div className="text-xs text-gray-300 truncate">{guest.email}</div>}
-        {(guest.phone || guest.mobile) && (
-          <div className="text-[11px] text-gray-500 truncate">{guest.phone || guest.mobile}</div>
-        )}
-        {!guest.email && !guest.phone && !guest.mobile && (
-          <div className="text-[11px] text-gray-700">—</div>
-        )}
-      </div>
+      {fieldCfg.list.contact && (
+        <div className="hidden md:flex flex-col gap-0.5 min-w-0">
+          {guest.email && <div className="text-xs text-gray-300 truncate">{guest.email}</div>}
+          {(guest.phone || guest.mobile) && (
+            <div className="text-[11px] text-gray-500 truncate">{guest.phone || guest.mobile}</div>
+          )}
+          {!guest.email && !guest.phone && !guest.mobile && (
+            <div className="text-[11px] text-gray-700">—</div>
+          )}
+        </div>
+      )}
 
       {/* Company */}
-      <div className="hidden md:block min-w-0">
-        {guest.company ? (
-          <div className="flex items-center gap-1.5 text-xs text-gray-300 truncate">
-            <Briefcase size={11} className="text-gray-500 flex-shrink-0" />
-            <span className="truncate">{guest.company}</span>
-          </div>
-        ) : (
-          <span className="text-[11px] text-gray-700">—</span>
-        )}
-      </div>
+      {fieldCfg.list.company && (
+        <div className="hidden md:block min-w-0">
+          {guest.company ? (
+            <div className="flex items-center gap-1.5 text-xs text-gray-300 truncate">
+              <Briefcase size={11} className="text-gray-500 flex-shrink-0" />
+              <span className="truncate">{guest.company}</span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-gray-700">—</span>
+          )}
+        </div>
+      )}
 
       {/* Activity */}
-      <div className="hidden md:block text-right text-[11px] text-gray-500">
-        {guest.total_stays && guest.total_stays > 0
-          ? <><span className="text-emerald-400 font-semibold tabular-nums">{guest.total_stays}</span> stays</>
-          : guest.created_at
-            ? <>added {format(new Date(guest.created_at), 'MMM d')}</>
-            : '—'}
-      </div>
+      {fieldCfg.list.activity && (
+        <div className="hidden md:block text-right text-[11px] text-gray-500">
+          {guest.total_stays && guest.total_stays > 0
+            ? <><span className="text-emerald-400 font-semibold tabular-nums">{guest.total_stays}</span> stays</>
+            : guest.created_at
+              ? <>added {format(new Date(guest.created_at), 'MMM d')}</>
+              : '—'}
+        </div>
+      )}
 
       {/* Right-side actions */}
       <div className="flex items-center gap-1.5 justify-end">

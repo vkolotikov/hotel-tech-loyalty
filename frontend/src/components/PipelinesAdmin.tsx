@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   GitBranch, Plus, Trash2, Star, ChevronDown, ChevronRight, Edit3,
-  Trophy, X, Flag, Save, LayoutGrid, Eye, EyeOff,
+  Trophy, X, Flag, Save, Sparkles, Eye, SlidersHorizontal,
+  type LucideIcon,
 } from 'lucide-react'
-import { useSettings, DEFAULT_INQUIRY_FIELDS, type InquiryFieldConfig } from '../lib/crmSettings'
 import { CustomFieldsAdmin } from './CustomFieldsAdmin'
 import { IndustryPresetPicker } from './IndustryPresetPicker'
+import { FieldManagerPanel } from './FieldManagerPanel'
 
 /**
  * Settings → Pipelines tab. Manages:
@@ -103,87 +104,134 @@ export function PipelinesAdmin() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* CRM Phase 9 — one-click industry setup. Reshapes pipeline +
-          lost reasons + layout + custom fields together. Sits at the
-          top so non-experts hit it first. */}
-      <IndustryPresetPicker />
+    <div className="space-y-3">
+      {/* Five collapsible accordions. "Fields" is the most-used so it's
+          the only one expanded by default; the rest stay closed to keep
+          the page short. Industry preset stays at the top because it's
+          the one-click setup for new orgs / first-time admins. */}
+      <Accordion title="Quick setup by industry" icon={Sparkles} iconColor="text-amber-400"
+        subtitle="One click reshapes pipeline stages, lost reasons, layout, and custom fields to fit your trade.">
+        <IndustryPresetPicker />
+      </Accordion>
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <GitBranch size={16} className="text-accent" /> Pipelines
-            </h2>
-            <p className="text-xs text-t-secondary mt-1">
-              Stages your deals progress through. The industry preset above sets a sensible default —
-              tweak names, colors and order here.
-            </p>
-          </div>
-          <button
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-2 bg-accent text-black font-bold rounded-md px-3 py-1.5 text-xs hover:bg-accent/90"
-          >
-            <Plus size={13} /> New pipeline
-          </button>
-        </div>
+      <Accordion title="Fields" icon={Eye} iconColor="text-cyan-400"
+        subtitle="Pick which fields appear on add forms and which columns show in each list. Per-entity tabs."
+        defaultOpen>
+        <FieldManagerPanel />
+      </Accordion>
 
-        {isLoading ? (
-          <p className="text-sm text-t-secondary py-8 text-center">Loading…</p>
-        ) : (
-          <div className="space-y-2">
-            {pipelines?.map(p => (
-              <PipelineRow
-                key={p.id}
-                pipeline={p}
-                expanded={expanded.has(p.id)}
-                onToggle={() => toggleExpanded(p.id)}
-                onSetDefault={() => setDefault.mutate(p.id)}
-                onDelete={() => {
-                  if (window.confirm(`Delete pipeline "${p.name}"? Inquiries on it must be closed or moved first.`)) {
-                    deletePipeline.mutate(p.id)
-                  }
-                }}
-              />
-            ))}
-          </div>
-        )}
+      <Accordion title="Custom fields" icon={SlidersHorizontal} iconColor="text-purple-400"
+        subtitle="Add your own fields to leads, customers, companies, and tasks. Industry presets above seed sensible defaults.">
+        <CustomFieldsAdmin />
+      </Accordion>
 
-        {creating && (
-          <NewPipelineModal
-            onClose={() => setCreating(false)}
-            onCreated={() => {
-              qc.invalidateQueries({ queryKey: ['admin-pipelines'] })
-              setCreating(false)
-            }}
-          />
-        )}
-      </div>
+      <Accordion title="Pipelines & stages" icon={GitBranch} iconColor="text-accent"
+        subtitle="Stages your deals progress through. Rename, recolor, and reorder.">
+        <PipelinesEditor isLoading={isLoading} pipelines={pipelines} creating={creating}
+          setCreating={setCreating} expanded={expanded} toggleExpanded={toggleExpanded}
+          setDefault={setDefault} deletePipeline={deletePipeline} />
+      </Accordion>
 
-      {/* Lost reasons */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <X size={16} className="text-red-400" /> Lost reasons
-            </h2>
-            <p className="text-xs text-t-secondary mt-1">
-              Required pick when a deal is moved to a Lost stage. Powers the lost-reason breakdown on the funnel report.
-            </p>
-          </div>
-        </div>
-
+      <Accordion title="Lost reasons" icon={X} iconColor="text-red-400"
+        subtitle="Required pick when a deal is moved to a Lost stage. Powers the lost-reason breakdown on the funnel report.">
         <LostReasonsEditor reasons={lostReasons ?? []} />
+      </Accordion>
+    </div>
+  )
+}
+
+// === Collapsible accordion wrapper =========================================
+
+function Accordion({ title, subtitle, icon: Icon, iconColor, defaultOpen, children }: {
+  title: string
+  subtitle?: string
+  icon: LucideIcon
+  iconColor: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(!!defaultOpen)
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-dark-surface2/30 transition"
+      >
+        <span className="mt-0.5 text-t-secondary">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+        <Icon size={16} className={'mt-0.5 flex-shrink-0 ' + iconColor} />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-bold text-white">{title}</h2>
+          {subtitle && <p className="text-xs text-t-secondary mt-0.5">{subtitle}</p>}
+        </div>
+      </button>
+      {open && (
+        <div className="border-t border-dark-border px-4 py-4">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// === Pipelines editor (extracted from inline JSX) ==========================
+
+function PipelinesEditor({
+  isLoading, pipelines, creating, setCreating, expanded, toggleExpanded,
+  setDefault, deletePipeline,
+}: {
+  isLoading: boolean
+  pipelines: Pipeline[] | undefined
+  creating: boolean
+  setCreating: (v: boolean) => void
+  expanded: Set<number>
+  toggleExpanded: (id: number) => void
+  setDefault: any
+  deletePipeline: any
+}) {
+  const qc = useQueryClient()
+  return (
+    <div>
+      <div className="flex items-center justify-end mb-3">
+        <button
+          onClick={() => setCreating(true)}
+          className="flex items-center gap-2 bg-accent text-black font-bold rounded-md px-3 py-1.5 text-xs hover:bg-accent/90"
+        >
+          <Plus size={13} /> New pipeline
+        </button>
       </div>
 
-      {/* Field visibility — admin picks which fields show on the Add
-          Inquiry form and which columns appear in the leads list. */}
-      <FieldLayoutEditor />
+      {isLoading ? (
+        <p className="text-sm text-t-secondary py-8 text-center">Loading…</p>
+      ) : (
+        <div className="space-y-2">
+          {pipelines?.map(p => (
+            <PipelineRow
+              key={p.id}
+              pipeline={p}
+              expanded={expanded.has(p.id)}
+              onToggle={() => toggleExpanded(p.id)}
+              onSetDefault={() => setDefault.mutate(p.id)}
+              onDelete={() => {
+                if (window.confirm(`Delete pipeline "${p.name}"? Inquiries on it must be closed or moved first.`)) {
+                  deletePipeline.mutate(p.id)
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Custom fields — admin-defined per entity. Multi-industry: a
-          beauty salon adds skin_type / allergies to Guest, a clinic
-          adds DOB + insurance, etc. Industry presets at the top. */}
-      <CustomFieldsAdmin />
+      {creating && (
+        <NewPipelineModal
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            qc.invalidateQueries({ queryKey: ['admin-pipelines'] })
+            setCreating(false)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -728,171 +776,4 @@ function ReasonRow({ reason, onToggle, onDelete }: {
   )
 }
 
-/* ── Field layout editor ────────────────────────────────────── */
-
-const FORM_FIELDS: Array<{ key: keyof InquiryFieldConfig['form']; label: string; group: 'main' | 'advanced' }> = [
-  { key: 'check_in',         label: 'Check-in',         group: 'main' },
-  { key: 'check_out',        label: 'Check-out',        group: 'main' },
-  { key: 'num_rooms',        label: 'Rooms',            group: 'main' },
-  { key: 'inquiry_type',     label: 'Inquiry type',     group: 'main' },
-  { key: 'source',           label: 'Source',           group: 'advanced' },
-  { key: 'room_type',        label: 'Room type',        group: 'advanced' },
-  { key: 'rate_offered',     label: 'Rate',             group: 'advanced' },
-  { key: 'total_value',      label: 'Total value',      group: 'advanced' },
-  { key: 'status',           label: 'Status',           group: 'advanced' },
-  { key: 'priority',         label: 'Priority',         group: 'advanced' },
-  { key: 'assigned_to',      label: 'Assigned to',      group: 'advanced' },
-  { key: 'special_requests', label: 'Special requests', group: 'advanced' },
-  { key: 'notes',            label: 'Notes',            group: 'advanced' },
-]
-
-const LIST_COLUMNS: Array<{ key: keyof InquiryFieldConfig['list']; label: string; hint?: string }> = [
-  { key: 'bulk_select', label: 'Bulk-select column', hint: 'Checkbox to multi-select rows for bulk actions. Off by default — turn on if your team uses bulk owner reassign / status changes.' },
-  { key: 'stay',        label: 'Stay (dates · nights · rooms)' },
-  { key: 'value',       label: 'Value (€)' },
-  { key: 'owner',       label: 'Owner' },
-  { key: 'touches',     label: 'Touches' },
-  { key: 'next_task',   label: 'Next task' },
-]
-
-function FieldLayoutEditor() {
-  const qc = useQueryClient()
-  const settings = useSettings()
-  // Local working copy so toggles feel immediate; we save on user click
-  // rather than per-toggle to keep the API calls cheap.
-  const [draft, setDraft] = useState<InquiryFieldConfig>(settings.inquiry_fields)
-  const [dirty, setDirty] = useState(false)
-
-  // Re-sync when the upstream settings change (e.g. after our own save).
-  useEffect(() => { setDraft(settings.inquiry_fields); setDirty(false) }, [settings.inquiry_fields])
-
-  const save = useMutation({
-    mutationFn: () => api.put('/v1/admin/crm-settings/inquiry_fields', { value: draft }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm-settings'] })
-      toast.success('Layout saved')
-      setDirty(false)
-    },
-    onError: () => toast.error('Save failed'),
-  })
-
-  const reset = () => {
-    setDraft(DEFAULT_INQUIRY_FIELDS)
-    setDirty(true)
-  }
-
-  const toggleForm = (key: keyof InquiryFieldConfig['form']) => {
-    setDraft(d => ({ ...d, form: { ...d.form, [key]: !d.form[key] } }))
-    setDirty(true)
-  }
-  const toggleList = (key: keyof InquiryFieldConfig['list']) => {
-    setDraft(d => ({ ...d, list: { ...d.list, [key]: !d.list[key] } }))
-    setDirty(true)
-  }
-
-  return (
-    <div>
-      <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
-        <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <LayoutGrid size={16} className="text-cyan-400" /> Pipeline layout
-          </h2>
-          <p className="text-xs text-t-secondary mt-1">
-            Pick which fields appear on Add Inquiry and which columns show in the leads list.
-            Guest, Property, Status and Actions are always shown.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={reset}
-            className="text-xs text-t-secondary hover:text-white px-2 py-1 rounded hover:bg-dark-surface2"
-          >
-            Reset to defaults
-          </button>
-          <button
-            onClick={() => save.mutate()}
-            disabled={!dirty || save.isPending}
-            className="flex items-center gap-1.5 bg-accent text-black font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50 hover:bg-accent/90"
-          >
-            <Save size={12} />
-            {save.isPending ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Add Inquiry form */}
-        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-t-secondary mb-2">
-            Add Inquiry form
-          </h3>
-          <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wide text-t-secondary/70 px-2 pt-1">Main</div>
-            {FORM_FIELDS.filter(f => f.group === 'main').map(f => (
-              <ToggleRow
-                key={f.key}
-                label={f.label}
-                on={draft.form[f.key]}
-                onToggle={() => toggleForm(f.key)}
-              />
-            ))}
-            <div className="text-[10px] uppercase tracking-wide text-t-secondary/70 px-2 pt-2">Advanced</div>
-            {FORM_FIELDS.filter(f => f.group === 'advanced').map(f => (
-              <ToggleRow
-                key={f.key}
-                label={f.label}
-                on={draft.form[f.key]}
-                onToggle={() => toggleForm(f.key)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Leads list columns */}
-        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-t-secondary mb-2">
-            Leads list columns
-          </h3>
-          <div className="space-y-1">
-            {LIST_COLUMNS.map(c => (
-              <ToggleRow
-                key={c.key}
-                label={c.label}
-                hint={c.hint}
-                on={draft.list[c.key]}
-                onToggle={() => toggleList(c.key)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ToggleRow({ label, hint, on, onToggle }: {
-  label: string
-  hint?: string
-  on: boolean
-  onToggle: () => void
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={`w-full flex items-start gap-2 px-2 py-1.5 rounded-md text-left transition ${
-        on ? 'hover:bg-emerald-500/5' : 'hover:bg-dark-surface2 opacity-60'
-      }`}
-    >
-      <div className={`mt-0.5 w-7 h-4 rounded-full p-0.5 flex-shrink-0 transition ${on ? 'bg-emerald-500/80' : 'bg-dark-surface2'}`}>
-        <div className={`w-3 h-3 rounded-full bg-white transition-transform ${on ? 'translate-x-3' : ''}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          {on ? <Eye size={11} className="text-emerald-400 flex-shrink-0" /> : <EyeOff size={11} className="text-t-secondary flex-shrink-0" />}
-          <span className={`text-xs font-semibold ${on ? 'text-white' : 'text-t-secondary'}`}>{label}</span>
-        </div>
-        {hint && <p className="text-[10px] text-t-secondary mt-0.5 leading-snug">{hint}</p>}
-      </div>
-    </button>
-  )
-}
+/* Field layout editor moved to ./FieldManagerPanel.tsx — see import above. */

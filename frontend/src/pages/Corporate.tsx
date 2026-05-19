@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { useSettings } from '../lib/crmSettings'
+import { useSettings, type CorporateFieldConfig } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import { Plus, Search, ChevronLeft, ChevronRight, X, Building2, ChevronDown, ChevronUp, Sparkles, Loader2, Users } from 'lucide-react'
 import { CustomFieldsForm, CustomFieldsDisplay } from '../components/CustomFields'
@@ -30,6 +30,9 @@ export function Corporate() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const settings = useSettings()
+  // Per-org column visibility — admin toggles in Settings → Pipelines → Fields → Companies.
+  const corpFields: CorporateFieldConfig = settings.corporate_fields
+  const visibleCols = Object.values(corpFields.list).filter(Boolean).length + 2 // +2 for chevron + company (always shown)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [accountManager, setAccountManager] = useState('')
@@ -122,21 +125,21 @@ export function Corporate() {
               <tr>
                 <th className="w-8 px-3 py-3" />
                 <SortHeader col="company_name" label={t('corporate.table.company', 'Company')} />
-                <SortHeader col="industry" label={t('corporate.table.industry', 'Industry')} />
-                <SortHeader col="contact_person" label={t('corporate.table.contact', 'Contact')} />
-                <SortHeader col="account_manager" label={t('corporate.table.manager', 'Manager')} />
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('corporate.table.contract', 'Contract')}</th>
-                <SortHeader col="negotiated_rate" label={t('corporate.table.rate', 'Rate')} />
-                <SortHeader col="discount_percentage" label={t('corporate.table.discount', 'Discount')} />
-                <SortHeader col="annual_revenue" label={t('corporate.table.revenue', 'Revenue')} />
-                <SortHeader col="status" label={t('corporate.table.status', 'Status')} />
+                {corpFields.list.industry && <SortHeader col="industry" label={t('corporate.table.industry', 'Industry')} />}
+                {corpFields.list.contact_person && <SortHeader col="contact_person" label={t('corporate.table.contact', 'Contact')} />}
+                {corpFields.list.account_manager && <SortHeader col="account_manager" label={t('corporate.table.manager', 'Manager')} />}
+                {corpFields.list.contract && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('corporate.table.contract', 'Contract')}</th>}
+                {corpFields.list.rate && <SortHeader col="negotiated_rate" label={t('corporate.table.rate', 'Rate')} />}
+                {corpFields.list.discount && <SortHeader col="discount_percentage" label={t('corporate.table.discount', 'Discount')} />}
+                {corpFields.list.revenue && <SortHeader col="annual_revenue" label={t('corporate.table.revenue', 'Revenue')} />}
+                {corpFields.list.status && <SortHeader col="status" label={t('corporate.table.status', 'Status')} />}
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">{t('corporate.table.loading', 'Loading...')}</td></tr>
+                <tr><td colSpan={visibleCols} className="text-center py-12 text-[#636366]">{t('corporate.table.loading', 'Loading...')}</td></tr>
               ) : accounts.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-12 text-[#636366]">{t('corporate.table.no_accounts', 'No corporate accounts found')}</td></tr>
+                <tr><td colSpan={visibleCols} className="text-center py-12 text-[#636366]">{t('corporate.table.no_accounts', 'No corporate accounts found')}</td></tr>
               ) : accounts.map((a: any) => (
                 <>
                   <tr key={a.id} onClick={() => setExpandedId(expandedId === a.id ? null : a.id)} className="hover:bg-dark-surface2/50 cursor-pointer transition-colors">
@@ -159,24 +162,28 @@ export function Corporate() {
                         </Link>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#a0a0a0]">{a.industry || '—'}</td>
-                    <td className="px-4 py-3 text-gray-300">{a.contact_person || '—'}</td>
-                    <td className="px-4 py-3 text-gray-300">{a.account_manager || '—'}</td>
-                    <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">
-                      {a.contract_start && a.contract_end ? `${a.contract_start} — ${a.contract_end}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-300">{a.negotiated_rate != null ? fmt(a.negotiated_rate) : '—'}</td>
-                    <td className="px-4 py-3 text-gray-300">{a.discount_percentage != null ? `${a.discount_percentage}%` : '—'}</td>
-                    <td className="px-4 py-3 text-primary-400 font-medium">{a.annual_revenue != null ? fmt(a.annual_revenue) : '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-t-secondary'}`}>
-                        {t(`corporate.statuses.${a.status}`, { defaultValue: a.status ?? '' })}
-                      </span>
-                    </td>
+                    {corpFields.list.industry && <td className="px-4 py-3 text-[#a0a0a0]">{a.industry || '—'}</td>}
+                    {corpFields.list.contact_person && <td className="px-4 py-3 text-gray-300">{a.contact_person || '—'}</td>}
+                    {corpFields.list.account_manager && <td className="px-4 py-3 text-gray-300">{a.account_manager || '—'}</td>}
+                    {corpFields.list.contract && (
+                      <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">
+                        {a.contract_start && a.contract_end ? `${a.contract_start} — ${a.contract_end}` : '—'}
+                      </td>
+                    )}
+                    {corpFields.list.rate && <td className="px-4 py-3 text-gray-300">{a.negotiated_rate != null ? fmt(a.negotiated_rate) : '—'}</td>}
+                    {corpFields.list.discount && <td className="px-4 py-3 text-gray-300">{a.discount_percentage != null ? `${a.discount_percentage}%` : '—'}</td>}
+                    {corpFields.list.revenue && <td className="px-4 py-3 text-primary-400 font-medium">{a.annual_revenue != null ? fmt(a.annual_revenue) : '—'}</td>}
+                    {corpFields.list.status && (
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-t-secondary'}`}>
+                          {t(`corporate.statuses.${a.status}`, { defaultValue: a.status ?? '' })}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                   {expandedId === a.id && (
                     <tr key={`detail-${a.id}`}>
-                      <td colSpan={10} className="bg-dark-bg px-6 py-5 border-t border-dark-border">
+                      <td colSpan={visibleCols} className="bg-dark-bg px-6 py-5 border-t border-dark-border">
                         <DetailPanel account={a} detail={detail} currencySymbol={settings.currency_symbol} />
                       </td>
                     </tr>

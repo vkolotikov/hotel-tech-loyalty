@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { useSettings, triggerExport } from '../lib/crmSettings'
+import { useSettings, triggerExport, type DealFieldConfig } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import {
   Package, Download, Upload, Plus, ChevronLeft, ChevronRight, ChevronDown,
@@ -46,6 +46,10 @@ export function Deals() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const settings = useSettings()
+  // Per-org column visibility — admin toggles in Settings → Pipelines → Fields → Deals.
+  // Deal/Customer column + Actions are always shown.
+  const dealFields: DealFieldConfig = settings.deal_fields
+  const visibleCols = Object.values(dealFields.list).filter(Boolean).length + 2 // +2 for deal/customer + actions
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sort, setSort] = useState<'due_date' | 'amount' | 'created'>('due_date')
   const [page, setPage] = useState(1)
@@ -237,22 +241,22 @@ export function Deals() {
             <thead>
               <tr className="border-b border-dark-border">
                 <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.deal_customer', 'Deal / Customer')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.product_details', 'Product & Details')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.amount', 'Amount')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.payment', 'Payment')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.fulfillment', 'Fulfillment Stage')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.next_action', 'Next Action')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.due_date', 'Due Date')}</th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.owner', 'Owner')}</th>
+                {dealFields.list.product_details && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.product_details', 'Product & Details')}</th>}
+                {dealFields.list.amount && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.amount', 'Amount')}</th>}
+                {dealFields.list.payment && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.payment', 'Payment')}</th>}
+                {dealFields.list.fulfillment && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.fulfillment', 'Fulfillment Stage')}</th>}
+                {dealFields.list.next_action && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.next_action', 'Next Action')}</th>}
+                {dealFields.list.due_date && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.due_date', 'Due Date')}</th>}
+                {dealFields.list.owner && <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.owner', 'Owner')}</th>}
                 <th className="text-right px-4 py-3 text-[11px] uppercase tracking-wider font-medium text-t-secondary">{t('deals.table.actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-[#636366]">{t('deals.table.loading', 'Loading…')}</td></tr>
+                <tr><td colSpan={visibleCols} className="px-4 py-12 text-center text-[#636366]">{t('deals.table.loading', 'Loading…')}</td></tr>
               )}
               {!isLoading && deals.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-16 text-center">
+                <tr><td colSpan={visibleCols} className="px-4 py-16 text-center">
                   <Package size={36} className="mx-auto mb-3 text-[#636366]" />
                   <p className="text-sm text-[#a0a0a0]">{t('deals.table.empty', 'No deals match the current filter.')}</p>
                   <p className="text-xs text-[#636366] mt-1">{t('deals.table.empty_hint', 'Confirm an inquiry to start tracking it here.')}</p>
@@ -287,26 +291,31 @@ export function Deals() {
                     </td>
 
                     {/* Product & Details */}
-                    <td className="px-4 py-3 max-w-[220px]">
-                      <div className="text-sm text-white truncate">{d.room_type_requested || d.inquiry_type || t('deals.row.no_product', '—')}</div>
-                      {(d.num_rooms || d.event_pax) && (
-                        <div className="text-[11px] text-gray-500 truncate">
-                          {d.num_rooms ? `${d.num_rooms} ${t('deals.row.rooms', 'rooms')}` : `${d.event_pax} ${t('deals.row.pax', 'pax')}`}
-                          {d.property?.name && ` · ${d.property.name}`}
-                        </div>
-                      )}
-                      {d.event_name && <div className="text-[10px] text-gray-600 truncate">{d.event_name}</div>}
-                    </td>
+                    {dealFields.list.product_details && (
+                      <td className="px-4 py-3 max-w-[220px]">
+                        <div className="text-sm text-white truncate">{d.room_type_requested || d.inquiry_type || t('deals.row.no_product', '—')}</div>
+                        {(d.num_rooms || d.event_pax) && (
+                          <div className="text-[11px] text-gray-500 truncate">
+                            {d.num_rooms ? `${d.num_rooms} ${t('deals.row.rooms', 'rooms')}` : `${d.event_pax} ${t('deals.row.pax', 'pax')}`}
+                            {d.property?.name && ` · ${d.property.name}`}
+                          </div>
+                        )}
+                        {d.event_name && <div className="text-[10px] text-gray-600 truncate">{d.event_name}</div>}
+                      </td>
+                    )}
 
                     {/* Amount */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-bold text-white tabular-nums">{currency(d.total_value)}</div>
-                      {d.paid_amount != null && d.payment_status === 'partial' && (
-                        <div className="text-[10px] text-purple-400">{currency(d.paid_amount)} {t('deals.row.paid_lower', 'paid')}</div>
-                      )}
-                    </td>
+                    {dealFields.list.amount && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-bold text-white tabular-nums">{currency(d.total_value)}</div>
+                        {d.paid_amount != null && d.payment_status === 'partial' && (
+                          <div className="text-[10px] text-purple-400">{currency(d.paid_amount)} {t('deals.row.paid_lower', 'paid')}</div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Payment */}
+                    {dealFields.list.payment && (
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <button onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect()
@@ -323,8 +332,10 @@ export function Deals() {
                         <div className="text-[10px] text-gray-500 mt-0.5">{t('deals.row.due')} {fmtDate(d.next_task_due)}</div>
                       )}
                     </td>
+                    )}
 
                     {/* Fulfillment stage + progress bar */}
+                    {dealFields.list.fulfillment && (
                     <td className="px-4 py-3 max-w-[220px]" onClick={e => e.stopPropagation()}>
                       <button onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect()
@@ -342,8 +353,10 @@ export function Deals() {
                         ))}
                       </div>
                     </td>
+                    )}
 
                     {/* Next Action */}
+                    {dealFields.list.next_action && (
                     <td className="px-4 py-3 max-w-[200px]">
                       {d.next_task_type && !d.next_task_completed ? (
                         <>
@@ -361,28 +374,33 @@ export function Deals() {
                         <span className="text-xs text-gray-700">—</span>
                       )}
                     </td>
+                    )}
 
                     {/* Due date + relative */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {d.next_task_due ? (
-                        <>
-                          <div className="text-xs text-gray-300">{fmtDate(d.next_task_due)}</div>
-                          {rel && <div className={`text-[10px] ${rel.tone} font-semibold`}>{rel.text}</div>}
-                        </>
-                      ) : <span className="text-xs text-gray-700">—</span>}
-                    </td>
+                    {dealFields.list.due_date && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {d.next_task_due ? (
+                          <>
+                            <div className="text-xs text-gray-300">{fmtDate(d.next_task_due)}</div>
+                            {rel && <div className={`text-[10px] ${rel.tone} font-semibold`}>{rel.text}</div>}
+                          </>
+                        ) : <span className="text-xs text-gray-700">—</span>}
+                      </td>
+                    )}
 
                     {/* Owner */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {d.assigned_to ? (
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${avatarTint(d.id + 1)}`}>
-                            {avatarInitials(d.assigned_to)}
+                    {dealFields.list.owner && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {d.assigned_to ? (
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${avatarTint(d.id + 1)}`}>
+                              {avatarInitials(d.assigned_to)}
+                            </div>
+                            <span className="text-xs text-gray-300 truncate max-w-[80px]">{d.assigned_to}</span>
                           </div>
-                          <span className="text-xs text-gray-300 truncate max-w-[80px]">{d.assigned_to}</span>
-                        </div>
-                      ) : <span className="text-xs text-gray-700">—</span>}
-                    </td>
+                        ) : <span className="text-xs text-gray-700">—</span>}
+                      </td>
+                    )}
 
                     {/* Actions */}
                     <td className="px-4 py-3 whitespace-nowrap text-right">

@@ -2,11 +2,21 @@ import { useQuery } from '@tanstack/react-query'
 import { api, API_BASE } from './api'
 
 /**
- * Field-visibility config for the Sales Pipeline. Stored under the
- * `inquiry_fields` key in crm_settings. Lets admins hide fields from
- * the Add Inquiry form and columns from the leads list without
- * touching code. Required-to-create fields (`guest`, `property`) are
- * always shown; only optional fields are toggleable.
+ * Field-visibility config for CRM entities. Stored under per-entity
+ * keys in `crm_settings` (`inquiry_fields`, `customer_fields`,
+ * `corporate_fields`, `deal_fields`). Lets admins hide fields from
+ * each entity's listing + add-new form without touching code.
+ *
+ * Always-shown fields (the identity column, status column, actions)
+ * are NOT toggleable — they live outside this config to keep the UI
+ * usable when an admin turns everything off.
+ *
+ * Adding a new toggleable field: add the key here, default it to true
+ * in the matching `DEFAULT_*` const, wire the consumer page to gate
+ * its render on `settings.<entity>_fields.<section>.<key>`. The
+ * deep-merge in `useSettings()` fills missing keys for orgs that
+ * saved a partial config before the new field existed — no migration
+ * needed.
  */
 export interface InquiryFieldConfig {
   form: {
@@ -34,6 +44,41 @@ export interface InquiryFieldConfig {
   }
 }
 
+export interface CustomerFieldConfig {
+  list: {
+    contact: boolean        // email + phone column
+    company: boolean        // company chip
+    activity: boolean       // stays count / added-date column
+    vip_badge: boolean      // VIP star pill on the row
+    position_title: boolean // job title under the name
+  }
+}
+
+export interface CorporateFieldConfig {
+  list: {
+    industry: boolean
+    contact_person: boolean
+    account_manager: boolean
+    contract: boolean        // contract start/end column
+    rate: boolean
+    discount: boolean
+    revenue: boolean
+    status: boolean
+  }
+}
+
+export interface DealFieldConfig {
+  list: {
+    product_details: boolean
+    amount: boolean
+    payment: boolean
+    fulfillment: boolean
+    next_action: boolean
+    due_date: boolean
+    owner: boolean
+  }
+}
+
 export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
   form: {
     check_in: true, check_out: true, num_rooms: true,
@@ -46,6 +91,29 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
     stay: true, value: true, owner: true,
     touches: true, next_task: true,
     bulk_select: false, // hidden by default — admins opt in
+  },
+}
+
+export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldConfig = {
+  list: {
+    contact: true, company: true, activity: true,
+    vip_badge: true, position_title: true,
+  },
+}
+
+export const DEFAULT_CORPORATE_FIELDS: CorporateFieldConfig = {
+  list: {
+    industry: true, contact_person: true, account_manager: true,
+    contract: true, rate: true, discount: true,
+    revenue: true, status: true,
+  },
+}
+
+export const DEFAULT_DEAL_FIELDS: DealFieldConfig = {
+  list: {
+    product_details: true, amount: true, payment: true,
+    fulfillment: true, next_action: true, due_date: true,
+    owner: true,
   },
 }
 
@@ -86,6 +154,9 @@ export interface CrmSettings {
   company_name: string
   date_format: string
   inquiry_fields: InquiryFieldConfig
+  customer_fields: CustomerFieldConfig
+  corporate_fields: CorporateFieldConfig
+  deal_fields: DealFieldConfig
 }
 
 const DEFAULTS: CrmSettings = {
@@ -122,6 +193,9 @@ const DEFAULTS: CrmSettings = {
   company_name: 'Hotel Group',
   date_format: 'Y-m-d',
   inquiry_fields: DEFAULT_INQUIRY_FIELDS,
+  customer_fields: DEFAULT_CUSTOMER_FIELDS,
+  corporate_fields: DEFAULT_CORPORATE_FIELDS,
+  deal_fields: DEFAULT_DEAL_FIELDS,
 }
 
 export function useSettings(): CrmSettings {
@@ -157,9 +231,10 @@ export function useSettings(): CrmSettings {
     merged[key] = parsed
   }
 
-  // Deep-merge inquiry_fields so adding a new toggleable field in code
-  // doesn't break orgs that saved a partial config before the field
-  // existed. Server value wins where present; defaults fill the gaps.
+  // Deep-merge per-entity field configs so adding a new toggleable
+  // field in code doesn't break orgs that saved a partial config
+  // before the field existed. Server value wins where present;
+  // defaults fill the gaps.
   if (merged.inquiry_fields && typeof merged.inquiry_fields === 'object') {
     merged.inquiry_fields = {
       form: { ...DEFAULT_INQUIRY_FIELDS.form, ...(merged.inquiry_fields.form ?? {}) },
@@ -167,6 +242,27 @@ export function useSettings(): CrmSettings {
     }
   } else {
     merged.inquiry_fields = DEFAULT_INQUIRY_FIELDS
+  }
+  if (merged.customer_fields && typeof merged.customer_fields === 'object') {
+    merged.customer_fields = {
+      list: { ...DEFAULT_CUSTOMER_FIELDS.list, ...(merged.customer_fields.list ?? {}) },
+    }
+  } else {
+    merged.customer_fields = DEFAULT_CUSTOMER_FIELDS
+  }
+  if (merged.corporate_fields && typeof merged.corporate_fields === 'object') {
+    merged.corporate_fields = {
+      list: { ...DEFAULT_CORPORATE_FIELDS.list, ...(merged.corporate_fields.list ?? {}) },
+    }
+  } else {
+    merged.corporate_fields = DEFAULT_CORPORATE_FIELDS
+  }
+  if (merged.deal_fields && typeof merged.deal_fields === 'object') {
+    merged.deal_fields = {
+      list: { ...DEFAULT_DEAL_FIELDS.list, ...(merged.deal_fields.list ?? {}) },
+    }
+  } else {
+    merged.deal_fields = DEFAULT_DEAL_FIELDS
   }
 
   return merged

@@ -105,11 +105,35 @@ class IndustryPresetService
             // ── 2. Lost reasons ─────────────────────────────────────
             $summary['reasons_set'] = $this->replaceLostReasons($preset['lost_reasons']);
 
-            // ── 3. Layout config (which built-in fields to show) ────
+            // ── 3. Layout configs — which built-in fields to show on
+            //     each entity's list / add form. inquiry_fields drives
+            //     the Leads form + list, the other three drive
+            //     Customers / Companies / Deals lists. Older presets
+            //     written before this block existed default to the
+            //     "show everything" layout via the frontend's deep
+            //     merge in useSettings(), so back-compat is free.
             CrmSetting::updateOrCreate(
                 ['key' => 'inquiry_fields'],
                 ['value' => $preset['layout']],
             );
+            if (!empty($preset['customer_layout'])) {
+                CrmSetting::updateOrCreate(
+                    ['key' => 'customer_fields'],
+                    ['value' => $preset['customer_layout']],
+                );
+            }
+            if (!empty($preset['corporate_layout'])) {
+                CrmSetting::updateOrCreate(
+                    ['key' => 'corporate_fields'],
+                    ['value' => $preset['corporate_layout']],
+                );
+            }
+            if (!empty($preset['deal_layout'])) {
+                CrmSetting::updateOrCreate(
+                    ['key' => 'deal_fields'],
+                    ['value' => $preset['deal_layout']],
+                );
+            }
             $summary['layout_updated'] = true;
 
             // ── 4. Track which preset is active so we can clean up
@@ -376,6 +400,53 @@ class IndustryPresetService
     ];
 
     /**
+     * Customer-list defaults. The 5 fields are universal enough that
+     * every preset uses this; admins still hide individually.
+     */
+    private const FULL_CUSTOMER_LAYOUT = [
+        'list' => [
+            'contact' => true, 'company' => true, 'activity' => true,
+            'vip_badge' => true, 'position_title' => true,
+        ],
+    ];
+
+    /**
+     * Companies-list defaults — everything visible. Used by Hotel +
+     * Real Estate where the full taxonomy (contract, rate, discount,
+     * revenue) actually applies.
+     */
+    private const FULL_CORPORATE_LAYOUT = [
+        'list' => [
+            'industry' => true, 'contact_person' => true, 'account_manager' => true,
+            'contract' => true, 'rate' => true, 'discount' => true,
+            'revenue' => true, 'status' => true,
+        ],
+    ];
+
+    /**
+     * Service-industry companies layout. Spas, clinics, law firms,
+     * gyms and restaurants rarely negotiate contract rates with
+     * corporate clients — those four columns get hidden by default
+     * (admin can still toggle them back on per-org).
+     */
+    private const SERVICE_CORPORATE_LAYOUT = [
+        'list' => [
+            'industry' => true, 'contact_person' => true, 'account_manager' => true,
+            'contract' => false, 'rate' => false, 'discount' => false,
+            'revenue' => true, 'status' => true,
+        ],
+    ];
+
+    /** Deals-list defaults. The 7 columns apply broadly; reuse for every preset. */
+    private const FULL_DEAL_LAYOUT = [
+        'list' => [
+            'product_details' => true, 'amount' => true, 'payment' => true,
+            'fulfillment' => true, 'next_action' => true, 'due_date' => true,
+            'owner' => true,
+        ],
+    ];
+
+    /**
      * Eight curated industry bundles. Each preset is opinionated —
      * the shapes (stage count, lost-reason taxonomy, layout) reflect
      * how that industry's sales / intake actually flows, not just a
@@ -405,6 +476,9 @@ class IndustryPresetService
                 'No response from guest', 'Disqualified', 'Other',
             ],
             'layout'             => self::HOTEL_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => null, // hotel uses built-in fields
         ],
 
@@ -429,6 +503,9 @@ class IndustryPresetService
                 'Found another provider', 'No response', 'Cancelled by guest', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'beauty',
         ],
 
@@ -453,6 +530,9 @@ class IndustryPresetService
                 'Patient declined', 'Out of area', 'Referred elsewhere', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'medical',
         ],
 
@@ -477,6 +557,9 @@ class IndustryPresetService
                 'Cost', 'Could not assist', 'Pro-se / DIY', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'legal',
         ],
 
@@ -515,6 +598,9 @@ class IndustryPresetService
                     'touches' => true, 'next_task' => true, 'bulk_select' => false,
                 ],
             ],
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'real_estate',
         ],
 
@@ -538,6 +624,9 @@ class IndustryPresetService
                 'No response', 'Distance / location', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'education',
         ],
 
@@ -561,6 +650,9 @@ class IndustryPresetService
                 'No response', 'Injury / health', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'fitness',
         ],
 
@@ -584,6 +676,9 @@ class IndustryPresetService
                 'Found another venue', 'Wrong cuisine / fit', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'restaurant',
         ],
     ];
