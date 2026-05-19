@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search, X, Loader2, User, FileText, Briefcase, Hotel, Star, Crown,
 } from 'lucide-react'
@@ -42,10 +42,22 @@ const TYPE_META: Record<ResultType, { label: string; icon: any; color: string }>
 
 export function GlobalSearch() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [activeIdx, setActiveIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Defense-in-depth: close the modal on any route change. The internal
+  // navigate() call already closes via setOpen(false) on the result-click
+  // path, but if some other code path navigates while the modal is open
+  // (e.g. a programmatic redirect) the modal would otherwise stay mounted
+  // with its z-50 fixed-inset backdrop sitting on top of the sidebar —
+  // every nav click then closes the modal instead of routing, which
+  // looks identical to "the menu is stuck".
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
 
   // Cmd+K / Ctrl+K to open from anywhere.
   useEffect(() => {

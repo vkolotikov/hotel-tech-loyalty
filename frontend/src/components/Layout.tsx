@@ -23,7 +23,14 @@ import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
 import { useSettings } from '../lib/crmSettings'
 import { BrandSwitcher } from './BrandSwitcher'
-import { MemberQuickSearch } from './MemberQuickSearch'
+// MemberQuickSearch removed 2026-05-20 — replaced by GlobalSearch which
+// covers Members + Customers + Inquiries + Companies + Reservations.
+// Keeping both mounted caused a real bug: both listened for Cmd+K, both
+// opened simultaneously, and the GlobalSearch backdrop at z-50 was left
+// behind the foreground MemberQuickSearch at z-[100]. After the user
+// used the foreground modal, the backdrop covered the sidebar and ate
+// every nav click until the modal was dismissed — looked like "stuck
+// menu" to the user.
 import { LangSwitcher } from './LangSwitcher'
 import { useTranslation } from 'react-i18next'
 
@@ -396,10 +403,12 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-dark-bg">
-      {/* Cmd+K global member search — listens for the chord and
-          renders its own modal portal at z-100. Always-mounted so a
-          fresh page can open it before the rest of the SPA hydrates. */}
-      <MemberQuickSearch />
+      {/* Global Cmd+K search lives in <GlobalSearch /> further down.
+          Was previously duplicated with a <MemberQuickSearch /> here;
+          both listened for Cmd+K simultaneously and the lower-z backdrop
+          stayed open behind the foreground modal, covering the sidebar
+          and eating every nav click until dismissed. See comment near
+          the top of this file. */}
 
       {/* Mobile drawer backdrop */}
       <div
