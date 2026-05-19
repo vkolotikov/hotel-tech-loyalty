@@ -150,6 +150,7 @@ export function Inquiries() {
       else if (showCreate) setShowCreate(false)
       else if (showCapture) setShowCapture(false)
       else if (openMenu)   setOpenMenu(null)
+      else if (selected.size > 0) setSelected(new Set())
     }
     const onClick = (e: MouseEvent) => {
       if (!openMenu) return
@@ -162,7 +163,7 @@ export function Inquiries() {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('mousedown', onClick)
     }
-  }, [taskFor, showCreate, showCapture, openMenu])
+  }, [taskFor, showCreate, showCapture, openMenu, selected.size])
 
   const { data: propertiesData } = useQuery({
     queryKey: ['properties-list'],
@@ -591,20 +592,28 @@ export function Inquiries() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border">
-                {fieldCfg.list.bulk_select && (
-                  <th className="text-center px-3 py-3 w-8">
-                    <input type="checkbox"
-                      checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
-                      onChange={() => setSelected(prev => {
-                        const next = new Set(prev)
-                        const allOn = inquiries.length > 0 && inquiries.every((i: any) => prev.has(i.id))
-                        if (allOn) inquiries.forEach((i: any) => next.delete(i.id))
-                        else       inquiries.forEach((i: any) => next.add(i.id))
-                        return next
-                      })}
-                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                  </th>
-                )}
+                {/* Bulk-select column is always rendered now so the
+                    feature is discoverable without admin opt-in. The
+                    fieldCfg.list.bulk_select flag now controls
+                    visibility-at-rest: when ON, checkboxes are always
+                    visible (sticky-column-like behaviour for power
+                    users); when OFF (the default), checkboxes are
+                    invisible until you hover a row or until ANY row is
+                    selected — at which point all checkboxes pop so
+                    multi-select stays one click away. */}
+                <th className={`text-center px-3 py-3 w-8 transition-opacity ${fieldCfg.list.bulk_select || selected.size > 0 ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
+                    title={t('inquiries.bulk.header_tooltip', 'Select all on this page')}>
+                  <input type="checkbox"
+                    checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
+                    onChange={() => setSelected(prev => {
+                      const next = new Set(prev)
+                      const allOn = inquiries.length > 0 && inquiries.every((i: any) => prev.has(i.id))
+                      if (allOn) inquiries.forEach((i: any) => next.delete(i.id))
+                      else       inquiries.forEach((i: any) => next.add(i.id))
+                      return next
+                    })}
+                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.guest', 'Guest')}</th>
                 {fieldCfg.list.stay && <SortHeader col="check_in" label={t('inquiries.table.stay', 'Stay')} />}
                 {fieldCfg.list.value && <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} />}
@@ -660,8 +669,7 @@ export function Inquiries() {
                 // Total column span for the expanded row, derived live from the
                 // visible-column toggles so the colspan stays correct when admins
                 // reshape the table via Settings → Pipeline Layout.
-                const expandColSpan = 2 // Guest + Actions trailing
-                  + (fieldCfg.list.bulk_select ? 1 : 0)
+                const expandColSpan = 3 // bulk-select (always rendered now) + Guest + Actions trailing
                   + (fieldCfg.list.stay ? 1 : 0)
                   + (fieldCfg.list.value ? 1 : 0)
                   + 1 // Status
@@ -685,15 +693,17 @@ export function Inquiries() {
                     className={`group border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}
                     style={priorityStripe ? { boxShadow: priorityStripe } : undefined}
                   >
-                    {fieldCfg.list.bulk_select && (
-                      <td className="px-3 py-3 text-center">
-                        <input type="checkbox" checked={selected.has(inq.id)}
-                          onChange={() => setSelected(prev => {
-                            const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
-                          })}
-                          className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                      </td>
-                    )}
+                    {/* Bulk-select cell — always rendered (see <thead>
+                        comment). Visible when selected, when admin opted
+                        into always-on via fieldCfg, or on row hover via
+                        the parent <tr>'s group class. */}
+                    <td className={`px-3 py-3 text-center transition-opacity ${fieldCfg.list.bulk_select || selected.has(inq.id) || selected.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      <input type="checkbox" checked={selected.has(inq.id)}
+                        onChange={() => setSelected(prev => {
+                          const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
+                        })}
+                        className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                    </td>
 
                     {/* Guest cell — name, company, property + source pills,
                         contact links. Heavy lifting in this cell so the
@@ -1560,6 +1570,20 @@ export function Inquiries() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
             <XCircle size={13} /> Mark Lost
           </button>
+          {/* Set stage — full status taxonomy beyond Won/Lost. The
+              picker reads inquiry_statuses from settings so the list
+              tracks whatever pipeline preset the org applied. */}
+          <select onChange={e => {
+              if (!e.target.value) return
+              runBulk('set_status', e.target.value)
+              e.currentTarget.value = ''
+            }} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 transition-colors cursor-pointer"
+            style={{ colorScheme: 'dark' }}
+            defaultValue="">
+            <option value="" disabled>{t('inquiries.bulk.set_stage', 'Set stage…')}</option>
+            {settings.inquiry_statuses.map(s => <option key={s} value={s} style={{ background: '#0f1c18', color: '#fff' }}>{s}</option>)}
+          </select>
           {/* Owner reassignment via select — submitting fires the bulk
               call. The select intentionally has an empty option so
               "Unassign" is one click away. */}
@@ -1589,9 +1613,10 @@ export function Inquiries() {
             {settings.priorities.map(p => <option key={p} value={p} style={{ background: '#0f1c18', color: '#fff' }}>{p}</option>)}
           </select>
           <div className="h-5 w-px bg-white/10" />
-          <button onClick={() => setSelected(new Set())} title="Clear selection"
-            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+          <button onClick={() => setSelected(new Set())} title={t('inquiries.bulk.clear_tooltip', 'Clear selection (Esc)')}
+            className="flex items-center gap-1.5 p-1.5 px-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
             <XIcon size={14} />
+            <span className="hidden md:inline text-[10px] font-mono uppercase opacity-60">Esc</span>
           </button>
         </div>
       )}

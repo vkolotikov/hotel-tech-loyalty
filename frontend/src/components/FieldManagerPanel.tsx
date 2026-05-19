@@ -85,7 +85,7 @@ const TABS: TabDef[] = [
         label: 'Leads list columns',
         path: 'list',
         fields: [
-          { key: 'bulk_select', label: 'Bulk-select column', hint: 'Checkbox to multi-select rows for bulk actions. Off by default.' },
+          { key: 'bulk_select', label: 'Bulk-select column (always visible)', hint: 'When OFF (default), the bulk-select checkboxes fade in on row hover. When ON, the checkbox column stays visible at rest — useful if your team uses bulk owner reassign / status changes daily.' },
           { key: 'stay', label: 'Stay (dates · nights · rooms)' },
           { key: 'value', label: 'Value (€)' },
           { key: 'owner', label: 'Owner' },
