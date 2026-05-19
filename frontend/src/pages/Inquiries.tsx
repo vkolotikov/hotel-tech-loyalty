@@ -640,6 +640,22 @@ export function Inquiries() {
                   : score >= 70 ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
                     : score >= 40 ? { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
                     : { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
+                // Age/freshness chip — "Fresh" for <24h, "Nd old" for normal
+                // ageing, "Cold Nd" when there's been no contact for a week+.
+                // Gives staff a glanceable sense of how this lead is doing
+                // without opening the detail page.
+                const createdAt = inq.created_at ? new Date(inq.created_at) : null
+                const lastContact = inq.last_contacted_at ? new Date(inq.last_contacted_at) : null
+                const ageDays = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / 86_400_000) : null
+                const daysSinceContact = lastContact ? Math.floor((Date.now() - lastContact.getTime()) / 86_400_000) : null
+                const isClosedKind = inq.pipeline_stage?.kind === 'won' || inq.pipeline_stage?.kind === 'lost'
+                const ageChip = (ageDays === null || isClosedKind)
+                  ? null
+                  : ageDays < 1
+                    ? { label: t('inquiries.row.age_fresh', 'Fresh'), cls: 'text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20' }
+                    : ((daysSinceContact === null && ageDays >= 7) || (daysSinceContact !== null && daysSinceContact >= 7))
+                      ? { label: t('inquiries.row.age_cold', { d: daysSinceContact ?? ageDays, defaultValue: 'Cold {{d}}d' }), cls: 'text-amber-300/90 bg-amber-500/10 border-amber-500/20' }
+                      : { label: t('inquiries.row.age_days', { d: ageDays, defaultValue: '{{d}}d old' }), cls: 'text-gray-500 bg-white/[0.02] border-white/10' }
                 const isExpanded = expandedRow === inq.id
                 // Total column span for the expanded row, derived live from the
                 // visible-column toggles so the colspan stays correct when admins
@@ -691,6 +707,14 @@ export function Inquiries() {
                         ) : (
                           <span className="font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</span>
                         )}
+                        {ageChip && (
+                          <span
+                            className={`flex-shrink-0 inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ageChip.cls}`}
+                            title={t('inquiries.row.age_tooltip', 'Days since the lead was created — turns amber when there\'s been no contact in 7+ days')}
+                          >
+                            {ageChip.label}
+                          </span>
+                        )}
                       </div>
                       {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
                       {/* Email + phone shown as text so staff can scan
@@ -701,21 +725,23 @@ export function Inquiries() {
                           {(inq.guest?.phone || inq.guest?.mobile) && <span className="text-gray-500">· {inq.guest.phone || inq.guest.mobile}</span>}
                         </div>
                       )}
-                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        {inq.property?.name && (
-                          <span className="text-[10px] text-gray-500">{inq.property.name}</span>
-                        )}
-                        {inq.inquiry_type && (
-                          <span className="text-[10px] text-gray-600">· {inq.inquiry_type}</span>
-                        )}
-                        {inq.source && SOURCE_BADGES[inq.source] && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
-                        )}
-                        {inq.source && !SOURCE_BADGES[inq.source] && (
-                          <span className="text-[10px] text-gray-600">· {inq.source}</span>
-                        )}
-                        <BrandBadge brandId={inq.brand_id} />
-                      </div>
+                      {/* Compressed metadata line — property and the typed
+                          source pill only. Inquiry type lives in the
+                          expanded row; raw source strings without a
+                          system-source badge (e.g. "fds_card_builder")
+                          are dropped here to cut clutter and surfaced in
+                          the expand panel instead. */}
+                      {(inq.property?.name || (inq.source && SOURCE_BADGES[inq.source]) || inq.brand_id) && (
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {inq.property?.name && (
+                            <span className="text-[10px] text-gray-500">{inq.property.name}</span>
+                          )}
+                          {inq.source && SOURCE_BADGES[inq.source] && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
+                          )}
+                          <BrandBadge brandId={inq.brand_id} />
+                        </div>
+                      )}
                       {/* Always-visible quick-contact pills. ContactActions
                           renders Email / Call / SMS / WhatsApp depending on
                           which channels are populated; chat-captured leads
