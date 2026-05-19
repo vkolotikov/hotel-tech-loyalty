@@ -669,9 +669,22 @@ export function Inquiries() {
                   + (fieldCfg.list.touches ? 1 : 0)
                   + (fieldCfg.list.next_task ? 1 : 0)
                   + listColumns.length
+                // Priority left-edge stripe — inset box-shadow on the
+                // <tr> so the 3px color hint sits flush against the left
+                // edge of the row without disturbing the table layout.
+                // Low / no priority stays unstriped; Medium gets a quiet
+                // blue, High a clear red.
+                const priorityStripe = inq.priority === 'High'
+                  ? 'inset 3px 0 0 #ef4444'   // red
+                  : inq.priority === 'Medium'
+                    ? 'inset 3px 0 0 #3b82f6' // blue
+                    : null
                 return (
                 <React.Fragment key={inq.id}>
-                  <tr className={`border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}>
+                  <tr
+                    className={`group border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}
+                    style={priorityStripe ? { boxShadow: priorityStripe } : undefined}
+                  >
                     {fieldCfg.list.bulk_select && (
                       <td className="px-3 py-3 text-center">
                         <input type="checkbox" checked={selected.has(inq.id)}
@@ -778,11 +791,19 @@ export function Inquiries() {
                       </td>
                     )}
 
+                    {/* Value cell — soft-pill emerald chip with the
+                        amount tabular-aligned so a column of values
+                        reads cleanly. Empty rows collapse to a quiet
+                        em-dash so the column doesn't pull the eye. */}
                     {fieldCfg.list.value && (
-                      <td className="px-4 py-3 text-sm font-semibold tabular-nums whitespace-nowrap">
-                        {inq.total_value
-                          ? <span className="text-emerald-400">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>
-                          : <span className="text-gray-700 text-xs">—</span>}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {inq.total_value ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300 text-sm font-bold tabular-nums">
+                            {settings.currency_symbol}{Number(inq.total_value).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-700 text-xs">—</span>
+                        )}
                       </td>
                     )}
 
@@ -873,9 +894,13 @@ export function Inquiries() {
                       )
                     })}
 
-                    {/* Inline quick actions — call, email, whatsapp, sms,
-                        won, lost — all single-click and self-logging. */}
-                    <td className="px-4 py-3 text-right">
+                    {/* Inline quick actions — Won / Lost shortcuts.
+                        Hidden by default, fade in on row hover or when
+                        any button inside has keyboard focus, so the row
+                        reads cleaner at rest while staying one tap
+                        away. focus-within keeps it accessible when
+                        tabbing through. */}
+                    <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <InquiryQuickActions inquiry={inq}
                         onStatus={(id, status) => statusMutation.mutate({ id, status })} />
                     </td>
