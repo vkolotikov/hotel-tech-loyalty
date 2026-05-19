@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Sparkles, GitBranch, Users, Building2, Crown,
+  Sparkles, GitBranch, Users, Building2, Crown, ListChecks,
   Save, Search, Eye, EyeOff, RotateCcw, type LucideIcon,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -10,6 +10,7 @@ import {
   useSettings,
   DEFAULT_INQUIRY_FIELDS, DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_CORPORATE_FIELDS, DEFAULT_DEAL_FIELDS, DEFAULT_MEMBER_FIELDS,
+  DEFAULT_TASK_FIELDS,
 } from '../lib/crmSettings'
 
 /**
@@ -28,7 +29,7 @@ import {
  * the UI stays usable when an admin turns everything off.
  */
 
-type TabKey = 'inquiry' | 'deal' | 'customer' | 'corporate' | 'member'
+type TabKey = 'inquiry' | 'deal' | 'customer' | 'corporate' | 'member' | 'task'
 
 type Section = {
   /** UI label for the section ("List columns", "Add Inquiry form"). */
@@ -48,7 +49,7 @@ type TabDef = {
   /** Server defaults used as a "Reset to defaults" baseline. */
   defaults: Record<string, any>
   /** Path through the settings object to get the current config. */
-  configKey: 'inquiry_fields' | 'customer_fields' | 'corporate_fields' | 'deal_fields' | 'member_fields'
+  configKey: 'inquiry_fields' | 'customer_fields' | 'corporate_fields' | 'deal_fields' | 'member_fields' | 'task_fields'
   sections: Section[]
 }
 
@@ -242,6 +243,28 @@ const TABS: TabDef[] = [
           { key: 'overview_recent_activity', label: 'Recent activity card', hint: 'Top-5 transactions block on the Overview tab.' },
           { key: 'overview_qr_card', label: 'Member QR card', hint: 'Right-column QR for scanning.' },
           { key: 'overview_adjust_points', label: 'Award / Redeem panel' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'task',
+    label: 'Tasks',
+    icon: ListChecks,
+    settingsKey: 'task_fields',
+    defaults: DEFAULT_TASK_FIELDS,
+    configKey: 'task_fields',
+    sections: [
+      {
+        label: 'Task card',
+        path: 'list',
+        fields: [
+          { key: 'description', label: 'Description', hint: 'Multi-line text under the task title.' },
+          { key: 'type_label', label: 'Type label', hint: 'Uppercase "CALL" / "EMAIL" / etc. chip. The colored icon stays regardless.' },
+          { key: 'due_at', label: 'Due date' },
+          { key: 'assignee', label: 'Assignee' },
+          { key: 'inquiry_link', label: 'Inquiry link', hint: '"Inquiry #123" chip that opens the related lead.' },
+          { key: 'outcome', label: 'Outcome', hint: 'Completion note shown on done tasks.' },
         ],
       },
     ],

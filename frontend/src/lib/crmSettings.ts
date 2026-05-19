@@ -114,6 +114,17 @@ export interface DealFieldConfig {
   }
 }
 
+export interface TaskFieldConfig {
+  list: {
+    description: boolean   // multi-line task description under the title
+    type_label: boolean    // uppercase "CALL" / "EMAIL" / etc. chip (icon stays)
+    due_at: boolean        // due date inline
+    assignee: boolean      // assigned staff name
+    inquiry_link: boolean  // "Inquiry #123" clickable link
+    outcome: boolean       // completion outcome on done tasks
+  }
+}
+
 export interface MemberFieldConfig {
   list: {
     kpi_strip: boolean   // 4-card health strip above the table
@@ -193,6 +204,13 @@ export const DEFAULT_DEAL_FIELDS: DealFieldConfig = {
   },
 }
 
+export const DEFAULT_TASK_FIELDS: TaskFieldConfig = {
+  list: {
+    description: true, type_label: true, due_at: true,
+    assignee: true, inquiry_link: true, outcome: true,
+  },
+}
+
 export const DEFAULT_MEMBER_FIELDS: MemberFieldConfig = {
   list: {
     kpi_strip: true,
@@ -248,6 +266,7 @@ export interface CrmSettings {
   corporate_fields: CorporateFieldConfig
   deal_fields: DealFieldConfig
   member_fields: MemberFieldConfig
+  task_fields: TaskFieldConfig
 }
 
 const DEFAULTS: CrmSettings = {
@@ -288,6 +307,7 @@ const DEFAULTS: CrmSettings = {
   corporate_fields: DEFAULT_CORPORATE_FIELDS,
   deal_fields: DEFAULT_DEAL_FIELDS,
   member_fields: DEFAULT_MEMBER_FIELDS,
+  task_fields: DEFAULT_TASK_FIELDS,
 }
 
 export function useSettings(): CrmSettings {
@@ -366,6 +386,13 @@ export function useSettings(): CrmSettings {
     }
   } else {
     merged.member_fields = DEFAULT_MEMBER_FIELDS
+  }
+  if (merged.task_fields && typeof merged.task_fields === 'object') {
+    merged.task_fields = {
+      list: { ...DEFAULT_TASK_FIELDS.list, ...(merged.task_fields.list ?? {}) },
+    }
+  } else {
+    merged.task_fields = DEFAULT_TASK_FIELDS
   }
 
   return merged

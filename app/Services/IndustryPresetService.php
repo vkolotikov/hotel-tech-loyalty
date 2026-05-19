@@ -140,6 +140,12 @@ class IndustryPresetService
                     ['value' => $preset['member_layout']],
                 );
             }
+            if (!empty($preset['task_layout'])) {
+                CrmSetting::updateOrCreate(
+                    ['key' => 'task_fields'],
+                    ['value' => $preset['task_layout']],
+                );
+            }
             $summary['layout_updated'] = true;
 
             // ── 4. Track which preset is active so we can clean up
@@ -509,6 +515,18 @@ class IndustryPresetService
     ];
 
     /**
+     * Task-card defaults. The 6 inline bits (description / type label /
+     * due date / assignee / inquiry link / outcome) apply broadly, so
+     * every preset shares this layout. Admin still tunes per-org.
+     */
+    private const FULL_TASK_LAYOUT = [
+        'list' => [
+            'description' => true, 'type_label' => true, 'due_at' => true,
+            'assignee' => true, 'inquiry_link' => true, 'outcome' => true,
+        ],
+    ];
+
+    /**
      * Members-page defaults — everything visible. Loyalty programs
      * make sense in nearly every industry (hotel, spa, gym,
      * restaurant, retail), so we don't bother branching per preset.
@@ -563,6 +581,7 @@ class IndustryPresetService
             'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => null, // hotel uses built-in fields
         ],
 
@@ -591,6 +610,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'beauty',
         ],
 
@@ -619,6 +639,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'medical',
         ],
 
@@ -647,6 +668,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'legal',
         ],
 
@@ -696,6 +718,7 @@ class IndustryPresetService
             'corporate_layout'   => self::FULL_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'real_estate',
         ],
 
@@ -723,6 +746,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'education',
         ],
 
@@ -750,6 +774,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'fitness',
         ],
 
@@ -777,6 +802,7 @@ class IndustryPresetService
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
             'custom_fields_key'  => 'restaurant',
         ],
     ];

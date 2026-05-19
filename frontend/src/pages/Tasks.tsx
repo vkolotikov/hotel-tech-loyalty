@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { useSettings, type TaskFieldConfig } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 import {
   Plus, Phone, Mail, Calendar as CalendarIcon, FileText,
@@ -61,6 +62,8 @@ const STATUS_CHIPS: { id: Status; label: string; color: string }[] = [
 export function Tasks() {
   const qc = useQueryClient()
   const { t } = useTranslation()
+  // Admin-toggleable visibility for the task card bits — Settings → Pipelines → Fields → Tasks.
+  const taskFieldCfg = useSettings().task_fields.list
   const [status, setStatus] = useState<Status>('open')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Task | 'new' | null>(null)
@@ -208,6 +211,7 @@ export function Tasks() {
                   <TaskCard
                     key={task.id}
                     task={task}
+                    fieldCfg={taskFieldCfg}
                     onComplete={() => completeMut.mutate(task.id)}
                     onReopen={() => reopenMut.mutate(task.id)}
                     onEdit={() => setEditing(task)}
@@ -238,8 +242,9 @@ export function Tasks() {
 
 /* ── Task card ──────────────────────────────────────────────── */
 
-function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
+function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
   task: Task
+  fieldCfg: TaskFieldConfig['list']
   onComplete: () => void
   onReopen: () => void
   onEdit: () => void
@@ -285,29 +290,31 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
         <p className={`text-sm font-semibold ${completed ? 'text-t-secondary line-through' : 'text-white'}`}>
           {task.title}
         </p>
-        {task.description && (
+        {fieldCfg.description && task.description && (
           <p className="text-xs text-t-secondary mt-0.5 line-clamp-2">{task.description}</p>
         )}
         <div className="flex items-center gap-2 mt-1 text-[11px] text-t-secondary flex-wrap">
-          <span className="uppercase tracking-wide font-bold" style={{ color: meta.color }}>
-            {typeLabel}
-          </span>
-          {task.due_at && (
+          {fieldCfg.type_label && (
+            <span className="uppercase tracking-wide font-bold" style={{ color: meta.color }}>
+              {typeLabel}
+            </span>
+          )}
+          {fieldCfg.due_at && task.due_at && (
             <>
-              <span>·</span>
+              {fieldCfg.type_label && <span>·</span>}
               <span className={overdue ? 'text-red-400 font-bold' : ''}>
                 {overdue && <AlertCircle size={10} className="inline mr-0.5" />}
                 {formatDue(task.due_at, completed, t)}
               </span>
             </>
           )}
-          {task.assignee && (
+          {fieldCfg.assignee && task.assignee && (
             <>
               <span>·</span>
               <span>{task.assignee.name}</span>
             </>
           )}
-          {task.inquiry_id && (
+          {fieldCfg.inquiry_link && task.inquiry_id && (
             <>
               <span>·</span>
               <Link
@@ -319,7 +326,7 @@ function TaskCard({ task, onComplete, onReopen, onEdit, onDelete }: {
               </Link>
             </>
           )}
-          {task.outcome && (
+          {fieldCfg.outcome && task.outcome && (
             <>
               <span>·</span>
               <span className="text-emerald-400 italic">{task.outcome}</span>
