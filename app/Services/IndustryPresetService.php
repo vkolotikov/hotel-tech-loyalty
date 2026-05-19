@@ -388,6 +388,7 @@ class IndustryPresetService
         'list' => [
             'stay' => true, 'value' => true, 'owner' => true,
             'touches' => true, 'next_task' => true, 'bulk_select' => false,
+            'country' => true,  // hotels routinely triage by guest origin — ship ON for the hotel preset
         ],
         'detail' => [
             'contact_section' => true, 'stay_section' => true,
@@ -419,6 +420,7 @@ class IndustryPresetService
         'list' => [
             'stay' => false, 'value' => true, 'owner' => true,
             'touches' => true, 'next_task' => true, 'bulk_select' => false,
+            'country' => false,  // service businesses (clinics, gyms, law firms) usually serve local clients
         ],
         'detail' => [
             'contact_section' => true, 'stay_section' => false,
@@ -437,6 +439,7 @@ class IndustryPresetService
         'list' => [
             'contact' => true, 'company' => true, 'activity' => true,
             'vip_badge' => true, 'position_title' => true,
+            'country' => true,  // hotel + real-estate guests are routinely from multiple countries
         ],
         'detail' => [
             'header_pills' => true, 'stats_strip' => true,
@@ -457,6 +460,7 @@ class IndustryPresetService
         'list' => [
             'contact' => true, 'company' => true, 'activity' => true,
             'vip_badge' => true, 'position_title' => true,
+            'country' => false,  // service customers are typically local — admin can opt in
         ],
         'detail' => [
             'header_pills' => true, 'stats_strip' => false,
@@ -705,6 +709,7 @@ class IndustryPresetService
                 'list' => [
                     'stay' => true, 'value' => true, 'owner' => true,
                     'touches' => true, 'next_task' => true, 'bulk_select' => false,
+                    'country' => true,  // real estate often handles international buyers
                 ],
                 'detail' => [
                     'contact_section' => true, 'stay_section' => true,

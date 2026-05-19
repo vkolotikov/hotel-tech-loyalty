@@ -35,7 +35,7 @@ class InquiryController extends Controller
         // these fields, chat-captured leads (which DO populate phone
         // via the widget capture flow) silently appear contactless.
         $query = Inquiry::with([
-            'guest:id,full_name,company,email,phone,mobile,vip_level,nationality',
+            'guest:id,full_name,company,email,phone,mobile,vip_level,nationality,country',
             'property:id,name,code',
             'corporateAccount:id,company_name',
             'pipelineStage:id,name,color,kind',

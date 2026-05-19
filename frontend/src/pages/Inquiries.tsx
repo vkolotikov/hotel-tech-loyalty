@@ -780,10 +780,16 @@ export function Inquiries() {
                           system-source badge (e.g. "fds_card_builder")
                           are dropped here to cut clutter and surfaced in
                           the expand panel instead. */}
-                      {(inq.property?.name || (inq.source && SOURCE_BADGES[inq.source]) || inq.brand_id) && (
+                      {(inq.property?.name || (inq.source && SOURCE_BADGES[inq.source]) || inq.brand_id || (fieldCfg.list.country && inq.guest?.country)) && (
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {inq.property?.name && (
                             <span className="text-[10px] text-gray-500">{inq.property.name}</span>
+                          )}
+                          {fieldCfg.list.country && inq.guest?.country && (
+                            <span className="text-[10px] text-gray-500 inline-flex items-center gap-0.5">
+                              <span aria-hidden>·</span>
+                              <span>{inq.guest.country}</span>
+                            </span>
                           )}
                           {inq.source && SOURCE_BADGES[inq.source] && (
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>

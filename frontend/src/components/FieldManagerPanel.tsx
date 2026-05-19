@@ -91,6 +91,7 @@ const TABS: TabDef[] = [
           { key: 'owner', label: 'Owner' },
           { key: 'touches', label: 'Touches' },
           { key: 'next_task', label: 'Next task' },
+          { key: 'country', label: 'Country chip', hint: 'Shows the guest country in the metadata cluster under the name. Off by default — handy for international hotels / clinics that triage by region.' },
         ],
       },
       {
@@ -151,6 +152,7 @@ const TABS: TabDef[] = [
           { key: 'activity', label: 'Activity (stays / added date)' },
           { key: 'vip_badge', label: 'VIP badge', hint: 'Star pill next to the name for VIPs. Auto-hides if the customer is Standard tier.' },
           { key: 'position_title', label: 'Position / job title' },
+          { key: 'country', label: 'Country chip', hint: 'Small country tag next to the name. Off by default — useful for international hotels / clinics.' },
         ],
       },
       {

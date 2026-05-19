@@ -807,6 +807,11 @@ function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) 
                 <Star size={9} fill="currentColor" /> VIP
               </span>
             )}
+            {fieldCfg.list.country && guest.country && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-500 truncate" title={guest.country}>
+                <Globe size={9} /> {guest.country}
+              </span>
+            )}
           </div>
           {fieldCfg.list.position_title && guest.position_title && (
             <div className="text-[11px] text-gray-500 truncate">{guest.position_title}</div>

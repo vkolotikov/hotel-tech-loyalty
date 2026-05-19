@@ -41,6 +41,7 @@ export interface InquiryFieldConfig {
     touches: boolean
     next_task: boolean
     bulk_select: boolean
+    country: boolean   // small country chip in the guest cell — handy for international hotels / clinics
   }
   detail: {
     contact_section: boolean           // email + phone block on the profile column
@@ -63,6 +64,7 @@ export interface CustomerFieldConfig {
     activity: boolean       // stays count / added-date column
     vip_badge: boolean      // VIP star pill on the row
     position_title: boolean // job title under the name
+    country: boolean        // small country chip in the name cell
   }
   detail: {
     header_pills: boolean         // lifecycle / VIP / lead-source pills above stats
@@ -159,6 +161,7 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
     stay: true, value: true, owner: true,
     touches: true, next_task: true,
     bulk_select: false, // hidden by default — admins opt in
+    country: false,     // off by default — niche for most orgs
   },
   detail: {
     contact_section: true, stay_section: true,
@@ -173,6 +176,7 @@ export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldConfig = {
   list: {
     contact: true, company: true, activity: true,
     vip_badge: true, position_title: true,
+    country: false,  // off by default — admins opt in
   },
   detail: {
     header_pills: true, stats_strip: true,
