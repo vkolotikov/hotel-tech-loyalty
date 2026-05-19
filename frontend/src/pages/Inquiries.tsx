@@ -187,11 +187,16 @@ export function Inquiries() {
     queryFn: () => api.get('/v1/admin/inquiries', { params }).then(r => r.data),
   })
 
-  // Daily ops snapshot (today's overdue/due/new counts) is now fetched
-  // by the sibling InquiryInsights page. Mutations on this page still
-  // invalidate the ['inquiries-today'] cache key so the other tab
-  // refetches on next mount. Phase 2 will re-add a slim local stat bar
-  // here driven by the same endpoint.
+  // Daily ops snapshot — counts that power the slim filter-pill bar
+  // above the table (Overdue / Due Today / Due Soon). The expanded
+  // card strip + focus pane live on the sibling /pipeline?tab=insights
+  // page; this page only needs the totals for the pills.
+  const { data: today } = useQuery<any>({
+    queryKey: ['inquiries-today'],
+    queryFn: () => api.get('/v1/admin/inquiries/today').then(r => r.data),
+    staleTime: 120_000,
+    refetchInterval: 120_000,
+  })
 
   // KPI data has moved to /analytics → Leads tab. Same /v1/admin/
   // inquiries/kpis endpoint powers it there.
@@ -452,6 +457,58 @@ export function Inquiries() {
           ))}
         </div>
       </div>
+
+      {/* Slim filter-pill bar — one-line replacement for the fat card
+          strips that used to live up top. Each pill (Overdue / Due
+          today / Due soon) shows its live count and toggles the
+          matching task_due filter on the table when clicked. Pills go
+          quiet (gray + zero hint) when their count is zero so the bar
+          doesn't feel busy when nothing is on fire. Full analytics are
+          on the sibling Insights tab. */}
+      {today && (() => {
+        const pills: { value: '' | 'overdue' | 'today' | 'soon'; label: string; count: number; tone: 'red' | 'amber' | 'blue' }[] = [
+          { value: 'overdue', label: t('inquiries.today.tiles.overdue', 'Overdue'),     count: today.overdue?.count ?? 0,  tone: 'red'   },
+          { value: 'today',   label: t('inquiries.today.tiles.due_today', 'Due today'), count: today.today?.count   ?? 0,  tone: 'amber' },
+          { value: 'soon',    label: t('inquiries.today.tiles.due_soon',  'Due soon'),  count: today.soon?.count    ?? 0,  tone: 'blue'  },
+        ]
+        const toneCls = (tone: 'red' | 'amber' | 'blue', active: boolean, hasCount: boolean) => {
+          if (active) {
+            return tone === 'red'   ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                 : tone === 'amber' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                 :                    'bg-blue-500/20 text-blue-300 border-blue-500/40'
+          }
+          if (!hasCount) return 'text-gray-600 border-dark-border/60 hover:text-gray-400'
+          return tone === 'red'   ? 'text-red-300/80 border-red-500/20 hover:bg-red-500/10'
+               : tone === 'amber' ? 'text-amber-300/80 border-amber-500/20 hover:bg-amber-500/10'
+               :                    'text-blue-300/80 border-blue-500/20 hover:bg-blue-500/10'
+        }
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mr-1">{t('inquiries.quick_stats.label', 'Quick filters')}</span>
+            {pills.map(p => {
+              const active = taskDue === p.value
+              return (
+                <button
+                  key={p.value}
+                  onClick={() => { setTaskDue(active ? '' : p.value); setPage(1) }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-medium transition-colors ${toneCls(p.tone, active, p.count > 0)}`}
+                  title={active ? t('inquiries.quick_stats.clear', 'Click to clear this filter') : t('inquiries.quick_stats.apply', 'Click to filter')}
+                >
+                  <span>{p.label}</span>
+                  <span className="tabular-nums font-bold">{p.count}</span>
+                </button>
+              )
+            })}
+            <Link
+              to="/pipeline?tab=insights"
+              className="ml-auto inline-flex items-center gap-1 text-[10px] text-t-secondary hover:text-primary-300 transition-colors px-2 py-1"
+              title={t('inquiries.quick_stats.insights_tooltip', 'Full dashboard: going cold, high value, unassigned, stuck')}
+            >
+              <Sparkles size={11} /> {t('inquiries.quick_stats.insights', 'Insights')}
+            </Link>
+          </div>
+        )
+      })()}
 
       {/* Saved views — pinned filter combos for the current user. */}
       <SavedViews
