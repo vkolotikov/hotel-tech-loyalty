@@ -1045,6 +1045,14 @@ export function Inquiries() {
             : settings.inquiry_statuses.filter(s => (STAGE_GROUPS[stageGroup] || []).includes(s))
           ).map((col: string) => {
             const cards = inquiries.filter((i: any) => i.status === col)
+            // Borrow the column tint from the first card's
+            // pipeline_stage.color when one is set — gives custom
+            // pipelines (renamed stages, recolored stages) a column
+            // header that matches the row pill on the list view. Falls
+            // back to STATUS_COLORS for orgs without custom stages.
+            const stageColor: string | null = cards.find((c: any) => c.pipeline_stage?.color)?.pipeline_stage?.color ?? null
+            const columnTotal = cards.reduce((sum: number, c: any) => sum + (Number(c.total_value) || 0), 0)
+            const isDropTarget = dragging !== null
             return (
               <div key={col}
                 onDragOver={e => { if (dragging !== null) e.preventDefault() }}
@@ -1052,44 +1060,107 @@ export function Inquiries() {
                   e.preventDefault()
                   if (dragging !== null) statusMutation.mutate({ id: dragging, status: col })
                 }}
-                className="flex-shrink-0 w-[280px] rounded-2xl border border-white/[0.06] bg-dark-surface flex flex-col"
+                className={`flex-shrink-0 w-[280px] rounded-2xl border flex flex-col transition-all ${isDropTarget ? 'border-primary-400/40 ring-1 ring-primary-400/20' : 'border-white/[0.06]'}`}
                 style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
-                <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between sticky top-0 z-10"
+                <div className="px-3 py-2.5 border-b border-white/[0.06] sticky top-0 z-10"
                   style={{ background: 'rgba(14,20,18,0.98)' }}>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${STATUS_COLORS[col] ?? 'bg-gray-500/20 text-t-secondary'}`}>{col}</span>
-                  <span className="text-[10px] text-gray-500 font-bold tabular-nums">{cards.length}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider truncate ${stageColor ? 'border' : (STATUS_COLORS[col] ?? 'bg-gray-500/20 text-t-secondary')}`}
+                      style={stageColor ? { background: stageColor + '20', color: stageColor, border: `1px solid ${stageColor}40` } : undefined}
+                    >
+                      {col}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-bold tabular-nums flex-shrink-0">{cards.length}</span>
+                  </div>
+                  {columnTotal > 0 && (
+                    <div className="mt-1 text-[10px] text-gray-500 tabular-nums">
+                      {settings.currency_symbol}{columnTotal.toLocaleString()}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 p-2 space-y-2 min-h-[120px]">
                   {cards.length === 0 && (
-                    <div className="text-center text-[10px] text-gray-700 py-4">{t('inquiries.table.drop_cards_here', 'Drop cards here')}</div>
+                    <div className={`text-center text-[10px] py-4 transition-colors ${isDropTarget ? 'text-primary-400/70' : 'text-gray-700'}`}>
+                      {isDropTarget ? t('inquiries.table.drop_here', 'Drop here →') : t('inquiries.table.drop_cards_here', 'Drop cards here')}
+                    </div>
                   )}
                   {cards.map((inq: any) => {
                     const isDragging = dragging === inq.id
+                    // Mirror the list-row visual language: AI score chip,
+                    // age/freshness chip, priority left-edge stripe, value
+                    // pill. Computations duplicate the list-view block by
+                    // design — the row-level logic is small and inlining
+                    // it keeps the kanban + list code paths independently
+                    // tunable.
+                    const score: number | null = (typeof inq.ai_win_probability === 'number') ? inq.ai_win_probability : null
+                    const scoreColor = score == null
+                      ? null
+                      : score >= 70 ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
+                        : score >= 40 ? { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
+                        : { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
+                    const createdAt = inq.created_at ? new Date(inq.created_at) : null
+                    const lastContact = inq.last_contacted_at ? new Date(inq.last_contacted_at) : null
+                    const ageDays = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / 86_400_000) : null
+                    const daysSinceContact = lastContact ? Math.floor((Date.now() - lastContact.getTime()) / 86_400_000) : null
+                    const isClosedKind = inq.pipeline_stage?.kind === 'won' || inq.pipeline_stage?.kind === 'lost'
+                    const ageChip = (ageDays === null || isClosedKind)
+                      ? null
+                      : ageDays < 1
+                        ? { label: t('inquiries.row.age_fresh', 'Fresh'), cls: 'text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20' }
+                        : ((daysSinceContact === null && ageDays >= 7) || (daysSinceContact !== null && daysSinceContact >= 7))
+                          ? { label: t('inquiries.row.age_cold', { d: daysSinceContact ?? ageDays, defaultValue: 'Cold {{d}}d' }), cls: 'text-amber-300/90 bg-amber-500/10 border-amber-500/20' }
+                          : { label: t('inquiries.row.age_days', { d: ageDays, defaultValue: '{{d}}d old' }), cls: 'text-gray-500 bg-white/[0.02] border-white/10' }
+                    const priorityStripe = inq.priority === 'High'
+                      ? 'inset 3px 0 0 #ef4444'
+                      : inq.priority === 'Medium'
+                        ? 'inset 3px 0 0 #3b82f6'
+                        : null
+                    const isTaskOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
                     return (
                       <div key={inq.id}
                         draggable
                         onDragStart={() => setDragging(inq.id)}
                         onDragEnd={() => setDragging(null)}
                         className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:bg-white/[0.04] transition-all"
-                        style={{ opacity: isDragging ? 0.4 : 1 }}>
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          {inq.guest?.id ? (
-                            <Link
-                              to={`/guests/${inq.guest.id}`}
-                              className="text-sm font-semibold text-white hover:text-primary-300 truncate transition-colors"
-                              onClick={e => e.stopPropagation()}
-                              draggable={false}
+                        style={{
+                          opacity: isDragging ? 0.4 : 1,
+                          boxShadow: priorityStripe ?? undefined,
+                        }}>
+                        <div className="flex items-start gap-2 mb-1.5">
+                          {scoreColor && (
+                            <span
+                              className={`flex-shrink-0 inline-flex items-center justify-center w-7 h-6 rounded-md text-[10px] font-bold tabular-nums border ${scoreColor.bg} ${scoreColor.text} ${scoreColor.border}`}
+                              title={t('inquiries.score.tooltip', 'AI win probability')}
                             >
-                              {inq.guest?.full_name ?? '—'}
-                            </Link>
-                          ) : (
-                            <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                              {score}
+                            </span>
                           )}
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[inq.priority] ?? 'text-gray-500'}`}>
-                            {inq.priority}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {inq.guest?.id ? (
+                                <Link
+                                  to={`/guests/${inq.guest.id}`}
+                                  className="text-sm font-semibold text-white hover:text-primary-300 truncate transition-colors"
+                                  onClick={e => e.stopPropagation()}
+                                  draggable={false}
+                                >
+                                  {inq.guest?.full_name ?? '—'}
+                                </Link>
+                              ) : (
+                                <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
+                              )}
+                              {ageChip && (
+                                <span
+                                  className={`flex-shrink-0 inline-flex items-center text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ageChip.cls}`}
+                                >
+                                  {ageChip.label}
+                                </span>
+                              )}
+                            </div>
+                            {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
+                          </div>
                         </div>
-                        {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate mb-1.5">{inq.guest.company}</div>}
                         {/* Contact text on the kanban card so staff can scan
                             without opening detail. Click pills below still
                             handle the action side. */}
@@ -1099,10 +1170,17 @@ export function Inquiries() {
                             {(inq.guest?.phone || inq.guest?.mobile) && <span>· {inq.guest.phone || inq.guest.mobile}</span>}
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-400">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-gray-400">
                           {inq.check_in && <span>{inq.check_in}{inq.check_out ? ` → ${inq.check_out}` : ''}</span>}
                           {inq.num_rooms && <span>{inq.num_rooms} room{inq.num_rooms === 1 ? '' : 's'}</span>}
-                          {inq.total_value && <span className="text-emerald-400 font-semibold">{settings.currency_symbol}{Number(inq.total_value).toLocaleString()}</span>}
+                          {inq.source && SOURCE_BADGES[inq.source] && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
+                          )}
+                          {inq.total_value && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300 text-[11px] font-bold tabular-nums ml-auto">
+                              {settings.currency_symbol}{Number(inq.total_value).toLocaleString()}
+                            </span>
+                          )}
                         </div>
                         {(inq.guest?.email || inq.guest?.phone) && (
                           <div className="mt-2">
@@ -1111,9 +1189,9 @@ export function Inquiries() {
                         )}
                         {inq.next_task_type && !inq.next_task_completed && (
                           <div className="mt-2 flex items-center gap-1 text-[10px]">
-                            <AlertCircle size={10} className={new Date(inq.next_task_due) < new Date() ? 'text-red-400' : 'text-amber-400'} />
-                            <span className="text-gray-400">{inq.next_task_type}</span>
-                            {inq.next_task_due && <span className="text-gray-600">· {inq.next_task_due}</span>}
+                            <AlertCircle size={10} className={isTaskOverdue ? 'text-red-400' : 'text-amber-400'} />
+                            <span className={isTaskOverdue ? 'text-red-400 font-semibold' : 'text-gray-400'}>{inq.next_task_type}</span>
+                            {inq.next_task_due && <span className={isTaskOverdue ? 'text-red-400/70' : 'text-gray-600'}>· {inq.next_task_due}</span>}
                           </div>
                         )}
                       </div>
