@@ -184,7 +184,7 @@ export function Corporate() {
                   {expandedId === a.id && (
                     <tr key={`detail-${a.id}`}>
                       <td colSpan={visibleCols} className="bg-dark-bg px-6 py-5 border-t border-dark-border">
-                        <DetailPanel account={a} detail={detail} currencySymbol={settings.currency_symbol} />
+                        <DetailPanel account={a} detail={detail} currencySymbol={settings.currency_symbol} fieldCfg={corpFields.detail} />
                       </td>
                     </tr>
                   )}
@@ -392,7 +392,12 @@ export function Corporate() {
   )
 }
 
-function DetailPanel({ account, detail, currencySymbol }: { account: any; detail: any; currencySymbol: string }) {
+function DetailPanel({ account, detail, currencySymbol, fieldCfg }: {
+  account: any
+  detail: any
+  currencySymbol: string
+  fieldCfg: CorporateFieldConfig['detail']
+}) {
   const { t } = useTranslation()
   const fmt = (v: any) => v != null ? `${currencySymbol}${Number(v).toLocaleString()}` : '—'
   const info = detail ?? account
@@ -402,7 +407,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
   // utilization / last contact + renewal-soon chip into one glance.
   return (
     <div className="space-y-4">
-      {ltv && (
+      {fieldCfg.vitals_strip && ltv && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Vital label={t('corporate.detail.lifetime_revenue', 'Lifetime revenue')} value={fmt(ltv.confirmed_revenue)} valueClass="text-emerald-400" />
           <Vital
@@ -426,25 +431,27 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
         </div>
       )}
 
-      {ltv?.renewal_soon && (
+      {fieldCfg.renewal_chip && ltv?.renewal_soon && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-amber-200 flex items-center gap-2">
           <span className="font-bold uppercase tracking-wide text-amber-300">{t('corporate.detail.renewal_soon', 'Renewal soon')}</span>
           <span>{t('corporate.detail.renewal_message', { date: info.contract_end, defaultValue: 'Contract ends {{date}} — within 60 days.' })}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InfoBlock label={t('corporate.detail.billing_email', 'Billing Email')} value={info.billing_email || '—'} />
-        <InfoBlock label={t('corporate.detail.tax_id', 'Tax ID')} value={info.tax_id || '—'} />
-        <InfoBlock label={t('corporate.detail.rate_type', 'Rate Type')} value={info.rate_type || '—'} />
-        <InfoBlock label={t('corporate.detail.payment_terms', 'Payment Terms')} value={info.payment_terms || '—'} />
-      </div>
-      {info.billing_address && <div><span className="text-xs text-t-secondary">{t('corporate.detail.billing_address', 'Billing Address')}</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
-      {info.notes && <div><span className="text-xs text-t-secondary">{t('corporate.detail.notes', 'Notes')}</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
+      {fieldCfg.info_billing && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <InfoBlock label={t('corporate.detail.billing_email', 'Billing Email')} value={info.billing_email || '—'} />
+          <InfoBlock label={t('corporate.detail.tax_id', 'Tax ID')} value={info.tax_id || '—'} />
+          <InfoBlock label={t('corporate.detail.rate_type', 'Rate Type')} value={info.rate_type || '—'} />
+          <InfoBlock label={t('corporate.detail.payment_terms', 'Payment Terms')} value={info.payment_terms || '—'} />
+        </div>
+      )}
+      {fieldCfg.info_address && info.billing_address && <div><span className="text-xs text-t-secondary">{t('corporate.detail.billing_address', 'Billing Address')}</span><p className="text-sm text-gray-300 mt-0.5">{info.billing_address}</p></div>}
+      {fieldCfg.info_notes && info.notes && <div><span className="text-xs text-t-secondary">{t('corporate.detail.notes', 'Notes')}</span><p className="text-sm text-gray-300 mt-0.5">{info.notes}</p></div>}
 
-      <CustomFieldsDisplay entity="corporate_account" values={info.custom_data} />
+      {fieldCfg.custom_fields && <CustomFieldsDisplay entity="corporate_account" values={info.custom_data} />}
 
-      {detail?.recent_inquiries?.length > 0 && (
+      {fieldCfg.linked_deals && detail?.recent_inquiries?.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">{t('corporate.detail.linked_deals', 'Linked deals')}</h4>
           <div className="space-y-1">
@@ -467,7 +474,7 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
         </div>
       )}
 
-      {detail?.recent_reservations?.length > 0 && (
+      {fieldCfg.recent_reservations && detail?.recent_reservations?.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-t-secondary uppercase tracking-wide mb-2">{t('corporate.detail.recent_reservations', 'Recent reservations')}</h4>
           <div className="space-y-1">
@@ -482,7 +489,10 @@ function DetailPanel({ account, detail, currencySymbol }: { account: any; detail
           </div>
         </div>
       )}
-      {detail && !detail.recent_reservations?.length && !detail.recent_inquiries?.length && (
+      {(fieldCfg.linked_deals || fieldCfg.recent_reservations)
+        && detail
+        && !detail.recent_reservations?.length
+        && !detail.recent_inquiries?.length && (
         <p className="text-xs text-[#636366]">{t('corporate.detail.empty_recent', 'No recent reservations or inquiries for this account.')}</p>
       )}
     </div>

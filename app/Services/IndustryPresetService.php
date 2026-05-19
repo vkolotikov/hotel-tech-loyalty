@@ -400,13 +400,40 @@ class IndustryPresetService
     ];
 
     /**
-     * Customer-list defaults. The 5 fields are universal enough that
-     * every preset uses this; admins still hide individually.
+     * Customer defaults — everything visible. Used by Hotel + Real
+     * Estate where stays + hotel preferences actually apply.
      */
     private const FULL_CUSTOMER_LAYOUT = [
         'list' => [
             'contact' => true, 'company' => true, 'activity' => true,
             'vip_badge' => true, 'position_title' => true,
+        ],
+        'detail' => [
+            'header_pills' => true, 'stats_strip' => true,
+            'profile_b2b' => true, 'profile_location' => true,
+            'profile_hotel_prefs' => true, 'profile_dates' => true,
+            'tags' => true, 'notes' => true,
+            'activity_log' => true, 'recent_reservations' => true, 'recent_inquiries' => true,
+        ],
+    ];
+
+    /**
+     * Service-industry customer layout. Hides the stay-centric pieces
+     * (the "Total Stays" strip, hotel preferences, recent reservations)
+     * because spas / clinics / law firms / gyms / restaurants don't
+     * book overnight stays. Admin can still toggle them back on.
+     */
+    private const SERVICE_CUSTOMER_LAYOUT = [
+        'list' => [
+            'contact' => true, 'company' => true, 'activity' => true,
+            'vip_badge' => true, 'position_title' => true,
+        ],
+        'detail' => [
+            'header_pills' => true, 'stats_strip' => false,
+            'profile_b2b' => true, 'profile_location' => true,
+            'profile_hotel_prefs' => false, 'profile_dates' => true,
+            'tags' => true, 'notes' => true,
+            'activity_log' => true, 'recent_reservations' => false, 'recent_inquiries' => true,
         ],
     ];
 
@@ -421,19 +448,30 @@ class IndustryPresetService
             'contract' => true, 'rate' => true, 'discount' => true,
             'revenue' => true, 'status' => true,
         ],
+        'detail' => [
+            'vitals_strip' => true, 'renewal_chip' => true,
+            'info_billing' => true, 'info_address' => true, 'info_notes' => true,
+            'custom_fields' => true, 'linked_deals' => true, 'recent_reservations' => true,
+        ],
     ];
 
     /**
      * Service-industry companies layout. Spas, clinics, law firms,
      * gyms and restaurants rarely negotiate contract rates with
      * corporate clients — those four columns get hidden by default
-     * (admin can still toggle them back on per-org).
+     * (admin can still toggle them back on per-org). Same idea on the
+     * detail page: hide the hotel-style vitals + billing grid.
      */
     private const SERVICE_CORPORATE_LAYOUT = [
         'list' => [
             'industry' => true, 'contact_person' => true, 'account_manager' => true,
             'contract' => false, 'rate' => false, 'discount' => false,
             'revenue' => true, 'status' => true,
+        ],
+        'detail' => [
+            'vitals_strip' => false, 'renewal_chip' => false,
+            'info_billing' => false, 'info_address' => true, 'info_notes' => true,
+            'custom_fields' => true, 'linked_deals' => true, 'recent_reservations' => false,
         ],
     ];
 
@@ -503,7 +541,7 @@ class IndustryPresetService
                 'Found another provider', 'No response', 'Cancelled by guest', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'beauty',
@@ -530,7 +568,7 @@ class IndustryPresetService
                 'Patient declined', 'Out of area', 'Referred elsewhere', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'medical',
@@ -557,7 +595,7 @@ class IndustryPresetService
                 'Cost', 'Could not assist', 'Pro-se / DIY', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'legal',
@@ -624,7 +662,7 @@ class IndustryPresetService
                 'No response', 'Distance / location', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'education',
@@ -650,7 +688,7 @@ class IndustryPresetService
                 'No response', 'Injury / health', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'fitness',
@@ -676,7 +714,7 @@ class IndustryPresetService
                 'Found another venue', 'Wrong cuisine / fit', 'Other',
             ],
             'layout'             => self::SERVICE_LAYOUT,
-            'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
             'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
             'deal_layout'        => self::FULL_DEAL_LAYOUT,
             'custom_fields_key'  => 'restaurant',

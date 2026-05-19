@@ -52,6 +52,19 @@ export interface CustomerFieldConfig {
     vip_badge: boolean      // VIP star pill on the row
     position_title: boolean // job title under the name
   }
+  detail: {
+    header_pills: boolean         // lifecycle / VIP / lead-source pills above stats
+    stats_strip: boolean          // Total Stays / Nights / Revenue / Last Stay row
+    profile_b2b: boolean          // company + guest type + owner + importance
+    profile_location: boolean     // country / city / address
+    profile_hotel_prefs: boolean  // preferred room / floor / language / dietary
+    profile_dates: boolean        // last activity + first stay dates
+    tags: boolean
+    notes: boolean
+    activity_log: boolean         // the timeline component on the right
+    recent_reservations: boolean
+    recent_inquiries: boolean
+  }
 }
 
 export interface CorporateFieldConfig {
@@ -64,6 +77,16 @@ export interface CorporateFieldConfig {
     discount: boolean
     revenue: boolean
     status: boolean
+  }
+  detail: {
+    vitals_strip: boolean    // 4 KPI cards: LTV / Open pipeline / Credit / Last contact
+    renewal_chip: boolean    // "Renewal soon" amber banner
+    info_billing: boolean    // billing_email + tax_id + rate_type + payment_terms grid
+    info_address: boolean    // billing_address paragraph
+    info_notes: boolean      // free-form notes
+    custom_fields: boolean   // the CustomFieldsDisplay block
+    linked_deals: boolean    // recent_inquiries list
+    recent_reservations: boolean
   }
 }
 
@@ -99,6 +122,13 @@ export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldConfig = {
     contact: true, company: true, activity: true,
     vip_badge: true, position_title: true,
   },
+  detail: {
+    header_pills: true, stats_strip: true,
+    profile_b2b: true, profile_location: true,
+    profile_hotel_prefs: true, profile_dates: true,
+    tags: true, notes: true,
+    activity_log: true, recent_reservations: true, recent_inquiries: true,
+  },
 }
 
 export const DEFAULT_CORPORATE_FIELDS: CorporateFieldConfig = {
@@ -106,6 +136,11 @@ export const DEFAULT_CORPORATE_FIELDS: CorporateFieldConfig = {
     industry: true, contact_person: true, account_manager: true,
     contract: true, rate: true, discount: true,
     revenue: true, status: true,
+  },
+  detail: {
+    vitals_strip: true, renewal_chip: true,
+    info_billing: true, info_address: true, info_notes: true,
+    custom_fields: true, linked_deals: true, recent_reservations: true,
   },
 }
 
@@ -245,14 +280,16 @@ export function useSettings(): CrmSettings {
   }
   if (merged.customer_fields && typeof merged.customer_fields === 'object') {
     merged.customer_fields = {
-      list: { ...DEFAULT_CUSTOMER_FIELDS.list, ...(merged.customer_fields.list ?? {}) },
+      list:   { ...DEFAULT_CUSTOMER_FIELDS.list,   ...(merged.customer_fields.list   ?? {}) },
+      detail: { ...DEFAULT_CUSTOMER_FIELDS.detail, ...(merged.customer_fields.detail ?? {}) },
     }
   } else {
     merged.customer_fields = DEFAULT_CUSTOMER_FIELDS
   }
   if (merged.corporate_fields && typeof merged.corporate_fields === 'object') {
     merged.corporate_fields = {
-      list: { ...DEFAULT_CORPORATE_FIELDS.list, ...(merged.corporate_fields.list ?? {}) },
+      list:   { ...DEFAULT_CORPORATE_FIELDS.list,   ...(merged.corporate_fields.list   ?? {}) },
+      detail: { ...DEFAULT_CORPORATE_FIELDS.detail, ...(merged.corporate_fields.detail ?? {}) },
     }
   } else {
     merged.corporate_fields = DEFAULT_CORPORATE_FIELDS

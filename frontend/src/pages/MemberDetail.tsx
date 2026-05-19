@@ -17,6 +17,7 @@ import {
   History, Plus, Minus, Loader2, Settings as SettingsIcon, LayoutDashboard,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useSettings } from '../lib/crmSettings'
 
 const LIFECYCLE_COLORS: Record<string, string> = {
   'Prospect': 'bg-gray-500/20 text-gray-300',
@@ -33,6 +34,8 @@ export function MemberDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { t } = useTranslation()
+  // Admin-toggleable visibility for the CRM tab — Settings → Pipelines → Fields → Customers (Detail page).
+  const customerDetailCfg = useSettings().customer_fields.detail
   const [urlParams, setUrlParams] = useSearchParams()
   const activeTab = urlParams.get('tab') ?? 'overview'
   const selectTab = (key: string) => {
@@ -579,17 +582,17 @@ export function MemberDetail() {
           <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2 flex-wrap">
             <Crown size={16} className="text-primary-400" />
             <h2 className="font-semibold text-white">Linked CRM Guest</h2>
-            {linkedGuest.lifecycle_status && (
+            {customerDetailCfg.header_pills && linkedGuest.lifecycle_status && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LIFECYCLE_COLORS[linkedGuest.lifecycle_status] ?? 'bg-gray-500/20 text-gray-300'}`}>
                 {linkedGuest.lifecycle_status}
               </span>
             )}
-            {linkedGuest.vip_level && linkedGuest.vip_level !== 'Standard' && (
+            {customerDetailCfg.header_pills && linkedGuest.vip_level && linkedGuest.vip_level !== 'Standard' && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-400">
                 VIP: {linkedGuest.vip_level}
               </span>
             )}
-            {linkedGuest.lead_source && (
+            {customerDetailCfg.header_pills && linkedGuest.lead_source && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-500/20 text-indigo-300">
                 {linkedGuest.lead_source}
               </span>
@@ -608,21 +611,23 @@ export function MemberDetail() {
           </div>
 
           {/* Stat row spans full width */}
-          <div className="px-6 pt-5">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Total Stays',  value: linkedGuest.total_stays ?? 0, color: 'text-blue-400' },
-                { label: 'Total Nights', value: linkedGuest.total_nights ?? 0, color: 'text-purple-400' },
-                { label: 'CRM Revenue',  value: `$${Number(linkedGuest.total_revenue ?? 0).toLocaleString()}`, color: 'text-[#32d74b]' },
-                { label: 'Last Stay',    value: linkedGuest.last_stay_date ? new Date(linkedGuest.last_stay_date).toLocaleDateString() : '—', color: 'text-[#a0a0a0]' },
-              ].map(s => (
-                <div key={s.label} className="text-center">
-                  <p className="text-xs text-t-secondary">{s.label}</p>
-                  <p className={`text-lg font-bold mt-0.5 ${s.color}`}>{s.value}</p>
-                </div>
-              ))}
+          {customerDetailCfg.stats_strip && (
+            <div className="px-6 pt-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Stays',  value: linkedGuest.total_stays ?? 0, color: 'text-blue-400' },
+                  { label: 'Total Nights', value: linkedGuest.total_nights ?? 0, color: 'text-purple-400' },
+                  { label: 'CRM Revenue',  value: `$${Number(linkedGuest.total_revenue ?? 0).toLocaleString()}`, color: 'text-[#32d74b]' },
+                  { label: 'Last Stay',    value: linkedGuest.last_stay_date ? new Date(linkedGuest.last_stay_date).toLocaleDateString() : '—', color: 'text-[#a0a0a0]' },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <p className="text-xs text-t-secondary">{s.label}</p>
+                    <p className={`text-lg font-bold mt-0.5 ${s.color}`}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Two-column body: profile fields on the left, activity + history on
               the right. Stacks single-column on mobile. Each column has its
@@ -633,46 +638,46 @@ export function MemberDetail() {
               <div>
                 <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2">Profile</h3>
                 <div className="grid grid-cols-1 gap-y-2 text-xs">
-                  {linkedGuest.company && (
+                  {customerDetailCfg.profile_b2b && linkedGuest.company && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Company</span><span className="text-white text-right truncate">{linkedGuest.company}{linkedGuest.position_title ? ` · ${linkedGuest.position_title}` : ''}</span></div>
                   )}
-                  {linkedGuest.guest_type && (
+                  {customerDetailCfg.profile_b2b && linkedGuest.guest_type && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Guest type</span><span className="text-white">{linkedGuest.guest_type}</span></div>
                   )}
-                  {linkedGuest.owner_name && (
+                  {customerDetailCfg.profile_b2b && linkedGuest.owner_name && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Owner</span><span className="text-white">{linkedGuest.owner_name}</span></div>
                   )}
-                  {linkedGuest.importance && (
+                  {customerDetailCfg.profile_b2b && linkedGuest.importance && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Importance</span><span className="text-white">{linkedGuest.importance}</span></div>
                   )}
-                  {(linkedGuest.country || linkedGuest.city) && (
+                  {customerDetailCfg.profile_location && (linkedGuest.country || linkedGuest.city) && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary flex items-center gap-1"><MapPin size={11}/>Location</span><span className="text-white text-right truncate">{[linkedGuest.city, linkedGuest.country].filter(Boolean).join(', ')}</span></div>
                   )}
-                  {linkedGuest.address && (
+                  {customerDetailCfg.profile_location && linkedGuest.address && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Address</span><span className="text-white text-right truncate">{linkedGuest.address}</span></div>
                   )}
-                  {linkedGuest.preferred_room_type && (
+                  {customerDetailCfg.profile_hotel_prefs && linkedGuest.preferred_room_type && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. room</span><span className="text-white">{linkedGuest.preferred_room_type}</span></div>
                   )}
-                  {linkedGuest.preferred_floor && (
+                  {customerDetailCfg.profile_hotel_prefs && linkedGuest.preferred_floor && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. floor</span><span className="text-white">{linkedGuest.preferred_floor}</span></div>
                   )}
-                  {linkedGuest.preferred_language && (
+                  {customerDetailCfg.profile_hotel_prefs && linkedGuest.preferred_language && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Pref. language</span><span className="text-white">{linkedGuest.preferred_language}</span></div>
                   )}
-                  {linkedGuest.dietary_preferences && (
+                  {customerDetailCfg.profile_hotel_prefs && linkedGuest.dietary_preferences && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Dietary</span><span className="text-white text-right truncate">{linkedGuest.dietary_preferences}</span></div>
                   )}
-                  {linkedGuest.last_activity_at && (
+                  {customerDetailCfg.profile_dates && linkedGuest.last_activity_at && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">Last activity</span><span className="text-white">{new Date(linkedGuest.last_activity_at).toLocaleDateString()}</span></div>
                   )}
-                  {linkedGuest.first_stay_date && (
+                  {customerDetailCfg.profile_dates && linkedGuest.first_stay_date && (
                     <div className="flex justify-between gap-3"><span className="text-t-secondary">First stay</span><span className="text-white">{new Date(linkedGuest.first_stay_date).toLocaleDateString()}</span></div>
                   )}
                 </div>
               </div>
 
-              {(linkedGuest.tags?.length ?? 0) > 0 && (
+              {customerDetailCfg.tags && (linkedGuest.tags?.length ?? 0) > 0 && (
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5"><Tag size={11} /> Tags</h3>
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -683,7 +688,7 @@ export function MemberDetail() {
                 </div>
               )}
 
-              {linkedGuest.notes && (
+              {customerDetailCfg.notes && linkedGuest.notes && (
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5"><StickyNote size={11} /> Notes</h3>
                   <div className="bg-dark-surface2 rounded-lg px-3 py-2">
@@ -696,14 +701,16 @@ export function MemberDetail() {
             {/* Right: activity timeline + reservations + inquiries — the
                 "what happened" column. Heavier visual weight (3/5 grid). */}
             <div className="lg:col-span-3 space-y-4">
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
-                  <Activity size={11} /> Activity Log
-                </h3>
-                <ActivityTimeline guestId={linkedGuest.id} initialActivities={linkedGuest.activities} />
-              </div>
+              {customerDetailCfg.activity_log && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
+                    <Activity size={11} /> Activity Log
+                  </h3>
+                  <ActivityTimeline guestId={linkedGuest.id} initialActivities={linkedGuest.activities} />
+                </div>
+              )}
 
-              {(linkedGuest.reservations?.length ?? 0) > 0 && (
+              {customerDetailCfg.recent_reservations && (linkedGuest.reservations?.length ?? 0) > 0 && (
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
                     <Hotel size={11} /> Recent Reservations
@@ -734,7 +741,7 @@ export function MemberDetail() {
                 </div>
               )}
 
-              {(linkedGuest.inquiries?.length ?? 0) > 0 && (
+              {customerDetailCfg.recent_inquiries && (linkedGuest.inquiries?.length ?? 0) > 0 && (
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5">
                     <FileText size={11} /> Recent Inquiries
