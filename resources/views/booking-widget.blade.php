@@ -239,6 +239,16 @@ input,select,textarea{font-family:inherit}
 .cal-day.sold-out .day-num{text-decoration:line-through;color:var(--text-secondary)}
 .cal-day.sold-out .day-price{display:none}
 .cal-day.sold-out::after{content:"";position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--text-secondary);opacity:.45}
+/* Sold-out days that ARE a valid checkout candidate (user has picked
+   check-in and clicking this would set checkout). Hotel convention:
+   the checkout day doesn't need inventory — guests leave in the
+   morning, so a fully-booked-for-the-night day can still be a valid
+   end-of-stay. Bumps opacity, restores cursor + pointer events, and
+   shows a subtle "checkout" tooltip on hover. */
+.cal-day.sold-out.checkout-eligible{cursor:pointer;pointer-events:auto}
+.cal-day.sold-out.checkout-eligible .day-inner{opacity:.75}
+.cal-day.sold-out.checkout-eligible:hover .day-inner{background:var(--primary-light);opacity:1}
+.cal-day.sold-out.checkout-eligible:hover .day-num{color:var(--primary)}
 .cal-day .day-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:42px;border-radius:8px;transition:all .15s;padding:3px 0}
 .cal-day:not(.empty):not(.disabled):not(.sold-out):hover .day-inner{background:var(--primary-light)}
 .cal-day .day-num{font-size:13px;font-weight:500;line-height:1.2}
@@ -696,6 +706,26 @@ function renderCalendar() {
   return h;
 }
 
+// Can this sold-out date be picked as checkout? Requires a set check-in,
+// no checkout yet, date strictly after check-in, and every NIGHT between
+// check-in (inclusive) and this date (exclusive) available — the guest's
+// stay nights must all have inventory; only the leaving morning can be sold.
+function isCheckoutEligible(dateStr) {
+  if (!state.checkIn || state.checkOut) return false;
+  if (dateStr <= state.checkIn) return false;
+  var cur = new Date(state.checkIn + 'T00:00:00');
+  var end = new Date(dateStr + 'T00:00:00');
+  while (cur < end) {
+    var y = cur.getFullYear();
+    var m = String(cur.getMonth() + 1).padStart(2, '0');
+    var d = String(cur.getDate()).padStart(2, '0');
+    var key = y + '-' + m + '-' + d;
+    if (state.calendarAvailability[key] === false) return false;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return true;
+}
+
 function renderMonth(year, month) {
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var dows = ['Mo','Tu','We','Th','Fr','Sa','Su'];
@@ -739,18 +769,26 @@ function renderMonth(year, month) {
     var isStart = state.checkIn === dateStr;
     var isEnd = state.checkOut === dateStr;
     var inRange = state.checkIn && state.checkOut && dateStr > state.checkIn && dateStr < state.checkOut;
-    // Sold-out: backend reports every room as unavailable for this night.
-    // Treat as unselectable so users can't pick a range straddling no-stock days.
+    // Sold-out: backend reports every room as unavailable for this NIGHT.
+    // A sold-out night blocks check-in but NOT checkout: hotel convention is
+    // the checkout day doesn't need inventory (guest leaves in the morning).
+    // So a sold-out date can still be picked as checkout when:
+    //   - check-in is set + checkout is not yet picked
+    //   - date is strictly after check-in
+    //   - every NIGHT between check-in (inclusive) and this date (exclusive) is available
     var soldOut = state.calendarAvailability[dateStr] === false && !isPast;
+    var checkoutEligible = soldOut && isCheckoutEligible(dateStr);
 
     var cls = 'cal-day';
     if (isPast) cls += ' disabled';
     if (soldOut) cls += ' sold-out';
+    if (checkoutEligible) cls += ' checkout-eligible';
     if (isStart) cls += ' range-start';
     if (isEnd) cls += ' range-end';
     if (inRange) cls += ' in-range';
 
-    h += '<div class="' + cls + '" data-date="' + dateStr + '"' + (soldOut ? ' title="Fully booked"' : '') + '>';
+    var dayTitle = soldOut ? (checkoutEligible ? 'Fully booked — can be used as checkout' : 'Fully booked') : '';
+    h += '<div class="' + cls + '" data-date="' + dateStr + '"' + (dayTitle ? ' title="' + dayTitle + '"' : '') + '>';
     h += '<div class="day-inner">';
     h += '<span class="day-num">' + d + '</span>';
 
@@ -1682,12 +1720,23 @@ function renderCalendarInPlace() {
 }
 
 function bindCalendarDays() {
-  // Skip past days (.disabled) AND fully-booked days (.sold-out).
-  var days = document.querySelectorAll('.cal-day[data-date]:not(.disabled):not(.sold-out)');
+  // Skip past days (.disabled). Sold-out days are bound too — the click handler
+  // ignores them unless they're flagged .checkout-eligible (valid as a checkout).
+  var days = document.querySelectorAll('.cal-day[data-date]:not(.disabled)');
   for (var di = 0; di < days.length; di++) {
     (function(el) {
       el.addEventListener('click', function() {
         var date = el.getAttribute('data-date');
+        var isSoldOut = el.classList.contains('sold-out');
+        // Sold-out date is only clickable as a checkout pick when eligible.
+        // Re-validate at click time (state can change between render + click).
+        if (isSoldOut) {
+          if (!isCheckoutEligible(date)) return;
+          state.checkOut = date;
+          state.calendarOpen = false;
+          render();
+          return;
+        }
         if (!state.checkIn || state.pickingCheckout === false) {
           state.checkIn = date;
           state.checkOut = '';
