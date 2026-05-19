@@ -453,13 +453,19 @@ export function Members() {
                   </div>
                   <ChevronRight size={16} className="text-[#636366] flex-shrink-0" />
                 </div>
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  <TierBadge tier={m.tier?.name} color={m.tier?.color_hex} />
-                  <span className="text-xs font-semibold text-white">{m.current_points?.toLocaleString()} pts</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
-                    {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
-                  </span>
-                </div>
+                {(memberFields.list.tier || memberFields.list.points || memberFields.list.status) && (
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {memberFields.list.tier && <TierBadge tier={m.tier?.name} color={m.tier?.color_hex} />}
+                    {memberFields.list.points && (
+                      <span className="text-xs font-semibold text-white">{m.current_points?.toLocaleString()} pts</span>
+                    )}
+                    {memberFields.list.status && (
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
+                        {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
