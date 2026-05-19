@@ -175,11 +175,23 @@ export function canAccess(gate: NavGate, staff: { role: string; can_manage_offer
 }
 
 const SIDEBAR_KEY = 'loyalty-sidebar-collapsed'
+const NAV_GROUPS_KEY = 'loyalty-nav-groups'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  // Persist per-group expand/collapse state. Groups default to OPEN
+  // (missing key = open) — only an explicit `false` means the user
+  // collapsed it. Reading from localStorage on mount means a collapse
+  // sticks across page reloads / navigations.
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(NAV_GROUPS_KEY)
+      return raw ? JSON.parse(raw) : {}
+    } catch {
+      return {}
+    }
+  })
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
@@ -260,7 +272,13 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }, [isMobile, mobileOpen])
 
-  // Auto-expand group containing current page
+  // Auto-expand group containing current page — but ONLY if the user
+  // hasn't explicitly collapsed it. If `prev[label] === false`, the
+  // user clicked to collapse it; respect that intent and leave it
+  // collapsed even when they navigate to a page in that group.
+  // (Previously this effect force-set the active group to `true` on
+  // every navigation, which made the group pop back open every time
+  // the user clicked anywhere — looked like "collapse doesn't stick".)
   useEffect(() => {
     for (const group of navGroups) {
       const match = group.items.some(i => {
@@ -269,11 +287,20 @@ export function Layout({ children }: { children: ReactNode }) {
         return (i.altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))
       })
       if (match) {
-        setExpandedGroups(prev => ({ ...prev, [group.defaultLabel]: true }))
+        setExpandedGroups(prev => {
+          if (prev[group.defaultLabel] === false) return prev   // user collapsed → respect
+          if (prev[group.defaultLabel] === true)  return prev   // already open → no-op
+          return { ...prev, [group.defaultLabel]: true }
+        })
         break
       }
     }
   }, [location.pathname])
+
+  // Persist group state across reloads so a collapse sticks.
+  useEffect(() => {
+    try { localStorage.setItem(NAV_GROUPS_KEY, JSON.stringify(expandedGroups)) } catch {}
+  }, [expandedGroups])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -291,7 +318,13 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const toggleGroup = (label: string) => {
     if (displayCollapsed) return
-    setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }))
+    setExpandedGroups(prev => {
+      // Default rendered state is OPEN (undefined !== false), so toggling
+      // from `undefined` must produce `false`, not `true` (which would be
+      // a visual no-op and force the user to click twice to collapse).
+      const isCurrentlyOpen = prev[label] !== false
+      return { ...prev, [label]: !isCurrentlyOpen }
+    })
   }
 
   const { data: settingsData } = useQuery({
