@@ -92,6 +92,22 @@ const TABS: TabDef[] = [
           { key: 'next_task', label: 'Next task' },
         ],
       },
+      {
+        label: 'Inquiry detail page',
+        path: 'detail',
+        fields: [
+          { key: 'contact_section', label: 'Contact (email + phone)' },
+          { key: 'stay_section', label: 'Stay block', hint: 'Check-in / check-out / rooms / adults / children. Hide for service-only orgs.' },
+          { key: 'special_requests', label: 'Special requests' },
+          { key: 'pipeline_section', label: 'Pipeline block', hint: 'Property / priority / source.' },
+          { key: 'linked_reservation', label: 'Linked reservation' },
+          { key: 'custom_fields_section', label: 'Custom fields' },
+          { key: 'guest_profile_link', label: 'Open guest profile link' },
+          { key: 'ai_smart_panel', label: 'AI Smart Panel', hint: 'AI brief + intent + win probability + suggested action.' },
+          { key: 'open_tasks', label: 'Open tasks panel' },
+          { key: 'attachments', label: 'Attachments panel' },
+        ],
+      },
     ],
   },
   {

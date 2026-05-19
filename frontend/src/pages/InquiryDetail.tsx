@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { useSettings, type InquiryFieldConfig } from '../lib/crmSettings'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
 import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
@@ -155,6 +156,8 @@ export function InquiryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  // Admin-toggleable visibility for the detail page — Settings → Pipelines → Fields → Leads (Inquiry detail page).
+  const detailCfg = useSettings().inquiry_fields.detail
 
   const { data: inq, isLoading } = useQuery<InquiryDetail>({
     queryKey: ['inquiry', id],
@@ -243,7 +246,7 @@ export function InquiryDetail() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_300px] gap-4">
-        <ProfileCol inq={inq} />
+        <ProfileCol inq={inq} fieldCfg={detailCfg} />
         <TimelineCol
           activities={inq.activities ?? []}
           onAdd={(payload) => addActivity.mutate(payload)}
@@ -255,6 +258,7 @@ export function InquiryDetail() {
           inq={inq}
           tasks={inq.open_tasks ?? []}
           onCompleteTask={(taskId) => completeTask.mutate(taskId)}
+          fieldCfg={detailCfg}
         />
       </div>
 
@@ -432,28 +436,36 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
 
 /* ── Left: Profile column ───────────────────────────────────── */
 
-function ProfileCol({ inq }: { inq: InquiryDetail }) {
+function ProfileCol({ inq, fieldCfg }: { inq: InquiryDetail; fieldCfg: InquiryFieldConfig['detail'] }) {
   const { t } = useTranslation()
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4 space-y-4 self-start">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <User size={11} /> {t('inquiryDetail.profile.contact', 'Contact')}
-      </div>
-      <Field label={t('inquiryDetail.profile.email', 'Email')} value={inq.guest?.email ?? '—'} />
-      <Field label={t('inquiryDetail.profile.phone', 'Phone')} value={inq.guest?.phone ?? '—'} />
+      {fieldCfg.contact_section && (
+        <>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
+            <User size={11} /> {t('inquiryDetail.profile.contact', 'Contact')}
+          </div>
+          <Field label={t('inquiryDetail.profile.email', 'Email')} value={inq.guest?.email ?? '—'} />
+          <Field label={t('inquiryDetail.profile.phone', 'Phone')} value={inq.guest?.phone ?? '—'} />
+        </>
+      )}
 
-      <div className="border-t border-dark-border pt-4 flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <CalendarIcon size={11} /> {t('inquiryDetail.profile.stay', 'Stay')}
-      </div>
-      <Field label={t('inquiryDetail.profile.check_in',  'Check-in')}  value={inq.check_in ?? '—'} mono />
-      <Field label={t('inquiryDetail.profile.check_out', 'Check-out')} value={inq.check_out ?? '—'} mono />
-      <div className="grid grid-cols-3 gap-2">
-        <Field label={t('inquiryDetail.profile.rooms',    'Rooms')}    value={String(inq.num_rooms ?? '—')} />
-        <Field label={t('inquiryDetail.profile.adults',   'Adults')}   value={String(inq.num_adults ?? '—')} />
-        <Field label={t('inquiryDetail.profile.children', 'Children')} value={String(inq.num_children ?? '—')} />
-      </div>
+      {fieldCfg.stay_section && (
+        <>
+          <div className={(fieldCfg.contact_section ? 'border-t border-dark-border pt-4 ' : '') + 'flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary'}>
+            <CalendarIcon size={11} /> {t('inquiryDetail.profile.stay', 'Stay')}
+          </div>
+          <Field label={t('inquiryDetail.profile.check_in',  'Check-in')}  value={inq.check_in ?? '—'} mono />
+          <Field label={t('inquiryDetail.profile.check_out', 'Check-out')} value={inq.check_out ?? '—'} mono />
+          <div className="grid grid-cols-3 gap-2">
+            <Field label={t('inquiryDetail.profile.rooms',    'Rooms')}    value={String(inq.num_rooms ?? '—')} />
+            <Field label={t('inquiryDetail.profile.adults',   'Adults')}   value={String(inq.num_adults ?? '—')} />
+            <Field label={t('inquiryDetail.profile.children', 'Children')} value={String(inq.num_children ?? '—')} />
+          </div>
+        </>
+      )}
 
-      {inq.special_requests && (
+      {fieldCfg.special_requests && inq.special_requests && (
         <>
           <div className="border-t border-dark-border pt-4 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
             {t('inquiryDetail.profile.special_requests', 'Special requests')}
@@ -462,14 +474,18 @@ function ProfileCol({ inq }: { inq: InquiryDetail }) {
         </>
       )}
 
-      <div className="border-t border-dark-border pt-4 flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-        <MapPin size={11} /> {t('inquiryDetail.profile.pipeline', 'Pipeline')}
-      </div>
-      <Field label={t('inquiryDetail.profile.property', 'Property')} value={inq.property?.name ?? '—'} />
-      <Field label={t('inquiryDetail.profile.priority', 'Priority')} value={inq.priority ?? t('inquiryDetail.profile.default_priority', 'Medium')} />
-      <Field label={t('inquiryDetail.profile.source',   'Source')}   value={inq.source ?? t('inquiryDetail.profile.default_source', 'Manual')} />
+      {fieldCfg.pipeline_section && (
+        <>
+          <div className="border-t border-dark-border pt-4 flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
+            <MapPin size={11} /> {t('inquiryDetail.profile.pipeline', 'Pipeline')}
+          </div>
+          <Field label={t('inquiryDetail.profile.property', 'Property')} value={inq.property?.name ?? '—'} />
+          <Field label={t('inquiryDetail.profile.priority', 'Priority')} value={inq.priority ?? t('inquiryDetail.profile.default_priority', 'Medium')} />
+          <Field label={t('inquiryDetail.profile.source',   'Source')}   value={inq.source ?? t('inquiryDetail.profile.default_source', 'Manual')} />
+        </>
+      )}
 
-      {inq.reservations && inq.reservations.length > 0 && (
+      {fieldCfg.linked_reservation && inq.reservations && inq.reservations.length > 0 && (
         <>
           <div className="border-t border-dark-border pt-4 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
             {t('inquiryDetail.profile.linked_reservation', 'Linked reservation')}
@@ -483,9 +499,9 @@ function ProfileCol({ inq }: { inq: InquiryDetail }) {
         </>
       )}
 
-      <CustomFieldsSection inq={inq} />
+      {fieldCfg.custom_fields_section && <CustomFieldsSection inq={inq} />}
 
-      {inq.guest_id && (
+      {fieldCfg.guest_profile_link && inq.guest_id && (
         <Link to={`/guest/${inq.guest_id}`} className="block text-xs text-accent hover:underline pt-2 border-t border-dark-border">
           {t('inquiryDetail.profile.open_guest_profile', 'Open guest profile →')}
         </Link>
@@ -857,42 +873,51 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
 
 /* ── Right: Smart Panel + Open Tasks ─────────────────────────── */
 
-function SmartPanelCol({ inq, tasks, onCompleteTask }: {
+function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
   inq: InquiryDetail
   tasks: Task[]
   onCompleteTask: (taskId: number) => void
+  fieldCfg: InquiryFieldConfig['detail']
 }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [adding, setAdding] = useState(false)
 
+  // If every right-column panel is hidden, suppress the column entirely
+  // so the layout collapses cleanly instead of leaving an empty 300px gap.
+  if (!fieldCfg.ai_smart_panel && !fieldCfg.open_tasks && !fieldCfg.attachments) {
+    return null
+  }
+
   return (
     <div className="space-y-4 self-start">
-      <SmartPanel inq={inq} />
+      {fieldCfg.ai_smart_panel && <SmartPanel inq={inq} />}
 
-      <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
-            <Clock size={11} /> {t('inquiryDetail.tasks.open_tasks', { count: tasks.length, defaultValue: 'Open tasks ({{count}})' })}
+      {fieldCfg.open_tasks && (
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-t-secondary">
+              <Clock size={11} /> {t('inquiryDetail.tasks.open_tasks', { count: tasks.length, defaultValue: 'Open tasks ({{count}})' })}
+            </div>
+            <button
+              onClick={() => setAdding(true)}
+              className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+              title={t('inquiryDetail.tasks.add_task', 'Add task')}
+            >
+              <Plus size={13} />
+            </button>
           </div>
-          <button
-            onClick={() => setAdding(true)}
-            className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
-            title={t('inquiryDetail.tasks.add_task', 'Add task')}
-          >
-            <Plus size={13} />
-          </button>
+          {tasks.length === 0 ? (
+            <p className="text-xs text-t-secondary italic">{t('inquiryDetail.tasks.empty', 'No open tasks.')}</p>
+          ) : (
+            <div className="space-y-1.5">
+              {tasks.map(t => <TaskRow key={t.id} task={t} onComplete={() => onCompleteTask(t.id)} />)}
+            </div>
+          )}
         </div>
-        {tasks.length === 0 ? (
-          <p className="text-xs text-t-secondary italic">{t('inquiryDetail.tasks.empty', 'No open tasks.')}</p>
-        ) : (
-          <div className="space-y-1.5">
-            {tasks.map(t => <TaskRow key={t.id} task={t} onComplete={() => onCompleteTask(t.id)} />)}
-          </div>
-        )}
-      </div>
+      )}
 
-      <InquiryAttachmentsPanel inquiryId={inq.id} />
+      {fieldCfg.attachments && <InquiryAttachmentsPanel inquiryId={inq.id} />}
 
       {adding && (
         <TaskDrawer

@@ -377,6 +377,13 @@ class IndustryPresetService
             'stay' => true, 'value' => true, 'owner' => true,
             'touches' => true, 'next_task' => true, 'bulk_select' => false,
         ],
+        'detail' => [
+            'contact_section' => true, 'stay_section' => true,
+            'special_requests' => true, 'pipeline_section' => true,
+            'linked_reservation' => true, 'custom_fields_section' => true,
+            'guest_profile_link' => true,
+            'ai_smart_panel' => true, 'open_tasks' => true, 'attachments' => true,
+        ],
     ];
 
     /**
@@ -384,6 +391,10 @@ class IndustryPresetService
      * Beauty, Medical, Legal, Education, Fitness which don't book
      * rooms. Keeps total_value (bill amount) and inquiry_type
      * (service category).
+     *
+     * On the detail page: hides the stay block (check-in / check-out /
+     * rooms / adults / children) and the linked-reservation chip
+     * because those concepts don't exist for service businesses.
      */
     private const SERVICE_LAYOUT = [
         'form' => [
@@ -396,6 +407,13 @@ class IndustryPresetService
         'list' => [
             'stay' => false, 'value' => true, 'owner' => true,
             'touches' => true, 'next_task' => true, 'bulk_select' => false,
+        ],
+        'detail' => [
+            'contact_section' => true, 'stay_section' => false,
+            'special_requests' => true, 'pipeline_section' => true,
+            'linked_reservation' => false, 'custom_fields_section' => true,
+            'guest_profile_link' => true,
+            'ai_smart_panel' => true, 'open_tasks' => true, 'attachments' => true,
         ],
     ];
 
@@ -634,6 +652,13 @@ class IndustryPresetService
                 'list' => [
                     'stay' => true, 'value' => true, 'owner' => true,
                     'touches' => true, 'next_task' => true, 'bulk_select' => false,
+                ],
+                'detail' => [
+                    'contact_section' => true, 'stay_section' => true,
+                    'special_requests' => true, 'pipeline_section' => true,
+                    'linked_reservation' => false, // real estate doesn't link to PMS reservations
+                    'custom_fields_section' => true, 'guest_profile_link' => true,
+                    'ai_smart_panel' => true, 'open_tasks' => true, 'attachments' => true,
                 ],
             ],
             'customer_layout'    => self::FULL_CUSTOMER_LAYOUT,

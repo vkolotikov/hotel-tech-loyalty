@@ -42,6 +42,18 @@ export interface InquiryFieldConfig {
     next_task: boolean
     bulk_select: boolean
   }
+  detail: {
+    contact_section: boolean           // email + phone block on the profile column
+    stay_section: boolean              // check-in / check-out / rooms / adults / children
+    special_requests: boolean
+    pipeline_section: boolean          // property / priority / source block
+    linked_reservation: boolean        // confirmation-no chip when a reservation exists
+    custom_fields_section: boolean
+    guest_profile_link: boolean        // "Open guest profile →" link at the bottom
+    ai_smart_panel: boolean            // AI brief + intent + win prob + suggested action
+    open_tasks: boolean                // tasks list in the right column
+    attachments: boolean               // file attachments panel
+  }
 }
 
 export interface CustomerFieldConfig {
@@ -114,6 +126,13 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
     stay: true, value: true, owner: true,
     touches: true, next_task: true,
     bulk_select: false, // hidden by default — admins opt in
+  },
+  detail: {
+    contact_section: true, stay_section: true,
+    special_requests: true, pipeline_section: true,
+    linked_reservation: true, custom_fields_section: true,
+    guest_profile_link: true,
+    ai_smart_panel: true, open_tasks: true, attachments: true,
   },
 }
 
@@ -272,8 +291,9 @@ export function useSettings(): CrmSettings {
   // defaults fill the gaps.
   if (merged.inquiry_fields && typeof merged.inquiry_fields === 'object') {
     merged.inquiry_fields = {
-      form: { ...DEFAULT_INQUIRY_FIELDS.form, ...(merged.inquiry_fields.form ?? {}) },
-      list: { ...DEFAULT_INQUIRY_FIELDS.list, ...(merged.inquiry_fields.list ?? {}) },
+      form:   { ...DEFAULT_INQUIRY_FIELDS.form,   ...(merged.inquiry_fields.form   ?? {}) },
+      list:   { ...DEFAULT_INQUIRY_FIELDS.list,   ...(merged.inquiry_fields.list   ?? {}) },
+      detail: { ...DEFAULT_INQUIRY_FIELDS.detail, ...(merged.inquiry_fields.detail ?? {}) },
     }
   } else {
     merged.inquiry_fields = DEFAULT_INQUIRY_FIELDS
