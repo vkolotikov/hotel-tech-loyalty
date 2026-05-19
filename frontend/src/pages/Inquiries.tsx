@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, X as XIcon, ListChecks, Pencil } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Pencil } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 // DailyOpsBar + PipelineInsights moved to /pipeline?tab=insights so this
 // page stays focused on managing leads. See InquiryInsights.tsx.
@@ -131,6 +131,18 @@ export function Inquiries() {
   // pipeline as Leads (just-arrived) vs Active Deals (being worked) vs
   // Closed (won/lost). Pure client-side slice so we don't touch the API.
   const [stageGroup, setStageGroup] = useState<'all' | 'leads' | 'deals' | 'closed'>('all')
+  // Focus mode — hides the filter / saved-views / advanced-filter rows
+  // so the table gets the full viewport. Persisted to localStorage so
+  // the preference survives page navigation + reloads. Stage-group +
+  // view toggle stay visible because they're navigation, not filters.
+  const [focusMode, setFocusMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('inquiries:focus_mode') === '1'
+  })
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('inquiries:focus_mode', focusMode ? '1' : '0')
+  }, [focusMode])
   // Daily-ops drilldown focus — clicking an ops tile opens a panel
   // with the matching task list inline.
   // dailyFocus state moved to InquiryInsights.tsx along with the cards.
@@ -389,25 +401,33 @@ export function Inquiries() {
   const inp = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t('inquiries.title', 'Sales Pipeline')}</h1>
-          {/* Subtitle reconstructed from atomic labels so the colour
-              structure (blue/amber/emerald per stage) survives translation.
-              Numbers stay separately styled; localised noun labels follow. */}
-          <p className="text-xs md:text-sm text-t-secondary mt-0.5">
-            {meta.total ?? 0} {t('inquiries.stat_labels.total', 'total')}
-            <span> · </span>
-            <span className="text-blue-400">{stageCounts.leads}</span> {t('inquiries.stat_labels.leads', 'leads')}
-            <span> · </span>
-            <span className="text-amber-400">{stageCounts.deals}</span> {t('inquiries.stat_labels.deals', 'active deals')}
-            <span> · </span>
-            <span className="text-emerald-400">{stageCounts.closed}</span> {t('inquiries.stat_labels.closed', 'closed')}
-          </p>
-        </div>
-        {/* Action buttons wrap on mobile, condense labels at narrow widths */}
+    <div className="space-y-3">
+      {/* Single header row — stats on the left, actions on the right.
+          The H1 "Sales Pipeline" used to live here but is redundant
+          with the PipelineHub's own header + tab label ("Pipeline" >
+          "Leads & Inquiries"). Numbers stay colour-coded inline so a
+          glance still tells you the bucket distribution. */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs md:text-sm text-t-secondary">
+          <span className="font-bold text-white tabular-nums">{meta.total ?? 0}</span>
+          <span> {t('inquiries.stat_labels.total', 'total')} · </span>
+          <span className="text-blue-400 font-semibold tabular-nums">{stageCounts.leads}</span> <span>{t('inquiries.stat_labels.leads', 'leads')}</span>
+          <span> · </span>
+          <span className="text-amber-400 font-semibold tabular-nums">{stageCounts.deals}</span> <span>{t('inquiries.stat_labels.deals', 'active deals')}</span>
+          <span> · </span>
+          <span className="text-emerald-400 font-semibold tabular-nums">{stageCounts.closed}</span> <span>{t('inquiries.stat_labels.closed', 'closed')}</span>
+        </p>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setFocusMode(f => !f)}
+            title={focusMode
+              ? t('inquiries.focus.exit_tooltip', 'Exit focus mode — show filters and saved views')
+              : t('inquiries.focus.enter_tooltip', 'Focus mode — hide filters, saved views, and quick filters so the table fills the page')}
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${focusMode ? 'bg-primary-500/15 border border-primary-500/30 text-primary-300' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white'}`}
+          >
+            {focusMode ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span className="hidden sm:inline">{focusMode ? t('inquiries.focus.on', 'Focus') : t('inquiries.focus.off', 'Focus')}</span>
+          </button>
           <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors">
             <Sparkles size={14} /> <span className="hidden sm:inline">{t('inquiries.actions.ai_capture', 'AI Capture')}</span><span className="sm:hidden">{t('inquiries.actions.ai_short', 'AI')}</span>
           </button>
@@ -466,7 +486,7 @@ export function Inquiries() {
           quiet (gray + zero hint) when their count is zero so the bar
           doesn't feel busy when nothing is on fire. Full analytics are
           on the sibling Insights tab. */}
-      {today && (() => {
+      {!focusMode && today && (() => {
         const pills: { value: '' | 'overdue' | 'today' | 'soon'; label: string; count: number; tone: 'red' | 'amber' | 'blue' }[] = [
           { value: 'overdue', label: t('inquiries.today.tiles.overdue', 'Overdue'),     count: today.overdue?.count ?? 0,  tone: 'red'   },
           { value: 'today',   label: t('inquiries.today.tiles.due_today', 'Due today'), count: today.today?.count   ?? 0,  tone: 'amber' },
@@ -511,8 +531,9 @@ export function Inquiries() {
         )
       })()}
 
-      {/* Saved views — pinned filter combos for the current user. */}
-      <SavedViews
+      {/* Saved views — pinned filter combos for the current user. Hidden
+          in focus mode along with the rest of the filter chrome. */}
+      {!focusMode && <SavedViews
         page="inquiries"
         currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue, activeOnly }}
         hasActiveFilters={!!hasFilters}
@@ -527,9 +548,13 @@ export function Inquiries() {
           setActiveOnly(!!f.activeOnly)
           setPage(1)
         }}
-      />
+      />}
 
-      {/* Filters */}
+      {/* Filters — wrapped with the focus-mode gate. In focus mode the
+          whole search/status/filters cluster collapses to nothing; the
+          stage-group + view toggle above and the table below stay so
+          basic navigation still works. */}
+      {!focusMode && (
       <div className="space-y-2">
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm">
@@ -584,6 +609,7 @@ export function Inquiries() {
           </div>
         )}
       </div>
+      )}
 
       {/* Table — list view */}
       {view === 'list' && (
