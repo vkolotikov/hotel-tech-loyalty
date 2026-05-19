@@ -124,6 +124,16 @@ export interface MemberFieldConfig {
     joined: boolean
     status: boolean      // active/inactive pill
   }
+  detail: {
+    hero_stats: boolean              // Stays / Total spent / Member since secondary row (current points always shown)
+    ai_analysis_button: boolean      // button in the header that triggers churn/upsell AI
+    tab_transactions: boolean        // show the Transactions tab
+    tab_journey: boolean             // show the Journey tab (still gated by linkedGuest)
+    tab_settings: boolean            // show the Settings tab
+    overview_recent_activity: boolean // top-5 transactions card on Overview
+    overview_qr_card: boolean         // MemberQrCard on Overview's right column
+    overview_adjust_points: boolean   // Award / Redeem panel on Overview
+  }
 }
 
 export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
@@ -188,6 +198,12 @@ export const DEFAULT_MEMBER_FIELDS: MemberFieldConfig = {
     kpi_strip: true,
     phone: true, source: true, tier: true,
     points: true, joined: true, status: true,
+  },
+  detail: {
+    hero_stats: true, ai_analysis_button: true,
+    tab_transactions: true, tab_journey: true, tab_settings: true,
+    overview_recent_activity: true,
+    overview_qr_card: true, overview_adjust_points: true,
   },
 }
 
@@ -345,7 +361,8 @@ export function useSettings(): CrmSettings {
   }
   if (merged.member_fields && typeof merged.member_fields === 'object') {
     merged.member_fields = {
-      list: { ...DEFAULT_MEMBER_FIELDS.list, ...(merged.member_fields.list ?? {}) },
+      list:   { ...DEFAULT_MEMBER_FIELDS.list,   ...(merged.member_fields.list   ?? {}) },
+      detail: { ...DEFAULT_MEMBER_FIELDS.detail, ...(merged.member_fields.detail ?? {}) },
     }
   } else {
     merged.member_fields = DEFAULT_MEMBER_FIELDS

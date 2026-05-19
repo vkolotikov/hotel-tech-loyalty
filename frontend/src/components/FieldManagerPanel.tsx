@@ -230,6 +230,20 @@ const TABS: TabDef[] = [
           { key: 'status', label: 'Status column', hint: 'Active / Inactive pill.' },
         ],
       },
+      {
+        label: 'Member detail page',
+        path: 'detail',
+        fields: [
+          { key: 'hero_stats', label: 'Hero stats row', hint: 'Stays / Total spent / Member since. Current points always stays.' },
+          { key: 'ai_analysis_button', label: 'AI Analysis button', hint: 'Triggers churn-risk + upsell suggestions. Hide if you don\'t use AI features.' },
+          { key: 'tab_transactions', label: 'Transactions tab' },
+          { key: 'tab_journey', label: 'Journey tab', hint: 'Customer journey timeline. Still requires a linked CRM guest.' },
+          { key: 'tab_settings', label: 'Settings tab' },
+          { key: 'overview_recent_activity', label: 'Recent activity card', hint: 'Top-5 transactions block on the Overview tab.' },
+          { key: 'overview_qr_card', label: 'Member QR card', hint: 'Right-column QR for scanning.' },
+          { key: 'overview_adjust_points', label: 'Award / Redeem panel' },
+        ],
+      },
     ],
   },
 ]

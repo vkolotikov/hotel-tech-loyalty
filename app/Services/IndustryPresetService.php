@@ -512,13 +512,20 @@ class IndustryPresetService
      * Members-page defaults — everything visible. Loyalty programs
      * make sense in nearly every industry (hotel, spa, gym,
      * restaurant, retail), so we don't bother branching per preset.
-     * Admin can still hide individual columns per-org.
+     * Admin can still hide individual columns / detail sections
+     * per-org via the Field Manager UI.
      */
     private const FULL_MEMBER_LAYOUT = [
         'list' => [
             'kpi_strip' => true,
             'phone' => true, 'source' => true, 'tier' => true,
             'points' => true, 'joined' => true, 'status' => true,
+        ],
+        'detail' => [
+            'hero_stats' => true, 'ai_analysis_button' => true,
+            'tab_transactions' => true, 'tab_journey' => true, 'tab_settings' => true,
+            'overview_recent_activity' => true,
+            'overview_qr_card' => true, 'overview_adjust_points' => true,
         ],
     ];
 

@@ -34,8 +34,12 @@ export function MemberDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { t } = useTranslation()
-  // Admin-toggleable visibility for the CRM tab — Settings → Pipelines → Fields → Customers (Detail page).
-  const customerDetailCfg = useSettings().customer_fields.detail
+  // Admin-toggleable visibility — Settings → Pipelines → Fields.
+  // CRM tab uses customer_fields.detail; the loyalty side (header,
+  // tabs, Overview) uses member_fields.detail.
+  const allSettings = useSettings()
+  const customerDetailCfg = allSettings.customer_fields.detail
+  const memberDetailCfg = allSettings.member_fields.detail
   const [urlParams, setUrlParams] = useSearchParams()
   const activeTab = urlParams.get('tab') ?? 'overview'
   const selectTab = (key: string) => {
@@ -238,10 +242,10 @@ export function MemberDetail() {
 
   const tabs: { key: string; label: string; icon: React.ReactNode; show: boolean }[] = [
     { key: 'overview',     label: t('memberDetail.tabs.overview',     'Overview'),     icon: <LayoutDashboard size={15} />, show: true },
-    { key: 'transactions', label: t('memberDetail.tabs.transactions', 'Transactions'), icon: <Receipt size={15} />,         show: true },
-    { key: 'journey',      label: t('memberDetail.tabs.journey',      'Journey'),      icon: <History size={15} />,         show: !!linkedGuest },
+    { key: 'transactions', label: t('memberDetail.tabs.transactions', 'Transactions'), icon: <Receipt size={15} />,         show: memberDetailCfg.tab_transactions },
+    { key: 'journey',      label: t('memberDetail.tabs.journey',      'Journey'),      icon: <History size={15} />,         show: !!linkedGuest && memberDetailCfg.tab_journey },
     { key: 'crm',          label: t('memberDetail.tabs.crm_profile',  'CRM Profile'),  icon: <Crown size={15} />,           show: !!linkedGuest },
-    { key: 'settings',     label: t('memberDetail.tabs.settings',     'Settings'),     icon: <SettingsIcon size={15} />,    show: true },
+    { key: 'settings',     label: t('memberDetail.tabs.settings',     'Settings'),     icon: <SettingsIcon size={15} />,    show: memberDetailCfg.tab_settings },
   ].filter(t => t.show)
 
   return (
@@ -283,7 +287,7 @@ export function MemberDetail() {
                 destructive surface area (deactivate / delete) until needed. */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {member?.id && <SendReviewButton target={{ memberId: member.id }} />}
-              {(isAdmin || staff?.can_view_analytics) && (
+              {memberDetailCfg.ai_analysis_button && (isAdmin || staff?.can_view_analytics) && (
                 <button
                   onClick={() => refetchAi()}
                   disabled={aiLoading}
@@ -360,20 +364,24 @@ export function MemberDetail() {
                 {' '}{t('memberDetail.hero.lifetime_label', 'lifetime')}
               </p>
             </div>
-            <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.stays', 'Stays')}</p>
-              <p className="text-2xl md:text-3xl font-bold text-purple-400 mt-1">{data?.stats?.total_bookings ?? 0}</p>
-            </div>
-            <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.total_spent', 'Total spent')}</p>
-              <p className="text-2xl md:text-3xl font-bold text-orange-400 mt-1">${(data?.stats?.total_spent ?? 0).toLocaleString()}</p>
-            </div>
-            <div className="text-center sm:text-left">
-              <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.member_since', 'Member since')}</p>
-              <p className="text-base md:text-lg font-semibold text-white mt-1">
-                {member?.joined_at ? new Date(member.joined_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '—'}
-              </p>
-            </div>
+            {memberDetailCfg.hero_stats && (
+              <>
+                <div className="text-center sm:text-left">
+                  <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.stays', 'Stays')}</p>
+                  <p className="text-2xl md:text-3xl font-bold text-purple-400 mt-1">{data?.stats?.total_bookings ?? 0}</p>
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.total_spent', 'Total spent')}</p>
+                  <p className="text-2xl md:text-3xl font-bold text-orange-400 mt-1">${(data?.stats?.total_spent ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-[11px] uppercase tracking-wide text-t-secondary">{t('memberDetail.hero.member_since', 'Member since')}</p>
+                  <p className="text-base md:text-lg font-semibold text-white mt-1">
+                    {member?.joined_at ? new Date(member.joined_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '—'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -402,34 +410,36 @@ export function MemberDetail() {
           <div className="lg:col-span-2 space-y-5">
             {/* Recent transactions (top 5). Full ledger lives on the
                 Transactions tab. */}
-            <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
-              <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">{t('memberDetail.recent_activity', 'Recent Activity')}</h2>
-                {(data?.recent_transactions?.length ?? 0) > 5 && (
-                  <button onClick={() => selectTab('transactions')} className="text-xs text-primary-400 hover:underline">
-                    {t('memberDetail.see_all', 'See all')}
-                  </button>
-                )}
+            {memberDetailCfg.overview_recent_activity && (
+              <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
+                <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-white">{t('memberDetail.recent_activity', 'Recent Activity')}</h2>
+                  {memberDetailCfg.tab_transactions && (data?.recent_transactions?.length ?? 0) > 5 && (
+                    <button onClick={() => selectTab('transactions')} className="text-xs text-primary-400 hover:underline">
+                      {t('memberDetail.see_all', 'See all')}
+                    </button>
+                  )}
+                </div>
+                <div className="divide-y divide-dark-border">
+                  {(data?.recent_transactions ?? []).length === 0 ? (
+                    <p className="text-center text-[#636366] py-8 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
+                  ) : (data?.recent_transactions ?? []).slice(0, 5).map((tx: any) => (
+                    <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
+                      <div className={`text-sm font-bold tabular-nums w-16 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
+                        {tx.points > 0 ? '+' : ''}{tx.points.toLocaleString()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{tx.description}</p>
+                        <p className="text-xs text-[#636366]">{new Date(tx.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-xs text-[#636366] text-right tabular-nums">
+                        <p>{tx.balance_after?.toLocaleString()} pts</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="divide-y divide-dark-border">
-                {(data?.recent_transactions ?? []).length === 0 ? (
-                  <p className="text-center text-[#636366] py-8 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
-                ) : (data?.recent_transactions ?? []).slice(0, 5).map((tx: any) => (
-                  <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
-                    <div className={`text-sm font-bold tabular-nums w-16 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
-                      {tx.points > 0 ? '+' : ''}{tx.points.toLocaleString()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{tx.description}</p>
-                      <p className="text-xs text-[#636366]">{new Date(tx.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="text-xs text-[#636366] text-right tabular-nums">
-                      <p>{tx.balance_after?.toLocaleString()} pts</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* AI Analysis Panel — appears once the user clicks AI Analysis */}
             {aiData && (
@@ -463,11 +473,13 @@ export function MemberDetail() {
           </div>
 
           <div className="space-y-4">
-            <MemberQrCard memberId={id!} memberNumber={member?.member_number} />
+            {memberDetailCfg.overview_qr_card && (
+              <MemberQrCard memberId={id!} memberNumber={member?.member_number} />
+            )}
 
             {/* Unified Adjust Points panel — single form, Award/Redeem
                 toggle replaces what used to be two stacked cards. */}
-            {canAdjustPoints && (
+            {memberDetailCfg.overview_adjust_points && canAdjustPoints && (
               <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
                 <h3 className="font-semibold text-white mb-3">{t('memberDetail.adjust.title', 'Adjust Points')}</h3>
                 <div className="inline-flex w-full bg-dark-surface2 border border-dark-border rounded-lg p-0.5 mb-3">
@@ -537,7 +549,7 @@ export function MemberDetail() {
         </div>
       )}
 
-      {activeTab === 'transactions' && (
+      {activeTab === 'transactions' && memberDetailCfg.tab_transactions && (
         <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border">
             <h2 className="text-sm font-semibold text-white">{t('memberDetail.all_transactions', 'All Transactions')}</h2>
@@ -564,7 +576,7 @@ export function MemberDetail() {
         </div>
       )}
 
-      {activeTab === 'journey' && linkedGuest && (
+      {activeTab === 'journey' && linkedGuest && memberDetailCfg.tab_journey && (
         <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
           <h2 className="font-semibold text-white mb-3">{t('memberDetail.customer_journey', 'Customer Journey')}</h2>
           <JourneyTimeline
@@ -784,7 +796,7 @@ export function MemberDetail() {
         </div>
       )}
 
-      {activeTab === 'settings' && (
+      {activeTab === 'settings' && memberDetailCfg.tab_settings && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 bg-dark-surface rounded-xl border border-dark-border p-5 md:p-6">
             <div className="flex items-center justify-between mb-4">
