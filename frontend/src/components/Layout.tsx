@@ -10,7 +10,7 @@ import {
   Crown, Building2, FileText,
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
-  BedDouble, CreditCard, Home, Package, Star,
+  BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors,
   Menu, X, MoreHorizontal,
 } from 'lucide-react'
@@ -124,17 +124,21 @@ const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.crm_marketing', defaultLabel: 'CRM & Marketing',
     accent: '#f472b6', // pink
     items: [
-      // Contacts hub (Customers + Companies + Duplicates). Legacy paths
-      // /customers /guests /corporate /customers/duplicates all redirect
-      // into ?tab= on /contacts so existing bookmarks still highlight
-      // this nav entry as active.
-      { path: '/contacts',      labelKey: 'nav.items.contacts',        defaultLabel: 'Contacts',          icon: Users,     gate: 'all',   altPaths: ['/customers', '/guests', '/corporate'] },
-      // Pipeline hub (Leads & Inquiries + Deals + Lead forms).
-      { path: '/pipeline',      labelKey: 'nav.items.pipeline',        defaultLabel: 'Pipeline',          icon: FileText,  gate: 'all',   altPaths: ['/inquiries', '/deals', '/lead-forms'] },
-      // Reports moved under /analytics → Leads tab. Sidebar entry removed
-      // to keep all analytics surfaces in one place.
-      { path: '/notifications', labelKey: 'nav.items.campaigns',       defaultLabel: 'Campaigns',         icon: Bell,      gate: 'admin', feature: 'push_notifications', altPaths: ['/email-templates'] },
-      { path: '/reviews',       labelKey: 'nav.items.reviews',         defaultLabel: 'Reviews',           icon: Star,      gate: 'admin' },
+      // 3-hub consolidation (was 4: Contacts / Pipeline / Campaigns /
+      // Reviews). Each hub uses the same grid-home + breadcrumb-leaf
+      // pattern as Settings / Chatbot Setup. Analytics deliberately
+      // not surfaced in these hubs — pipeline reporting lives in
+      // /analytics.
+      //
+      //   Leads     = Inquiries + Customers + Companies + Duplicates + Lead forms
+      //   Deals     = Won deals working through fulfillment (4 quick-filter tiles)
+      //   Marketing = Campaigns + Email Templates + Reviews
+      //
+      // Legacy paths redirect into the new hubs with ?tab= so
+      // bookmarks survive — see App.tsx.
+      { path: '/leads',     labelKey: 'nav.items.leads',     defaultLabel: 'Leads',     icon: FileText, gate: 'all',   altPaths: ['/contacts', '/pipeline', '/customers', '/guests', '/corporate', '/inquiries', '/lead-forms'] },
+      { path: '/deals',     labelKey: 'nav.items.deals',     defaultLabel: 'Deals',     icon: Briefcase, gate: 'all' },
+      { path: '/marketing', labelKey: 'nav.items.marketing', defaultLabel: 'Marketing', icon: Bell,     gate: 'admin', altPaths: ['/notifications', '/email-templates', '/reviews'] },
     ],
   },
   {

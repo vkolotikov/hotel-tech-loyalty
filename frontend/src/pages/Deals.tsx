@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
@@ -50,7 +50,25 @@ export function Deals() {
   // Deal/Customer column + Actions are always shown.
   const dealFields: DealFieldConfig = settings.deal_fields
   const visibleCols = Object.values(dealFields.list).filter(Boolean).length + 2 // +2 for deal/customer + actions
-  const [filter, setFilter] = useState<FilterKey>('all')
+  // The Deals hub deep-links into specific filtered views via ?view=
+  // (e.g. /deals?view=overdue). Read once on mount so the hub tile a
+  // user just clicked lands on the right pill. Subsequent pill clicks
+  // don't write back to the URL — keeping the URL clean and avoiding
+  // a re-init loop.
+  const [searchParamsDeals] = useSearchParams()
+  const initialFilter = ((): FilterKey => {
+    const v = searchParamsDeals.get('view')
+    const allowed: FilterKey[] = ['all', 'payment_pending', 'design_needed', 'in_production', 'overdue', 'high_value']
+    return (v && (allowed as string[]).includes(v)) ? (v as FilterKey) : 'all'
+  })()
+  const [filter, setFilter] = useState<FilterKey>(initialFilter)
+  // Re-sync when the URL view param changes (e.g. user clicks another
+  // hub tile while already on /deals).
+  useEffect(() => {
+    const v = searchParamsDeals.get('view')
+    const allowed: FilterKey[] = ['all', 'payment_pending', 'design_needed', 'in_production', 'overdue', 'high_value']
+    if (v && (allowed as string[]).includes(v)) setFilter(v as FilterKey)
+  }, [searchParamsDeals])
   const [sort, setSort] = useState<'due_date' | 'amount' | 'created'>('due_date')
   const [page, setPage] = useState(1)
   // Dropdown anchors carry the button's bounding rect so we can render

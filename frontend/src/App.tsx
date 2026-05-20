@@ -40,22 +40,28 @@ const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.V
 const Engagement = lazy(() => import('./pages/Engagement').then(m => ({ default: m.Engagement })))
 const EngagementLive = lazy(() => import('./pages/EngagementLive').then(m => ({ default: m.EngagementLive })))
 const InquiryDetail = lazy(() => import('./pages/InquiryDetail').then(m => ({ default: m.InquiryDetail })))
-const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })))
+// Notifications / Reviews / EmailTemplates list pages live inside
+// MarketingHub now (lazy-imported there). Only the detail leaves
+// remain referenced from App.tsx so deep-links from emails and
+// external tools still render the detail view directly.
 const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ default: m.CampaignDetail })))
-const Reviews = lazy(() => import('./pages/Reviews').then(m => ({ default: m.Reviews })))
 const ReviewFormBuilder = lazy(() => import('./pages/ReviewFormBuilder').then(m => ({ default: m.ReviewFormBuilder })))
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ default: m.ReviewDetail })))
-const EmailTemplates = lazy(() => import('./pages/EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
-// Customers, CustomerDuplicates, Inquiries, Deals, LeadForms, Corporate
-// are no longer top-level routes — they're now tabs inside ContactsHub /
-// PipelineHub which import them directly via lazy(). The hubs handle
-// the lazy-loading + Suspense boundary themselves.
-const ContactsHub = lazy(() => import('./pages/hubs/ContactsHub').then(m => ({ default: m.ContactsHub })))
-const PipelineHub = lazy(() => import('./pages/hubs/PipelineHub').then(m => ({ default: m.PipelineHub })))
+// CRM is consolidated into 3 hubs: Leads / Deals / Marketing. The
+// hubs lazy-import their child pages (Customers, Companies,
+// Inquiries, Deals, LeadForms, Notifications, EmailTemplates,
+// Reviews) so each tab is code-split.
+//
+// Old hubs (ContactsHub / PipelineHub) are no longer routed —
+// /contacts and /pipeline Navigate to the new hubs. The files
+// stay in the repo to be deleted in a follow-up cleanup.
+const LeadsHub     = lazy(() => import('./pages/hubs/LeadsHub').then(m => ({ default: m.LeadsHub })))
+const DealsHub     = lazy(() => import('./pages/hubs/DealsHub').then(m => ({ default: m.DealsHub })))
+const MarketingHub = lazy(() => import('./pages/hubs/MarketingHub').then(m => ({ default: m.MarketingHub })))
 const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Planner })))
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
 const Billing = lazy(() => import('./pages/Billing').then(m => ({ default: m.Billing })))
@@ -236,40 +242,51 @@ export default function App() {
               external tools / emails / CRM notes that still point to the
               full visitor or chat-inbox view continue to render. */}
           <Route path="/legacy/visitors" element={<LazyRoute gate="all" product="chat"><Visitors /></LazyRoute>} />
-          <Route path="/notifications" element={<LazyRoute gate="admin" feature="push_notifications"><Notifications /></LazyRoute>} />
+          {/* Detail routes for the marketing hub's child pages —
+              kept as standalone leaves so links from emails / external
+              tools still render the detail view directly. */}
           <Route path="/notifications/:id" element={<LazyRoute gate="admin" feature="push_notifications"><CampaignDetail /></LazyRoute>} />
-          <Route path="/reviews" element={<LazyRoute gate="admin"><Reviews /></LazyRoute>} />
           <Route path="/reviews/forms/:id" element={<LazyRoute gate="admin"><ReviewFormBuilder /></LazyRoute>} />
           <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin"><ReviewDetail /></LazyRoute>} />
-          <Route path="/email-templates" element={<LazyRoute gate="admin"><EmailTemplates /></LazyRoute>} />
           {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
-          {/* Contacts hub — Customers + Companies + Duplicates in one
-              tabbed page. The old standalone routes (/customers, /corporate,
-              /customers/duplicates) redirect into the hub with ?tab= so
-              bookmarks survive, while the actual list components stay
-              renderable inside the hub. Detail routes (/guests/:id,
-              /corporate/:id-ish) are unchanged — they're leaves, not
-              hub members. */}
-          <Route path="/contacts" element={<LazyRoute><ContactsHub /></LazyRoute>} />
-          <Route path="/customers" element={<Navigate to="/contacts?tab=customers" replace />} />
-          <Route path="/customers/duplicates" element={<Navigate to="/contacts?tab=duplicates" replace />} />
-          <Route path="/guests" element={<Navigate to="/contacts?tab=customers" replace />} />
-          <Route path="/guests/duplicates" element={<Navigate to="/contacts?tab=duplicates" replace />} />
-          <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
-          <Route path="/corporate" element={<Navigate to="/contacts?tab=companies" replace />} />
 
-          {/* Pipeline hub — Leads & Inquiries + Deals + Lead forms in one
-              tabbed page. Same redirect-into-hub pattern as Contacts. */}
-          <Route path="/pipeline" element={<LazyRoute><PipelineHub /></LazyRoute>} />
-          <Route path="/inquiries" element={<Navigate to="/pipeline?tab=inquiries" replace />} />
+          {/* Customer detail — leaf route, not a hub member. */}
+          <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
+
+          {/* --- 3-hub CRM consolidation (Leads / Deals / Marketing) ---
+              Each hub uses the grid-home + breadcrumb-leaf pattern.
+              Old hubs (Contacts / Pipeline) and old standalone pages
+              (Notifications, EmailTemplates, Reviews) redirect into
+              the new hubs via ?tab= so bookmarks survive. */}
+
+          {/* Leads hub */}
+          <Route path="/leads" element={<LazyRoute><LeadsHub /></LazyRoute>} />
+          <Route path="/contacts" element={<Navigate to="/leads?tab=customers" replace />} />
+          <Route path="/customers" element={<Navigate to="/leads?tab=customers" replace />} />
+          <Route path="/customers/duplicates" element={<Navigate to="/leads?tab=duplicates" replace />} />
+          <Route path="/guests" element={<Navigate to="/leads?tab=customers" replace />} />
+          <Route path="/guests/duplicates" element={<Navigate to="/leads?tab=duplicates" replace />} />
+          <Route path="/corporate" element={<Navigate to="/leads?tab=companies" replace />} />
+          <Route path="/pipeline" element={<Navigate to="/leads?tab=inquiries" replace />} />
+          <Route path="/inquiries" element={<Navigate to="/leads?tab=inquiries" replace />} />
           <Route path="/inquiries/:id" element={<LazyRoute><InquiryDetail /></LazyRoute>} />
-          <Route path="/deals" element={<Navigate to="/pipeline?tab=deals" replace />} />
-          <Route path="/lead-forms" element={<Navigate to="/pipeline?tab=lead-forms" replace />} />
-          {/* Tasks page removed — tasks live inside Leads + Deals now.
+          <Route path="/lead-forms" element={<Navigate to="/leads?tab=lead-forms" replace />} />
+
+          {/* Deals hub — was a /pipeline?tab=deals redirect; now its own
+              hub with quick-filter tiles into the Deals list. */}
+          <Route path="/deals" element={<LazyRoute><DealsHub /></LazyRoute>} />
+
+          {/* Marketing hub */}
+          <Route path="/marketing" element={<LazyRoute gate="admin"><MarketingHub /></LazyRoute>} />
+          <Route path="/notifications" element={<Navigate to="/marketing?tab=campaigns" replace />} />
+          <Route path="/email-templates" element={<Navigate to="/marketing?tab=email-templates" replace />} />
+          <Route path="/reviews" element={<Navigate to="/marketing?tab=reviews" replace />} />
+
+          {/* Tasks page removed — tasks live inside leads/deals now.
               Redirect any stray external bookmark back to the leads tab. */}
-          <Route path="/tasks" element={<Navigate to="/pipeline?tab=inquiries" replace />} />
+          <Route path="/tasks" element={<Navigate to="/leads?tab=inquiries" replace />} />
           {/* Reports moved into /analytics. Redirect preserves existing
               bookmarks + the "Pipeline deep-dive" link patterns. */}
           <Route path="/reports" element={<Navigate to="/analytics?tab=leads" replace />} />
