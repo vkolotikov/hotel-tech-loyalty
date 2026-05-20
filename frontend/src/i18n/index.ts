@@ -21,9 +21,15 @@ import es from './locales/es/common.json'
  *   3. Browser navigator — best-effort default for first-time visitors.
  *   4. English — fallback that always renders.
  */
+// `label` is the language's NATIVE name (Русский in Russian etc.).
+// `flag` is kept for backwards compatibility with any caller that
+// still reads it, but the LangSwitcher no longer renders it because
+// Windows browsers don't ship a colour-emoji font for regional-
+// indicator pairs — flags rendered as "US"/"RU"/"DE" letter
+// fragments next to the language code looked like broken images.
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English',  flag: '\u{1F1FA}\u{1F1F8}' },
-  { code: 'ru', label: 'Russian',  flag: '\u{1F1F7}\u{1F1FA}' },
+  { code: 'ru', label: 'Русский',  flag: '\u{1F1F7}\u{1F1FA}' },
   { code: 'de', label: 'Deutsch',  flag: '\u{1F1E9}\u{1F1EA}' },
   { code: 'fr', label: 'Français', flag: '\u{1F1EB}\u{1F1F7}' },
   { code: 'es', label: 'Español',  flag: '\u{1F1EA}\u{1F1F8}' },

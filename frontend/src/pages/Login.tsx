@@ -68,28 +68,39 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-white/[0.08] hover:border-white/20 text-xs text-slate-300 transition"
+        title={`Language: ${current.label}`}
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-white/[0.08] hover:border-white/20 text-xs text-slate-300 transition"
       >
-        <Globe size={13} className="text-slate-500" />
-        <span className="text-base leading-none">{current.flag}</span>
-        <span className="uppercase tracking-wider text-[10px]">{current.code}</span>
+        <Globe size={13} className="text-slate-400" />
+        <span className="inline-flex items-center justify-center min-w-[26px] h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+          {current.code}
+        </span>
+        <span className="hidden sm:inline text-[11px] text-slate-300">{current.label}</span>
         <ChevronDown size={12} className={'text-slate-500 transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
-        <div className="absolute top-full right-0 mt-1.5 min-w-[170px] rounded-lg border border-white/[0.08] bg-slate-900/95 backdrop-blur-md shadow-xl py-1 z-50">
-          {SUPPORTED_LANGUAGES.map((l: { code: LangCode; label: string; flag: string }) => (
-            <button
-              key={l.code}
-              type="button"
-              onClick={() => { i18n.changeLanguage(l.code); setOpen(false) }}
-              className={'flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors ' +
-                (l.code === current.code ? 'text-white' : 'text-slate-400')}
-            >
-              <span className="text-base leading-none">{l.flag}</span>
-              <span className="flex-1 text-left">{l.label}</span>
-              {l.code === current.code && <Check size={12} className="text-blue-400" />}
-            </button>
-          ))}
+        <div className="absolute top-full right-0 mt-1.5 min-w-[190px] rounded-lg border border-white/[0.08] bg-slate-900/95 backdrop-blur-md shadow-xl py-1 z-50">
+          {SUPPORTED_LANGUAGES.map((l: { code: LangCode; label: string; flag: string }) => {
+            const isActive = l.code === current.code
+            return (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => { i18n.changeLanguage(l.code); setOpen(false) }}
+                className={'flex items-center gap-2.5 w-full px-2.5 py-1.5 text-sm transition-colors ' +
+                  (isActive ? 'bg-blue-500/10 text-white' : 'text-slate-300 hover:bg-white/[0.04] hover:text-white')}
+              >
+                <span className={'inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider border ' +
+                  (isActive
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                    : 'bg-slate-800 text-slate-400 border-white/[0.08]')}>
+                  {l.code}
+                </span>
+                <span className="flex-1 text-left">{l.label}</span>
+                {isActive && <Check size={13} className="text-blue-400 flex-shrink-0" />}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
