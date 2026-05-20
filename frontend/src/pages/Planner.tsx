@@ -864,18 +864,31 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
    * 4px dead-zone prevents accidental drags from a simple click,
    * and `justDraggedRef` suppresses the onClick that would
    * otherwise fire the popover at the end of a drag.
+   *
+   * In team mode, move drags ALSO track horizontal position so
+   * the user can drag a chip into another employee's column to
+   * reassign. `origColumn` / `currentColumn` are 0-based indices
+   * into the `employees` array; commit includes employee_name
+   * when currentColumn differs from origColumn.
    */
   const [drag, setDrag] = useState<null | {
     taskId: number
     mode: 'move' | 'resize'
     startY: number
+    startX: number
     origStartMin: number
     origDuration: number
+    origColumn: number
     currentStartMin: number
     currentDuration: number
+    currentColumn: number
     moved: boolean
   }>(null)
   const justDraggedRef = useRef(false)
+  // Ref to the time-grid container — used during cross-column drag
+  // to convert clientX into a column index. Assigned by the <div
+  // className="relative cursor-cell"> below.
+  const gridRef = useRef<HTMLDivElement>(null)
 
   // Global mouse listeners — only active while a drag is in flight.
   useEffect(() => {
@@ -883,13 +896,32 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
     const onMove = (e: MouseEvent) => {
       const dy = e.clientY - drag.startY
       const minutesDelta = Math.round((dy / PX_PER_HOUR) * 60 / 15) * 15 // snap 15min
+
+      // Compute the live column from the cursor's X. Only matters
+      // when the user is doing a "move" drag in team mode. In single
+      // mode this resolves to the original column and is a no-op.
+      let newColumn = drag.origColumn
+      const inTeam = drag.mode === 'move' && employees.length >= 2 && gridRef.current
+      if (inTeam) {
+        const rect = gridRef.current!.getBoundingClientRect()
+        const xInCols = e.clientX - rect.left - TIME_LABEL_WIDTH
+        const colsW = rect.width - TIME_LABEL_WIDTH
+        if (colsW > 0) {
+          newColumn = Math.max(0, Math.min(employees.length - 1, Math.floor((xInCols / colsW) * employees.length)))
+        }
+      }
+
       if (drag.mode === 'move') {
         const newStart = Math.max(
           HOUR_START * 60,
           Math.min(HOUR_END * 60 - drag.origDuration, drag.origStartMin + minutesDelta),
         )
-        if (newStart === drag.currentStartMin && Math.abs(dy) < 4) return
-        setDrag(d => d ? { ...d, currentStartMin: newStart, moved: d.moved || Math.abs(dy) >= 4 } : null)
+        const verticalChanged = newStart !== drag.currentStartMin
+        const horizontalChanged = newColumn !== drag.currentColumn
+        const dx = e.clientX - drag.startX
+        const moved = drag.moved || Math.abs(dy) >= 4 || Math.abs(dx) >= 4
+        if (!verticalChanged && !horizontalChanged && moved === drag.moved) return
+        setDrag(d => d ? { ...d, currentStartMin: newStart, currentColumn: newColumn, moved } : null)
       } else {
         const newDuration = Math.max(15, Math.min(HOUR_END * 60 - drag.origStartMin, drag.origDuration + minutesDelta))
         if (newDuration === drag.currentDuration && Math.abs(dy) < 4) return
@@ -900,10 +932,20 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
       if (drag.moved) {
         justDraggedRef.current = true
         setTimeout(() => { justDraggedRef.current = false }, 80)
-        if (drag.mode === 'move' && drag.currentStartMin !== drag.origStartMin) {
-          const hh = String(Math.floor(drag.currentStartMin / 60)).padStart(2, '0')
-          const mm = String(drag.currentStartMin % 60).padStart(2, '0')
-          onTaskUpdate(drag.taskId, { start_time: `${hh}:${mm}` })
+        if (drag.mode === 'move') {
+          const body: Record<string, any> = {}
+          if (drag.currentStartMin !== drag.origStartMin) {
+            const hh = String(Math.floor(drag.currentStartMin / 60)).padStart(2, '0')
+            const mm = String(drag.currentStartMin % 60).padStart(2, '0')
+            body.start_time = `${hh}:${mm}`
+          }
+          if (employees.length >= 2 && drag.currentColumn !== drag.origColumn) {
+            const target = employees[drag.currentColumn]
+            // Map the synthetic `__unassigned__` column back to a
+            // null employee_name on the server.
+            body.employee_name = target === '__unassigned__' ? null : target
+          }
+          if (Object.keys(body).length > 0) onTaskUpdate(drag.taskId, body)
         } else if (drag.mode === 'resize' && drag.currentDuration !== drag.origDuration) {
           onTaskUpdate(drag.taskId, { duration_minutes: drag.currentDuration })
         }
@@ -913,7 +955,7 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [drag, onTaskUpdate])
+  }, [drag, onTaskUpdate, employees])
 
   // Tick every 60s so the "Now" line + the "Now" pill text stay
   // current without the parent re-rendering.
@@ -1047,6 +1089,7 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
         )}
 
         <div
+          ref={gridRef}
           className="relative cursor-cell"
           style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}
           onClick={(e) => {
@@ -1143,6 +1186,10 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
             const isDragging = !!(drag && drag.taskId === task.id && drag.moved)
             const startMin = isDragging && drag ? drag.currentStartMin : rawStartMin
             const duration = isDragging && drag ? drag.currentDuration : rawDuration
+            // In team mode, position the chip in its LIVE column
+            // during a drag so the user sees it jump into the new
+            // employee's lane as they cross the column boundary.
+            const effectiveCol = isDragging && drag && renderedMode === 'team' ? drag.currentColumn : colIdx
             // Clamp top + height to keep tasks inside the visible window.
             const topRaw = minutesToPx(startMin)
             const top = Math.max(0, Math.min(TOTAL_HEIGHT - 18, topRaw))
@@ -1159,7 +1206,7 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
             const positionStyle: React.CSSProperties = renderedMode === 'team'
               ? {
                   top: top + 2,
-                  left: `calc(${TIME_LABEL_WIDTH}px + (${colIdx / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)) + 4px)`,
+                  left: `calc(${TIME_LABEL_WIDTH}px + (${effectiveCol / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)) + 4px)`,
                   width: `calc((100% - ${TIME_LABEL_WIDTH}px) / ${employees.length} - 8px)`,
                   height: height - 4,
                 }
@@ -1183,10 +1230,16 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
                   // Only the primary button starts a drag. Other
                   // buttons (right-click) fall through to default.
                   if (e.button !== 0) return
+                  // In team mode, capture the chip's starting column
+                  // so we can detect cross-column moves on mouseup.
+                  // colIdx was computed above; in single mode it's
+                  // -1 which we coerce to 0 (we never read it in
+                  // single mode anyway).
+                  const origCol = renderedMode === 'team' ? Math.max(0, colIdx) : 0
                   setDrag({
-                    taskId: task.id, mode: 'move', startY: e.clientY,
-                    origStartMin: rawStartMin, origDuration: rawDuration,
-                    currentStartMin: rawStartMin, currentDuration: rawDuration,
+                    taskId: task.id, mode: 'move', startY: e.clientY, startX: e.clientX,
+                    origStartMin: rawStartMin, origDuration: rawDuration, origColumn: origCol,
+                    currentStartMin: rawStartMin, currentDuration: rawDuration, currentColumn: origCol,
                     moved: false,
                   })
                 }}
@@ -1256,10 +1309,11 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
                   onMouseDown={(e) => {
                     if (e.button !== 0) return
                     e.stopPropagation()
+                    const origCol = renderedMode === 'team' ? Math.max(0, colIdx) : 0
                     setDrag({
-                      taskId: task.id, mode: 'resize', startY: e.clientY,
-                      origStartMin: rawStartMin, origDuration: rawDuration,
-                      currentStartMin: rawStartMin, currentDuration: rawDuration,
+                      taskId: task.id, mode: 'resize', startY: e.clientY, startX: e.clientX,
+                      origStartMin: rawStartMin, origDuration: rawDuration, origColumn: origCol,
+                      currentStartMin: rawStartMin, currentDuration: rawDuration, currentColumn: origCol,
                       moved: false,
                     })
                   }}
@@ -2195,7 +2249,8 @@ export function Planner() {
                     const cellTasks = empTasks.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
                     const cellId = dateStr + '|' + emp
                     const isDropTarget = dragOverCell === cellId
-                    const isQuickAdd = quickAddCell === cellId
+                    // inline quick-add removed — clicking the "+" now
+                    // opens the full new-task drawer instead
                     return (
                       <div key={dateStr}
                         onDragEnter={() => setDragOverCell(cellId)}
@@ -2286,18 +2341,19 @@ export function Planner() {
                               </button>
                             </div>
                           ))}
-                          {isQuickAdd ? (
-                            <InlineQuickAdd
-                              onSubmit={(title) => { handleQuickCreate(title, dateStr, undefined, undefined, undefined, emp === 'Unassigned' ? undefined : emp); setQuickAddCell(null) }}
-                              onCancel={() => setQuickAddCell(null)}
-                            />
-                          ) : (
-                            <button onClick={() => setQuickAddCell(cellId)}
-                              className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
-                                (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/30 hover:border-primary-500/40' : 'py-1')}>
-                              <Plus size={cellTasks.length === 0 ? 16 : 12} className={cellTasks.length === 0 ? 'opacity-0 group-hover:opacity-100' : ''} />
-                            </button>
-                          )}
+                          {/* Quick-add button now opens the full new-task
+                              drawer with date + employee pre-filled, so
+                              the user gets the proper Type + Group +
+                              Priority controls instead of a plain title
+                              input. The isQuickAdd state is kept around
+                              for backward compatibility but always
+                              false now in the Schedule cell path. */}
+                          <button
+                            onClick={() => openCreate(dateStr, emp === 'Unassigned' ? undefined : emp)}
+                            className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
+                              (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/30 hover:border-primary-500/40' : 'py-1')}>
+                            <Plus size={cellTasks.length === 0 ? 16 : 12} className={cellTasks.length === 0 ? 'opacity-0 group-hover:opacity-100' : ''} />
+                          </button>
                         </div>
                       </div>
                     )
@@ -2322,7 +2378,8 @@ export function Planner() {
                     const cellTasks = unassigned.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
                     const cellId = dateStr + '|__unassigned'
                     const isDropTarget = dragOverCell === cellId
-                    const isQuickAdd = quickAddCell === cellId
+                    // inline quick-add replaced by full drawer — see
+                    // the "+" button at the bottom of this cell
                     return (
                       <div key={dateStr}
                         onDragEnter={() => setDragOverCell(cellId)}
@@ -2384,18 +2441,16 @@ export function Planner() {
                               </button>
                             </div>
                           ))}
-                          {isQuickAdd ? (
-                            <InlineQuickAdd
-                              onSubmit={(title) => { handleQuickCreate(title, dateStr); setQuickAddCell(null) }}
-                              onCancel={() => setQuickAddCell(null)}
-                            />
-                          ) : (
-                            <button onClick={() => setQuickAddCell(cellId)}
-                              className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
-                                (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/20 hover:border-primary-500/40' : 'py-1')}>
-                              <Plus size={cellTasks.length === 0 ? 16 : 12} />
-                            </button>
-                          )}
+                          {/* Same change as the employee-row quick-add:
+                              click → full drawer instead of inline
+                              title input, but with no pre-selected
+                              employee so the user can pick later. */}
+                          <button
+                            onClick={() => openCreate(dateStr)}
+                            className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
+                              (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/20 hover:border-primary-500/40' : 'py-1')}>
+                            <Plus size={cellTasks.length === 0 ? 16 : 12} />
+                          </button>
                         </div>
                       </div>
                     )
