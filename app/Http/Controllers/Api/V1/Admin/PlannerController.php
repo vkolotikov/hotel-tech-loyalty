@@ -462,4 +462,168 @@ class PlannerController extends Controller
             $generated++;
         }
     }
+
+    /* ─── Auto-plan (smart-fit unscheduled tasks into the day) ─── */
+
+    /**
+     * Returns a proposal that fits today's UNSCHEDULED tasks
+     * (start_time IS NULL) into available slots between work-start
+     * and work-end, in priority order. Nothing is mutated — the
+     * frontend renders the proposal in a preview modal and POSTs
+     * to /auto-plan/apply to commit. Deterministic by design so
+     * the same input always produces the same plan; a future LLM
+     * variant can swap in here without changing the API shape.
+     */
+    public function autoPlanDay(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'date'          => 'required|date_format:Y-m-d',
+            'employee_name' => 'nullable|string|max:120',
+            'work_start'    => 'nullable|regex:/^\d{2}:\d{2}$/',
+            'work_end'      => 'nullable|regex:/^\d{2}:\d{2}$/',
+        ]);
+
+        $date = $data['date'];
+        $employee = $data['employee_name'] ?? null;
+        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
+        $workEndMin = $this->hhmmToMin($data['work_end'] ?? '18:00');
+
+        // Priority weight — High first, then Normal, then Low.
+        $priorityOrder = ['High' => 0, 'Normal' => 1, 'Low' => 2];
+
+        $tasksQuery = PlannerTask::where('task_date', $date)->where('completed', false);
+        if ($employee) $tasksQuery->where('employee_name', $employee);
+        $tasks = $tasksQuery->get();
+
+        // Build busy ranges from already-scheduled tasks. Sorted by
+        // start so the slot-finder can advance through them in one
+        // pass.
+        $busy = $tasks->filter(fn($t) => $t->start_time !== null)
+            ->map(function ($t) {
+                $start = $this->hhmmToMin(substr($t->start_time, 0, 5));
+                $duration = (int) ($t->duration_minutes ?? 30);
+                return ['start' => $start, 'end' => $start + $duration];
+            })
+            ->sortBy('start')
+            ->values()
+            ->all();
+
+        // Sort unscheduled tasks by priority then created_at so the
+        // result is stable. Tasks without a duration default to 30
+        // min for slotting purposes (the actual stored value isn't
+        // touched).
+        $unscheduled = $tasks->filter(fn($t) => $t->start_time === null)
+            ->sortBy([
+                fn($a, $b) => ($priorityOrder[$a->priority] ?? 1) <=> ($priorityOrder[$b->priority] ?? 1),
+                fn($a, $b) => strcmp((string)$a->created_at, (string)$b->created_at),
+            ])
+            ->values();
+
+        $proposals = [];
+        $skipped = [];
+        $cursor = $workStartMin;
+
+        foreach ($unscheduled as $t) {
+            $duration = max(15, (int) ($t->duration_minutes ?? 30));
+
+            // Advance cursor past any busy window that overlaps the
+            // candidate slot [cursor, cursor+duration). Loop in case
+            // a single advance lands in another busy block.
+            $tries = 0;
+            while ($tries++ < count($busy) + 2) {
+                $hit = null;
+                foreach ($busy as $b) {
+                    if ($b['start'] < $cursor + $duration && $b['end'] > $cursor) {
+                        $hit = $b;
+                        break;
+                    }
+                }
+                if (!$hit) break;
+                $cursor = $hit['end'];
+            }
+
+            if ($cursor + $duration > $workEndMin) {
+                $skipped[] = [
+                    'task_id' => $t->id,
+                    'title'   => $t->title,
+                    'reason'  => 'No room left in working hours',
+                ];
+                continue;
+            }
+
+            $hh = (int) floor($cursor / 60);
+            $mm = $cursor % 60;
+            $proposals[] = [
+                'task_id'           => $t->id,
+                'title'             => $t->title,
+                'task_group'        => $t->task_group,
+                'priority'          => $t->priority,
+                'duration_minutes'  => $duration,
+                'start_time'        => sprintf('%02d:%02d', $hh, $mm),
+            ];
+
+            // Add this proposal to busy so subsequent fits respect
+            // it; resort to keep the loop's first-overlap check
+            // monotonic.
+            $busy[] = ['start' => $cursor, 'end' => $cursor + $duration];
+            usort($busy, fn($a, $b) => $a['start'] <=> $b['start']);
+
+            $cursor += $duration;
+        }
+
+        return response()->json([
+            'proposals' => $proposals,
+            'skipped'   => $skipped,
+            'work'      => [
+                'start' => sprintf('%02d:%02d', intdiv($workStartMin, 60), $workStartMin % 60),
+                'end'   => sprintf('%02d:%02d', intdiv($workEndMin, 60), $workEndMin % 60),
+            ],
+        ]);
+    }
+
+    /**
+     * Commits a previously-returned proposal. Trusts the caller to
+     * send the array unmodified — but each row is validated and the
+     * matching task is loaded fresh, so out-of-band changes between
+     * preview and apply (e.g. someone else scheduled the task)
+     * can't be overwritten silently — we skip those.
+     */
+    public function autoPlanApply(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'proposals'                       => 'required|array|max:200',
+            'proposals.*.task_id'             => 'required|integer',
+            'proposals.*.start_time'          => 'required|regex:/^\d{2}:\d{2}$/',
+            'proposals.*.duration_minutes'    => 'nullable|integer|min:5|max:1440',
+        ]);
+
+        $applied = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($data, &$applied, &$skipped) {
+            foreach ($data['proposals'] as $p) {
+                $task = PlannerTask::find($p['task_id']);
+                if (!$task || $task->start_time !== null) {
+                    // Task vanished, or someone scheduled it
+                    // between preview + apply.
+                    $skipped++;
+                    continue;
+                }
+                $update = ['start_time' => $p['start_time'] . ':00'];
+                if (!empty($p['duration_minutes'])) {
+                    $update['duration_minutes'] = (int) $p['duration_minutes'];
+                }
+                $task->update($update);
+                $applied++;
+            }
+        });
+
+        return response()->json(['applied' => $applied, 'skipped' => $skipped]);
+    }
+
+    private function hhmmToMin(string $hhmm): int
+    {
+        [$h, $m] = array_pad(explode(':', $hhmm), 2, '0');
+        return ((int) $h) * 60 + ((int) $m);
+    }
 }

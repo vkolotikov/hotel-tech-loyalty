@@ -836,17 +836,77 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
  * tasks/day) plain overlap is fine and a click still hits the right
  * chip because the popover anchor is the absolutely-positioned chip.
  */
-function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
+function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate }: {
   tasks: any[]
   isToday: boolean
   onTaskClick: (task: any, anchor: DOMRect) => void
   onCreateAtTime: (hhmm: string) => void
+  onTaskUpdate: (taskId: number, body: Record<string, any>) => void
 }) {
   const HOUR_START = 6
   const HOUR_END = 22
   const PX_PER_HOUR = 56
   const TOTAL_HEIGHT = (HOUR_END - HOUR_START) * PX_PER_HOUR
   const TIME_LABEL_WIDTH = 56
+
+  /**
+   * Drag state for in-grid reschedule + resize. Pointer-events on
+   * chip body start a "move" drag, on the bottom edge a "resize"
+   * drag. Live preview updates the rendered top/height while the
+   * mouse moves; we commit via onTaskUpdate on mouseup. A small
+   * 4px dead-zone prevents accidental drags from a simple click,
+   * and `justDraggedRef` suppresses the onClick that would
+   * otherwise fire the popover at the end of a drag.
+   */
+  const [drag, setDrag] = useState<null | {
+    taskId: number
+    mode: 'move' | 'resize'
+    startY: number
+    origStartMin: number
+    origDuration: number
+    currentStartMin: number
+    currentDuration: number
+    moved: boolean
+  }>(null)
+  const justDraggedRef = useRef(false)
+
+  // Global mouse listeners — only active while a drag is in flight.
+  useEffect(() => {
+    if (!drag) return
+    const onMove = (e: MouseEvent) => {
+      const dy = e.clientY - drag.startY
+      const minutesDelta = Math.round((dy / PX_PER_HOUR) * 60 / 15) * 15 // snap 15min
+      if (drag.mode === 'move') {
+        const newStart = Math.max(
+          HOUR_START * 60,
+          Math.min(HOUR_END * 60 - drag.origDuration, drag.origStartMin + minutesDelta),
+        )
+        if (newStart === drag.currentStartMin && Math.abs(dy) < 4) return
+        setDrag(d => d ? { ...d, currentStartMin: newStart, moved: d.moved || Math.abs(dy) >= 4 } : null)
+      } else {
+        const newDuration = Math.max(15, Math.min(HOUR_END * 60 - drag.origStartMin, drag.origDuration + minutesDelta))
+        if (newDuration === drag.currentDuration && Math.abs(dy) < 4) return
+        setDrag(d => d ? { ...d, currentDuration: newDuration, moved: d.moved || Math.abs(dy) >= 4 } : null)
+      }
+    }
+    const onUp = () => {
+      if (drag.moved) {
+        justDraggedRef.current = true
+        setTimeout(() => { justDraggedRef.current = false }, 80)
+        if (drag.mode === 'move' && drag.currentStartMin !== drag.origStartMin) {
+          const hh = String(Math.floor(drag.currentStartMin / 60)).padStart(2, '0')
+          const mm = String(drag.currentStartMin % 60).padStart(2, '0')
+          onTaskUpdate(drag.taskId, { start_time: `${hh}:${mm}` })
+        } else if (drag.mode === 'resize' && drag.currentDuration !== drag.origDuration) {
+          onTaskUpdate(drag.taskId, { duration_minutes: drag.currentDuration })
+        }
+      }
+      setDrag(null)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [drag, onTaskUpdate])
 
   // Tick every 60s so the "Now" line + the "Now" pill text stay
   // current without the parent re-rendering.
@@ -986,11 +1046,17 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
 
           {/* Task chips, positioned absolutely */}
           {sorted.map(task => {
-            const startMin = parseMin(task.start_time)
-            if (startMin == null) return null
-            const duration = Math.max(15, Number(task.duration_minutes) || 30)
+            const rawStartMin = parseMin(task.start_time)
+            if (rawStartMin == null) return null
+            const rawDuration = Math.max(15, Number(task.duration_minutes) || 30)
             const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
             const Icon = meta.icon
+            // While the chip is being dragged, render at the live
+            // drag position instead of the persisted value — gives
+            // instant feedback before mutation commits.
+            const isDragging = !!(drag && drag.taskId === task.id && drag.moved)
+            const startMin = isDragging && drag ? drag.currentStartMin : rawStartMin
+            const duration = isDragging && drag ? drag.currentDuration : rawDuration
             // Clamp top + height to keep tasks inside the visible window.
             const topRaw = minutesToPx(startMin)
             const top = Math.max(0, Math.min(TOTAL_HEIGHT - 18, topRaw))
@@ -1003,9 +1069,26 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
             return (
               <button
                 key={task.id}
-                onClick={(e) => onTaskClick(task, (e.currentTarget as HTMLElement).getBoundingClientRect())}
-                title={`${task.title} — ${startLabel}${duration ? ` to ${endLabel}` : ''}`}
-                className="absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20"
+                onClick={(e) => {
+                  // Suppress the click that fires at the end of a
+                  // drag — the popover would steal focus from the
+                  // user who just dropped the chip in its new home.
+                  if (justDraggedRef.current) { e.preventDefault(); e.stopPropagation(); return }
+                  onTaskClick(task, (e.currentTarget as HTMLElement).getBoundingClientRect())
+                }}
+                onMouseDown={(e) => {
+                  // Only the primary button starts a drag. Other
+                  // buttons (right-click) fall through to default.
+                  if (e.button !== 0) return
+                  setDrag({
+                    taskId: task.id, mode: 'move', startY: e.clientY,
+                    origStartMin: rawStartMin, origDuration: rawDuration,
+                    currentStartMin: rawStartMin, currentDuration: rawDuration,
+                    moved: false,
+                  })
+                }}
+                title={`${task.title} — ${startLabel}${duration ? ` to ${endLabel}` : ''} · drag to move, drag bottom edge to resize`}
+                className={'absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20 cursor-grab active:cursor-grabbing ' + (isDragging ? 'z-30 shadow-2xl' : '')}
                 style={{
                   top: top + 2,
                   left: TIME_LABEL_WIDTH + 8,
@@ -1015,8 +1098,9 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
                   border: `1px solid ${meta.color}55`,
                   borderLeft: `3px solid ${meta.color}`,
                   borderRadius: 8,
-                  opacity: task.completed ? 0.55 : 1,
-                  zIndex: 10,
+                  opacity: task.completed ? 0.55 : (isDragging ? 0.9 : 1),
+                  zIndex: isDragging ? 30 : 10,
+                  transition: isDragging ? 'none' : 'top 0.15s, height 0.15s, box-shadow 0.15s',
                 }}>
                 <div className="h-full px-2.5 py-1 flex flex-col items-start text-left overflow-hidden">
                   <div className="flex items-center gap-1.5 w-full">
@@ -1063,6 +1147,26 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
                     </span>
                   )}
                 </div>
+                {/* Resize handle — bottom 6px of the chip. Drag to
+                    adjust duration. stopPropagation prevents the
+                    chip-body onMouseDown from also starting a move
+                    drag, and the cursor switches to row-resize on
+                    hover so the affordance is obvious. */}
+                <div
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return
+                    e.stopPropagation()
+                    setDrag({
+                      taskId: task.id, mode: 'resize', startY: e.clientY,
+                      origStartMin: rawStartMin, origDuration: rawDuration,
+                      currentStartMin: rawStartMin, currentDuration: rawDuration,
+                      moved: false,
+                    })
+                  }}
+                  className="absolute bottom-0 left-0 right-0 h-1.5 cursor-row-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: meta.color + '60', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}
+                  title="Drag to resize duration"
+                />
               </button>
             )
           })}
@@ -1105,6 +1209,14 @@ export function Planner() {
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
+  // Auto-plan modal state — null = closed, populated = showing preview.
+  const [autoPlan, setAutoPlan] = useState<null | {
+    proposals: Array<{ task_id: number; title: string; task_group: string | null; priority: string | null; duration_minutes: number; start_time: string }>
+    skipped: Array<{ task_id: number; title: string; reason: string }>
+    work: { start: string; end: string }
+  }>(null)
+  const [autoPlanLoading, setAutoPlanLoading] = useState(false)
+  const [autoPlanApplying, setAutoPlanApplying] = useState(false)
   const [dragOverDate, setDragOverDate] = useState<string | null>(null)
   /**
    * Drop-target highlight key for Schedule + Month views. Composed
@@ -1259,6 +1371,45 @@ export function Planner() {
     onSuccess: () => { invalidate(); toast.success('Task added') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
+
+  /**
+   * Auto-plan fetch — hits the backend's deterministic
+   * priority-sorted fitter and shows the result in a preview
+   * modal. Nothing is mutated until the user clicks Apply. We
+   * fetch on demand (not via useQuery) because this is a
+   * user-initiated, single-shot action.
+   */
+  const runAutoPlan = useCallback(async () => {
+    setAutoPlanLoading(true)
+    try {
+      const body: any = { date: currentDate }
+      if (employee) body.employee_name = employee
+      const res = await api.post('/v1/admin/planner/auto-plan', body)
+      setAutoPlan(res.data)
+      if (res.data.proposals.length === 0) {
+        toast('No unscheduled tasks to fit', { icon: '👍' })
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Could not build a plan')
+    } finally {
+      setAutoPlanLoading(false)
+    }
+  }, [currentDate, employee])
+
+  const applyAutoPlan = useCallback(async () => {
+    if (!autoPlan) return
+    setAutoPlanApplying(true)
+    try {
+      const res = await api.post('/v1/admin/planner/auto-plan/apply', { proposals: autoPlan.proposals })
+      toast.success(`${res.data.applied} task${res.data.applied === 1 ? '' : 's'} scheduled`)
+      setAutoPlan(null)
+      invalidate()
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Could not apply the plan')
+    } finally {
+      setAutoPlanApplying(false)
+    }
+  }, [autoPlan])
 
   const addSubtaskMutation = useMutation({
     mutationFn: ({ taskId, title }: any) => api.post('/v1/admin/planner/tasks/' + taskId + '/subtasks', { title }),
@@ -1606,12 +1757,27 @@ export function Planner() {
       {tab === 'day' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
-            {/* Summary card removed — universal KPI strip above covers
-                Total / Completed / Overdue / High Priority across every
-                view. Slim progress bar below replaces the old card. */}
+            {/* Day-view action row — progress + Auto-plan button. Only
+                renders when there are tasks, since otherwise the empty
+                state below already invites task creation. */}
             {tasks.length > 0 && (
-              <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
-                <ProgressBar done={tasks.filter((t: any) => t.completed).length} total={tasks.length} />
+              <div className="bg-dark-surface border border-dark-border rounded-xl p-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <ProgressBar done={tasks.filter((t: any) => t.completed).length} total={tasks.length} />
+                </div>
+                {/* Auto-plan — only meaningful if there are
+                    unscheduled tasks to fit. Hidden otherwise so the
+                    UI doesn't dangle a useless button. */}
+                {tasks.some((t: any) => !t.start_time && !t.completed) && (
+                  <button
+                    onClick={runAutoPlan}
+                    disabled={autoPlanLoading}
+                    title="Smart-fit your unscheduled tasks into the day in priority order"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-colors disabled:opacity-50">
+                    <Sparkles size={12} />
+                    {autoPlanLoading ? 'Planning…' : 'Auto-plan'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -1628,6 +1794,20 @@ export function Planner() {
                 isToday={currentDate === today}
                 onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
                 onCreateAtTime={(hhmm) => openCreate(currentDate, undefined, hhmm)}
+                onTaskUpdate={(taskId, body) => {
+                  // Optimistic patch: update the cached query data
+                  // immediately so the chip stays where the user
+                  // dropped it. The mutation then commits server-
+                  // side; on success the invalidate refreshes with
+                  // the canonical value. On failure we'd rollback
+                  // but the existing patterns (drag-drop, complete)
+                  // don't rollback either, so we match that
+                  // behaviour — the chip will snap back when the
+                  // refetch returns the un-modified row.
+                  qc.setQueriesData({ queryKey: ['planner-tasks'] }, (old: any) =>
+                    Array.isArray(old) ? old.map((t: any) => t.id === taskId ? { ...t, ...body } : t) : old)
+                  updateMutation.mutate({ id: taskId, ...body })
+                }}
               />
             )}
 
@@ -2266,6 +2446,84 @@ export function Planner() {
       )}
 
       {/* ═══ MOVE MODAL ═══ */}
+      {/* Auto-plan preview modal — opens after runAutoPlan resolves.
+          Shows a proposal row per fitted task and any that couldn't
+          fit. The user accepts the whole plan with Apply; nothing
+          mutates until then. */}
+      {autoPlan && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAutoPlan(null)}>
+          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.35)' }}>
+                <Sparkles size={18} className="text-purple-300" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-white">Auto-plan for {currentDate}</h2>
+                <p className="text-xs text-t-secondary mt-0.5">
+                  Fitted into your {autoPlan.work.start}–{autoPlan.work.end} window in priority order. Already-scheduled tasks are skipped. Click Apply to commit.
+                </p>
+              </div>
+            </div>
+
+            {autoPlan.proposals.length === 0 ? (
+              <div className="text-center py-10 text-sm text-t-secondary">
+                No unscheduled tasks to fit. You're all set.
+              </div>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {autoPlan.proposals.map(p => {
+                  const meta = TASK_GROUP_META[p.task_group ?? ''] ?? CUSTOM_GROUP_META
+                  const Icon = meta.icon
+                  return (
+                    <div key={p.task_id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg border"
+                      style={{ borderColor: meta.color + '40', background: meta.color + '10' }}>
+                      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: meta.color, minWidth: 50 }}>
+                        {p.start_time}
+                      </span>
+                      <Icon size={14} style={{ color: meta.color }} className="flex-shrink-0" />
+                      <span className="flex-1 text-sm text-white truncate">{p.title}</span>
+                      <span className="text-[10px] text-gray-400 flex-shrink-0">{p.duration_minutes}m</span>
+                      {p.priority === 'High' && (
+                        <Flag size={11} className="text-red-400 flex-shrink-0" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {autoPlan.skipped.length > 0 && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1">
+                  {autoPlan.skipped.length} task{autoPlan.skipped.length === 1 ? '' : 's'} didn't fit
+                </p>
+                <ul className="text-xs text-amber-200/80 space-y-0.5">
+                  {autoPlan.skipped.map(s => (
+                    <li key={s.task_id}>· {s.title} — {s.reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-dark-border">
+              <button onClick={() => setAutoPlan(null)}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">
+                Cancel
+              </button>
+              {autoPlan.proposals.length > 0 && (
+                <button onClick={applyAutoPlan} disabled={autoPlanApplying}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
+                  <Sparkles size={13} />
+                  {autoPlanApplying ? 'Applying…' : `Apply ${autoPlan.proposals.length} task${autoPlan.proposals.length === 1 ? '' : 's'}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {moveTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setMoveTarget(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>

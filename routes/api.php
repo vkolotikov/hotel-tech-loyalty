@@ -804,6 +804,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('planner/day-note',                [PlannerController::class, 'dayNote']);
             Route::post('planner/day-note',               [PlannerController::class, 'upsertDayNote']);
             Route::get('planner/stats',                   [PlannerController::class, 'stats']);
+            // Auto-plan — fits today's unscheduled tasks into the
+            // working-hour window in priority order, skipping busy
+            // slots. Returns a proposal array; nothing is mutated
+            // until the frontend POSTs to /apply.
+            Route::post('planner/auto-plan',              [PlannerController::class, 'autoPlanDay']);
+            Route::post('planner/auto-plan/apply',        [PlannerController::class, 'autoPlanApply']);
 
             // ─── Planner v2: org-wide task templates ──────────────────────
             Route::get('planner/templates',                [PlannerController::class, 'templates']);
