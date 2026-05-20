@@ -686,7 +686,7 @@ function InlineQuickAdd({ onSubmit, onCancel, autoFocus = true }: {
  * fixed-position the popover just below the task chip. Falls back to
  * viewport-bottom if the popover would clip off the screen.
  */
-function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComplete, onFullEdit, onDelete }: {
+function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComplete, onFullEdit, onDelete, onDuplicate, onReschedule }: {
   task: any
   anchor: DOMRect
   onClose: () => void
@@ -695,6 +695,8 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
   onComplete: () => void
   onFullEdit: () => void
   onDelete: () => void
+  onDuplicate: (toDate: string) => void
+  onReschedule: (toDate: string) => void
 }) {
   const [title, setTitle] = useState(task.title || '')
   const ref = useRef<HTMLDivElement>(null)
@@ -711,8 +713,8 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
    * viewport — then flip above. Same horizontal anchor with viewport
    * clamping to keep it visible on small screens.
    */
-  const popHeight = 220
-  const popWidth = 280
+  const popHeight = 320
+  const popWidth = 300
   const top = anchor.bottom + popHeight > window.innerHeight ? Math.max(8, anchor.top - popHeight - 4) : anchor.bottom + 4
   const left = Math.min(window.innerWidth - popWidth - 8, Math.max(8, anchor.left))
 
@@ -721,6 +723,14 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
     const idx = order.indexOf(task.priority || 'Normal')
     onTogglePriority(order[(idx + 1) % order.length])
   }
+
+  // Quick reschedule shortcuts — compute the dates fresh on each
+  // render so a popover left open across midnight still produces
+  // the right offsets.
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const tomorrowStr = (() => { const d = new Date(today); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) })()
+  const nextWeekStr = (() => { const d = new Date(today); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) })()
+  const todayStr = today.toISOString().slice(0, 10)
 
   return (
     <div
@@ -744,6 +754,7 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
         {task.employee_name && <span className="truncate">· {task.employee_name}</span>}
       </div>
 
+      {/* Primary actions: complete + priority */}
       <div className="grid grid-cols-2 gap-1.5">
         <button onClick={onComplete}
           className={'flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ' +
@@ -758,13 +769,38 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
+      {/* Reschedule quick chips */}
+      <div>
+        <div className="text-[9px] uppercase tracking-wider font-bold text-gray-500 px-1 mb-1">Reschedule</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <button onClick={() => onReschedule(todayStr)}
+            className="px-2 py-1.5 rounded-lg text-[11px] font-medium bg-dark-surface2 text-gray-300 hover:bg-primary-500/15 hover:text-white transition-colors">
+            Today
+          </button>
+          <button onClick={() => onReschedule(tomorrowStr)}
+            className="px-2 py-1.5 rounded-lg text-[11px] font-medium bg-dark-surface2 text-gray-300 hover:bg-primary-500/15 hover:text-white transition-colors">
+            Tomorrow
+          </button>
+          <button onClick={() => onReschedule(nextWeekStr)}
+            className="px-2 py-1.5 rounded-lg text-[11px] font-medium bg-dark-surface2 text-gray-300 hover:bg-primary-500/15 hover:text-white transition-colors">
+            +1 week
+          </button>
+        </div>
+      </div>
+
+      {/* Secondary actions: duplicate + edit + delete */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <button onClick={() => onDuplicate(todayStr)}
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-dark-surface2 text-gray-300 hover:bg-blue-500/15 hover:text-blue-300 transition-colors"
+          title="Duplicate this task to today">
+          <Copy size={12} /> Copy
+        </button>
         <button onClick={onFullEdit}
-          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium bg-dark-surface2 text-gray-300 hover:bg-primary-500/15 hover:text-white transition-colors">
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-dark-surface2 text-gray-300 hover:bg-primary-500/15 hover:text-white transition-colors">
           <Edit size={12} /> Edit
         </button>
         <button onClick={onDelete}
-          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
           <Trash2 size={12} /> Delete
         </button>
       </div>
@@ -1157,22 +1193,32 @@ export function Planner() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
-          {/* Tabs — horizontal scroll on cramped phones */}
-          <div className="flex rounded-xl border border-dark-border overflow-x-auto bg-dark-surface w-full sm:w-auto">
+          {/* View switcher — modernized segmented control. Active state
+              now uses the brand gold fill (same pattern as Engagement
+              filters + Members tier pills) instead of the muted
+              translucent primary tint, so the current view is more
+              obvious at a glance. */}
+          <div className="flex p-1 rounded-xl border border-dark-border overflow-x-auto bg-dark-surface w-full sm:w-auto gap-0.5">
             {([
               ['day', CalendarDays, t('planner.tabs.day', 'Day')],
               ['schedule', Calendar, t('planner.tabs.schedule', 'Schedule')],
               ['month', CalendarRange, t('planner.tabs.month', 'Month')],
               ['stats', BarChart2, t('planner.tabs.stats', 'Stats')],
-            ] as const).map(([tabKey, Icon, label]) => (
-              <button
-                key={tabKey}
-                onClick={() => setTab(tabKey as Tab)}
-                className={'flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' + (tab === tabKey ? 'bg-primary-500/15 text-primary-400' : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
-              >
-                <Icon size={14} /> {label}
-              </button>
-            ))}
+            ] as const).map(([tabKey, Icon, label]) => {
+              const active = tab === tabKey
+              return (
+                <button
+                  key={tabKey}
+                  onClick={() => setTab(tabKey as Tab)}
+                  className={'flex items-center gap-1.5 px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' +
+                    (active
+                      ? 'bg-primary-500 text-black shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
+                      : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
+                >
+                  <Icon size={14} /> {label}
+                </button>
+              )
+            })}
           </div>
 
           {tab !== 'stats' && <>
@@ -1208,21 +1254,68 @@ export function Planner() {
         </div>
       )}
 
+      {/* Universal KPI strip — appears across Day / Schedule / Month so
+          the agent always sees workload at a glance. Counts come from
+          `tasks` which is the post-group-filter slice, so the numbers
+          mirror what's actually rendered below. Overdue + Unassigned
+          are clickable filters (a future iteration could deep-link
+          into a filtered subview — for now they're informational). */}
+      {tab !== 'stats' && (() => {
+        const todayISO = fmtDate(new Date())
+        const total = tasks.length
+        const completed = tasks.filter((t: any) => t.completed).length
+        const overdue = tasks.filter((t: any) => !t.completed && (t.task_date ?? '').slice(0, 10) < todayISO).length
+        const highPriority = tasks.filter((t: any) => !t.completed && t.priority === 'High').length
+        const unassigned = tasks.filter((t: any) => !t.employee_name).length
+        const completedPct = total > 0 ? Math.round((completed / total) * 100) : 0
+
+        const kpis = [
+          { label: 'Total',         value: total,        accent: '#9ca3af', icon: ListChecks },
+          { label: 'Completed',     value: `${completed} · ${completedPct}%`, accent: '#22c55e', icon: CheckCircle2 },
+          { label: 'Overdue',       value: overdue,      accent: '#ef4444', icon: AlertCircle, dim: overdue === 0 },
+          { label: 'High Priority', value: highPriority, accent: '#f59e0b', icon: Flag,        dim: highPriority === 0 },
+          { label: 'Unassigned',    value: unassigned,   accent: '#3b82f6', icon: User,        dim: unassigned === 0 },
+        ]
+
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+            {kpis.map((k) => {
+              const KIcon = k.icon
+              return (
+                <div key={k.label}
+                  className={'bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 flex items-center gap-2.5 transition-opacity ' + (k.dim ? 'opacity-60' : '')}>
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${k.accent}22, ${k.accent}08)`,
+                      border: `1px solid ${k.accent}40`,
+                    }}>
+                    <KIcon size={14} style={{ color: k.accent }} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 leading-none">{k.label}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate" style={k.dim ? {} : { color: k.accent }}>
+                      {k.value}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
+
       {/* ═══ DAY VIEW ═══ */}
       {tab === 'day' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
-            {/* Summary */}
-            <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-white">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</span>
-                  <span className="text-xs text-green-400">{tasks.filter((t: any) => t.completed).length} completed</span>
-                  <span className="text-xs text-gray-500">{tasks.filter((t: any) => !t.completed).length} remaining</span>
-                </div>
+            {/* Summary card removed — universal KPI strip above covers
+                Total / Completed / Overdue / High Priority across every
+                view. Slim progress bar below replaces the old card. */}
+            {tasks.length > 0 && (
+              <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
+                <ProgressBar done={tasks.filter((t: any) => t.completed).length} total={tasks.length} />
               </div>
-              <ProgressBar done={tasks.filter((t: any) => t.completed).length} total={tasks.length} />
-            </div>
+            )}
 
             {/* Timeline */}
             {tasks.some((t: any) => t.start_time) && (
@@ -1276,10 +1369,32 @@ export function Planner() {
                 }
               }}>
               {tasks.length === 0 && (
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-12 text-center">
-                  <CalendarDays size={40} className="mx-auto text-gray-700 mb-3" />
-                  <p className="text-gray-500 text-sm">{t('planner.empty.no_tasks_today', 'No tasks for this day')}</p>
-                  <button onClick={() => openCreate(currentDate)} className="mt-3 text-sm text-primary-400 hover:text-primary-300 font-medium">{t('planner.empty.create_first', 'Create your first task')}</button>
+                <div className="relative bg-dark-surface border border-dark-border rounded-xl p-10 text-center overflow-hidden">
+                  <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl pointer-events-none"
+                    style={{ background: 'rgba(201,168,76,0.12)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.04))',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                      }}>
+                      <CalendarDays size={26} className="text-primary-400" />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-1">{t('planner.empty.no_tasks_today', 'No tasks for this day')}</h3>
+                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
+                      {t('planner.empty.hint', 'Start with a quick task or pick from a template below.')}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <button onClick={() => openCreate(currentDate)}
+                        className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-black font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow-[0_4px_14px_rgba(201,168,76,0.25)]">
+                        <Plus size={14} /> {t('planner.empty.create_first', 'Create your first task')}
+                      </button>
+                      <button onClick={() => setShowTemplatePicker(s => !s)}
+                        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-2 rounded-lg border border-dark-border hover:border-white/20 transition-colors">
+                        <FileText size={13} /> {t('planner.empty.use_template', 'Use a template')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
               {[...tasks].sort((a: any, b: any) => {
@@ -2155,6 +2270,14 @@ export function Planner() {
           onComplete={() => { completeMutation.mutate(taskPopover.task.id); setTaskPopover(null) }}
           onFullEdit={() => { const t = taskPopover.task; setTaskPopover(null); openEdit(t) }}
           onDelete={() => { const t = taskPopover.task; setTaskPopover(null); deleteWithScope(t) }}
+          onDuplicate={(toDate) => {
+            copyMutation.mutate({ id: taskPopover.task.id, task_date: toDate, employee_name: taskPopover.task.employee_name ?? '' })
+            setTaskPopover(null)
+          }}
+          onReschedule={(toDate) => {
+            moveMutation.mutate({ id: taskPopover.task.id, task_date: toDate, employee_name: taskPopover.task.employee_name ?? undefined })
+            setTaskPopover(null)
+          }}
         />
       )}
     </div>
