@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import {
@@ -11,6 +11,7 @@ import {
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
   BookOpen, Search, HelpCircle, FileText, GitBranch, ClipboardList, Activity,
+  Building2, ArrowLeft,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -219,20 +220,106 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { id: 'general',       label: 'General',        icon: Settings2,  desc: 'Company info & account',              groups: ['general'],      custom: true },
-  { id: 'branding',      label: 'Branding',        icon: Palette,    desc: 'Colors, logo, theme presets',         groups: ['appearance'],   custom: true },
-  { id: 'loyalty',       label: 'Loyalty',         icon: Star,       desc: 'Points, tiers & rewards',             groups: ['points'],       custom: true, product: 'loyalty' },
-  { id: 'notifications', label: 'Notifications',   icon: Bell,       desc: 'Push & email notification config',    groups: ['notifications'], feature: 'push_notifications' },
-  { id: 'integrations',  label: 'Integrations',    icon: Zap,        desc: 'PMS, payments, channels & messaging', groups: ['integrations'], custom: true },
-  { id: 'booking',       label: 'Booking',         icon: Calendar,   desc: 'Booking engine configuration',        groups: ['booking'],      custom: true, product: 'booking' },
-  { id: 'pipelines',     label: 'Pipelines',       icon: GitBranch,  desc: 'CRM pipelines, stages & lost reasons', custom: true },
-  { id: 'planner',       label: 'Planner',         icon: ClipboardList, desc: 'Task groups, templates & industry presets', custom: true },
-  { id: 'menu',          label: 'Menu',            icon: Layers,        desc: 'Show or hide sidebar groups for your org', custom: true },
-  { id: 'team',          label: 'Team',            icon: Users,         desc: 'Invite teammates and manage roles + permissions', custom: true },
-  { id: 'mobile_app',    label: 'Mobile App',      icon: Smartphone, desc: 'Loyalty mobile app appearance & preview', groups: ['mobile_app'], custom: true, product: 'loyalty' },
-  { id: 'documentation', label: 'Documentation',   icon: BookOpen,   desc: 'Platform guides, use cases & FAQ',     custom: true },
-  { id: 'ai_usage',      label: 'AI Usage',        icon: Activity,   desc: 'Month-to-date AI spend, per-model + per-feature breakdown, plan cap', custom: true },
-  { id: 'ai_system',     label: 'AI & System',     icon: Shield,     desc: 'AI models, system info & diagnostics', custom: true, superAdminOnly: true },
+  { id: 'general',       label: 'Hotel Info',         icon: Building2,     desc: 'Hotel name, contact info, account',         groups: ['general'],      custom: true },
+  { id: 'branding',      label: 'Branding & Theme',   icon: Palette,       desc: 'Colors, logo, theme presets',               groups: ['appearance'],   custom: true },
+  { id: 'loyalty',       label: 'Loyalty Program',    icon: Star,          desc: 'Points, tiers, rewards rules',              groups: ['points'],       custom: true, product: 'loyalty' },
+  { id: 'notifications', label: 'Notifications',      icon: Bell,          desc: 'Push and email notification config',        groups: ['notifications'], feature: 'push_notifications' },
+  { id: 'integrations',  label: 'Integrations & API', icon: Zap,           desc: 'PMS, payments, messaging, developer tokens', groups: ['integrations'], custom: true },
+  { id: 'booking',       label: 'Booking Engine',     icon: Calendar,      desc: 'Rates, currency, payment, Smoobu sync',     groups: ['booking'],      custom: true, product: 'booking' },
+  { id: 'pipelines',     label: 'Pipelines & Fields', icon: GitBranch,     desc: 'CRM pipelines, stages, fields, industry presets', custom: true },
+  { id: 'planner',       label: 'Planner',            icon: ClipboardList, desc: 'Task groups, templates, industry presets',  custom: true },
+  { id: 'menu',          label: 'Sidebar Menu',       icon: Layers,        desc: 'Show or hide sidebar groups for your org',  custom: true },
+  { id: 'team',          label: 'Team & Roles',       icon: Users,         desc: 'Invite teammates, manage roles + permissions', custom: true },
+  { id: 'mobile_app',    label: 'Member App',         icon: Smartphone,    desc: 'Loyalty mobile app appearance + preview',   groups: ['mobile_app'], custom: true, product: 'loyalty' },
+  { id: 'documentation', label: 'Help & Docs',        icon: BookOpen,      desc: 'Platform guides, use cases, FAQ',           custom: true },
+  { id: 'ai_usage',      label: 'AI Usage',           icon: Activity,      desc: 'Spend MTD, per-model + per-feature breakdown, plan cap', custom: true },
+  { id: 'ai_system',     label: 'System',             icon: Shield,        desc: 'AI models, system info, diagnostics',       custom: true, superAdminOnly: true },
+]
+
+/**
+ * Grouping for the Settings home grid. Each section is a labelled card
+ * cluster on the home page; the user clicks into a tile to open that
+ * tab's content. Sections are filtered out when ALL their tabs are
+ * gated away by role / product / feature.
+ *
+ * Keep `tabs[]` referring to existing `TABS[].id` values — the home grid
+ * dereferences each id back to the tab record at render time for icon +
+ * label + desc + gate info.
+ */
+interface Section {
+  id: string
+  label: string
+  desc: string
+  icon: any
+  accent: string         // hex — drives the section header dot + tile hover ring
+  tabs: string[]
+}
+
+const SECTIONS: Section[] = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    desc: 'How your hotel and admin app look',
+    icon: Building2,
+    accent: '#60a5fa',
+    tabs: ['general', 'branding', 'menu'],
+  },
+  {
+    id: 'crm',
+    label: 'CRM & Sales',
+    desc: 'Pipeline taxonomy, fields, daily planner',
+    icon: GitBranch,
+    accent: '#f472b6',
+    tabs: ['pipelines', 'planner'],
+  },
+  {
+    id: 'loyalty',
+    label: 'Loyalty & Member App',
+    desc: 'Points program plus the member-facing mobile app',
+    icon: Crown,
+    accent: '#fbbf24',
+    tabs: ['loyalty', 'mobile_app'],
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    desc: 'Booking engine and guest notifications',
+    icon: Calendar,
+    accent: '#34d399',
+    tabs: ['booking', 'notifications'],
+  },
+  {
+    id: 'team',
+    label: 'Team & Access',
+    desc: 'Who can see and do what',
+    icon: Users,
+    accent: '#22d3ee',
+    tabs: ['team'],
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    desc: 'External services and developer API',
+    icon: Zap,
+    accent: '#a78bfa',
+    tabs: ['integrations'],
+  },
+  {
+    id: 'ai',
+    label: 'AI',
+    desc: 'Usage tracking and model diagnostics',
+    icon: Brain,
+    accent: '#c084fc',
+    tabs: ['ai_usage', 'ai_system'],
+  },
+  {
+    id: 'help',
+    label: 'Help',
+    desc: 'Documentation and platform guides',
+    icon: BookOpen,
+    accent: '#9ca3af',
+    tabs: ['documentation'],
+  },
 ]
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
@@ -243,7 +330,19 @@ export function Settings() {
   const { hasFeature, hasProduct } = useSubscription()
   const qc = useQueryClient()
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState('general')
+  // Active tab persists to the URL via ?tab= so refreshes + deep links
+  // land on the same place. 'home' = the grid index (default).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'home'
+  const setActiveTab = (id: string) => {
+    if (id === 'home') {
+      const next = new URLSearchParams(searchParams)
+      next.delete('tab')
+      setSearchParams(next, { replace: true })
+    } else {
+      setSearchParams({ tab: id }, { replace: true })
+    }
+  }
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({})
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null)
@@ -1914,32 +2013,129 @@ export function Settings() {
         )}
       </div>
 
-      {/* Top Tab Navigation — underline style, matches ChatbotSetup */}
-      <div className="flex gap-1 border-b border-dark-border overflow-x-auto">
-        {TABS.filter(tab => {
-          if (tab.superAdminOnly && !isSuperAdmin) return false
-          if (tab.feature && !hasFeature(tab.feature)) return false
-          if (tab.product && !hasProduct(tab.product)) return false
+      {/* Settings home grid OR breadcrumb + content.
+          Home (default) = sectioned grid of cards. Click a card → deep-link
+          via ?tab=<id> into that section. Breadcrumb shows up on every
+          non-home tab to jump back to the index. */}
+      {(() => {
+        // Resolve current tab metadata once. tab === undefined when
+        // activeTab === 'home' OR the URL carries a stale ?tab= the
+        // user can no longer access (gated away). In the latter case
+        // we fall through to the home grid so the page never blanks.
+        const tabIsVisible = (t: Tab) => {
+          if (t.superAdminOnly && !isSuperAdmin) return false
+          if (t.feature && !hasFeature(t.feature)) return false
+          if (t.product && !hasProduct(t.product)) return false
           return true
-        }).map(tab => {
-          const Icon = tab.icon
-          const active = activeTab === tab.id
-          // Tab labels live in i18n at `settings.tabs.<id>`; missing keys
-          // fall through to the structural English label.
-          const label = t(`settings.tabs.${tab.id}`, tab.label)
-          return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                active ? 'border-primary-500 text-white' : 'border-transparent text-t-secondary hover:text-white'
-              }`}>
-              <Icon size={14} /> {label}
-            </button>
-          )
-        })}
-      </div>
+        }
+        const tab = TABS.find(t => t.id === activeTab)
+        const onHome = activeTab === 'home' || !tab || !tabIsVisible(tab)
 
-      {/* Content */}
-      {renderTabContent()}
+        if (onHome) {
+          // Filter sections: drop any whose tabs are all gated away.
+          const visibleSections = SECTIONS.map(s => ({
+            ...s,
+            visibleTabs: s.tabs
+              .map(id => TABS.find(t => t.id === id))
+              .filter((t): t is Tab => !!t && tabIsVisible(t)),
+          })).filter(s => s.visibleTabs.length > 0)
+
+          // Hex → rgba helper for soft tinted backgrounds.
+          const tint = (hex: string, alpha: number) => {
+            const h = hex.replace('#', '')
+            const r = parseInt(h.slice(0, 2), 16)
+            const g = parseInt(h.slice(2, 4), 16)
+            const b = parseInt(h.slice(4, 6), 16)
+            return `rgba(${r},${g},${b},${alpha})`
+          }
+
+          return (
+            <div className="space-y-8">
+              {visibleSections.map(section => {
+                const SIcon = section.icon
+                return (
+                  <div key={section.id}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: tint(section.accent, 0.15), border: `1px solid ${tint(section.accent, 0.35)}` }}
+                      >
+                        <SIcon size={14} style={{ color: section.accent }} />
+                      </span>
+                      <div>
+                        <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: section.accent }}>
+                          {t(`settings.sections.${section.id}.label`, section.label)}
+                        </h2>
+                        <p className="text-xs text-t-secondary">
+                          {t(`settings.sections.${section.id}.desc`, section.desc)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {section.visibleTabs.map(tile => {
+                        const TIcon = tile.icon
+                        return (
+                          <button
+                            key={tile.id}
+                            onClick={() => setActiveTab(tile.id)}
+                            className="group text-left bg-dark-surface border border-dark-border rounded-xl p-4 transition-all hover:border-current hover:bg-dark-surface2"
+                            style={{ ['--tw-text-opacity' as any]: 1 } as React.CSSProperties}
+                          >
+                            <div className="flex items-start gap-3">
+                              <span
+                                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                                style={{ background: tint(section.accent, 0.1), border: `1px solid ${tint(section.accent, 0.25)}` }}
+                              >
+                                <TIcon size={18} style={{ color: section.accent }} />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-sm font-semibold text-white truncate">
+                                  {t(`settings.tabs.${tile.id}`, tile.label)}
+                                </h3>
+                                <p className="text-xs text-t-secondary mt-0.5 line-clamp-2">
+                                  {t(`settings.descs.${tile.id}`, tile.desc)}
+                                </p>
+                              </div>
+                              <ChevronRight size={14} className="text-t-secondary group-hover:text-white transition-colors flex-shrink-0 mt-1" />
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        }
+
+        // Non-home: slim breadcrumb + content
+        const TIcon = tab.icon
+        const label = t(`settings.tabs.${tab.id}`, tab.label)
+        const desc = t(`settings.descs.${tab.id}`, tab.desc)
+        return (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors px-2 py-1 -ml-2 rounded-md hover:bg-dark-surface2"
+                >
+                  <ArrowLeft size={13} />
+                  {t('settings.back_to_home', 'All settings')}
+                </button>
+                <span className="text-t-secondary/40">/</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <TIcon size={14} className="text-t-secondary flex-shrink-0" />
+                  <h2 className="text-sm font-semibold text-white truncate">{label}</h2>
+                  <span className="hidden md:inline text-xs text-t-secondary truncate">— {desc}</span>
+                </div>
+              </div>
+            </div>
+            {renderTabContent()}
+          </div>
+        )
+      })()}
     </div>
   )
 }
