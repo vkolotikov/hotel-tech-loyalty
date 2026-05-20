@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
-  ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat,
+  ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
   Wrench, Coffee, Briefcase, BedDouble, PartyPopper, ConciergeBell, Sparkles, Phone,
   // Channel-type icons for the new comms-channel row in the drawer.
   Phone as PhoneIcon, Mail as MailIcon, MessageCircle as WhatsAppIcon,
@@ -51,6 +51,16 @@ const STATUS_COLOR: Record<string, string> = {
   in_progress: 'bg-blue-500/15 text-blue-400',
   blocked: 'bg-red-500/15 text-red-400',
   done: 'bg-green-500/15 text-green-400',
+}
+
+// Icon + hex accent per status. Used by chip badges across views so
+// "in progress" / "blocked" tasks are obvious without opening the
+// popover. `todo` is the default state and intentionally has no
+// badge — clutters the chip when nothing's actually happening.
+const STATUS_META: Record<string, { icon: any; color: string; label: string }> = {
+  in_progress: { icon: PlayCircle,   color: '#3b82f6', label: 'In progress' },
+  blocked:     { icon: AlertCircle,  color: '#ef4444', label: 'Blocked' },
+  done:        { icon: CheckCircle2, color: '#22c55e', label: 'Done' },
 }
 
 /**
@@ -826,10 +836,11 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
  * tasks/day) plain overlap is fine and a click still hits the right
  * chip because the popover anchor is the absolutely-positioned chip.
  */
-function DayTimeline({ tasks, isToday, onTaskClick }: {
+function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime }: {
   tasks: any[]
   isToday: boolean
   onTaskClick: (task: any, anchor: DOMRect) => void
+  onCreateAtTime: (hhmm: string) => void
 }) {
   const HOUR_START = 6
   const HOUR_END = 22
@@ -915,10 +926,31 @@ function DayTimeline({ tasks, isToday, onTaskClick }: {
       </div>
 
       <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: 480 }}>
-        <div className="relative" style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}>
+        <div
+          className="relative cursor-cell"
+          style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}
+          onClick={(e) => {
+            // Click on empty timeline space → open the new-task drawer
+            // with this hour pre-selected. We skip when the click
+            // bubbled from a chip button so a chip click doesn't also
+            // create a task underneath it.
+            const tgt = e.target as HTMLElement | null
+            if (!tgt) return
+            if (tgt.closest('button')) return
+            const wrap = e.currentTarget.getBoundingClientRect()
+            const y = e.clientY - wrap.top
+            const mins = (y / PX_PER_HOUR) * 60
+            // Snap to nearest 15-min slot.
+            const snapped = Math.max(0, Math.round(mins / 15) * 15)
+            const total = HOUR_START * 60 + snapped
+            const hh = String(Math.floor(total / 60)).padStart(2, '0')
+            const mm = String(total % 60).padStart(2, '0')
+            onCreateAtTime(`${hh}:${mm}`)
+          }}
+        >
           {/* Hour grid */}
           {hours.map((h, i) => (
-            <div key={h} className="absolute left-0 right-0 flex items-start" style={{ top: i * PX_PER_HOUR, height: PX_PER_HOUR }}>
+            <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none" style={{ top: i * PX_PER_HOUR, height: PX_PER_HOUR }}>
               <span className="w-14 pr-2 text-right text-[10px] font-mono text-gray-600 -mt-1.5 select-none">
                 {formatHourLabel(h)}
               </span>
@@ -992,6 +1024,30 @@ function DayTimeline({ tasks, isToday, onTaskClick }: {
                     <span className="text-[10px] font-mono text-gray-400 flex-shrink-0">
                       {startLabel}{duration ? `–${endLabel}` : ''}
                     </span>
+                    {/* Recurring loop badge — appears for tasks that
+                        are part of a series so the user knows editing
+                        this one might affect future instances. */}
+                    {(task.recurring || task.recurring_parent_id) && (
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-500/20 flex-shrink-0"
+                        title="Part of a recurring series">
+                        <Repeat size={8} className="text-purple-300" />
+                      </span>
+                    )}
+                    {/* Status badge — only shows for non-default
+                        states (in_progress / blocked / done). `todo`
+                        is implicit and clutter-free. */}
+                    {(() => {
+                      const sm = STATUS_META[task.status]
+                      if (!sm) return null
+                      const SIcon = sm.icon
+                      return (
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0"
+                          style={{ background: sm.color + '25' }}
+                          title={sm.label}>
+                          <SIcon size={9} style={{ color: sm.color }} />
+                        </span>
+                      )
+                    })()}
                     {task.priority === 'High' && (
                       <span className="ml-auto inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/20 flex-shrink-0">
                         <Flag size={8} className="text-red-400" />
@@ -1032,6 +1088,15 @@ export function Planner() {
   const [monthYear, setMonthYear] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
   const [employee, setEmployee] = useState('')
   const [groupFilter, setGroupFilter] = useState('')
+  // "Just mine" filter — client-side. Persists across sessions so an
+  // agent who always works this way doesn't have to re-toggle every
+  // morning. Falls back to false when the user isn't logged in.
+  const [mineOnly, setMineOnly] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && localStorage.getItem('planner-mine-only') === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('planner-mine-only', mineOnly ? '1' : '0') } catch {}
+  }, [mineOnly])
   const [showModal, setShowModal] = useState(false)
   const [editTask, setEditTask] = useState<any>(null)
   const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
@@ -1082,9 +1147,12 @@ export function Planner() {
     queryFn: () => api.get('/v1/admin/planner/tasks', { params: queryParams }).then(r => r.data),
     enabled: tab !== 'stats',
   })
-  const tasks = groupFilter
-    ? allTasks.filter((t: any) => (t.task_group || '') === groupFilter)
-    : allTasks
+  const tasks = (() => {
+    let out = allTasks
+    if (groupFilter) out = out.filter((t: any) => (t.task_group || '') === groupFilter)
+    if (mineOnly && myName) out = out.filter((t: any) => (t.employee_name || '') === myName)
+    return out
+  })()
 
   const { data: dayNote } = useQuery({
     queryKey: ['planner-day-note', tab === 'day' ? currentDate : today],
@@ -1258,10 +1326,15 @@ export function Planner() {
   }
   const goToday = () => { const n = new Date(); setCurrentDate(fmtDate(n)); setWeekStart(fmtDate(getMonday(n))); setMonthYear({ year: n.getFullYear(), month: n.getMonth() }) }
 
-  const openCreate = (date: string, emp?: string) => {
+  const openCreate = (date: string, emp?: string, startTime?: string) => {
     setEditTask(null)
     setShowTemplatePicker(false)
-    setForm({ ...EMPTY_FORM, task_date: date, employee_name: emp ?? myName })
+    setForm({
+      ...EMPTY_FORM,
+      task_date: date,
+      employee_name: emp ?? myName,
+      start_time: startTime ?? '',
+    })
     setShowModal(true)
   }
 
@@ -1430,6 +1503,23 @@ export function Planner() {
           </div>
 
           {tab !== 'stats' && <>
+            {/* "Just mine" filter — quick toggle to hide everyone
+                else's tasks. Persists in localStorage so the user's
+                preference survives reload. Hidden when no user name
+                is known (e.g. unauthenticated edge case). */}
+            {myName && (
+              <button
+                onClick={() => setMineOnly(o => !o)}
+                title={mineOnly ? 'Showing only your tasks — click to show everyone' : 'Click to show only your tasks'}
+                className={'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ' +
+                  (mineOnly
+                    ? 'bg-primary-500/15 border-primary-500/40 text-primary-300'
+                    : 'bg-dark-surface border-dark-border text-gray-500 hover:text-white')}
+              >
+                <User size={13} />
+                <span className="hidden sm:inline">{mineOnly ? 'Just mine' : 'All team'}</span>
+              </button>
+            )}
             <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
               <option value="">{t('planner.actions.all_team', 'All Team')}</option>
               {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
@@ -1537,6 +1627,7 @@ export function Planner() {
                 tasks={tasks.filter((t: any) => t.start_time)}
                 isToday={currentDate === today}
                 onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
+                onCreateAtTime={(hhmm) => openCreate(currentDate, undefined, hhmm)}
               />
             )}
 
@@ -1715,9 +1806,11 @@ export function Planner() {
               scroll horizontally on mobile instead of cramming all 8 columns
               (employee + 7 days) into ~375px and rendering each cell unusable. */}
           <div className="bg-dark-surface border border-dark-border rounded-xl overflow-x-auto">
-            {/* Header row */}
+            {/* Header row — left column sticky so the "View by employee"
+                label stays put while the user scrolls the day columns
+                horizontally on cramped screens. */}
             <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
-              <div className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
+              <div className="sticky left-0 z-10 bg-dark-surface px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center border-r border-dark-border/30">
                 <User size={14} className="mr-2" /> View by employee
               </div>
               {weekDates.map((date, i) => {
@@ -1741,14 +1834,47 @@ export function Planner() {
             {/* Employee rows */}
             {scheduleEmployees.map((emp) => {
               const empTasks = tasks.filter((t: any) => (t.employee_name || 'Unassigned') === emp)
+              // Workload calc: sum of duration_minutes across the
+              // week, falling back to a typed default (30 min) when a
+              // task has no duration. The bar is normalised against
+              // 40h/week (240 / 5 = 8h/day). Over 40h paints red;
+              // 80% paints amber. Pure visualisation — no enforcement.
+              const totalMinutes = empTasks.reduce((sum: number, t: any) =>
+                sum + (Number(t.duration_minutes) || 30), 0)
+              const totalHours = totalMinutes / 60
+              const loadPct = Math.min(100, (totalHours / 40) * 100)
+              const loadColor = totalHours > 40 ? '#ef4444' : totalHours > 32 ? '#f59e0b' : '#22c55e'
               return (
                 <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
-                  {/* Employee name cell */}
-                  <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 flex-shrink-0">
-                      {emp.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                  {/* Employee name cell — sticky left so the name +
+                      workload stay visible while horizontally
+                      scrolling the day columns. z-10 keeps it above
+                      the chips when scrolled. */}
+                  <div className="sticky left-0 z-10 bg-dark-surface px-4 py-3 flex flex-col gap-2 border-r border-dark-border/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 flex-shrink-0">
+                        {emp.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-white truncate">{emp}</div>
+                        {empTasks.length > 0 && (
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            {empTasks.length} task{empTasks.length === 1 ? '' : 's'} · {totalHours.toFixed(1)}h
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-white truncate">{emp}</span>
+                    {/* Workload bar — only renders when there's something to show.
+                        Bar width = % of 40h. Color shifts amber > 32h, red > 40h. */}
+                    {empTasks.length > 0 && (
+                      <div className="w-full h-1 rounded-full bg-dark-surface2 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${loadPct}%`, background: loadColor }}
+                          title={`${totalHours.toFixed(1)}h of 40h capacity`}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Day cells */}
