@@ -7,6 +7,7 @@ import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
   Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
+  ChevronUp, ChevronDown, SlidersHorizontal,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -106,6 +107,15 @@ export function Engagement() {
   const [range, setRange] = useState<'today' | 'week' | 'month' | 'all'>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  // Focus mode — collapses the entire filter card (range + filter chips +
+  // intent + search) into a slim 1-line summary so the agent can devote
+  // the viewport to the conversation rows. Persisted across sessions.
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(
+    () => typeof window === 'undefined' || localStorage.getItem('engagement-filters-open') !== '0'
+  )
+  useEffect(() => {
+    try { localStorage.setItem('engagement-filters-open', filtersOpen ? '1' : '0') } catch {}
+  }, [filtersOpen])
 
   // Drawer state — visitorId !== null means it's open. conversationId is
   // optional; when set, the Conversation tab is auto-selected.
@@ -251,6 +261,23 @@ export function Engagement() {
             <Mail size={13} />
             {prefs?.wants_daily_summary ? t('engagement.daily_email_on', 'Daily email on') : t('engagement.daily_email', 'Daily email')}
           </button>
+          {/* Focus mode toggle — collapses the whole filter card so the
+              agent can fit more chats on screen. Active state is gold. */}
+          <button
+            onClick={() => setFiltersOpen(o => !o)}
+            title={filtersOpen
+              ? t('engagement.focus_on_tooltip',  'Hide filters and focus on the chat list')
+              : t('engagement.focus_off_tooltip', 'Show range, filter chips, intent, and search')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border ${
+              filtersOpen
+                ? 'bg-dark-surface border-dark-border hover:bg-dark-surface2 text-t-secondary hover:text-white'
+                : 'bg-accent/15 border-accent/40 text-accent hover:bg-accent/20'
+            }`}
+          >
+            <SlidersHorizontal size={14} />
+            <span className="hidden sm:inline">{filtersOpen ? t('engagement.focus', 'Focus') : t('engagement.filters', 'Filters')}</span>
+            {filtersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
           <Link
             to="/engagement/live"
             className="flex items-center gap-2 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg text-sm hover:bg-dark-surface2 transition-colors"
@@ -312,7 +339,47 @@ export function Engagement() {
           carry the same filtering action without the duplicated stat
           numbers. */}
 
+      {/* Focus mode: slim summary row replacing the full filter card.
+          Shows the active filter + range so the agent can still see what
+          they're looking at, with a quick re-open link. */}
+      {!filtersOpen && (() => {
+        const activeFilterMeta = [...FILTERS, ...INTENT_FILTERS].find(f => f.key === filter)
+        const activeFilterLabel = activeFilterMeta ? t(filterLabelKey(filter), activeFilterMeta.label) : filter
+        const rangeLabel =
+          range === 'today' ? t('engagement.range.today', 'Today')
+          : range === 'week' ? t('engagement.range.week', '7 days')
+          : range === 'month' ? t('engagement.range.month', '30 days')
+          : t('engagement.range.all', 'All time')
+        return (
+          <div className="flex items-center gap-2 flex-wrap bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-xs">
+            <span className="text-[10px] uppercase tracking-wide font-bold text-t-secondary">
+              {t('engagement.focus_mode', 'Focus mode')}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/15 text-accent font-semibold">
+              {activeFilterLabel}
+            </span>
+            <span className="text-t-secondary">·</span>
+            <span className="text-t-secondary">{rangeLabel}</span>
+            {search && (
+              <>
+                <span className="text-t-secondary">·</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-dark-bg border border-dark-border">
+                  <Search size={10} /> <span className="truncate max-w-[180px]">{search}</span>
+                </span>
+              </>
+            )}
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="ml-auto text-accent hover:underline text-xs font-semibold"
+            >
+              {t('engagement.show_filters', 'Show filters')}
+            </button>
+          </div>
+        )
+      })()}
+
       {/* Filter chips + search */}
+      {filtersOpen && (
       <div className="flex flex-col gap-3 bg-dark-surface border border-dark-border rounded-xl p-3">
         {/* Range chips — Today / Week / Month / All. Reapplied to every
             filter + count query so the badges + feed stay in sync. */}
@@ -411,6 +478,7 @@ export function Engagement() {
           />
         </div>
       </div>
+      )}
 
       {/* List */}
       {isLoading ? (
