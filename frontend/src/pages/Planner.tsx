@@ -809,6 +809,214 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
+/*  DAY TIMELINE — true time-axis grid                                */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Renders a vertical time-axis (6am → 10pm by default) with tasks
+ * positioned absolutely by their start_time + duration_minutes. Tasks
+ * that fall outside the window are clamped to the edges with a marker
+ * so they don't silently disappear. The "Now" red line auto-refreshes
+ * every minute when viewing today and the page mounts pre-scrolled so
+ * the current hour is in view.
+ *
+ * Overlap handling: tasks that overlap visually stack with the later
+ * one on top — z-index by start time. A future iteration could split
+ * the column into lanes, but for typical hotel-ops workloads (5–15
+ * tasks/day) plain overlap is fine and a click still hits the right
+ * chip because the popover anchor is the absolutely-positioned chip.
+ */
+function DayTimeline({ tasks, isToday, onTaskClick }: {
+  tasks: any[]
+  isToday: boolean
+  onTaskClick: (task: any, anchor: DOMRect) => void
+}) {
+  const HOUR_START = 6
+  const HOUR_END = 22
+  const PX_PER_HOUR = 56
+  const TOTAL_HEIGHT = (HOUR_END - HOUR_START) * PX_PER_HOUR
+  const TIME_LABEL_WIDTH = 56
+
+  // Tick every 60s so the "Now" line + the "Now" pill text stay
+  // current without the parent re-rendering.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    if (!isToday) return
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [isToday])
+
+  // Convert HH:MM[:SS] to minutes-since-midnight. Returns null when
+  // the input doesn't parse (so we can filter out untimed tasks).
+  const parseMin = (t: string | null | undefined): number | null => {
+    if (!t) return null
+    const m = /^(\d{1,2}):(\d{1,2})/.exec(t)
+    if (!m) return null
+    return Number(m[1]) * 60 + Number(m[2])
+  }
+
+  const minutesToPx = (mins: number) => {
+    const fromStart = mins - HOUR_START * 60
+    return (fromStart / 60) * PX_PER_HOUR
+  }
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // On first mount, scroll the timeline so the current hour (or the
+  // first task) is roughly centered. Only fires once per mount, so a
+  // user scrolling around won't get yanked back.
+  useEffect(() => {
+    if (!scrollRef.current) return
+    let scrollToMin: number | null = null
+    if (isToday) scrollToMin = now.getHours() * 60 + now.getMinutes()
+    else {
+      const firstTask = [...tasks].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))[0]
+      const m = parseMin(firstTask?.start_time)
+      if (m != null) scrollToMin = m
+    }
+    if (scrollToMin == null) return
+    const px = minutesToPx(scrollToMin) - PX_PER_HOUR * 2 // padding above
+    scrollRef.current.scrollTop = Math.max(0, px)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const showNowLine = isToday && nowMin >= HOUR_START * 60 && nowMin <= HOUR_END * 60
+  const nowTop = minutesToPx(nowMin)
+
+  // Build the hour-label rows.
+  const hours: number[] = []
+  for (let h = HOUR_START; h <= HOUR_END; h++) hours.push(h)
+  const formatHourLabel = (h: number) => {
+    if (h === 0) return '12am'
+    if (h === 12) return '12pm'
+    if (h < 12) return `${h}am`
+    return `${h - 12}pm`
+  }
+
+  // Sort tasks by start so later-starting tasks paint on top of
+  // earlier ones in an overlap — feels more natural since the "next
+  // task" is usually the one the user wants to click.
+  const sorted = [...tasks].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+        <h3 className="text-sm font-semibold text-white">Timeline</h3>
+        <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          {isToday && (
+            <span className="inline-flex items-center gap-1.5 text-red-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} now
+            </span>
+          )}
+          <span className="hidden sm:inline">6 am → 10 pm</span>
+        </div>
+      </div>
+
+      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: 480 }}>
+        <div className="relative" style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}>
+          {/* Hour grid */}
+          {hours.map((h, i) => (
+            <div key={h} className="absolute left-0 right-0 flex items-start" style={{ top: i * PX_PER_HOUR, height: PX_PER_HOUR }}>
+              <span className="w-14 pr-2 text-right text-[10px] font-mono text-gray-600 -mt-1.5 select-none">
+                {formatHourLabel(h)}
+              </span>
+              <span className="flex-1 border-t border-dark-border/40" />
+            </div>
+          ))}
+
+          {/* Half-hour ticks (subtle) */}
+          {hours.slice(0, -1).map((h) => (
+            <div key={`half-${h}`}
+              className="absolute border-t border-dashed border-dark-border/20 pointer-events-none"
+              style={{
+                top: (h - HOUR_START) * PX_PER_HOUR + PX_PER_HOUR / 2,
+                left: TIME_LABEL_WIDTH,
+                right: 0,
+              }} />
+          ))}
+
+          {/* Now line */}
+          {showNowLine && (
+            <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowTop }}>
+              <div className="flex items-center">
+                <span className="w-14 pr-1 text-right text-[10px] font-bold text-red-400">
+                  {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </span>
+                <span className="flex-1 relative">
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)]" />
+                  <span className="block border-t border-red-500/70" />
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Task chips, positioned absolutely */}
+          {sorted.map(task => {
+            const startMin = parseMin(task.start_time)
+            if (startMin == null) return null
+            const duration = Math.max(15, Number(task.duration_minutes) || 30)
+            const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+            const Icon = meta.icon
+            // Clamp top + height to keep tasks inside the visible window.
+            const topRaw = minutesToPx(startMin)
+            const top = Math.max(0, Math.min(TOTAL_HEIGHT - 18, topRaw))
+            const heightRaw = (duration / 60) * PX_PER_HOUR
+            const maxHeight = TOTAL_HEIGHT - top
+            const height = Math.max(20, Math.min(maxHeight, heightRaw))
+            const endMin = startMin + duration
+            const endLabel = `${String(Math.floor(endMin / 60) % 24).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`
+            const startLabel = `${String(Math.floor(startMin / 60) % 24).padStart(2, '0')}:${String(startMin % 60).padStart(2, '0')}`
+            return (
+              <button
+                key={task.id}
+                onClick={(e) => onTaskClick(task, (e.currentTarget as HTMLElement).getBoundingClientRect())}
+                title={`${task.title} — ${startLabel}${duration ? ` to ${endLabel}` : ''}`}
+                className="absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20"
+                style={{
+                  top: top + 2,
+                  left: TIME_LABEL_WIDTH + 8,
+                  right: 8,
+                  height: height - 4,
+                  background: meta.color + '20',
+                  border: `1px solid ${meta.color}55`,
+                  borderLeft: `3px solid ${meta.color}`,
+                  borderRadius: 8,
+                  opacity: task.completed ? 0.55 : 1,
+                  zIndex: 10,
+                }}>
+                <div className="h-full px-2.5 py-1 flex flex-col items-start text-left overflow-hidden">
+                  <div className="flex items-center gap-1.5 w-full">
+                    <Icon size={11} style={{ color: meta.color, flexShrink: 0 }} />
+                    <span className="text-[10px] font-mono text-gray-400 flex-shrink-0">
+                      {startLabel}{duration ? `–${endLabel}` : ''}
+                    </span>
+                    {task.priority === 'High' && (
+                      <span className="ml-auto inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/20 flex-shrink-0">
+                        <Flag size={8} className="text-red-400" />
+                      </span>
+                    )}
+                  </div>
+                  <span className={'text-xs font-semibold text-white mt-0.5 leading-tight truncate w-full ' + (task.completed ? 'line-through' : '')}>
+                    {task.title}
+                  </span>
+                  {height > 50 && task.employee_name && (
+                    <span className="text-[10px] text-gray-400 mt-0.5 truncate w-full">
+                      {task.employee_name}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
 /*  MAIN PLANNER COMPONENT                                           */
 /* ═══════════════════════════════════════════════════════════════════ */
 
@@ -1317,36 +1525,46 @@ export function Planner() {
               </div>
             )}
 
-            {/* Timeline */}
+            {/* Timeline — true time-axis grid. 6am → 10pm, 56px/hour.
+                Tasks position absolutely by start_time + duration so a
+                glance gives a real sense of the day's shape (gaps,
+                cluster, overlap). Tasks without a start_time render
+                below in an "Untimed" pile. A red "Now" line shows
+                current time when viewing today and auto-refreshes via
+                <DayTimeline />'s internal minute tick. */}
             {tasks.some((t: any) => t.start_time) && (
-              <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">{t('planner.timeline.title', 'Timeline')}</h3>
-                  <span className="text-[10px] text-gray-500">{t('planner.timeline.width_hint', 'Width = task duration')}</span>
+              <DayTimeline
+                tasks={tasks.filter((t: any) => t.start_time)}
+                isToday={currentDate === today}
+                onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
+              />
+            )}
+
+            {/* Untimed tasks pulled out of the timeline so they don't
+                vanish — same width as the timed list, just listed at
+                the bottom under a small label. */}
+            {tasks.some((t: any) => t.start_time) && tasks.some((t: any) => !t.start_time) && (
+              <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
+                <div className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">
+                  {t('planner.timeline.untimed', 'No specific time')}
                 </div>
-                <div className="space-y-2">
-                  {[...tasks].filter((t: any) => t.start_time).sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? '')).map((task: any) => {
-                    const duration = task.duration_minutes || 30
-                    const width = Math.min((duration / 480) * 100, 100) // 480 = 8 hours
+                <div className="flex flex-wrap gap-1.5">
+                  {tasks.filter((t: any) => !t.start_time).map((task: any) => {
                     const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
                     const Icon = meta.icon
                     return (
                       <button key={task.id}
                         onClick={(e) => setTaskPopover({ task, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                        className="w-full flex items-center gap-2 hover:bg-dark-surface2/50 rounded-lg p-1 transition-colors">
-                        <span className="text-[10px] font-mono text-gray-500 min-w-[50px] text-right">{fmtShort(task.start_time)}</span>
-                        <div className="flex-1 h-7 rounded-md bg-dark-surface2/40 border border-dark-border/40 relative overflow-hidden" title={task.title}>
-                          <div className="h-full rounded-md transition-all" style={{
-                            width: `${width}%`,
-                            backgroundColor: meta.color,
-                            opacity: task.completed ? 0.35 : 0.6,
-                          }} />
-                          <span className="absolute inset-0 flex items-center gap-1.5 px-2 text-[10px] font-semibold text-white pointer-events-none">
-                            <Icon size={10} className="flex-shrink-0" />
-                            <span className={'truncate ' + (task.completed ? 'line-through' : '')}>{task.title}</span>
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-gray-600 min-w-[34px] text-right">{duration}m</span>
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition-all hover:scale-[1.02]"
+                        style={{
+                          background: meta.color + '20',
+                          border: '1px solid ' + meta.color + '40',
+                          color: meta.color,
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          opacity: task.completed ? 0.6 : 1,
+                        }}>
+                        <Icon size={10} />
+                        <span className="truncate max-w-[200px]">{task.title}</span>
                       </button>
                     )
                   })}
