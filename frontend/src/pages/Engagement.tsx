@@ -7,7 +7,7 @@ import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
   Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
-  ChevronUp, ChevronDown, SlidersHorizontal,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -261,22 +261,21 @@ export function Engagement() {
             <Mail size={13} />
             {prefs?.wants_daily_summary ? t('engagement.daily_email_on', 'Daily email on') : t('engagement.daily_email', 'Daily email')}
           </button>
-          {/* Focus mode toggle — collapses the whole filter card so the
-              agent can fit more chats on screen. Active state is gold. */}
+          {/* Focus mode toggle — small icon-only button. Hide-filters state
+              fills gold so the active mode is obvious at a glance. */}
           <button
             onClick={() => setFiltersOpen(o => !o)}
+            aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
             title={filtersOpen
               ? t('engagement.focus_on_tooltip',  'Hide filters and focus on the chat list')
               : t('engagement.focus_off_tooltip', 'Show range, filter chips, intent, and search')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border ${
+            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-colors border ${
               filtersOpen
                 ? 'bg-dark-surface border-dark-border hover:bg-dark-surface2 text-t-secondary hover:text-white'
                 : 'bg-accent/15 border-accent/40 text-accent hover:bg-accent/20'
             }`}
           >
-            <SlidersHorizontal size={14} />
-            <span className="hidden sm:inline">{filtersOpen ? t('engagement.focus', 'Focus') : t('engagement.filters', 'Filters')}</span>
-            {filtersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            <SlidersHorizontal size={15} />
           </button>
           <Link
             to="/engagement/live"
