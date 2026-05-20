@@ -836,12 +836,19 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
  * tasks/day) plain overlap is fine and a click still hits the right
  * chip because the popover anchor is the absolutely-positioned chip.
  */
-function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate }: {
+function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate, employees, viewMode, onViewModeChange }: {
   tasks: any[]
   isToday: boolean
   onTaskClick: (task: any, anchor: DOMRect) => void
-  onCreateAtTime: (hhmm: string) => void
+  /** hhmm is the snapped start; emp is the column the user clicked
+   *  (undefined in single-column mode or when click hit no column). */
+  onCreateAtTime: (hhmm: string, emp?: string) => void
   onTaskUpdate: (taskId: number, body: Record<string, any>) => void
+  /** Employees to render as columns when viewMode === 'team'. Order is
+   *  preserved, with `__unassigned__` reserved for null employees. */
+  employees: string[]
+  viewMode: 'single' | 'team'
+  onViewModeChange: (mode: 'single' | 'team') => void
 }) {
   const HOUR_START = 6
   const HOUR_END = 22
@@ -970,11 +977,42 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
   // task" is usually the one the user wants to click.
   const sorted = [...tasks].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
 
+  // Team mode only makes sense when there are 2+ employees in scope.
+  // Force single mode otherwise so the toggle doesn't dangle as a
+  // useless control. The actual rendered mode also defaults to
+  // single when team mode is requested but employees list is empty
+  // — defensive against query timing where tasks load before
+  // settings.employees.
+  const canTeam = employees.length >= 2
+  const renderedMode: 'single' | 'team' = (viewMode === 'team' && canTeam) ? 'team' : 'single'
+
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border gap-3 flex-wrap">
         <h3 className="text-sm font-semibold text-white">Timeline</h3>
-        <div className="flex items-center gap-3 text-[10px] text-gray-500">
+        <div className="flex items-center gap-3 text-[10px] text-gray-500 flex-wrap">
+          {/* View-mode toggle — only shown when team mode is possible
+              (i.e. there are 2+ employees in scope). Single-column is
+              still useful when filtered to one person, so we don't
+              hide that mode unconditionally. */}
+          {canTeam && (
+            <div className="inline-flex p-0.5 rounded-md border border-dark-border bg-dark-surface2">
+              <button
+                onClick={() => onViewModeChange('single')}
+                title="One timeline for the selected scope"
+                className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
+                  (renderedMode === 'single' ? 'bg-primary-500 text-black' : 'text-gray-400 hover:text-white')}>
+                <CalendarDays size={10} /> Combined
+              </button>
+              <button
+                onClick={() => onViewModeChange('team')}
+                title="One column per person — Google Calendar-style team view"
+                className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
+                  (renderedMode === 'team' ? 'bg-primary-500 text-black' : 'text-gray-400 hover:text-white')}>
+                <User size={10} /> By person
+              </button>
+            </div>
+          )}
           {isToday && (
             <span className="inline-flex items-center gap-1.5 text-red-400">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -985,7 +1023,29 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
         </div>
       </div>
 
-      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: 480 }}>
+      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: renderedMode === 'team' ? 540 : 480 }}>
+        {/* Team mode: sticky header row with avatars sits above the
+            time grid. Same scroll container so the header stays
+            pinned while the grid scrolls. */}
+        {renderedMode === 'team' && (
+          <div
+            className="sticky top-0 z-30 bg-dark-surface border-b border-dark-border flex"
+            style={{ paddingLeft: TIME_LABEL_WIDTH }}>
+            {employees.map(emp => {
+              const label = emp === '__unassigned__' ? 'Unassigned' : emp
+              const initials = label.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+              return (
+                <div key={emp} className="flex-1 px-2 py-2 border-l border-dark-border/30 flex items-center gap-1.5 min-w-0">
+                  <div className={'w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ' + (emp === '__unassigned__' ? 'bg-gray-700/40 text-gray-300' : 'bg-primary-500/25 text-primary-300')}>
+                    {initials}
+                  </div>
+                  <span className="text-[11px] font-semibold text-white truncate">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <div
           className="relative cursor-cell"
           style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}
@@ -993,19 +1053,27 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
             // Click on empty timeline space → open the new-task drawer
             // with this hour pre-selected. We skip when the click
             // bubbled from a chip button so a chip click doesn't also
-            // create a task underneath it.
+            // create a task underneath it. In team mode we also work
+            // out which employee column was clicked.
             const tgt = e.target as HTMLElement | null
             if (!tgt) return
             if (tgt.closest('button')) return
             const wrap = e.currentTarget.getBoundingClientRect()
             const y = e.clientY - wrap.top
             const mins = (y / PX_PER_HOUR) * 60
-            // Snap to nearest 15-min slot.
             const snapped = Math.max(0, Math.round(mins / 15) * 15)
             const total = HOUR_START * 60 + snapped
             const hh = String(Math.floor(total / 60)).padStart(2, '0')
             const mm = String(total % 60).padStart(2, '0')
-            onCreateAtTime(`${hh}:${mm}`)
+            let emp: string | undefined
+            if (renderedMode === 'team' && employees.length > 0) {
+              const colsW = wrap.width - TIME_LABEL_WIDTH
+              const x = Math.max(0, e.clientX - wrap.left - TIME_LABEL_WIDTH)
+              const colIdx = Math.min(employees.length - 1, Math.floor((x / colsW) * employees.length))
+              const candidate = employees[colIdx]
+              if (candidate && candidate !== '__unassigned__') emp = candidate
+            }
+            onCreateAtTime(`${hh}:${mm}`, emp)
           }}
         >
           {/* Hour grid */}
@@ -1027,6 +1095,14 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
                 left: TIME_LABEL_WIDTH,
                 right: 0,
               }} />
+          ))}
+
+          {/* Vertical column dividers — only in team mode. Drawn via
+              percentage so they auto-distribute as the columns resize. */}
+          {renderedMode === 'team' && employees.slice(1).map((emp, i) => (
+            <div key={`col-${emp}`}
+              className="absolute top-0 bottom-0 border-l border-dark-border/40 pointer-events-none"
+              style={{ left: `calc(${TIME_LABEL_WIDTH}px + (${(i + 1) / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)))` }} />
           ))}
 
           {/* Now line */}
@@ -1051,6 +1127,16 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
             const rawDuration = Math.max(15, Number(task.duration_minutes) || 30)
             const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
             const Icon = meta.icon
+            // In team mode, find which column this task belongs to.
+            // Tasks whose employee_name isn't in the employees array
+            // (e.g. orphaned data) are skipped so we don't paint
+            // outside any column.
+            let colIdx = -1
+            if (renderedMode === 'team') {
+              const empKey = task.employee_name || '__unassigned__'
+              colIdx = employees.indexOf(empKey)
+              if (colIdx < 0) return null
+            }
             // While the chip is being dragged, render at the live
             // drag position instead of the persisted value — gives
             // instant feedback before mutation commits.
@@ -1066,6 +1152,23 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
             const endMin = startMin + duration
             const endLabel = `${String(Math.floor(endMin / 60) % 24).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`
             const startLabel = `${String(Math.floor(startMin / 60) % 24).padStart(2, '0')}:${String(startMin % 60).padStart(2, '0')}`
+            // Position style differs by mode. Single = full-width
+            // chip across the columns area. Team = chip restricted
+            // to its employee's column via CSS calc against the
+            // columns-area width.
+            const positionStyle: React.CSSProperties = renderedMode === 'team'
+              ? {
+                  top: top + 2,
+                  left: `calc(${TIME_LABEL_WIDTH}px + (${colIdx / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)) + 4px)`,
+                  width: `calc((100% - ${TIME_LABEL_WIDTH}px) / ${employees.length} - 8px)`,
+                  height: height - 4,
+                }
+              : {
+                  top: top + 2,
+                  left: TIME_LABEL_WIDTH + 8,
+                  right: 8,
+                  height: height - 4,
+                }
             return (
               <button
                 key={task.id}
@@ -1090,10 +1193,7 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
                 title={`${task.title} — ${startLabel}${duration ? ` to ${endLabel}` : ''} · drag to move, drag bottom edge to resize`}
                 className={'absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20 cursor-grab active:cursor-grabbing ' + (isDragging ? 'z-30 shadow-2xl' : '')}
                 style={{
-                  top: top + 2,
-                  left: TIME_LABEL_WIDTH + 8,
-                  right: 8,
-                  height: height - 4,
+                  ...positionStyle,
                   background: meta.color + '20',
                   border: `1px solid ${meta.color}55`,
                   borderLeft: `3px solid ${meta.color}`,
@@ -1217,6 +1317,16 @@ export function Planner() {
   }>(null)
   const [autoPlanLoading, setAutoPlanLoading] = useState(false)
   const [autoPlanApplying, setAutoPlanApplying] = useState(false)
+  // Day-view layout mode: 'single' = one combined timeline, 'team' =
+  // one column per person (Google Calendar-style). Persisted so the
+  // user's preference survives reloads. The DayTimeline component
+  // falls back to single when fewer than 2 employees are in scope.
+  const [dayViewMode, setDayViewMode] = useState<'single' | 'team'>(() => {
+    try { return typeof window !== 'undefined' && localStorage.getItem('planner-day-view-mode') === 'team' ? 'team' : 'single' } catch { return 'single' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('planner-day-view-mode', dayViewMode) } catch {}
+  }, [dayViewMode])
   const [dragOverDate, setDragOverDate] = useState<string | null>(null)
   /**
    * Drop-target highlight key for Schedule + Month views. Composed
@@ -1788,28 +1898,49 @@ export function Planner() {
                 below in an "Untimed" pile. A red "Now" line shows
                 current time when viewing today and auto-refreshes via
                 <DayTimeline />'s internal minute tick. */}
-            {tasks.some((t: any) => t.start_time) && (
-              <DayTimeline
-                tasks={tasks.filter((t: any) => t.start_time)}
-                isToday={currentDate === today}
-                onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
-                onCreateAtTime={(hhmm) => openCreate(currentDate, undefined, hhmm)}
-                onTaskUpdate={(taskId, body) => {
-                  // Optimistic patch: update the cached query data
-                  // immediately so the chip stays where the user
-                  // dropped it. The mutation then commits server-
-                  // side; on success the invalidate refreshes with
-                  // the canonical value. On failure we'd rollback
-                  // but the existing patterns (drag-drop, complete)
-                  // don't rollback either, so we match that
-                  // behaviour — the chip will snap back when the
-                  // refetch returns the un-modified row.
-                  qc.setQueriesData({ queryKey: ['planner-tasks'] }, (old: any) =>
-                    Array.isArray(old) ? old.map((t: any) => t.id === taskId ? { ...t, ...body } : t) : old)
-                  updateMutation.mutate({ id: taskId, ...body })
-                }}
-              />
-            )}
+            {tasks.some((t: any) => t.start_time) && (() => {
+              // Build the list of employees rendered as columns when
+              // team mode is active. When a single-employee filter
+              // is set we force single mode (a one-column "team"
+              // view would be a useless layout). Otherwise: union
+              // of `settings.employees` and any names that actually
+              // appear on today's tasks, plus a synthetic
+              // `__unassigned__` slot when there are tasks without
+              // an employee_name so they remain visible.
+              const dayTasks = tasks.filter((t: any) => t.start_time)
+              const fromTasks = Array.from(new Set(dayTasks.map((t: any) => t.employee_name).filter(Boolean))) as string[]
+              const fromSettings = (settings.employees ?? []) as string[]
+              const merged = Array.from(new Set([...fromSettings, ...fromTasks]))
+              const hasUnassigned = dayTasks.some((t: any) => !t.employee_name)
+              const dayEmployees = employee
+                ? merged.filter(e => e === employee)
+                : (hasUnassigned ? [...merged, '__unassigned__'] : merged)
+              return (
+                <DayTimeline
+                  tasks={dayTasks}
+                  isToday={currentDate === today}
+                  employees={dayEmployees}
+                  viewMode={dayViewMode}
+                  onViewModeChange={setDayViewMode}
+                  onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
+                  onCreateAtTime={(hhmm, emp) => openCreate(currentDate, emp, hhmm)}
+                  onTaskUpdate={(taskId, body) => {
+                    // Optimistic patch: update the cached query data
+                    // immediately so the chip stays where the user
+                    // dropped it. The mutation then commits server-
+                    // side; on success the invalidate refreshes with
+                    // the canonical value. On failure we'd rollback
+                    // but the existing patterns (drag-drop, complete)
+                    // don't rollback either, so we match that
+                    // behaviour — the chip will snap back when the
+                    // refetch returns the un-modified row.
+                    qc.setQueriesData({ queryKey: ['planner-tasks'] }, (old: any) =>
+                      Array.isArray(old) ? old.map((t: any) => t.id === taskId ? { ...t, ...body } : t) : old)
+                    updateMutation.mutate({ id: taskId, ...body })
+                  }}
+                />
+              )
+            })()}
 
             {/* Untimed tasks pulled out of the timeline so they don't
                 vanish — same width as the timed list, just listed at
