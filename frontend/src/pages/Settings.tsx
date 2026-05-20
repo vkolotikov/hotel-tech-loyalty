@@ -354,6 +354,7 @@ export function Settings() {
   const [loadingSmoobuChannels, setLoadingSmoobuChannels] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [homeSearch, setHomeSearch] = useState('')
 
   /* ── Queries ─────────────────────────────────────────────────────────── */
 
@@ -2049,60 +2050,150 @@ export function Settings() {
             return `rgba(${r},${g},${b},${alpha})`
           }
 
+          // Quick-filter: search across tab label + desc + section label.
+          // Trimmed + lowered once; tile filter applied per-section so
+          // sections collapse out when none of their tiles match.
+          const q = homeSearch.trim().toLowerCase()
+          const filteredSections = !q ? visibleSections : visibleSections
+            .map(s => ({
+              ...s,
+              visibleTabs: s.visibleTabs.filter(tile => {
+                const label = t(`settings.tabs.${tile.id}`, tile.label).toLowerCase()
+                const desc = t(`settings.descs.${tile.id}`, tile.desc).toLowerCase()
+                const secLabel = t(`settings.sections.${s.id}.label`, s.label).toLowerCase()
+                return label.includes(q) || desc.includes(q) || secLabel.includes(q)
+              }),
+            }))
+            .filter(s => s.visibleTabs.length > 0)
+
           return (
             <div className="space-y-8">
-              {visibleSections.map(section => {
+              {/* Quick-filter */}
+              <div className="relative max-w-md">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                <input
+                  value={homeSearch}
+                  onChange={(e) => setHomeSearch(e.target.value)}
+                  placeholder={t('settings.home_search', 'Search settings…')}
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-primary-500 transition-colors"
+                />
+              </div>
+
+              {filteredSections.length === 0 && (
+                <div className="text-center py-12 text-t-secondary text-sm">
+                  {t('settings.home_no_match', 'No settings match that search.')}
+                </div>
+              )}
+
+              {filteredSections.map(section => {
                 const SIcon = section.icon
+                const tileCount = section.visibleTabs.length
+                // Single-tile sections render in a 2-col grid (lonely
+                // looks intentional, not stranded). 2 tiles → 2-col. 3+ → 3-col.
+                const gridCols = tileCount === 1 ? 'sm:grid-cols-1 lg:grid-cols-2'
+                  : tileCount === 2 ? 'sm:grid-cols-2 lg:grid-cols-2'
+                  : 'sm:grid-cols-2 lg:grid-cols-3'
                 return (
-                  <div key={section.id}>
-                    <div className="flex items-center gap-2 mb-3">
+                  <section key={section.id} className="space-y-3">
+                    {/* Section header — bigger icon tile with the section
+                        accent glow, label in white for hierarchy, accent
+                        dot + colored description so the section identity
+                        is unmistakable but doesn't shout. */}
+                    <div className="flex items-center gap-3">
                       <span
-                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: tint(section.accent, 0.15), border: `1px solid ${tint(section.accent, 0.35)}` }}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: `linear-gradient(135deg, ${tint(section.accent, 0.22)}, ${tint(section.accent, 0.08)})`,
+                          border: `1px solid ${tint(section.accent, 0.35)}`,
+                          boxShadow: `0 0 24px ${tint(section.accent, 0.18)}`,
+                        }}
                       >
-                        <SIcon size={14} style={{ color: section.accent }} />
+                        <SIcon size={18} style={{ color: section.accent }} />
                       </span>
-                      <div>
-                        <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: section.accent }}>
-                          {t(`settings.sections.${section.id}.label`, section.label)}
-                        </h2>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-base font-bold text-white">
+                            {t(`settings.sections.${section.id}.label`, section.label)}
+                          </h2>
+                          <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: section.accent }} />
+                          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: section.accent }}>
+                            {tileCount}
+                          </span>
+                        </div>
                         <p className="text-xs text-t-secondary">
                           {t(`settings.sections.${section.id}.desc`, section.desc)}
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+                    {/* Tiles */}
+                    <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
                       {section.visibleTabs.map(tile => {
                         const TIcon = tile.icon
                         return (
                           <button
                             key={tile.id}
                             onClick={() => setActiveTab(tile.id)}
-                            className="group text-left bg-dark-surface border border-dark-border rounded-xl p-4 transition-all hover:border-current hover:bg-dark-surface2"
-                            style={{ ['--tw-text-opacity' as any]: 1 } as React.CSSProperties}
+                            className="group relative text-left bg-dark-surface border border-dark-border rounded-xl p-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                            style={{
+                              // CSS custom props let us drive borderColor +
+                              // shadow + chevron color from the section
+                              // accent without per-card inline classes.
+                              ['--accent' as any]: section.accent,
+                              ['--accent-soft' as any]: tint(section.accent, 0.18),
+                              ['--accent-glow' as any]: tint(section.accent, 0.25),
+                            } as React.CSSProperties}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = section.accent
+                              e.currentTarget.style.boxShadow = `0 8px 30px ${tint(section.accent, 0.18)}`
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = ''
+                              e.currentTarget.style.boxShadow = ''
+                            }}
                           >
-                            <div className="flex items-start gap-3">
+                            {/* Left-edge accent stripe — colored on hover */}
+                            <span
+                              aria-hidden
+                              className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: section.accent }}
+                            />
+                            {/* Soft gradient wash behind icon for depth */}
+                            <span
+                              aria-hidden
+                              className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl pointer-events-none"
+                              style={{ background: tint(section.accent, 0.18) }}
+                            />
+
+                            <div className="relative flex items-start gap-3">
                               <span
-                                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-                                style={{ background: tint(section.accent, 0.1), border: `1px solid ${tint(section.accent, 0.25)}` }}
+                                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                                style={{
+                                  background: `linear-gradient(135deg, ${tint(section.accent, 0.18)}, ${tint(section.accent, 0.04)})`,
+                                  border: `1px solid ${tint(section.accent, 0.3)}`,
+                                }}
                               >
-                                <TIcon size={18} style={{ color: section.accent }} />
+                                <TIcon size={20} style={{ color: section.accent }} />
                               </span>
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-sm font-semibold text-white truncate">
+                                <h3 className="text-sm font-semibold text-white">
                                   {t(`settings.tabs.${tile.id}`, tile.label)}
                                 </h3>
-                                <p className="text-xs text-t-secondary mt-0.5 line-clamp-2">
+                                <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">
                                   {t(`settings.descs.${tile.id}`, tile.desc)}
                                 </p>
                               </div>
-                              <ChevronRight size={14} className="text-t-secondary group-hover:text-white transition-colors flex-shrink-0 mt-1" />
+                              <ChevronRight
+                                size={16}
+                                className="text-t-secondary transition-all flex-shrink-0 mt-1 group-hover:translate-x-0.5"
+                                style={{ ['--hover-color' as any]: section.accent } as React.CSSProperties}
+                              />
                             </div>
                           </button>
                         )
                       })}
                     </div>
-                  </div>
+                  </section>
                 )
               })}
             </div>
