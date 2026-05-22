@@ -227,6 +227,43 @@ export function BookingDetail() {
                   </div>
                 </div>
 
+                {/* Price-element breakdown from Smoobu — only renders
+                    when the PMS sync wrote rows to booking_price_elements
+                    (eager-loaded as `price_elements` by the show endpoint).
+                    Items typed 'discount' (or with negative amount) paint
+                    in emerald so length-of-stay discounts are immediately
+                    visible. */}
+                {Array.isArray(b.price_elements) && b.price_elements.length > 0 && (
+                  <div className="mb-5 rounded-xl overflow-hidden" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                        {t('bookingDetail.financial.breakdown', 'Price breakdown')}
+                      </span>
+                      <span className="text-[9px] text-gray-600">from Smoobu</span>
+                    </div>
+                    <div className="divide-y divide-white/[0.03]">
+                      {[...b.price_elements].sort((a: any, c: any) => (a.sort_order ?? 0) - (c.sort_order ?? 0)).map((line: any) => {
+                        const amount = Number(line.amount ?? 0) * Number(line.quantity ?? 1)
+                        const isDiscount = String(line.element_type ?? '').toLowerCase().includes('discount') || amount < 0
+                        return (
+                          <div key={line.id} className="flex items-center gap-3 px-4 py-2 text-xs">
+                            <span className="text-gray-300 flex-1 truncate">
+                              {line.name || formatLabel(line.element_type || 'Line item')}
+                              {Number(line.quantity ?? 1) > 1 && (
+                                <span className="text-gray-600 ml-1.5">×{line.quantity}</span>
+                              )}
+                            </span>
+                            <span className="text-[9px] uppercase tracking-wider text-gray-600 font-medium">{line.element_type}</span>
+                            <span className={'font-mono font-semibold tabular-nums min-w-[80px] text-right ' + (isDiscount ? 'text-emerald-400' : 'text-white')}>
+                              {amount < 0 ? '−' : ''}{money(Math.abs(amount))}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {b.payment_status && (
                   <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <span className="text-[11px] text-gray-500 font-medium">{t('bookingDetail.financial.payment_status_label', 'Payment Status:')}</span>

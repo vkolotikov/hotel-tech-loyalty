@@ -501,6 +501,16 @@ class BookingEngineService
             }
         }
 
+        // Pull Smoobu's price-element breakdown so the admin detail page
+        // can show base + taxes + LOS discount + extras as line items
+        // (not just a grand total). Only meaningful for Smoobu-tracked
+        // bookings — internal_status='pending_pms_sync' means the PMS
+        // POST failed and we'll retry; the breakdown can wait until
+        // RetryPmsSync gets the reservation_id.
+        if ($pmsResult && $mirror->reservation_id && !str_starts_with($mirror->reservation_id, 'LOCAL-')) {
+            $this->fetchAndStorePriceBreakdown($mirror);
+        }
+
         $response = [
             'success'           => true,
             'booking_reference' => $result['reference-id'] ?? null,
@@ -929,16 +939,21 @@ class BookingEngineService
         // tab. Detection rule: if the existing mirror already says
         // "Website" OR has a Stripe intent (only widget creates those),
         // keep "Website" — otherwise trust Smoobu's label.
+        $existing = null;
         $existingChannel = null;
         $existingHadStripe = false;
+        $existingPriceTotal = null;
+        $existingHadBreakdown = false;
         if (!empty($data['id'])) {
             $existing = BookingMirror::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
                 ->where('reservation_id', $clip((string) $data['id'], 30))
-                ->first(['channel_name', 'stripe_payment_intent_id']);
+                ->first(['channel_name', 'stripe_payment_intent_id', 'price_total', 'price_breakdown']);
             if ($existing) {
-                $existingChannel    = $existing->channel_name;
-                $existingHadStripe  = !empty($existing->stripe_payment_intent_id);
+                $existingChannel      = $existing->channel_name;
+                $existingHadStripe    = !empty($existing->stripe_payment_intent_id);
+                $existingPriceTotal   = $existing->price_total !== null ? (float) $existing->price_total : null;
+                $existingHadBreakdown = !empty($existing->price_breakdown);
             }
         }
         $smoobuChannel = $clip($strOrNull($channel['name'] ?? null), 80);
@@ -983,6 +998,21 @@ class BookingEngineService
                 'raw_json'           => $data,
             ]
         );
+
+        // Refresh the price-element breakdown only when worthwhile:
+        //   1. brand-new mirror (wasRecentlyCreated)
+        //   2. price_total changed since last sync (Smoobu re-priced)
+        //   3. mirror exists but has no breakdown yet (one-time backfill)
+        // A 5-min full-org cron with 1000+ bookings would otherwise burn
+        // a price-elements API call per booking per cycle (~12k calls/hr)
+        // for no reason. With this gate, steady-state cost is near zero.
+        $priceChanged = $existingPriceTotal !== null
+            && $priceTotal !== null
+            && abs($existingPriceTotal - (float) $priceTotal) > 0.005;
+        $needsBackfill = $existing !== null && !$existingHadBreakdown;
+        if ($mirror->wasRecentlyCreated || $priceChanged || $needsBackfill) {
+            $this->fetchAndStorePriceBreakdown($mirror);
+        }
 
         // Count toward guest lifecycle the first time this mirror reaches
         // a checked-out state. lifecycle_counted_at acts as the idempotency
@@ -1543,5 +1573,99 @@ class BookingEngineService
         }
 
         return [];
+    }
+
+    /* ─── Price-element breakdown sync ──────────────────────────── */
+
+    /**
+     * Pull Smoobu's price-element breakdown for a reservation and
+     * write it into the booking_price_elements relational table.
+     *
+     * Used so the admin booking detail page can show a real receipt
+     * (base + taxes + LOS discount + extras + cleaning fee, with the
+     * customer-configured discount actually itemised) instead of
+     * just a grand total. The BookingMirror::priceElements() HasMany
+     * relation is already eager-loaded by BookingAdminController::
+     * show() so the frontend gets these lines automatically.
+     *
+     * Strategy: fetch raw → wrap in transaction → delete old rows
+     * for THIS mirror only → insert new ones. Atomic so a partial
+     * write can never leave a half-merged receipt. Idempotent: re-
+     * running with the same Smoobu data produces the same rows.
+     *
+     * Skips silently for local-only bookings and for any Smoobu
+     * hiccup — a logging failure must NEVER block the booking flow.
+     */
+    private function fetchAndStorePriceBreakdown(BookingMirror $mirror): void
+    {
+        if (!$mirror->reservation_id || str_starts_with($mirror->reservation_id, 'LOCAL-')) {
+            return;
+        }
+        try {
+            $raw = $this->smoobu->getPriceElements($mirror->reservation_id);
+            $items = $this->normalizePriceElements($raw);
+            // Empty array could mean "Smoobu has no breakdown yet" —
+            // don't wipe existing rows in that case. Drop+rewrite
+            // only happens when we have something to put back.
+            if (empty($items)) return;
+
+            DB::transaction(function () use ($mirror, $items) {
+                BookingPriceElement::withoutGlobalScopes()
+                    ->where('booking_mirror_id', $mirror->id)
+                    ->delete();
+
+                foreach ($items as $idx => $item) {
+                    BookingPriceElement::create([
+                        'organization_id'         => $mirror->organization_id,
+                        'booking_mirror_id'       => $mirror->id,
+                        'reservation_id'          => $mirror->reservation_id,
+                        'remote_price_element_id' => $item['remote_id'],
+                        'element_type'            => $item['type'],
+                        'name'                    => $item['name'],
+                        'amount'                  => $item['amount'],
+                        'quantity'                => $item['quantity'],
+                        'tax'                     => $item['tax'],
+                        'currency_code'           => $item['currency'],
+                        'sort_order'              => $idx,
+                        'raw_json'                => $item['raw'],
+                        'synced_at'               => now(),
+                    ]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Smoobu price-elements fetch failed', [
+                'reservation_id' => $mirror->reservation_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Smoobu returns price elements as either `{ data: [...] }` or a
+     * bare array depending on API version. Normalise to the shape
+     * the BookingPriceElement row needs. We pass `type` through as-is
+     * (subtotal / discount / addon / tax / cleaning_fee / etc.) so
+     * the frontend can render different icons / colours and so a
+     * future "show me bookings with a discount line" query can use
+     * `WHERE element_type = 'discount'`.
+     */
+    private function normalizePriceElements(array $raw): array
+    {
+        $rows = is_array($raw['data'] ?? null) ? $raw['data'] : (is_array($raw) ? $raw : []);
+        $items = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) continue;
+            $items[] = [
+                'remote_id' => isset($row['id']) ? substr((string) $row['id'], 0, 30) : null,
+                'type'      => substr((string) ($row['type'] ?? $row['kind'] ?? 'item'), 0, 40),
+                'name'      => substr((string) ($row['name'] ?? $row['label'] ?? ''), 0, 180),
+                'amount'    => (float)  ($row['amount'] ?? $row['value'] ?? 0),
+                'quantity'  => (int)    ($row['quantity'] ?? $row['amount-quantity'] ?? 1),
+                'tax'       => isset($row['tax']) ? (float) $row['tax'] : null,
+                'currency'  => substr((string) ($row['currency'] ?? 'EUR'), 0, 3),
+                'raw'       => $row,
+            ];
+        }
+        return $items;
     }
 }

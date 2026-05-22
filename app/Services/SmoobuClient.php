@@ -335,6 +335,11 @@ class SmoobuClient
      * by /booking/checkApartmentAvailability which requires it as
      * `customerId`. Cached per-tenant for 24h since it never changes
      * for a given API key.
+     *
+     * NOTE: deliberately NOT using Cache::remember here — that would
+     * cache a null result from a transient failure for the full 24h,
+     * silently bricking pricing. We cache the success only; failures
+     * fall through and let the NEXT call retry.
      */
     public function getUserId(): ?int
     {
@@ -345,16 +350,20 @@ class SmoobuClient
         $brandId = $this->loadedForBrand ?? 0;
         $cacheKey = "smoobu:user_id:{$orgId}:{$brandId}";
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () {
-            try {
-                $resp = $this->get('/me');
-                $id = $resp['id'] ?? null;
-                return is_numeric($id) ? (int) $id : null;
-            } catch (\Throwable $e) {
-                Log::warning('Smoobu /api/me lookup failed', ['error' => $e->getMessage()]);
-                return null;
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached !== null) return (int) $cached;
+
+        try {
+            $resp = $this->get('/me');
+            $id = $resp['id'] ?? null;
+            if (is_numeric($id)) {
+                \Illuminate\Support\Facades\Cache::put($cacheKey, (int) $id, 86400);
+                return (int) $id;
             }
-        });
+        } catch (\Throwable $e) {
+            Log::warning('Smoobu /api/me lookup failed', ['error' => $e->getMessage()]);
+        }
+        return null;
     }
 
     /**
