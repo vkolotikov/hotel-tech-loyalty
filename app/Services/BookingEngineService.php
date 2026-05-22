@@ -511,6 +511,24 @@ class BookingEngineService
             $this->fetchAndStorePriceBreakdown($mirror);
         }
 
+        // Reload the relation so the freshly-written rows are visible
+        // when we serialise the response below. Without this, the
+        // widget would have to re-fetch the booking to see its own
+        // breakdown — an extra round-trip for the same data we just
+        // stored.
+        $mirror->load('priceElements');
+        $breakdown = $mirror->priceElements
+            ->sortBy('sort_order')
+            ->values()
+            ->map(fn ($el) => [
+                'name'         => $el->name,
+                'element_type' => $el->element_type,
+                'amount'       => (float) $el->amount,
+                'quantity'     => (int)   ($el->quantity ?? 1),
+                'currency'     => $el->currency_code,
+            ])
+            ->all();
+
         $response = [
             'success'           => true,
             'booking_reference' => $result['reference-id'] ?? null,
@@ -520,6 +538,10 @@ class BookingEngineService
             'check_out'         => $payload['check_out'],
             'gross_total'       => $payload['gross_total'],
             'currency'          => 'EUR',
+            // Empty array when Smoobu didn't return a breakdown — the
+            // widget renders this section only when there's something
+            // to show, so an empty array is safely rendered as nothing.
+            'price_breakdown'   => $breakdown,
         ];
 
         // Save idempotency. Unique constraint on (organization_id,

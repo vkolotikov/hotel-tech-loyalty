@@ -1142,6 +1142,34 @@ function renderSuccess() {
   h += '<p>' + msg + '</p>';
   if (c.booking_reference) h += '<div class="success-ref">' + esc(c.booking_reference) + '</div>';
   else if (c.reference) h += '<div class="success-ref">' + esc(c.reference) + '</div>';
+
+  // Price breakdown — Smoobu's per-line items including any length-of-
+  // stay discount the host has configured. Only renders when the
+  // confirm response carried items (Smoobu-tracked booking that
+  // returned price-elements). Discount lines paint in green so the
+  // saved amount is the first thing the guest sees on the page.
+  if (Array.isArray(c.price_breakdown) && c.price_breakdown.length > 0) {
+    h += '<div class="success-breakdown" style="max-width:420px;margin:24px auto 0;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">';
+    h += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary)">Price breakdown</div>';
+    for (var i = 0; i < c.price_breakdown.length; i++) {
+      var line = c.price_breakdown[i] || {};
+      var amt = (Number(line.amount) || 0) * (Number(line.quantity) || 1);
+      var typ = String(line.element_type || '').toLowerCase();
+      var isDisc = typ.indexOf('discount') !== -1 || amt < 0;
+      var name = line.name || (line.element_type || 'Item');
+      var qty = Number(line.quantity) || 1;
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;border-top:1px solid rgba(255,255,255,.04)">';
+      h += '<span style="flex:1;color:var(--text)">' + esc(name);
+      if (qty > 1) h += '<span style="color:var(--text-secondary);margin-left:6px">×' + qty + '</span>';
+      h += '</span>';
+      h += '<span style="font-family:ui-monospace,monospace;font-weight:600;color:' + (isDisc ? '#10b981' : 'var(--text)') + '">';
+      h += (amt < 0 ? '−' : '') + formatCurrency(Math.abs(amt));
+      h += '</span>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
   h += '<div style="margin-top:24px"><button class="btn btn-outline" id="w-new" style="max-width:220px;margin:0 auto">Make Another Booking</button></div>';
   h += '</div></div>';
   return h;
