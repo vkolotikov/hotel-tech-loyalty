@@ -330,6 +330,103 @@ class SmoobuClient
         return $this->get('/rates', $params);
     }
 
+    /**
+     * Returns the Smoobu account's user ID (`id` from /api/me). Needed
+     * by /booking/checkApartmentAvailability which requires it as
+     * `customerId`. Cached per-tenant for 24h since it never changes
+     * for a given API key.
+     */
+    public function getUserId(): ?int
+    {
+        $this->boot();
+        if ($this->isMock) return null;
+
+        $orgId   = $this->loadedForOrg ?? 0;
+        $brandId = $this->loadedForBrand ?? 0;
+        $cacheKey = "smoobu:user_id:{$orgId}:{$brandId}";
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () {
+            try {
+                $resp = $this->get('/me');
+                $id = $resp['id'] ?? null;
+                return is_numeric($id) ? (int) $id : null;
+            } catch (\Throwable $e) {
+                Log::warning('Smoobu /api/me lookup failed', ['error' => $e->getMessage()]);
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Ask Smoobu to compute the final stay price WITH all configured
+     * rules applied server-side — length-of-stay discounts, weekend
+     * markups, channel-specific rate plans, etc. This is the only
+     * Smoobu endpoint that does that math for a prospective stay; the
+     * `/api/rates` endpoint only returns raw per-day prices and would
+     * miss any LOS discount the customer has configured.
+     *
+     * Endpoint sits at /booking/checkApartmentAvailability (NOT under
+     * /api/) — we pass an absolute URL through `request()` for this
+     * one call.
+     *
+     * @param  string $checkIn  arrival YYYY-MM-DD
+     * @param  string $checkOut departure YYYY-MM-DD
+     * @param  int[]  $unitIds  apartment IDs to quote
+     * @param  int    $guests   guest count (optional, sometimes affects price)
+     * @return array{
+     *   available: array<int, string>,
+     *   prices: array<string, array{price: float, currency: string}>,
+     *   errors: array<string, string>,
+     * }
+     */
+    public function checkAvailability(string $checkIn, string $checkOut, array $unitIds, int $guests = 2): array
+    {
+        $this->boot();
+        if ($this->isMock) {
+            return ['available' => [], 'prices' => [], 'errors' => []];
+        }
+        $customerId = $this->getUserId();
+        if (!$customerId) {
+            // Without a customerId the endpoint rejects the request.
+            // Return empty so the caller falls back to its own pricing
+            // path rather than throwing — a Smoobu user-lookup hiccup
+            // shouldn't break the booking widget.
+            return ['available' => [], 'prices' => [], 'errors' => []];
+        }
+
+        $body = [
+            'arrivalDate'   => $checkIn,
+            'departureDate' => $checkOut,
+            'apartments'    => array_map('intval', array_values($unitIds)),
+            'customerId'    => $customerId,
+        ];
+        if ($guests > 0) $body['guests'] = $guests;
+
+        try {
+            // Absolute URL — endpoint lives on /booking/, not /api/.
+            $resp = $this->request('POST', 'https://login.smoobu.com/booking/checkApartmentAvailability', ['json' => $body]);
+
+            $available = array_map('strval', $resp['availableApartments'] ?? []);
+            $prices = [];
+            foreach (($resp['prices'] ?? []) as $aptId => $row) {
+                $prices[(string) $aptId] = [
+                    'price'    => (float) ($row['price'] ?? 0),
+                    'currency' => (string) ($row['currency'] ?? 'EUR'),
+                ];
+            }
+            $errors = [];
+            foreach (($resp['errorMessages'] ?? []) as $aptId => $row) {
+                $errors[(string) $aptId] = is_array($row)
+                    ? (string) ($row['message'] ?? '')
+                    : (string) $row;
+            }
+            return ['available' => $available, 'prices' => $prices, 'errors' => $errors];
+        } catch (\Throwable $e) {
+            Log::warning('Smoobu checkAvailability failed', ['error' => $e->getMessage()]);
+            return ['available' => [], 'prices' => [], 'errors' => []];
+        }
+    }
+
     public function createReservation(array $data): array
     {
         $this->boot();
@@ -605,7 +702,11 @@ class SmoobuClient
 
     private function request(string $method, string $path, array $options, array $default = []): array
     {
-        $url = "{$this->baseUrl}{$path}";
+        // Most paths are relative to the configured `/api` base URL.
+        // A few endpoints (notably `/booking/checkApartmentAvailability`)
+        // sit OUTSIDE the `/api` namespace on Smoobu — callers can pass
+        // an absolute URL in that case and we use it as-is.
+        $url = str_starts_with($path, 'http') ? $path : "{$this->baseUrl}{$path}";
         $attempt = 0;
 
         while (true) {

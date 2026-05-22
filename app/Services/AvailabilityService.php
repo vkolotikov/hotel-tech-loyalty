@@ -162,6 +162,46 @@ class AvailabilityService
             $data  = $rates['data'] ?? $rates;
             $rate  = $data[$unitId] ?? null;
             if ($rate && ($rate['available'] ?? false)) {
+                // Ask Smoobu for the discount-applied total. The
+                // /api/rates endpoint we just hit returns raw per-day
+                // prices summed without applying length-of-stay
+                // discounts, weekend markups, channel rate plans,
+                // etc. The /booking/checkApartmentAvailability
+                // endpoint runs Smoobu's full pricing engine and
+                // returns the actual stay total — so the widget
+                // quote matches what Smoobu would charge.
+                //
+                // We only OVERWRITE the price when Smoobu's calculated
+                // total comes back. If the call fails or the unit
+                // isn't in the response, we fall through to the raw
+                // sum-of-days total from /api/rates — no behaviour
+                // change for customers who don't use discounts.
+                try {
+                    $check = $this->smoobu->checkAvailability($checkIn, $checkOut, [$unitId], max(1, $adults));
+                    $calculated = $check['prices'][$unitId]['price'] ?? null;
+                    $isAvailable = in_array($unitId, $check['available'], true);
+                    if ($isAvailable && $calculated !== null && $calculated > 0) {
+                        // Snapshot the raw sum-of-days total BEFORE
+                        // we overwrite it so the discount delta is
+                        // computable.
+                        $rawTotal = (float) ($rate['price'] ?? 0);
+                        $nights = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+                        $rate['price'] = round((float) $calculated, 2);
+                        $rate['price_per_night'] = round($rate['price'] / $nights, 2);
+                        // Record any base-vs-calculated delta so callers
+                        // (and the audit log) can see when a discount
+                        // actually kicked in. Frontend can use this to
+                        // render "5% off — $20 saved" copy.
+                        if ($rawTotal > $rate['price'] + 0.01) {
+                            $rate['discount_amount'] = round($rawTotal - $rate['price'], 2);
+                            $rate['raw_total']       = round($rawTotal, 2);
+                        }
+                    }
+                } catch (\Throwable $eCheck) {
+                    \Illuminate\Support\Facades\Log::warning('Smoobu checkAvailability skipped, using sum-of-days', [
+                        'unit_id' => $unitId, 'error' => $eCheck->getMessage(),
+                    ]);
+                }
                 return $rate;
             }
         } catch (\Throwable $e) {
