@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Services\BookingEngineService;
 use App\Services\IntegrationStatus;
@@ -89,6 +90,31 @@ class SyncSmoobuBookings extends Command
                     $result['to'],
                     $result['modified_from'] ?? 'n/a',
                 ));
+
+                // Audit the cron run so the dashboard "Last Sync"
+                // badge updates. The badge reads
+                // AuditLog::where('action','like','booking.sync%') and
+                // before this write it was ONLY populated by the
+                // manual-sync button — so a perfectly healthy 5-min
+                // cron looked stuck for days. user_id = null
+                // distinguishes cron rows from manual ones.
+                try {
+                    AuditLog::create([
+                        'organization_id' => $target['org_id'],
+                        'user_id'         => null,
+                        'action'          => 'booking.sync_cron',
+                        'description'     => sprintf(
+                            'Auto sync: %d synced, %d errors',
+                            $result['synced'],
+                            $result['errors'],
+                        ),
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Could not write cron sync audit row', [
+                        'org_id' => $target['org_id'],
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
             } catch (\Throwable $e) {
                 Log::error('Scheduled Smoobu sync failed', [
                     'org_id'   => $target['org_id'],
@@ -96,6 +122,18 @@ class SyncSmoobuBookings extends Command
                     'error'    => $e->getMessage(),
                 ]);
                 $this->error("{$label}: {$e->getMessage()}");
+                // Also surface failures in the audit log so an
+                // operator looking at the dashboard sees that the
+                // cron tried + failed, instead of silence that
+                // looks identical to "cron didn't run at all".
+                try {
+                    AuditLog::create([
+                        'organization_id' => $target['org_id'],
+                        'user_id'         => null,
+                        'action'          => 'booking.sync_cron_failed',
+                        'description'     => 'Auto sync failed: ' . substr($e->getMessage(), 0, 480),
+                    ]);
+                } catch (\Throwable) {}
             } finally {
                 app()->forgetInstance('current_organization_id');
                 app()->forgetInstance('current_brand_id');
