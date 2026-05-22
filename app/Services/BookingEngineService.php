@@ -304,26 +304,84 @@ class BookingEngineService
                 // calendar's hover popup.
                 $notice = trim((string) ($data['special_requests'] ?? $guest['special_requests'] ?? ''));
 
-                // Build a richer extras line for the assistant notice so
-                // staff see what to prepare without opening our admin.
-                // Hold's extras payload is just [{id, quantity}, ...] — we
-                // resolve the names via the catalog for readability.
-                $assistantNoticeLines = [];
+                // Build a rich assistant-notice block so staff see EVERYTHING
+                // about the booking without opening our admin: where it came
+                // from, how it was paid, what was charged, and an itemised
+                // breakdown of accommodation + each extra. Mirrors what
+                // channel-pulled bookings (Airbnb, Booking.com) show.
+                //
+                // Why notes vs price-elements: Smoobu's POST /price-elements
+                // endpoint MAY auto-create a base-price line from the
+                // reservation's `price` field, so pushing our own line items
+                // could double-count. Notes are zero-risk and Smoobu shows
+                // them prominently in the reservation detail. A future
+                // enhancement can push real price-elements once we've
+                // verified the API behaviour.
+                $nights = max(1, (int) round((strtotime($payload['check_out']) - strtotime($payload['check_in'])) / 86400));
+                $roomPerNight = $nights > 0 ? round($roomTotal / $nights, 2) : 0.0;
+                $assistantSections = [];
+
+                // Source + payment block.
+                $sourceLines = ['Booked via: Website / Direct widget'];
+                $paymentMethod = $data['payment_method'] ?? null;
+                $paymentIntentId = $data['payment_intent_id'] ?? null;
+                if ($paymentIntentId) {
+                    $methodLabel = $paymentMethod === 'mock' ? 'Mock' : 'Stripe';
+                    $sourceLines[] = sprintf(
+                        'Payment: %s (€%s paid)',
+                        $methodLabel,
+                        number_format($paidAmount, 2, '.', '')
+                    );
+                    $sourceLines[] = 'Stripe ref: ' . $paymentIntentId;
+                    $sourceLines[] = 'Paid at: ' . now()->toIso8601String();
+                } elseif ($isPaid) {
+                    $sourceLines[] = sprintf('Payment: marked paid (€%s)', number_format($paidAmount, 2, '.', ''));
+                } else {
+                    $sourceLines[] = sprintf('Payment: unpaid (€%s due)', number_format($grossTotal, 2, '.', ''));
+                }
+                $assistantSections[] = implode("\n", $sourceLines);
+
+                // Itemised price breakdown — base accommodation then each
+                // extra. Builds the same kind of receipt staff are used to
+                // seeing from channel-pulled bookings.
+                $breakdownLines = [];
+                $breakdownLines[] = sprintf(
+                    'Accommodation: %d night%s × €%s = €%s',
+                    $nights,
+                    $nights === 1 ? '' : 's',
+                    number_format($roomPerNight, 2, '.', ''),
+                    number_format($roomTotal, 2, '.', '')
+                );
                 if (!empty($payload['extras']) && is_array($payload['extras'])) {
                     $catalog = collect($this->loadExtrasConfig());
+                    $hasAnyExtra = false;
                     foreach ($payload['extras'] as $ex) {
-                        $extraId = (string) ($ex['id'] ?? '');
-                        $qty     = max(1, (int) ($ex['quantity'] ?? 1));
-                        $def     = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
-                        $name    = (string) ($def['name'] ?? $extraId);
-                        if ($name !== '') {
-                            $assistantNoticeLines[] = $name . ($qty > 1 ? " ×{$qty}" : '');
+                        $extraId  = (string) ($ex['id'] ?? '');
+                        $qty      = max(1, (int) ($ex['quantity'] ?? 1));
+                        $def      = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
+                        $name     = (string) ($def['name'] ?? $extraId);
+                        $unit     = (float)  ($def['price'] ?? 0);
+                        $lineTotal = round($unit * $qty, 2);
+                        if ($name === '') continue;
+                        if (!$hasAnyExtra) {
+                            $breakdownLines[] = 'Extras:';
+                            $hasAnyExtra = true;
                         }
+                        $breakdownLines[] = sprintf(
+                            '  · %s%s = €%s',
+                            $name,
+                            $qty > 1 ? " ×{$qty} @ €" . number_format($unit, 2, '.', '') : '',
+                            number_format($lineTotal, 2, '.', '')
+                        );
                     }
                 }
-                $assistantNotice = empty($assistantNoticeLines)
-                    ? null
-                    : 'Extras: ' . implode(', ', $assistantNoticeLines);
+                $breakdownLines[] = '─────────────';
+                $breakdownLines[] = 'Total: €' . number_format($grossTotal, 2, '.', '');
+                $assistantSections[] = implode("\n", $breakdownLines);
+
+                // Join with a visual divider so each section is easy to
+                // scan in Smoobu's reservation-detail panel.
+                $assistantNotice = implode("\n─────────────\n", $assistantSections);
 
                 // Refuse to push with a zero channelId — Smoobu would
                 // attribute the reservation to its internal Blocked
