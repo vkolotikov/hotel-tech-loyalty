@@ -2,7 +2,31 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
+
+// Heartbeat — every minute, write a row directly via a closure
+// schedule. Bypasses both withoutOverlapping() and the
+// ScheduledTask* event chain, so it isolates "is schedule:work
+// actually ticking the cron loop?" from "are events being
+// dispatched and listened to?". If heartbeat rows appear but
+// event-listener rows don't, the bug is in event dispatch.
+// If NO rows appear, schedule:work isn't running at all.
+// Cheap to leave on permanently — one tiny INSERT per minute.
+Schedule::call(function () {
+    try {
+        \App\Models\ScheduledCommandRun::create([
+            'command'     => 'heartbeat',
+            'expression'  => '* * * * *',
+            'status'      => 'success',
+            'duration_ms' => 0,
+            'started_at'  => now(),
+            'finished_at' => now(),
+        ]);
+    } catch (\Throwable $e) {
+        Log::warning('[heartbeat] insert failed: ' . $e->getMessage());
+    }
+})->everyMinute()->name('heartbeat');
 
 // Daily lifecycle sweep — anyone with 90+ days of no activity flips to
 // Inactive so the Members list stays meaningful as auto-Bronze guests

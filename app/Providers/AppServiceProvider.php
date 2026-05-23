@@ -6,6 +6,7 @@ use App\Models\ScheduledCommandRun;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
+use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -58,11 +59,22 @@ class AppServiceProvider extends ServiceProvider
             return mb_substr($shellCommand, 0, 191);
         };
 
+        // Starting listener — purely diagnostic. Doesn't write a row,
+        // but emits a log line so we can confirm the scheduler is
+        // dispatching events at all. If laravel.log shows "[sched]
+        // starting…" lines but no Finished follow-ups, that
+        // narrows the bug to event dispatch vs row write.
+        Event::listen(ScheduledTaskStarting::class, function ($event) use ($extract) {
+            Log::info('[sched] starting: ' . $extract($event->task->command ?? ''));
+        });
+
         Event::listen(ScheduledTaskFinished::class, function ($event) use ($extract) {
+            $cmd = $extract($event->task->command ?? '');
+            Log::info('[sched] finished: ' . $cmd);
             try {
                 $durationMs = (int) round(($event->runtime ?? 0) * 1000);
                 ScheduledCommandRun::create([
-                    'command'     => $extract($event->task->command ?? ''),
+                    'command'     => $cmd,
                     'expression'  => $event->task->expression ?? null,
                     'status'      => 'success',
                     'duration_ms' => $durationMs,
@@ -70,14 +82,16 @@ class AppServiceProvider extends ServiceProvider
                     'finished_at' => now(),
                 ]);
             } catch (\Throwable $e) {
-                Log::warning('Failed to log scheduled task finish', ['error' => $e->getMessage()]);
+                Log::warning('[sched] failed to log finish', ['cmd' => $cmd, 'error' => $e->getMessage()]);
             }
         });
 
         Event::listen(ScheduledTaskFailed::class, function ($event) use ($extract) {
+            $cmd = $extract($event->task->command ?? '');
+            Log::info('[sched] failed: ' . $cmd);
             try {
                 ScheduledCommandRun::create([
-                    'command'        => $extract($event->task->command ?? ''),
+                    'command'        => $cmd,
                     'expression'     => $event->task->expression ?? null,
                     'status'         => 'failed',
                     'started_at'     => now(),
@@ -85,21 +99,23 @@ class AppServiceProvider extends ServiceProvider
                     'output_excerpt' => mb_substr($event->exception?->getMessage() ?? 'unknown', 0, 2000),
                 ]);
             } catch (\Throwable $e) {
-                Log::warning('Failed to log scheduled task failure', ['error' => $e->getMessage()]);
+                Log::warning('[sched] failed to log failure', ['cmd' => $cmd, 'error' => $e->getMessage()]);
             }
         });
 
         Event::listen(ScheduledTaskSkipped::class, function ($event) use ($extract) {
+            $cmd = $extract($event->task->command ?? '');
+            Log::info('[sched] skipped (overlapping?): ' . $cmd);
             try {
                 ScheduledCommandRun::create([
-                    'command'     => $extract($event->task->command ?? ''),
+                    'command'     => $cmd,
                     'expression'  => $event->task->expression ?? null,
                     'status'      => 'skipped',
                     'started_at'  => now(),
                     'finished_at' => now(),
                 ]);
             } catch (\Throwable $e) {
-                Log::warning('Failed to log scheduled task skip', ['error' => $e->getMessage()]);
+                Log::warning('[sched] failed to log skip', ['cmd' => $cmd, 'error' => $e->getMessage()]);
             }
         });
     }
