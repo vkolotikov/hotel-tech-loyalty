@@ -13,10 +13,19 @@ Schedule::command('guests:sweep-lifecycle')->dailyAt('03:15');
 // expires_at has passed and writes an append-only `expire` ledger row.
 // Hourly cadence keeps the "redeem points you've already lost" window
 // bounded to ≤1h after the bucket clock ticks over.
+//
+// NOTE: ->runInBackground() removed across all crons (2026-05-23).
+// On Laravel Cloud's containerised Worker, the `schedule:finish`
+// subprocess that should dispatch ScheduledTaskFinished doesn't reach
+// our event listener — every command shows `never` in diag even when
+// it ran successfully. Foreground execution dispatches the event in
+// the same process where the listener is registered. Our commands are
+// fast enough (sync ~30-60s worst case) that sequential ticking via
+// schedule:work is fine — and `withoutOverlapping` still prevents a
+// long sync from being re-entered before it finishes.
 Schedule::command('loyalty:expire-points')
     ->hourly()
-    ->withoutOverlapping(20)
-    ->runInBackground();
+    ->withoutOverlapping(20);
 
 // Daily birthday-bonus sweep at 09:00 UTC. Awards configured bonus
 // points to every member whose date_of_birth matches today, with
@@ -25,8 +34,7 @@ Schedule::command('loyalty:expire-points')
 // later if customers want per-org local-time scheduling.
 Schedule::command('loyalty:birthday-rewards')
     ->dailyAt('09:00')
-    ->withoutOverlapping(30)
-    ->runInBackground();
+    ->withoutOverlapping(30);
 
 // Daily reward-proximity nudge at 10:00 UTC. Pushes a single "you're
 // X points from {reward}" notification to members whose balance is
@@ -35,8 +43,7 @@ Schedule::command('loyalty:birthday-rewards')
 // just got the birthday bonus may cross into the nudge band today.
 Schedule::command('loyalty:reward-nudges')
     ->dailyAt('10:00')
-    ->withoutOverlapping(30)
-    ->runInBackground();
+    ->withoutOverlapping(30);
 
 // Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
 // clean and "active" / "waiting" stats reflect reality.
@@ -62,8 +69,7 @@ Schedule::command('saas:reconcile-orgs')->dailyAt('03:30');
 // at most a 10-minute window even before the per-request check kicks in.
 Schedule::command('subscriptions:expire-trials')
     ->everyTenMinutes()
-    ->withoutOverlapping(5)
-    ->runInBackground();
+    ->withoutOverlapping(5);
 
 // Smoobu booking sync — durability backstop for the webhook. The
 // webhook handler is the primary real-time path; this cron pulls the
@@ -74,8 +80,7 @@ Schedule::command('subscriptions:expire-trials')
 // won't stack a second invocation on top of itself.
 Schedule::command('bookings:sync-pms')
     ->everyFiveMinutes()
-    ->withoutOverlapping(10)
-    ->runInBackground();
+    ->withoutOverlapping(10);
 
 // Push local-only bookings to Smoobu after the original confirm() POST
 // failed. Without this, a guest could pay via Stripe + see "Booked!"
@@ -85,8 +90,7 @@ Schedule::command('bookings:sync-pms')
 // before flagging for manual review — see RetryPmsSync::MAX_ATTEMPTS.
 Schedule::command('bookings:retry-pms-sync')
     ->everyFiveMinutes()
-    ->withoutOverlapping(10)
-    ->runInBackground();
+    ->withoutOverlapping(10);
 
 // Engagement Hub daily summary email. Hourly cron — the command itself
 // gates on each org's local 8am (so a Tokyo org and a New York org both
@@ -96,8 +100,7 @@ Schedule::command('bookings:retry-pms-sync')
 // without the cron knowing about timezones in routes/console.php.
 Schedule::command('engagement:send-daily-summary')
     ->hourly()
-    ->withoutOverlapping(10)
-    ->runInBackground();
+    ->withoutOverlapping(10);
 
 // Loyalty digest email — same hourly + per-org-timezone + dedupe
 // pattern as the engagement summary, separate opt-in
@@ -106,8 +109,7 @@ Schedule::command('engagement:send-daily-summary')
 // get a morning pulse without having to remember to open /analytics.
 Schedule::command('loyalty:send-digest')
     ->hourly()
-    ->withoutOverlapping(10)
-    ->runInBackground();
+    ->withoutOverlapping(10);
 
 /*
 |--------------------------------------------------------------------------
