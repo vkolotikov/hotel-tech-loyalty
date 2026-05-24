@@ -1330,6 +1330,14 @@ class AuthController extends Controller
     /**
      * Get a SaaS JWT for the current user's org.
      * Tries: (1) existing SaaS JWT on the request, (2) service-to-service token endpoint.
+     *
+     * Negative-cached: when the service-token call fails (timeout, 5xx, etc.)
+     * we set a short-lived "unhealthy" key in the cache so subsequent calls
+     * return null fast instead of every admin request blocking for the full
+     * HTTP timeout. Without this, a slow SaaS makes the loyalty backend feel
+     * frozen for everyone — PHP-FPM children pile up waiting on 5s curls
+     * because the dashboard polls /subscription, which calls this, which
+     * hangs, exhausting the FPM worker pool within seconds.
      */
     private function getSaasToken(Request $request): ?string
     {
@@ -1354,11 +1362,24 @@ class AuthController extends Controller
         $jwtSecret = config('services.saas.jwt_secret', '');
         if (!$jwtSecret) return null;
 
+        // Fail-fast circuit breaker. If SaaS recently failed for any reason
+        // (timeout / 5xx / DNS), skip the call and return null immediately
+        // until the cache key expires. 60s is short enough that a real outage
+        // recovers quickly, long enough to spare ~12 worker-blocks per minute
+        // per polling admin tab.
+        if (\Illuminate\Support\Facades\Cache::has('saas_token_unhealthy')) {
+            return null;
+        }
+
         $payload = implode('|', [$user->email, $org->saas_org_id]);
         $signature = hash_hmac('sha256', $payload, $jwtSecret);
 
         try {
-            $response = Http::timeout(5)
+            // Tightened from 5s to 2s. The endpoint is a single signed POST
+            // against a Laravel route — when it's healthy it returns in
+            // ~100ms. 2s is well above any real latency floor while keeping
+            // worker-block time bounded under SaaS slowdowns.
+            $response = Http::timeout(2)->connectTimeout(2)
                 ->withHeaders(['X-Service-Signature' => $signature])
                 ->post("{$saasApi}/auth/service-token", [
                     'email' => $user->email,
@@ -1368,7 +1389,17 @@ class AuthController extends Controller
             if ($response->successful()) {
                 return $response->json('token');
             }
-        } catch (\Exception $e) {
+
+            // Non-2xx: SaaS is up but rejecting. Don't trip the circuit on
+            // a 401/403 — that's our problem (bad signature / disabled org),
+            // not theirs, and we don't want to mask it. Only trip on 5xx.
+            if ($response->serverError()) {
+                \Illuminate\Support\Facades\Cache::put('saas_token_unhealthy', 1, 60);
+            }
+        } catch (\Throwable $e) {
+            // Connection-level failure (timeout, DNS, refused). Trip the
+            // breaker so the next 60s of admin requests skip the call.
+            \Illuminate\Support\Facades\Cache::put('saas_token_unhealthy', 1, 60);
             report($e);
         }
 
