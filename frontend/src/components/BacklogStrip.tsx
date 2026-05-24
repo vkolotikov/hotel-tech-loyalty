@@ -208,30 +208,38 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
             <span className="text-xs font-semibold text-white uppercase tracking-wide">Backlog</span>
           </div>
 
-          {/* Scope tabs as inline pills */}
+          {/* Scope tabs as inline pills. Inactive state uses a brighter
+              white-overlay background + visible border so the option
+              reads as a real button against the dark surface. The
+              previous bg-white/5 + gray-400 combo was so subtle the
+              inactive tab looked disabled. */}
           <div className="flex gap-1 flex-shrink-0">
             <button
               onClick={() => setScope('mine')}
               className={[
-                'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition',
-                scope === 'mine' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10',
+                'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
+                scope === 'mine'
+                  ? 'bg-gold-500 text-black border-gold-500'
+                  : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
               ].join(' ')}
             >
               <Hand size={10} /> Mine
               {mineTasks.length > 0 && (
-                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'mine' ? 'bg-black/20' : 'bg-white/10'].join(' ')}>{mineTasks.length}</span>
+                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>
               )}
             </button>
             <button
               onClick={() => setScope('pool')}
               className={[
-                'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition',
-                scope === 'pool' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10',
+                'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
+                scope === 'pool'
+                  ? 'bg-gold-500 text-black border-gold-500'
+                  : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
               ].join(' ')}
             >
               <Users size={10} /> Open pool
               {poolTasks.length > 0 && (
-                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'pool' ? 'bg-black/20' : 'bg-white/10'].join(' ')}>{poolTasks.length}</span>
+                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>
               )}
             </button>
           </div>
@@ -365,17 +373,21 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
             <div className="flex gap-1 p-2 border-b border-white/5">
               <button
                 onClick={() => setScope('mine')}
-                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5',
-                  scope === 'mine' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-300'].join(' ')}
+                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
+                  scope === 'mine'
+                    ? 'bg-gold-500 text-black border-gold-500'
+                    : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
               >
-                <Hand size={12} /> Mine {mineTasks.length > 0 && <span className="ml-0.5 px-1 rounded bg-black/20 text-[10px]">{mineTasks.length}</span>}
+                <Hand size={12} /> Mine {mineTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>}
               </button>
               <button
                 onClick={() => setScope('pool')}
-                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5',
-                  scope === 'pool' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-300'].join(' ')}
+                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
+                  scope === 'pool'
+                    ? 'bg-gold-500 text-black border-gold-500'
+                    : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
               >
-                <Users size={12} /> Pool {poolTasks.length > 0 && <span className="ml-0.5 px-1 rounded bg-black/20 text-[10px]">{poolTasks.length}</span>}
+                <Users size={12} /> Pool {poolTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>}
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-2">
