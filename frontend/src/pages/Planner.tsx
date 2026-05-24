@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
-import { BacklogDrawer } from '../components/BacklogDrawer'
+import { BacklogStrip } from '../components/BacklogStrip'
 import { TeamBucketsView } from '../components/TeamBucketsView'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
@@ -1909,25 +1909,8 @@ export function Planner() {
 
   /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
-    <div className="flex items-stretch">
-      {/* Sidebar backlog drawer — collapsible, persists its open/scope
-          state across sessions. Manages its own queries; the parent's
-          invalidate() helper above busts ['planner-backlog'] alongside
-          ['planner-tasks'] so this drawer reacts to calendar mutations
-          and vice versa. Mobile hides it (it's md:flex/hidden). */}
-      {/* Drawer is hidden on Team + Stats views — Team already shows the
-          full backlog as kanban columns, and Stats has nothing to drop
-          tasks onto. Hiding it gives those two views the full viewport. */}
-      {tab !== 'team' && tab !== 'stats' && (
-        <BacklogDrawer
-          currentUserId={user?.id ?? null}
-          currentUserName={myName}
-          plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
-        />
-      )}
-
-      <div className="flex-1 min-w-0 p-4 md:p-6 space-y-4 md:space-y-5">
-        <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
+      <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
 
       {/* Header — restructured for mobile:
           Row 1: title + Add button
@@ -2043,6 +2026,22 @@ export function Planner() {
             tasks={allTasks}
           />
         </div>
+      )}
+
+      {/* Backlog strip — horizontal panel sitting above the KPI bar.
+          Replaces the previous left-sidebar drawer that was competing
+          with the calendar for horizontal space. Collapsed by default
+          to a one-row header with scope tabs + quick-add; expand to
+          see the cards row. Drag cards DOWN onto any calendar cell
+          to schedule; drag a scheduled chip UP into the strip to
+          unschedule. Hidden on Team + Stats (those views don't drop
+          tasks onto a calendar). */}
+      {tab !== 'stats' && tab !== 'team' && (
+        <BacklogStrip
+          currentUserId={user?.id ?? null}
+          currentUserName={myName}
+          plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+        />
       )}
 
       {/* Universal KPI strip — appears across Day / Schedule / Month so
@@ -2400,7 +2399,9 @@ export function Planner() {
                   Add staff in Settings → Team so the Schedule grid shows real workload columns. Until then the grid only renders an Unassigned row.
                 </p>
               </div>
-              <a href="/team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md flex-shrink-0">
+              {/* Settings → Team is mounted as a tab inside /settings,
+                  not a standalone route. `/team` 404'd in production. */}
+              <a href="/settings?tab=team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md flex-shrink-0">
                 Add staff
               </a>
             </div>
@@ -3427,7 +3428,6 @@ export function Planner() {
           </div>
         </div>
       )}
-      </div>
     </div>
   )
 }
