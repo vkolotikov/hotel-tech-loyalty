@@ -25,6 +25,14 @@ interface Staff {
    * manager roles, who see everything.
    */
   allowed_nav_groups?: string[] | null
+  /**
+   * Planner backlog skill allowlist (Settings → Team). Null = staff can
+   * claim any pool task; non-empty array = whitelist of task_group
+   * values they can claim. Managers + super_admins always bypass the
+   * gate regardless of this field. Used by the Planner's BacklogDrawer
+   * to (a) filter the pool view, (b) default the quick-add task_group.
+   */
+  planner_skills?: string[] | null
 }
 
 interface AuthState {

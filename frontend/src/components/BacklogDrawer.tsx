@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, ChevronRight, Inbox, Users, Flag, Loader2,
-  Hand, Send, LayoutGrid,
+  Hand, Send, LayoutGrid, X, Calendar as CalendarIcon,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -30,6 +30,10 @@ interface Props {
    *  non-managers don't see the toggle even if the backend somehow lets
    *  them through. Backend enforces the auth check independently. */
   isManager?: boolean
+  /** Current user's planner skill allowlist. When non-empty, the drawer's
+   *  pool quick-add defaults task_group to the first entry so the staff
+   *  doesn't accidentally create a task they can't claim themselves. */
+  plannerSkills?: string[] | null
 }
 
 type TeamBucket = {
@@ -58,7 +62,7 @@ const TEAM_MODE_KEY      = 'planner-backlog-team-mode'
  * augmented to also invalidate ['planner-backlog'] so the drawer
  * refreshes whenever the calendar changes.
  */
-export function BacklogDrawer({ currentUserId, currentUserName = '', isManager = false }: Props) {
+export function BacklogDrawer({ currentUserId, currentUserName = '', isManager = false, plannerSkills = null }: Props) {
   const qc = useQueryClient()
 
   // Drawer expand/collapse — persists across reloads so an admin who
@@ -92,6 +96,24 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
 
   const [quickAdd, setQuickAdd] = useState('')
   const [isDropTarget, setIsDropTarget] = useState(false)
+  // Mobile sheet state. Drag-drop is brutal on touch, so on phones we
+  // surface the backlog as a bottom sheet with a date+time picker per
+  // card instead. Activated by the floating "Backlog" button below.
+  const [mobileOpen, setMobileOpen] = useState(false)
+  // Per-card "Schedule" affordance on mobile opens a tiny inline form
+  // for date + time. Tracks the task being scheduled by id.
+  const [mobileScheduling, setMobileScheduling] = useState<{ id: number; title: string } | null>(null)
+  const [mobileDate, setMobileDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [mobileTime, setMobileTime] = useState('09:00')
+
+  const scheduleMutation = useMutation({
+    mutationFn: (vars: { id: number; task_date: string; start_time?: string }) =>
+      api.patch(`/v1/admin/planner/tasks/${vars.id}/move`, vars),
+    onSuccess: () => {
+      invalidate(); setMobileScheduling(null); toast.success('Scheduled')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
+  })
 
   // Backlog query. The two scopes have completely different filters
   // server-side so we run them as two queries — keeps the badge counts
@@ -164,6 +186,13 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
   // with task_date=null + the new employee_name + new assigned_to_user_id
   // (null for the pool). Server preserves the null task_date so the row
   // stays in the backlog after the reassign.
+  //
+  // Optimistic: patches the ['planner-backlog','team'] cache in-place
+  // so the card jumps to the new column the instant the drop lands.
+  // Same rollback-on-error pattern as the main moveMutation. Without
+  // this, the kanban felt sluggish — a drag-drop with a 300ms server
+  // round-trip is the kind of thing users do a dozen times in a row
+  // and the lag adds up.
   const reassignMutation = useMutation({
     mutationFn: (vars: { id: number; user_id: number | null; user_name: string | null }) =>
       api.patch(`/v1/admin/planner/tasks/${vars.id}/move`, {
@@ -171,13 +200,53 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
         assigned_to_user_id: vars.user_id,
         employee_name: vars.user_name,
       }),
-    onSuccess: () => { invalidate(); toast.success('Reassigned') },
-    onError:  (e: any) => toast.error(e.response?.data?.message || 'Error'),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['planner-backlog', 'team'] })
+      const snapshot = qc.getQueryData<TeamData>(['planner-backlog', 'team'])
+      if (!snapshot) return { snapshot }
+      // Find + remove the task from wherever it currently lives.
+      let moved: BacklogTask | undefined
+      const stripFrom = (list: BacklogTask[]) => {
+        const idx = list.findIndex(t => t.id === vars.id)
+        if (idx === -1) return list
+        moved = { ...list[idx], assigned_to_user_id: vars.user_id, employee_name: vars.user_name }
+        return [...list.slice(0, idx), ...list.slice(idx + 1)]
+      }
+      const next: TeamData = {
+        pool: stripFrom(snapshot.pool),
+        buckets: snapshot.buckets.map(b => ({ ...b, tasks: stripFrom(b.tasks) })),
+      }
+      if (!moved) return { snapshot }
+      // Drop into the target column.
+      if (vars.user_id === null) {
+        next.pool = [moved, ...next.pool]
+      } else {
+        next.buckets = next.buckets.map(b =>
+          b.user_id === vars.user_id ? { ...b, tasks: [moved!, ...b.tasks] } : b)
+      }
+      qc.setQueryData(['planner-backlog', 'team'], next)
+      return { snapshot }
+    },
+    onError: (e: any, _vars, ctx: any) => {
+      if (ctx?.snapshot) qc.setQueryData(['planner-backlog', 'team'], ctx.snapshot)
+      toast.error(e.response?.data?.message || 'Could not reassign')
+    },
+    onSettled: () => invalidate(),
   })
 
   const handleQuickAdd = (intoPool: boolean) => {
     const title = quickAdd.trim()
     if (!title) return
+    // Skill-aware default for pool drops: if the current user has a
+    // skill allowlist set, tag the new pool task with their first
+    // allowed group. Without this, staff who type into the quick-add
+    // could create pool tasks they themselves can't claim (since the
+    // pool view + claim endpoint both gate on task_group ∈ skills).
+    // For the Mine flow this is irrelevant — they're the assignee
+    // already, no claim gate applies.
+    const defaultGroup = intoPool && plannerSkills && plannerSkills.length > 0
+      ? plannerSkills[0]
+      : null
     createMutation.mutate({
       title,
       // intoPool=true → unassigned, no employee. intoPool=false → assign
@@ -187,6 +256,7 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
       task_date:           null,
       priority:            'normal',
       status:              'todo',
+      task_group:          defaultGroup,
     })
   }
 
@@ -201,10 +271,137 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
     })
   }, [activeTasks])
 
+  const totalCount = (mineTasks.length || 0) + (poolTasks.length || 0)
+
+  // Mobile floating button + bottom sheet. Drag-drop is poor on touch,
+  // so on phones we surface the same backlog as a list with a tap →
+  // inline date/time picker per card. The desktop drawer remains
+  // mounted alongside (`hidden md:flex`) so this component handles
+  // both responsive surfaces from one render.
+  const mobileSurface = (
+    <>
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-gold-500 hover:bg-gold-400 text-black shadow-lg flex items-center justify-center"
+        title="Backlog"
+      >
+        <Inbox size={22} />
+        {totalCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-dark-bg">
+            {totalCount > 99 ? '99+' : totalCount}
+          </span>
+        )}
+      </button>
+
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex flex-col bg-black/80" onClick={() => setMobileOpen(false)}>
+          <div className="mt-auto bg-dark-surface rounded-t-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-3 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Inbox size={16} className="text-gold-400" />
+                <span className="text-sm font-semibold text-white">Backlog</span>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="w-8 h-8 rounded-md hover:bg-white/5 text-gray-400 flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex gap-1 p-2 border-b border-white/5">
+              <button
+                onClick={() => setScope('mine')}
+                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5',
+                  scope === 'mine' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-300'].join(' ')}
+              >
+                <Hand size={12} /> Mine {mineTasks.length > 0 && <span className="ml-0.5 px-1 rounded bg-black/20 text-[10px]">{mineTasks.length}</span>}
+              </button>
+              <button
+                onClick={() => setScope('pool')}
+                className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5',
+                  scope === 'pool' ? 'bg-gold-500 text-black' : 'bg-white/5 text-gray-300'].join(' ')}
+              >
+                <Users size={12} /> Pool {poolTasks.length > 0 && <span className="ml-0.5 px-1 rounded bg-black/20 text-[10px]">{poolTasks.length}</span>}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {isLoading && (
+                <div className="flex items-center justify-center py-6 text-gray-500">
+                  <Loader2 size={16} className="animate-spin" />
+                </div>
+              )}
+              {!isLoading && activeTasks.length === 0 && (
+                <div className="px-2 py-6 text-center text-[11px] text-gray-500">
+                  {scope === 'mine' ? 'No backlog tasks assigned to you.' : 'Open pool is empty.'}
+                </div>
+              )}
+              {activeTasks.map(task => (
+                <div key={task.id} className="bg-white/5 border border-white/10 rounded-md p-2.5">
+                  <div className="text-sm text-white font-medium">{task.title}</div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
+                    {task.task_group && <span className="px-1 rounded bg-white/5">{task.task_group}</span>}
+                    {task.priority === 'high' && <span className="text-red-400 flex items-center gap-0.5"><Flag size={9} />high</span>}
+                  </div>
+                  {mobileScheduling?.id === task.id ? (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <div className="flex gap-1.5">
+                        <input
+                          type="date"
+                          value={mobileDate}
+                          onChange={(e) => setMobileDate(e.target.value)}
+                          className="flex-1 bg-dark-bg border border-white/10 rounded px-2 py-1.5 text-xs text-white"
+                        />
+                        <input
+                          type="time"
+                          value={mobileTime}
+                          onChange={(e) => setMobileTime(e.target.value)}
+                          className="bg-dark-bg border border-white/10 rounded px-2 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => scheduleMutation.mutate({ id: task.id, task_date: mobileDate, start_time: mobileTime })}
+                          disabled={scheduleMutation.isPending}
+                          className="flex-1 px-2 py-1.5 rounded bg-gold-500 hover:bg-gold-400 text-black text-xs font-medium disabled:opacity-50"
+                        >
+                          Schedule
+                        </button>
+                        <button
+                          onClick={() => setMobileScheduling(null)}
+                          className="px-2 py-1.5 rounded bg-white/5 text-gray-400 text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5 mt-2">
+                      <button
+                        onClick={() => setMobileScheduling({ id: task.id, title: task.title })}
+                        className="flex-1 px-2 py-1.5 rounded bg-white/5 hover:bg-white/10 text-xs text-gray-300 flex items-center justify-center gap-1"
+                      >
+                        <CalendarIcon size={11} /> Schedule
+                      </button>
+                      {scope === 'pool' && (
+                        <button
+                          onClick={() => claimMutation.mutate(task.id)}
+                          className="px-3 py-1.5 rounded bg-gold-500/15 text-gold-400 text-xs flex items-center gap-1"
+                        >
+                          <Hand size={11} /> Claim
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
   // Collapsed rail — vertical icon strip with a count badge.
   if (!open) {
-    const total = (mineTasks.length || 0) + (poolTasks.length || 0)
     return (
+      <>
       <div className="hidden md:flex flex-col items-center gap-2 w-12 bg-dark-surface border-r border-white/5 py-3 sticky top-0 h-screen">
         <button
           onClick={() => setOpen(true)}
@@ -212,9 +409,9 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
           title="Show backlog"
         >
           <Inbox size={18} />
-          {total > 0 && (
+          {totalCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gold-500 text-black text-[10px] font-bold flex items-center justify-center">
-              {total > 99 ? '99+' : total}
+              {totalCount > 99 ? '99+' : totalCount}
             </span>
           )}
         </button>
@@ -226,10 +423,13 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
           <ChevronRight size={18} />
         </button>
       </div>
+      {mobileSurface}
+      </>
     )
   }
 
   return (
+    <>
     <div
       className={[
         'hidden md:flex flex-col bg-dark-surface border-r sticky top-0 h-screen overflow-hidden',
@@ -420,6 +620,8 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
       </div>
       </>)}
     </div>
+    {mobileSurface}
+    </>
   )
 }
 

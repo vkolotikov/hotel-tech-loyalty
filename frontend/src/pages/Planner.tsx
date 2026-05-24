@@ -1830,6 +1830,7 @@ export function Planner() {
         currentUserId={user?.id ?? null}
         currentUserName={myName}
         isManager={useAuthStore.getState().isAdmin()}
+        plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
       />
 
       <div className="flex-1 min-w-0 p-4 md:p-6 space-y-4 md:space-y-5">
@@ -2345,11 +2346,33 @@ export function Planner() {
                           const sourceEmp = e.dataTransfer.getData('sourceEmp')
                           if (!taskId) return
                           if (dateStr === sourceDate && emp === (sourceEmp || 'Unassigned')) return
-                          moveMutation.mutate({
+                          // Y-coordinate → hour-resolution start_time. The
+                          // cell is too small (typically ~72-120px tall)
+                          // for minute precision, so we map to a 9am-18pm
+                          // working window with hour snapping. Drops in
+                          // the top 20% become 9am; in the bottom 20%
+                          // become 17pm. Refinable in the task popover.
+                          // Skipped when the source is a scheduled chip
+                          // (sourceDate !== '') and it already has a
+                          // start_time — that case is just a date move,
+                          // we preserve the existing time.
+                          const cell = e.currentTarget.getBoundingClientRect()
+                          const ratio = Math.max(0, Math.min(1, (e.clientY - cell.top) / Math.max(1, cell.height)))
+                          const WORK_START = 9, WORK_END = 18 // 9-hour window
+                          const hour = WORK_START + Math.round(ratio * (WORK_END - WORK_START))
+                          const droppedStart = `${String(hour).padStart(2, '0')}:00`
+                          // Only set start_time for backlog drops (sourceDate === '')
+                          // or when the source chip has no start_time. Keeps
+                          // existing scheduled chips at their original
+                          // time on a cross-day drag.
+                          const isFromBacklog = !sourceDate
+                          const body: any = {
                             id: taskId,
                             task_date: dateStr,
                             employee_name: emp === 'Unassigned' ? null : emp,
-                          })
+                          }
+                          if (isFromBacklog) body.start_time = droppedStart
+                          moveMutation.mutate(body)
                         }}
                         className={'px-2 py-2 border-l border-dark-border/30 min-h-[72px] transition-colors ' +
                           (isDropTarget ? 'bg-primary-500/15 ring-1 ring-primary-500/40 ring-inset' : (isToday ? 'bg-primary-500/5' : ''))}>
