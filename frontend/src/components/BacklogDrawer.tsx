@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, ChevronRight, Inbox, Users, Flag, Loader2,
-  Hand, Send, LayoutGrid, X, Calendar as CalendarIcon,
+  Hand, Send, LayoutGrid, X, Calendar as CalendarIcon, Search,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -96,6 +96,12 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
 
   const [quickAdd, setQuickAdd] = useState('')
   const [isDropTarget, setIsDropTarget] = useState(false)
+  // Local search + group filter for the backlog list. Transient by
+  // design — kept in component state so refreshing or switching scopes
+  // resets the filter. When the pool grows past ~30 cards, finding the
+  // right one to assign without these gets painful.
+  const [search, setSearch] = useState('')
+  const [groupFilter, setGroupFilter] = useState<string | null>(null)
   // Mobile sheet state. Drag-drop is brutal on touch, so on phones we
   // surface the backlog as a bottom sheet with a date+time picker per
   // card instead. Activated by the floating "Backlog" button below.
@@ -264,11 +270,27 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
   // the user's eye lands on what they should pick next.
   const sorted = useMemo(() => {
     const pri = (p: string | null | undefined) => p === 'high' ? 0 : p === 'normal' ? 1 : 2
-    return [...activeTasks].sort((a, b) => {
-      const d = pri(a.priority) - pri(b.priority)
-      if (d !== 0) return d
-      return (b.created_at || '').localeCompare(a.created_at || '')
-    })
+    const q = search.trim().toLowerCase()
+    return [...activeTasks]
+      .filter(t => {
+        if (groupFilter && (t.task_group || '') !== groupFilter) return false
+        if (q && !(t.title || '').toLowerCase().includes(q)) return false
+        return true
+      })
+      .sort((a, b) => {
+        const d = pri(a.priority) - pri(b.priority)
+        if (d !== 0) return d
+        return (b.created_at || '').localeCompare(a.created_at || '')
+      })
+  }, [activeTasks, search, groupFilter])
+
+  // Distinct task_groups present in the current scope, sorted alphabetically.
+  // Used to render the filter chip row — hidden when there's only one or
+  // zero groups to filter on (filtering a 1-group list has no value).
+  const distinctGroups = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of activeTasks) if (t.task_group) set.add(t.task_group)
+    return Array.from(set).sort()
   }, [activeTasks])
 
   const totalCount = (mineTasks.length || 0) + (poolTasks.length || 0)
@@ -588,6 +610,58 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
         )}
       </div>
 
+      {/* Search + group filter. Only renders when there are enough tasks
+          to justify it — under 5 tasks any filter just hides cards the
+          user could find by scanning. The group filter chip row is
+          additionally gated on having >1 distinct group present. */}
+      {activeTasks.length >= 5 && (
+        <div className="px-2 pt-2 pb-1.5 border-b border-white/5 space-y-1.5">
+          <div className="relative">
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="w-full bg-dark-bg border border-white/10 rounded-md pl-7 pr-7 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded text-gray-500 hover:text-white hover:bg-white/5 flex items-center justify-center"
+              >
+                <X size={10} />
+              </button>
+            )}
+          </div>
+          {distinctGroups.length > 1 && (
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setGroupFilter(null)}
+                className={['px-1.5 py-0.5 rounded text-[10px] border transition',
+                  groupFilter === null
+                    ? 'bg-gold-500 border-gold-500 text-black font-medium'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'].join(' ')}
+              >
+                All
+              </button>
+              {distinctGroups.map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGroupFilter(g === groupFilter ? null : g)}
+                  className={['px-1.5 py-0.5 rounded text-[10px] border transition truncate max-w-[100px]',
+                    groupFilter === g
+                      ? 'bg-gold-500 border-gold-500 text-black font-medium'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'].join(' ')}
+                  title={g}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Task list */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         {isLoading && (
@@ -597,7 +671,9 @@ export function BacklogDrawer({ currentUserId, currentUserName = '', isManager =
         )}
         {!isLoading && sorted.length === 0 && (
           <div className="px-2 py-6 text-center text-[11px] text-gray-500">
-            {scope === 'mine' ? 'No backlog tasks assigned to you.' : 'Open pool is empty.'}
+            {(search || groupFilter)
+              ? <>No tasks match your filter. <button onClick={() => { setSearch(''); setGroupFilter(null) }} className="text-gold-400 hover:underline">Clear</button></>
+              : scope === 'mine' ? 'No backlog tasks assigned to you.' : 'Open pool is empty.'}
             <div className="mt-1 text-gray-600">
               Drag any scheduled task here to unschedule it, or type above to add one.
             </div>

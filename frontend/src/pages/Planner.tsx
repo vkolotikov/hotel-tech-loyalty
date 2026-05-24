@@ -1442,6 +1442,11 @@ export function Planner() {
    */
   const [quickAddCell, setQuickAddCell] = useState<string | null>(null)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  // Recurring-delete modal — null = closed. Replaces the old window.prompt
+  // numbered choice flow which was confusing + visually crusty next to
+  // the rest of the SPA. Carries the task so we can show its title for
+  // confirmation before the user picks a scope.
+  const [recurringDelete, setRecurringDelete] = useState<any | null>(null)
 
   const today = fmtDate(new Date())
 
@@ -1533,17 +1538,9 @@ export function Planner() {
       if (confirm('Delete this task?')) deleteMutation.mutate({ id: task.id })
       return
     }
-    const choice = window.prompt(
-      'This task is part of a recurring series.\n\n'
-      + 'Type 1 to delete just this occurrence,\n'
-      + 'Type 2 to delete this + all future occurrences,\n'
-      + 'Type 3 to delete the WHOLE series.\n\n'
-      + 'Cancel to keep all.',
-      '1',
-    )
-    if (choice === '1') deleteMutation.mutate({ id: task.id, scope: 'just_this' })
-    else if (choice === '2') deleteMutation.mutate({ id: task.id, scope: 'all_future' })
-    else if (choice === '3') deleteMutation.mutate({ id: task.id, scope: 'whole_series' })
+    // Recurring task — open the scope picker modal. State carries the
+    // whole task so the modal can show its title for confirmation.
+    setRecurringDelete(task)
   }, [deleteMutation])
 
   const copyMutation = useMutation({
@@ -2053,11 +2050,30 @@ export function Planner() {
                     // slot. Schedule with task_date=currentDate +
                     // start_time=hhmm + employee from the column (or
                     // current employee filter when not in team mode).
+                    const targetEmp = emp ?? (employee || undefined)
+                    // Capacity warning (informational) — same shape as the
+                    // Schedule view check. Skipped for unassigned drops.
+                    if (targetEmp) {
+                      const dropped = allTasks.find((t: any) => t.id === taskId)
+                      const newMins = Number(dropped?.duration_minutes ?? 60)
+                      const existingMins = (allTasks as any[]).filter(t =>
+                        t.id !== taskId
+                        && (t.employee_name || '') === targetEmp
+                        && (t.task_date ?? '').slice(0, 10) === currentDate
+                      ).reduce((sum, t) => sum + Number(t.duration_minutes ?? 60), 0)
+                      const totalH = (existingMins + newMins) / 60
+                      if (totalH > 8) {
+                        toast(
+                          `${targetEmp} now at ${totalH.toFixed(1)}h on ${currentDate}. Consider redistributing.`,
+                          { icon: '⚠️', duration: 5000 },
+                        )
+                      }
+                    }
                     moveMutation.mutate({
                       id: taskId,
                       task_date: currentDate,
                       start_time: hhmm,
-                      employee_name: emp ?? (employee || undefined),
+                      employee_name: targetEmp,
                     })
                   }}
                   onTaskUpdate={(taskId, body) => {
@@ -2372,6 +2388,32 @@ export function Planner() {
                             employee_name: emp === 'Unassigned' ? null : emp,
                           }
                           if (isFromBacklog) body.start_time = droppedStart
+                          // Capacity warning — informational only, doesn't
+                          // block. Sums existing task duration for the
+                          // target employee + day (excluding the task being
+                          // moved so a within-day re-shuffle doesn't fire
+                          // a false positive), and warns when the new total
+                          // crosses 8h. Default 60min for tasks with no
+                          // duration set so we don't undercount. Skipped
+                          // for the Unassigned row since "Unassigned" isn't
+                          // a real person to over-book.
+                          if (emp !== 'Unassigned') {
+                            const dropped = allTasks.find((t: any) => t.id === taskId)
+                            const newMins = Number(dropped?.duration_minutes ?? 60)
+                            const existingMins = (allTasks as any[]).filter(t =>
+                              t.id !== taskId
+                              && (t.employee_name || '') === emp
+                              && (t.task_date ?? '').slice(0, 10) === dateStr
+                            ).reduce((sum, t) => sum + Number(t.duration_minutes ?? 60), 0)
+                            const totalH = (existingMins + newMins) / 60
+                            if (totalH > 8) {
+                              const existingH = existingMins / 60
+                              toast(
+                                `${emp} now at ${totalH.toFixed(1)}h on ${dateStr} (was ${existingH.toFixed(1)}h). Consider redistributing.`,
+                                { icon: '⚠️', duration: 5000 },
+                              )
+                            }
+                          }
                           moveMutation.mutate(body)
                         }}
                         className={'px-2 py-2 border-l border-dark-border/30 min-h-[72px] transition-colors ' +
@@ -3171,6 +3213,60 @@ export function Planner() {
             setTaskPopover(null)
           }}
         />
+      )}
+
+      {/* Recurring-delete scope picker. Replaces the previous window.prompt
+          with three numbered choices, which felt out of place next to the
+          rest of the SPA. Each button labels its impact explicitly so the
+          user can't pick the wrong scope by counting wrong. */}
+      {recurringDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setRecurringDelete(null)}>
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-5 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={18} className="text-red-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-white">Delete recurring task</h3>
+                <p className="text-xs text-gray-500 mt-0.5 truncate" title={recurringDelete.title}>
+                  {recurringDelete.title}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-4">
+              This task is part of a recurring series. Pick what you want to delete:
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { deleteMutation.mutate({ id: recurringDelete.id, scope: 'just_this' }); setRecurringDelete(null) }}
+                className="w-full text-left px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition group"
+              >
+                <div className="text-sm font-medium text-white group-hover:text-primary-300">Just this occurrence</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">Future copies stay scheduled.</div>
+              </button>
+              <button
+                onClick={() => { deleteMutation.mutate({ id: recurringDelete.id, scope: 'all_future' }); setRecurringDelete(null) }}
+                className="w-full text-left px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition group"
+              >
+                <div className="text-sm font-medium text-white group-hover:text-amber-300">This + all future occurrences</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">Past occurrences are kept; the series stops here.</div>
+              </button>
+              <button
+                onClick={() => { deleteMutation.mutate({ id: recurringDelete.id, scope: 'whole_series' }); setRecurringDelete(null) }}
+                className="w-full text-left px-3 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition group"
+              >
+                <div className="text-sm font-medium text-red-300">Delete the WHOLE series</div>
+                <div className="text-[11px] text-red-400/70 mt-0.5">Removes every past + future occurrence. Cannot be undone.</div>
+              </button>
+            </div>
+            <button
+              onClick={() => setRecurringDelete(null)}
+              className="w-full mt-3 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-xs text-gray-400"
+            >
+              Cancel — keep everything
+            </button>
+          </div>
+        </div>
       )}
       </div>
     </div>
