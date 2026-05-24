@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/authStore'
 import toast from 'react-hot-toast'
 import {
   ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
-  BarChart2, Calendar, CalendarDays, CalendarRange, FileText,
+  BarChart2, Calendar, CalendarDays, CalendarRange, FileText, LayoutGrid,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
   Wrench, Coffee, Briefcase, BedDouble, PartyPopper, ConciergeBell, Sparkles, Phone,
@@ -18,6 +18,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { BacklogDrawer } from '../components/BacklogDrawer'
+import { TeamBucketsView } from '../components/TeamBucketsView'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
@@ -130,7 +131,7 @@ const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50',
 const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
 const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500'
 
-type Tab = 'day' | 'schedule' | 'month' | 'stats'
+type Tab = 'day' | 'schedule' | 'month' | 'team' | 'stats'
 type TaskForm = {
   employee_name: string; title: string; task_date: string; start_time: string; end_time: string
   priority: string; task_group: string; task_category: string; duration_minutes: string
@@ -697,6 +698,75 @@ function InlineQuickAdd({ onSubmit, onCancel, autoFocus = true }: {
  * fixed-position the popover just below the task chip. Falls back to
  * viewport-bottom if the popover would clip off the screen.
  */
+/**
+ * Compact, click-to-expand "Today's Note" block. Default rendering is a
+ * single low-attention row that shows the existing note text or a tiny
+ * "+ Add note" link — recovers ~80px of vertical real estate that the
+ * always-expanded version was eating, especially on weeks where no note
+ * was set. Click the row → full textarea modal-ish inline editor with
+ * Save/Cancel. Save fires `onSave` and collapses back.
+ */
+function CollapsibleNote({ value, weekStart, placeholder, label, onSave }: {
+  value: string
+  weekStart: string
+  placeholder: string
+  label: string
+  onSave: (text: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  // Reset draft when the week changes or upstream value updates while
+  // collapsed. Avoids stale draft text after switching weeks.
+  useEffect(() => { if (!editing) setDraft(value) }, [value, weekStart, editing])
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="w-full flex items-center gap-2.5 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg hover:bg-dark-surface2 hover:border-primary-500/30 transition text-left"
+      >
+        <FileText size={13} className={value ? 'text-primary-400' : 'text-gray-600'} />
+        <span className="text-[11px] uppercase tracking-wide font-semibold text-gray-500">{label}</span>
+        <span className={'text-xs truncate flex-1 ' + (value ? 'text-gray-300' : 'text-gray-600 italic')}>
+          {value || placeholder}
+        </span>
+        <span className="text-[10px] text-gray-600 flex-shrink-0">click to edit</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="bg-dark-surface border border-primary-500/40 rounded-lg p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <FileText size={13} className="text-primary-400" />
+        <span className="text-[11px] uppercase tracking-wide font-semibold text-gray-400">{label}</span>
+      </div>
+      <textarea
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={3}
+        placeholder={placeholder}
+        className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none"
+      />
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={() => { setDraft(value); setEditing(false) }}
+          className="px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => { onSave(draft); setEditing(false) }}
+          className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md"
+        >
+          Save note
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComplete, onFullEdit, onDelete, onDuplicate, onReschedule }: {
   task: any
   anchor: DOMRect
@@ -1823,12 +1893,16 @@ export function Planner() {
           invalidate() helper above busts ['planner-backlog'] alongside
           ['planner-tasks'] so this drawer reacts to calendar mutations
           and vice versa. Mobile hides it (it's md:flex/hidden). */}
-      <BacklogDrawer
-        currentUserId={user?.id ?? null}
-        currentUserName={myName}
-        isManager={useAuthStore.getState().isAdmin()}
-        plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
-      />
+      {/* Drawer is hidden on Team + Stats views — Team already shows the
+          full backlog as kanban columns, and Stats has nothing to drop
+          tasks onto. Hiding it gives those two views the full viewport. */}
+      {tab !== 'team' && tab !== 'stats' && (
+        <BacklogDrawer
+          currentUserId={user?.id ?? null}
+          currentUserName={myName}
+          plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+        />
+      )}
 
       <div className="flex-1 min-w-0 p-4 md:p-6 space-y-4 md:space-y-5">
         <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
@@ -1845,7 +1919,7 @@ export function Planner() {
             <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{subtitle}</p>
           </div>
           {/* Mobile-only: Add button next to title to save a row */}
-          {tab !== 'stats' && (
+          {tab !== 'stats' && tab !== 'team' && (
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
               className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
@@ -1862,29 +1936,44 @@ export function Planner() {
               translucent primary tint, so the current view is more
               obvious at a glance. */}
           <div className="flex p-1 rounded-xl border border-dark-border overflow-x-auto bg-dark-surface w-full sm:w-auto gap-0.5">
-            {([
-              ['day', CalendarDays, t('planner.tabs.day', 'Day')],
-              ['schedule', Calendar, t('planner.tabs.schedule', 'Schedule')],
-              ['month', CalendarRange, t('planner.tabs.month', 'Month')],
-              ['stats', BarChart2, t('planner.tabs.stats', 'Stats')],
-            ] as const).map(([tabKey, Icon, label]) => {
-              const active = tab === tabKey
-              return (
-                <button
-                  key={tabKey}
-                  onClick={() => setTab(tabKey as Tab)}
-                  className={'flex items-center gap-1.5 px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' +
-                    (active
-                      ? 'bg-primary-500 text-black shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
-                      : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
-                >
-                  <Icon size={14} /> {label}
-                </button>
-              )
-            })}
+            {(() => {
+              // Distinct icons per view — was three near-identical Calendar*
+              // icons before, which made the segmented control read as a
+              // homogeneous row of dates instead of distinct surfaces. Now:
+              // Day = single Calendar, Schedule = CalendarDays (week grid),
+              // Month = CalendarRange, Team = LayoutGrid (kanban columns),
+              // Stats = BarChart2 (data).
+              const tabs: Array<readonly [Tab, any, string]> = [
+                ['day', Calendar, t('planner.tabs.day', 'Day')],
+                ['schedule', CalendarDays, t('planner.tabs.schedule', 'Schedule')],
+                ['month', CalendarRange, t('planner.tabs.month', 'Month')],
+              ]
+              // Team tab is manager-only — it's a cross-employee kanban view
+              // of the backlog. Non-managers don't need it (they only see
+              // their own bucket via the drawer's "Mine" tab anyway).
+              if (useAuthStore.getState().isAdmin()) {
+                tabs.push(['team', LayoutGrid, t('planner.tabs.team', 'Team')])
+              }
+              tabs.push(['stats', BarChart2, t('planner.tabs.stats', 'Stats')])
+              return tabs.map(([tabKey, Icon, label]) => {
+                const active = tab === tabKey
+                return (
+                  <button
+                    key={tabKey}
+                    onClick={() => setTab(tabKey as Tab)}
+                    className={'flex items-center gap-1.5 px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' +
+                      (active
+                        ? 'bg-primary-500 text-black shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
+                        : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
+                  >
+                    <Icon size={14} /> {label}
+                  </button>
+                )
+              })
+            })()}
           </div>
 
-          {tab !== 'stats' && <>
+          {tab !== 'stats' && tab !== 'team' && <>
             {/* "Just mine" filter — quick toggle to hide everyone
                 else's tasks. Persists in localStorage so the user's
                 preference survives reload. Hidden when no user name
@@ -1923,7 +2012,7 @@ export function Planner() {
       </div>
 
       {/* Group filter tabs — shared across Day / Schedule / Month */}
-      {tab !== 'stats' && (settings.planner_groups?.length ?? 0) > 0 && (
+      {tab !== 'stats' && tab !== 'team' && (settings.planner_groups?.length ?? 0) > 0 && (
         <div className="mb-4">
           <GroupFilterTabs
             groups={settings.planner_groups}
@@ -1940,7 +2029,7 @@ export function Planner() {
           mirror what's actually rendered below. Overdue + Unassigned
           are clickable filters (a future iteration could deep-link
           into a filtered subview — for now they're informational). */}
-      {tab !== 'stats' && (() => {
+      {tab !== 'stats' && tab !== 'team' && (() => {
         const todayISO = fmtDate(new Date())
         const total = tasks.length
         const completed = tasks.filter((t: any) => t.completed).length
@@ -1957,23 +2046,22 @@ export function Planner() {
           { label: 'Unassigned',    value: unassigned,   accent: '#3b82f6', icon: User,        dim: unassigned === 0 },
         ]
 
+        // Single-row "stats bar" rather than five bordered boxes.
+        // Each KPI is a vertical stack (label on top, number below)
+        // separated by hairline dividers. Reads as one data row instead
+        // of five competing cards. Dim state for zero-value KPIs keeps
+        // the empty ones visually quiet but still scannable.
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+          <div className="bg-dark-surface border border-dark-border rounded-xl px-2 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-dark-border/40">
             {kpis.map((k) => {
               const KIcon = k.icon
               return (
                 <div key={k.label}
-                  className={'bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 flex items-center gap-2.5 transition-opacity ' + (k.dim ? 'opacity-60' : '')}>
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: `linear-gradient(135deg, ${k.accent}22, ${k.accent}08)`,
-                      border: `1px solid ${k.accent}40`,
-                    }}>
-                    <KIcon size={14} style={{ color: k.accent }} />
-                  </span>
+                  className={'flex items-center gap-2.5 px-3 py-1 transition-opacity ' + (k.dim ? 'opacity-50' : '')}>
+                  <KIcon size={16} style={{ color: k.accent }} className="flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 leading-none">{k.label}</p>
-                    <p className="text-sm font-bold text-white mt-1 truncate" style={k.dim ? {} : { color: k.accent }}>
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 leading-none">{k.label}</p>
+                    <p className="text-base font-bold text-white mt-0.5 truncate leading-tight" style={k.dim ? {} : { color: k.accent }}>
                       {k.value}
                     </p>
                   </div>
@@ -2252,17 +2340,39 @@ export function Planner() {
       {/* ═══ SCHEDULE VIEW (Connecteam-style) ═══ */}
       {tab === 'schedule' && (
         <div className="space-y-4">
-          {/* Day Note */}
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText size={14} className="text-primary-400" />
-              <span className="text-sm font-medium text-white">{t('planner.notes.todays_note', "Today's Note")}</span>
+          {/* Day note — collapsed by default to recover vertical space
+              for the schedule grid. Shows the note inline if one exists;
+              otherwise renders as a compact "+ Add note" link. The full
+              textarea is opened on click. */}
+          <CollapsibleNote
+            value={dayNote?.note_text ?? ''}
+            weekStart={weekStart}
+            placeholder={t('planner.notes.placeholder_today', 'Add notes for today…')}
+            label={t('planner.notes.todays_note', "Today's Note")}
+            onSave={(text) => upsertNoteMutation.mutate({ note_date: today, note_text: text })}
+          />
+
+          {/* Empty state — only the synthetic Unassigned row + no tasks.
+              The grid still renders below for the fallback, but this
+              gold callout points the user at Settings → Team so they
+              know how to populate it. Without this, a fresh org sees an
+              eerie one-row table and nothing about how to fix it. */}
+          {scheduleEmployees.length === 1 && scheduleEmployees[0] === 'Unassigned' && tasks.length === 0 && (
+            <div className="bg-gradient-to-br from-primary-500/10 via-primary-500/[0.04] to-transparent border border-primary-500/30 rounded-xl p-5 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
+                <User size={18} className="text-primary-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-white">No team members configured yet</div>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  Add staff in Settings → Team so the Schedule grid shows real workload columns. Until then the grid only renders an Unassigned row.
+                </p>
+              </div>
+              <a href="/team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md flex-shrink-0">
+                Add staff
+              </a>
             </div>
-            <textarea key={`note-${weekStart}`} defaultValue={dayNote?.note_text ?? ''}
-              onBlur={e => upsertNoteMutation.mutate({ note_date: today, note_text: e.target.value })}
-              rows={2} placeholder={t('planner.notes.placeholder_today', 'Add notes for today…')}
-              className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none" />
-          </div>
+          )}
 
           {/* Schedule Grid: employee rows × day columns
               Outer overflow-x-auto + min-width on the grid lets the table
@@ -2700,6 +2810,23 @@ export function Planner() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* ═══ TEAM VIEW (manager-only) ═══
+          Full-width cross-employee bucket kanban — the same data the
+          drawer's old "team mode" rendered at 720px wide, now promoted
+          to its own page-level view so the schedule isn't squeezed off
+          the right edge. Renders TeamBucketsView which fetches
+          ['planner-backlog','team'] and reuses the BacklogCard styling. */}
+      {tab === 'team' && (
+        <TeamBucketsView
+          currentUserId={user?.id ?? null}
+          invalidate={() => {
+            qc.invalidateQueries({ queryKey: ['planner-tasks']   })
+            qc.invalidateQueries({ queryKey: ['planner-backlog'] })
+            qc.invalidateQueries({ queryKey: ['planner-stats']   })
+          }}
+        />
       )}
 
       {/* ═══ STATS VIEW ═══ */}
