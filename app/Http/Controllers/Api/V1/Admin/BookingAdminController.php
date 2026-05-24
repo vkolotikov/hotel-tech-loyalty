@@ -932,7 +932,12 @@ class BookingAdminController extends Controller
             $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
             \App\Models\HotelSetting::withoutGlobalScopes()->updateOrCreate(
                 ['key' => 'booking_units', 'organization_id' => $orgId],
-                ['value' => json_encode($units), 'type' => 'json', 'group' => 'booking'],
+                [
+                    'value' => json_encode($units),
+                    'type'  => 'json',
+                    'group' => 'booking',
+                    'label' => 'Booking units (synced from PMS)',
+                ],
             );
 
             // Orphan cleanup: any booking_rooms row for this org whose pms_id
