@@ -390,16 +390,20 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
   return (
     <div className="space-y-1.5 mb-3">
       {mode === 'closed' && (
+        // Brighter than the previous gray-600-on-empty look — the
+        // buttons were nearly invisible against the dark surface,
+        // making the "Templates" entry point feel hidden. Now reads
+        // as a real action row.
         <div className="flex gap-1.5">
           <button
             onClick={() => setMode('pick')}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors"
           >
-            <Plus size={14} /> Templates {templates.length > 0 && <span className="text-[10px] opacity-60">({templates.length})</span>}
+            <FileText size={13} /> Templates {templates.length > 0 && <span className="text-[10px] text-gray-500 tabular-nums">({templates.length})</span>}
           </button>
           <button
             onClick={() => setMode('manage')}
-            className="px-3 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs font-medium"
+            className="px-3 py-2 rounded-lg text-gray-500 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors text-xs"
             title="Manage templates"
           >
             ⚙
@@ -408,44 +412,61 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
       )}
 
       {mode === 'pick' && (
-        <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-400">Pick a template</span>
-            <button onClick={() => setMode('closed')} className="p-1 rounded text-gray-600 hover:text-white">
+        // Card-grid layout instead of a plain stacked list. Each
+        // category header carries its group color (TASK_GROUP_META)
+        // so a glance separates Housekeeping from F&B from Maintenance
+        // without reading the labels. Templates render as 2-column
+        // cards on wider screens with name + duration + group dot.
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-white">Pick a template</span>
+            <button onClick={() => setMode('closed')} className="w-6 h-6 rounded hover:bg-white/5 text-gray-400 flex items-center justify-center">
               <X size={12} />
             </button>
           </div>
-          <div className="space-y-1 max-h-[300px] overflow-y-auto">
-            {isLoading ? (
-              <p className="text-xs text-gray-600 text-center py-4">Loading…</p>
-            ) : templates.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-xs text-gray-500 mb-2">No templates yet — start with our suggestions:</p>
-                <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-white font-medium hover:bg-primary-500">
-                  + Seed {SUGGESTED_TEMPLATES.length} starter templates
-                </button>
-              </div>
-            ) : (
-              Object.entries(grouped).map(([cat, tmps]) => (
-                <div key={cat}>
-                  <div className="text-[9px] font-bold uppercase text-gray-600 px-2 py-1 tracking-wider">{cat}</div>
-                  {tmps.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        onCreate(t.title, currentDate, t.task_group ?? undefined, t.task_category ?? undefined, t.duration_minutes ?? undefined)
-                        setMode('closed')
-                      }}
-                      className="w-full text-left text-xs px-3 py-1.5 rounded-md text-gray-300 hover:bg-primary-500/10 hover:text-primary-400 transition-colors flex items-center justify-between"
-                    >
-                      <span className="truncate">{t.name}</span>
-                      {t.duration_minutes && <span className="text-[9px] text-gray-600 flex-shrink-0">{t.duration_minutes}m</span>}
-                    </button>
-                  ))}
-                </div>
-              ))
-            )}
-          </div>
+          {isLoading ? (
+            <p className="text-xs text-gray-600 text-center py-4">Loading…</p>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-xs text-gray-500 mb-2">No templates yet — start with our suggestions:</p>
+              <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-white font-medium hover:bg-primary-500">
+                + Seed {SUGGESTED_TEMPLATES.length} starter templates
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[420px] overflow-y-auto">
+              {Object.entries(grouped).map(([cat, tmps]) => {
+                const groupMeta = TASK_GROUP_META[tmps[0]?.task_group ?? ''] ?? CUSTOM_GROUP_META
+                const accent = groupMeta.color
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accent }} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>{cat}</span>
+                      <span className="text-[10px] text-gray-600 tabular-nums">{tmps.length}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                      {tmps.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            onCreate(t.title, currentDate, t.task_group ?? undefined, t.task_category ?? undefined, t.duration_minutes ?? undefined)
+                            setMode('closed')
+                          }}
+                          className="w-full text-left bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 rounded-lg px-3 py-2 transition-colors flex items-center justify-between gap-2 group"
+                        >
+                          <span className="text-xs font-medium text-gray-200 group-hover:text-white truncate">{t.name}</span>
+                          {t.duration_minutes && (
+                            <span className="text-[10px] text-gray-500 tabular-nums flex-shrink-0">{t.duration_minutes}m</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -584,8 +605,9 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
   useEffect(() => { if (open && ref.current) ref.current.focus() }, [open])
 
   if (!open) return (
-    <button onClick={() => { setOpen(true); setTitle('') }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-dark-surface2/50 transition-colors text-xs">
-      <Plus size={14} /> Add custom task
+    <button onClick={() => { setOpen(true); setTitle('') }}
+      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors">
+      <Plus size={13} /> Add custom task
     </button>
   )
 
@@ -2072,10 +2094,30 @@ export function Planner() {
         )
       })()}
 
-      {/* ═══ DAY VIEW ═══ */}
+      {/* ═══ DAY VIEW ═══
+          Layout was: 2-col grid with timeline+tasks left, Day Notes +
+          Overview + Team breakdown right. Right sidebar duplicated the
+          KPI strip ("Overview" = Total/Completed/HighPri/WithSubtasks
+          which are already in the bar above), stole horizontal real
+          estate from the timeline, and kept the Day Notes textarea
+          always-expanded even when empty.
+          New layout: single column. Day Notes uses the same
+          CollapsibleNote pattern as Schedule. Overview removed. Team
+          breakdown only rendered when meaningful (multiple employees
+          + tasks present) and as a compact one-row strip above the
+          tasks list, not a sidebar panel. */}
       {tab === 'day' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-4">
+          {/* Day note — compact, click to expand. Same pattern as Schedule. */}
+          <CollapsibleNote
+            value={dayNote?.note_text ?? ''}
+            weekStart={currentDate}
+            placeholder={t('planner.notes.placeholder_day', 'Write notes for this day…')}
+            label={t('planner.notes.day_notes', 'Day notes')}
+            onSave={(text) => upsertNoteMutation.mutate({ note_date: currentDate, note_text: text })}
+          />
+
+          <div className="space-y-4">
             {/* Day-view action row — progress + Auto-plan button. Only
                 renders when there are tasks, since otherwise the empty
                 state below already invites task creation. */}
@@ -2229,31 +2271,37 @@ export function Planner() {
                 }
               }}>
               {tasks.length === 0 && (
-                <div className="relative bg-dark-surface border border-dark-border rounded-xl p-10 text-center overflow-hidden">
-                  <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl pointer-events-none"
-                    style={{ background: 'rgba(201,168,76,0.12)' }} />
-                  <div className="relative">
-                    <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4"
+                // Compact, horizontal empty state. The previous card was
+                // p-10 with a w-14 icon tile + centered headline — felt
+                // like a dialog blocking the page. This version reads as
+                // a one-line prompt: small icon, inline copy, two CTAs.
+                // Recovers vertical space so the templates + quick-add
+                // below stay in the same viewport.
+                <div className="flex items-center justify-between gap-4 bg-dark-surface border border-dark-border rounded-xl px-4 py-3 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
                         background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.04))',
                         border: '1px solid rgba(201,168,76,0.3)',
                       }}>
-                      <CalendarDays size={26} className="text-primary-400" />
+                      <CalendarDays size={18} className="text-primary-400" />
                     </div>
-                    <h3 className="text-base font-bold text-white mb-1">{t('planner.empty.no_tasks_today', 'No tasks for this day')}</h3>
-                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
-                      {t('planner.empty.hint', 'Start with a quick task or pick from a template below.')}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                      <button onClick={() => openCreate(currentDate)}
-                        className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-black font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow-[0_4px_14px_rgba(201,168,76,0.25)]">
-                        <Plus size={14} /> {t('planner.empty.create_first', 'Create your first task')}
-                      </button>
-                      <button onClick={() => setShowTemplatePicker(s => !s)}
-                        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-2 rounded-lg border border-dark-border hover:border-white/20 transition-colors">
-                        <FileText size={13} /> {t('planner.empty.use_template', 'Use a template')}
-                      </button>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white">{t('planner.empty.no_tasks_today', 'No tasks for this day')}</div>
+                      <div className="text-[11px] text-gray-500 leading-snug">
+                        {t('planner.empty.hint', 'Start with a quick task or pick from a template below.')}
+                      </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => openCreate(currentDate)}
+                      className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-colors">
+                      <Plus size={12} /> {t('planner.empty.create_first', 'Create your first task')}
+                    </button>
+                    <button onClick={() => setShowTemplatePicker(s => !s)}
+                      className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-dark-border hover:border-white/20 transition-colors">
+                      <FileText size={11} /> {t('planner.empty.use_template', 'Use a template')}
+                    </button>
                   </div>
                 </div>
               )}
@@ -2284,56 +2332,40 @@ export function Planner() {
             <QuickAdd date={currentDate} onCreate={handleQuickCreate} />
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText size={16} className="text-primary-400" />
-                <span className="text-sm font-semibold text-white">{t('planner.notes.day_notes', 'Day Notes')}</span>
-              </div>
-              <textarea key={currentDate} defaultValue={dayNote?.note_text ?? ''}
-                onBlur={e => upsertNoteMutation.mutate({ note_date: currentDate, note_text: e.target.value })}
-                rows={4} placeholder={t('planner.notes.placeholder_day', 'Write notes for this day…')}
-                className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none leading-relaxed" />
-            </div>
-
-            <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-3">{t('planner.overview', 'Overview')}</h3>
-              <div className="space-y-3">
-                {[
-                  ['Total', tasks.length, 'text-white'],
-                  ['Completed', tasks.filter((t: any) => t.completed).length, 'text-green-400'],
-                  ['High Priority', tasks.filter((t: any) => t.priority === 'High' && !t.completed).length, 'text-red-400'],
-                  ['With subtasks', tasks.filter((t: any) => t.subtasks?.length > 0).length, 'text-gray-400'],
-                ].map(([label, val, cls]) => (
-                  <div key={label as string} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{label}</span>
-                    <span className={'text-sm font-semibold ' + cls}>{val as number}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {!employee && tasks.length > 0 && (
-              <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-white mb-3">{t('planner.team', 'Team')}</h3>
-                <div className="space-y-2">
-                  {Object.entries(tasks.reduce((acc: any, t: any) => {
-                    const n = t.employee_name || 'Unassigned'; if (!acc[n]) acc[n] = { total: 0, done: 0 }
-                    acc[n].total++; if (t.completed) acc[n].done++; return acc
-                  }, {} as Record<string, { total: number; done: number }>)).map(([name, d]: [string, any]) => (
-                    <div key={name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-400 truncate">{name}</span>
-                        <span className="text-[10px] text-gray-600">{d.done}/{d.total}</span>
+          {/* Team workload — compact horizontal strip. Only renders when
+              we have multiple distinct assignees AND tasks present, so
+              single-person days don't show a one-item meta panel. Was a
+              vertical sidebar panel before; this layout puts the same
+              data on one line so the timeline stays uncramped. */}
+          {!employee && tasks.length > 0 && (() => {
+            const byEmp = tasks.reduce((acc: any, t: any) => {
+              const n = t.employee_name || 'Unassigned'
+              if (!acc[n]) acc[n] = { total: 0, done: 0 }
+              acc[n].total++; if (t.completed) acc[n].done++
+              return acc
+            }, {} as Record<string, { total: number; done: number }>)
+            const entries = Object.entries(byEmp) as Array<[string, { total: number; done: number }]>
+            if (entries.length < 2) return null
+            return (
+              <div className="bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <User size={12} className="text-gray-500" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{t('planner.team', 'Team workload today')}</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
+                  {entries.map(([name, d]) => (
+                    <div key={name} className="min-w-0">
+                      <div className="flex items-center justify-between mb-0.5 gap-2">
+                        <span className="text-xs text-gray-300 truncate">{name}</span>
+                        <span className="text-[10px] text-gray-500 tabular-nums flex-shrink-0">{d.done}/{d.total}</span>
                       </div>
                       <ProgressBar done={d.done} total={d.total} />
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+            )
+          })()}
         </div>
       )}
 
