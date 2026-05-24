@@ -160,8 +160,15 @@ class DiagWidgetAvailability extends Command
         }
         $this->newLine();
 
-        // ── 4. Inventory snapshot (booked vs total) ───────────────────
-        $this->line('<options=bold>4. Inventory state (booked vs total for the window)</>');
+        // ── 4. Per-night occupancy per room ───────────────────────────
+        // Distinct from the bookedCountForRoom() AvailabilityService uses
+        // internally — that one counts any stay overlapping the window, which
+        // can read as "3/1 overbooked" even when the stays don't overlap each
+        // other (just both fall inside the window). What you actually want to
+        // see here is per-night peak occupancy: a room is unavailable for a
+        // multi-night stay if any single night in the window is at-or-over
+        // inventory.
+        $this->line('<options=bold>4. Per-night occupancy (the metric that decides sold-out)</>');
         $allRooms = \App\Models\BookingRoom::withoutGlobalScopes()
             ->where('organization_id', $orgId)
             ->where('is_active', true)
@@ -169,25 +176,62 @@ class DiagWidgetAvailability extends Command
         if ($allRooms->isEmpty()) {
             $this->warn('  (no rooms configured for this org)');
         } else {
+            // Build night list once
+            $nights = [];
+            $cur = new \DateTime($in);
+            $endDt = new \DateTime($out);
+            while ($cur < $endDt) {
+                $nights[] = $cur->format('Y-m-d');
+                $cur->modify('+1 day');
+            }
+
             foreach ($allRooms as $room) {
                 $pms = (string) ($room->pms_id ?? '');
                 if ($pms === '') continue;
-                $booked = \App\Models\BookingMirror::withoutGlobalScopes()
+                $inv = max(1, (int) ($room->inventory_count ?? 1));
+
+                // Pull every overlapping booking once, then walk nights.
+                $overlapping = \App\Models\BookingMirror::withoutGlobalScopes()
                     ->where('organization_id', $orgId)
                     ->where('apartment_id', $pms)
                     ->where('booking_state', '!=', 'cancelled')
                     ->where('arrival_date', '<', $out)
                     ->where('departure_date', '>', $in)
-                    ->count();
-                $inv = max(1, (int) ($room->inventory_count ?? 1));
-                $tag = $booked >= $inv ? '<fg=red>SOLD OUT</>' : '<fg=green>AVAIL   </>';
+                    ->get(['reservation_id', 'arrival_date', 'departure_date']);
+
+                $peak = 0;
+                $peakNight = null;
+                $blockedNights = [];
+                foreach ($nights as $n) {
+                    $count = 0;
+                    foreach ($overlapping as $b) {
+                        $a = (string) $b->arrival_date;
+                        $d = (string) $b->departure_date;
+                        if ($a <= $n && $n < $d) $count++;
+                    }
+                    if ($count >= $inv) $blockedNights[] = $n;
+                    if ($count > $peak) {
+                        $peak = $count;
+                        $peakNight = $n;
+                    }
+                }
+
+                $isSold = !empty($blockedNights);
+                $tag = $isSold ? '<fg=red>SOLD</>' : '<fg=green>AVAIL</>';
+                $suffix = $isSold
+                    ? ' · blocked: ' . implode(',', $blockedNights)
+                    : '';
                 $this->line(sprintf(
-                    '  %s  pms=%-6s %s  booked=%d/%d',
+                    '  %s  pms=%-6s %s  peak=%d/%d on %s · %d overlapping stay%s%s',
                     $tag,
                     $pms,
                     str_pad(substr($room->name ?? '?', 0, 40), 40),
-                    $booked,
+                    $peak,
                     $inv,
+                    $peakNight ?? '—',
+                    $overlapping->count(),
+                    $overlapping->count() === 1 ? '' : 's',
+                    $suffix,
                 ));
             }
         }
