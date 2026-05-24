@@ -12,7 +12,7 @@ class Staff extends Model
     protected $fillable = [
         'organization_id', 'user_id', 'role', 'hotel_name', 'department',
         'can_award_points', 'can_redeem_points', 'can_manage_offers',
-        'can_view_analytics', 'allowed_nav_groups',
+        'can_view_analytics', 'allowed_nav_groups', 'planner_skills',
         'is_active', 'expo_push_token', 'last_login_at',
     ];
 
@@ -24,6 +24,7 @@ class Staff extends Model
         'can_manage_offers' => 'boolean',
         'can_view_analytics' => 'boolean',
         'allowed_nav_groups' => 'array',
+        'planner_skills' => 'array',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
     ];

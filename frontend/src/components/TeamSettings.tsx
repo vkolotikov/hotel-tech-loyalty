@@ -4,8 +4,9 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Users, UserPlus, Mail, Shield, Crown, X, RefreshCw, Edit2, Save, UserX, UserCheck,
-  Check, Info,
+  Check, Info, Wrench,
 } from 'lucide-react'
+import { useSettings } from '../lib/crmSettings'
 
 /**
  * Settings → Team. Lists every staff member in the org and lets
@@ -41,6 +42,7 @@ interface StaffRow {
   can_manage_offers: boolean
   can_view_analytics: boolean
   allowed_nav_groups: string[] | null
+  planner_skills: string[] | null
   is_me: boolean
 }
 
@@ -211,6 +213,8 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
   onCancel: () => void
   onSaved: () => void
 }) {
+  const settings = useSettings()
+  const plannerGroups: string[] = settings.planner_groups ?? []
   const [form, setForm] = useState({
     role: staff.role,
     department: staff.department ?? '',
@@ -222,6 +226,10 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
     // surface the same triple state on the UI via the "All sections"
     // option in the picker.
     allowed_nav_groups: staff.allowed_nav_groups,
+    // Planner backlog pool skill allowlist. Same tri-state semantics
+    // as allowed_nav_groups — null = "claim anything", non-empty
+    // array = whitelist. The picker UI below collapses [] to null.
+    planner_skills: staff.planner_skills,
   })
 
   const save = useMutation({
@@ -282,15 +290,24 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
           </div>
 
           {form.role === 'staff' && (
-            <SectionPicker
-              availableGroups={availableGroups}
-              value={form.allowed_nav_groups}
-              onChange={v => setForm(f => ({ ...f, allowed_nav_groups: v }))}
-            />
+            <>
+              <SectionPicker
+                availableGroups={availableGroups}
+                value={form.allowed_nav_groups}
+                onChange={v => setForm(f => ({ ...f, allowed_nav_groups: v }))}
+              />
+              {plannerGroups.length > 0 && (
+                <PlannerSkillsPicker
+                  availableGroups={plannerGroups}
+                  value={form.planner_skills}
+                  onChange={v => setForm(f => ({ ...f, planner_skills: v }))}
+                />
+              )}
+            </>
           )}
           {form.role !== 'staff' && (
             <div className="text-[11px] text-gray-500 leading-snug bg-dark-bg border border-dark-border rounded-md p-2.5">
-              <span className="text-amber-300 font-semibold">{form.role === 'super_admin' ? 'Super admins' : 'Managers'}</span> always see every section. Section restrictions only apply to the <span className="text-white">staff</span> role.
+              <span className="text-amber-300 font-semibold">{form.role === 'super_admin' ? 'Super admins' : 'Managers'}</span> always see every section + can claim any planner task. Restrictions only apply to the <span className="text-white">staff</span> role.
             </div>
           )}
         </div>
@@ -347,6 +364,58 @@ function SectionPicker({ availableGroups, value, onChange }: {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Allowlist picker for planner backlog skills. When set, the staff
+ * member can only see + claim Open-pool tasks whose task_group is in
+ * the list. Tri-state mirrors SectionPicker above: null = no
+ * restriction (claim anything), non-empty = whitelist. Coerce empty
+ * array to null at the picker level for API parity.
+ */
+function PlannerSkillsPicker({ availableGroups, value, onChange }: {
+  availableGroups: string[]
+  value: string[] | null
+  onChange: (v: string[] | null) => void
+}) {
+  const isAll = !value || value.length === 0
+  const toggle = (g: string) => {
+    const cur = value ?? []
+    const next = cur.includes(g) ? cur.filter(x => x !== g) : [...cur, g]
+    onChange(next.length === 0 ? null : next)
+  }
+  return (
+    <div className="mt-3">
+      <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 flex items-center gap-1.5">
+        <Wrench size={11} />
+        Planner: task groups this person can claim
+      </label>
+      <button onClick={() => onChange(null)}
+        className={'w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs mb-1.5 transition-colors ' +
+          (isAll ? 'border-emerald-500/60 bg-emerald-500/[0.06] text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
+        <span className={'w-3 h-3 rounded-full flex-shrink-0 ' + (isAll ? 'bg-emerald-400' : 'border border-gray-600')} />
+        <span className="font-semibold">Can claim anything in the pool</span>
+      </button>
+      <div className="grid grid-cols-2 gap-1">
+        {availableGroups.map(g => {
+          const checked = !isAll && (value ?? []).includes(g)
+          return (
+            <button key={g} onClick={() => toggle(g)}
+              className={'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ' +
+                (checked ? 'border-amber-500/60 bg-amber-500/[0.06] text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+              <span className={'w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
+                {checked && <Check size={9} className="text-black" />}
+              </span>
+              <span className="truncate">{g}</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="text-[10px] text-gray-600 mt-1.5 leading-snug">
+        Empty = restricted to nothing. Managers always bypass this.
+      </p>
     </div>
   )
 }

@@ -837,7 +837,7 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
  * tasks/day) plain overlap is fine and a click still hits the right
  * chip because the popover anchor is the absolutely-positioned chip.
  */
-function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate, employees, viewMode, onViewModeChange }: {
+function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate, onTaskDropAtTime, employees, viewMode, onViewModeChange }: {
   tasks: any[]
   isToday: boolean
   onTaskClick: (task: any, anchor: DOMRect) => void
@@ -845,6 +845,11 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
    *  (undefined in single-column mode or when click hit no column). */
   onCreateAtTime: (hhmm: string, emp?: string) => void
   onTaskUpdate: (taskId: number, body: Record<string, any>) => void
+  /** Fired when a task is HTML5-dragged onto an empty slot in the
+   *  timeline (e.g. from the BacklogDrawer or another day's chip).
+   *  hhmm is the snapped start, emp is the column in team mode. The
+   *  parent uses this to fire moveMutation with task_date + start_time. */
+  onTaskDropAtTime: (taskId: number, hhmm: string, emp?: string) => void
   /** Employees to render as columns when viewMode === 'team'. Order is
    *  preserved, with `__unassigned__` reserved for null employees. */
   employees: string[]
@@ -1093,6 +1098,40 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
           ref={gridRef}
           className="relative cursor-cell"
           style={{ height: TOTAL_HEIGHT, paddingLeft: TIME_LABEL_WIDTH }}
+          onDragOver={(e) => {
+            // Accept drops from any chip (backlog or another scheduled
+            // chip). dataTransfer.types is the only thing we can read in
+            // dragover (Firefox blocks getData); presence of 'taskid' is
+            // our signal.
+            if (e.dataTransfer.types.includes('taskid') || e.dataTransfer.types.includes('text/plain')) {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            const taskId = Number(e.dataTransfer.getData('taskId'))
+            if (!taskId) return
+            const wrap = e.currentTarget.getBoundingClientRect()
+            const y = e.clientY - wrap.top
+            const mins = (y / PX_PER_HOUR) * 60
+            const snapped = Math.max(0, Math.round(mins / 15) * 15)
+            const total = HOUR_START * 60 + snapped
+            const hh = String(Math.floor(total / 60)).padStart(2, '0')
+            const mm = String(total % 60).padStart(2, '0')
+            // Same column resolution as the click handler — in team
+            // mode, map clientX to an employee column so dropping in
+            // the Maintenance column auto-assigns it.
+            let emp: string | undefined
+            if (renderedMode === 'team' && employees.length > 0) {
+              const colsW = wrap.width - TIME_LABEL_WIDTH
+              const x = Math.max(0, e.clientX - wrap.left - TIME_LABEL_WIDTH)
+              const colIdx = Math.min(employees.length - 1, Math.floor((x / colsW) * employees.length))
+              const candidate = employees[colIdx]
+              if (candidate && candidate !== '__unassigned__') emp = candidate
+            }
+            onTaskDropAtTime(taskId, `${hh}:${mm}`, emp)
+          }}
           onClick={(e) => {
             // Click on empty timeline space → open the new-task drawer
             // with this hour pre-selected. We skip when the click
@@ -1519,14 +1558,20 @@ export function Planner() {
    * Used by drag-and-drop in every view, so latency matters.
    */
   const moveMutation = useMutation({
-    mutationFn: ({ id, task_date, employee_name }: any) => api.patch('/v1/admin/planner/tasks/' + id + '/move', { task_date, employee_name }),
-    onMutate: async ({ id, task_date, employee_name }: any) => {
+    // start_time is optional — only the Day-timeline backlog drop sends it
+    // (it knows the exact slot the user dropped on). Schedule / Month
+    // drops omit it because those views only know the date, not the time.
+    mutationFn: ({ id, task_date, employee_name, start_time }: any) => api.patch('/v1/admin/planner/tasks/' + id + '/move', { task_date, employee_name, start_time }),
+    onMutate: async ({ id, task_date, employee_name, start_time }: any) => {
       await qc.cancelQueries({ queryKey: ['planner-tasks'] })
       const snapshots = qc.getQueriesData({ queryKey: ['planner-tasks'] })
       qc.setQueriesData({ queryKey: ['planner-tasks'] }, (old: any) => {
         if (!Array.isArray(old)) return old
         return old.map((t: any) => t.id === id
-          ? { ...t, task_date, ...(employee_name !== undefined ? { employee_name } : {}) }
+          ? { ...t, task_date,
+              ...(employee_name !== undefined ? { employee_name } : {}),
+              ...(start_time !== undefined ? { start_time } : {}),
+            }
           : t)
       })
       return { snapshots }
@@ -1781,7 +1826,11 @@ export function Planner() {
           invalidate() helper above busts ['planner-backlog'] alongside
           ['planner-tasks'] so this drawer reacts to calendar mutations
           and vice versa. Mobile hides it (it's md:flex/hidden). */}
-      <BacklogDrawer currentUserId={user?.id ?? null} currentUserName={myName} />
+      <BacklogDrawer
+        currentUserId={user?.id ?? null}
+        currentUserName={myName}
+        isManager={useAuthStore.getState().isAdmin()}
+      />
 
       <div className="flex-1 min-w-0 p-4 md:p-6 space-y-4 md:space-y-5">
         <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
@@ -1998,6 +2047,18 @@ export function Planner() {
                   onViewModeChange={setDayViewMode}
                   onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
                   onCreateAtTime={(hhmm, emp) => openCreate(currentDate, emp, hhmm)}
+                  onTaskDropAtTime={(taskId, hhmm, emp) => {
+                    // Backlog or cross-day drop landed on an exact time
+                    // slot. Schedule with task_date=currentDate +
+                    // start_time=hhmm + employee from the column (or
+                    // current employee filter when not in team mode).
+                    moveMutation.mutate({
+                      id: taskId,
+                      task_date: currentDate,
+                      start_time: hhmm,
+                      employee_name: emp ?? (employee || undefined),
+                    })
+                  }}
                   onTaskUpdate={(taskId, body) => {
                     // Optimistic patch: update the cached query data
                     // immediately so the chip stays where the user

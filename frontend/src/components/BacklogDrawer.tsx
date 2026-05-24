@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, ChevronRight, Inbox, Users, Flag, Loader2,
-  Hand, Send,
+  Hand, Send, LayoutGrid,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -26,10 +26,23 @@ interface Props {
   currentUserId?: number | null
   /** Current user's display name — fallback match for legacy employee_name rows. */
   currentUserName?: string
+  /** Manager flag — gates the "Team mode" toggle. Defaults to false so
+   *  non-managers don't see the toggle even if the backend somehow lets
+   *  them through. Backend enforces the auth check independently. */
+  isManager?: boolean
 }
+
+type TeamBucket = {
+  user_id: number
+  user_name: string
+  avatar_url?: string | null
+  tasks: BacklogTask[]
+}
+type TeamData = { pool: BacklogTask[]; buckets: TeamBucket[] }
 
 const SCOPE_STORAGE_KEY  = 'planner-backlog-scope'
 const OPEN_STORAGE_KEY   = 'planner-backlog-open'
+const TEAM_MODE_KEY      = 'planner-backlog-team-mode'
 
 /**
  * Sidebar drawer that holds tasks without a scheduled date — either in
@@ -45,7 +58,7 @@ const OPEN_STORAGE_KEY   = 'planner-backlog-open'
  * augmented to also invalidate ['planner-backlog'] so the drawer
  * refreshes whenever the calendar changes.
  */
-export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
+export function BacklogDrawer({ currentUserId, currentUserName = '', isManager = false }: Props) {
   const qc = useQueryClient()
 
   // Drawer expand/collapse — persists across reloads so an admin who
@@ -65,6 +78,18 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
     try { localStorage.setItem(SCOPE_STORAGE_KEY, scope) } catch {}
   }, [scope])
 
+  // Team mode: managers get a wide kanban-style view with one column
+  // per active staff member's bucket + the open pool. Persists per
+  // session so a manager who plans the day this way doesn't have to
+  // re-toggle every morning.
+  const [teamMode, setTeamMode] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && localStorage.getItem(TEAM_MODE_KEY) === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(TEAM_MODE_KEY, teamMode ? '1' : '0') } catch {}
+  }, [teamMode])
+  const showTeamMode = teamMode && isManager
+
   const [quickAdd, setQuickAdd] = useState('')
   const [isDropTarget, setIsDropTarget] = useState(false)
 
@@ -79,6 +104,15 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
   const { data: poolTasks = [], isLoading: poolLoading } = useQuery<BacklogTask[]>({
     queryKey: ['planner-backlog', 'pool'],
     queryFn: () => api.get('/v1/admin/planner/backlog', { params: { scope: 'pool' } }).then((r: any) => r.data),
+  })
+
+  // Team mode: one bucket per active staff + the pool. Only fetched
+  // when manager + team mode is on so non-managers never pay the
+  // round-trip.
+  const { data: teamData, isLoading: teamLoading } = useQuery<TeamData>({
+    queryKey: ['planner-backlog', 'team'],
+    queryFn: () => api.get('/v1/admin/planner/backlog', { params: { scope: 'team' } }).then((r: any) => r.data),
+    enabled: showTeamMode,
   })
 
   const activeTasks = scope === 'mine' ? mineTasks : poolTasks
@@ -123,6 +157,21 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
   const unscheduleMutation = useMutation({
     mutationFn: (id: number) => api.patch(`/v1/admin/planner/tasks/${id}/move`, { task_date: null }),
     onSuccess: () => { invalidate(); toast.success('Moved to backlog') },
+    onError:  (e: any) => toast.error(e.response?.data?.message || 'Error'),
+  })
+
+  // Reassign a backlog task between buckets in Team mode. PATCH /move
+  // with task_date=null + the new employee_name + new assigned_to_user_id
+  // (null for the pool). Server preserves the null task_date so the row
+  // stays in the backlog after the reassign.
+  const reassignMutation = useMutation({
+    mutationFn: (vars: { id: number; user_id: number | null; user_name: string | null }) =>
+      api.patch(`/v1/admin/planner/tasks/${vars.id}/move`, {
+        task_date: null,
+        assigned_to_user_id: vars.user_id,
+        employee_name: vars.user_name,
+      }),
+    onSuccess: () => { invalidate(); toast.success('Reassigned') },
     onError:  (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -183,15 +232,17 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
   return (
     <div
       className={[
-        'hidden md:flex flex-col w-[280px] bg-dark-surface border-r sticky top-0 h-screen overflow-hidden',
+        'hidden md:flex flex-col bg-dark-surface border-r sticky top-0 h-screen overflow-hidden',
+        showTeamMode ? 'w-[720px]' : 'w-[280px]',
         isDropTarget ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-white/5',
       ].join(' ')}
       onDragOver={(e) => {
         const sourceDate = e.dataTransfer.types.includes('text/plain')
           ? '' : e.dataTransfer.getData('sourceDate')
         // Only highlight + accept drops from CALENDAR (sourceDate is set)
-        // — drops from inside the drawer are no-ops.
-        if (sourceDate !== '' && sourceDate !== undefined) {
+        // — drops from inside the drawer are no-ops. In team mode the
+        // drop target is the inner column, not the whole drawer.
+        if (!showTeamMode && sourceDate !== '' && sourceDate !== undefined) {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'move'
           setIsDropTarget(true)
@@ -199,6 +250,7 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
       }}
       onDragLeave={() => setIsDropTarget(false)}
       onDrop={(e) => {
+        if (showTeamMode) return  // inner columns handle the drop
         e.preventDefault()
         setIsDropTarget(false)
         const taskId = Number(e.dataTransfer.getData('taskId'))
@@ -211,16 +263,66 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
       <div className="flex items-center justify-between p-3 border-b border-white/5">
         <div className="flex items-center gap-2">
           <Inbox size={16} className="text-gold-400" />
-          <span className="text-sm font-semibold text-white">Backlog</span>
+          <span className="text-sm font-semibold text-white">Backlog{showTeamMode && ' · Team'}</span>
         </div>
-        <button
-          onClick={() => setOpen(false)}
-          className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center text-gray-400"
-          title="Collapse"
-        >
-          <ChevronLeft size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          {isManager && (
+            <button
+              onClick={() => setTeamMode(m => !m)}
+              className={[
+                'w-7 h-7 rounded-md flex items-center justify-center transition',
+                showTeamMode ? 'bg-gold-500 text-black' : 'hover:bg-white/5 text-gray-400',
+              ].join(' ')}
+              title={showTeamMode ? 'Switch to my view' : 'Show every employee\'s bucket side-by-side'}
+            >
+              <LayoutGrid size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => setOpen(false)}
+            className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center text-gray-400"
+            title="Collapse"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Team mode: kanban of buckets + pool, full-width columns. */}
+      {showTeamMode && (
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-2">
+          {teamLoading && (
+            <div className="flex items-center justify-center py-6 text-gray-500">
+              <Loader2 size={16} className="animate-spin" />
+            </div>
+          )}
+          {!teamLoading && teamData && (
+            <div className="flex gap-2 h-full">
+              <TeamColumn
+                title="Open pool"
+                accentClass="border-cyan-500/40"
+                tasks={teamData.pool}
+                target={{ user_id: null, user_name: null, label: 'Open pool' }}
+                onReassign={(taskId) => reassignMutation.mutate({ id: taskId, user_id: null, user_name: null })}
+                onUnschedule={(taskId) => unscheduleMutation.mutate(taskId)}
+              />
+              {teamData.buckets.map(b => (
+                <TeamColumn
+                  key={b.user_id}
+                  title={b.user_name || 'Unnamed'}
+                  accentClass="border-gold-500/40"
+                  tasks={b.tasks}
+                  target={{ user_id: b.user_id, user_name: b.user_name, label: b.user_name }}
+                  onReassign={(taskId) => reassignMutation.mutate({ id: taskId, user_id: b.user_id, user_name: b.user_name })}
+                  onUnschedule={(taskId) => unscheduleMutation.mutate(taskId)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!showTeamMode && (<>
 
       {/* Scope tabs */}
       <div className="flex gap-1 p-2 border-b border-white/5">
@@ -316,6 +418,74 @@ export function BacklogDrawer({ currentUserId, currentUserName = '' }: Props) {
       <div className="p-2 border-t border-white/5 text-[10px] text-gray-600">
         Drag a card onto any calendar cell to schedule it.
       </div>
+      </>)}
+    </div>
+  )
+}
+
+/**
+ * One column in the Team-mode kanban. Each represents either the open
+ * pool or a specific staff member's bucket. Accepts drops from any
+ * calendar chip (unschedule + reassign in one go) or from another
+ * column (just reassign).
+ */
+function TeamColumn({ title, tasks, target, onReassign, onUnschedule, accentClass }: {
+  title: string
+  accentClass: string
+  tasks: BacklogTask[]
+  target: { user_id: number | null; user_name: string | null; label: string | null }
+  onReassign: (taskId: number) => void
+  onUnschedule: (taskId: number) => void
+}) {
+  const [hot, setHot] = useState(false)
+  return (
+    <div
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('taskid')) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          setHot(true)
+        }
+      }}
+      onDragLeave={() => setHot(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setHot(false)
+        const taskId = Number(e.dataTransfer.getData('taskId'))
+        const sourceDate = e.dataTransfer.getData('sourceDate')
+        if (!taskId) return
+        // From calendar: unschedule first, then reassign in a second
+        // call. Two round-trips, but it's a manager-only flow + drag
+        // is intentional so latency is fine.
+        if (sourceDate) onUnschedule(taskId)
+        onReassign(taskId)
+      }}
+      className={[
+        'flex-shrink-0 w-[200px] flex flex-col bg-dark-bg/40 border rounded-lg overflow-hidden',
+        hot ? 'border-gold-500 ring-2 ring-gold-500/30' : accentClass,
+      ].join(' ')}
+    >
+      <div className="px-2.5 py-2 border-b border-white/5 flex items-center justify-between bg-dark-surface/50">
+        <span className="text-xs font-semibold text-white truncate" title={title}>{title}</span>
+        <span className="text-[10px] tabular-nums text-gray-500">{tasks.length}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+        {tasks.length === 0 && (
+          <div className="text-[10px] text-gray-600 text-center py-3 px-2 leading-snug">
+            Drag tasks here to assign to <span className="text-gray-400">{target.label || 'pool'}</span>
+          </div>
+        )}
+        {tasks.map(task => (
+          <BacklogCard
+            key={task.id}
+            task={task}
+            scope={target.user_id === null ? 'pool' : 'mine'}
+            onClaim={() => { /* not used in team mode */ }}
+            onRelease={() => { /* not used in team mode */ }}
+            hideActions
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -325,9 +495,13 @@ interface CardProps {
   scope: Scope
   onClaim: () => void
   onRelease: () => void
+  /** Team mode shows cards inside a manager-driven kanban; the
+   *  per-card claim/release affordances make no sense there because
+   *  the drag-between-columns is the assignment gesture. */
+  hideActions?: boolean
 }
 
-function BacklogCard({ task, scope, onClaim, onRelease }: CardProps) {
+function BacklogCard({ task, scope, onClaim, onRelease, hideActions = false }: CardProps) {
   const accent =
     task.priority === 'high'   ? 'border-l-red-400' :
     task.priority === 'low'    ? 'border-l-gray-500' :
@@ -371,7 +545,7 @@ function BacklogCard({ task, scope, onClaim, onRelease }: CardProps) {
           </div>
         </div>
         {/* Claim / release affordance — only show on hover to keep cards tidy. */}
-        {scope === 'pool' ? (
+        {!hideActions && (scope === 'pool' ? (
           <button
             onClick={(e) => { e.stopPropagation(); onClaim() }}
             className="opacity-0 group-hover:opacity-100 transition w-6 h-6 rounded bg-gold-500/15 hover:bg-gold-500/25 text-gold-400 flex items-center justify-center"
@@ -387,7 +561,7 @@ function BacklogCard({ task, scope, onClaim, onRelease }: CardProps) {
           >
             <Send size={11} />
           </button>
-        )}
+        ))}
       </div>
     </div>
   )

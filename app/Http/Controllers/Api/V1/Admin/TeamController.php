@@ -94,6 +94,7 @@ class TeamController extends Controller
                 'can_manage_offers'   => $s->can_manage_offers,
                 'can_view_analytics'  => $s->can_view_analytics,
                 'allowed_nav_groups'  => $s->allowed_nav_groups,
+                'planner_skills'      => $s->planner_skills,
                 'is_me'               => $s->user_id === $request->user()?->id,
             ]);
 
@@ -123,6 +124,13 @@ class TeamController extends Controller
             'can_view_analytics'   => 'nullable|boolean',
             'allowed_nav_groups'   => 'nullable|array',
             'allowed_nav_groups.*' => 'string|in:' . implode(',', self::TOGGLEABLE_GROUPS),
+            // Planner pool skill allowlist. Null = no restriction (this
+            // staff can claim any task_group). Empty array = none.
+            // Values are arbitrary strings matching planner_tasks.task_group
+            // so we don't constrain them here — orgs configure their own
+            // groups via Settings → Planner.
+            'planner_skills'       => 'nullable|array',
+            'planner_skills.*'     => 'string|max:80',
         ]);
 
         $email = strtolower(trim($validated['email']));
@@ -192,6 +200,12 @@ class TeamController extends Controller
                     'can_manage_offers'  => (bool) ($validated['can_manage_offers']  ?? in_array($validated['role'], ['super_admin', 'manager'])),
                     'can_view_analytics' => (bool) ($validated['can_view_analytics'] ?? in_array($validated['role'], ['super_admin', 'manager'])),
                     'allowed_nav_groups' => $allowedGroups,
+                    // Planner skill allowlist: ignored on managers (they
+                    // always see the full pool), persisted as-is for
+                    // regular staff. Null means "no restriction".
+                    'planner_skills'     => in_array($validated['role'], ['super_admin', 'manager'], true)
+                        ? null
+                        : ($validated['planner_skills'] ?? null),
                     'is_active'          => true,
                 ];
                 if ($staff) {
@@ -260,6 +274,8 @@ class TeamController extends Controller
             'can_view_analytics'   => 'sometimes|boolean',
             'allowed_nav_groups'   => 'sometimes|nullable|array',
             'allowed_nav_groups.*' => 'string|in:' . implode(',', self::TOGGLEABLE_GROUPS),
+            'planner_skills'       => 'sometimes|nullable|array',
+            'planner_skills.*'     => 'string|max:80',
         ]);
 
         // Admins always see everything — clear any whitelist they may have
@@ -268,6 +284,9 @@ class TeamController extends Controller
         $nextRole = $validated['role'] ?? $staff->role;
         if (in_array($nextRole, ['super_admin', 'manager'], true)) {
             $validated['allowed_nav_groups'] = null;
+            // Same logic for planner skills — managers bypass the skill
+            // gate by design, so any leftover list is meaningless.
+            $validated['planner_skills'] = null;
         }
 
         // Only super-admin can promote TO super-admin.

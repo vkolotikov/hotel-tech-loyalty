@@ -195,6 +195,64 @@ class PlannerController extends Controller
     public function backlog(Request $request): JsonResponse
     {
         $scope = $request->get('scope', 'mine');
+
+        // Team mode: managers see one bucket per active staff member +
+        // the unassigned pool, in a single payload so they can compare
+        // workloads at a glance. Other scopes return a flat array of
+        // tasks; this one returns a grouped object.
+        if ($scope === 'team') {
+            $user = $request->user();
+            if (!$user) return response()->json(['error' => 'Not authenticated'], 401);
+            $staff = $user->organization_id
+                ? \App\Models\Staff::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->where('organization_id', $user->organization_id)
+                    ->first(['role'])
+                : null;
+            if (!$staff || !$staff->isManager()) {
+                return response()->json(['error' => 'Team view is for managers'], 403);
+            }
+
+            // Active staff with at least the user_id link, ordered by
+            // name so the columns are stable across renders.
+            $staffRows = \App\Models\Staff::withoutGlobalScopes()
+                ->with('user:id,name,email,avatar_url')
+                ->where('organization_id', $user->organization_id)
+                ->where('is_active', true)
+                ->whereNotNull('user_id')
+                ->get(['id', 'user_id'])
+                ->sortBy(fn ($s) => $s->user?->name ?? 'zzz')
+                ->values();
+
+            // Single query for every unscheduled task in the org.
+            $all = PlannerTask::with('subtasks')->whereNull('task_date')->get();
+
+            $buckets = $staffRows->map(function ($s) use ($all) {
+                $uid = $s->user_id;
+                $name = $s->user?->name ?? '';
+                $bucket = $all->filter(fn ($t) =>
+                    $t->assigned_to_user_id === $uid
+                    || ($t->employee_name && $t->employee_name === $name)
+                )->values();
+                return [
+                    'user_id'    => $uid,
+                    'user_name'  => $name,
+                    'avatar_url' => $s->user?->avatar_url,
+                    'tasks'      => $bucket,
+                ];
+            });
+
+            $pool = $all->filter(fn ($t) =>
+                $t->assigned_to_user_id === null
+                && empty($t->employee_name)
+            )->values();
+
+            return response()->json([
+                'pool'    => $pool,
+                'buckets' => $buckets,
+            ]);
+        }
+
         $query = PlannerTask::with('subtasks')->whereNull('task_date');
 
         if ($scope === 'pool') {
@@ -202,6 +260,31 @@ class PlannerController extends Controller
                   ->where(function ($q) {
                       $q->whereNull('employee_name')->orWhere('employee_name', '');
                   });
+
+            // Skill filter: if the current user has a non-null
+            // staff.planner_skills allowlist, only show pool tasks whose
+            // task_group is in it. NULL skills = "no restriction" (default
+            // behaviour, preserves existing orgs). Empty array = "this
+            // user can't claim anything" — returns zero pool tasks.
+            // Tasks with NULL task_group are visible to everyone since
+            // there's nothing to gate against.
+            $user = $request->user();
+            $staff = $user?->organization_id
+                ? \App\Models\Staff::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->where('organization_id', $user->organization_id)
+                    ->first(['planner_skills', 'role'])
+                : null;
+            $skills = $staff?->planner_skills;
+            $isManager = $staff?->isManager() ?? false;
+            if (is_array($skills) && !$isManager) {
+                // Managers + super_admins see the full pool regardless of
+                // skills — they're the ones who triage the unclaimed work.
+                $query->where(function ($q) use ($skills) {
+                    $q->whereNull('task_group')
+                      ->orWhereIn('task_group', $skills);
+                });
+            }
         } else {
             // "mine" — assigned to the current user. Match on either the
             // FK or the legacy employee_name string so older rows still
@@ -240,6 +323,29 @@ class PlannerController extends Controller
                 'assigned_to_user_id' => $taskModel->assigned_to_user_id,
                 'employee_name'       => $taskModel->employee_name,
             ], 409);
+        }
+
+        // Skill gate: matches the backlog list filter so a user can't
+        // discover a task they can't see and POST /claim directly. Same
+        // exemption for managers as in backlog() above.
+        $staff = $user->organization_id
+            ? \App\Models\Staff::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $user->organization_id)
+                ->first(['planner_skills', 'role'])
+            : null;
+        $skills = $staff?->planner_skills;
+        $isManager = $staff?->isManager() ?? false;
+        if (
+            is_array($skills)
+            && !$isManager
+            && $taskModel->task_group
+            && !in_array($taskModel->task_group, $skills, true)
+        ) {
+            return response()->json([
+                'error' => 'You do not have the skills configured to claim this task',
+                'required_skill' => $taskModel->task_group,
+            ], 403);
         }
 
         $taskModel->update([
