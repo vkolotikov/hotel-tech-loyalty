@@ -1025,15 +1025,22 @@ class BookingEngineService
         $existingPriceTotal = null;
         $existingHadBreakdown = false;
         if (!empty($data['id'])) {
+            // `id` is needed alongside the snapshot fields so the existsHadBreakdown
+            // lookup below can use the relational booking_price_elements table.
+            // Note: there is no `price_breakdown` column on booking_mirror — the
+            // breakdown lives in the relational `booking_price_elements` table.
+            // An earlier draft selected a `price_breakdown` jsonb column on
+            // this row that never made it to prod; including it here broke
+            // every reservation upsert with 42703 undefined-column.
             $existing = BookingMirror::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
                 ->where('reservation_id', $clip((string) $data['id'], 30))
-                ->first(['channel_name', 'stripe_payment_intent_id', 'price_total', 'price_breakdown']);
+                ->first(['id', 'channel_name', 'stripe_payment_intent_id', 'price_total']);
             if ($existing) {
                 $existingChannel      = $existing->channel_name;
                 $existingHadStripe    = !empty($existing->stripe_payment_intent_id);
                 $existingPriceTotal   = $existing->price_total !== null ? (float) $existing->price_total : null;
-                $existingHadBreakdown = !empty($existing->price_breakdown);
+                $existingHadBreakdown = $existing->priceElements()->exists();
             }
         }
         $smoobuChannel = $clip($strOrNull($channel['name'] ?? null), 80);
