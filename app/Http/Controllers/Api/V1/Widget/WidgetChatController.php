@@ -66,21 +66,38 @@ class WidgetChatController extends Controller
         $geo = $this->geolocateIp($ip);
 
         if (!$visitor) {
-            $visitor = Visitor::create([
-                'organization_id'    => $orgId,
-                'visitor_key'        => $fingerprint,
-                'visitor_ip'         => $ip,
-                'user_agent'         => $ua,
-                'country'            => $geo['country'] ?? null,
-                'city'               => $geo['city'] ?? null,
-                'referrer'           => $referrer,
-                'current_page'       => $pageUrl,
-                'current_page_title' => $pageTitle,
-                'first_seen_at'      => $now,
-                'last_seen_at'       => $now,
-                'visit_count'        => 1,
-            ]);
-        } else {
+            // Race window: a concurrent /page-view from the same fingerprint
+            // can pass the SELECT above and both try to INSERT. The
+            // (organization_id, visitor_key) unique constraint then rejects
+            // the loser with 23505. The winner's row is the one we want — so
+            // catch the violation, refetch, and fall through to the update
+            // branch. Without this, every collision surfaces as an Unhandled
+            // API exception and the widget page-view 500s for the loser.
+            try {
+                $visitor = Visitor::create([
+                    'organization_id'    => $orgId,
+                    'visitor_key'        => $fingerprint,
+                    'visitor_ip'         => $ip,
+                    'user_agent'         => $ua,
+                    'country'            => $geo['country'] ?? null,
+                    'city'               => $geo['city'] ?? null,
+                    'referrer'           => $referrer,
+                    'current_page'       => $pageUrl,
+                    'current_page_title' => $pageTitle,
+                    'first_seen_at'      => $now,
+                    'last_seen_at'       => $now,
+                    'visit_count'        => 1,
+                ]);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                $visitor = Visitor::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->where('visitor_key', $fingerprint)
+                    ->first();
+                if (!$visitor) throw $e;
+            }
+        }
+
+        if (!$visitor->wasRecentlyCreated) {
             // New visit if there's been a 30+ minute gap
             $isNewVisit = !$visitor->last_seen_at || $visitor->last_seen_at->lt($now->copy()->subMinutes(30));
             $visitor->fill([

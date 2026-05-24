@@ -1362,17 +1362,26 @@ class AuthController extends Controller
         $jwtSecret = config('services.saas.jwt_secret', '');
         if (!$jwtSecret) return null;
 
-        // Fail-fast circuit breaker. If SaaS recently failed for any reason
-        // (timeout / 5xx / DNS), skip the call and return null immediately
-        // until the cache key expires. 60s is short enough that a real outage
-        // recovers quickly, long enough to spare ~12 worker-blocks per minute
-        // per polling admin tab.
-        if (\Illuminate\Support\Facades\Cache::has('saas_token_unhealthy')) {
+        // Fail-fast circuit breaker. Two cache keys:
+        //   saas_token_unhealthy — set for 60s after a confirmed failure.
+        //     Returns null immediately so polling admin tabs don't repeat
+        //     the curl call across the next minute.
+        //   saas_token_inflight — set for 3s when we START the call. Catches
+        //     the concurrent-request race: two admin polls within the same
+        //     2s window otherwise both make the call (both miss the breaker
+        //     because the first hasn't tripped it yet). With this key, the
+        //     second sees an in-flight call and returns null without burning
+        //     a second curl. 3s is the timeout (2s) + a small grace.
+        $cache = \Illuminate\Support\Facades\Cache::store();
+        if ($cache->has('saas_token_unhealthy') || $cache->has('saas_token_inflight')) {
             return null;
         }
 
         $payload = implode('|', [$user->email, $org->saas_org_id]);
         $signature = hash_hmac('sha256', $payload, $jwtSecret);
+
+        // Mark in-flight before the curl call so concurrent requests bail.
+        $cache->put('saas_token_inflight', 1, 3);
 
         try {
             // Tightened from 5s to 2s. The endpoint is a single signed POST
@@ -1386,6 +1395,8 @@ class AuthController extends Controller
                     'orgId' => $org->saas_org_id,
                 ]);
 
+            $cache->forget('saas_token_inflight');
+
             if ($response->successful()) {
                 return $response->json('token');
             }
@@ -1394,13 +1405,19 @@ class AuthController extends Controller
             // a 401/403 — that's our problem (bad signature / disabled org),
             // not theirs, and we don't want to mask it. Only trip on 5xx.
             if ($response->serverError()) {
-                \Illuminate\Support\Facades\Cache::put('saas_token_unhealthy', 1, 60);
+                $cache->put('saas_token_unhealthy', 1, 60);
             }
         } catch (\Throwable $e) {
             // Connection-level failure (timeout, DNS, refused). Trip the
             // breaker so the next 60s of admin requests skip the call.
-            \Illuminate\Support\Facades\Cache::put('saas_token_unhealthy', 1, 60);
-            report($e);
+            $cache->forget('saas_token_inflight');
+            $cache->put('saas_token_unhealthy', 1, 60);
+            // Log once per breaker window instead of every failed request.
+            // The previous behaviour (report() on every call) produced
+            // duplicate Nightwatch entries for the same outage.
+            \Illuminate\Support\Facades\Log::warning('SaaS service-token call failed — breaker tripped for 60s', [
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return null;
