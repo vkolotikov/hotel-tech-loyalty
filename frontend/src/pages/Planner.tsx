@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
+import { BacklogDrawer } from '../components/BacklogDrawer'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
@@ -1442,7 +1443,14 @@ export function Planner() {
   })
 
   /* ─── mutations ───────────────────────────────────────────────── */
-  const invalidate = () => { qc.invalidateQueries({ queryKey: ['planner-tasks'] }); qc.invalidateQueries({ queryKey: ['planner-stats'] }) }
+  // Backlog drawer reads from ['planner-backlog'] — scheduling /
+  // unscheduling moves tasks between the two pools, so every calendar
+  // mutation has to bust both query keys to keep counts in sync.
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['planner-tasks']   })
+    qc.invalidateQueries({ queryKey: ['planner-stats']   })
+    qc.invalidateQueries({ queryKey: ['planner-backlog'] })
+  }
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
@@ -1527,7 +1535,11 @@ export function Planner() {
       ctx?.snapshots?.forEach(([key, data]: any) => qc.setQueryData(key, data))
       toast.error('Could not move task')
     },
-    onSettled: () => { qc.invalidateQueries({ queryKey: ['planner-tasks'] }); setMoveTarget(null) },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['planner-tasks']   })
+      qc.invalidateQueries({ queryKey: ['planner-backlog'] })
+      setMoveTarget(null)
+    },
   })
 
   const quickCreateMutation = useMutation({
@@ -1763,8 +1775,16 @@ export function Planner() {
 
   /* ═══ RENDER ══════════════════════════════════════════════════════ */
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
-      <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
+    <div className="flex items-stretch">
+      {/* Sidebar backlog drawer — collapsible, persists its open/scope
+          state across sessions. Manages its own queries; the parent's
+          invalidate() helper above busts ['planner-backlog'] alongside
+          ['planner-tasks'] so this drawer reacts to calendar mutations
+          and vice versa. Mobile hides it (it's md:flex/hidden). */}
+      <BacklogDrawer currentUserId={user?.id ?? null} currentUserName={myName} />
+
+      <div className="flex-1 min-w-0 p-4 md:p-6 space-y-4 md:space-y-5">
+        <DesktopOnlyBanner pageKey="planner" message="The planner's week and month views work best on desktop. On mobile, use Day view for the smoothest experience." />
 
       {/* Header — restructured for mobile:
           Row 1: title + Add button
@@ -3068,6 +3088,7 @@ export function Planner() {
           }}
         />
       )}
+      </div>
     </div>
   )
 }

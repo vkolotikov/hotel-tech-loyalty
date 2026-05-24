@@ -811,6 +811,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('planner/auto-plan',              [PlannerController::class, 'autoPlanDay']);
             Route::post('planner/auto-plan/apply',        [PlannerController::class, 'autoPlanApply']);
 
+            // Backlog drawer: unscheduled tasks (task_date IS NULL).
+            // scope=mine (default) returns the current user's bucket,
+            // scope=pool returns the company-wide open pool that anyone
+            // can claim.
+            Route::get('planner/backlog',                 [PlannerController::class, 'backlog']);
+            Route::post('planner/tasks/{task}/claim',     [PlannerController::class, 'claimTask']);
+            Route::post('planner/tasks/{task}/release',   [PlannerController::class, 'releaseTask']);
+
             // ─── Planner v2: org-wide task templates ──────────────────────
             Route::get('planner/templates',                [PlannerController::class, 'templates']);
             Route::post('planner/templates',               [PlannerController::class, 'storeTemplate']);

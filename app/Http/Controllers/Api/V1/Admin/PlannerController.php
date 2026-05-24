@@ -54,7 +54,9 @@ class PlannerController extends Controller
             'employee_name'        => 'nullable|string|max:150',
             'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
             'title'                => 'required|string|max:200',
-            'task_date'            => 'required|date',
+            // Nullable: backlog tasks live without a date until someone
+            // schedules them by dragging onto a day cell.
+            'task_date'            => 'nullable|date',
             'start_time'           => 'nullable|date_format:H:i',
             'end_time'             => 'nullable|date_format:H:i',
             'status'               => 'nullable|string|max:20',
@@ -112,7 +114,8 @@ class PlannerController extends Controller
             'employee_name'        => 'nullable|string|max:150',
             'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
             'title'                => 'sometimes|string|max:200',
-            'task_date'            => 'sometimes|date',
+            // Accept null so editor / drag-to-backlog can unschedule.
+            'task_date'            => 'sometimes|nullable|date',
             'start_time'           => 'nullable|date_format:H:i',
             'end_time'             => 'nullable|date_format:H:i',
             'status'               => 'nullable|string|max:20',
@@ -158,13 +161,121 @@ class PlannerController extends Controller
     {
         $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
-            'task_date'            => 'required|date',
+            // Nullable so the same endpoint supports drag-back-to-backlog.
+            // When null, the task drops out of every calendar view and
+            // resurfaces in the sidebar backlog drawer.
+            'task_date'            => 'nullable|date',
             'employee_name'        => 'nullable|string|max:150',
             'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
+            'start_time'           => 'nullable|date_format:H:i',
         ]);
+
+        // When unscheduling (task_date=null), also clear start_time —
+        // a backlog task with a leftover start_time would re-render at a
+        // weird position the moment it's scheduled again.
+        if (array_key_exists('task_date', $validated) && $validated['task_date'] === null) {
+            $validated['start_time'] = null;
+            $validated['end_time']   = null;
+        }
 
         $taskModel->update($validated);
         return response()->json(['success' => true]);
+    }
+
+    /* ─── Backlog (unscheduled tasks) ──────────────────────────────────
+     *
+     * A task with task_date IS NULL lives in the "backlog". Two scopes:
+     *   - mine: assigned to current user, no date yet — their private
+     *           todo bucket that they'll schedule onto specific days
+     *   - pool: nobody assigned, no date — the company-wide pool that
+     *           any staff member can claim into their own bucket
+     *
+     * Returned newest-first so a freshly-thrown-in task lands on top.
+     */
+    public function backlog(Request $request): JsonResponse
+    {
+        $scope = $request->get('scope', 'mine');
+        $query = PlannerTask::with('subtasks')->whereNull('task_date');
+
+        if ($scope === 'pool') {
+            $query->whereNull('assigned_to_user_id')
+                  ->where(function ($q) {
+                      $q->whereNull('employee_name')->orWhere('employee_name', '');
+                  });
+        } else {
+            // "mine" — assigned to the current user. Match on either the
+            // FK or the legacy employee_name string so older rows still
+            // surface for the assignee.
+            $user = $request->user();
+            if (!$user) return response()->json([]);
+            $query->where(function ($q) use ($user) {
+                $q->where('assigned_to_user_id', $user->id);
+                if ($user->name) {
+                    $q->orWhere('employee_name', $user->name);
+                }
+            });
+        }
+
+        return response()->json(
+            $query->orderByDesc('created_at')->limit(200)->get()
+        );
+    }
+
+    /**
+     * POST /v1/admin/planner/tasks/{id}/claim — pull a pool task into
+     * the current user's bucket. Idempotent on already-claimed tasks
+     * belonging to the same user; refuses to steal a task that's
+     * already assigned to someone else (returns 409 so the UI can
+     * refetch and surface the actual owner).
+     */
+    public function claimTask(Request $request, int $task): JsonResponse
+    {
+        $taskModel = $this->resolveTask($task);
+        $user = $request->user();
+        if (!$user) return response()->json(['error' => 'Not authenticated'], 401);
+
+        if ($taskModel->assigned_to_user_id && $taskModel->assigned_to_user_id !== $user->id) {
+            return response()->json([
+                'error' => 'Task is already assigned to another user',
+                'assigned_to_user_id' => $taskModel->assigned_to_user_id,
+                'employee_name'       => $taskModel->employee_name,
+            ], 409);
+        }
+
+        $taskModel->update([
+            'assigned_to_user_id' => $user->id,
+            'employee_name'       => $user->name ?: $taskModel->employee_name,
+        ]);
+
+        return response()->json($taskModel->fresh()->load('subtasks'));
+    }
+
+    /**
+     * POST /v1/admin/planner/tasks/{id}/release — send a task back to
+     * the open pool. Only the current assignee or a user with manager
+     * perms can release; otherwise random staff could yank tasks off
+     * a colleague's bucket.
+     */
+    public function releaseTask(Request $request, int $task): JsonResponse
+    {
+        $taskModel = $this->resolveTask($task);
+        $user = $request->user();
+        if (!$user) return response()->json(['error' => 'Not authenticated'], 401);
+
+        $isAssignee = $taskModel->assigned_to_user_id === $user->id;
+        $isManager  = method_exists($user, 'hasRole')
+            ? ($user->hasRole('super_admin') || $user->hasRole('manager'))
+            : false;
+        if (!$isAssignee && !$isManager) {
+            return response()->json(['error' => 'Only the assignee or a manager can release this task'], 403);
+        }
+
+        $taskModel->update([
+            'assigned_to_user_id' => null,
+            'employee_name'       => null,
+        ]);
+
+        return response()->json($taskModel->fresh()->load('subtasks'));
     }
 
     public function copyTask(Request $request, int $task): JsonResponse
