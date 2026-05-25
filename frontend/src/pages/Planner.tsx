@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
@@ -938,9 +938,11 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
  * tasks/day) plain overlap is fine and a click still hits the right
  * chip because the popover anchor is the absolutely-positioned chip.
  */
-function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate, onTaskDropAtTime, employees, viewMode, onViewModeChange }: {
+function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime, onTaskUpdate, onTaskDropAtTime, onAddTask, employees, viewMode, onViewModeChange }: {
   tasks: any[]
   isToday: boolean
+  /** ISO date (Y-m-d) — shown as the day pill in the top-left of the header. */
+  currentDate: string
   onTaskClick: (task: any, anchor: DOMRect) => void
   /** hhmm is the snapped start; emp is the column the user clicked
    *  (undefined in single-column mode or when click hit no column). */
@@ -951,6 +953,10 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
    *  hhmm is the snapped start, emp is the column in team mode. The
    *  parent uses this to fire moveMutation with task_date + start_time. */
   onTaskDropAtTime: (taskId: number, hhmm: string, emp?: string) => void
+  /** Fired by the "+ Add task" button at the bottom of the timeline.
+   *  Opens the new-task drawer for the current date with no time
+   *  pre-selected. */
+  onAddTask: () => void
   /** Employees to render as columns when viewMode === 'team'. Order is
    *  preserved, with `__unassigned__` reserved for null employees. */
   employees: string[]
@@ -961,7 +967,8 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
   const HOUR_END = 22
   const PX_PER_HOUR = 56
   const TOTAL_HEIGHT = (HOUR_END - HOUR_START) * PX_PER_HOUR
-  const TIME_LABEL_WIDTH = 56
+  // Widened to fit the 12-hour "10:00 AM" hour labels without clipping.
+  const TIME_LABEL_WIDTH = 72
 
   /**
    * Drag state for in-grid reschedule + resize. Pointer-events on
@@ -1115,10 +1122,18 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
   const hours: number[] = []
   for (let h = HOUR_START; h <= HOUR_END; h++) hours.push(h)
   const formatHourLabel = (h: number) => {
-    if (h === 0) return '12am'
-    if (h === 12) return '12pm'
-    if (h < 12) return `${h}am`
-    return `${h - 12}pm`
+    if (h === 0) return '12:00 AM'
+    if (h === 12) return '12:00 PM'
+    if (h < 12) return `${h}:00 AM`
+    return `${h - 12}:00 PM`
+  }
+  // 12-hour clock with AM/PM for the chip time range + "now" label,
+  // matching the sample design. `s` is in HH:MM 24-hour form.
+  const to12h = (s: string) => {
+    const [hh, mm] = s.split(':').map(Number)
+    const period = hh >= 12 ? 'PM' : 'AM'
+    const h12 = hh % 12 === 0 ? 12 : hh % 12
+    return `${h12}:${String(mm).padStart(2, '0')} ${period}`
   }
 
   // Sort tasks by start so later-starting tasks paint on top of
@@ -1134,6 +1149,31 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
   // settings.employees.
   const canTeam = employees.length >= 2
   const renderedMode: 'single' | 'team' = (viewMode === 'team' && canTeam) ? 'team' : 'single'
+
+  // Per-employee task count for the column header (team mode) — fed
+  // off the same task slice the timeline renders so the badge stays
+  // honest as the user filters. Unassigned bucket counts separately.
+  const employeeTaskCount = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of tasks) {
+      const key = t.employee_name || '__unassigned__'
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [tasks])
+
+  // Day pill labels ("Mon", "25") parsed from the ISO date so the
+  // header reads at a glance like a paper calendar. Falls back to "—"
+  // when currentDate is empty (shouldn't happen but defensive).
+  const dayLabel = useMemo(() => {
+    if (!currentDate) return { name: '—', num: '' }
+    const d = new Date(currentDate + 'T00:00:00')
+    if (Number.isNaN(d.getTime())) return { name: '—', num: '' }
+    return {
+      name: d.toLocaleDateString([], { weekday: 'short' }),
+      num: String(d.getDate()),
+    }
+  }, [currentDate])
 
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
@@ -1165,35 +1205,57 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
           {isToday && (
             <span className="inline-flex items-center gap-1.5 text-red-400">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} now
+              {to12h(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`).toLowerCase()} now
             </span>
           )}
-          <span className="hidden sm:inline">6 am → 10 pm</span>
+          <span className="hidden sm:inline">6 AM → 10 PM</span>
         </div>
       </div>
 
-      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: renderedMode === 'team' ? 540 : 480 }}>
-        {/* Team mode: sticky header row with avatars sits above the
-            time grid. Same scroll container so the header stays
-            pinned while the grid scrolls. */}
-        {renderedMode === 'team' && (
+      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: renderedMode === 'team' ? 600 : 540 }}>
+        {/* Sticky header row — date pill in the top-left + per-employee
+            columns (team mode) or empty space (single mode). Lives in
+            the scroll container so it stays pinned while the time
+            grid scrolls underneath. */}
+        <div className="sticky top-0 z-30 bg-dark-surface border-b border-dark-border flex">
           <div
-            className="sticky top-0 z-30 bg-dark-surface border-b border-dark-border flex"
-            style={{ paddingLeft: TIME_LABEL_WIDTH }}>
-            {employees.map(emp => {
+            className="flex flex-col items-center justify-center border-r border-dark-border/40 select-none"
+            style={{ width: TIME_LABEL_WIDTH, minHeight: 60 }}>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-400 leading-none">
+              {dayLabel.name}
+            </span>
+            <span className="text-xl font-bold text-primary-400 leading-none mt-0.5 tabular-nums">
+              {dayLabel.num}
+            </span>
+          </div>
+          {renderedMode === 'team' ? (
+            employees.map(emp => {
               const label = emp === '__unassigned__' ? 'Unassigned' : emp
               const initials = label.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+              const count = employeeTaskCount.get(emp) ?? 0
+              const isUn = emp === '__unassigned__'
               return (
-                <div key={emp} className="flex-1 px-2 py-2 border-l border-dark-border/30 flex items-center gap-1.5 min-w-0">
-                  <div className={'w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ' + (emp === '__unassigned__' ? 'bg-gray-700/40 text-gray-300' : 'bg-primary-500/25 text-primary-300')}>
+                <div key={emp} className="flex-1 px-3 py-2.5 border-l border-dark-border/30 flex items-center gap-2 min-w-0">
+                  <div className={'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ring-1 ' + (isUn ? 'bg-gray-700/40 text-gray-300 ring-gray-600/40' : 'bg-gradient-to-br from-primary-500/30 to-primary-600/30 text-primary-200 ring-primary-500/40')}>
                     {initials}
                   </div>
-                  <span className="text-[11px] font-semibold text-white truncate">{label}</span>
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="text-[12px] font-semibold text-white truncate">{label}</span>
+                    <span className="text-[10px] text-gray-500">
+                      {count} {count === 1 ? 'task' : 'tasks'}
+                    </span>
+                  </div>
                 </div>
               )
-            })}
-          </div>
-        )}
+            })
+          ) : (
+            <div className="flex-1 px-3 py-2.5 flex items-center min-h-[60px]">
+              <span className="text-[11px] text-gray-500">
+                {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} scheduled
+              </span>
+            </div>
+          )}
+        </div>
 
         <div
           ref={gridRef}
@@ -1263,7 +1325,7 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
           {/* Hour grid */}
           {hours.map((h, i) => (
             <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none" style={{ top: i * PX_PER_HOUR, height: PX_PER_HOUR }}>
-              <span className="w-14 pr-2 text-right text-[10px] font-mono text-gray-600 -mt-1.5 select-none">
+              <span className="pr-3 text-right text-[11px] font-medium text-gray-500 -mt-1.5 select-none" style={{ width: TIME_LABEL_WIDTH }}>
                 {formatHourLabel(h)}
               </span>
               <span className="flex-1 border-t border-dark-border/40" />
@@ -1289,16 +1351,20 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
               style={{ left: `calc(${TIME_LABEL_WIDTH}px + (${(i + 1) / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)))` }} />
           ))}
 
-          {/* Now line */}
+          {/* Now line — bright red across the grid, time pill on the
+              left edge so it reads against the dark header even when
+              the user scrolls. */}
           {showNowLine && (
             <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowTop }}>
               <div className="flex items-center">
-                <span className="w-14 pr-1 text-right text-[10px] font-bold text-red-400">
-                  {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                <span
+                  className="text-right text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded shadow-[0_2px_6px_rgba(239,68,68,0.5)] mr-1"
+                  style={{ width: TIME_LABEL_WIDTH - 4 }}>
+                  {to12h(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)}
                 </span>
                 <span className="flex-1 relative">
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)]" />
-                  <span className="block border-t border-red-500/70" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.25)]" />
+                  <span className="block border-t-2 border-red-500" />
                 </span>
               </div>
             </div>
@@ -1384,62 +1450,80 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
                     moved: false,
                   })
                 }}
-                title={`${task.title} — ${startLabel}${duration ? ` to ${endLabel}` : ''} · drag to move, drag bottom edge to resize`}
+                title={`${task.title} — ${to12h(startLabel)}${duration ? ` to ${to12h(endLabel)}` : ''} · drag to move, drag bottom edge to resize`}
                 className={'absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20 cursor-grab active:cursor-grabbing ' + (isDragging ? 'z-30 shadow-2xl' : '')}
                 style={{
+                  // Slightly more saturated tint than the old `+20`
+                  // alpha so chips read as "their" color at a glance
+                  // (cyan / purple / green / blue clusters in the
+                  // sample design). Border drops the left stripe in
+                  // favour of an even border + corner icon badge.
                   ...positionStyle,
-                  background: meta.color + '20',
-                  border: `1px solid ${meta.color}55`,
-                  borderLeft: `3px solid ${meta.color}`,
-                  borderRadius: 8,
+                  background: `linear-gradient(180deg, ${meta.color}26 0%, ${meta.color}1a 100%)`,
+                  border: `1px solid ${meta.color}66`,
+                  borderRadius: 10,
                   opacity: task.completed ? 0.55 : (isDragging ? 0.9 : 1),
                   zIndex: isDragging ? 30 : 10,
                   transition: isDragging ? 'none' : 'top 0.15s, height 0.15s, box-shadow 0.15s',
                 }}>
-                <div className="h-full px-2.5 py-1 flex flex-col items-start text-left overflow-hidden">
-                  <div className="flex items-center gap-1.5 w-full">
-                    <Icon size={11} style={{ color: meta.color, flexShrink: 0 }} />
-                    <span className="text-[10px] font-mono text-gray-400 flex-shrink-0">
-                      {startLabel}{duration ? `–${endLabel}` : ''}
+                <div className="h-full px-2.5 py-1.5 flex flex-col items-start text-left overflow-hidden relative">
+                  {/* Time range — lead line in muted gray, matches the
+                      sample's "9:00 – 10:00" header. */}
+                  <span className="text-[10px] font-medium tabular-nums flex-shrink-0" style={{ color: meta.color }}>
+                    {to12h(startLabel).replace(' ', '')}{duration ? ` – ${to12h(endLabel).replace(' ', '')}` : ''}
+                  </span>
+                  {/* Title — bold, with right-padding so the corner
+                      badge cluster never overlaps. */}
+                  <span className={'text-[12px] font-semibold text-white mt-0.5 leading-tight truncate w-full pr-7 ' + (task.completed ? 'line-through' : '')}>
+                    {task.title}
+                  </span>
+                  {/* Sublabel — employee in single mode (column header
+                      tells you in team mode), or the group label when
+                      the chip is in a single-employee scope. Renders
+                      only when the chip is tall enough so we don't
+                      ship a 3rd line on a 20-min slot. */}
+                  {height > 48 && (
+                    <span className="text-[10px] text-gray-400 mt-auto mb-0 truncate w-full">
+                      {renderedMode === 'team' ? (task.task_group || 'Task') : (task.employee_name || task.task_group || 'Unassigned')}
                     </span>
-                    {/* Recurring loop badge — appears for tasks that
-                        are part of a series so the user knows editing
-                        this one might affect future instances. */}
+                  )}
+                  {/* Corner badge cluster — square category icon tile
+                      in the top-right, with priority / recurring /
+                      status badges stacking to its left. Mirrors the
+                      sample where each card's icon sits in the
+                      top-right corner. */}
+                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                     {(task.recurring || task.recurring_parent_id) && (
-                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-500/20 flex-shrink-0"
+                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-md bg-purple-500/25"
                         title="Part of a recurring series">
-                        <Repeat size={8} className="text-purple-300" />
+                        <Repeat size={9} className="text-purple-200" />
                       </span>
                     )}
-                    {/* Status badge — only shows for non-default
-                        states (in_progress / blocked / done). `todo`
-                        is implicit and clutter-free. */}
                     {(() => {
                       const sm = STATUS_META[task.status]
                       if (!sm) return null
                       const SIcon = sm.icon
                       return (
-                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0"
-                          style={{ background: sm.color + '25' }}
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-md flex-shrink-0"
+                          style={{ background: sm.color + '30' }}
                           title={sm.label}>
                           <SIcon size={9} style={{ color: sm.color }} />
                         </span>
                       )
                     })()}
                     {task.priority === 'High' && (
-                      <span className="ml-auto inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/20 flex-shrink-0">
-                        <Flag size={8} className="text-red-400" />
+                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-md bg-red-500/25 flex-shrink-0"
+                        title="High priority">
+                        <Flag size={9} className="text-red-300" />
                       </span>
                     )}
-                  </div>
-                  <span className={'text-xs font-semibold text-white mt-0.5 leading-tight truncate w-full ' + (task.completed ? 'line-through' : '')}>
-                    {task.title}
-                  </span>
-                  {height > 50 && task.employee_name && (
-                    <span className="text-[10px] text-gray-400 mt-0.5 truncate w-full">
-                      {task.employee_name}
+                    <span
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
+                      style={{ background: meta.color + '50', boxShadow: `0 1px 4px ${meta.color}40` }}
+                      title={task.task_group || 'Task'}>
+                      <Icon size={11} className="text-white" />
                     </span>
-                  )}
+                  </div>
                 </div>
                 {/* Resize handle — bottom 6px of the chip. Drag to
                     adjust duration. stopPropagation prevents the
@@ -1465,6 +1549,19 @@ function DayTimeline({ tasks, isToday, onTaskClick, onCreateAtTime, onTaskUpdate
               </button>
             )
           })}
+        </div>
+        {/* Bottom "+ Add task" affordance — mirrors the sample's
+            centered footer button. Scrolls with the grid so it's
+            always at the end of the day, not anchored above the
+            fold. */}
+        <div className="flex justify-center py-3 border-t border-dark-border/40 bg-dark-surface/60 sticky bottom-0 z-20">
+          <button
+            type="button"
+            onClick={onAddTask}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium text-gray-300 hover:text-white bg-dark-surface2/60 hover:bg-dark-surface2 border border-dark-border hover:border-primary-500/40 transition">
+            <Plus size={13} />
+            Add task
+          </button>
         </div>
       </div>
     </div>
@@ -2191,11 +2288,13 @@ export function Planner() {
                 <DayTimeline
                   tasks={dayTasks}
                   isToday={currentDate === today}
+                  currentDate={currentDate}
                   employees={dayEmployees}
                   viewMode={dayViewMode}
                   onViewModeChange={setDayViewMode}
                   onTaskClick={(task, anchor) => setTaskPopover({ task, anchor })}
                   onCreateAtTime={(hhmm, emp) => openCreate(currentDate, emp, hhmm)}
+                  onAddTask={() => openCreate(currentDate, employee || undefined)}
                   onTaskDropAtTime={(taskId, hhmm, emp) => {
                     // Backlog or cross-day drop landed on an exact time
                     // slot. Schedule with task_date=currentDate +
