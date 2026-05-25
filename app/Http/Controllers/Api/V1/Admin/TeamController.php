@@ -157,11 +157,19 @@ class TeamController extends Controller
 
         try {
             $result = DB::transaction(function () use ($validated, $email, $orgId) {
-                // Reuse an existing user (same email across orgs is fine
-                // — Loyalty's User table is org-scoped via the trait).
+                // Reuse an existing user in THIS org with THIS email.
+                // Migration `2026_05_25_120000_users_email_unique_per_org_for_staff`
+                // replaced the global users.email unique with two partial
+                // uniques — staff are (org, email) unique, members are
+                // globally email unique. So the same email can exist as:
+                //   - a staff at multiple orgs (legitimate multi-org consultant)
+                //   - a member at one org + a staff at another (or same) org
+                // Filter by user_type='staff' so we don't accidentally
+                // pick up a member row and treat them as the staff user.
                 $user = User::withoutGlobalScopes()
                     ->where('email', $email)
                     ->where('organization_id', $orgId)
+                    ->where('user_type', 'staff')
                     ->first();
 
                 if (!$user) {

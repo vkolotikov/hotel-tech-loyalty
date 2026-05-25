@@ -258,9 +258,19 @@ class SaasAuthMiddleware
             $this->maybeSyncEntitlements($org, $request);
         }
 
-        // Find or create local staff user (bypass tenant scopes — no context yet)
+        // Find or create local staff user scoped to THIS org. Pre-multi-org
+        // this lookup was just `WHERE email = ?` which silently reused the
+        // first matching user across orgs and then required a separate
+        // "repoint organization_id" branch below (now removed). With the
+        // partial unique `users_email_staff_org_unique` on
+        // (organization_id, email) WHERE user_type = 'staff', the same
+        // person can have multiple staff rows — one per org. Bypass tenant
+        // scopes because no `current_organization_id` is bound yet.
         $user = User::withoutGlobalScopes()
-            ->where('email', $email)->where('user_type', 'staff')->first();
+            ->where('email', $email)
+            ->where('user_type', 'staff')
+            ->where('organization_id', $org?->id)
+            ->first();
 
         if (!$user) {
             $user = User::create([
@@ -298,49 +308,14 @@ class SaasAuthMiddleware
                     'user_id' => $user->id, 'org_id' => $org?->id, 'error' => $e->getMessage(),
                 ]);
             }
-        } elseif ($org && $user->organization_id !== $org->id) {
-            // The JWT is authoritative for which org this user is currently
-            // operating in. If their local `organization_id` points somewhere
-            // else (e.g. an old org they were invited to that's since been
-            // deleted in SaaS, or a different org they belong to), repoint
-            // them — otherwise `/v1/auth/me`, the staff record, and anything
-            // else that reads `user->organization_id` will show stale data
-            // from the previous org.
-            $user->update(['organization_id' => $org->id]);
-
-            $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
-            $saasRole = $request->attributes->get('saas_role', 'STAFF');
-            $localRole = match (strtoupper($saasRole)) {
-                'OWNER' => 'super_admin',
-                'ADMIN' => 'manager',
-                default => 'receptionist',
-            };
-
-            if ($staff) {
-                $staff->update([
-                    'organization_id'   => $org->id,
-                    'role'              => $localRole,
-                    'hotel_name'        => $org->name ?? $staff->hotel_name,
-                    'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
-                    'can_redeem_points' => true,
-                    'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
-                    'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
-                    'is_active'         => true,
-                ]);
-            } else {
-                Staff::withoutGlobalScopes()->create([
-                    'user_id'           => $user->id,
-                    'organization_id'   => $org->id,
-                    'role'              => $localRole,
-                    'hotel_name'        => $org->name ?? 'Hotel',
-                    'can_award_points'  => in_array($localRole, ['super_admin', 'manager']),
-                    'can_redeem_points' => true,
-                    'can_manage_offers' => in_array($localRole, ['super_admin', 'manager']),
-                    'can_view_analytics'=> in_array($localRole, ['super_admin', 'manager']),
-                    'is_active'         => true,
-                ]);
-            }
         }
+        // Note: the old "repoint user organization_id" branch was removed.
+        // It existed because the lookup above was `WHERE email = ?` only,
+        // which could resolve to a user in a DIFFERENT org and then
+        // silently steal them by overwriting `organization_id`. Now the
+        // lookup is scoped to the current org, so any user we get back
+        // is already in this org by construction — no repoint needed.
+        // Multi-org staff get separate rows per org, one per Staff record.
 
         // Log in on the default (web) guard, and also pin the user on the
         // sanctum guard so that `auth:sanctum` — which runs after this
