@@ -37,6 +37,10 @@ interface StaffRow {
   department: string | null
   is_active: boolean
   last_login_at: string | null
+  /** When set, the staff has been invited but hasn't activated. ISO
+   *  timestamp of when the current invite code expires (48h from issue).
+   *  Null on activated rows. */
+  invite_expires_at?: string | null
   can_award_points: boolean
   can_redeem_points: boolean
   can_manage_offers: boolean
@@ -99,28 +103,91 @@ export function TeamSettings() {
         </div>
       </div>
 
-      <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-xs text-gray-500">Loading team…</div>
-        ) : !data?.staff.length ? (
-          <div className="p-8 text-center text-xs text-gray-500">No team members yet. Invite your first one above.</div>
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="bg-dark-surface border border-dark-border rounded-xl p-8 text-center text-xs text-gray-500">
+              Loading team…
+            </div>
+          )
+        }
+        if (!data?.staff.length) {
+          return (
+            <div className="bg-dark-surface border border-dark-border rounded-xl p-8 text-center text-xs text-gray-500">
+              No team members yet. Invite your first one above.
+            </div>
+          )
+        }
+        // Split into pending (never logged in) and active. Pending rows
+        // get their own card at the top with a more prominent Resend
+        // button + the invite expiration countdown, since they're the
+        // ones an admin needs to act on. Active rows render below in
+        // the usual list. This replaces the previous flat list where
+        // "Pending" was a small amber badge easily missed amid a list
+        // of activated teammates.
+        const pending = data.staff.filter(s => !s.last_login_at)
+        const active  = data.staff.filter(s => !!s.last_login_at)
+        const renderRow = (s: StaffRow) => editingId === s.id ? (
+          <EditRow key={s.id} staff={s} availableRoles={data.roles} availableGroups={data.available_groups} onCancel={() => setEditingId(null)} onSaved={() => { setEditingId(null); qc.invalidateQueries({ queryKey: ['admin-team'] }) }} />
         ) : (
-          <div className="divide-y divide-dark-border">
-            {data.staff.map(s => editingId === s.id ? (
-              <EditRow key={s.id} staff={s} availableRoles={data.roles} availableGroups={data.available_groups} onCancel={() => setEditingId(null)} onSaved={() => { setEditingId(null); qc.invalidateQueries({ queryKey: ['admin-team'] }) }} />
-            ) : (
-              <ViewRow
-                key={s.id}
-                staff={s}
-                onEdit={() => setEditingId(s.id)}
-                onDeactivate={() => deactivate.mutate(s.id)}
-                onReactivate={() => reactivate.mutate(s.id)}
-                onResend={() => resend.mutate(s.id)}
-              />
-            ))}
+          <ViewRow
+            key={s.id}
+            staff={s}
+            onEdit={() => setEditingId(s.id)}
+            onDeactivate={() => deactivate.mutate(s.id)}
+            onReactivate={() => reactivate.mutate(s.id)}
+            onResend={() => resend.mutate(s.id)}
+            resendPending={resend.isPending}
+          />
+        )
+
+        return (
+          <div className="space-y-4">
+            {pending.length > 0 && (
+              <div className="bg-amber-500/[0.04] border border-amber-500/30 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-500/[0.06] border-b border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <Mail size={13} className="text-amber-400" />
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                      Pending invitations
+                    </span>
+                    <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
+                      {pending.length}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-amber-300/60 hidden sm:inline">
+                    Waiting for first sign-in
+                  </span>
+                </div>
+                <div className="divide-y divide-amber-500/10">
+                  {pending.map(renderRow)}
+                </div>
+              </div>
+            )}
+
+            {active.length > 0 && (
+              <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
+                {pending.length > 0 && (
+                  <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.02] border-b border-dark-border">
+                    <div className="flex items-center gap-2">
+                      <Users size={13} className="text-gray-400" />
+                      <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                        Active team
+                      </span>
+                      <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+                        {active.length}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="divide-y divide-dark-border">
+                  {active.map(renderRow)}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        )
+      })()}
 
       <div className="bg-dark-bg/50 border border-dark-border rounded-lg p-3 text-[11px] text-gray-500 leading-relaxed">
         <p className="flex items-start gap-1.5">
@@ -147,16 +214,35 @@ export function TeamSettings() {
 
 /* ───────────────────── View row ───────────────────── */
 
-function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend }: {
+function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPending = false }: {
   staff: StaffRow
   onEdit: () => void
   onDeactivate: () => void
   onReactivate: () => void
   onResend: () => void
+  resendPending?: boolean
 }) {
   const meta = ROLE_META[staff.role] ?? ROLE_META.staff
   const Icon = meta.icon
-  const lastLogin = staff.last_login_at ? new Date(staff.last_login_at).toLocaleDateString() : 'Never'
+  const isPending = !staff.last_login_at
+  const lastLogin = staff.last_login_at ? new Date(staff.last_login_at).toLocaleDateString() : null
+
+  // Relative "expires in 36h" for pending rows. The invite code is
+  // 48h-TTL per TeamController; once it's past, the user can still
+  // hit Resend to mint a new one.
+  let inviteExpiry: string | null = null
+  if (isPending && staff.invite_expires_at) {
+    const ms = new Date(staff.invite_expires_at).getTime() - Date.now()
+    if (ms <= 0) {
+      inviteExpiry = 'expired'
+    } else if (ms < 60 * 60 * 1000) {
+      inviteExpiry = `expires in ${Math.max(1, Math.round(ms / (60 * 1000)))}m`
+    } else if (ms < 24 * 60 * 60 * 1000) {
+      inviteExpiry = `expires in ${Math.round(ms / (60 * 60 * 1000))}h`
+    } else {
+      inviteExpiry = `expires in ${Math.round(ms / (24 * 60 * 60 * 1000))}d`
+    }
+  }
 
   return (
     <div className={'flex items-center gap-3 p-3 ' + (staff.is_active ? '' : 'opacity-50')}>
@@ -169,19 +255,24 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend }: {
           <span className="text-sm font-bold text-white truncate">{staff.name || '—'}</span>
           {staff.is_me && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 uppercase tracking-wide">You</span>}
           {!staff.is_active && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 uppercase tracking-wide">Deactivated</span>}
-          {!staff.last_login_at && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 uppercase tracking-wide">Pending</span>}
+          {inviteExpiry === 'expired' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 uppercase tracking-wide">Code expired</span>}
         </div>
         <div className="text-[11px] text-gray-500 mt-0.5 truncate">{staff.email}</div>
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: meta.color }}>{meta.label}</span>
-        <span className="text-[10px] text-gray-600">Last login: {lastLogin}</span>
+        <span className="text-[10px] text-gray-600">
+          {lastLogin ? `Last login: ${lastLogin}` : inviteExpiry ? inviteExpiry : 'Never logged in'}
+        </span>
       </div>
-      <div className="flex items-center gap-0.5 ml-1">
-        {!staff.last_login_at && (
-          <button onClick={onResend} title="Resend invite"
-            className="p-1.5 rounded text-gray-500 hover:bg-dark-surface2 hover:text-amber-400">
-            <RefreshCw size={13} />
+      <div className="flex items-center gap-1 ml-1">
+        {isPending && (
+          // Pending rows get a labeled, primary-styled Resend button so
+          // the action is obvious — was a tiny icon-only button before.
+          <button onClick={onResend} disabled={resendPending} title="Resend invitation email"
+            className="flex items-center gap-1 px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-[11px] font-semibold disabled:opacity-50">
+            <RefreshCw size={11} className={resendPending ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">{resendPending ? 'Sending…' : 'Resend'}</span>
           </button>
         )}
         <button onClick={onEdit} title="Edit"

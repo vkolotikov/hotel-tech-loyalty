@@ -74,11 +74,33 @@ class TeamController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $staff = Staff::with('user:id,name,email,phone,avatar_url,last_login_at')
+        $rows = Staff::with('user:id,name,email,phone,avatar_url,last_login_at')
             ->orderByDesc('is_active')
             ->orderBy('id')
-            ->get()
-            ->map(fn (Staff $s) => [
+            ->get();
+
+        // Pull the latest unverified invite code per email in one query
+        // so the UI can show "expires in 36h" on each pending row instead
+        // of just "Pending". Indexed only on the pending subset so a busy
+        // team list doesn't fan out into one query per row.
+        $pendingEmails = $rows
+            ->filter(fn (Staff $s) => $s->user && !$s->user->last_login_at)
+            ->pluck('user.email')
+            ->filter()
+            ->unique()
+            ->values();
+        $inviteExpiry = collect();
+        if ($pendingEmails->isNotEmpty()) {
+            $inviteExpiry = EmailVerificationCode::whereIn('email', $pendingEmails)
+                ->whereNull('verified_at')
+                ->where('expires_at', '>', now())
+                ->orderByDesc('id')
+                ->get(['email', 'expires_at'])
+                ->groupBy('email')
+                ->map(fn ($g) => $g->first()->expires_at);
+        }
+
+        $staff = $rows->map(fn (Staff $s) => [
                 'id'                  => $s->id,
                 'user_id'             => $s->user_id,
                 'name'                => $s->user?->name,
@@ -89,6 +111,7 @@ class TeamController extends Controller
                 'department'          => $s->department,
                 'is_active'           => $s->is_active,
                 'last_login_at'       => $s->user?->last_login_at,
+                'invite_expires_at'   => $s->user?->last_login_at ? null : ($inviteExpiry[$s->user?->email] ?? null),
                 'can_award_points'    => $s->can_award_points,
                 'can_redeem_points'   => $s->can_redeem_points,
                 'can_manage_offers'   => $s->can_manage_offers,
