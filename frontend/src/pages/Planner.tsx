@@ -19,6 +19,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { BacklogStrip } from '../components/BacklogStrip'
 import { TeamBucketsView } from '../components/TeamBucketsView'
+import { PlannerDaySidebar } from '../components/PlannerDaySidebar'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
@@ -2094,19 +2095,18 @@ export function Planner() {
       })()}
 
       {/* ═══ DAY VIEW ═══
-          Layout was: 2-col grid with timeline+tasks left, Day Notes +
-          Overview + Team breakdown right. Right sidebar duplicated the
-          KPI strip ("Overview" = Total/Completed/HighPri/WithSubtasks
-          which are already in the bar above), stole horizontal real
-          estate from the timeline, and kept the Day Notes textarea
-          always-expanded even when empty.
-          New layout: single column. Day Notes uses the same
-          CollapsibleNote pattern as Schedule. Overview removed. Team
-          breakdown only rendered when meaningful (multiple employees
-          + tasks present) and as a compact one-row strip above the
-          tasks list, not a sidebar panel. */}
+          2-col grid on lg+: main timeline + tasks on the left, sidebar
+          on the right with mini-calendar + donut summary + Up Next.
+          Below lg it collapses to a single column and the sidebar drops
+          to the bottom — better than competing for horizontal space on
+          narrow screens. The right sidebar was REMOVED in an earlier
+          pass (because the old Overview panel duplicated the KPI bar);
+          this brings it back with widgets that COMPLEMENT the KPI bar
+          rather than duplicate it (mini-cal for date nav, visual donut,
+          time-ordered upcoming-tasks list). */}
       {tab === 'day' && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+          <div className="space-y-4 min-w-0">
           {/* Day note — compact, click to expand. Same pattern as Schedule. */}
           <CollapsibleNote
             value={dayNote?.note_text ?? ''}
@@ -2365,6 +2365,17 @@ export function Planner() {
               </div>
             )
           })()}
+          </div>
+
+          {/* Right sidebar — mini calendar, donut, Up Next. Renders only
+              on lg+ via the parent grid's responsive cols. */}
+          <aside className="lg:sticky lg:top-4 lg:self-start">
+            <PlannerDaySidebar
+              currentDate={currentDate}
+              tasks={tasks}
+              onDateChange={setCurrentDate}
+            />
+          </aside>
         </div>
       )}
 
