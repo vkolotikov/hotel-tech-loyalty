@@ -646,36 +646,44 @@ function GroupFilterTabs({ groups, value, onChange, tasks }: {
   tasks: any[]
 }) {
   const countFor = (g: string) => g === '' ? tasks.length : tasks.filter((t: any) => (t.task_group || '') === g).length
-  const allTab = { key: '', label: 'All', icon: ListChecks, color: '#9ca3af' }
+  // Cleaner pill design — drop the surrounding container chrome, drop
+  // the icons (they were visually noisy when there are 6-8 groups), and
+  // render label + inline count instead of a separate count badge. Looks
+  // closer to Notion / Linear / Asana filter rows where the labels are
+  // the data and the active pill carries one accent fill.
+  const allTab = { key: '', label: 'All', color: '#fbbf24' /* gold — matches app accent */ }
+  const tabs = [allTab, ...groups.map(g => {
+    const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
+    return { key: g, label: g, color: meta.color }
+  })]
   return (
-    <div className="bg-dark-surface border border-dark-border rounded-xl p-1.5 overflow-x-auto">
-      <div className="flex gap-1 min-w-min">
-        {[allTab, ...groups.map(g => {
-          const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
-          return { key: g, label: g, icon: meta.icon, color: meta.color }
-        })].map(tab => {
-          const active = value === tab.key
-          const Icon = tab.icon
-          const n = countFor(tab.key)
-          return (
-            <button
-              key={tab.key}
-              onClick={() => onChange(tab.key)}
-              className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ' +
-                (active ? 'text-white border-transparent' : 'text-gray-400 border-transparent hover:bg-dark-surface2 hover:text-white')}
-              style={active ? { backgroundColor: tab.color + '30', borderColor: tab.color + '60', color: tab.color } : {}}>
-              <Icon size={13} />
-              {tab.label}
-              {n > 0 && (
-                <span className={'ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ' +
-                  (active ? 'bg-white/15' : 'bg-dark-surface2 text-gray-500')}>
-                  {n}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+    <div className="flex gap-2 overflow-x-auto pb-1 -mb-1">
+      {tabs.map(tab => {
+        const active = value === tab.key
+        const n = countFor(tab.key)
+        return (
+          <button
+            key={tab.key}
+            onClick={() => onChange(tab.key)}
+            className={[
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border',
+              active
+                ? 'bg-primary-500 text-black border-primary-500 shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
+                : 'bg-dark-surface text-gray-300 border-dark-border hover:bg-dark-surface2 hover:border-white/15 hover:text-white',
+            ].join(' ')}
+          >
+            <span>{tab.label}</span>
+            {n > 0 && (
+              <span className={[
+                'text-[10px] tabular-nums font-bold',
+                active ? 'text-black/70' : 'text-gray-500',
+              ].join(' ')}>
+                {n}
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -2059,33 +2067,47 @@ export function Planner() {
         const highPriority = tasks.filter((t: any) => !t.completed && t.priority === 'High').length
         const unassigned = tasks.filter((t: any) => !t.employee_name).length
         const completedPct = total > 0 ? Math.round((completed / total) * 100) : 0
+        // Focus time = sum of duration_minutes for incomplete tasks
+        // in the current scope. Default 60min when duration isn't set.
+        const focusMins = tasks
+          .filter((t: any) => !t.completed)
+          .reduce((sum: number, t: any) => sum + Number(t.duration_minutes ?? 60), 0)
+        const focusH = Math.floor(focusMins / 60)
+        const focusM = focusMins % 60
+        const focusLabel = focusH > 0 ? `${focusH}h${focusM ? ` ${focusM}m` : ''}` : `${focusM}m`
 
+        // Discrete cards instead of a divided strip — matches the
+        // dashboard-style design where each KPI is a separate tile
+        // with the value top-left + a small icon tile top-right. Reads
+        // as a row of dashboard widgets rather than a packed stat bar.
         const kpis = [
-          { label: 'Total',         value: total,        accent: '#9ca3af', icon: ListChecks },
-          { label: 'Completed',     value: `${completed} · ${completedPct}%`, accent: '#22c55e', icon: CheckCircle2 },
-          { label: 'Overdue',       value: overdue,      accent: '#ef4444', icon: AlertCircle, dim: overdue === 0 },
-          { label: 'High Priority', value: highPriority, accent: '#f59e0b', icon: Flag,        dim: highPriority === 0 },
-          { label: 'Unassigned',    value: unassigned,   accent: '#3b82f6', icon: User,        dim: unassigned === 0 },
+          { label: 'Total',     sublabel: total === 1 ? 'task' : 'tasks',  value: String(total),      accent: '#a78bfa', bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)', icon: ListChecks },
+          { label: 'Completed', sublabel: `${completedPct}%`,              value: String(completed),  accent: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)',   icon: CheckCircle2 },
+          { label: 'Overdue',   sublabel: overdue === 1 ? 'task' : 'tasks', value: String(overdue),    accent: '#ef4444', bg: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.25)',   icon: AlertCircle, dim: overdue === 0 },
+          { label: 'High Priority', sublabel: highPriority === 1 ? 'task' : 'tasks', value: String(highPriority), accent: '#f59e0b', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.25)', icon: Flag,    dim: highPriority === 0 },
+          { label: 'Focus Time',sublabel: 'today',                          value: focusLabel,         accent: '#0ea5e9', bg: 'rgba(14,165,233,0.10)',  border: 'rgba(14,165,233,0.25)',  icon: Clock },
+          { label: 'Unassigned', sublabel: unassigned === 1 ? 'task' : 'tasks', value: String(unassigned), accent: '#3b82f6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.25)', icon: User,    dim: unassigned === 0 },
         ]
 
-        // Single-row "stats bar" rather than five bordered boxes.
-        // Each KPI is a vertical stack (label on top, number below)
-        // separated by hairline dividers. Reads as one data row instead
-        // of five competing cards. Dim state for zero-value KPIs keeps
-        // the empty ones visually quiet but still scannable.
         return (
-          <div className="bg-dark-surface border border-dark-border rounded-xl px-2 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-dark-border/40">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             {kpis.map((k) => {
               const KIcon = k.icon
               return (
                 <div key={k.label}
-                  className={'flex items-center gap-2.5 px-3 py-1 transition-opacity ' + (k.dim ? 'opacity-50' : '')}>
-                  <KIcon size={16} style={{ color: k.accent }} className="flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 leading-none">{k.label}</p>
-                    <p className="text-base font-bold text-white mt-0.5 truncate leading-tight" style={k.dim ? {} : { color: k.accent }}>
-                      {k.value}
-                    </p>
+                  className={'bg-dark-surface border border-dark-border rounded-xl p-3 transition-opacity ' + (k.dim ? 'opacity-50' : '')}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 truncate">{k.label}</p>
+                      <p className="text-2xl font-bold text-white mt-1 leading-none tabular-nums">{k.value}</p>
+                      <p className="text-[10px] text-gray-500 mt-1 truncate" style={k.dim ? {} : { color: k.accent }}>
+                        {k.sublabel}
+                      </p>
+                    </div>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: k.bg, border: `1px solid ${k.border}` }}>
+                      <KIcon size={16} style={{ color: k.accent }} />
+                    </div>
                   </div>
                 </div>
               )
