@@ -436,7 +436,12 @@ class TeamController extends Controller
             $org = Organization::find(app('current_organization_id'));
             $orgName = $org?->name ?? 'your team';
             $appUrl = rtrim(config('app.url', ''), '/');
-            $link = $appUrl . '/activate?email=' . urlencode($email);
+            // Include the 6-digit code so the Activate page can pre-fill
+            // it from the URL. Without `&code=...`, the page can't
+            // identify which invitation to redeem (we'd just see the
+            // email but not which one of N possible invites it belongs
+            // to) and shows "missing required information".
+            $link = $appUrl . '/activate?email=' . urlencode($email) . '&code=' . urlencode($code);
 
             Mail::raw(
                 "Hi {$name},\n\n" .

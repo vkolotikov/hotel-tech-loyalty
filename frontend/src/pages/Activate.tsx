@@ -13,7 +13,14 @@ export function Activate() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
 
-  const token = params.get('token') || ''
+  // Invite emails carry both `email` and `code` (the 6-digit
+  // verification code stored locally in EmailVerificationCode). The old
+  // `token` flow targeted /v1/auth/activate which forwards to SaaS's
+  // reset-password endpoint — but TeamController.invite() doesn't issue
+  // a SaaS token, it stores a local 6-digit code. The correct endpoint
+  // here is /v1/auth/claim which redeems the code via the local
+  // EmailVerificationCode table.
+  const code = params.get('code') || params.get('token') || ''
   const email = params.get('email') || ''
 
   const [password, setPassword] = useState('')
@@ -25,10 +32,10 @@ export function Activate() {
   const [logoFailed, setLogoFailed] = useState(false)
 
   useEffect(() => {
-    if (!token || !email) {
+    if (!code || !email) {
       setError('This activation link is missing required information. Please open the link from your invitation email.')
     }
-  }, [token, email])
+  }, [code, email])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,9 +50,19 @@ export function Activate() {
     }
     setLoading(true)
     try {
-      const { data } = await api.post('/v1/auth/activate', { token, email, password })
+      // claimAccount expects `password_confirmation` (Laravel `confirmed` rule)
+      const { data } = await api.post('/v1/auth/claim', {
+        email,
+        code,
+        password,
+        password_confirmation: confirm,
+      })
       setDone(true)
-      setAuth(data.token, data.user, data.staff)
+      // claimAccount returns { token, user, member } — no staff payload
+      // since the Staff record is provisioned at invite time. The Layout
+      // will load /v1/auth/me on first navigation and surface the staff
+      // info from there.
+      setAuth(data.token, data.user)
       setTimeout(() => navigate('/', { replace: true }), 800)
     } catch (err: any) {
       const msg = err?.response?.data?.error
@@ -112,7 +129,7 @@ export function Activate() {
                       className="w-full bg-black/30 border border-white/[0.08] rounded-lg py-2.5 pl-10 pr-10 text-white text-sm focus:border-[#c9a84c]/50 focus:ring-1 focus:ring-[#c9a84c]/30 focus:outline-none transition"
                       placeholder="At least 8 characters"
                       autoFocus
-                      disabled={loading || !token || !email}
+                      disabled={loading || !code || !email}
                     />
                     <button
                       type="button"
@@ -137,7 +154,7 @@ export function Activate() {
                       onChange={(e) => setConfirm(e.target.value)}
                       className="w-full bg-black/30 border border-white/[0.08] rounded-lg py-2.5 pl-10 pr-3 text-white text-sm focus:border-[#c9a84c]/50 focus:ring-1 focus:ring-[#c9a84c]/30 focus:outline-none transition"
                       placeholder="Re-enter password"
-                      disabled={loading || !token || !email}
+                      disabled={loading || !code || !email}
                     />
                   </div>
                 </div>
@@ -151,7 +168,7 @@ export function Activate() {
 
                 <button
                   type="submit"
-                  disabled={loading || !token || !email}
+                  disabled={loading || !code || !email}
                   className="w-full py-3 rounded-lg font-semibold text-sm text-black bg-gradient-to-br from-[#d4b357] via-[#c9a84c] to-[#a6883c] hover:from-[#dcbc60] hover:to-[#b59244] transition shadow-lg shadow-[#c9a84c]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? 'Activating…' : <>Activate Account <ArrowRight size={16} /></>}
