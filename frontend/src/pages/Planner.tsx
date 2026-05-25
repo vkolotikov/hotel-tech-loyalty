@@ -965,7 +965,10 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
 }) {
   const HOUR_START = 6
   const HOUR_END = 22
-  const PX_PER_HOUR = 56
+  // 72px/hour (was 56) — gives a 1-hour chip ~66px of content height,
+  // enough to fit time + title + sublabel without cropping. Mirrors
+  // the airier vertical rhythm of the mockup.
+  const PX_PER_HOUR = 72
   const TOTAL_HEIGHT = (HOUR_END - HOUR_START) * PX_PER_HOUR
   // Widened to fit the 12-hour "10:00 AM" hour labels without clipping.
   const TIME_LABEL_WIDTH = 72
@@ -1219,7 +1222,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
         </div>
       </div>
 
-      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: renderedMode === 'team' ? 600 : 540 }}>
+      <div ref={scrollRef} className="relative overflow-y-auto" style={{ maxHeight: renderedMode === 'team' ? 720 : 640 }}>
         {/* Sticky header row — date pill in the top-left + per-employee
             columns (team mode) or empty space (single mode). Lives in
             the scroll container so it stays pinned while the time
@@ -1472,32 +1475,33 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                   zIndex: isDragging ? 30 : 10,
                   transition: isDragging ? 'none' : 'top 0.15s, height 0.15s, box-shadow 0.15s',
                 }}>
-                <div className="h-full px-3 py-1.5 flex flex-col items-start text-left overflow-hidden relative">
+                <div className="h-full px-3 py-2 flex flex-col items-start text-left overflow-hidden relative gap-0.5">
                   {/* Time range — bright color, matches sample's
                       "9:00 – 10:00" header. Drops AM/PM since the
                       column already groups by day. */}
-                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-6" style={{ color: meta.color, filter: 'brightness(1.45)' }}>
+                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-7 leading-none" style={{ color: meta.color, filter: 'brightness(1.5)' }}>
                     {to12hNoSuffix(startLabel)}{duration ? ` – ${to12hNoSuffix(endLabel)}` : ''}
                   </span>
                   {/* Title — bright white, with right-padding so the
-                      corner icon never overlaps. Allows wrapping to
-                      2 lines on taller chips, otherwise truncates. */}
+                      corner icon never overlaps. Wraps to 2 lines on
+                      chips ≥ 80px tall (45min+ at 72px/hr), truncates
+                      otherwise so half-hour slots stay readable. */}
                   <span
-                    className={'text-[12.5px] font-semibold text-white mt-0.5 leading-tight w-full pr-6 ' + (task.completed ? 'line-through' : '')}
+                    className={'text-[13px] font-semibold text-white leading-tight w-full pr-7 ' + (task.completed ? 'line-through' : '')}
                     style={{
                       display: '-webkit-box',
-                      WebkitLineClamp: height > 70 ? 2 : 1,
+                      WebkitLineClamp: height >= 80 ? 2 : 1,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                     }}>
                     {task.title}
                   </span>
                   {/* Sublabel — group label in team mode (column shows
-                      employee), employee in single mode. Only renders
-                      when the chip is tall enough so we don't ship a
-                      3rd line on a 30-min slot. */}
-                  {height > 52 && (
-                    <span className="text-[10px] text-white/55 mt-auto truncate w-full">
+                      employee), employee in single mode. Shows on
+                      chips ≥ 60px (45min+ at 72px/hr) so the third
+                      line never gets clipped. */}
+                  {height >= 60 && (
+                    <span className="text-[10px] text-white/60 mt-auto truncate w-full pr-1">
                       {renderedMode === 'team' ? (task.task_group || 'Task') : (task.employee_name || task.task_group || 'Unassigned')}
                     </span>
                   )}
