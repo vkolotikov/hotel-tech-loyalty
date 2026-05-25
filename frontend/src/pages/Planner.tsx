@@ -1127,13 +1127,20 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
     if (h < 12) return `${h}:00 AM`
     return `${h - 12}:00 PM`
   }
-  // 12-hour clock with AM/PM for the chip time range + "now" label,
-  // matching the sample design. `s` is in HH:MM 24-hour form.
+  // 12-hour clock with AM/PM for the "now" pill label. `s` is in
+  // HH:MM 24-hour form.
   const to12h = (s: string) => {
     const [hh, mm] = s.split(':').map(Number)
     const period = hh >= 12 ? 'PM' : 'AM'
     const h12 = hh % 12 === 0 ? 12 : hh % 12
     return `${h12}:${String(mm).padStart(2, '0')} ${period}`
+  }
+  // 12-hour clock WITHOUT AM/PM — used in chip headers since the
+  // column already implies the day and AM/PM clutters short chips.
+  const to12hNoSuffix = (s: string) => {
+    const [hh, mm] = s.split(':').map(Number)
+    const h12 = hh % 12 === 0 ? 12 : hh % 12
+    return `${h12}:${String(mm).padStart(2, '0')}`
   }
 
   // Sort tasks by start so later-starting tasks paint on top of
@@ -1412,16 +1419,16 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
             // columns-area width.
             const positionStyle: React.CSSProperties = renderedMode === 'team'
               ? {
-                  top: top + 2,
-                  left: `calc(${TIME_LABEL_WIDTH}px + (${effectiveCol / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)) + 4px)`,
-                  width: `calc((100% - ${TIME_LABEL_WIDTH}px) / ${employees.length} - 8px)`,
-                  height: height - 4,
+                  top: top + 3,
+                  left: `calc(${TIME_LABEL_WIDTH}px + (${effectiveCol / employees.length} * (100% - ${TIME_LABEL_WIDTH}px)) + 5px)`,
+                  width: `calc((100% - ${TIME_LABEL_WIDTH}px) / ${employees.length} - 10px)`,
+                  height: height - 6,
                 }
               : {
-                  top: top + 2,
-                  left: TIME_LABEL_WIDTH + 8,
-                  right: 8,
-                  height: height - 4,
+                  top: top + 3,
+                  left: TIME_LABEL_WIDTH + 10,
+                  right: 10,
+                  height: height - 6,
                 }
             return (
               <button
@@ -1453,77 +1460,88 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                 title={`${task.title} — ${to12h(startLabel)}${duration ? ` to ${to12h(endLabel)}` : ''} · drag to move, drag bottom edge to resize`}
                 className={'absolute group transition-shadow hover:shadow-lg hover:shadow-black/40 hover:z-20 cursor-grab active:cursor-grabbing ' + (isDragging ? 'z-30 shadow-2xl' : '')}
                 style={{
-                  // Slightly more saturated tint than the old `+20`
-                  // alpha so chips read as "their" color at a glance
-                  // (cyan / purple / green / blue clusters in the
-                  // sample design). Border drops the left stripe in
-                  // favour of an even border + corner icon badge.
+                  // Solid saturated tint (no gradient) so titles stay
+                  // legible top-to-bottom; backdrop-saturated bg gives
+                  // the same "frosted color" feel as the sample cards.
                   ...positionStyle,
-                  background: `linear-gradient(180deg, ${meta.color}26 0%, ${meta.color}1a 100%)`,
-                  border: `1px solid ${meta.color}66`,
-                  borderRadius: 10,
+                  background: meta.color + '38',
+                  border: `1px solid ${meta.color}80`,
+                  borderRadius: 12,
+                  boxShadow: `inset 0 1px 0 ${meta.color}30`,
                   opacity: task.completed ? 0.55 : (isDragging ? 0.9 : 1),
                   zIndex: isDragging ? 30 : 10,
                   transition: isDragging ? 'none' : 'top 0.15s, height 0.15s, box-shadow 0.15s',
                 }}>
-                <div className="h-full px-2.5 py-1.5 flex flex-col items-start text-left overflow-hidden relative">
-                  {/* Time range — lead line in muted gray, matches the
-                      sample's "9:00 – 10:00" header. */}
-                  <span className="text-[10px] font-medium tabular-nums flex-shrink-0" style={{ color: meta.color }}>
-                    {to12h(startLabel).replace(' ', '')}{duration ? ` – ${to12h(endLabel).replace(' ', '')}` : ''}
+                <div className="h-full px-3 py-1.5 flex flex-col items-start text-left overflow-hidden relative">
+                  {/* Time range — bright color, matches sample's
+                      "9:00 – 10:00" header. Drops AM/PM since the
+                      column already groups by day. */}
+                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-6" style={{ color: meta.color, filter: 'brightness(1.45)' }}>
+                    {to12hNoSuffix(startLabel)}{duration ? ` – ${to12hNoSuffix(endLabel)}` : ''}
                   </span>
-                  {/* Title — bold, with right-padding so the corner
-                      badge cluster never overlaps. */}
-                  <span className={'text-[12px] font-semibold text-white mt-0.5 leading-tight truncate w-full pr-7 ' + (task.completed ? 'line-through' : '')}>
+                  {/* Title — bright white, with right-padding so the
+                      corner icon never overlaps. Allows wrapping to
+                      2 lines on taller chips, otherwise truncates. */}
+                  <span
+                    className={'text-[12.5px] font-semibold text-white mt-0.5 leading-tight w-full pr-6 ' + (task.completed ? 'line-through' : '')}
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: height > 70 ? 2 : 1,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}>
                     {task.title}
                   </span>
-                  {/* Sublabel — employee in single mode (column header
-                      tells you in team mode), or the group label when
-                      the chip is in a single-employee scope. Renders
-                      only when the chip is tall enough so we don't
-                      ship a 3rd line on a 20-min slot. */}
-                  {height > 48 && (
-                    <span className="text-[10px] text-gray-400 mt-auto mb-0 truncate w-full">
+                  {/* Sublabel — group label in team mode (column shows
+                      employee), employee in single mode. Only renders
+                      when the chip is tall enough so we don't ship a
+                      3rd line on a 30-min slot. */}
+                  {height > 52 && (
+                    <span className="text-[10px] text-white/55 mt-auto truncate w-full">
                       {renderedMode === 'team' ? (task.task_group || 'Task') : (task.employee_name || task.task_group || 'Unassigned')}
                     </span>
                   )}
-                  {/* Corner badge cluster — square category icon tile
-                      in the top-right, with priority / recurring /
-                      status badges stacking to its left. Mirrors the
-                      sample where each card's icon sits in the
-                      top-right corner. */}
-                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                    {(task.recurring || task.recurring_parent_id) && (
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-md bg-purple-500/25"
-                        title="Part of a recurring series">
-                        <Repeat size={9} className="text-purple-200" />
-                      </span>
-                    )}
-                    {(() => {
-                      const sm = STATUS_META[task.status]
-                      if (!sm) return null
-                      const SIcon = sm.icon
-                      return (
-                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-md flex-shrink-0"
-                          style={{ background: sm.color + '30' }}
-                          title={sm.label}>
-                          <SIcon size={9} style={{ color: sm.color }} />
+                  {/* Corner icon — single circular dot in the
+                      top-right, mirroring the sample design where each
+                      card has a single accent badge (no rectangular
+                      tile). Priority / recurring / status sit
+                      vertically beneath, only when set, so the corner
+                      stays uncluttered. */}
+                  <span
+                    className="absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0"
+                    style={{ background: meta.color + 'cc', boxShadow: `0 1px 4px ${meta.color}55` }}
+                    title={task.task_group || 'Task'}>
+                    <Icon size={11} className="text-white" />
+                  </span>
+                  {/* Secondary badges — stacked under the corner icon
+                      only when they exist. Keeps the top-right corner
+                      uncluttered on the common case (no priority, not
+                      recurring, default status). */}
+                  {(task.priority === 'High' || (task.recurring || task.recurring_parent_id) || STATUS_META[task.status]) && (
+                    <div className="absolute top-8 right-2 flex flex-col items-end gap-0.5">
+                      {task.priority === 'High' && (
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/80 flex-shrink-0" title="High priority">
+                          <Flag size={8} className="text-white" />
                         </span>
-                      )
-                    })()}
-                    {task.priority === 'High' && (
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-md bg-red-500/25 flex-shrink-0"
-                        title="High priority">
-                        <Flag size={9} className="text-red-300" />
-                      </span>
-                    )}
-                    <span
-                      className="inline-flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
-                      style={{ background: meta.color + '50', boxShadow: `0 1px 4px ${meta.color}40` }}
-                      title={task.task_group || 'Task'}>
-                      <Icon size={11} className="text-white" />
-                    </span>
-                  </div>
+                      )}
+                      {(task.recurring || task.recurring_parent_id) && (
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-500/80" title="Part of a recurring series">
+                          <Repeat size={8} className="text-white" />
+                        </span>
+                      )}
+                      {(() => {
+                        const sm = STATUS_META[task.status]
+                        if (!sm) return null
+                        const SIcon = sm.icon
+                        return (
+                          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0"
+                            style={{ background: sm.color }} title={sm.label}>
+                            <SIcon size={8} className="text-white" />
+                          </span>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </div>
                 {/* Resize handle — bottom 6px of the chip. Drag to
                     adjust duration. stopPropagation prevents the
