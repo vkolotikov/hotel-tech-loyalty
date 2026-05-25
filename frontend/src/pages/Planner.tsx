@@ -3,6 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings } from '../lib/crmSettings'
+import {
+  TASK_GROUP_META as SHARED_TASK_GROUP_META,
+  CUSTOM_GROUP_META as SHARED_CUSTOM_GROUP_META,
+  parsePlannerGroups, parsePlannerChannels, getIcon,
+  type GroupMeta,
+} from '../lib/plannerMeta'
 import { useAuthStore } from '../stores/authStore'
 import toast from 'react-hot-toast'
 import {
@@ -10,10 +16,7 @@ import {
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText, LayoutGrid,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
-  Wrench, Coffee, Briefcase, BedDouble, PartyPopper, ConciergeBell, Sparkles, Phone,
-  // Channel-type icons for the new comms-channel row in the drawer.
-  Phone as PhoneIcon, Mail as MailIcon, MessageCircle as WhatsAppIcon,
-  MessageSquare as SmsIcon, Video as VideoIcon, User as UserIcon,
+  Sparkles,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
@@ -72,29 +75,36 @@ const STATUS_META: Record<string, { icon: any; color: string; label: string }> =
  * Custom tile for any group not listed here, so non-hotel orgs that
  * defined their own groups still get a usable picker.
  */
-const TASK_GROUP_META: Record<string, { icon: any; color: string }> = {
-  Housekeeping:   { icon: BedDouble,      color: '#10b981' },
-  'Front Desk':   { icon: ConciergeBell,  color: '#3b82f6' },
-  'Front Office': { icon: ConciergeBell,  color: '#3b82f6' },
-  Maintenance:    { icon: Wrench,         color: '#f59e0b' },
-  'F&B':          { icon: Coffee,         color: '#a855f7' },
-  Management:     { icon: Briefcase,      color: '#ef4444' },
-  Sales:          { icon: Phone,          color: '#06b6d4' },
-  Events:         { icon: PartyPopper,    color: '#ec4899' },
-}
-const CUSTOM_GROUP_META = { icon: Sparkles, color: '#94a3b8' }
+// Built-in group meta — proxied from the shared module so the
+// settings UI and the live planner pull from the same map.
+const TASK_GROUP_META = SHARED_TASK_GROUP_META
+const CUSTOM_GROUP_META: GroupMeta = SHARED_CUSTOM_GROUP_META
 
 /**
- * Half-hour time slots from 06:00 to 22:00. Drives the start-time
- * scroll-picker in the drawer. We render every slot but auto-scroll
- * to the currently-selected one on open. 30-min granularity matches
- * how hotel staff schedule shifts in practice.
+ * Module-mutable map of admin-customised group icon/color overrides,
+ * synced from settings on every Planner render. All 18 chip-render
+ * sites resolve through `getGroupMeta()` so a custom icon set in
+ * Settings → Planner shows up everywhere without having to thread a
+ * prop through every sub-component. Reset on logout / org switch
+ * (the settings query refetches and overwrites the map).
+ */
+let _customGroupMeta: Record<string, GroupMeta> = {}
+function getGroupMeta(group: string | null | undefined): GroupMeta {
+  if (!group) return CUSTOM_GROUP_META
+  return _customGroupMeta[group] ?? TASK_GROUP_META[group] ?? CUSTOM_GROUP_META
+}
+
+/**
+ * Half-hour time slots from 07:00 to 21:00 (work-day window). Drives
+ * the start-time picker in the new-task drawer. Labels show 24-hour
+ * HH:MM directly — matches the planner's timeline + how hotel staff
+ * read shift rosters in practice.
  */
 const TIME_SLOTS: string[] = (() => {
   const out: string[] = []
-  for (let h = 6; h <= 22; h++) {
+  for (let h = 7; h <= 21; h++) {
     out.push(String(h).padStart(2, '0') + ':00')
-    out.push(String(h).padStart(2, '0') + ':30')
+    if (h < 21) out.push(String(h).padStart(2, '0') + ':30')
   }
   return out
 })()
@@ -205,7 +215,7 @@ const TaskRow = memo(({
 }) => {
   const subDone = task.subtasks?.filter((s: any) => s.is_done).length ?? 0
   const subTotal = task.subtasks?.length ?? 0
-  const groupMeta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+  const groupMeta = getGroupMeta(task.task_group)
   const GroupIcon = groupMeta.icon
 
   return (
@@ -437,7 +447,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
           ) : (
             <div className="space-y-3 max-h-[420px] overflow-y-auto">
               {Object.entries(grouped).map(([cat, tmps]) => {
-                const groupMeta = TASK_GROUP_META[tmps[0]?.task_group ?? ''] ?? CUSTOM_GROUP_META
+                const groupMeta = getGroupMeta(tmps[0]?.task_group)
                 const accent = groupMeta.color
                 return (
                   <div key={cat}>
@@ -653,7 +663,7 @@ function GroupFilterTabs({ groups, value, onChange, tasks }: {
   // the data and the active pill carries one accent fill.
   const allTab = { key: '', label: 'All', color: '#fbbf24' /* gold — matches app accent */ }
   const tabs = [allTab, ...groups.map(g => {
-    const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
+    const meta = getGroupMeta(g)
     return { key: g, label: g, color: meta.color }
   })]
   return (
@@ -1385,7 +1395,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
             const rawStartMin = parseMin(task.start_time)
             if (rawStartMin == null) return null
             const rawDuration = Math.max(15, Number(task.duration_minutes) || 30)
-            const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+            const meta = getGroupMeta(task.task_group)
             const Icon = meta.icon
             // In team mode, find which column this task belongs to.
             // Tasks whose employee_name isn't in the employees array
@@ -1600,6 +1610,20 @@ export function Planner() {
   const settings = useSettings()
   const { user } = useAuthStore()
   const myName = user?.name ?? ''
+
+  // Raw settings read for the bits useSettings() flattens (it reduces
+  // enriched planner_groups to plain strings + has no awareness of
+  // planner_channels). We use the same cached query so no extra round
+  // trip. Sync the module-level customisation map on every render so
+  // every chip render in this file picks up admin icon/color edits.
+  const { data: rawSettings } = useQuery<Record<string, any>>({
+    queryKey: ['crm-settings'],
+    queryFn: () => api.get('/v1/admin/crm-settings').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const { custom: customGroupMetaSnapshot } = parsePlannerGroups(rawSettings?.planner_groups)
+  _customGroupMeta = customGroupMetaSnapshot
+  const taskChannels = parsePlannerChannels(rawSettings?.planner_channels)
   const [tab, setTab] = useState<Tab>('schedule')
   const [currentDate, setCurrentDate] = useState(() => fmtDate(new Date()))
   const [weekStart, setWeekStart] = useState(() => fmtDate(getMonday(new Date())))
@@ -2376,7 +2400,7 @@ export function Planner() {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {tasks.filter((t: any) => !t.start_time).map((task: any) => {
-                    const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                    const meta = getGroupMeta(task.task_group)
                     const Icon = meta.icon
                     return (
                       <button key={task.id}
@@ -2734,7 +2758,7 @@ export function Planner() {
                                  * scan readable — staff see the visual cluster of housekeeping
                                  * vs maintenance vs F&B before they read any text.
                                  */
-                                const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                                const meta = getGroupMeta(task.task_group)
                                 const Icon = meta.icon
                                 return (
                                   <button
@@ -2853,7 +2877,7 @@ export function Planner() {
                               }}
                               className="relative group cursor-grab active:cursor-grabbing">
                               {(() => {
-                                const meta = TASK_GROUP_META[task.task_group] ?? CUSTOM_GROUP_META
+                                const meta = getGroupMeta(task.task_group)
                                 const Icon = meta.icon
                                 return (
                                   <button
@@ -2966,7 +2990,7 @@ export function Planner() {
                     ) : (
                       <div className="space-y-0.5">
                         {dayTasks.slice(0, 3).map((t: any) => {
-                          const tMeta = TASK_GROUP_META[t.task_group] ?? CUSTOM_GROUP_META
+                          const tMeta = getGroupMeta(t.task_group)
                           return (
                             <div
                               key={t.id}
@@ -3119,7 +3143,7 @@ export function Planner() {
             ) : (
               <div className="space-y-2 mb-4">
                 {autoPlan.proposals.map(p => {
-                  const meta = TASK_GROUP_META[p.task_group ?? ''] ?? CUSTOM_GROUP_META
+                  const meta = getGroupMeta(p.task_group ?? '')
                   const Icon = meta.icon
                   return (
                     <div key={p.task_id}
@@ -3228,7 +3252,7 @@ export function Planner() {
         // Always include "Custom" as the bottom-row fallback for tasks
         // that don't fit a configured group.
         const groups = [...(settings.planner_groups || []), 'Custom']
-        const activeMeta = TASK_GROUP_META[form.task_group] ?? CUSTOM_GROUP_META
+        const activeMeta = getGroupMeta(form.task_group)
 
         return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
@@ -3244,7 +3268,7 @@ export function Planner() {
                 <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.type_label', 'Type')}</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {groups.map(g => {
-                    const meta = TASK_GROUP_META[g] ?? CUSTOM_GROUP_META
+                    const meta = getGroupMeta(g)
                     const active = (form.task_group || 'Custom') === g
                     const Icon = meta.icon
                     return (
@@ -3262,23 +3286,17 @@ export function Planner() {
               </div>
 
               {/* Channel — optional communication channel for this task.
-                  Mirrors the lead TaskDrawer so staff can categorise the
-                  comms style (call / email / etc.) independently of the
-                  ops group (Housekeeping / Front Desk / etc.). Stored in
-                  task_category. */}
+                  Reads from settings.planner_channels so admins can
+                  add / rename / re-icon the choices in Settings →
+                  Planner without code changes. Stored in
+                  task_category as the channel's stable `key`. */}
+              {taskChannels.length > 0 && (
               <div>
                 <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.channel_label', 'Channel')}</label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                  {([
-                    { key: 'call',      label: 'Call',     icon: PhoneIcon,    color: '#22d3ee' },
-                    { key: 'email',     label: 'Email',    icon: MailIcon,     color: '#a78bfa' },
-                    { key: 'whatsapp',  label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366' },
-                    { key: 'sms',       label: 'SMS',      icon: SmsIcon,      color: '#8b5cf6' },
-                    { key: 'video',     label: 'Video',    icon: VideoIcon,    color: '#06b6d4' },
-                    { key: 'in_person', label: 'In-person', icon: UserIcon,    color: '#fbbf24' },
-                  ] as const).map(c => {
+                  {taskChannels.map(c => {
                     const active = (form.task_category || '') === c.key
-                    const Icon = c.icon
+                    const Icon = getIcon(c.icon)
                     return (
                       <button key={c.key} type="button"
                         onClick={() => setForm(f => ({ ...f, task_category: active ? '' : c.key }))}
@@ -3292,6 +3310,7 @@ export function Planner() {
                   })}
                 </div>
               </div>
+              )}
 
               {/* Template picker — collapsed by default */}
               {!editTask && formTemplates.length > 0 && (
@@ -3385,7 +3404,7 @@ export function Planner() {
                 </div>
               </div>
 
-              {/* Start time — 30min slots */}
+              {/* Start time — 30min slots, 24h labels (07:00 → 21:00). */}
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Clock size={11} /> Start time</label>
                 <div className="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto p-1 bg-dark-bg border border-dark-border rounded-md">
@@ -3393,9 +3412,9 @@ export function Planner() {
                     const active = form.start_time && form.start_time.slice(0, 5) === t
                     return (
                       <button key={t} type="button" onClick={() => setStartTime(t)}
-                        className={'px-1.5 py-1 rounded text-[11px] font-mono transition-colors ' +
+                        className={'px-1.5 py-1 rounded text-[11px] font-mono tabular-nums transition-colors ' +
                           (active ? 'bg-primary-500 text-white' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
-                        {fmtShort(t)}
+                        {t}
                       </button>
                     )
                   })}

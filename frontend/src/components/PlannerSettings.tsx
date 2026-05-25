@@ -4,9 +4,14 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
-  CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks, Wrench, Coffee,
-  BedDouble, PartyPopper, ConciergeBell, Phone,
+  CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
+  MessageCircle,
 } from 'lucide-react'
+import {
+  ICON_OPTIONS, COLOR_OPTIONS, TASK_GROUP_META, CUSTOM_GROUP_META,
+  DEFAULT_CHANNELS, parsePlannerGroups, parsePlannerChannels, getIcon,
+  type ChannelDef, type GroupMeta,
+} from '../lib/plannerMeta'
 
 /**
  * Settings → Planner tab. Three sections:
@@ -40,22 +45,14 @@ const PRESET_ICONS: Record<string, any> = {
 }
 
 /**
- * Same group → icon/color mapping the planner uses for chips, so the
- * settings UI and the live view stay visually consistent. New groups
- * an admin types in (that aren't in this map) fall back to the
- * Custom tile, just like in the planner.
+ * Helper: resolve a group's icon + color given the customisation map
+ * pulled from settings. Order: custom override → built-in → fallback.
+ * Wraps the shared `lib/plannerMeta` helpers so the editor stays in
+ * sync with whatever the live planner renders.
  */
-const GROUP_META: Record<string, { icon: any; color: string }> = {
-  Housekeeping:    { icon: BedDouble,     color: '#10b981' },
-  'Front Desk':    { icon: ConciergeBell, color: '#3b82f6' },
-  'Front Office':  { icon: ConciergeBell, color: '#3b82f6' },
-  Maintenance:     { icon: Wrench,        color: '#f59e0b' },
-  'F&B':           { icon: Coffee,        color: '#a855f7' },
-  Management:      { icon: Briefcase,     color: '#ef4444' },
-  Sales:           { icon: Phone,         color: '#06b6d4' },
-  Events:          { icon: PartyPopper,   color: '#ec4899' },
+function metaFor(name: string, custom: Record<string, GroupMeta>): GroupMeta {
+  return custom[name] ?? TASK_GROUP_META[name] ?? CUSTOM_GROUP_META
 }
-const CUSTOM_META = { icon: Sparkles, color: '#94a3b8' }
 
 interface PlannerPreset {
   key: string
@@ -87,6 +84,7 @@ export function PlannerSettings() {
     <div className="space-y-6">
       <PresetPicker />
       <GroupsEditor />
+      <ChannelsEditor />
       <TemplatesEditor />
     </div>
   )
@@ -253,31 +251,51 @@ function ChangeRow({ label, accent }: { label: string; accent?: boolean }) {
 
 /* ─────────────────────── Groups editor ─────────────────────── */
 
+/**
+ * Local group-entry shape used while editing — the editor always
+ * works against the enriched form. We serialise back to the same
+ * enriched JSON on save; the planner's parse helper still accepts
+ * the legacy string-array form so older orgs stay backward-compat.
+ */
+interface GroupEntry { name: string; icon?: string; color?: string }
+
 function GroupsEditor() {
   const qc = useQueryClient()
   const [adding, setAdding] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
-  const [editingValue, setEditingValue] = useState('')
+  const [pickerOpen, setPickerOpen] = useState<number | null>(null)
 
-  /**
-   * Reads ALL crm-settings and pulls out `planner_groups`. The
-   * generic settings endpoint stores arrays JSON-encoded, so a
-   * fallback parse + default to [] keeps the UI sane when the key
-   * has never been written.
-   */
   const { data: rawSettings } = useQuery<Record<string, any>>({
     queryKey: ['crm-settings'],
     queryFn: () => api.get('/v1/admin/crm-settings').then(r => r.data),
   })
-  const groups: string[] = (() => {
-    const v = rawSettings?.planner_groups
-    if (!v) return ['Front Office', 'Housekeeping', 'F&B', 'Sales', 'Events', 'Maintenance']
-    if (Array.isArray(v)) return v
-    try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+
+  // Normalise the on-disk value into enriched entries. Legacy string
+  // entries get filled in with the built-in meta (if known) or the
+  // Sparkles fallback (if not), so the editor can render an icon
+  // tile + color swatch for every row regardless of save format.
+  const entries: GroupEntry[] = (() => {
+    const raw = rawSettings?.planner_groups
+    if (raw === undefined || raw === null) {
+      return ['Front Office', 'Housekeeping', 'F&B', 'Sales', 'Events', 'Maintenance']
+        .map(name => ({ name }))
+    }
+    const { names, custom } = parsePlannerGroups(raw)
+    return names.map(name => {
+      const m = custom[name] ?? TASK_GROUP_META[name] ?? CUSTOM_GROUP_META
+      return {
+        name,
+        icon: m.iconKey ?? 'sparkles',
+        color: m.color,
+      }
+    })
   })()
 
+  // Persist back as enriched objects. The planner reads either form.
   const save = useMutation({
-    mutationFn: (next: string[]) => api.put('/v1/admin/crm-settings/planner_groups', { value: JSON.stringify(next) }),
+    mutationFn: (next: GroupEntry[]) => api.put('/v1/admin/crm-settings/planner_groups', {
+      value: JSON.stringify(next),
+    }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Groups saved') },
     onError: () => toast.error('Could not save groups'),
   })
@@ -285,29 +303,34 @@ function GroupsEditor() {
   const addGroup = () => {
     const v = adding.trim()
     if (!v) return
-    if (groups.includes(v)) { toast.error('Group already exists'); return }
-    save.mutate([...groups, v])
+    if (entries.some(e => e.name === v)) { toast.error('Group already exists'); return }
+    save.mutate([...entries, { name: v, icon: 'sparkles', color: '#94a3b8' }])
     setAdding('')
   }
-
-  const removeGroup = (g: string) => {
-    if (!confirm(`Remove "${g}" from the group list?\n\nTasks currently using this group keep their value; they just won't have a matching tab.`)) return
-    save.mutate(groups.filter(x => x !== g))
+  const removeGroup = (name: string) => {
+    if (!confirm(`Remove "${name}" from the group list?\n\nTasks currently using this group keep their value; they just won't have a matching tab.`)) return
+    save.mutate(entries.filter(x => x.name !== name))
   }
-
-  const renameGroup = (idx: number) => {
-    const v = editingValue.trim()
+  const renameGroup = (idx: number, name: string) => {
+    const v = name.trim()
     if (!v) return
-    if (v !== groups[idx] && groups.includes(v)) { toast.error('Group already exists'); return }
-    const next = [...groups]; next[idx] = v
+    if (v !== entries[idx].name && entries.some(e => e.name === v)) { toast.error('Group already exists'); return }
+    const next = [...entries]; next[idx] = { ...next[idx], name: v }
     save.mutate(next)
     setEditingIdx(null)
   }
-
+  const setIcon = (idx: number, icon: string) => {
+    const next = [...entries]; next[idx] = { ...next[idx], icon }
+    save.mutate(next)
+  }
+  const setColor = (idx: number, color: string) => {
+    const next = [...entries]; next[idx] = { ...next[idx], color }
+    save.mutate(next)
+  }
   const move = (idx: number, delta: number) => {
     const j = idx + delta
-    if (j < 0 || j >= groups.length) return
-    const next = [...groups]
+    if (j < 0 || j >= entries.length) return
+    const next = [...entries]
     ;[next[idx], next[j]] = [next[j], next[idx]]
     save.mutate(next)
   }
@@ -317,44 +340,62 @@ function GroupsEditor() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-bold text-white flex items-center gap-2"><ListChecks size={14} /> Task groups</h3>
-          <p className="text-[11px] text-gray-500 mt-0.5">The icon-tab row in Schedule / Day / Month views. Reorder by clicking the arrows; rename inline.</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">The icon-tab row in Schedule / Day / Month views. Click the icon tile to pick a custom icon + color — saves immediately.</p>
         </div>
       </div>
 
       <div className="space-y-1.5 mb-3">
-        {groups.map((g, idx) => {
-          const meta = GROUP_META[g] ?? CUSTOM_META
-          const Icon = meta.icon
+        {entries.map((entry, idx) => {
+          const Icon = getIcon(entry.icon)
+          const color = entry.color ?? '#94a3b8'
           const editing = editingIdx === idx
+          const open = pickerOpen === idx
           return (
-            <div key={g} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: meta.color + '25', color: meta.color }}>
-                <Icon size={13} />
+            <div key={entry.name} className="bg-dark-bg border border-dark-border rounded-md">
+              <div className="flex items-center gap-2 px-2.5 py-1.5">
+                <button
+                  onClick={() => setPickerOpen(open ? null : idx)}
+                  title="Change icon / color"
+                  className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
+                  style={{ backgroundColor: color + '25', color }}>
+                  <Icon size={14} />
+                </button>
+                {editing ? (
+                  <input
+                    autoFocus
+                    defaultValue={entry.name}
+                    onBlur={e => renameGroup(idx, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') renameGroup(idx, (e.target as HTMLInputElement).value)
+                      if (e.key === 'Escape') setEditingIdx(null)
+                    }}
+                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-none"
+                  />
+                ) : (
+                  <span className="flex-1 text-sm text-white">{entry.name}</span>
+                )}
+                <div className="flex items-center gap-0.5 text-gray-500">
+                  <button onClick={() => move(idx, -1)} disabled={idx === 0}
+                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
+                  <button onClick={() => move(idx, 1)} disabled={idx === entries.length - 1}
+                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
+                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
+                  <button onClick={() => removeGroup(entry.name)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
+                </div>
               </div>
-              {editing ? (
-                <input
-                  autoFocus
-                  value={editingValue}
-                  onChange={e => setEditingValue(e.target.value)}
-                  onBlur={() => renameGroup(idx)}
-                  onKeyDown={e => { if (e.key === 'Enter') renameGroup(idx); if (e.key === 'Escape') setEditingIdx(null) }}
-                  className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-none"
+              {open && (
+                <IconColorPicker
+                  selectedIcon={entry.icon ?? 'sparkles'}
+                  selectedColor={color}
+                  onIcon={(k) => setIcon(idx, k)}
+                  onColor={(c) => setColor(idx, c)}
+                  onClose={() => setPickerOpen(null)}
                 />
-              ) : (
-                <span className="flex-1 text-sm text-white">{g}</span>
               )}
-              <div className="flex items-center gap-0.5 text-gray-500">
-                <button onClick={() => move(idx, -1)} disabled={idx === 0}
-                  className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
-                <button onClick={() => move(idx, 1)} disabled={idx === groups.length - 1}
-                  className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
-                <button onClick={() => { setEditingIdx(idx); setEditingValue(g) }} className="p-1 rounded hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
-                <button onClick={() => removeGroup(g)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
-              </div>
             </div>
           )
         })}
-        {groups.length === 0 && (
+        {entries.length === 0 && (
           <p className="text-xs text-gray-500 italic py-4 text-center">No groups yet. Add one below or apply an industry preset above.</p>
         )}
       </div>
@@ -364,6 +405,213 @@ function GroupsEditor() {
           value={adding}
           onChange={e => setAdding(e.target.value)}
           placeholder="Add a new group (e.g. Concierge)"
+          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
+        />
+        <button type="submit" disabled={!adding.trim() || save.isPending}
+          className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
+          <Plus size={13} /> Add
+        </button>
+      </form>
+    </div>
+  )
+}
+
+/**
+ * Inline icon + color picker. Rendered below the group row when its
+ * icon tile is clicked. Saves on every selection (no separate "save"
+ * step) so the planner reflects the change immediately.
+ */
+function IconColorPicker({ selectedIcon, selectedColor, onIcon, onColor, onClose }: {
+  selectedIcon: string
+  selectedColor: string
+  onIcon: (k: string) => void
+  onColor: (c: string) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="border-t border-dark-border bg-dark-surface/50 px-3 py-2.5">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] uppercase tracking-wide font-bold text-gray-500">Icon</span>
+        <button onClick={onClose} className="text-gray-600 hover:text-white text-[10px]">Close</button>
+      </div>
+      <div className="grid grid-cols-8 sm:grid-cols-12 gap-1 mb-3">
+        {Object.entries(ICON_OPTIONS).map(([key, Icon]) => {
+          const active = key === selectedIcon
+          return (
+            <button key={key} type="button" onClick={() => onIcon(key)}
+              title={key}
+              className={'w-7 h-7 rounded-md flex items-center justify-center transition ' +
+                (active ? 'ring-2 ring-primary-500 bg-primary-500/15' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+              <Icon size={13} />
+            </button>
+          )
+        })}
+      </div>
+      <span className="text-[10px] uppercase tracking-wide font-bold text-gray-500 block mb-1.5">Color</span>
+      <div className="flex flex-wrap gap-1">
+        {COLOR_OPTIONS.map(c => {
+          const active = c.toLowerCase() === selectedColor.toLowerCase()
+          return (
+            <button key={c} type="button" onClick={() => onColor(c)}
+              title={c}
+              className={'w-6 h-6 rounded-md transition ' + (active ? 'ring-2 ring-white' : 'hover:scale-110')}
+              style={{ backgroundColor: c }} />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────── Channels editor ─────────────────────── */
+
+/**
+ * Communication channels surfaced as the "Channel" picker in the
+ * Planner's New-task drawer. Org-wide, optional, defaults to the
+ * 6 starter channels (Call / Email / WhatsApp / SMS / Video /
+ * In-person). Stored in crm_settings.planner_channels as an array
+ * of { key, label, icon, color } objects.
+ */
+function ChannelsEditor() {
+  const qc = useQueryClient()
+  const [adding, setAdding] = useState('')
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [pickerOpen, setPickerOpen] = useState<number | null>(null)
+
+  const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
+  const channels: ChannelDef[] = parsePlannerChannels(rawSettings?.planner_channels)
+
+  const save = useMutation({
+    mutationFn: (next: ChannelDef[]) => api.put('/v1/admin/crm-settings/planner_channels', {
+      value: JSON.stringify(next),
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Channels saved') },
+    onError: () => toast.error('Could not save channels'),
+  })
+
+  // Slugify label → key. Keeps existing keys stable on rename so
+  // saved task_category values don't suddenly stop matching.
+  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'channel'
+
+  const addChannel = () => {
+    const v = adding.trim()
+    if (!v) return
+    const key = slugify(v)
+    if (channels.some(c => c.key === key || c.label.toLowerCase() === v.toLowerCase())) {
+      toast.error('Channel already exists'); return
+    }
+    save.mutate([...channels, { key, label: v, icon: 'phone', color: '#94a3b8' }])
+    setAdding('')
+  }
+  const removeChannel = (key: string) => {
+    if (!confirm(`Remove this channel?\n\nTasks already tagged with it keep their value; the chip just disappears from the picker.`)) return
+    save.mutate(channels.filter(c => c.key !== key))
+  }
+  const renameChannel = (idx: number, label: string) => {
+    const v = label.trim()
+    if (!v) return
+    if (v !== channels[idx].label && channels.some(c => c.label.toLowerCase() === v.toLowerCase())) {
+      toast.error('Channel already exists'); return
+    }
+    const next = [...channels]; next[idx] = { ...next[idx], label: v }
+    save.mutate(next)
+    setEditingIdx(null)
+  }
+  const setIcon = (idx: number, icon: string) => {
+    const next = [...channels]; next[idx] = { ...next[idx], icon }
+    save.mutate(next)
+  }
+  const setColor = (idx: number, color: string) => {
+    const next = [...channels]; next[idx] = { ...next[idx], color }
+    save.mutate(next)
+  }
+  const move = (idx: number, delta: number) => {
+    const j = idx + delta
+    if (j < 0 || j >= channels.length) return
+    const next = [...channels]
+    ;[next[idx], next[j]] = [next[j], next[idx]]
+    save.mutate(next)
+  }
+  const resetDefaults = () => {
+    if (!confirm('Reset channels to the 6 starter defaults?')) return
+    save.mutate(DEFAULT_CHANNELS)
+  }
+
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <div>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2"><MessageCircle size={14} /> Channels</h3>
+          <p className="text-[11px] text-gray-500 mt-0.5">Communication-method picker in the New task drawer. Click the icon tile to customise; rename inline.</p>
+        </div>
+        <button onClick={resetDefaults} className="text-[10px] text-gray-500 hover:text-white border border-dark-border rounded px-2 py-1 hover:bg-dark-surface2 transition">
+          Reset to defaults
+        </button>
+      </div>
+
+      <div className="space-y-1.5 mb-3">
+        {channels.map((c, idx) => {
+          const Icon = getIcon(c.icon)
+          const editing = editingIdx === idx
+          const open = pickerOpen === idx
+          return (
+            <div key={c.key} className="bg-dark-bg border border-dark-border rounded-md">
+              <div className="flex items-center gap-2 px-2.5 py-1.5">
+                <button
+                  onClick={() => setPickerOpen(open ? null : idx)}
+                  title="Change icon / color"
+                  className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
+                  style={{ backgroundColor: c.color + '25', color: c.color }}>
+                  <Icon size={14} />
+                </button>
+                {editing ? (
+                  <input
+                    autoFocus
+                    defaultValue={c.label}
+                    onBlur={e => renameChannel(idx, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') renameChannel(idx, (e.target as HTMLInputElement).value)
+                      if (e.key === 'Escape') setEditingIdx(null)
+                    }}
+                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-none"
+                  />
+                ) : (
+                  <span className="flex-1 text-sm text-white">{c.label}</span>
+                )}
+                <span className="text-[10px] text-gray-600 font-mono px-1.5 py-0.5 bg-dark-surface2 rounded border border-dark-border" title="Stable key (used in task_category)">
+                  {c.key}
+                </span>
+                <div className="flex items-center gap-0.5 text-gray-500">
+                  <button onClick={() => move(idx, -1)} disabled={idx === 0}
+                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
+                  <button onClick={() => move(idx, 1)} disabled={idx === channels.length - 1}
+                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
+                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
+                  <button onClick={() => removeChannel(c.key)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
+                </div>
+              </div>
+              {open && (
+                <IconColorPicker
+                  selectedIcon={c.icon}
+                  selectedColor={c.color}
+                  onIcon={(k) => setIcon(idx, k)}
+                  onColor={(col) => setColor(idx, col)}
+                  onClose={() => setPickerOpen(null)}
+                />
+              )}
+            </div>
+          )
+        })}
+        {channels.length === 0 && (
+          <p className="text-xs text-gray-500 italic py-4 text-center">No channels yet. Add one below or click Reset to defaults.</p>
+        )}
+      </div>
+
+      <form onSubmit={e => { e.preventDefault(); addChannel() }} className="flex gap-2">
+        <input
+          value={adding}
+          onChange={e => setAdding(e.target.value)}
+          placeholder="Add a new channel (e.g. Slack, Telegram)"
           className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}
@@ -386,6 +634,12 @@ function TemplatesEditor() {
     queryKey: ['planner-templates'],
     queryFn: () => api.get('/v1/admin/planner/templates').then(r => r.data),
   })
+
+  // Pull crm-settings for the group-icon resolution below — same
+  // cached query the rest of the editor uses, no extra fetch. Hoist
+  // the customisation map once so we don't re-parse per row.
+  const { data: rawSettingsForTemplates } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
+  const { custom: customGroupMeta } = parsePlannerGroups(rawSettingsForTemplates?.planner_groups)
 
   const del = useMutation({
     mutationFn: (id: number) => api.delete('/v1/admin/planner/templates/' + id),
@@ -420,7 +674,7 @@ function TemplatesEditor() {
               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">{cat}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                 {items.map(t => {
-                  const meta = t.task_group ? (GROUP_META[t.task_group] ?? CUSTOM_META) : null
+                  const meta = t.task_group ? metaFor(t.task_group, customGroupMeta) : null
                   const Icon = meta?.icon
                   return (
                     <div key={t.id} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5">
@@ -476,12 +730,9 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
    * the admin just configured above without a page reload.
    */
   const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
-  const groups: string[] = (() => {
-    const v = rawSettings?.planner_groups
-    if (Array.isArray(v)) return v
-    if (typeof v === 'string') { try { return JSON.parse(v) } catch { return [] } }
-    return []
-  })()
+  // Use the shared parser so enriched + legacy group entries both
+  // surface in the dropdown.
+  const { names: groups } = parsePlannerGroups(rawSettings?.planner_groups)
 
   const save = useMutation({
     mutationFn: () => {

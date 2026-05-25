@@ -78,24 +78,20 @@ const REPEAT_OPTIONS: { key: 'none' | 'daily' | 'weekly' | 'monthly'; label: str
   { key: 'monthly', label: 'Monthly' },
 ]
 
-// 30-min slot grid 06:00 → 22:00. Mirrors Planner.tsx.
+// 30-min slot grid 07:00 → 21:00, 24h labels. Mirrors Planner.tsx.
 const TIME_SLOTS: string[] = (() => {
   const slots: string[] = []
-  for (let h = 6; h <= 22; h++) {
+  for (let h = 7; h <= 21; h++) {
     slots.push(`${String(h).padStart(2, '0')}:00`)
-    if (h < 22) slots.push(`${String(h).padStart(2, '0')}:30`)
+    if (h < 21) slots.push(`${String(h).padStart(2, '0')}:30`)
   }
   return slots
 })()
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const fmtDateInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const formatSlotLabel = (slot: string) => {
-  const [h, m] = slot.split(':').map(Number)
-  const ampm = h >= 12 ? 'pm' : 'am'
-  const hh = h % 12 === 0 ? 12 : h % 12
-  return m === 0 ? `${hh}${ampm}` : `${hh}:${pad(m)}${ampm}`
-}
+// 24h HH:MM labels — drops AM/PM clutter, matches the planner timeline.
+const formatSlotLabel = (slot: string) => slot
 
 /** Parse an existing due_at (ISO or local datetime-local) → date + slot. */
 function splitDueAt(dueAt: string | null): { date: string; slot: string } {
