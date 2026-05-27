@@ -220,12 +220,20 @@ class SaasAuthMiddleware
                     $slug = $baseSlug . '-' . $suffix++;
                 }
 
-                $org = Organization::create([
-                    'saas_org_id' => $saasOrgId,
-                    'name' => $request->attributes->get('saas_org_slug') ?: 'Organization',
-                    'slug' => $slug,
-                ]);
-                $isNew = true;
+                try {
+                    $org = Organization::create([
+                        'saas_org_id' => $saasOrgId,
+                        'name' => $request->attributes->get('saas_org_slug') ?: 'Organization',
+                        'slug' => $slug,
+                    ]);
+                    $isNew = true;
+                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                    // Race: two concurrent requests for the same SaaS org
+                    // both passed the first() check and raced to create.
+                    // The loser re-fetches the winner's row.
+                    $org = Organization::where('saas_org_id', $saasOrgId)->first();
+                    if (!$org) throw $e;
+                }
             } elseif ($org->saas_deleted_at) {
                 // Reconcile job had previously marked this org as deleted in
                 // SaaS, but SaaS is still signing JWTs for it — resurrect.
@@ -273,13 +281,25 @@ class SaasAuthMiddleware
             ->first();
 
         if (!$user) {
-            $user = User::create([
-                'name'            => $request->attributes->get('saas_user_email'),
-                'email'           => $email,
-                'password'        => bcrypt(Str::random(32)),
-                'user_type'       => 'staff',
-                'organization_id' => $org?->id,
-            ]);
+            try {
+                $user = User::create([
+                    'name'            => $request->attributes->get('saas_user_email'),
+                    'email'           => $email,
+                    'password'        => bcrypt(Str::random(32)),
+                    'user_type'       => 'staff',
+                    'organization_id' => $org?->id,
+                ]);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // Race: two concurrent requests (e.g. multiple tabs
+                // opened at the same time) both passed the first()
+                // check and raced to insert the same user. Re-fetch.
+                $user = User::withoutGlobalScopes()
+                    ->where('email', $email)
+                    ->where('user_type', 'staff')
+                    ->where('organization_id', $org?->id)
+                    ->first();
+                if (!$user) throw $e;
+            }
 
             $saasRole = $request->attributes->get('saas_role', 'STAFF');
             $localRole = match (strtoupper($saasRole)) {
