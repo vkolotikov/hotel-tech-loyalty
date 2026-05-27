@@ -74,7 +74,7 @@ class TeamController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $rows = Staff::with('user:id,name,email,phone,avatar_url,last_login_at')
+        $rows = Staff::with('user:id,name,email,phone,avatar_url')
             ->orderByDesc('is_active')
             ->orderBy('id')
             ->get();
@@ -84,7 +84,7 @@ class TeamController extends Controller
         // of just "Pending". Indexed only on the pending subset so a busy
         // team list doesn't fan out into one query per row.
         $pendingEmails = $rows
-            ->filter(fn (Staff $s) => $s->user && !$s->user->last_login_at)
+            ->filter(fn (Staff $s) => $s->user && !$s->last_login_at)
             ->pluck('user.email')
             ->filter()
             ->unique()
@@ -110,8 +110,8 @@ class TeamController extends Controller
                 'role'                => $s->role,
                 'department'          => $s->department,
                 'is_active'           => $s->is_active,
-                'last_login_at'       => $s->user?->last_login_at,
-                'invite_expires_at'   => $s->user?->last_login_at ? null : ($inviteExpiry[$s->user?->email] ?? null),
+                'last_login_at'       => $s->last_login_at,
+                'invite_expires_at'   => $s->last_login_at ? null : ($inviteExpiry[$s->user?->email] ?? null),
                 'can_award_points'    => $s->can_award_points,
                 'can_redeem_points'   => $s->can_redeem_points,
                 'can_manage_offers'   => $s->can_manage_offers,

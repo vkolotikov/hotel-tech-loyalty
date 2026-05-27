@@ -291,7 +291,7 @@ class AnalyticsController extends Controller
             ? "(check_out::date - check_in::date)"
             : "DATEDIFF(check_out, check_in)";
 
-        $totalRooms = DB::table('properties')->where('is_active', true)->sum('total_rooms');
+        $totalRooms = DB::table('properties')->where('is_active', true)->sum('room_count');
 
         $occupied = Reservation::select(
                 DB::raw("{$periodSql} as period"),

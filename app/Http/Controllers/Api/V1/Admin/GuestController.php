@@ -144,11 +144,13 @@ class GuestController extends Controller
         return response()->json($guest->fresh(), 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(mixed $id): JsonResponse
     {
-        // Explicit lookup so we can return precise errors instead of a generic 404
-        // from route model binding (which respects TenantScope and silently 404s
-        // when the guest exists but belongs to a different organization).
+        if (!is_numeric($id)) {
+            return response()->json(['message' => 'Invalid guest ID.'], 404);
+        }
+        $id = (int) $id;
+
         $guest = Guest::find($id);
 
         if (!$guest) {
