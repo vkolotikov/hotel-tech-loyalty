@@ -1268,20 +1268,7 @@ function bindEvents() {
   on('cal-overlay', 'click', function(e) {
     if (e.target.id === 'cal-overlay') { state.calendarOpen = false; render(); }
   });
-  on('cal-prev', 'click', function() {
-    var now = new Date();
-    if (state.calendarYear === now.getFullYear() && state.calendarMonth <= now.getMonth()) return;
-    state.calendarMonth--;
-    if (state.calendarMonth < 0) { state.calendarMonth = 11; state.calendarYear--; }
-    render();
-    loadCalendarPrices();
-  });
-  on('cal-next', 'click', function() {
-    state.calendarMonth++;
-    if (state.calendarMonth > 11) { state.calendarMonth = 0; state.calendarYear++; }
-    render();
-    loadCalendarPrices();
-  });
+  bindCalendarNav();
   on('cal-apply', 'click', function() { state.calendarOpen = false; render(); });
 
   // Calendar day clicks
@@ -1743,8 +1730,26 @@ function renderCalendarInPlace() {
     if (nextMonth > 11) { nextMonth = 0; nextYear++; }
     monthsEl.innerHTML = renderMonth(state.calendarYear, state.calendarMonth) + renderMonth(nextYear, nextMonth);
     bindCalendarDays();
+    bindCalendarNav();
   }
   notifyHeight();
+}
+
+function bindCalendarNav() {
+  on('cal-prev', 'click', function() {
+    var now = new Date();
+    if (state.calendarYear === now.getFullYear() && state.calendarMonth <= now.getMonth()) return;
+    state.calendarMonth--;
+    if (state.calendarMonth < 0) { state.calendarMonth = 11; state.calendarYear--; }
+    render();
+    loadCalendarPrices();
+  });
+  on('cal-next', 'click', function() {
+    state.calendarMonth++;
+    if (state.calendarMonth > 11) { state.calendarMonth = 0; state.calendarYear++; }
+    render();
+    loadCalendarPrices();
+  });
 }
 
 function bindCalendarDays() {
