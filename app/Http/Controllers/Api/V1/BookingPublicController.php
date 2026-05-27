@@ -603,6 +603,31 @@ class BookingPublicController extends Controller
                             'pi_id'      => $intent->id,
                             'hold_token' => $holdToken,
                         ]);
+
+                        // Send the confirmation email the normal flow
+                        // would have sent. Best-effort — a failed email
+                        // must not crash the webhook handler. Signature
+                        // matches BookingEngineService::sendBookingEmails(
+                        //   array $guest, array $payload, array $response, ?int $orgId)
+                        try {
+                            $recoveredGuest = $payload['guest'] ?? [];
+                            if (empty($recoveredGuest['email'])) {
+                                $recoveredGuest['email'] = $intent->charges?->data[0]?->billing_details?->email ?? null;
+                            }
+                            if (!empty($recoveredGuest['email'])) {
+                                app(BookingEngineService::class)->sendBookingEmails(
+                                    $recoveredGuest,
+                                    $payload,
+                                    ['id' => 'ORPHAN-' . substr($intent->id, -10)],
+                                    (int) $orgId,
+                                );
+                            }
+                        } catch (\Throwable $emailErr) {
+                            \Illuminate\Support\Facades\Log::warning('Orphan recovery email failed (non-fatal)', [
+                                'pi_id' => $intent->id,
+                                'error' => $emailErr->getMessage(),
+                            ]);
+                        }
                     }
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::error('Stripe orphan-recovery failed', [

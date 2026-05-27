@@ -54,6 +54,7 @@ class ReapStaleChatConversations extends Command
                 'rating_requested' => $conv->rating_requested ?: true,
             ]);
             ChatMessage::create([
+                'organization_id' => $conv->organization_id,
                 'conversation_id' => $conv->id,
                 'sender_type'     => 'system',
                 'content'         => "Auto-resolved after {$hours}h of inactivity",

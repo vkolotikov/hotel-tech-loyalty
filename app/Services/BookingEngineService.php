@@ -160,6 +160,18 @@ class BookingEngineService
         $guest   = $data['guest'] ?? [];
         $apartmentId = $payload['unit_id'];
 
+        // Stamp guest info onto the hold before the main flow runs.
+        // If the /confirm endpoint crashes after Stripe charged the
+        // guest, the payment_intent.succeeded webhook's orphan-recovery
+        // path reads guest data from the hold so it can populate the
+        // mirror + send the confirmation email instead of creating a
+        // nameless row with no guest contact info.
+        if (!empty($guest['email']) && empty($payload['guest'])) {
+            $payload['guest'] = $guest;
+            $hold->payload_json = $payload;
+            $hold->save();
+        }
+
         // Try to link or create a CRM guest (outside the lock — idempotent by email).
         $guestId = $this->linkOrCreateGuest($guest, $orgId);
 
@@ -455,9 +467,15 @@ class BookingEngineService
                 //   business-rule rejection.
                 //
                 // Default to FATAL when uncertain — overselling is the
-                // worse failure mode.
+                // worse failure mode. BUT: we must be generous here so
+                // that generic infrastructure errors (HTML error pages
+                // from proxies, bare "Service Unavailable" text, empty
+                // bodies, DNS failures, etc.) fall into the transient
+                // bucket. A false-transient creates a local-only mirror
+                // that the retry cron picks up; a false-fatal rolls back
+                // the entire transaction after the guest already paid.
                 $isTransient =
-                    preg_match('/\b(50[0-9]|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429)/i', $msg);
+                    preg_match('/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i', $msg);
                 $pmsFatal = !$isTransient ? $msg : null;
 
                 if ($pmsFatal) {
@@ -1136,7 +1154,7 @@ class BookingEngineService
      * bookings so staff can test the full flow against real members
      * without spamming their inboxes.
      */
-    private function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
+    public function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
     {
         $email = $guest['email'] ?? null;
         if (!$email) return;
