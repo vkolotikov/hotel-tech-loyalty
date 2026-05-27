@@ -161,7 +161,9 @@ class BookingPublicController extends Controller
             $validated['children'] ?? 0,
         );
 
-        return response()->json(['available' => $results]);
+        // check() now returns { available: [], combinations: [] }.
+        // Pass through directly so the widget gets both arrays.
+        return response()->json($results);
     }
 
     /** GET /v1/booking/unit/{unitId}/rates — rates for a specific unit. */
@@ -186,18 +188,22 @@ class BookingPublicController extends Controller
         $this->bindOrg($request);
 
         $validated = $request->validate([
-            'unit_id'   => 'required|string',
-            'check_in'  => 'required|date|after_or_equal:today',
-            'check_out' => 'required|date|after:check_in',
-            'adults'    => 'nullable|integer|min:1',
-            'children'  => 'nullable|integer|min:0',
-            'extras'    => 'nullable|array',
+            'unit_id'    => 'required_without:unit_ids|string',
+            'unit_ids'   => 'required_without:unit_id|array|min:2|max:3',
+            'unit_ids.*' => 'string',
+            'check_in'   => 'required|date|after_or_equal:today',
+            'check_out'  => 'required|date|after:check_in',
+            'adults'     => 'nullable|integer|min:1',
+            'children'   => 'nullable|integer|min:0',
+            'extras'     => 'nullable|array',
             'extras.*.id'       => 'required_with:extras|string',
             'extras.*.quantity' => 'nullable|integer|min:1',
         ]);
 
         try {
-            $quote = $booking->quote($validated);
+            $quote = !empty($validated['unit_ids'])
+                ? $booking->quoteCombo($validated)
+                : $booking->quote($validated);
             return response()->json($quote);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['error' => $e->getMessage()], 400);

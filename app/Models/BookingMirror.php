@@ -20,7 +20,8 @@ class BookingMirror extends Model
     }
 
     protected $fillable = [
-        'organization_id', 'reservation_id', 'booking_reference', 'booking_type',
+        'organization_id', 'booking_group_id',
+        'reservation_id', 'booking_reference', 'booking_type',
         'booking_state', 'apartment_id', 'apartment_name', 'channel_id', 'channel_name',
         'guest_id', 'guest_name', 'guest_email', 'guest_phone', 'guest_language',
         'adults', 'children', 'arrival_date', 'departure_date',

@@ -817,11 +817,47 @@ function renderRooms() {
   h += '<p style="font-size:13px;color:var(--text-secondary)">' + formatDate(state.checkIn) + ' &mdash; ' + formatDate(state.checkOut) + ' &middot; ' + n + ' night' + (n > 1 ? 's' : '') + ' &middot; ' + state.adults + ' adult' + (state.adults > 1 ? 's' : '') + (state.children ? ', ' + state.children + ' child' + (state.children > 1 ? 'ren' : '') : '') + '</p>';
   h += '</div>';
 
-  if (state.available.length === 0) {
+  if (state.available.length === 0 && (!state.combinations || state.combinations.length === 0)) {
     h += '<div class="card" style="text-align:center;padding:48px 20px;color:var(--text-secondary)">';
     h += '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:16px;opacity:.4"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>';
     h += '<p style="font-size:15px;font-weight:600">No rooms available</p>';
     h += '<p style="font-size:13px;margin-top:6px">Try different dates or fewer guests</p></div>';
+  } else if (state.available.length === 0 && state.combinations && state.combinations.length > 0) {
+    // No single room fits, but combinations available.
+    h += '<div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(168,85,247,.08));border:1px solid rgba(99,102,241,.2);border-radius:12px">';
+    h += '<p style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px">🏠 Combination packages</p>';
+    h += '<p style="font-size:12px;color:var(--text-secondary)">No single room fits ' + (state.adults + (state.children||0)) + ' guests, but you can book multiple rooms together:</p>';
+    h += '</div>';
+    state.combinations.forEach(function(combo, ci) {
+      var sel = state.selectedCombo && state.selectedCombo._idx === ci;
+      h += '<div class="room-card' + (sel ? ' selected' : '') + '" data-combo="' + ci + '" style="border-left:3px solid #6366f1">';
+      h += '<div class="room-body">';
+      h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+      h += '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#818cf8;background:rgba(99,102,241,.12);padding:2px 8px;border-radius:4px">Package ' + (ci + 1) + '</span>';
+      h += '<span style="font-size:11px;color:var(--text-secondary)">' + combo.rooms.length + ' rooms &middot; ' + combo.total_guests + ' guests</span>';
+      h += '</div>';
+      combo.rooms.forEach(function(r, ri) {
+        if (ri > 0) h += '<div style="font-size:11px;color:var(--text-secondary);text-align:center;padding:2px 0">+</div>';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(0,0,0,.02);border-radius:8px;border:1px solid rgba(0,0,0,.06)">';
+        h += '<div>';
+        h += '<div style="font-size:14px;font-weight:600;color:var(--text-primary)">' + esc(r.name) + '</div>';
+        h += '<div style="font-size:12px;color:var(--text-secondary)">Max ' + r.max_guests + ' guests</div>';
+        h += '</div>';
+        h += '<div style="text-align:right">';
+        h += '<div style="font-size:14px;font-weight:700;color:var(--accent)">' + formatCurrency(r.price_per_night) + '<span style="font-size:11px;font-weight:400;color:var(--text-secondary)"> /night</span></div>';
+        h += '<div style="font-size:11px;color:var(--text-secondary)">' + formatCurrency(r.total_price) + ' total</div>';
+        h += '</div></div>';
+      });
+      h += '<div class="room-footer" style="margin-top:12px">';
+      h += '<div class="room-pricing">';
+      h += '<span class="room-price">' + formatCurrency(combo.price_per_night) + '</span>';
+      h += '<span class="room-price-unit">/ night total</span>';
+      h += '<span class="room-total">&middot; ' + formatCurrency(combo.total_price) + ' total</span>';
+      h += '</div>';
+      h += '<button class="room-select-btn">' + (sel ? svgCheck() + ' Selected' : 'Choose this package') + '</button>';
+      h += '</div>';
+      h += '</div></div>';
+    });
   } else {
     state.available.forEach(function(u) {
       var sel = state.selectedUnit && state.selectedUnit.id === u.id;
@@ -877,8 +913,9 @@ function renderRooms() {
 
   h += '<div class="btn-row">';
   h += '<button class="btn btn-outline" id="w-back1">' + svgArrowLeft() + ' Back</button>';
-  if (state.available.length > 0) {
-    h += '<button class="btn btn-primary" id="w-next2"' + (state.selectedUnit ? '' : ' disabled') + '>Continue ' + svgArrowRight() + '</button>';
+  if (state.available.length > 0 || (state.combinations && state.combinations.length > 0)) {
+    var hasSelection = state.selectedUnit || state.selectedCombo;
+    h += '<button class="btn btn-primary" id="w-next2"' + (hasSelection ? '' : ' disabled') + '>Continue ' + svgArrowRight() + '</button>';
   }
   h += '</div>';
   h += '</div>';  // end left column
@@ -1231,9 +1268,27 @@ function bindEvents() {
       el.addEventListener('click', function() {
         var uid = el.getAttribute('data-unit');
         state.selectedUnit = state.available.find(function(u) { return String(u.id) === uid; }) || null;
+        state.selectedCombo = null;
         render();
       });
     })(rooms[i]);
+  }
+
+  // Combo package cards
+  var combos = document.querySelectorAll('.room-card[data-combo]');
+  for (var ci = 0; ci < combos.length; ci++) {
+    (function(el) {
+      el.addEventListener('click', function() {
+        var idx = parseInt(el.getAttribute('data-combo'), 10);
+        var combo = (state.combinations || [])[idx];
+        if (combo) {
+          combo._idx = idx;
+          state.selectedCombo = combo;
+          state.selectedUnit = null;
+        }
+        render();
+      });
+    })(combos[ci]);
   }
 
   // Extra cards
@@ -1303,7 +1358,9 @@ function doSearch() {
     children: state.children
   }).then(function(data) {
     state.available = data.available || [];
+    state.combinations = data.combinations || [];
     state.selectedUnit = null;
+    state.selectedCombo = null;
     state.step = 2;
     state.searching = false;
     render();
@@ -1315,7 +1372,7 @@ function doSearch() {
 }
 
 function doSelectUnit() {
-  if (!state.selectedUnit) return;
+  if (!state.selectedUnit && !state.selectedCombo) return;
   state.step = 3;
   render();
 }
@@ -1324,14 +1381,21 @@ function doQuote() {
   state.quoteLoading = true; state.error = null; render();
   var extras = Object.keys(state.selectedExtras).map(function(id) { return { id: id, quantity: 1 }; });
 
-  apiPost('quote', {
-    unit_id: String(state.selectedUnit.id),
+  // Build the quote payload — single room or combo package.
+  var quoteBody = {
     check_in: state.checkIn,
     check_out: state.checkOut,
     adults: state.adults,
     children: state.children,
     extras: extras.length ? extras : undefined
-  }).then(function(data) {
+  };
+  if (state.selectedCombo) {
+    quoteBody.unit_ids = state.selectedCombo.rooms.map(function(r) { return String(r.id); });
+  } else {
+    quoteBody.unit_id = String(state.selectedUnit.id);
+  }
+
+  apiPost('quote', quoteBody).then(function(data) {
     state.quoteLoading = false;
     if (data.error) { state.error = data.error; render(); return; }
     state.quote = data;

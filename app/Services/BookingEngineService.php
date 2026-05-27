@@ -101,6 +101,95 @@ class BookingEngineService
     }
 
     /** Confirm a booking from hold token. */
+    /**
+     * Quote a multi-room combo. Same contract as quote() but accepts
+     * an array of unit_ids and stores all room data in a single hold.
+     * One Stripe PaymentIntent covers the combined total.
+     */
+    public function quoteCombo(array $data): array
+    {
+        $unitIds  = $data['unit_ids'];
+        $checkIn  = $data['check_in'];
+        $checkOut = $data['check_out'];
+        $adults   = $data['adults'] ?? 2;
+        $children = $data['children'] ?? 0;
+        $extras   = $data['extras'] ?? [];
+
+        $units = $this->getUnitsConfig();
+        $avail = app(AvailabilityService::class);
+        $nights = max(1, (int) ((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+
+        $rooms = [];
+        $roomTotalSum = 0;
+
+        foreach ($unitIds as $unitId) {
+            $unit = $units[$unitId] ?? null;
+            if (!$unit) throw new \InvalidArgumentException("Unknown unit: {$unitId}");
+
+            $rates = $avail->unitRates($unitId, $checkIn, $checkOut, $adults);
+            if (empty($rates) || !($rates['available'] ?? false)) {
+                throw new \RuntimeException("Unit {$unitId} ({$unit['name']}) is not available for the selected dates");
+            }
+
+            $roomTotal = $rates['price'] ?? ($rates['price_per_night'] ?? 0) * $nights;
+            $roomTotalSum += $roomTotal;
+
+            $rooms[] = [
+                'unit_id'         => $unitId,
+                'unit_name'       => $unit['name'] ?? '',
+                'room_total'      => round($roomTotal, 2),
+                'price_per_night' => $rates['price_per_night'] ?? round($roomTotal / $nights, 2),
+                'max_guests'      => (int) ($unit['max_guests'] ?? 0),
+            ];
+        }
+
+        $totalCapacity = array_sum(array_column($rooms, 'max_guests'));
+        if ($totalCapacity < $adults + $children) {
+            throw new \InvalidArgumentException('Selected rooms do not have enough capacity for your group');
+        }
+
+        $this->assertExtrasMeetLeadTime($extras, $checkIn);
+        $extrasTotal = $this->calcExtras($extras, $adults);
+        $grossTotal  = $roomTotalSum + $extrasTotal;
+
+        $holdToken = Str::random(48);
+        BookingHold::create([
+            'hold_token'   => $holdToken,
+            'status'       => 'active',
+            'expires_at'   => now()->addMinutes(10),
+            'payload_json' => [
+                'is_combo'        => true,
+                'rooms'           => $rooms,
+                'check_in'        => $checkIn,
+                'check_out'       => $checkOut,
+                'nights'          => $nights,
+                'adults'          => $adults,
+                'children'        => $children,
+                'room_total'      => round($roomTotalSum, 2),
+                'extras'          => $extras,
+                'extras_total'    => $extrasTotal,
+                'gross_total'     => round($grossTotal, 2),
+                'currency'        => 'EUR',
+            ],
+        ]);
+
+        return [
+            'hold_token'      => $holdToken,
+            'expires_at'      => now()->addMinutes(10)->toIso8601String(),
+            'is_combo'        => true,
+            'rooms'           => $rooms,
+            'check_in'        => $checkIn,
+            'check_out'       => $checkOut,
+            'nights'          => $nights,
+            'adults'          => $adults,
+            'children'        => $children,
+            'room_total'      => round($roomTotalSum, 2),
+            'extras_total'    => $extrasTotal,
+            'gross_total'     => round($grossTotal, 2),
+            'currency'        => 'EUR',
+        ];
+    }
+
     public function confirm(array $data, ?string $idempotencyKey = null, ?string $requestId = null, ?string $ip = null): array
     {
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
@@ -158,7 +247,6 @@ class BookingEngineService
 
         $payload = $hold->payload_json;
         $guest   = $data['guest'] ?? [];
-        $apartmentId = $payload['unit_id'];
 
         // Stamp guest info onto the hold before the main flow runs.
         // If the /confirm endpoint crashes after Stripe charged the
@@ -172,6 +260,13 @@ class BookingEngineService
             $hold->save();
         }
 
+        // Combo bookings branch off into their own confirm path that
+        // loops over each room, creates per-room Smoobu reservations,
+        // and links all mirrors via a shared booking_group_id.
+        if (!empty($payload['is_combo'])) {
+            return $this->confirmCombo($data, $hold, $payload, $guest, $orgId, $idempotencyKey, $requestId, $ip);
+        }
+
         // Try to link or create a CRM guest (outside the lock — idempotent by email).
         $guestId = $this->linkOrCreateGuest($guest, $orgId);
 
@@ -179,6 +274,7 @@ class BookingEngineService
         // transaction lock. Two guests holding overlapping dates on the same room
         // would otherwise both pass the quote-time check and both create mirrors,
         // double-booking a single-inventory unit.
+        $apartmentId = $payload['unit_id'];
         $lockKey = "room:{$orgId}:{$apartmentId}";
 
         try {
@@ -1154,6 +1250,186 @@ class BookingEngineService
      * bookings so staff can test the full flow against real members
      * without spamming their inboxes.
      */
+
+    /**
+     * Confirm a multi-room combo booking. Creates one Smoobu
+     * reservation + one BookingMirror per room, linked by a shared
+     * booking_group_id. Single Stripe payment covers all rooms.
+     *
+     * Partial-failure strategy:
+     *   • Fatal Smoobu reject on any room → cancel all previously-
+     *     succeeded Smoobu reservations → rollback DB → throw.
+     *   • Transient Smoobu error → mark that room pending_pms_sync,
+     *     continue. The retry cron picks it up.
+     */
+    public function confirmCombo(
+        array $data, BookingHold $hold, array $payload,
+        array $guest, ?int $orgId,
+        ?string $idempotencyKey, ?string $requestId, ?string $ip,
+    ): array {
+        $rooms    = $payload['rooms'] ?? [];
+        $checkIn  = $payload['check_in'];
+        $checkOut = $payload['check_out'];
+        $adults   = $payload['adults'] ?? 2;
+        $children = $payload['children'] ?? 0;
+        $nights   = $payload['nights'] ?? 1;
+
+        $guestId  = $this->linkOrCreateGuest($guest, $orgId);
+        $groupId  = (string) \Illuminate\Support\Str::uuid();
+
+        $paymentMethod = $data['payment_method'] ?? null;
+        $paymentStatus = $data['payment_status'] ?? 'pending';
+        $piId          = $data['payment_intent_id'] ?? null;
+
+        $succeededSmoobu = [];
+        $mirrors         = [];
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use (
+                &$mirrors, &$succeededSmoobu,
+                $rooms, $hold, $guest, $guestId, $orgId, $groupId,
+                $checkIn, $checkOut, $nights, $adults, $children,
+                $paymentMethod, $paymentStatus, $piId, $data, $payload,
+                $idempotencyKey, $requestId,
+            ) {
+                $hold->update(['status' => 'consumed']);
+
+                foreach ($rooms as $idx => $room) {
+                    $apartmentId = $room['unit_id'];
+                    $roomTotal   = $room['room_total'];
+                    $unitName    = $room['unit_name'] ?? 'Room';
+
+                    // Build Smoobu payload for this room.
+                    $smoobuPayload = [
+                        'arrivalDate'   => $checkIn,
+                        'departureDate' => $checkOut,
+                        'apartmentId'   => (int) $apartmentId,
+                        'firstName'     => $guest['first_name'] ?? '',
+                        'lastName'      => $guest['last_name'] ?? '',
+                        'email'         => $guest['email'] ?? '',
+                        'phone'         => $guest['phone'] ?? '',
+                        'adults'        => $adults,
+                        'children'      => $children,
+                        'price'         => $roomTotal,
+                        'notice'        => ($data['special_requests'] ?? '')
+                            . (count($rooms) > 1 ? " [Combo {$groupId} — room " . ($idx + 1) . '/' . count($rooms) . ']' : ''),
+                    ];
+
+                    $pmsResult  = null;
+                    $pmsFatal   = null;
+                    $isTransient = false;
+
+                    try {
+                        $pmsResult = $this->smoobu->createReservation($smoobuPayload);
+                    } catch (\Throwable $e) {
+                        $msg = $e->getMessage();
+                        $isTransient = (bool) preg_match(
+                            '/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i',
+                            $msg,
+                        );
+                        if (!$isTransient) {
+                            $pmsFatal = $msg;
+                        }
+                    }
+
+                    // Fatal on any room → compensate + abort.
+                    if ($pmsFatal) {
+                        foreach ($succeededSmoobu as $prev) {
+                            try {
+                                $this->smoobu->cancelReservation($prev['id']);
+                            } catch (\Throwable $cancelErr) {
+                                \Illuminate\Support\Facades\Log::error('Combo rollback: could not cancel Smoobu reservation', [
+                                    'smoobu_id' => $prev['id'], 'error' => $cancelErr->getMessage(),
+                                ]);
+                            }
+                        }
+                        throw new \RuntimeException(
+                            "Room \"{$unitName}\" is no longer available. Please choose a different combination."
+                        );
+                    }
+
+                    if ($pmsResult) {
+                        $succeededSmoobu[] = $pmsResult;
+                    }
+
+                    $result = $pmsResult ?: [
+                        'id'           => 'LOCAL-' . strtoupper(\Illuminate\Support\Str::random(10)),
+                        'reference-id' => 'LOC-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)),
+                    ];
+                    $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
+
+                    $mirror = BookingMirror::create([
+                        'organization_id'          => $orgId,
+                        'booking_group_id'         => $groupId,
+                        'reservation_id'           => substr((string) ($result['id'] ?? ''), 0, 30),
+                        'booking_reference'        => substr((string) ($result['reference-id'] ?? ''), 0, 60),
+                        'booking_type'             => 'reservation',
+                        'booking_state'            => 'confirmed',
+                        'apartment_id'             => $apartmentId,
+                        'apartment_name'           => $unitName,
+                        'channel_name'             => 'Website',
+                        'guest_id'                 => $guestId,
+                        'guest_name'               => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
+                        'guest_email'              => $guest['email'] ?? null,
+                        'guest_phone'              => $guest['phone'] ?? null,
+                        'adults'                   => $adults,
+                        'children'                 => $children,
+                        'arrival_date'             => $checkIn,
+                        'departure_date'           => $checkOut,
+                        'price_total'              => $roomTotal,
+                        'price_paid'               => $paymentStatus === 'paid' ? $roomTotal : 0,
+                        'payment_method'           => $paymentMethod,
+                        'payment_status'           => $paymentStatus,
+                        'stripe_payment_intent_id' => $piId,
+                        'internal_status'          => $internalStatus,
+                        'synced_at'                => $pmsResult ? now() : null,
+                    ]);
+                    $mirrors[] = $mirror;
+                }
+            });
+        } catch (\RuntimeException $e) {
+            throw $e;
+        }
+
+        $response = [
+            'booking_group_id'  => $groupId,
+            'is_combo'          => true,
+            'rooms'             => array_map(fn($m) => [
+                'mirror_id'         => $m->id,
+                'reservation_id'    => $m->reservation_id,
+                'booking_reference' => $m->booking_reference,
+                'apartment_name'    => $m->apartment_name,
+                'price_total'       => (float) $m->price_total,
+            ], $mirrors),
+            'check_in'          => $checkIn,
+            'check_out'         => $checkOut,
+            'gross_total'       => (float) ($payload['gross_total'] ?? 0),
+            'currency'          => $payload['currency'] ?? 'EUR',
+        ];
+
+        // Emails — single confirmation listing all rooms.
+        try {
+            $this->sendBookingEmails($guest, $payload, $response, $orgId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Combo booking email failed', ['error' => $e->getMessage()]);
+        }
+
+        // Idempotency key for the group.
+        if ($idempotencyKey) {
+            try {
+                BookingIdempotencyKey::create([
+                    'idempotency_key' => $idempotencyKey,
+                    'request_hash'    => md5(json_encode($data)),
+                    'response_json'   => $response,
+                    'status_code'     => 201,
+                    'expires_at'      => now()->addHours(24),
+                ]);
+            } catch (\Throwable) {}
+        }
+
+        return $response;
+    }
+
     public function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
     {
         $email = $guest['email'] ?? null;

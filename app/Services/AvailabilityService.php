@@ -138,8 +138,158 @@ class AvailabilityService
         // Cheapest first — matches Smoobu's own search UX.
         usort($results, fn($a, $b) => $a['total_price'] <=> $b['total_price']);
 
-        Cache::put($cacheKey, $results, 60);
+        // When no single room fits the party, build combo suggestions
+        // from the rooms that ARE available for those dates (even though
+        // individually they're too small). The combo finder runs over ALL
+        // rooms that passed the date/inventory checks — the only check
+        // it skips is the guest-count filter at line 67 above.
+        $totalGuests  = $adults + $children;
+        $combinations = [];
+        if (empty($results)) {
+            $allAvailable = $this->checkRoomsWithoutGuestFilter(
+                $rooms, $daily, $dailyOk, $data, $nights, $orgId,
+            );
+            $combinations = $this->findCombinations($allAvailable, $totalGuests, count($nights));
+        }
+
+        $out = ['available' => $results, 'combinations' => $combinations];
+        Cache::put($cacheKey, $out, 60);
+        return $out;
+    }
+
+    /**
+     * Same availability logic as check() but WITHOUT the max_guests
+     * filter — needed so the combo finder has the full list of rooms
+     * that are free on the requested dates.
+     */
+    private function checkRoomsWithoutGuestFilter(
+        array $rooms, array $daily, bool $dailyOk, array $rateData, array $nightDates, ?int $orgId,
+    ): array {
+        $results = [];
+        foreach ($rooms as $id => $room) {
+            $key     = (string) $id;
+            $perDay  = $daily[$key] ?? null;
+            $total   = 0.0;
+            $isAvail = true;
+
+            if (is_array($perDay) && !empty($perDay)) {
+                foreach ($nightDates as $d) {
+                    $day = $perDay[$d] ?? null;
+                    if (!$day || !($day['available'] ?? false) || (float) ($day['price'] ?? 0) <= 0) {
+                        $isAvail = false;
+                        break;
+                    }
+                    $total += (float) $day['price'];
+                }
+            } else {
+                $rate = $rateData[$key] ?? $rateData[$id] ?? null;
+                if ($rate && ($rate['available'] ?? false) && (float) ($rate['price'] ?? 0) > 0) {
+                    $total = (float) $rate['price'];
+                } else {
+                    $base = (float) ($room['base_price'] ?? 0);
+                    if ($base <= 0) continue;
+                    $total = $base * count($nightDates);
+                }
+            }
+            if (!$isAvail) continue;
+
+            $inventory = max(1, (int) ($room['inventory_count'] ?? 1));
+            $booked    = $this->bookedCountForRoom($key, $nightDates[0], end($nightDates), $orgId);
+            $remaining = $inventory - $booked;
+            if ($remaining <= 0) continue;
+
+            $results[] = [
+                'id'              => $key,
+                'name'            => $room['name'] ?? '',
+                'max_guests'      => (int) ($room['max_guests'] ?? 0),
+                'total_price'     => round($total, 2),
+                'price_per_night' => round($total / count($nightDates), 2),
+                'currency'        => $room['currency'] ?? 'EUR',
+                'image'           => $room['image'] ?? '',
+                'remaining'       => $remaining,
+            ];
+        }
         return $results;
+    }
+
+    /**
+     * Find 2- or 3-room combinations that together accommodate the
+     * requested guest count. Returns the top 5 cheapest combos.
+     *
+     * Algorithm: greedy bin-packing. Try all 2-room pairs first; if
+     * none fit, try 3-room triples. Rooms with inventory_count > 1
+     * can appear multiple times (up to their remaining inventory).
+     * Bounded to max 3 rooms per combo, and typical hotel inventories
+     * of 3-20 rooms keep the combinatorics trivially fast.
+     */
+    public function findCombinations(array $available, int $guestCount, int $nights): array
+    {
+        if ($guestCount <= 0 || empty($available)) return [];
+
+        // Expand rooms by remaining inventory (e.g., 3 identical rooms
+        // become 3 separate entries the combinator can pick from).
+        $expanded = [];
+        foreach ($available as $r) {
+            $copies = min($r['remaining'] ?? 1, 3);
+            for ($c = 0; $c < $copies; $c++) {
+                $expanded[] = $r;
+            }
+        }
+
+        $combos = [];
+
+        // Pass 1: 2-room pairs.
+        for ($i = 0; $i < count($expanded); $i++) {
+            for ($j = $i + 1; $j < count($expanded); $j++) {
+                $cap = $expanded[$i]['max_guests'] + $expanded[$j]['max_guests'];
+                if ($cap < $guestCount) continue;
+                $price = $expanded[$i]['total_price'] + $expanded[$j]['total_price'];
+                $combos[] = [
+                    'rooms' => [$expanded[$i], $expanded[$j]],
+                    'total_guests'   => $cap,
+                    'total_price'    => round($price, 2),
+                    'price_per_night'=> round($price / max(1, $nights), 2),
+                    'nights'         => $nights,
+                ];
+            }
+        }
+
+        // Pass 2: 3-room triples (only if no 2-room combos fit).
+        if (empty($combos)) {
+            for ($i = 0; $i < count($expanded); $i++) {
+                for ($j = $i + 1; $j < count($expanded); $j++) {
+                    for ($k = $j + 1; $k < count($expanded); $k++) {
+                        $cap = $expanded[$i]['max_guests'] + $expanded[$j]['max_guests'] + $expanded[$k]['max_guests'];
+                        if ($cap < $guestCount) continue;
+                        $price = $expanded[$i]['total_price'] + $expanded[$j]['total_price'] + $expanded[$k]['total_price'];
+                        $combos[] = [
+                            'rooms' => [$expanded[$i], $expanded[$j], $expanded[$k]],
+                            'total_guests'   => $cap,
+                            'total_price'    => round($price, 2),
+                            'price_per_night'=> round($price / max(1, $nights), 2),
+                            'nights'         => $nights,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Sort by price, deduplicate by room-ID set, return top 5.
+        usort($combos, fn($a, $b) => $a['total_price'] <=> $b['total_price']);
+
+        $seen = [];
+        $unique = [];
+        foreach ($combos as $combo) {
+            $ids = array_map(fn($r) => $r['id'], $combo['rooms']);
+            sort($ids);
+            $key = implode('+', $ids);
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $unique[] = $combo;
+            if (count($unique) >= 5) break;
+        }
+
+        return $unique;
     }
 
     /** Get rates for a single unit. */
