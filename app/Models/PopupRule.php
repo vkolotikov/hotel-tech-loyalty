@@ -38,6 +38,26 @@ class PopupRule extends Model
         'clicks_count' => 'integer',
     ];
 
+    /**
+     * Bust the WidgetChatController::getConfig cache whenever a rule
+     * is added/changed/deleted. The cached config payload embeds the
+     * popup rule list inline; without this, rule edits would take up
+     * to 60 s to appear on the embedded widget.
+     */
+    protected static function booted(): void
+    {
+        $bust = function (self $rule) {
+            $widgetKey = ChatWidgetConfig::withoutGlobalScopes()
+                ->where('organization_id', $rule->organization_id)
+                ->value('widget_key');
+            if ($widgetKey) {
+                \Illuminate\Support\Facades\Cache::forget('widget:config:' . $widgetKey);
+            }
+        };
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
     public function widgetConfig()
     {
         return $this->belongsTo(ChatWidgetConfig::class, 'widget_config_id');

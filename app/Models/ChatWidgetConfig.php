@@ -81,6 +81,24 @@ class ChatWidgetConfig extends Model
         'rating_prompt_enabled' => 'boolean',
     ];
 
+    /**
+     * Bust the WidgetChatController::getConfig cache whenever the
+     * config row is saved or deleted. The cached payload also embeds
+     * popup rules + voice config + business hours, so any admin
+     * tweak here would otherwise take up to 60 s to appear on the
+     * embedded customer site.
+     */
+    protected static function booted(): void
+    {
+        $bust = function (self $config) {
+            if ($config->widget_key) {
+                \Illuminate\Support\Facades\Cache::forget('widget:config:' . $config->widget_key);
+            }
+        };
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
     public static function getForOrg(int $orgId): self
     {
         return static::where('organization_id', $orgId)->first()

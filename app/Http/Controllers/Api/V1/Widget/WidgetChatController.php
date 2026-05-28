@@ -182,13 +182,41 @@ class WidgetChatController extends Controller
 
     /**
      * GET /v1/widget/{widgetKey}/config
+     *
+     * Cached server-side for 60 s — config is read on EVERY widget
+     * load (one per page view per visitor) and rarely changes. The
+     * cache key includes the widget key only; admin updates bust it
+     * via `Cache::forget("widget:config:{$widgetKey}")` on save (see
+     * ChatWidgetConfigController). 60 s upper bound on staleness is
+     * acceptable for branding / colour edits — admins seeing a
+     * stale colour for a minute is fine.
      */
     public function getConfig(string $widgetKey): JsonResponse
+    {
+        $cacheKey = 'widget:config:' . $widgetKey;
+        $payload = \Illuminate\Support\Facades\Cache::remember(
+            $cacheKey,
+            60,
+            fn () => $this->buildConfigPayload($widgetKey),
+        );
+        if ($payload === null) {
+            return response()->json(['error' => 'Widget not found or inactive'], 404);
+        }
+        return response()->json($payload)
+            ->header('Cache-Control', 'public, max-age=30');
+    }
+
+    /**
+     * The actual config build (formerly the body of getConfig). Returns
+     * null when the widget key isn't found so the wrapping cache layer
+     * doesn't memoise 404s.
+     */
+    private function buildConfigPayload(string $widgetKey): ?array
     {
         $config = $this->resolveWidget($widgetKey);
 
         if (!$config) {
-            return response()->json(['error' => 'Widget not found or inactive'], 404);
+            return null;
         }
 
         $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
@@ -199,7 +227,7 @@ class WidgetChatController extends Controller
             ->where('key', 'primary_color')
             ->value('value') ?: '#2d6a4f');
 
-        return response()->json([
+        return [
             'company_name'       => $config->company_name,
             'header_title'       => $config->header_title,
             'header_subtitle'    => $config->header_subtitle,
@@ -263,7 +291,18 @@ class WidgetChatController extends Controller
                 ->where('is_active', true)
                 ->exists(),
             'organization_id'    => $config->organization_id,
-        ]);
+            // Inline the popup rules so the widget doesn't need a
+            // second round-trip on cold load. Lighthouse flagged the
+            // sequential /config → /popup-rules chain as a 2.7 s
+            // critical-path tax — folding rules into config halves it.
+            // The widget falls back to /popup-rules for back-compat
+            // when this key is missing (older minified caches).
+            'popup_rules'        => PopupRule::where('organization_id', $config->organization_id)
+                ->active()
+                ->orderByDesc('priority')
+                ->get(['id', 'trigger_type', 'trigger_value', 'url_match_type', 'url_match_value', 'visitor_type', 'language_targets', 'message', 'quick_replies', 'priority'])
+                ->toArray(),
+        ];
     }
 
     /**

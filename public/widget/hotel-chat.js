@@ -387,7 +387,14 @@
     createLauncher();
     createPanel();
     loadConfig();
-    startVisitorTracking();
+    // Defer visitor tracking by ~2.5 s. The page-view + heartbeat
+    // pings are observability calls — admin uses them to see who is
+    // currently online — and they don't render anything visible.
+    // Firing them at boot time competes with the /config request
+    // for connection budget (Lighthouse flagged this as a 2.9 s
+    // critical-path tax). Delaying past the host page's LCP lets
+    // the customer site finish painting first.
+    setTimeout(startVisitorTracking, 2500);
   }
 
   // ── Visitor tracking ──
@@ -947,8 +954,18 @@
         var vcBtn = document.getElementById('htchat-voice-call-btn');
         if (vcBtn) vcBtn.style.display = 'flex';
       }
-      // Load popup rules after config is ready
-      loadPopupRules();
+      // Load popup rules. The /config response now embeds them
+      // inline (saves a 2.7 s round-trip on cold loads). Fall back
+      // to the standalone /popup-rules endpoint only if the inline
+      // payload is missing (older proxies / caches).
+      if (Array.isArray(data.popup_rules)) {
+        if (!popupShown) {
+          popupRules = data.popup_rules;
+          if (popupRules.length > 0) startPopupEngine();
+        }
+      } else {
+        loadPopupRules();
+      }
     }).catch(function () {});
   }
 
