@@ -238,7 +238,11 @@ class WidgetChatController extends Controller
             // Avatar must be an absolute URL — the widget runs on the
             // customer's website, so a relative `/storage/...` path would
             // resolve against THEIR domain and 404. Prepend our app URL.
-            'assistant_avatar'   => $this->absolutizeUrl(
+            // Also verify the file exists before sending the URL, so a
+            // deleted upload doesn't surface as a console 404 in
+            // production — the widget falls back to the company-initial
+            // bubble when this is null.
+            'assistant_avatar'   => $this->resolveAvatarUrl(
                 $config->assistant_avatar_url ?: ($behavior->assistant_avatar ?? null)
             ),
             'branding_text'      => $config->branding_text,
@@ -273,6 +277,40 @@ class WidgetChatController extends Controller
         if (preg_match('#^https?://#i', $url)) return $url;
         $base = rtrim(config('app.url') ?: url('/'), '/');
         return $base . '/' . ltrim($url, '/');
+    }
+
+    /**
+     * Like absolutizeUrl(), but for files we store ourselves: verifies
+     * the underlying file actually exists on the public disk before
+     * handing the URL to the widget. Stale avatar references that
+     * point at deleted uploads return null so the widget renders its
+     * branded initial fallback instead of logging a 404 to the
+     * console (which Lighthouse flags).
+     */
+    private function resolveAvatarUrl(?string $url): ?string
+    {
+        if (!$url) return null;
+        // External URLs we trust — let them render and 404 if the
+        // remote host has moved them. We can't check those server-side.
+        if (preg_match('#^https?://#i', $url)) return $url;
+        // Map `/storage/foo/bar.jpg` → `foo/bar.jpg` on the public disk
+        // and check it exists. The public disk is the same one used by
+        // MediaService::upload(), so this catches the common case where
+        // an admin deleted the avatar but the DB still references it.
+        $path = ltrim($url, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $diskPath = substr($path, strlen('storage/'));
+            try {
+                if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($diskPath)) {
+                    return null;
+                }
+            } catch (\Throwable) {
+                // Disk lookup failed — trust the URL and let the
+                // browser fall through. Better to attempt the load
+                // than blank the avatar on a transient disk error.
+            }
+        }
+        return $this->absolutizeUrl($url);
     }
 
     /**

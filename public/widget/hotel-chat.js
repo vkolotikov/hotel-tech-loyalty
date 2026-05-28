@@ -462,7 +462,10 @@
   function createLauncher() {
     var btn = document.createElement('button');
     btn.id = 'htchat-launcher';
-    btn.innerHTML = ICONS.chat + '<span class="htchat-pulse"></span>';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Open chat with us');
+    btn.title = 'Chat with us';
+    btn.innerHTML = ICONS.chat + '<span class="htchat-pulse" aria-hidden="true"></span>';
     btn.onclick = togglePanel;
     document.body.appendChild(btn);
     applyPosition(btn);

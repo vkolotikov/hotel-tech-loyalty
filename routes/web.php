@@ -16,6 +16,56 @@ Route::get('/storage/{path}', function (string $path) {
     abort(404);
 })->where('path', '.*');
 
+// ─── Chat widget JS — minified + long-cached ─────────────────────────────
+// Served via Laravel (not the static file in public/widget/) so we can
+// attach a 1-year Cache-Control header + ETag + minify on the fly.
+// Lighthouse flagged the hand-written source as missing both — fixing
+// each saves ~8 KiB on the wire and lets repeat visitors hit cache.
+// Embed loader points at /w/chat.js?v={mtime}; the original static
+// file stays in place as a fallback (and for local dev).
+Route::get('/w/chat.js', function () {
+    $src = public_path('widget/hotel-chat.js');
+    if (!is_file($src)) abort(404);
+
+    $mtime = filemtime($src);
+    $etag  = '"' . substr(md5($mtime . filesize($src)), 0, 16) . '"';
+
+    // 304 if the browser already has it.
+    if (request()->headers->get('If-None-Match') === $etag) {
+        return response('', 304)->header('ETag', $etag);
+    }
+
+    $cacheKey = 'widget:chat:min:' . $mtime;
+    $body = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60 * 60 * 24 * 30, function () use ($src) {
+        $code = file_get_contents($src);
+        // Minify conservatively: strip /* */ block comments, // line
+        // comments (but NOT inside strings/regex), collapse whitespace.
+        // We DON'T mangle identifiers — the script is hand-written and
+        // names like state, render, applyColor matter for debugging.
+        // Block comments outside strings.
+        $code = preg_replace('#/\*(?!\!)[\s\S]*?\*/#', '', $code);
+        // Line comments — only when the // is preceded by whitespace
+        // or start-of-line (avoids hitting URLs like https://).
+        $code = preg_replace('#(^|[\s;{}])//[^\n\r]*#m', '$1', $code);
+        // Collapse runs of whitespace, leaving single spaces and one
+        // newline per statement so error stack traces stay readable.
+        $code = preg_replace("/[ \t]+/", ' ', $code);
+        $code = preg_replace('/\n{2,}/', "\n", $code);
+        // Squeeze spaces around safe punctuators.
+        $code = preg_replace('/\s*([{};,:()\[\]])\s*/', '$1', $code);
+        return ltrim($code);
+    });
+
+    return response($body, 200, [
+        'Content-Type'  => 'application/javascript; charset=utf-8',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+        'ETag'          => $etag,
+        // Allow embedding from any origin (the widget runs on the
+        // customer's website, not on ours).
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+});
+
 // ─── Public Booking Widget (embeddable) ─────────────────────────────────────
 Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
     $orgId = $request->query('org', '');
@@ -102,7 +152,9 @@ Route::get('/chat-widget/{token}', function (string $token) {
         abort(404, 'Chat widget not configured for this organization');
     }
     $apiBase = rtrim(url('/'), '/') . '/api/v1/widget/' . $cfg->widget_key;
-    $scriptSrc = rtrim(url('/'), '/') . '/widget/hotel-chat.js?v=' . (@filemtime(public_path('widget/hotel-chat.js')) ?: time());
+    // Route through /w/chat.js (Laravel-served, minified, long-cached)
+    // instead of the static /widget/hotel-chat.js path.
+    $scriptSrc = rtrim(url('/'), '/') . '/w/chat.js?v=' . (@filemtime(public_path('widget/hotel-chat.js')) ?: time());
     return response()
         ->view('chat-widget-host', [
             'widgetKey'    => $cfg->widget_key,

@@ -117,7 +117,10 @@ class ChatWidgetConfig extends Model
         // forces customer browsers to fetch the new version instead of
         // running an indefinitely-cached old build.
         $mtime = @filemtime(public_path('widget/hotel-chat.js')) ?: time();
-        $src = $baseUrl . '/widget/hotel-chat.js?v=' . $mtime;
+        // Route through /w/chat.js (Laravel-served, minified + long-cached)
+        // rather than the static /widget/hotel-chat.js path so customers
+        // benefit from the 1-year Cache-Control + ETag + ~8 KiB minification.
+        $src = rtrim($baseUrl, '/') . '/w/chat.js?v=' . $mtime;
 
         return <<<HTML
 <script>
