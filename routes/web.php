@@ -36,24 +36,140 @@ Route::get('/w/chat.js', function () {
     }
 
     $cacheKey = 'widget:chat:min:' . $mtime;
+    // Bump version when the minifier logic changes so we don't keep
+    // serving a previously-broken cached payload.
+    $cacheKey .= ':v6';
     $body = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60 * 60 * 24 * 30, function () use ($src) {
         $code = file_get_contents($src);
-        // Minify conservatively: strip /* */ block comments, // line
-        // comments (but NOT inside strings/regex), collapse whitespace.
-        // We DON'T mangle identifiers — the script is hand-written and
-        // names like state, render, applyColor matter for debugging.
-        // Block comments outside strings.
-        $code = preg_replace('#/\*(?!\!)[\s\S]*?\*/#', '', $code);
-        // Line comments — only when the // is preceded by whitespace
-        // or start-of-line (avoids hitting URLs like https://).
-        $code = preg_replace('#(^|[\s;{}])//[^\n\r]*#m', '$1', $code);
-        // Collapse runs of whitespace, leaving single spaces and one
-        // newline per statement so error stack traces stay readable.
+
+        // Single-pass character scanner that handles STRINGS, LINE
+        // COMMENTS, and BLOCK COMMENTS together. Earlier versions
+        // stripped comments BEFORE protecting strings, which failed
+        // because line comments often contain apostrophes ("don't",
+        // "we're", etc.) that the string-protector then mistook for
+        // real string openings — phase-shifting every subsequent
+        // quote and corrupting kilobytes of code. Doing all three
+        // in one stateful pass is the only robust approach without
+        // a full JS parser.
+        //
+        // Backticks (`) are NOT treated as string openings: the
+        // source uses no template literals and the only backticks
+        // present are inside regex literals (e.g. /`(.+?)`/g).
+        $strings = [];
+        $out = '';
+        $i = 0;
+        $len = strlen($code);
+
+        // Helper: walk back from end of $out to find the last
+        // non-whitespace character. Used to disambiguate `/` between
+        // regex-literal start vs division operator.
+        $lastSignificant = function () use (&$out): string {
+            $j = strlen($out) - 1;
+            while ($j >= 0 && ctype_space($out[$j])) $j--;
+            return $j >= 0 ? $out[$j] : '';
+        };
+
+        // Chars that can immediately precede a regex literal in JS
+        // (i.e. "expression position"). Anything else means `/` is
+        // either a comment marker (handled separately) or division.
+        $regexPrev = ['', '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '~', '^', '<', '>', '%'];
+
+        while ($i < $len) {
+            $c = $code[$i];
+
+            // ── Block comment /* ... */ — drop unless /*! banner.
+            if ($c === '/' && $i + 1 < $len && $code[$i + 1] === '*') {
+                $preserve = ($i + 2 < $len && $code[$i + 2] === '!');
+                $start = $i;
+                $i += 2;
+                while ($i + 1 < $len && !($code[$i] === '*' && $code[$i + 1] === '/')) {
+                    $i++;
+                }
+                $i += 2; // skip the */
+                if ($preserve) $out .= substr($code, $start, $i - $start);
+                continue;
+            }
+
+            // ── Line comment // ... \n — drop, keep the \n.
+            // BUT only when the `/` is NOT the closing slash of a
+            // regex literal whose previous char was `\`. Without this
+            // guard, /^https?:\/\//i would have its trailing `\//i`
+            // mistakenly treated as a line comment (because the
+            // scanner sees `\` + `/` + `/` and the last two look
+            // like `//`).
+            if ($c === '/' && $i + 1 < $len && $code[$i + 1] === '/' && ($i === 0 || $code[$i - 1] !== '\\')) {
+                while ($i < $len && $code[$i] !== "\n") $i++;
+                continue;
+            }
+
+            // ── Regex literal /.../flags — pass through verbatim.
+            // A `/` starts a regex when the preceding significant
+            // char is something that can be followed by an expression
+            // (operators, opening punctuators, etc.). Otherwise `/` is
+            // a division operator and we just append it.
+            if ($c === '/' && in_array($lastSignificant(), $regexPrev, true)) {
+                $start = $i;
+                $i++;
+                $inClass = false; // inside [...] char class
+                while ($i < $len) {
+                    $cc = $code[$i];
+                    if ($cc === '\\') { $i += 2; continue; }
+                    if ($cc === '[') { $inClass = true; $i++; continue; }
+                    if ($cc === ']') { $inClass = false; $i++; continue; }
+                    if ($cc === '/' && !$inClass) { $i++; break; }
+                    if ($cc === "\n") { break; } // malformed — bail
+                    $i++;
+                }
+                // Consume flags (a-z).
+                while ($i < $len && ctype_alpha($code[$i])) $i++;
+                $out .= substr($code, $start, $i - $start);
+                continue;
+            }
+
+            // ── String literal " ... " or ' ... ' — stash.
+            if ($c === '"' || $c === "'") {
+                $quote = $c;
+                $start = $i;
+                $i++;
+                while ($i < $len) {
+                    if ($code[$i] === '\\') { $i += 2; continue; }
+                    if ($code[$i] === $quote) { $i++; break; }
+                    $i++;
+                }
+                $strings[] = substr($code, $start, $i - $start);
+                $out .= '__STR_' . (count($strings) - 1) . '__';
+                continue;
+            }
+
+            $out .= $c;
+            $i++;
+        }
+        $code = $out;
+        // Collapse runs of whitespace.
         $code = preg_replace("/[ \t]+/", ' ', $code);
         $code = preg_replace('/\n{2,}/', "\n", $code);
-        // Squeeze spaces around safe punctuators.
-        $code = preg_replace('/\s*([{};,:()\[\]])\s*/', '$1', $code);
-        return ltrim($code);
+        // Squeeze spaces around safe punctuators. SAFE here because
+        // every string literal is already a single __STR_n__ token,
+        // so the brackets/braces/commas in CSS selectors and regexes
+        // can't be reached.
+        $code = preg_replace('/\s*([{};,()\[\]])\s*/', '$1', $code);
+        $code = ltrim($code);
+
+        // Step 4 — restore the protected strings. Iterate because a
+        // single-quoted HTML string can contain double-quoted attribute
+        // values whose tokens were stashed first; restoring the outer
+        // string reveals the inner tokens, which need another pass.
+        // Capped iteration count prevents infinite loops.
+        $iter = 8;
+        while ($iter-- > 0 && str_contains($code, '__STR_')) {
+            $code = preg_replace_callback(
+                '/__STR_(\d+)__/',
+                fn ($m) => $strings[(int) $m[1]] ?? $m[0],
+                $code,
+            );
+        }
+
+        return $code;
     });
 
     return response($body, 200, [
