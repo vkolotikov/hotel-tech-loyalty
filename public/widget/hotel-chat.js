@@ -2316,9 +2316,23 @@
   }
 
   // ── Boot ──
+  // Defer init to an idle frame so we never block the host page's
+  // critical rendering path. requestIdleCallback runs after the
+  // browser finishes high-priority work (layout, paint); the 2s
+  // timeout fallback guarantees the launcher still appears on
+  // pages that stay perpetually busy. setTimeout(0) is the
+  // graceful fallback for Safari + older browsers that don't ship
+  // requestIdleCallback yet.
+  function boot() {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(init, { timeout: 2000 });
+    } else {
+      setTimeout(init, 0);
+    }
+  }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 })();

@@ -121,8 +121,16 @@ class ChatWidgetConfig extends Model
         // rather than the static /widget/hotel-chat.js path so customers
         // benefit from the 1-year Cache-Control + ETag + ~8 KiB minification.
         $src = rtrim($baseUrl, '/') . '/w/chat.js?v=' . $mtime;
+        // Origin without trailing slash — used for preconnect / dns-prefetch
+        // hints. Lighthouse flagged this origin as a preconnect candidate
+        // with ~320ms LCP savings. The hints let the browser open the TCP
+        // + TLS handshake to our domain in parallel with the customer
+        // site's other resources, so the actual GET hits a warm connection.
+        $origin = rtrim($baseUrl, '/');
 
         return <<<HTML
+<link rel="preconnect" href="{$origin}" crossorigin>
+<link rel="dns-prefetch" href="{$origin}">
 <script>
 (function(){var w=window,d=document;w.HotelChat={key:"{$key}",api:"{$apiBase}"};var s=d.createElement("script");s.src="{$src}";s.async=true;d.head.appendChild(s)})();
 </script>
