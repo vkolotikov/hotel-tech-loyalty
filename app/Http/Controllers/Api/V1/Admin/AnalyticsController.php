@@ -537,9 +537,14 @@ class AnalyticsController extends Controller
         $fillDays = function ($rows, ?callable $valueGetter = null) use ($days) {
             $out = [];
             $valueGetter ??= fn ($r) => (int) ($r->count ?? 0);
+            // Normalise the keyed collection into a plain array so the
+            // null-coalesce path works regardless of whether keyBy()
+            // returned an Eloquent Collection or a plain map.
+            $map = $rows instanceof \Illuminate\Support\Collection ? $rows->all() : (array) $rows;
             for ($i = $days - 1; $i >= 0; $i--) {
                 $d = now()->subDays($i)->format('Y-m-d');
-                $out[] = ['date' => $d, 'value' => $rows[$d] ? $valueGetter($rows[$d]) : 0];
+                $row = $map[$d] ?? null;
+                $out[] = ['date' => $d, 'value' => $row !== null ? $valueGetter($row) : 0];
             }
             return $out;
         };
