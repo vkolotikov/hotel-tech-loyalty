@@ -227,90 +227,38 @@ const TABS: Tab[] = [
 ]
 
 /**
- * Grouping for the Settings home grid. Each section is a labelled card
- * cluster on the home page; the user clicks into a tile to open that
- * tab's content. Sections are filtered out when ALL their tabs are
- * gated away by role / product / feature.
+ * Per-tab accent colour for the flat home grid (2026-05-30). Replaces
+ * the previous SECTIONS structure that grouped tabs under labelled
+ * headers — every tab now renders as a peer in the square-tile grid,
+ * each carrying its own identity colour.
  *
- * Keep `tabs[]` referring to existing `TABS[].id` values — the home grid
- * dereferences each id back to the tab record at render time for icon +
- * label + desc + gate info.
+ * If we ever need sections back (home grid getting crowded above 20
+ * tabs), the original groupings were:
+ *   workspace    → general · branding · menu
+ *   crm          → pipelines · planner
+ *   loyalty      → loyalty · mobile_app
+ *   operations   → booking · notifications
+ *   team         → team
+ *   integrations → integrations
+ *   ai           → ai_usage · ai_system
+ *   help         → documentation
  */
-interface Section {
-  id: string
-  label: string
-  desc: string
-  icon: any
-  accent: string         // hex — drives the section header dot + tile hover ring
-  tabs: string[]
+const TAB_ACCENTS: Record<string, string> = {
+  general:       '#60a5fa', // blue
+  branding:      '#f472b6', // pink
+  menu:          '#22d3ee', // cyan
+  pipelines:     '#c9a84c', // gold
+  planner:       '#fb923c', // orange
+  loyalty:       '#fbbf24', // amber
+  mobile_app:    '#a78bfa', // violet
+  booking:       '#34d399', // emerald
+  notifications: '#38bdf8', // sky
+  team:          '#22d3ee', // cyan
+  integrations:  '#a78bfa', // violet
+  ai_usage:      '#c084fc', // purple
+  ai_system:     '#f87171', // red — danger-adjacent
+  documentation: '#9ca3af', // gray
 }
-
-const SECTIONS: Section[] = [
-  {
-    id: 'workspace',
-    label: 'Workspace',
-    desc: 'How your hotel and admin app look',
-    icon: Building2,
-    accent: '#60a5fa',
-    tabs: ['general', 'branding', 'menu'],
-  },
-  {
-    id: 'crm',
-    label: 'CRM & Sales',
-    desc: 'Pipeline taxonomy, fields, daily planner',
-    icon: GitBranch,
-    accent: '#f472b6',
-    tabs: ['pipelines', 'planner'],
-  },
-  {
-    id: 'loyalty',
-    label: 'Loyalty & Member App',
-    desc: 'Points program plus the member-facing mobile app',
-    icon: Crown,
-    accent: '#fbbf24',
-    tabs: ['loyalty', 'mobile_app'],
-  },
-  {
-    id: 'operations',
-    label: 'Operations',
-    desc: 'Booking engine and guest notifications',
-    icon: Calendar,
-    accent: '#34d399',
-    tabs: ['booking', 'notifications'],
-  },
-  {
-    id: 'team',
-    label: 'Team & Access',
-    desc: 'Who can see and do what',
-    icon: Users,
-    accent: '#22d3ee',
-    tabs: ['team'],
-  },
-  {
-    id: 'integrations',
-    label: 'Integrations',
-    desc: 'External services and developer API',
-    icon: Zap,
-    accent: '#a78bfa',
-    tabs: ['integrations'],
-  },
-  {
-    id: 'ai',
-    label: 'AI',
-    desc: 'Usage tracking and model diagnostics',
-    icon: Brain,
-    accent: '#c084fc',
-    tabs: ['ai_usage', 'ai_system'],
-  },
-  {
-    id: 'help',
-    label: 'Help',
-    desc: 'Documentation and platform guides',
-    icon: BookOpen,
-    accent: '#9ca3af',
-    tabs: ['documentation'],
-  },
-]
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
@@ -1869,15 +1817,12 @@ export function Settings() {
         const onHome = activeTab === 'home' || !tab || !tabIsVisible(tab)
 
         if (onHome) {
-          // Filter sections: drop any whose tabs are all gated away.
-          const visibleSections = SECTIONS.map(s => ({
-            ...s,
-            visibleTabs: s.tabs
-              .map(id => TABS.find(t => t.id === id))
-              .filter((t): t is Tab => !!t && tabIsVisible(t)),
-          })).filter(s => s.visibleTabs.length > 0)
+          // Flat home grid (2026-05-30): every visible tab renders as a
+          // square tile at the same visual level. SECTIONS no longer
+          // drives layout — each tile pulls its accent from
+          // TAB_ACCENTS and stands on its own.
+          const visibleTabs = TABS.filter(tabIsVisible)
 
-          // Hex → rgba helper for soft tinted backgrounds.
           const tint = (hex: string, alpha: number) => {
             const h = hex.replace('#', '')
             const r = parseInt(h.slice(0, 2), 16)
@@ -1886,25 +1831,15 @@ export function Settings() {
             return `rgba(${r},${g},${b},${alpha})`
           }
 
-          // Quick-filter: search across tab label + desc + section label.
-          // Trimmed + lowered once; tile filter applied per-section so
-          // sections collapse out when none of their tiles match.
           const q = homeSearch.trim().toLowerCase()
-          const filteredSections = !q ? visibleSections : visibleSections
-            .map(s => ({
-              ...s,
-              visibleTabs: s.visibleTabs.filter(tile => {
-                const label = t(`settings.tabs.${tile.id}`, tile.label).toLowerCase()
-                const desc = t(`settings.descs.${tile.id}`, tile.desc).toLowerCase()
-                const secLabel = t(`settings.sections.${s.id}.label`, s.label).toLowerCase()
-                return label.includes(q) || desc.includes(q) || secLabel.includes(q)
-              }),
-            }))
-            .filter(s => s.visibleTabs.length > 0)
+          const filteredTabs = !q ? visibleTabs : visibleTabs.filter(tile => {
+            const label = t(`settings.tabs.${tile.id}`, tile.label).toLowerCase()
+            const desc = t(`settings.descs.${tile.id}`, tile.desc).toLowerCase()
+            return label.includes(q) || desc.includes(q)
+          })
 
           return (
-            <div className="space-y-8">
-              {/* Quick-filter */}
+            <div className="space-y-5">
               <div className="relative max-w-md">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
                 <input
@@ -1915,147 +1850,94 @@ export function Settings() {
                 />
               </div>
 
-              {filteredSections.length === 0 && (
+              {filteredTabs.length === 0 && (
                 <div className="text-center py-12 text-t-secondary text-sm">
                   {t('settings.home_no_match', 'No settings match that search.')}
                 </div>
               )}
 
-              {filteredSections.map(section => {
-                const SIcon = section.icon
-                const tileCount = section.visibleTabs.length
-                // Single-tile sections render in a 2-col grid (lonely
-                // looks intentional, not stranded). 2 tiles → 2-col. 3+ → 3-col.
-                const gridCols = tileCount === 1 ? 'sm:grid-cols-1 lg:grid-cols-2'
-                  : tileCount === 2 ? 'sm:grid-cols-2 lg:grid-cols-2'
-                  : 'sm:grid-cols-2 lg:grid-cols-3'
-                return (
-                  <section key={section.id} className="space-y-3">
-                    {/* Section header — bigger icon tile with the section
-                        accent glow, label in white for hierarchy, accent
-                        dot + colored description so the section identity
-                        is unmistakable but doesn't shout. */}
-                    <div className="flex items-center gap-3">
+              {/* Flat square-tile grid. With up to 14 tabs visible the
+                  grid lays out as 5-wide at xl, 4 at md/lg, 3 at sm, 2
+                  on mobile. Capped width keeps tiles a comfortable size
+                  on ultrawides. */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 max-w-[1400px]">
+                {filteredTabs.map(tile => {
+                  const TIcon = tile.icon
+                  const accent = TAB_ACCENTS[tile.id] ?? '#9ca3af'
+                  return (
+                    <button
+                      key={tile.id}
+                      onClick={() => setActiveTab(tile.id)}
+                      className="group relative aspect-square flex flex-col bg-dark-surface border border-dark-border rounded-2xl p-4 sm:p-5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 text-left"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = accent
+                        e.currentTarget.style.boxShadow = `0 12px 36px ${tint(accent, 0.22)}`
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = ''
+                        e.currentTarget.style.boxShadow = ''
+                      }}
+                    >
                       <span
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{
-                          background: `linear-gradient(135deg, ${tint(section.accent, 0.22)}, ${tint(section.accent, 0.08)})`,
-                          border: `1px solid ${tint(section.accent, 0.35)}`,
-                          boxShadow: `0 0 24px ${tint(section.accent, 0.18)}`,
-                        }}
-                      >
-                        <SIcon size={18} style={{ color: section.accent }} />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-base font-bold text-white">
-                            {t(`settings.sections.${section.id}.label`, section.label)}
-                          </h2>
-                          <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: section.accent }} />
-                          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: section.accent }}>
-                            {tileCount}
-                          </span>
-                        </div>
-                        <p className="text-xs text-t-secondary">
-                          {t(`settings.sections.${section.id}.desc`, section.desc)}
+                        aria-hidden
+                        className="absolute -right-12 -top-12 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-3xl pointer-events-none"
+                        style={{ background: tint(accent, 0.30) }}
+                      />
+                      <span
+                        aria-hidden
+                        className="absolute inset-x-0 top-0 h-px"
+                        style={{ background: `linear-gradient(90deg, transparent, ${tint(accent, 0.45)}, transparent)` }}
+                      />
+
+                      <div className="relative">
+                        <span
+                          className="inline-flex w-11 h-11 sm:w-12 sm:h-12 rounded-2xl items-center justify-center transition-transform group-hover:scale-105"
+                          style={{
+                            background: `linear-gradient(135deg, ${tint(accent, 0.22)}, ${tint(accent, 0.06)})`,
+                            border: `1px solid ${tint(accent, 0.35)}`,
+                            boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
+                          }}
+                        >
+                          <TIcon size={20} style={{ color: accent }} />
+                        </span>
+                      </div>
+
+                      <div className="relative mt-auto">
+                        <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
+                          {t(`settings.tabs.${tile.id}`, tile.label)}
+                        </h3>
+                        <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">
+                          {t(`settings.descs.${tile.id}`, tile.desc)}
                         </p>
                       </div>
-                    </div>
-
-                    {/* Tiles */}
-                    <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
-                      {section.visibleTabs.map(tile => {
-                        const TIcon = tile.icon
-                        return (
-                          <button
-                            key={tile.id}
-                            onClick={() => setActiveTab(tile.id)}
-                            className="group relative text-left bg-dark-surface border border-dark-border rounded-xl p-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-                            style={{
-                              // CSS custom props let us drive borderColor +
-                              // shadow + chevron color from the section
-                              // accent without per-card inline classes.
-                              ['--accent' as any]: section.accent,
-                              ['--accent-soft' as any]: tint(section.accent, 0.18),
-                              ['--accent-glow' as any]: tint(section.accent, 0.25),
-                            } as React.CSSProperties}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = section.accent
-                              e.currentTarget.style.boxShadow = `0 8px 30px ${tint(section.accent, 0.18)}`
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = ''
-                              e.currentTarget.style.boxShadow = ''
-                            }}
-                          >
-                            {/* Left-edge accent stripe — colored on hover */}
-                            <span
-                              aria-hidden
-                              className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ background: section.accent }}
-                            />
-                            {/* Soft gradient wash behind icon for depth */}
-                            <span
-                              aria-hidden
-                              className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl pointer-events-none"
-                              style={{ background: tint(section.accent, 0.18) }}
-                            />
-
-                            <div className="relative flex items-start gap-3">
-                              <span
-                                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
-                                style={{
-                                  background: `linear-gradient(135deg, ${tint(section.accent, 0.18)}, ${tint(section.accent, 0.04)})`,
-                                  border: `1px solid ${tint(section.accent, 0.3)}`,
-                                }}
-                              >
-                                <TIcon size={20} style={{ color: section.accent }} />
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <h3 className="text-sm font-semibold text-white">
-                                  {t(`settings.tabs.${tile.id}`, tile.label)}
-                                </h3>
-                                <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">
-                                  {t(`settings.descs.${tile.id}`, tile.desc)}
-                                </p>
-                              </div>
-                              <ChevronRight
-                                size={16}
-                                className="text-t-secondary transition-all flex-shrink-0 mt-1 group-hover:translate-x-0.5"
-                                style={{ ['--hover-color' as any]: section.accent } as React.CSSProperties}
-                              />
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )
-              })}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )
         }
 
-        // Non-home: slim breadcrumb + content
+        // Non-home: slim breadcrumb + content. Breadcrumb tail
+        // (description) dropped 2026-05-30 to match the other hubs.
         const TIcon = tab.icon
         const label = t(`settings.tabs.${tab.id}`, tab.label)
-        const desc = t(`settings.descs.${tab.id}`, tab.desc)
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
                 <button
                   onClick={() => setActiveTab('home')}
-                  className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors px-2 py-1 -ml-2 rounded-md hover:bg-dark-surface2"
+                  className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 flex-shrink-0"
+                  title={t('settings.back_to_home', 'All settings')}
                 >
                   <ArrowLeft size={13} />
-                  {t('settings.back_to_home', 'All settings')}
+                  <span className="hidden sm:inline">{t('settings.title', 'Settings')}</span>
                 </button>
-                <span className="text-t-secondary/40">/</span>
-                <div className="flex items-center gap-2 min-w-0">
+                <span className="text-t-secondary/40 flex-shrink-0">/</span>
+                <div className="flex items-center gap-1.5 min-w-0">
                   <TIcon size={14} className="text-t-secondary flex-shrink-0" />
-                  <h2 className="text-sm font-semibold text-white truncate">{label}</h2>
-                  <span className="hidden md:inline text-xs text-t-secondary truncate">— {desc}</span>
+                  <h2 className="text-base font-semibold text-white truncate">{label}</h2>
                 </div>
               </div>
             </div>
