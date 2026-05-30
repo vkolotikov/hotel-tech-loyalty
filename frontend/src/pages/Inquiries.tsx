@@ -1984,11 +1984,14 @@ export function Inquiries() {
 
       {/* Left-side lead drawer — opened by clicking a row or via the
           kebab "Open lead details". Replaces the broken
-          "Open full detail" link that pointed at /inquiries/:id.
-          Co-exists with the right-side CustomerDrawer (different sides). */}
+          "Open full detail" link that pointed at /inquiries/:id
+          (that route 404'd because the standalone show endpoint isn't
+          wired). We pass the inquiry from the already-loaded list
+          instead of re-fetching — fresh data flows through when the
+          list refetches after edits. */}
       <InquiryDrawer
         open={inquiryDrawerId !== null}
-        inquiryId={inquiryDrawerId}
+        inquiry={inquiryDrawerId !== null ? allInquiries.find((i: any) => i.id === inquiryDrawerId) : null}
         onClose={() => setInquiryDrawerId(null)}
         onInquiryUpdated={() => qc.invalidateQueries({ queryKey: ['inquiries'] })}
         onInquiryDeleted={() => {

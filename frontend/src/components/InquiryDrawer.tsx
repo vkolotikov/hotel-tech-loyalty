@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
-  X, MoreVertical, Trash2, Loader2, Building2, ExternalLink,
+  X, MoreVertical, Trash2, Building2, ExternalLink,
   CalendarDays, DollarSign, Tag, UserCircle2, FileText, Sparkles, Mail, Phone, Globe,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -78,7 +78,13 @@ interface DeleteImpact {
 
 interface Props {
   open: boolean
-  inquiryId: number | null
+  /**
+   * The lead row to display. Pass the inquiry directly from the
+   * already-loaded list query — we deliberately do NOT re-fetch via
+   * GET /v1/admin/inquiries/:id because that endpoint 404s in prod
+   * (route binding issue) and we already have the data in cache.
+   */
+  inquiry: Inquiry | null | undefined
   onClose: () => void
   /** Called when any inquiry field is saved — caller invalidates list. */
   onInquiryUpdated?: (id: number) => void
@@ -127,7 +133,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export function InquiryDrawer({
-  open, inquiryId, onClose,
+  open, inquiry, onClose,
   onInquiryUpdated, onInquiryDeleted, onRequestCustomerDrawer,
 }: Props) {
   const { t } = useTranslation()
@@ -137,6 +143,10 @@ export function InquiryDrawer({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const kebabRef = useRef<HTMLButtonElement>(null)
 
+  const inq = inquiry ?? null
+  const inquiryId = inq?.id ?? null
+  const loading = open && !inq // empty state when row is missing
+
   // Reset state when the drawer opens for a new inquiry.
   useEffect(() => {
     if (open) {
@@ -145,15 +155,6 @@ export function InquiryDrawer({
       setConfirmDelete(false)
     }
   }, [open, inquiryId])
-
-  // Fetch the inquiry payload. We re-use the list row shape (server returns
-  // the same eager-loaded relations on show).
-  const inquiryQuery = useQuery<Inquiry>({
-    queryKey: ['inquiry', inquiryId],
-    queryFn: () => api.get(`/v1/admin/inquiries/${inquiryId}`).then(r => r.data?.data ?? r.data),
-    enabled: open && inquiryId != null,
-    staleTime: 30_000,
-  })
 
   // Best-effort blast-radius fetch — 404 is fine, modal just hides the list.
   const impactQuery = useQuery<DeleteImpact>({
@@ -168,9 +169,6 @@ export function InquiryDrawer({
     },
     enabled: open && inquiryId != null && confirmDelete,
   })
-
-  const inq = inquiryQuery.data
-  const loading = inquiryQuery.isLoading
 
   // ESC closes (unless we're loading or inside a sub-modal).
   useEffect(() => {
@@ -201,8 +199,12 @@ export function InquiryDrawer({
     mutationFn: (patch: Partial<Inquiry>) =>
       api.put(`/v1/admin/inquiries/${inquiryId}`, patch).then(r => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
+      // Invalidating the list query is enough — the drawer reads its
+      // inquiry from the parent's already-loaded list, so the next
+      // refetch will flow fresh data through the `inquiry` prop.
       qc.invalidateQueries({ queryKey: ['inquiries'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+      qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
       if (inquiryId != null) onInquiryUpdated?.(inquiryId)
     },
     onError: (e: any) => {
@@ -214,7 +216,6 @@ export function InquiryDrawer({
     mutationFn: (patch: Partial<Guest>) =>
       api.put(`/v1/admin/guests/${inq?.guest?.id}`, patch).then(r => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['guest', inq?.guest?.id] })
     },
@@ -264,11 +265,11 @@ export function InquiryDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex justify-start"
-        onClick={() => { if (!loading && !confirmDelete) onClose() }}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-start"
+        onClick={() => { if (!confirmDelete) onClose() }}
       >
         <div
-          className="bg-dark-surface border-r border-dark-border w-full max-w-2xl h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-150"
+          className="bg-dark-surface border-r border-dark-border w-full max-w-2xl h-full flex flex-col shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -277,12 +278,12 @@ export function InquiryDrawer({
               className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold text-black flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #f5d782 0%, #c9a84c 100%)' }}
             >
-              {loading ? <Loader2 size={16} className="animate-spin text-black/70" /> : initial}
+              {initial}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-white truncate">
-                  {loading ? t('inquiryDrawer.loading', 'Loading…') : name}
+                  {name}
                 </h2>
                 {statusStr && (
                   <span
@@ -383,13 +384,25 @@ export function InquiryDrawer({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
-              <div className="flex items-center justify-center py-10 text-t-secondary text-sm">
-                <Loader2 size={18} className="animate-spin mr-2" /> {t('inquiryDrawer.loading', 'Loading…')}
+            {!inq && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText size={28} className="text-gray-700 mb-2" />
+                <p className="text-sm text-gray-400 font-medium">
+                  {t('inquiryDrawer.empty.title', 'Lead not available')}
+                </p>
+                <p className="text-xs text-gray-600 mt-1 max-w-xs">
+                  {t('inquiryDrawer.empty.hint', 'The lead may have been deleted, archived, or filtered out of the current view.')}
+                </p>
+                <button
+                  onClick={onClose}
+                  className="mt-4 px-3 py-1.5 text-xs rounded-md border border-dark-border text-gray-300 hover:bg-white/[0.06]"
+                >
+                  {t('inquiryDrawer.empty.close', 'Close panel')}
+                </button>
               </div>
             )}
 
-            {!loading && inq && tab === 'lead' && (
+            {inq && tab === 'lead' && (
               <div className="space-y-5">
                 {/* Pipeline / stage */}
                 <Section title={t('inquiryDrawer.lead.pipeline', 'Pipeline')} icon={<Tag size={12} />}>
@@ -520,7 +533,7 @@ export function InquiryDrawer({
               </div>
             )}
 
-            {!loading && inq && tab === 'customer' && (
+            {inq && tab === 'customer' && (
               <div className="space-y-5">
                 {!guest?.id && (
                   <div className="text-sm text-t-secondary italic">
@@ -649,7 +662,7 @@ export function InquiryDrawer({
               </div>
             )}
 
-            {!loading && tab === 'activity' && (
+            {inq && tab === 'activity' && (
               <div className="text-sm text-t-secondary italic flex flex-col items-center justify-center py-12">
                 <Sparkles size={20} className="text-primary-500/60 mb-2" />
                 {t('inquiryDrawer.activity.coming_soon', 'Activity timeline coming soon')}
@@ -661,7 +674,7 @@ export function InquiryDrawer({
           </div>
 
           {/* Footer */}
-          {!loading && inq && (
+          {inq && (
             <div className="border-t border-dark-border px-4 py-2.5 flex items-center justify-between text-[11px] text-t-secondary">
               <div className="flex items-center gap-3">
                 {inq.last_contacted_at && (
