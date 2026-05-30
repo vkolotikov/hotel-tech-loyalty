@@ -85,32 +85,43 @@ class MessengerConnectPage extends Command
 
         $this->info("Connecting Page {$pageId} to brand '{$brand->name}' in org '{$org->name}'...");
 
-        // Step 1: validate the token + fetch Page profile.
-        $this->line('  → Validating token + fetching Page profile...');
         $graphBase = rtrim(config('services.meta.graph_url', 'https://graph.facebook.com'), '/');
         $graphVer  = config('services.meta.graph_version', 'v25.0');
 
-        $profileResp = Http::timeout(10)
-            ->withQueryParameters([
-                'fields'       => 'id,name,picture.type(large)',
-                'access_token' => $pageToken,
-            ])
+        // Skip profile fetch — Meta tightened it to require pages_read_engagement
+        // permission, which we don't need otherwise (more permissions = more App
+        // Review). Page ID is fine as a placeholder display name; the Phase 3
+        // admin UI will let admins rename connections.
+        //
+        // Best-effort token sanity check via /me. With a Page Access Token,
+        // /me returns the Page object — works without extra permissions in most
+        // cases, but if Meta has tightened this too, we tolerate failure and
+        // let the subscribe step (below) do the real validation.
+        $this->line('  → Sanity-checking token...');
+        $meResp = Http::timeout(10)
+            ->withQueryParameters(['fields' => 'id', 'access_token' => $pageToken])
             ->acceptJson()
-            ->get("{$graphBase}/{$graphVer}/{$pageId}");
+            ->get("{$graphBase}/{$graphVer}/me");
 
-        if (!$profileResp->successful()) {
-            $err = $profileResp->json('error.message') ?? "HTTP {$profileResp->status()}";
-            $this->error("    Failed: {$err}");
-            $this->line('    Check the token is for THIS Page and has pages_messaging permission.');
-            return self::FAILURE;
+        if ($meResp->successful()) {
+            $tokenPageId = (string) $meResp->json('id');
+            if ($tokenPageId !== '' && $tokenPageId !== $pageId) {
+                $this->error("    Token is for Page {$tokenPageId}, not {$pageId}. Re-generate a token for the right Page.");
+                return self::FAILURE;
+            }
+            $this->line('    OK');
+        } else {
+            // Don't bail — the real auth check is the subscribe call below.
+            $this->line('    (skipped — subscribe call will validate instead)');
         }
 
-        $profile = $profileResp->json();
-        $displayName = (string) ($profile['name'] ?? '');
-        $avatarUrl   = (string) ($profile['picture']['data']['url'] ?? '');
-        $this->line("    OK: Page is '{$displayName}'");
+        // Display name placeholder. The Phase 3 admin UI lets admins rename
+        // any connection, and the Phase 2 message-receive path doesn't depend
+        // on this field for anything.
+        $displayName = "Page {$pageId}";
+        $avatarUrl   = null;
 
-        // Step 2: upsert the channel account record.
+        // Save the channel account record.
         $this->line('  → Saving connection record...');
         /** @var ChatChannelAccount&Model $account */
         $account = ChatChannelAccount::query()
@@ -124,8 +135,9 @@ class MessengerConnectPage extends Command
         if ($isUpdate) {
             $account->forceFill([
                 'brand_id'             => $brand->id,
-                'display_name'         => $displayName,
-                'display_avatar_url'   => $avatarUrl ?: null,
+                // Don't overwrite a display name an admin may have edited.
+                'display_name'         => $account->display_name ?: $displayName,
+                'display_avatar_url'   => $account->display_avatar_url ?: $avatarUrl,
                 'page_access_token'    => $pageToken, // re-encrypted by saving hook
                 'status'               => ChatChannelAccount::STATUS_ACTIVE,
                 'token_verified_at'    => now(),
@@ -138,7 +150,7 @@ class MessengerConnectPage extends Command
                 'channel'              => ChatChannelAccount::CHANNEL_MESSENGER,
                 'external_id'          => $pageId,
                 'display_name'         => $displayName,
-                'display_avatar_url'   => $avatarUrl ?: null,
+                'display_avatar_url'   => $avatarUrl,
                 'page_access_token'    => $pageToken,
                 'status'               => ChatChannelAccount::STATUS_ACTIVE,
                 'token_verified_at'    => now(),
