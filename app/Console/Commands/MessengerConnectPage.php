@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Brand;
 use App\Models\ChatChannelAccount;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Http;
@@ -41,7 +42,8 @@ use Illuminate\Support\Facades\Http;
 class MessengerConnectPage extends Command
 {
     protected $signature = 'messenger:connect-page
-        {--org= : Organization id (default: first org)}
+        {--for-email= : Resolve org + user automatically from this admin email (the easy path)}
+        {--org= : Organization id (overrides --for-email)}
         {--brand= : Brand id (default: first brand in the org)}
         {--page-id= : The Facebook Page ID to connect (required)}
         {--page-token= : The Page Access Token from Graph API Explorer (required)}
@@ -60,8 +62,29 @@ class MessengerConnectPage extends Command
             return self::INVALID;
         }
 
-        // Resolve org.
+        // Resolve org. Three paths in priority order:
+        //   1. --org=N — explicit id wins
+        //   2. --for-email=admin@example.com — look up that user, take their org
+        //   3. default — first org by id (fine for single-tenant test setups)
         $orgId = $this->option('org') !== null ? (int) $this->option('org') : null;
+        $email = $this->option('for-email');
+        $userId = $this->option('user') !== null ? (int) $this->option('user') : null;
+
+        if ($orgId === null && is_string($email) && $email !== '') {
+            $user = User::query()->withoutGlobalScopes()
+                ->where('email', $email)
+                ->first();
+            if ($user === null) {
+                $this->error("No user found with email '{$email}'.");
+                return self::FAILURE;
+            }
+            $orgId = (int) $user->organization_id;
+            if ($userId === null) {
+                $userId = (int) $user->id;
+            }
+            $this->line("  Resolved org from email: org_id={$orgId}, user_id={$userId}");
+        }
+
         $org = $orgId !== null
             ? Organization::query()->withoutGlobalScopes()->find($orgId)
             : Organization::query()->withoutGlobalScopes()->orderBy('id')->first();
@@ -80,8 +103,8 @@ class MessengerConnectPage extends Command
             return self::FAILURE;
         }
 
-        // Resolve user (optional — used for the audit trail of who connected).
-        $userId = $this->option('user') !== null ? (int) $this->option('user') : null;
+        // $userId resolved above (either explicit --user, or auto-set from
+        // --for-email's lookup, or null when neither was supplied).
 
         $this->info("Connecting Page {$pageId} to brand '{$brand->name}' in org '{$org->name}'...");
 
