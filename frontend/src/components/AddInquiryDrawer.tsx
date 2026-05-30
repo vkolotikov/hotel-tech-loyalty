@@ -230,14 +230,14 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
         aria-hidden="true"
       />
 
-      {/* Panel — explicitly pinned to LEFT edge, mirrors the right-side
-          CustomerDrawer / InquiryDrawer pattern. fixed left-0 top-0 +
-          full-height keeps the drawer locked to the left regardless of
-          parent layout or flex behaviour. */}
+      {/* Panel — pinned to RIGHT edge, matching CustomerDrawer +
+          InquiryDrawer so every drawer in the leads flow opens from the
+          same side. fixed right-0 top-0 + full-height keeps the drawer
+          locked to the right regardless of parent layout. */}
       <aside
         role="dialog"
         aria-modal="true"
-        className="fixed left-0 top-0 h-screen w-full max-w-2xl bg-[#0f0f0f] border-r border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden">
+        className="fixed right-0 top-0 h-screen w-full max-w-2xl bg-[#0f0f0f] border-l border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* Header — gradient hero with primary CTA echo */}
         <div className="relative px-5 pt-5 pb-4 border-b border-white/10"
           style={{ background: 'linear-gradient(180deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.02) 100%)' }}
