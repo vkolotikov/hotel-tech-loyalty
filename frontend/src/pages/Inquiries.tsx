@@ -18,6 +18,7 @@ import EditableField from '../components/EditableField'
 import ColumnTogglePopover from '../components/ColumnTogglePopover'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { CustomerDrawer } from '../components/CustomerDrawer'
+import { InquiryDrawer } from '../components/InquiryDrawer'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -223,8 +224,14 @@ export function Inquiries() {
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   // Customer drawer — opened from the expanded-row "View full customer"
-  // button. Drawer takes over the right side of the viewport.
+  // button OR from inside the InquiryDrawer kebab. Slides from the right.
   const [customerDrawerGuestId, setCustomerDrawerGuestId] = useState<number | null>(null)
+
+  // Inquiry drawer — opened by clicking a row. Slides from the LEFT so
+  // it can coexist with the right-side CustomerDrawer (e.g. lead detail
+  // open on the left, customer profile open on the right at the same
+  // time). Replaces the broken "Open full detail" link.
+  const [inquiryDrawerId, setInquiryDrawerId] = useState<number | null>(null)
 
   // Single-row delete confirmation — opened from the per-row kebab
   // "Delete lead" item. Impact pre-fetched from the new
@@ -747,8 +754,20 @@ export function Inquiries() {
                 return (
                 <React.Fragment key={inq.id}>
                   <tr
-                    className={`group border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}
+                    className={`group border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors cursor-pointer ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}
                     style={priorityStripe ? { boxShadow: priorityStripe } : undefined}
+                    onClick={(e) => {
+                      // Open the lead drawer on row click. Skip if the click
+                      // bubbled from an interactive element (button, link,
+                      // input, select) or anything inside a dropdown menu —
+                      // those handle their own action.
+                      const tgt = e.target as HTMLElement | null
+                      if (!tgt) return
+                      if (tgt.closest('button, a, input, select, textarea, label, [data-menu-root], [data-row-noopen]')) return
+                      // Don't fire if user is selecting text in a cell.
+                      if (window.getSelection()?.toString()) return
+                      setInquiryDrawerId(inq.id)
+                    }}
                   >
                     {/* Bulk-select cell — always rendered (see <thead>
                         comment). Visible when selected, when admin opted
@@ -1176,9 +1195,13 @@ export function Inquiries() {
                                 }}
                               />
                             </div>
-                            <Link to={`/inquiries/${inq.id}`} className="inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 pt-1">
-                              <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open full detail')}
-                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => setInquiryDrawerId(inq.id)}
+                              className="inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 pt-1"
+                            >
+                              <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open in panel')}
+                            </button>
                           </div>
                         </div>
                       </td>
@@ -1691,10 +1714,19 @@ export function Inquiries() {
                   className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
                   <AlertCircle size={12} /> {inq.next_task_type ? 'Edit Task' : 'Set Task'}
                 </button>
-                <button onClick={() => { setOpenMenu(null); window.location.href = `/inquiries/${openMenu.id}` }}
+                {/* Open the lead in the new left-side drawer instead of
+                    navigating to /inquiries/:id (the standalone page is
+                    being phased out — the drawer carries the same edits). */}
+                <button onClick={() => { const id = openMenu.id; setOpenMenu(null); setInquiryDrawerId(id) }}
                   className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
-                  <Eye size={12} /> View Detail
+                  <Eye size={12} /> {t('inquiries.menu.open_lead', 'Open lead details')}
                 </button>
+                {inq.guest?.id && (
+                  <button onClick={() => { const gid = inq.guest!.id; setOpenMenu(null); setCustomerDrawerGuestId(gid) }}
+                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                    <UserCircle2 size={12} /> {t('inquiries.menu.edit_customer', 'Edit customer details')}
+                  </button>
+                )}
                 <div className="my-1 h-px bg-white/10" />
                 <button
                   onClick={async () => {
@@ -1950,8 +1982,26 @@ export function Inquiries() {
         />
       )}
 
+      {/* Left-side lead drawer — opened by clicking a row or via the
+          kebab "Open lead details". Replaces the broken
+          "Open full detail" link that pointed at /inquiries/:id.
+          Co-exists with the right-side CustomerDrawer (different sides). */}
+      <InquiryDrawer
+        open={inquiryDrawerId !== null}
+        inquiryId={inquiryDrawerId}
+        onClose={() => setInquiryDrawerId(null)}
+        onInquiryUpdated={() => qc.invalidateQueries({ queryKey: ['inquiries'] })}
+        onInquiryDeleted={() => {
+          setInquiryDrawerId(null)
+          qc.invalidateQueries({ queryKey: ['inquiries'] })
+        }}
+        onRequestCustomerDrawer={(gid) => setCustomerDrawerGuestId(gid)}
+      />
+
       {/* Right-side drawer mounted from the expanded-row "View full
-          customer" link. Diff-PUTs against /v1/admin/guests/:id. */}
+          customer" link, the row kebab "Edit customer", or the
+          InquiryDrawer's "Open in customer drawer". Diff-PUTs against
+          /v1/admin/guests/:id. */}
       <CustomerDrawer
         open={customerDrawerGuestId !== null}
         guestId={customerDrawerGuestId}
