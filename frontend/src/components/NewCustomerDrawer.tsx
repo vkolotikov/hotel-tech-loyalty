@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Save, Loader2, Sparkles, User, Wand2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { api } from '../lib/api'
+import { useSettings } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
 
 /**
@@ -43,6 +44,10 @@ type Stage = 'pick' | 'pasting' | 'preview'
 
 export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void; onCreated: (guestId: number) => void }) {
   const queryClient = useQueryClient()
+  const settings = useSettings()
+  // Field-visibility config from Settings → Pipelines & Fields → Customers
+  // → "Add Customer form". `full_name` is always shown.
+  const formCfg = settings.customer_fields.form
   const [mode, setMode] = useState<Mode>('ai')
   const [stage, setStage] = useState<Stage>('pick')
   const [text, setText] = useState('')
@@ -209,45 +214,68 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
                 Review the extracted fields. Edit anything that needs correcting before saving.
               </div>
             )}
+            {/* Full name is required and always visible. The other rows
+                are gated by `customer_fields.form.*` — admins toggle
+                them in Settings → Pipelines & Fields → Customers. */}
             <Row>
               <Field label="Full name *" value={form.full_name} onChange={v => set('full_name', v)} required />
             </Row>
-            <Row>
-              <Field label="First name" value={form.first_name ?? ''} onChange={v => set('first_name', v)} />
-              <Field label="Last name"  value={form.last_name ?? ''}  onChange={v => set('last_name', v)} />
-            </Row>
-            <Row>
-              <Field label="Email" type="email" value={form.email ?? ''} onChange={v => set('email', v)} />
-              <Field label="Phone" type="tel"   value={form.phone ?? ''} onChange={v => set('phone', v)} />
-            </Row>
-            <Row>
-              <Field label="Company"  value={form.company ?? ''} onChange={v => set('company', v)} />
-              <Field label="Position" value={form.position_title ?? ''} onChange={v => set('position_title', v)} />
-            </Row>
-            <Row>
-              <Select label="Guest type" value={form.guest_type ?? 'Individual'} onChange={v => set('guest_type', v)}
-                options={['Individual', 'Corporate']} />
-              <Select label="VIP level"  value={form.vip_level ?? 'Standard'}   onChange={v => set('vip_level', v)}
-                options={['Standard', 'VIP', 'VVIP', 'Platinum']} />
-            </Row>
-            <Row>
-              <Field label="Nationality" value={form.nationality ?? ''} onChange={v => set('nationality', v)} />
-              <Field label="Country"     value={form.country ?? ''}     onChange={v => set('country', v)} />
-            </Row>
-            <Row>
-              <Field label="City" value={form.city ?? ''} onChange={v => set('city', v)} />
-              <Select label="Importance" value={form.importance ?? 'Normal'} onChange={v => set('importance', v)}
-                options={['Normal', 'High', 'Critical']} />
-            </Row>
-            <label className="block">
-              <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1">Notes</span>
-              <textarea
-                value={form.notes ?? ''}
-                onChange={e => set('notes', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
-              />
-            </label>
+            {formCfg.first_last_names && (
+              <Row>
+                <Field label="First name" value={form.first_name ?? ''} onChange={v => set('first_name', v)} />
+                <Field label="Last name"  value={form.last_name ?? ''}  onChange={v => set('last_name', v)} />
+              </Row>
+            )}
+            {(formCfg.email || formCfg.phone) && (
+              <Row>
+                {formCfg.email && <Field label="Email" type="email" value={form.email ?? ''} onChange={v => set('email', v)} />}
+                {formCfg.phone && <Field label="Phone" type="tel"   value={form.phone ?? ''} onChange={v => set('phone', v)} />}
+              </Row>
+            )}
+            {(formCfg.company || formCfg.position_title) && (
+              <Row>
+                {formCfg.company        && <Field label="Company"  value={form.company ?? ''} onChange={v => set('company', v)} />}
+                {formCfg.position_title && <Field label="Position" value={form.position_title ?? ''} onChange={v => set('position_title', v)} />}
+              </Row>
+            )}
+            {(formCfg.guest_type || formCfg.vip_level) && (
+              <Row>
+                {formCfg.guest_type && (
+                  <Select label="Guest type" value={form.guest_type ?? 'Individual'} onChange={v => set('guest_type', v)}
+                    options={['Individual', 'Corporate']} />
+                )}
+                {formCfg.vip_level && (
+                  <Select label="VIP level"  value={form.vip_level ?? 'Standard'}   onChange={v => set('vip_level', v)}
+                    options={['Standard', 'VIP', 'VVIP', 'Platinum']} />
+                )}
+              </Row>
+            )}
+            {(formCfg.nationality || formCfg.country) && (
+              <Row>
+                {formCfg.nationality && <Field label="Nationality" value={form.nationality ?? ''} onChange={v => set('nationality', v)} />}
+                {formCfg.country     && <Field label="Country"     value={form.country ?? ''}     onChange={v => set('country', v)} />}
+              </Row>
+            )}
+            {(formCfg.city || formCfg.importance) && (
+              <Row>
+                {formCfg.city && <Field label="City" value={form.city ?? ''} onChange={v => set('city', v)} />}
+                {formCfg.importance && (
+                  <Select label="Importance" value={form.importance ?? 'Normal'} onChange={v => set('importance', v)}
+                    options={['Normal', 'High', 'Critical']} />
+                )}
+              </Row>
+            )}
+            {formCfg.notes && (
+              <label className="block">
+                <span className="block text-[10px] uppercase tracking-wider text-t-secondary mb-1">Notes</span>
+                <textarea
+                  value={form.notes ?? ''}
+                  onChange={e => set('notes', e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+                />
+              </label>
+            )}
           </div>
         )}
 

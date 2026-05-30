@@ -144,6 +144,24 @@ const TABS: TabDef[] = [
     configKey: 'customer_fields',
     sections: [
       {
+        label: 'Add Customer form',
+        path: 'form',
+        fields: [
+          { key: 'first_last_names', label: 'First / last name pair', hint: 'Adds a separate First name + Last name row above the single full-name field. Off by default — most orgs capture in one box.' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'company', label: 'Company' },
+          { key: 'position_title', label: 'Position / job title' },
+          { key: 'guest_type', label: 'Guest type', hint: 'Individual / Corporate / Travel Agent / Group Leader.' },
+          { key: 'vip_level', label: 'VIP level' },
+          { key: 'importance', label: 'Importance' },
+          { key: 'nationality', label: 'Nationality' },
+          { key: 'country', label: 'Country' },
+          { key: 'city', label: 'City' },
+          { key: 'notes', label: 'Notes' },
+        ],
+      },
+      {
         label: 'Customers list columns',
         path: 'list',
         fields: [

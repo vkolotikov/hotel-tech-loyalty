@@ -1377,6 +1377,7 @@ export function Inquiries() {
         properties={properties}
         settings={settings as any}
         fieldCfg={fieldCfg as any}
+        customerFormCfg={settings.customer_fields.form}
       />
 
       {/* Legacy centered Add Inquiry modal — kept compiled but no longer

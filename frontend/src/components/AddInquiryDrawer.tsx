@@ -64,6 +64,21 @@ export type AddInquiryFieldCfg = {
   }
 }
 
+export type AddCustomerFieldCfg = {
+  email?: boolean
+  phone?: boolean
+  company?: boolean
+  position_title?: boolean
+  guest_type?: boolean
+  vip_level?: boolean
+  importance?: boolean
+  nationality?: boolean
+  country?: boolean
+  city?: boolean
+  notes?: boolean
+  first_last_names?: boolean
+}
+
 interface Property {
   id: number
   name: string
@@ -76,6 +91,10 @@ interface Props {
   properties: Property[]
   settings: AddInquirySettings
   fieldCfg: AddInquiryFieldCfg
+  /** customer_fields.form from Field Manager — gates the "New customer"
+      inline path. Optional for back-compat; falls back to a sensible
+      mini-set (email/phone/company on) when not provided. */
+  customerFormCfg?: AddCustomerFieldCfg
 }
 
 type CustomerMode = 'existing' | 'new'
@@ -89,9 +108,41 @@ const EMPTY_INQUIRY = {
   custom_data: {} as Record<string, any>,
 }
 
-const EMPTY_NEW_CUSTOMER = { full_name: '', email: '', phone: '', company: '' }
+type NewCustomer = {
+  full_name: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  company: string
+  position_title: string
+  guest_type: string
+  vip_level: string
+  importance: string
+  nationality: string
+  country: string
+  city: string
+  notes: string
+}
 
-export function AddInquiryDrawer({ open, onClose, onCreated, properties, settings, fieldCfg }: Props) {
+const EMPTY_NEW_CUSTOMER: NewCustomer = {
+  full_name: '', first_name: '', last_name: '',
+  email: '', phone: '', company: '', position_title: '',
+  guest_type: '', vip_level: '', importance: '',
+  nationality: '', country: '', city: '', notes: '',
+}
+
+const DEFAULT_CUSTOMER_FORM_CFG: Required<AddCustomerFieldCfg> = {
+  first_last_names: false,
+  email: true, phone: true,
+  company: true, position_title: false,
+  guest_type: false, vip_level: false, importance: false,
+  nationality: false, country: false, city: false,
+  notes: false,
+}
+
+export function AddInquiryDrawer({ open, onClose, onCreated, properties, settings, fieldCfg, customerFormCfg }: Props) {
+  const customerCfg = { ...DEFAULT_CUSTOMER_FORM_CFG, ...(customerFormCfg ?? {}) }
   const qc = useQueryClient()
 
   // Customer side: which path + state
@@ -147,13 +198,32 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
   })
 
   const createCustomer = useMutation({
-    mutationFn: (payload: typeof EMPTY_NEW_CUSTOMER) =>
-      api.post('/v1/admin/guests', {
-        full_name: payload.full_name.trim(),
-        email: payload.email.trim() || null,
-        phone: payload.phone.trim() || null,
-        company: payload.company.trim() || null,
-      }).then(r => r.data),
+    mutationFn: (payload: NewCustomer) => {
+      // Strip blanks so we don't send empty strings for fields the admin
+      // hid in the Field Manager. Server treats null/missing the same.
+      const body: Record<string, any> = { full_name: payload.full_name.trim() }
+      const map: Array<[keyof NewCustomer, boolean]> = [
+        ['first_name',     customerCfg.first_last_names],
+        ['last_name',      customerCfg.first_last_names],
+        ['email',          customerCfg.email],
+        ['phone',          customerCfg.phone],
+        ['company',        customerCfg.company],
+        ['position_title', customerCfg.position_title],
+        ['guest_type',     customerCfg.guest_type],
+        ['vip_level',      customerCfg.vip_level],
+        ['importance',     customerCfg.importance],
+        ['nationality',    customerCfg.nationality],
+        ['country',        customerCfg.country],
+        ['city',           customerCfg.city],
+        ['notes',          customerCfg.notes],
+      ]
+      for (const [key, on] of map) {
+        if (!on) continue
+        const v = (payload[key] ?? '').toString().trim()
+        if (v) body[key] = v
+      }
+      return api.post('/v1/admin/guests', body).then(r => r.data)
+    },
   })
 
   const createInquiry = useMutation({
@@ -367,6 +437,9 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
 
             {customerMode === 'new' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Full name is always shown — required. Everything below
+                    is gated by customer_fields.form.* (Settings →
+                    Pipelines & Fields → Customers → "Add Customer form"). */}
                 <Field label="Full name" required>
                   <div className="relative">
                     <UserIcon size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
@@ -379,40 +452,157 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     />
                   </div>
                 </Field>
-                <Field label="Email">
-                  <div className="relative">
-                    <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                {customerCfg.first_last_names && (
+                  <Field label="First name">
                     <input
-                      type="email"
-                      value={newCustomer.email}
-                      onChange={(e) => setNewCustomer(c => ({ ...c, email: e.target.value }))}
-                      placeholder="jane@example.com"
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      value={newCustomer.first_name}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, first_name: e.target.value }))}
+                      placeholder="Jane"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
                     />
-                  </div>
-                </Field>
-                <Field label="Phone">
-                  <div className="relative">
-                    <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                  </Field>
+                )}
+                {customerCfg.first_last_names && (
+                  <Field label="Last name">
                     <input
-                      value={newCustomer.phone}
-                      onChange={(e) => setNewCustomer(c => ({ ...c, phone: e.target.value }))}
-                      placeholder="+1 555 123 4567"
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      value={newCustomer.last_name}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, last_name: e.target.value }))}
+                      placeholder="Doe"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
                     />
-                  </div>
-                </Field>
-                <Field label="Company">
-                  <div className="relative">
-                    <Building2 size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                  </Field>
+                )}
+                {customerCfg.email && (
+                  <Field label="Email">
+                    <div className="relative">
+                      <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                      <input
+                        type="email"
+                        value={newCustomer.email}
+                        onChange={(e) => setNewCustomer(c => ({ ...c, email: e.target.value }))}
+                        placeholder="jane@example.com"
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      />
+                    </div>
+                  </Field>
+                )}
+                {customerCfg.phone && (
+                  <Field label="Phone">
+                    <div className="relative">
+                      <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                      <input
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer(c => ({ ...c, phone: e.target.value }))}
+                        placeholder="+1 555 123 4567"
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      />
+                    </div>
+                  </Field>
+                )}
+                {customerCfg.company && (
+                  <Field label="Company">
+                    <div className="relative">
+                      <Building2 size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+                      <input
+                        value={newCustomer.company}
+                        onChange={(e) => setNewCustomer(c => ({ ...c, company: e.target.value }))}
+                        placeholder="Acme Ltd"
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      />
+                    </div>
+                  </Field>
+                )}
+                {customerCfg.position_title && (
+                  <Field label="Position / job title">
                     <input
-                      value={newCustomer.company}
-                      onChange={(e) => setNewCustomer(c => ({ ...c, company: e.target.value }))}
-                      placeholder="Acme Ltd"
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                      value={newCustomer.position_title}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, position_title: e.target.value }))}
+                      placeholder="Director of Sales"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
                     />
+                  </Field>
+                )}
+                {customerCfg.guest_type && (
+                  <Field label="Guest type">
+                    <select
+                      value={newCustomer.guest_type}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, guest_type: e.target.value }))}
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50"
+                    >
+                      <option value="">— Select —</option>
+                      {(settings as any).guest_types?.map?.((g: string) => <option key={g}>{g}</option>)
+                        ?? ['Individual', 'Corporate', 'Travel Agent', 'Group Leader'].map(g => <option key={g}>{g}</option>)}
+                    </select>
+                  </Field>
+                )}
+                {customerCfg.vip_level && (
+                  <Field label="VIP level">
+                    <select
+                      value={newCustomer.vip_level}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, vip_level: e.target.value }))}
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50"
+                    >
+                      <option value="">— Select —</option>
+                      {(settings as any).vip_levels?.map?.((v: string) => <option key={v}>{v}</option>)
+                        ?? ['Standard', 'Silver', 'Gold', 'Platinum', 'Diamond'].map(v => <option key={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                )}
+                {customerCfg.importance && (
+                  <Field label="Importance">
+                    <select
+                      value={newCustomer.importance}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, importance: e.target.value }))}
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50"
+                    >
+                      <option value="">— Select —</option>
+                      {['Standard', 'Important', 'VIP', 'VVIP'].map(i => <option key={i}>{i}</option>)}
+                    </select>
+                  </Field>
+                )}
+                {customerCfg.nationality && (
+                  <Field label="Nationality">
+                    <input
+                      value={newCustomer.nationality}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, nationality: e.target.value }))}
+                      placeholder="German"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                    />
+                  </Field>
+                )}
+                {customerCfg.country && (
+                  <Field label="Country">
+                    <input
+                      value={newCustomer.country}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, country: e.target.value }))}
+                      placeholder="Germany"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                    />
+                  </Field>
+                )}
+                {customerCfg.city && (
+                  <Field label="City">
+                    <input
+                      value={newCustomer.city}
+                      onChange={(e) => setNewCustomer(c => ({ ...c, city: e.target.value }))}
+                      placeholder="Berlin"
+                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50"
+                    />
+                  </Field>
+                )}
+                {customerCfg.notes && (
+                  <div className="sm:col-span-2">
+                    <Field label="Notes">
+                      <textarea
+                        value={newCustomer.notes}
+                        onChange={(e) => setNewCustomer(c => ({ ...c, notes: e.target.value }))}
+                        rows={2}
+                        placeholder="Anything useful about this customer…"
+                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-[#22d3ee]/50 resize-none"
+                      />
+                    </Field>
                   </div>
-                </Field>
+                )}
                 <div className="sm:col-span-2 text-[11px] text-t-secondary flex items-center gap-1.5">
                   <Sparkles size={11} className="text-[#22d3ee]" />
                   Customer will be created in your CRM when you submit.

@@ -58,6 +58,23 @@ export interface InquiryFieldConfig {
 }
 
 export interface CustomerFieldConfig {
+  form: {
+    // Add-Customer drawer fields. `full_name` is required and stays
+    // out of this config. Drives both the standalone NewCustomerDrawer
+    // and the "New customer" inline path inside AddInquiryDrawer.
+    first_last_names: boolean   // First name + Last name pair
+    email: boolean
+    phone: boolean
+    company: boolean
+    position_title: boolean
+    guest_type: boolean         // Individual / Corporate / Travel Agent…
+    vip_level: boolean
+    importance: boolean
+    nationality: boolean
+    country: boolean
+    city: boolean
+    notes: boolean
+  }
   list: {
     contact: boolean        // email + phone column
     company: boolean        // company chip
@@ -173,6 +190,16 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
 }
 
 export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldConfig = {
+  form: {
+    // Sensible defaults: contact + company + identity classifications.
+    // Location bits + first/last split off by default — niche fields.
+    first_last_names: false,
+    email: true, phone: true,
+    company: true, position_title: true,
+    guest_type: true, vip_level: true, importance: true,
+    nationality: false, country: false, city: false,
+    notes: true,
+  },
   list: {
     contact: true, company: true, activity: true,
     vip_badge: true, position_title: true,
@@ -382,6 +409,7 @@ export function useSettings(): CrmSettings {
   }
   if (merged.customer_fields && typeof merged.customer_fields === 'object') {
     merged.customer_fields = {
+      form:   { ...DEFAULT_CUSTOMER_FIELDS.form,   ...(merged.customer_fields.form   ?? {}) },
       list:   { ...DEFAULT_CUSTOMER_FIELDS.list,   ...(merged.customer_fields.list   ?? {}) },
       detail: { ...DEFAULT_CUSTOMER_FIELDS.detail, ...(merged.customer_fields.detail ?? {}) },
     }
