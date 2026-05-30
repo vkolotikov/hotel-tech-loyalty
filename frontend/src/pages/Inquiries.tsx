@@ -19,6 +19,7 @@ import ColumnTogglePopover from '../components/ColumnTogglePopover'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { CustomerDrawer } from '../components/CustomerDrawer'
 import { InquiryDrawer } from '../components/InquiryDrawer'
+import { AddInquiryDrawer } from '../components/AddInquiryDrawer'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -1369,7 +1370,22 @@ export function Inquiries() {
       {/* Create Modal — split Required vs Advanced. Most inquiries are
           captured with just guest + property + dates + rooms; everything
           else (rate negotiation, ownership, source, etc.) is collapsible. */}
-      {showCreate && (
+      <AddInquiryDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => { /* invalidation happens inside the drawer */ }}
+        properties={properties}
+        settings={settings as any}
+        fieldCfg={fieldCfg as any}
+      />
+
+      {/* Legacy centered Add Inquiry modal — kept compiled but no longer
+          rendered. The new AddInquiryDrawer above replaces it: left-side
+          slide, sectioned design with icon tiles, inline new-customer
+          path, and collapsible Deal/Notes sections. Hidden behind a
+          permanent `false &&` so we can delete the block in a follow-up
+          once the drawer settles. */}
+      {false && showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-white mb-1">Add Inquiry</h2>
