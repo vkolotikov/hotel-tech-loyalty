@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
-  Search, ChevronLeft, ChevronRight, RefreshCw, Inbox as InboxIcon,
+  Search, ChevronLeft, ChevronRight, RefreshCw,
   Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
   SlidersHorizontal,
 } from 'lucide-react'
@@ -24,10 +24,12 @@ import { useHotLeadAlert, useNotificationPermission, type HotLeadInfo } from '..
  * Detail drawer + quick actions land in Phase 2.
  */
 
-type FilterKey =
-  | 'priority' | 'online' | 'has_contact' | 'active_chat' | 'hot_lead'
-  | 'anonymous' | 'resolved'
-  | 'booking_inquiry' | 'info_request' | 'complaint' | 'cancellation' | 'support'
+// Slimmed 2026-05-30. Hot leads (priority already surfaces them),
+// Anonymous + Resolved (rare daily-use), and the whole By-intent
+// row (low signal — intent tagging is shown on each row already) were
+// dropped. Backend still accepts the old filter values for API
+// compatibility; the UI just no longer exposes them.
+type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat'
 
 interface EngagementRow {
   id: number
@@ -77,25 +79,11 @@ const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
   { key: 'online',      label: 'Online',       icon: Wifi,  tone: 'green'     },
   { key: 'has_contact', label: 'Has contact',  icon: Mail                     },
   { key: 'active_chat', label: 'Active chat',  icon: MessageSquare            },
-  { key: 'hot_lead',    label: 'Hot leads',    icon: Sparkles, tone: 'amber'  },
-  { key: 'anonymous',   label: 'Anonymous',    icon: Eye                      },
-  { key: 'resolved',    label: 'Resolved',     icon: InboxIcon                },
 ]
 
-const INTENT_FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'booking_inquiry', label: 'Booking' },
-  { key: 'info_request',    label: 'Info' },
-  { key: 'complaint',       label: 'Complaint' },
-  { key: 'cancellation',    label: 'Cancellation' },
-  { key: 'support',         label: 'Support' },
-]
-
-/** Maps a FilterKey to its i18n key under `engagement.filters.*`. The
- * top-row chips live at `.priority/.online/...` and intent chips live
- * one level deeper at `.intent.<key>`. */
+/** Maps a FilterKey to its i18n key under `engagement.filters.*`. */
 function filterLabelKey(k: FilterKey): string {
-  const intentKeys = ['booking_inquiry', 'info_request', 'complaint', 'cancellation', 'support'] as const
-  return (intentKeys as readonly string[]).includes(k) ? `engagement.filters.intent.${k}` : `engagement.filters.${k}`
+  return `engagement.filters.${k}`
 }
 
 export function Engagement() {
@@ -342,7 +330,7 @@ export function Engagement() {
           Shows the active filter + range so the agent can still see what
           they're looking at, with a quick re-open link. */}
       {!filtersOpen && (() => {
-        const activeFilterMeta = [...FILTERS, ...INTENT_FILTERS].find(f => f.key === filter)
+        const activeFilterMeta = FILTERS.find(f => f.key === filter)
         const activeFilterLabel = activeFilterMeta ? t(filterLabelKey(filter), activeFilterMeta.label) : filter
         const rangeLabel =
           range === 'today' ? t('engagement.range.today', 'Today')
@@ -433,40 +421,11 @@ export function Engagement() {
           })}
         </div>
 
-        {/* Intent filter row — narrows the feed to a single AI-classified
-            intent. Only AI-tagged conversations appear here, so a brand-new
-            org may see empty results until the chats accumulate. */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ flexShrink: 0 }}>
-          <span className="text-[9px] uppercase tracking-wide font-bold text-t-secondary whitespace-nowrap pl-1 pr-1">
-            {t('engagement.filters.by_intent', 'By intent')}
-          </span>
-          {INTENT_FILTERS.map(f => {
-            const active = filter === f.key
-            const meta = INTENT_META[f.key]
-            const Ic = meta?.icon ?? Sparkles
-            const n = counts[f.key] ?? null
-            return (
-              <button
-                key={f.key}
-                onClick={() => { setFilter(f.key); setPage(1) }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                  active
-                    ? `${meta?.cls ?? ''} border-current`
-                    : 'bg-dark-bg text-t-secondary hover:text-white hover:bg-dark-surface2'
-                }`}
-                style={{ height: 28 }}
-              >
-                <Ic size={11} />
-                {t(filterLabelKey(f.key), f.label)}
-                {n !== null && (
-                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold bg-dark-surface2/80">
-                    {n}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        {/* By-intent row removed 2026-05-30 — low signal in daily use
+            (counts often zero, requires AI-tag accumulation, intent is
+            already visible as a row badge). Intent tagging continues
+            server-side for display purposes; just no filter chip for it. */}
+
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
           <input
@@ -701,18 +660,10 @@ function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFil
   // file is missing a key. Keep in sync with engagement.empty.* in the
   // locale JSON.
   const fallbacks: Record<FilterKey, { title: string; sub: string }> = {
-    priority:        { title: 'Nothing needs attention',     sub: 'No online visitors, leads, or active chats right now.' },
+    priority:        { title: 'Nothing needs attention',      sub: 'No online visitors, leads, or active chats right now.' },
     online:          { title: 'No one is online',             sub: 'Visitors will appear here in real time when they hit the chat widget.' },
     has_contact:     { title: 'No leads captured yet',        sub: 'Anyone who leaves an email or phone number lands here.' },
     active_chat:     { title: 'No active chats',              sub: 'Open conversations will appear here.' },
-    hot_lead:        { title: 'No hot leads right now',       sub: 'Visitors with a captured contact + a strong buying signal (booking page visit, 3+ messages, online now) surface here.' },
-    anonymous:       { title: 'No anonymous browsers',        sub: 'Visitors without contact info, hidden from the priority view, surface here.' },
-    resolved:        { title: 'No resolved conversations',    sub: 'Closed chats land here for reference.' },
-    booking_inquiry: { title: 'No booking inquiries',         sub: 'Conversations the AI tagged as booking-related land here. Tags appear after 3+ messages.' },
-    info_request:    { title: 'No info requests',             sub: 'Visitors asking general questions surface here once their chat has been AI-tagged.' },
-    complaint:       { title: 'No complaints',                sub: 'Issues raised by visitors land here once tagged.' },
-    cancellation:    { title: 'No cancellation requests',     sub: 'Visitors asking to cancel a booking surface here once tagged.' },
-    support:         { title: 'No support requests',          sub: 'General support conversations land here once tagged.' },
   }
   const fb = fallbacks[filter]
   const title = t(`engagement.empty.${filter}.title`, fb.title)
