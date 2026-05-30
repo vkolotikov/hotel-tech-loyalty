@@ -222,10 +222,22 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-start" aria-modal="true" role="dialog">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={onClose} />
+    <>
+      {/* Backdrop — pinned full screen, click to close */}
+      <div
+        className="fixed inset-0 z-40 bg-black/75 backdrop-blur-md"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <aside className="relative h-full w-full max-w-2xl bg-[#0f0f0f] border-r border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-left duration-200">
+      {/* Panel — explicitly pinned to LEFT edge, mirrors the right-side
+          CustomerDrawer / InquiryDrawer pattern. fixed left-0 top-0 +
+          full-height keeps the drawer locked to the left regardless of
+          parent layout or flex behaviour. */}
+      <aside
+        role="dialog"
+        aria-modal="true"
+        className="fixed left-0 top-0 h-screen w-full max-w-2xl bg-[#0f0f0f] border-r border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* Header — gradient hero with primary CTA echo */}
         <div className="relative px-5 pt-5 pb-4 border-b border-white/10"
           style={{ background: 'linear-gradient(180deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.02) 100%)' }}
@@ -722,7 +734,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
           </div>
         </div>
       </aside>
-    </div>
+    </>
   )
 }
 
