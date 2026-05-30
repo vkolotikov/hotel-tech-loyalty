@@ -426,42 +426,22 @@ export function Inquiries() {
 
   return (
     <div className="space-y-3">
-      {/* Single header row — stats on the left, actions on the right.
-          The H1 "Sales Pipeline" used to live here but is redundant
-          with the PipelineHub's own header + tab label ("Pipeline" >
-          "Leads & Inquiries"). Numbers stay colour-coded inline so a
-          glance still tells you the bucket distribution. */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs md:text-sm text-t-secondary">
-          <span className="font-bold text-white tabular-nums">{meta.total ?? 0}</span>
-          <span> {t('inquiries.stat_labels.total', 'total')} · </span>
-          <span className="text-blue-400 font-semibold tabular-nums">{stageCounts.leads}</span> <span>{t('inquiries.stat_labels.leads', 'leads')}</span>
-          <span> · </span>
-          <span className="text-amber-400 font-semibold tabular-nums">{stageCounts.deals}</span> <span>{t('inquiries.stat_labels.deals', 'active deals')}</span>
-          <span> · </span>
-          <span className="text-emerald-400 font-semibold tabular-nums">{stageCounts.closed}</span> <span>{t('inquiries.stat_labels.closed', 'closed')}</span>
-        </p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setFocusMode(f => !f)}
-            title={focusMode
-              ? t('inquiries.focus.exit_tooltip', 'Exit focus mode — show filters and saved views')
-              : t('inquiries.focus.enter_tooltip', 'Focus mode — hide filters, saved views, and quick filters so the table fills the page')}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${focusMode ? 'bg-primary-500/15 border border-primary-500/30 text-primary-300' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white'}`}
-          >
-            {focusMode ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span className="hidden sm:inline">{focusMode ? t('inquiries.focus.on', 'Focus') : t('inquiries.focus.off', 'Focus')}</span>
-          </button>
-          <button onClick={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }} className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors">
-            <Sparkles size={14} /> <span className="hidden sm:inline">{t('inquiries.actions.ai_capture', 'AI Capture')}</span><span className="sm:hidden">{t('inquiries.actions.ai_short', 'AI')}</span>
-          </button>
-          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-1.5 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-xs md:text-sm px-2.5 md:px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-            <Download size={14} /> <span className="hidden sm:inline">{t('inquiries.actions.export', 'Export')}</span>
-          </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors">
-            <Plus size={15} /> <span className="hidden sm:inline">{t('inquiries.actions.add', 'Add Inquiry')}</span><span className="sm:hidden">{t('inquiries.actions.add_short', 'Add')}</span>
-          </button>
-        </div>
+      {/* Compact action bar. Stats line removed — same numbers live on
+          the tab pills below ([All 25] [Leads 16] …). Focus / AI Capture /
+          Export folded into a ⋯ overflow menu so new users see one clear
+          primary action (Add inquiry) instead of four competing buttons. */}
+      <div className="flex items-center justify-end gap-2 flex-wrap">
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+          <Plus size={15} /> <span className="hidden sm:inline">{t('inquiries.actions.add', 'Add inquiry')}</span><span className="sm:hidden">{t('inquiries.actions.add_short', 'Add')}</span>
+        </button>
+        <HeaderMenu
+          focusMode={focusMode}
+          onToggleFocus={() => setFocusMode(f => !f)}
+          onCapture={() => { setShowCapture(true); setCaptureResult(null); setCaptureText('') }}
+          onExport={handleExport}
+          exporting={exporting}
+          t={t}
+        />
       </div>
 
       {/* Analytics moved to the sibling Insights tab so this page stays
@@ -503,57 +483,10 @@ export function Inquiries() {
         </div>
       </div>
 
-      {/* Slim filter-pill bar — one-line replacement for the fat card
-          strips that used to live up top. Each pill (Overdue / Due
-          today / Due soon) shows its live count and toggles the
-          matching task_due filter on the table when clicked. Pills go
-          quiet (gray + zero hint) when their count is zero so the bar
-          doesn't feel busy when nothing is on fire. Full analytics are
-          on the sibling Insights tab. */}
-      {!focusMode && today && (() => {
-        const pills: { value: '' | 'overdue' | 'today' | 'soon'; label: string; count: number; tone: 'red' | 'amber' | 'blue' }[] = [
-          { value: 'overdue', label: t('inquiries.today.tiles.overdue', 'Overdue'),     count: today.overdue?.count ?? 0,  tone: 'red'   },
-          { value: 'today',   label: t('inquiries.today.tiles.due_today', 'Due today'), count: today.today?.count   ?? 0,  tone: 'amber' },
-          { value: 'soon',    label: t('inquiries.today.tiles.due_soon',  'Due soon'),  count: today.soon?.count    ?? 0,  tone: 'blue'  },
-        ]
-        const toneCls = (tone: 'red' | 'amber' | 'blue', active: boolean, hasCount: boolean) => {
-          if (active) {
-            return tone === 'red'   ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                 : tone === 'amber' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                 :                    'bg-blue-500/20 text-blue-300 border-blue-500/40'
-          }
-          if (!hasCount) return 'text-gray-600 border-dark-border/60 hover:text-gray-400'
-          return tone === 'red'   ? 'text-red-300/80 border-red-500/20 hover:bg-red-500/10'
-               : tone === 'amber' ? 'text-amber-300/80 border-amber-500/20 hover:bg-amber-500/10'
-               :                    'text-blue-300/80 border-blue-500/20 hover:bg-blue-500/10'
-        }
-        return (
-          <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mr-1">{t('inquiries.quick_stats.label', 'Quick filters')}</span>
-            {pills.map(p => {
-              const active = taskDue === p.value
-              return (
-                <button
-                  key={p.value}
-                  onClick={() => { setTaskDue(active ? '' : p.value); setPage(1) }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-medium transition-colors ${toneCls(p.tone, active, p.count > 0)}`}
-                  title={active ? t('inquiries.quick_stats.clear', 'Click to clear this filter') : t('inquiries.quick_stats.apply', 'Click to filter')}
-                >
-                  <span>{p.label}</span>
-                  <span className="tabular-nums font-bold">{p.count}</span>
-                </button>
-              )
-            })}
-            <Link
-              to="/pipeline?tab=insights"
-              className="ml-auto inline-flex items-center gap-1 text-[10px] text-t-secondary hover:text-primary-300 transition-colors px-2 py-1"
-              title={t('inquiries.quick_stats.insights_tooltip', 'Full dashboard: going cold, high value, unassigned, stuck')}
-            >
-              <Sparkles size={11} /> {t('inquiries.quick_stats.insights', 'Insights')}
-            </Link>
-          </div>
-        )
-      })()}
+      {/* Quick-filter pills row removed — pills now render INLINE inside
+          the filter row below (after Columns), so the header stays a
+          two-row affair instead of four. Pills only appear when their
+          count > 0 — when nothing's on fire, the row is silent. */}
 
       {/* Saved views — pinned filter combos for the current user. Hidden
           in focus mode along with the rest of the filter chrome. */}
@@ -608,6 +541,43 @@ export function Inquiries() {
               ]}
             />
           )}
+          {/* Inline quick-filter chips — only the ones with count > 0
+              render, so the row stays silent when nothing is on fire.
+              Used to live as a separate row above; consolidated here to
+              save vertical space and reduce header noise. */}
+          {today && (() => {
+            type Pill = { value: 'overdue' | 'today' | 'soon'; label: string; count: number; tone: 'red' | 'amber' | 'blue' }
+            const pills: Pill[] = ([
+              { value: 'overdue' as const, label: t('inquiries.today.tiles.overdue',   'Overdue'),   count: today.overdue?.count ?? 0, tone: 'red'   as const },
+              { value: 'today'   as const, label: t('inquiries.today.tiles.due_today', 'Due today'), count: today.today?.count   ?? 0, tone: 'amber' as const },
+              { value: 'soon'    as const, label: t('inquiries.today.tiles.due_soon',  'Due soon'),  count: today.soon?.count    ?? 0, tone: 'blue'  as const },
+            ] satisfies Pill[]).filter(p => p.count > 0 || taskDue === p.value)
+            const toneCls = (tone: 'red' | 'amber' | 'blue', active: boolean) => {
+              if (active) {
+                return tone === 'red'   ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                     : tone === 'amber' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                     :                    'bg-blue-500/20 text-blue-300 border-blue-500/40'
+              }
+              return tone === 'red'   ? 'text-red-300/85 border-red-500/30 hover:bg-red-500/10'
+                   : tone === 'amber' ? 'text-amber-300/85 border-amber-500/30 hover:bg-amber-500/10'
+                   :                    'text-blue-300/85 border-blue-500/30 hover:bg-blue-500/10'
+            }
+            return pills.map(p => {
+              const active = taskDue === p.value
+              return (
+                <button
+                  key={p.value}
+                  onClick={() => { setTaskDue(active ? '' : p.value); setPage(1) }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors ${toneCls(p.tone, active)}`}
+                  title={active ? t('inquiries.quick_stats.clear', 'Click to clear this filter') : t('inquiries.quick_stats.apply', 'Click to filter')}
+                >
+                  <AlertCircle size={12} />
+                  <span>{p.label}</span>
+                  <span className="tabular-nums font-bold">{p.count}</span>
+                </button>
+              )
+            })
+          })()}
         </div>
 
         {showFilters && (
@@ -2334,6 +2304,80 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HeaderMenu({
+  focusMode,
+  onToggleFocus,
+  onCapture,
+  onExport,
+  exporting,
+  t,
+}: {
+  focusMode: boolean
+  onToggleFocus: () => void
+  onCapture: () => void
+  onExport: () => void
+  exporting: boolean
+  t: (k: string, def: string) => string
+}) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Escape') setOpen(false) })
+    return () => window.removeEventListener('click', close)
+  }, [open])
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title={t('inquiries.actions.more_tooltip', 'More — Focus, AI Capture, Export, Insights')}
+        aria-label={t('inquiries.actions.more_label', 'More actions')}
+        className="flex items-center justify-center w-9 h-9 rounded-lg bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:border-primary-500/40 transition-colors"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-dark-border bg-[#1a1a1a] shadow-2xl py-1.5 z-30">
+          <button
+            onClick={() => { onToggleFocus(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+          >
+            {focusMode ? <EyeOff size={14} className="text-primary-400" /> : <Eye size={14} />}
+            <span className="flex-1 text-left">{focusMode ? t('inquiries.focus.exit_label', 'Exit focus mode') : t('inquiries.focus.enter_label', 'Focus mode')}</span>
+            {focusMode && <span className="text-[9px] uppercase tracking-wider text-primary-400 font-bold">On</span>}
+          </button>
+          <button
+            onClick={() => { onCapture(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+          >
+            <Sparkles size={14} className="text-purple-400" />
+            <span className="flex-1 text-left">{t('inquiries.actions.ai_capture', 'AI Capture')}</span>
+          </button>
+          <button
+            onClick={() => { onExport(); setOpen(false) }}
+            disabled={exporting}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors disabled:opacity-50"
+          >
+            <Download size={14} />
+            <span className="flex-1 text-left">{exporting ? t('inquiries.actions.exporting', 'Exporting…') : t('inquiries.actions.export', 'Export CSV')}</span>
+          </button>
+          <div className="h-px bg-dark-border my-1" />
+          <Link
+            to="/pipeline?tab=insights"
+            onClick={() => setOpen(false)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+          >
+            <Sparkles size={14} className="text-amber-400" />
+            <span className="flex-1 text-left">{t('inquiries.quick_stats.insights', 'Insights dashboard')}</span>
+          </Link>
         </div>
       )}
     </div>

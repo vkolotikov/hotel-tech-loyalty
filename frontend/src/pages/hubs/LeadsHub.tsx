@@ -107,10 +107,12 @@ export function LeadsHub() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Leads</h1>
-        <p className="text-sm text-t-secondary mt-0.5">Top-of-funnel inquiries plus everyone you're talking to.</p>
-      </div>
+      {onHome && (
+        <div>
+          <h1 className="text-2xl font-bold text-white">Leads</h1>
+          <p className="text-sm text-t-secondary mt-0.5">Top-of-funnel inquiries plus everyone you're talking to.</p>
+        </div>
+      )}
 
       {onHome ? (() => {
         const q = homeSearch.trim().toLowerCase()
@@ -218,19 +220,19 @@ export function LeadsHub() {
         )
       })() : (
         <div className="space-y-5">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setActive('home')}
-              className="flex items-center gap-1.5 text-xs text-t-secondary hover:text-white transition-colors px-2 py-1 -ml-2 rounded-md hover:bg-dark-surface2"
+              className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 flex-shrink-0"
+              title="Back to Leads home"
             >
               <ArrowLeft size={13} />
-              All leads
+              <span className="hidden sm:inline">Leads</span>
             </button>
-            <span className="text-t-secondary/40">/</span>
-            <div className="flex items-center gap-2 min-w-0">
+            <span className="text-t-secondary/40 flex-shrink-0">/</span>
+            <div className="flex items-center gap-1.5 min-w-0">
               {tab && <tab.icon size={14} className="text-t-secondary flex-shrink-0" />}
-              {tab && <h2 className="text-sm font-semibold text-white truncate">{tab.label}</h2>}
-              {tab && <span className="hidden md:inline text-xs text-t-secondary truncate">— {tab.desc}</span>}
+              {tab && <h2 className="text-base font-semibold text-white truncate">{tab.label}</h2>}
             </div>
           </div>
 
