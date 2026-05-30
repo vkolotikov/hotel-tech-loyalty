@@ -306,6 +306,46 @@ class GuestController extends Controller
         return response()->json(['message' => 'Guest deleted']);
     }
 
+    /**
+     * GET /v1/admin/guests/{id}/delete-impact — blast-radius preview
+     * for the confirm-delete modal. Counts linked CRM rows + flags the
+     * loyalty-member link, which the destroy() FK detaches but doesn't
+     * cascade-remove.
+     */
+    public function deleteImpact(int $id): JsonResponse
+    {
+        $guest = Guest::find($id);
+        if (!$guest) {
+            $exists = Guest::withoutGlobalScopes()->where('id', $id)->exists();
+            return response()->json([
+                'message' => $exists ? 'Guest belongs to a different organization.' : 'Guest not found.',
+            ], 404);
+        }
+
+        $inquiries    = $guest->inquiries()->count();
+        $reservations = $guest->reservations()->count();
+        $activities   = $guest->activities()->count();
+
+        $warnings = [];
+        if ($guest->member_id) {
+            $warnings[] = "Linked to loyalty member #{$guest->member_id} — delete will detach but not remove the member.";
+        }
+        if ($reservations > 0) {
+            $hasConfirmed = $guest->reservations()->where('status', 'Confirmed')->exists();
+            $warnings[] = $hasConfirmed
+                ? 'This customer has confirmed reservation(s) — deleting will detach them from this profile.'
+                : 'This customer has linked reservation(s) — deletion will detach them.';
+        }
+
+        return response()->json([
+            'inquiries'    => $inquiries,
+            'reservations' => $reservations,
+            'activities'   => $activities,
+            'member_id'    => $guest->member_id,
+            'warnings'     => $warnings,
+        ]);
+    }
+
     public function backfillLinks(): JsonResponse
     {
         $result = $this->linkService->backfillAll();

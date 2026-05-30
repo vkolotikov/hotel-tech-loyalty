@@ -651,6 +651,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             // Quick-send: dispatch an EmailTemplate to a single recipient
             Route::post('email-templates/{template}/send', [\App\Http\Controllers\Api\V1\Admin\EmailTemplateController::class, 'sendOnce']);
+            // Blast-radius preview for the confirm-delete modal. Declared
+            // BEFORE the {guest} show binding so the static segment wins
+            // the route-matcher race against numeric ids.
+            Route::get('guests/{id}/delete-impact',       [GuestController::class, 'deleteImpact']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update']);
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);
@@ -675,6 +679,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('inquiries',                       [InquiryController::class, 'index']);
             Route::post('inquiries',                      [InquiryController::class, 'store']);
             Route::get('inquiries/export',                [InquiryController::class, 'export']);
+            // Blast-radius preview for the confirm-delete modal. Declared
+            // BEFORE the {inquiry} show binding so the static segment wins
+            // the route-matcher race against numeric ids.
+            Route::get('inquiries/{id}/delete-impact',    [InquiryController::class, 'deleteImpact']);
             Route::get('inquiries/{inquiry}',             [InquiryController::class, 'show']);
             Route::put('inquiries/{inquiry}',             [InquiryController::class, 'update']);
             Route::delete('inquiries/{inquiry}',          [InquiryController::class, 'destroy']);

@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
-import { useSettings, triggerExport } from '../lib/crmSettings'
+import { useSettings, triggerExport, INQUIRY_LIST_FIELD_META } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Pencil } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Pencil, Trash2, UserCircle2 } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 // DailyOpsBar + PipelineInsights moved to /pipeline?tab=insights so this
 // page stays focused on managing leads. See InquiryInsights.tsx.
@@ -14,6 +14,10 @@ import { BrandBadge } from '../components/BrandBadge'
 import { SavedViews } from '../components/SavedViews'
 import { CustomFieldsForm, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 import { TaskDrawer } from '../components/TaskDrawer'
+import EditableField from '../components/EditableField'
+import ColumnTogglePopover from '../components/ColumnTogglePopover'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
+import { CustomerDrawer } from '../components/CustomerDrawer'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -217,6 +221,19 @@ export function Inquiries() {
   // Per-row expand state — controlled by chevron click on each list row.
   // Single inquiry expanded at a time keeps vertical footprint bounded.
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
+
+  // Customer drawer — opened from the expanded-row "View full customer"
+  // button. Drawer takes over the right side of the viewport.
+  const [customerDrawerGuestId, setCustomerDrawerGuestId] = useState<number | null>(null)
+
+  // Single-row delete confirmation — opened from the per-row kebab
+  // "Delete lead" item. Impact pre-fetched from the new
+  // /v1/admin/inquiries/{id}/delete-impact endpoint.
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; impact?: any } | null>(null)
+
+  // Bulk delete confirmation — opened from the floating-bar Delete
+  // button. Simple count-based warning; no impact pre-fetch.
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   // TaskDrawer state — opens with a target inquiry id (for adds) and
   // optionally an existing task to edit. Drawer takes over the right
@@ -570,6 +587,20 @@ export function Inquiries() {
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> {t('inquiries.filters.filters_label', 'Filters')} {hasFilters ? '●' : ''}
           </button>
+          {view === 'list' && (
+            <ColumnTogglePopover
+              settingKey="inquiry_fields"
+              section="list"
+              fields={[
+                { key: 'status', label: 'Status', description: 'Stage pill — required for workflow', alwaysOn: true },
+                ...INQUIRY_LIST_FIELD_META.map(m => ({
+                  key: m.key as string,
+                  label: m.label,
+                  description: m.description,
+                })),
+              ]}
+            />
+          )}
         </div>
 
         {showFilters && (
@@ -976,30 +1007,109 @@ export function Inquiries() {
                   {/* Expanded detail row — full-width drawer showing
                       contact details, AI brief, notes, and next-task
                       summary. Collapses by default; one row expanded at
-                      a time keeps page height bounded. */}
+                      a time keeps page height bounded. Phase 2: each
+                      field is inline-editable via EditableField; CRM
+                      fields hit /v1/admin/guests/:id (partial PUT), lead
+                      fields hit /v1/admin/inquiries/:id. */}
                   {isExpanded && (
                     <tr className="bg-dark-bg/40 border-b border-dark-border/50">
                       <td colSpan={expandColSpan} className="px-4 py-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                          <div className="space-y-1.5">
-                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.customer', 'Customer')}</div>
-                            {/* Contact pills are already shown in the Guest cell —
-                                no need to repeat email/phone here. Keep this
-                                column for company + VIP + nationality only. */}
-                            <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.company', 'Company')}: </span>{inq.guest?.company ?? <span className="text-gray-700">—</span>}</div>
-                            {inq.guest?.vip_level && <div className="text-gray-300"><span className="text-t-secondary">VIP: </span>{inq.guest.vip_level}</div>}
-                            {inq.guest?.nationality && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.nationality', 'Nationality')}: </span>{inq.guest.nationality}</div>}
-                            {!inq.guest?.company && !inq.guest?.vip_level && !inq.guest?.nationality && (
-                              <div className="text-gray-700 italic text-[11px]">{t('inquiries.row.expanded.no_extra_details', 'No additional details')}</div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.customer', 'Customer')}</div>
+                              {inq.guest?.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCustomerDrawerGuestId(inq.guest.id)}
+                                  className="inline-flex items-center gap-1 text-[10px] text-primary-400 hover:text-primary-300 normal-case tracking-normal"
+                                >
+                                  <UserCircle2 size={11} /> {t('inquiries.row.expanded.view_full_customer', 'View full customer')}
+                                </button>
+                              )}
+                            </div>
+                            {inq.guest?.id ? (
+                              <>
+                                <div>
+                                  <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.company', 'Company')}</div>
+                                  <EditableField
+                                    value={inq.guest.company ?? ''}
+                                    onSave={async (v) => {
+                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { company: v })
+                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-t-secondary mb-0.5">VIP</div>
+                                  <EditableField
+                                    variant="select"
+                                    value={inq.guest.vip_level ?? ''}
+                                    options={[
+                                      { value: 'Standard', label: 'Standard' },
+                                      { value: 'Silver', label: 'Silver' },
+                                      { value: 'Gold', label: 'Gold' },
+                                      { value: 'Diamond', label: 'Diamond' },
+                                    ]}
+                                    onSave={async (v) => {
+                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { vip_level: v })
+                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.nationality', 'Nationality')}</div>
+                                  <EditableField
+                                    value={inq.guest.nationality ?? ''}
+                                    onSave={async (v) => {
+                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { nationality: v })
+                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-gray-700 italic text-[11px]">{t('inquiries.row.expanded.no_guest_linked', 'No guest linked')}</div>
                             )}
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.opportunity', 'Opportunity')}</div>
-                            {inq.property?.name && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.property', 'Property')}: </span>{inq.property.name}</div>}
-                            {inq.inquiry_type && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.type', 'Type')}: </span>{inq.inquiry_type}</div>}
-                            {inq.source && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.source', 'Source')}: </span>{inq.source}</div>}
-                            {inq.assigned_to && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.owner', 'Owner')}: </span>{inq.assigned_to}</div>}
-                            {inq.last_contacted_at && <div className="text-gray-300"><span className="text-t-secondary">{t('inquiries.row.expanded.last_contact', 'Last contact')}: </span>{new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
+                            {inq.property?.name && <div className="text-gray-300 px-2.5"><span className="text-t-secondary">{t('inquiries.row.expanded.property', 'Property')}: </span>{inq.property.name}</div>}
+                            <div>
+                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.owner', 'Owner')}</div>
+                              <EditableField
+                                variant="select"
+                                value={inq.assigned_to ?? ''}
+                                options={settings.lead_owners.map(o => ({ value: o, label: o }))}
+                                onSave={async (v) => {
+                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { assigned_to: v })
+                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.source', 'Source')}</div>
+                              <EditableField
+                                value={inq.source ?? ''}
+                                onSave={async (v) => {
+                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { source: v })
+                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.type', 'Type')}</div>
+                              <EditableField
+                                variant="select"
+                                value={inq.inquiry_type ?? ''}
+                                options={settings.inquiry_types.map(it => ({ value: it, label: it }))}
+                                onSave={async (v) => {
+                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { inquiry_type: v })
+                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                }}
+                              />
+                            </div>
+                            {inq.last_contacted_at && <div className="text-gray-300 px-2.5"><span className="text-t-secondary">{t('inquiries.row.expanded.last_contact', 'Last contact')}: </span>{new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                           </div>
                           <div className="space-y-1.5">
                             <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold flex items-center justify-between">
@@ -1054,12 +1164,18 @@ export function Inquiries() {
                             ) : (
                               <div className="text-gray-700 italic">{t('inquiries.row.expanded.no_task', 'No task scheduled. Click Add task to create one.')}</div>
                             )}
-                            {inq.notes && (
-                              <div className="pt-2">
-                                <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold mb-1">{t('inquiries.row.expanded.notes', 'Notes')}</div>
-                                <p className="text-gray-300 whitespace-pre-wrap line-clamp-4">{inq.notes}</p>
-                              </div>
-                            )}
+                            <div className="pt-2">
+                              <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold mb-1">{t('inquiries.row.expanded.notes', 'Notes')}</div>
+                              <EditableField
+                                variant="textarea"
+                                value={inq.notes ?? ''}
+                                placeholder={t('inquiries.row.expanded.notes_placeholder', 'Add notes…')}
+                                onSave={async (v) => {
+                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { notes: v })
+                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                }}
+                              />
+                            </div>
                             <Link to={`/inquiries/${inq.id}`} className="inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 pt-1">
                               <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open full detail')}
                             </Link>
@@ -1579,6 +1695,22 @@ export function Inquiries() {
                   className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
                   <Eye size={12} /> View Detail
                 </button>
+                <div className="my-1 h-px bg-white/10" />
+                <button
+                  onClick={async () => {
+                    const id = openMenu.id
+                    const name = inq.guest?.full_name || `Lead #${id}`
+                    setOpenMenu(null)
+                    let impact: any = undefined
+                    try {
+                      const res = await api.get(`/v1/admin/inquiries/${id}/delete-impact`)
+                      impact = res.data
+                    } catch { /* fall through with no impact */ }
+                    setDeleteTarget({ id, name, impact })
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-red-400 hover:bg-red-500/10">
+                  <Trash2 size={12} /> {t('inquiries.actions.delete_lead', 'Delete lead')}
+                </button>
               </>
             )}
           </div>
@@ -1644,6 +1776,11 @@ export function Inquiries() {
             <option value="" disabled>Priority…</option>
             {settings.priorities.map(p => <option key={p} value={p} style={{ background: '#0f1c18', color: '#fff' }}>{p}</option>)}
           </select>
+          <div className="h-5 w-px bg-white/10" />
+          <button onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
+            <Trash2 size={13} /> {t('inquiries.bulk.delete', 'Delete')}
+          </button>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => setSelected(new Set())} title={t('inquiries.bulk.clear_tooltip', 'Clear selection (Esc)')}
             className="flex items-center gap-1.5 p-1.5 px-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
@@ -1812,6 +1949,72 @@ export function Inquiries() {
           }}
         />
       )}
+
+      {/* Right-side drawer mounted from the expanded-row "View full
+          customer" link. Diff-PUTs against /v1/admin/guests/:id. */}
+      <CustomerDrawer
+        open={customerDrawerGuestId !== null}
+        guestId={customerDrawerGuestId}
+        onClose={() => setCustomerDrawerGuestId(null)}
+        onGuestUpdated={() => qc.invalidateQueries({ queryKey: ['inquiries'] })}
+        onGuestDeleted={() => {
+          setCustomerDrawerGuestId(null)
+          qc.invalidateQueries({ queryKey: ['inquiries'] })
+        }}
+      />
+
+      {/* Single-lead delete confirmation. Impact pre-fetched from
+          /v1/admin/inquiries/{id}/delete-impact and shown as a
+          blast-radius list inside the modal. */}
+      <DeleteConfirmModal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title={t('inquiries.delete_lead.title', 'Delete lead?')}
+        entityName={deleteTarget?.name || ''}
+        impacts={deleteTarget?.impact
+          ? Object.entries(deleteTarget.impact)
+              .filter(([k, v]) => k !== 'warnings' && Number(v) > 0)
+              .map(([k, v]) => `${v} ${k}`)
+          : []}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await api.delete(`/v1/admin/inquiries/${deleteTarget.id}`)
+          toast.success(t('inquiries.toasts.deleted', 'Lead deleted'))
+          qc.invalidateQueries({ queryKey: ['inquiries'] })
+          setDeleteTarget(null)
+        }}
+        mode="simple"
+      />
+
+      {/* Bulk delete — count-based warning, no per-row impact fetch
+          (would be N round trips). Hits the bulk endpoint with
+          action='delete' (backend phase 1 accepts this verb). */}
+      <DeleteConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title={t('inquiries.bulk_delete.title', 'Delete leads?')}
+        entityName={t('inquiries.bulk_delete.entity', '{{n}} leads', { n: selected.size, defaultValue: '{{n}} leads' })}
+        impacts={[
+          t('inquiries.bulk_delete.impact_count', '{{n}} lead records will be permanently removed', { n: selected.size, defaultValue: '{{n}} lead records will be permanently removed' }),
+        ]}
+        onConfirm={async () => {
+          try {
+            await api.post('/v1/admin/inquiries/bulk', {
+              action: 'delete',
+              ids: Array.from(selected),
+            })
+            toast.success(t('inquiries.toasts.bulk_deleted', '{{n}} leads deleted', { n: selected.size, defaultValue: '{{n}} leads deleted' }))
+            setSelected(new Set())
+            qc.invalidateQueries({ queryKey: ['inquiries'] })
+            qc.invalidateQueries({ queryKey: ['inquiries-today'] })
+            qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
+            setBulkDeleteOpen(false)
+          } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Bulk delete failed')
+          }
+        }}
+        mode="simple"
+      />
     </div>
   )
 }

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Inquiry;
+use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
 use App\Models\PipelineStage;
 use App\Models\Reservation;
+use App\Models\Task;
 use App\Services\CustomFieldService;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
@@ -240,6 +242,43 @@ class InquiryController extends Controller
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $inquiry->delete();
         return response()->json(['message' => 'Inquiry deleted']);
+    }
+
+    /**
+     * GET /v1/admin/inquiries/{id}/delete-impact — blast-radius preview
+     * for the confirm-delete modal. Counts related rows the destroy()
+     * cascade would orphan (or take with it), plus any warnings the UI
+     * should surface before the rep commits.
+     */
+    public function deleteImpact(int $id): JsonResponse
+    {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+
+        $activities   = Activity::where('inquiry_id', $id)->count();
+        $tasks        = Task::where('inquiry_id', $id)->count();
+        $attachments  = InquiryAttachment::where('inquiry_id', $id)->count();
+        $reservations = Reservation::where('inquiry_id', $id)->count();
+
+        $warnings = [];
+        if ($reservations > 0) {
+            // Inquiries usually only auto-link a reservation when marked
+            // Won. A confirmed reservation on the books is a hard signal
+            // that this row isn't garbage — surface it explicitly.
+            $hasConfirmed = Reservation::where('inquiry_id', $id)
+                ->where('status', 'Confirmed')
+                ->exists();
+            $warnings[] = $hasConfirmed
+                ? 'This lead is linked to a confirmed reservation — deleting will detach the reservation but not remove it.'
+                : 'This lead has linked reservation(s) — deletion will detach them.';
+        }
+
+        return response()->json([
+            'activities'   => $activities,
+            'tasks'        => $tasks,
+            'attachments'  => $attachments,
+            'reservations' => $reservations,
+            'warnings'     => $warnings,
+        ]);
     }
 
     public function completeTask(int $id): JsonResponse
@@ -489,9 +528,33 @@ class InquiryController extends Controller
         $validated = $request->validate([
             'ids'    => 'required|array|min:1|max:500',
             'ids.*'  => 'integer',
-            'action' => 'required|string|in:set_status,set_priority,set_assigned_to,mark_won,mark_lost,mark_for_reengagement',
+            'action' => 'required|string|in:set_status,set_priority,set_assigned_to,mark_won,mark_lost,mark_for_reengagement,delete',
             'value'  => 'nullable|string|max:150',
         ]);
+
+        // Bulk delete — early-return path. Tenant scope guarantees only
+        // current-org rows resolve via Inquiry::find(), but we double-
+        // check organization_id defensively in case a future caller
+        // bypasses TenantScope. Wraps in DB::transaction so a mid-loop
+        // failure doesn't leave half-deleted batches.
+        if ($validated['action'] === 'delete') {
+            $deleted = 0;
+            $currentOrgId = app()->bound('current_organization_id')
+                ? app('current_organization_id')
+                : null;
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($validated, &$deleted, $currentOrgId) {
+                foreach ($validated['ids'] as $id) {
+                    $inquiry = Inquiry::find($id);
+                    if (!$inquiry) continue;
+                    if ($currentOrgId !== null && $inquiry->organization_id !== $currentOrgId) continue;
+                    $inquiry->delete();
+                    $deleted++;
+                }
+            });
+
+            return response()->json(['deleted' => $deleted]);
+        }
 
         $updated = 0;
         // Wrap in a transaction with per-row locks so two concurrent

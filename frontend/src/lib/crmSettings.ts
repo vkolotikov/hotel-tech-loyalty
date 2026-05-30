@@ -208,6 +208,26 @@ export const DEFAULT_DEAL_FIELDS: DealFieldConfig = {
   },
 }
 
+export const INQUIRY_LIST_FIELD_META: Array<{ key: keyof InquiryFieldConfig['list']; label: string; description?: string }> = [
+  { key: 'bulk_select', label: 'Bulk select', description: 'Checkbox column for multi-row actions' },
+  { key: 'country', label: 'Guest country', description: 'Shows guest nationality flag/name' },
+  { key: 'stay', label: 'Stay dates', description: 'Check-in → check-out + room count' },
+  { key: 'value', label: 'Value', description: 'Estimated booking value' },
+  { key: 'owner', label: 'Owner', description: 'Assigned salesperson' },
+  { key: 'touches', label: 'Touches', description: 'Outreach activity summary' },
+  { key: 'next_task', label: 'Next task', description: 'Upcoming task with due-date relativity' },
+]
+
+export const DEAL_LIST_FIELD_META: Array<{ key: keyof DealFieldConfig['list']; label: string; description?: string }> = [
+  { key: 'product_details', label: 'Product details' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'payment', label: 'Payment status' },
+  { key: 'fulfillment', label: 'Fulfillment stage' },
+  { key: 'next_action', label: 'Next action' },
+  { key: 'due_date', label: 'Due date' },
+  { key: 'owner', label: 'Owner' },
+]
+
 export const DEFAULT_TASK_FIELDS: TaskFieldConfig = {
   list: {
     description: true, type_label: true, due_at: true,
