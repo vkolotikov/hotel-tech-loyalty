@@ -2,20 +2,29 @@ import { lazy, Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   FileText, Users, Building2, Copy, FilePlus2,
-  GitBranch, Sparkles, ArrowLeft, ChevronRight, Search,
+  ArrowLeft, Search,
 } from 'lucide-react'
 
 /**
  * "Leads" hub — top of the CRM funnel. Combines pipeline intake +
- * contact identity (Customers / Companies / Duplicates) into one
- * grid-home page so staff can manage their entire leads-and-contacts
- * workflow from a single sidebar entry.
+ * contact identity (Customers / Companies / Duplicates) + lead-capture
+ * into one grid-home page so staff can manage their entire
+ * leads-and-contacts workflow from a single sidebar entry.
  *
- * Analytics deliberately not included — pipeline reporting lives in
- * /analytics so this hub stays focused on day-to-day record
- * management.
+ * Layout (2026-05-30 rev): flat square-tile grid. Section headers
+ * (Pipeline / Contacts / Capture) removed — they added a layer of
+ * visual chrome without conveying anything that couldn't be inferred
+ * from each tile's own icon + colour. Tiles are roughly square at all
+ * breakpoints so the page reads as a wall of equal-weight choices,
+ * not a hierarchy.
  *
- * Sibling hub: Deals (`/deals`) for won + working deals.
+ * Each tile carries its own accent colour for visual identity, since
+ * section colour-coding is gone:
+ *   Leads & Inquiries → gold (primary action)
+ *   Customers         → pink
+ *   Companies         → cyan
+ *   Duplicates        → orange
+ *   Lead forms        → violet
  */
 
 const Inquiries          = lazy(() => import('../Inquiries').then(m => ({ default: m.Inquiries })))
@@ -26,58 +35,31 @@ const LeadForms          = lazy(() => import('../LeadForms').then(m => ({ defaul
 
 type TabKey = 'inquiries' | 'customers' | 'companies' | 'duplicates' | 'lead-forms'
 
-interface TabDef {
+interface TileDef {
   key: TabKey
   label: string
   desc: string
   icon: any
-}
-
-const TABS: TabDef[] = [
-  { key: 'inquiries',  label: 'Leads & Inquiries', desc: 'Open leads and inquiries moving through your sales pipeline',  icon: FileText },
-  { key: 'customers',  label: 'Customers',         desc: 'Individual contacts — guests, past customers, prospects',     icon: Users },
-  { key: 'companies',  label: 'Companies',         desc: 'Corporate accounts and B2B contacts',                         icon: Building2 },
-  { key: 'duplicates', label: 'Duplicates',        desc: 'Possible duplicate contacts — review and merge',              icon: Copy },
-  { key: 'lead-forms', label: 'Lead forms',        desc: 'Embeddable lead-capture forms — the front door for new leads', icon: FilePlus2 },
-]
-
-interface Section {
-  id: string
-  label: string
-  desc: string
-  icon: any
   accent: string
-  tabs: TabKey[]
 }
 
-const SECTIONS: Section[] = [
-  {
-    id: 'pipeline',
-    label: 'Pipeline',
-    desc: 'Open leads moving toward a booking',
-    icon: GitBranch,
-    accent: '#c9a84c', // gold
-    tabs: ['inquiries'],
-  },
-  {
-    id: 'contacts',
-    label: 'Contacts',
-    desc: 'Identity records — who your leads actually are',
-    icon: Users,
-    accent: '#f472b6', // pink
-    tabs: ['customers', 'companies', 'duplicates'],
-  },
-  {
-    id: 'capture',
-    label: 'Capture',
-    desc: 'How new leads find their way in',
-    icon: Sparkles,
-    accent: '#a78bfa', // violet
-    tabs: ['lead-forms'],
-  },
+const TILES: TileDef[] = [
+  { key: 'inquiries',  label: 'Leads & Inquiries', desc: 'Open leads moving through your sales pipeline', icon: FileText,  accent: '#c9a84c' },
+  { key: 'customers',  label: 'Customers',         desc: 'Individual contacts — guests and prospects',    icon: Users,     accent: '#f472b6' },
+  { key: 'companies',  label: 'Companies',         desc: 'Corporate accounts and B2B contacts',           icon: Building2, accent: '#22d3ee' },
+  { key: 'duplicates', label: 'Duplicates',        desc: 'Possible duplicates — review and merge',        icon: Copy,      accent: '#fb923c' },
+  { key: 'lead-forms', label: 'Lead forms',        desc: 'Embeddable forms — the front door for leads',   icon: FilePlus2, accent: '#a78bfa' },
 ]
 
 const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+
+const tint = (hex: string, alpha: number) => {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
 
 export function LeadsHub() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -94,16 +76,8 @@ export function LeadsHub() {
 
   const [homeSearch, setHomeSearch] = useState('')
 
-  const tint = (hex: string, alpha: number) => {
-    const h = hex.replace('#', '')
-    const r = parseInt(h.slice(0, 2), 16)
-    const g = parseInt(h.slice(2, 4), 16)
-    const b = parseInt(h.slice(4, 6), 16)
-    return `rgba(${r},${g},${b},${alpha})`
-  }
-
-  const tab = TABS.find(td => td.key === active)
-  const onHome = active === 'home' || !tab
+  const tile = TILES.find(td => td.key === active)
+  const onHome = active === 'home' || !tile
 
   return (
     <div className="space-y-5">
@@ -116,21 +90,12 @@ export function LeadsHub() {
 
       {onHome ? (() => {
         const q = homeSearch.trim().toLowerCase()
-        const filteredSections = SECTIONS
-          .map(s => ({
-            ...s,
-            visibleTabs: s.tabs
-              .map(id => TABS.find(td => td.key === id))
-              .filter((td): td is TabDef => !!td)
-              .filter(td => !q
-                || td.label.toLowerCase().includes(q)
-                || td.desc.toLowerCase().includes(q)
-                || s.label.toLowerCase().includes(q)),
-          }))
-          .filter(s => s.visibleTabs.length > 0)
+        const visibleTiles = q
+          ? TILES.filter(t => t.label.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q))
+          : TILES
 
         return (
-          <div className="space-y-8">
+          <div className="space-y-5">
             <div className="relative max-w-md">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
               <input
@@ -141,81 +106,18 @@ export function LeadsHub() {
               />
             </div>
 
-            {filteredSections.length === 0 && (
+            {visibleTiles.length === 0 && (
               <div className="text-center py-12 text-t-secondary text-sm">No matches.</div>
             )}
 
-            {filteredSections.map(section => {
-              const SIcon = section.icon
-              const tileCount = section.visibleTabs.length
-              const gridCols = tileCount === 1 ? 'sm:grid-cols-1 lg:grid-cols-2'
-                : tileCount === 2 ? 'sm:grid-cols-2 lg:grid-cols-2'
-                : 'sm:grid-cols-2 lg:grid-cols-3'
-              return (
-                <section key={section.id} className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `linear-gradient(135deg, ${tint(section.accent, 0.22)}, ${tint(section.accent, 0.08)})`,
-                        border: `1px solid ${tint(section.accent, 0.35)}`,
-                        boxShadow: `0 0 24px ${tint(section.accent, 0.18)}`,
-                      }}
-                    >
-                      <SIcon size={18} style={{ color: section.accent }} />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-base font-bold text-white">{section.label}</h2>
-                        <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: section.accent }} />
-                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: section.accent }}>{tileCount}</span>
-                      </div>
-                      <p className="text-xs text-t-secondary">{section.desc}</p>
-                    </div>
-                  </div>
-
-                  <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
-                    {section.visibleTabs.map(tile => {
-                      const TIcon = tile.icon
-                      return (
-                        <button
-                          key={tile.key}
-                          onClick={() => setActive(tile.key)}
-                          className="group relative text-left bg-dark-surface border border-dark-border rounded-xl p-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = section.accent
-                            e.currentTarget.style.boxShadow = `0 8px 30px ${tint(section.accent, 0.18)}`
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = ''
-                            e.currentTarget.style.boxShadow = ''
-                          }}
-                        >
-                          <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: section.accent }} />
-                          <span aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl pointer-events-none" style={{ background: tint(section.accent, 0.18) }} />
-                          <div className="relative flex items-start gap-3">
-                            <span
-                              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
-                              style={{
-                                background: `linear-gradient(135deg, ${tint(section.accent, 0.18)}, ${tint(section.accent, 0.04)})`,
-                                border: `1px solid ${tint(section.accent, 0.3)}`,
-                              }}
-                            >
-                              <TIcon size={20} style={{ color: section.accent }} />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-sm font-semibold text-white">{tile.label}</h3>
-                              <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{tile.desc}</p>
-                            </div>
-                            <ChevronRight size={16} className="text-t-secondary transition-all flex-shrink-0 mt-1 group-hover:translate-x-0.5" />
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-              )
-            })}
+            {/* Flat square-tile grid. No section headers — each tile
+                carries its own identity through icon + accent colour.
+                Tiles are aspect-square so the page reads as a wall of
+                equal-weight choices. Capped width via the grid so they
+                don't balloon on ultrawide displays. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 max-w-[1400px]">
+              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} />)}
+            </div>
           </div>
         )
       })() : (
@@ -231,8 +133,8 @@ export function LeadsHub() {
             </button>
             <span className="text-t-secondary/40 flex-shrink-0">/</span>
             <div className="flex items-center gap-1.5 min-w-0">
-              {tab && <tab.icon size={14} className="text-t-secondary flex-shrink-0" />}
-              {tab && <h2 className="text-base font-semibold text-white truncate">{tab.label}</h2>}
+              {tile && <tile.icon size={14} className="text-t-secondary flex-shrink-0" />}
+              {tile && <h2 className="text-base font-semibold text-white truncate">{tile.label}</h2>}
             </div>
           </div>
 
@@ -246,5 +148,60 @@ export function LeadsHub() {
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Tile ────────────────────────────────────────────────────────────
+
+function Tile({ tile, onClick }: { tile: TileDef; onClick: () => void }) {
+  const Icon = tile.icon
+  const { accent } = tile
+  return (
+    <button
+      onClick={onClick}
+      className="group relative aspect-square flex flex-col bg-dark-surface border border-dark-border rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 text-left"
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = accent
+        e.currentTarget.style.boxShadow = `0 12px 36px ${tint(accent, 0.22)}`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = ''
+        e.currentTarget.style.boxShadow = ''
+      }}
+    >
+      {/* Decorative accent glow on hover */}
+      <span
+        aria-hidden
+        className="absolute -right-12 -top-12 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-3xl pointer-events-none"
+        style={{ background: tint(accent, 0.30) }}
+      />
+      {/* Faint baseline tint so the tile has color identity even at rest */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px"
+        style={{ background: `linear-gradient(90deg, transparent, ${tint(accent, 0.45)}, transparent)` }}
+      />
+
+      {/* Top: icon tile */}
+      <div className="relative">
+        <span
+          className="inline-flex w-12 h-12 sm:w-14 sm:h-14 rounded-2xl items-center justify-center transition-transform group-hover:scale-105"
+          style={{
+            background: `linear-gradient(135deg, ${tint(accent, 0.22)}, ${tint(accent, 0.06)})`,
+            border: `1px solid ${tint(accent, 0.35)}`,
+            boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
+          }}
+        >
+          <Icon size={22} style={{ color: accent }} />
+        </span>
+      </div>
+
+      {/* Bottom: title + description anchored to the bottom-left so the
+          tile reads as: "icon up top, what-it-is down low". */}
+      <div className="relative mt-auto">
+        <h3 className="text-base sm:text-lg font-bold text-white leading-tight">{tile.label}</h3>
+        <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{tile.desc}</p>
+      </div>
+    </button>
   )
 }
