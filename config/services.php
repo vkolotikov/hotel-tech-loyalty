@@ -58,4 +58,28 @@ return [
         'timeout'        => env('SMOOBU_TIMEOUT_SECONDS', 8),
     ],
 
+    /*
+     * Meta Platform (Facebook Messenger Phase 1 — Instagram + WhatsApp later).
+     *
+     * The App ID + Secret belong to ONE Meta Developer App that every
+     * customer's Page connection routes through. Provisioned by the
+     * platform owner — see apps/loyalty/MESSENGER_INTEGRATION.md.
+     *
+     * Webhook verify token is invented by us and pasted into both the
+     * Meta App dashboard (Messenger product → Webhooks → Add Callback URL)
+     * AND this env var. They must match exactly for the GET handshake
+     * to succeed.
+     *
+     * graph_version is pinned so we upgrade deliberately on Meta's
+     * release schedule, not silently when they bump default. v25.0 as of
+     * May 2026.
+     */
+    'meta' => [
+        'app_id'        => env('META_APP_ID', ''),
+        'app_secret'    => env('META_APP_SECRET', ''),
+        'verify_token'  => env('META_WEBHOOK_VERIFY_TOKEN', ''),
+        'graph_url'     => env('META_GRAPH_URL', 'https://graph.facebook.com'),
+        'graph_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
+    ],
+
 ];

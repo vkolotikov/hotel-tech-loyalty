@@ -162,6 +162,19 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('{submissionId}/redirected', [ReviewPublicController::class, 'markRedirected']);
     });
 
+    // ─── Public Meta (Facebook/Instagram/WhatsApp) Webhooks ────────────────────
+    // Phase 1: Messenger only. Webhook routes are public — Meta doesn't auth,
+    // identity is verified inside the controller via:
+    //   GET  → matching ?hub.verify_token against META_WEBHOOK_VERIFY_TOKEN
+    //   POST → HMAC-SHA256 of raw body against META_APP_SECRET
+    // Throttle is wide (300/min) because Meta can batch up to 1000 events per
+    // POST during traffic spikes and replays after a re-enable can hammer us
+    // legitimately for a minute or two.
+    Route::prefix('widget/webhooks')->middleware('throttle:300,1')->group(function () {
+        Route::get('messenger',  [\App\Http\Controllers\Api\V1\Widget\MessengerWebhookController::class, 'verify']);
+        Route::post('messenger', [\App\Http\Controllers\Api\V1\Widget\MessengerWebhookController::class, 'receive']);
+    });
+
     // ─── Public Chat Widget API ────────────────────────────────────────────────
     // Outer throttle is generous (200/min) because polling alone is ~17/min per
     // open chat. Per-endpoint inner throttles cap the costly OpenAI / write

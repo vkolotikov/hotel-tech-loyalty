@@ -24,6 +24,10 @@ class ChatConversation extends Model
         'visitor_user_agent',
         'page_url',
         'channel',
+        // External-channel linkage (Phase 1 — Messenger). Null for legacy
+        // widget conversations. See MESSENGER_INTEGRATION.md.
+        'external_thread_id',
+        'channel_account_id',
         'status',
         'ai_enabled',
         'assigned_to',

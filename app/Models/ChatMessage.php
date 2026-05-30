@@ -24,14 +24,26 @@ class ChatMessage extends Model
         'attachment_url',
         'attachment_type',
         'attachment_size',
+        // External-channel linkage (Phase 1 — Messenger). channel_message_id
+        // is Meta's mid.* used for idempotency; direction is the cheaper-
+        // to-filter form of (sender_type=visitor → inbound, else outbound).
+        // attachments_data carries normalised attachment metadata that
+        // outlives the raw webhook `metadata` blob.
+        'channel_message_id',
+        'direction',
+        'attachments_data',
         'created_at',
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
         'metadata' => 'array',
+        'attachments_data' => 'array',
         'created_at' => 'datetime',
     ];
+
+    public const DIRECTION_INBOUND  = 'inbound';
+    public const DIRECTION_OUTBOUND = 'outbound';
 
     public function conversation()
     {
