@@ -340,6 +340,19 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('api-tokens',               [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'store']);
             Route::delete('api-tokens/{id}',        [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'destroy']);
 
+            // Messenger Page connection flow (Phase 3 admin Connect UI).
+            // The /list-pages endpoint takes a short-lived user token from
+            // the FB JS SDK, exchanges it for long-lived, and returns the
+            // user's manageable Pages. /connect creates the account + does
+            // the subscribed_apps POST. See MESSENGER_INTEGRATION.md.
+            Route::get('integrations/messenger/config',           [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'config']);
+            Route::get('integrations/messenger',                  [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'index']);
+            Route::post('integrations/messenger/list-pages',      [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'listPages']);
+            Route::post('integrations/messenger',                 [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'connect']);
+            Route::post('integrations/messenger/{id}/reconnect',  [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'reconnect']);
+            Route::post('integrations/messenger/{id}/verify',     [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'verify']);
+            Route::delete('integrations/messenger/{id}',          [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'destroy']);
+
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
             Route::get('dashboard/kpis',          [DashboardController::class, 'kpis']);
             Route::get('dashboard/points-chart',   [DashboardController::class, 'pointsChart']);
