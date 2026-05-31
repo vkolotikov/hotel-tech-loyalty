@@ -54,7 +54,12 @@ return [
         'base_url'       => env('SMOOBU_BASE_URL', 'https://login.smoobu.com/api/'),
         'api_key'        => env('SMOOBU_API_KEY', ''),
         'channel_id'     => env('SMOOBU_CHANNEL_ID', ''),
-        'timeout'        => env('SMOOBU_TIMEOUT_SECONDS', 8),
+        // 30s default — Smoobu's /reservations endpoint with
+        // includePriceElements=1 + 100/page can legitimately take >8s
+        // for properties with many bookings (Forrest Glamp at 1367
+        // mirrored bookings was hitting cURL error 28 at 8s on every
+        // sync page since 2026-05-25). Bumped 8 → 30.
+        'timeout'        => env('SMOOBU_TIMEOUT_SECONDS', 30),
     ],
 
     /*

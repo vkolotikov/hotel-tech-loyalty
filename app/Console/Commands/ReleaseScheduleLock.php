@@ -28,11 +28,12 @@ use Illuminate\Support\Facades\Schema;
  *
  * Usage
  * ─────
- *   php artisan schedule:release-lock                 # interactive — lists locks first
- *   php artisan schedule:release-lock --all           # purge ALL framework-schedule locks
- *   php artisan schedule:release-lock --expired       # purge only locks whose expiration has lapsed
- *   php artisan schedule:release-lock bookings:sync-pms  # name hint — purges locks whose key
- *                                                        # contains the hash of this mutex (best-effort)
+ *   php artisan schedule:release-lock                    # interactive — lists locks first
+ *   php artisan schedule:release-lock --all              # purge ALL framework-schedule locks
+ *   php artisan schedule:release-lock --expired          # purge only locks whose expiration has lapsed
+ *   php artisan schedule:release-lock bookings:sync-pms  # name hint (positional `cron` arg) — purges
+ *                                                        # locks whose key contains the hash of this
+ *                                                        # mutex (best-effort)
  *
  * Exits 0 when at least one lock was released or none were stuck.
  * Exits 1 if `cache_locks` doesn't exist (run the
@@ -41,7 +42,7 @@ use Illuminate\Support\Facades\Schema;
 class ReleaseScheduleLock extends Command
 {
     protected $signature = 'schedule:release-lock
-                            {command? : Optional command name hint (best-effort matching)}
+                            {cron? : Optional scheduled-command name hint (best-effort matching). Renamed from {command?} because Symfony Console reserves "command" for the artisan command name itself.}
                             {--all : Purge every framework-schedule cache lock unconditionally}
                             {--expired : Purge only locks whose expiration has already lapsed}';
 
@@ -79,7 +80,7 @@ class ReleaseScheduleLock extends Command
 
         if ($this->option('expired')) {
             $query->where('expiration', '<=', $now);
-        } elseif ($hint = $this->argument('command')) {
+        } elseif ($hint = $this->argument('cron')) {
             // The cache key incorporates a SHA-1 of the mutex; we can't
             // reconstruct it deterministically here. Best-effort: filter
             // by a `LIKE %hint%` against the key, which will catch nothing

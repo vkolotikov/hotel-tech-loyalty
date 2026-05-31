@@ -719,13 +719,50 @@ class SmoobuClient
         $attempt = 0;
 
         while (true) {
-            $client = Http::withHeaders(['Api-Key' => $this->apiKey])->timeout($this->timeout);
-            $response = match ($method) {
-                'GET'    => $client->get($url, $options['query'] ?? []),
-                'POST'   => $client->post($url, $options['json'] ?? []),
-                'DELETE' => $client->delete($url),
-                default  => throw new \LogicException("Unsupported method: {$method}"),
-            };
+            // cURL timeout + connection failure handling: a request that
+            // never gets an HTTP response throws ConnectionException
+            // (or a wrapped RequestException whose message contains
+            // "cURL error 28" / "cURL error 7" / "timed out") BEFORE
+            // the 429+5xx status check below ever runs. Without this
+            // try/catch the loop bails on the first transient blip,
+            // even though such failures are exactly the class we want
+            // to retry — e.g. Forrest Glamp's /reservations call timing
+            // out at 8s mid-sync. Treat any of those as transient and
+            // fall into the same exponential backoff path as 429+5xx.
+            try {
+                $client = Http::withHeaders(['Api-Key' => $this->apiKey])->timeout($this->timeout);
+                $response = match ($method) {
+                    'GET'    => $client->get($url, $options['query'] ?? []),
+                    'POST'   => $client->post($url, $options['json'] ?? []),
+                    'DELETE' => $client->delete($url),
+                    default  => throw new \LogicException("Unsupported method: {$method}"),
+                };
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                if ($attempt >= self::RATE_LIMIT_RETRIES) {
+                    Log::error("Smoobu {$method} {$path} connection failed", ['error' => $e->getMessage(), 'attempts' => $attempt + 1]);
+                    throw new \RuntimeException("Smoobu API connection error: " . $e->getMessage(), 0, $e);
+                }
+                $sleepMs = (int) (self::BACKOFF_MS_BASE * (2 ** $attempt));
+                Log::info("Smoobu {$method} {$path} retrying after {$sleepMs}ms (connection)", ['error' => $e->getMessage(), 'attempt' => $attempt + 1]);
+                usleep($sleepMs * 1000);
+                $attempt++;
+                continue;
+            } catch (\Illuminate\Http\Client\RequestException $e) {
+                // RequestException can wrap a cURL transport error
+                // (timed out / connect refused / DNS) that didn't
+                // surface as ConnectionException — match by message.
+                $msg = $e->getMessage();
+                if (preg_match('/timed out|cURL error 28|cURL error 7|connection (refused|reset)|could not resolve host/i', $msg)
+                    && $attempt < self::RATE_LIMIT_RETRIES) {
+                    $sleepMs = (int) (self::BACKOFF_MS_BASE * (2 ** $attempt));
+                    Log::info("Smoobu {$method} {$path} retrying after {$sleepMs}ms (transport)", ['error' => $msg, 'attempt' => $attempt + 1]);
+                    usleep($sleepMs * 1000);
+                    $attempt++;
+                    continue;
+                }
+                Log::error("Smoobu {$method} {$path} request failed", ['error' => $msg, 'attempts' => $attempt + 1]);
+                throw $e;
+            }
 
             if ($response->successful()) {
                 return $response->json() ?? $default;

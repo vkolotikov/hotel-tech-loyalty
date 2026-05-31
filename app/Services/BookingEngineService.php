@@ -900,12 +900,19 @@ class BookingEngineService
         // to be repulled every 5 min — they're covered by pass 2
         // (modifiedFrom) which catches any retro-edits in Smoobu.
         //
+        // Forward cap: 12 months. Was 18. Smoobu's /reservations with
+        // includePriceElements=1 has to compute price elements + filter
+        // for the whole window — for a busy property the extra 6 months
+        // of long-lead bookings pushes per-page work past the HTTP
+        // timeout. Anything booked >12 months out is rare enough that
+        // pass 2 (modifiedFrom, 30-day window on Smoobu's side) will
+        // still catch it the first time the OTA or admin touches it.
+        //
         // Before: -12 months → +18 months (about 30 months of rows
-        // each pass). After: -3 days → +18 months (about a 95% drop
-        // in row volume for an active hotel) — faster syncs, lower
-        // Smoobu API quota burn, lower DB write pressure.
+        // each pass). After: -3 days → +12 months — faster syncs,
+        // lower Smoobu API quota burn, lower DB write pressure.
         $from = $from ?? now()->subDays(3)->format('Y-m-d');
-        $to   = $to   ?? now()->addMonths(18)->format('Y-m-d');
+        $to   = $to   ?? now()->addMonths(12)->format('Y-m-d');
 
         // Pass 2 still looks at everything modified in the last 30 days
         // — this catches retro-edits Smoobu side (payment status flips
@@ -998,12 +1005,24 @@ class BookingEngineService
         $synced = 0;
         $errors = 0;
         $pageCount = 1;
-        $maxPages = 200; // safety net — 20 000 rows per pass at 100/page
+        // Safety net — 10 000 rows per pass at 50/page. Bumped from 200
+        // when we cut pageSize from 100 to 50 so total rows-per-pass
+        // capacity drops from 20 000 → 20 000 (200 → 400 pages keeps it
+        // at the same ceiling).
+        $maxPages = 400;
 
         while ($page <= $maxPages) {
             $response = $this->smoobu->listReservations(array_merge($baseParams, [
                 'page'     => $page,
-                'pageSize' => 100,
+                // 50/page (was 100) — smaller pages mean less per-call
+                // work for Smoobu (and fewer price-element rows to
+                // serialise), so each request comes in well under the
+                // HTTP timeout even for properties with 1000+ active
+                // bookings. Halving the page size roughly doubled the
+                // call count but kept each call inside the 30s budget,
+                // which is the only thing that mattered after the
+                // Forrest Glamp cURL-28 incident.
+                'pageSize' => 50,
             ]));
 
             $bookings = $response['bookings'] ?? [];
