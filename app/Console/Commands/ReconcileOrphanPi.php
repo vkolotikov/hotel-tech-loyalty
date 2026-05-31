@@ -46,9 +46,17 @@ use Illuminate\Console\Command;
  *
  * Default to dry-run when neither --apply nor --auto-refund is passed.
  *
+ * Match rules (strict — never attach a stranger's booking to an orphan PI):
+ *   - Smoobu reservation's apartment.id MUST equal hold's unit_id. Mismatch → REFUSED.
+ *   - Smoobu reservation's arrival/departure MUST equal hold's check_in/check_out. Mismatch → REFUSED.
+ *   - HIGH confidence: emails match. Auto-proceeds with --apply.
+ *   - MEDIUM confidence: hold has no email + name fuzzy-matches. Requires --force in addition to --apply.
+ *   - Otherwise: REFUSED. Operator must --auto-refund or fix the data and re-run.
+ *
  * Usage:
  *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12                    # DRY RUN
- *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12 --apply            # Apply Path A if Smoobu match
+ *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12 --apply            # Apply Path A if HIGH-confidence Smoobu match
+ *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12 --apply --force    # Also accept MEDIUM-confidence name-only matches
  *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12 --apply --auto-refund   # Apply Path A OR Path B
  *   php artisan booking:reconcile-orphan-pi pi_3Abc... --org-id=12 --apply --guest-email=...  # narrow Smoobu match
  */
@@ -60,6 +68,7 @@ class ReconcileOrphanPi extends Command
                             {--guest-email= : Narrow the Smoobu reservation search by guest email}
                             {--auto-refund : When no Smoobu match exists, refund the PI in full}
                             {--apply : Actually perform the action. Without this (and without --auto-refund), command is dry-run}
+                            {--force : Required to accept a MEDIUM-confidence (name-only) match. Without it, name-only candidates are refused.}
                             {--dry-run : Force dry-run mode even when --apply / --auto-refund passed (safety override)}';
 
     protected $description = 'Reconcile a captured Stripe PaymentIntent that has no BookingMirror. Hand-grenade — defaults to dry-run.';
@@ -71,6 +80,7 @@ class ReconcileOrphanPi extends Command
         $guestEmailFilter = $this->option('guest-email') ? strtolower(trim((string) $this->option('guest-email'))) : null;
         $autoRefund = (bool) $this->option('auto-refund');
         $apply      = (bool) $this->option('apply');
+        $force      = (bool) $this->option('force');
         $forceDry   = (bool) $this->option('dry-run');
 
         // Default: dry-run unless an explicit "yes do it" flag was passed.
@@ -188,10 +198,17 @@ class ReconcileOrphanPi extends Command
         // ── Step 4: search Smoobu for a matching reservation ──────────
         $checkIn  = $payload['check_in']  ?? ($meta['check_in']  ?? null);
         $checkOut = $payload['check_out'] ?? ($meta['check_out'] ?? null);
+        // Hold's unit_id is the Smoobu apartment id (pms_id on booking_rooms).
+        // This is the load-bearing key for refusing cross-apartment matches.
+        $holdUnitId = $payload['unit_id'] ?? ($meta['unit_id'] ?? null);
 
         $smoobuMatch = null;
+        $matchConfidence = null;   // 'high' | 'medium'
+        $evaluatedCandidates = [];
+        $searchError = null;
+
         if ($checkIn && $checkOut) {
-            $this->line("Searching Smoobu for a reservation matching arrival={$checkIn}…");
+            $this->line("Searching Smoobu for a reservation matching arrival={$checkIn} apartment_id={$holdUnitId}…");
             try {
                 // Smoobu's /reservations supports from/to filters that bound
                 // the search by arrival date. A ±2 day window catches any
@@ -205,12 +222,54 @@ class ReconcileOrphanPi extends Command
                     'pageSize' => 50,
                 ]);
                 $candidates = $resp['bookings'] ?? [];
-                $smoobuMatch = $this->pickSmoobuMatch($candidates, $guestEmail, $guestName, $checkIn, $checkOut);
+                $pick = $this->pickSmoobuMatch(
+                    $candidates,
+                    $guestEmail,
+                    $guestName,
+                    $checkIn,
+                    $checkOut,
+                    $holdUnitId,
+                );
+                $smoobuMatch         = $pick['match'];
+                $matchConfidence     = $pick['confidence'];
+                $evaluatedCandidates = $pick['evaluated'];
             } catch (\Throwable $e) {
+                $searchError = $e->getMessage();
                 $this->warn('Smoobu listReservations failed: ' . $e->getMessage() . ' — assuming no match.');
             }
         } else {
             $this->warn('No check_in / check_out available — cannot search Smoobu. Will treat as Path B (no match).');
+        }
+
+        // Always show every candidate we considered + WHY each was accepted/skipped/refused.
+        // Operator needs this to debug "we expected match X but got nothing / got Y instead."
+        if (!empty($evaluatedCandidates)) {
+            $this->newLine();
+            $this->line('Smoobu candidates evaluated (' . count($evaluatedCandidates) . ' total):');
+            foreach ($evaluatedCandidates as $i => $row) {
+                $tag = match ($row['disposition']) {
+                    'accepted_high'   => '<fg=green>ACCEPTED (HIGH — apartment+email)</>',
+                    'accepted_medium' => '<fg=yellow>ACCEPTED (MEDIUM — apartment+name)</>',
+                    'refused'         => '<fg=red>REFUSED</>',
+                    'skipped'         => '<fg=red>SKIPPED</>',
+                    default           => $row['disposition'],
+                };
+                $this->line(sprintf(
+                    '  [%d] %s — res=%s apartment=%s(#%s) guest=%s <%s> arr=%s dep=%s',
+                    $i + 1,
+                    $tag,
+                    (string) ($row['raw']['id'] ?? '—'),
+                    (string) ($row['raw']['apartment']['name'] ?? '—'),
+                    (string) ($row['raw']['apartment']['id']   ?? '—'),
+                    (string) ($row['raw']['guest-name']        ?? '—'),
+                    (string) ($row['raw']['email']             ?? '—'),
+                    (string) ($row['raw']['arrival']           ?? '—'),
+                    (string) ($row['raw']['departure']         ?? '—'),
+                ));
+                $this->line('       reason: ' . $row['reason']);
+            }
+        } elseif ($checkIn && $checkOut && !$searchError) {
+            $this->line('Smoobu returned 0 reservations in the ±2 day window — nothing to evaluate.');
         }
 
         $this->newLine();
@@ -219,7 +278,23 @@ class ReconcileOrphanPi extends Command
         if ($smoobuMatch) {
             $smoobuId  = (string) ($smoobuMatch['id'] ?? '');
             $smoobuRef = (string) ($smoobuMatch['reference-id'] ?? '');
-            $this->info("Smoobu match found: id={$smoobuId} reference={$smoobuRef}");
+
+            // MEDIUM confidence (name-only match): require --force, otherwise
+            // refuse rather than risk attaching the wrong stranger's booking
+            // to this PI. This is the Arturs-vs-Janai case the strictness
+            // pass was added to prevent.
+            if ($matchConfidence === 'medium' && !$force) {
+                $this->warn('=== MEDIUM-CONFIDENCE MATCH (name-only) — refusing without --force ===');
+                $this->line("  Candidate: Smoobu res {$smoobuId} ({$smoobuRef})");
+                $this->line('  Apartment matches the hold unit_id, but only the guest NAME matches (no email).');
+                $this->line('  Re-run with --force ONLY if you have verified this is the correct guest:');
+                $this->line("       php artisan booking:reconcile-orphan-pi {$intentId} --org-id={$orgId} --apply --force");
+                $this->line('  OR re-run with --guest-email=… to bring this match up to HIGH confidence.');
+                return self::FAILURE;
+            }
+
+            $confidenceLabel = $matchConfidence === 'high' ? 'HIGH (apartment + email)' : 'MEDIUM (apartment + name, --force acknowledged)';
+            $this->info("Smoobu match found [{$confidenceLabel}]: id={$smoobuId} reference={$smoobuRef}");
             $this->line('  apartment   = ' . (($smoobuMatch['apartment']['name'] ?? '') . ' (#' . ($smoobuMatch['apartment']['id'] ?? '') . ')'));
             $this->line('  guest       = ' . ($smoobuMatch['guest-name'] ?? '—') . ' <' . ($smoobuMatch['email'] ?? '—') . '>');
             $this->line('  arrival     = ' . ($smoobuMatch['arrival'] ?? '—'));
@@ -232,6 +307,7 @@ class ReconcileOrphanPi extends Command
                 hold: $hold,
                 payload: $payload,
                 smoobuMatch: $smoobuMatch,
+                matchConfidence: $matchConfidence ?: 'unknown',
                 guestEmail: $guestEmail,
                 guestName: $guestName,
                 guestPhone: $guestPhone,
@@ -241,15 +317,20 @@ class ReconcileOrphanPi extends Command
         }
 
         // No Smoobu match — guest paid, has nothing.
-        $this->warn('No matching Smoobu reservation found for this PI.');
+        $this->warn('No SAFE Smoobu match found for this PI.');
+        $this->line('  (A match requires apartment_id == hold.unit_id AND dates match AND email/name match. See evaluated candidates above for why each was refused.)');
         $this->newLine();
 
         if (!$autoRefund) {
-            $this->line('Next steps:');
-            $this->line("  1. Investigate manually in Stripe Dashboard ({$intentId}) + Smoobu UI before refunding.");
+            $this->error('No safe match found; pass --auto-refund to refund the PI or manually create the Smoobu reservation and re-run with --apply.');
+            $this->newLine();
+            $this->line('Options:');
+            $this->line("  1. Investigate manually in Stripe Dashboard ({$intentId}) + Smoobu UI.");
             $this->line("  2. If the guest should be refunded, re-run with --auto-refund:");
             $this->line("       php artisan booking:reconcile-orphan-pi {$intentId} --org-id={$orgId} --auto-refund");
-            $this->line("  3. If you found the Smoobu booking under a different email, re-run with --guest-email=…");
+            $this->line("  3. If you can find the Smoobu booking under a different email, re-run with --guest-email=…");
+            $this->line("  4. If the right Smoobu reservation exists but matched only by name (no email), re-run with --apply --force after confirming the candidate manually.");
+            $this->line("  5. If no Smoobu reservation exists yet, create one in Smoobu UI and re-run with --apply.");
             return self::FAILURE;
         }
 
@@ -272,6 +353,7 @@ class ReconcileOrphanPi extends Command
         ?BookingHold $hold,
         array $payload,
         array $smoobuMatch,
+        string $matchConfidence,
         ?string $guestEmail,
         string $guestName,
         ?string $guestPhone,
@@ -401,16 +483,19 @@ class ReconcileOrphanPi extends Command
         // Audit.
         $this->auditLog($orgId, 'booking.reconcile.orphan', [
             'path'                 => 'A_smoobu_match',
+            'match_confidence'     => $matchConfidence,
             'payment_intent_id'    => $piId,
             'mirror_id'            => $mirror->id,
             'smoobu_reservation_id'=> $smoobuId,
             'smoobu_reference'     => $smoobuRef,
+            'smoobu_apartment_id'  => is_array($smoobuMatch['apartment'] ?? null) ? ($smoobuMatch['apartment']['id'] ?? null) : null,
+            'hold_unit_id'         => $payload['unit_id'] ?? null,
             'amount'               => $amountMaj,
             'currency'             => strtoupper((string) ($pi->currency ?? '')),
             'email_sent'           => $emailSent,
             'hold_token'           => $hold?->hold_token,
             'guest_email'          => $guestEmail,
-        ], "Reconciled orphan PI {$piId} → BookingMirror #{$mirror->id} (Smoobu res {$smoobuId})");
+        ], "Reconciled orphan PI {$piId} → BookingMirror #{$mirror->id} (Smoobu res {$smoobuId}, confidence={$matchConfidence})");
 
         $this->newLine();
         $this->info("Done. BookingMirror #{$mirror->id} now linked to PI {$piId} and Smoobu res {$smoobuId}.");
@@ -488,50 +573,159 @@ class ReconcileOrphanPi extends Command
     // ─── Helpers ────────────────────────────────────────────────────────
 
     /**
-     * Pick the best Smoobu reservation candidate for this PI. Match
-     * priority: exact email > exact name + exact dates > exact dates
-     * only. Returns null when nothing meets the bar — we'd rather refund
-     * than attach an unrelated reservation to a stranger's PI.
+     * Pick the best Smoobu reservation candidate for this PI under strict
+     * rules. NEVER attach an orphan PI to a stranger's booking — false
+     * positives here are catastrophic (money tied to wrong reservation,
+     * wrong guest emailed, points granted to wrong member).
+     *
+     * Required for ANY acceptance:
+     *   - Smoobu reservation's apartment.id == hold's unit_id (the Smoobu
+     *     PMS id of the room the guest actually paid for). NO exceptions —
+     *     a date-only or email-only match on a DIFFERENT apartment is
+     *     refused outright. This is the load-bearing check.
+     *   - Smoobu reservation's arrival == hold's check_in
+     *   - Smoobu reservation's departure == hold's check_out
+     *
+     * Then for guest-identity confirmation, in order:
+     *   - HIGH confidence: emails match (case-insensitive). Auto-proceeds.
+     *   - MEDIUM confidence: hold has no email AND fuzzy case-insensitive
+     *     substring match on guest name (either direction). Caller MUST
+     *     re-prompt operator with --force before proceeding.
+     *   - Otherwise: REFUSED.
+     *
+     * Returns:
+     *   [
+     *     'match'      => ?array,   // the chosen Smoobu booking, or null
+     *     'confidence' => ?string,  // 'high' | 'medium' | null
+     *     'evaluated'  => array[],  // every candidate considered + reason + disposition
+     *   ]
      */
-    private function pickSmoobuMatch(array $candidates, ?string $guestEmail, ?string $guestName, ?string $checkIn, ?string $checkOut): ?array
-    {
-        if (empty($candidates)) return null;
+    private function pickSmoobuMatch(
+        array $candidates,
+        ?string $guestEmail,
+        ?string $guestName,
+        ?string $checkIn,
+        ?string $checkOut,
+        $holdUnitId,
+    ): array {
+        $evaluated = [];
+        $high = null;
+        $medium = null;
 
         $emailLc = $guestEmail ? strtolower(trim($guestEmail)) : null;
         $nameLc  = $guestName  ? strtolower(trim($guestName))  : null;
-
-        $byEmail = [];
-        $byNameDates = [];
-        $byDates = [];
+        $holdUnitIdStr = $holdUnitId === null ? '' : (string) $holdUnitId;
 
         foreach ($candidates as $b) {
             if (!is_array($b)) continue;
-            // Skip cancellations — orphan PI guest still wants their booking.
-            if (($b['type'] ?? '') === 'cancellation') continue;
 
+            $bId    = (string) ($b['id'] ?? '');
+            $bAptId = isset($b['apartment']['id']) ? (string) $b['apartment']['id'] : '';
             $bEmail = strtolower(trim((string) ($b['email'] ?? '')));
             $bName  = strtolower(trim((string) ($b['guest-name'] ?? '')));
             $bArr   = (string) ($b['arrival']   ?? '');
             $bDep   = (string) ($b['departure'] ?? '');
+            $bType  = (string) ($b['type']      ?? '');
 
-            $datesMatch = ($checkIn && $checkOut && $bArr === $checkIn && $bDep === $checkOut);
-
-            if ($emailLc && $bEmail && $bEmail === $emailLc) {
-                $byEmail[] = $b;
-            } elseif ($nameLc && $bName && $bName === $nameLc && $datesMatch) {
-                $byNameDates[] = $b;
-            } elseif ($datesMatch) {
-                $byDates[] = $b;
+            // Skip cancellations — orphan PI guest still wants their booking.
+            if ($bType === 'cancellation') {
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'skipped',
+                    'reason'      => "candidate skipped: type=cancellation",
+                ];
+                continue;
             }
+
+            // Apartment gate — UNCONDITIONAL refusal on mismatch.
+            if ($holdUnitIdStr === '') {
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'refused',
+                    'reason'      => 'candidate refused: hold has no unit_id, cannot verify apartment',
+                ];
+                continue;
+            }
+            if ($bAptId === '' || $bAptId !== $holdUnitIdStr) {
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'refused',
+                    'reason'      => "candidate skipped: apartment_id mismatch (smoobu={$bAptId} vs hold={$holdUnitIdStr})",
+                ];
+                continue;
+            }
+
+            // Dates gate.
+            $arrivalMatch   = ($checkIn  && $bArr === $checkIn);
+            $departureMatch = ($checkOut && $bDep === $checkOut);
+            if (!$arrivalMatch || !$departureMatch) {
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'refused',
+                    'reason'      => "candidate refused: dates mismatch (smoobu arr={$bArr} dep={$bDep} vs hold arr={$checkIn} dep={$checkOut})",
+                ];
+                continue;
+            }
+
+            // Guest identity gate.
+            if ($emailLc !== null) {
+                if ($bEmail !== '' && $bEmail === $emailLc) {
+                    $evaluated[] = [
+                        'raw'         => $b,
+                        'disposition' => 'accepted_high',
+                        'reason'      => 'apartment + dates + email all match',
+                    ];
+                    if ($high === null) $high = $b;
+                    continue;
+                }
+                // We had an email; Smoobu's email doesn't match. Refuse
+                // — falling back to name when the email disagreed would
+                // attach the wrong guest.
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'refused',
+                    'reason'      => "candidate refused: email mismatch (smoobu={$bEmail} vs hold={$emailLc}) — apartment+dates matched but email override rejected",
+                ];
+                continue;
+            }
+
+            // No email available — try fuzzy name match. Substring match in
+            // either direction so "John Smith" matches "John Q Smith" and
+            // vice-versa. Refuse when neither name is present at all.
+            if ($nameLc !== null && $nameLc !== '' && $bName !== '') {
+                $nameFuzzyMatch = (str_contains($bName, $nameLc) || str_contains($nameLc, $bName));
+                if ($nameFuzzyMatch) {
+                    $evaluated[] = [
+                        'raw'         => $b,
+                        'disposition' => 'accepted_medium',
+                        'reason'      => "apartment + dates match; name fuzzy-match ('{$bName}' ~ '{$nameLc}') — MEDIUM confidence, --force required",
+                    ];
+                    if ($medium === null) $medium = $b;
+                    continue;
+                }
+                $evaluated[] = [
+                    'raw'         => $b,
+                    'disposition' => 'refused',
+                    'reason'      => "candidate refused: no email on hold AND name does not match (smoobu='{$bName}' vs hold='{$nameLc}')",
+                ];
+                continue;
+            }
+
+            $evaluated[] = [
+                'raw'         => $b,
+                'disposition' => 'refused',
+                'reason'      => 'candidate refused: no email AND no usable name to verify guest identity (dates+apartment alone is not sufficient)',
+            ];
         }
 
-        if (!empty($byEmail))      return $byEmail[0];
-        if (!empty($byNameDates))  return $byNameDates[0];
-        // Only fall back to dates-only when there's exactly ONE candidate
-        // — picking randomly between strangers staying the same nights
-        // is worse than refunding and letting staff investigate.
-        if (count($byDates) === 1) return $byDates[0];
-        return null;
+        // Prefer HIGH over MEDIUM.
+        if ($high !== null) {
+            return ['match' => $high, 'confidence' => 'high', 'evaluated' => $evaluated];
+        }
+        if ($medium !== null) {
+            return ['match' => $medium, 'confidence' => 'medium', 'evaluated' => $evaluated];
+        }
+        return ['match' => null, 'confidence' => null, 'evaluated' => $evaluated];
     }
 
     private function safeMetadata(object $pi): array

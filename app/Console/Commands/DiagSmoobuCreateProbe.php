@@ -28,9 +28,19 @@ use Illuminate\Console\Command;
  * a real customer booking.
  *
  * Usage:
+ *   # Minimal known-good payload (dry-run)
  *   php artisan diag:smoobu-create-probe --org=12 --apartment-id=1001 --from=2026-06-10 --to=2026-06-12
+ *
+ *   # Minimal payload, actually hit Smoobu (auto-cleans up)
  *   php artisan diag:smoobu-create-probe --org=12 --apartment-id=1001 --from=2026-06-10 --to=2026-06-12 --commit
- *   php artisan diag:smoobu-create-probe --org=12 --apartment-id=1001 --from=2026-06-10 --to=2026-06-12 --guest-email=qa@example.com --commit
+ *
+ *   # Replay production confirm() payload shape verbatim — adds country, language='en',
+ *   # type='reservation', assistant-notice, drops channelId when 0, array_filter cleanup.
+ *   # Use this to reproduce a real customer rejection without a real customer booking.
+ *   php artisan diag:smoobu-create-probe --org=12 --apartment-id=1001 --from=2026-06-10 --to=2026-06-12 --like-production --commit
+ *
+ *   # Override price fields to match a specific failing production payload
+ *   php artisan diag:smoobu-create-probe --org=12 --apartment-id=1001 --from=2026-06-10 --to=2026-06-12 --like-production --price=560 --price-paid=560 --price-status=1 --commit
  */
 class DiagSmoobuCreateProbe extends Command
 {
@@ -40,6 +50,10 @@ class DiagSmoobuCreateProbe extends Command
                             {--from= : Arrival date YYYY-MM-DD (required)}
                             {--to= : Departure date YYYY-MM-DD (required)}
                             {--guest-email= : Guest email (defaults to qa-probe@hotel-tech.ai)}
+                            {--like-production : Replay production confirm() payload shape verbatim (adds country, language, type=reservation, assistant-notice, channelId-drop-when-zero, array_filter cleanup)}
+                            {--price= : Override price field (default 1.00)}
+                            {--price-paid= : Override price-paid field (default 0.00)}
+                            {--price-status= : Override priceStatus field (default 0)}
                             {--commit : Actually hit Smoobu (otherwise dry-run). Cleans up by deleting the reservation it created.}';
 
     protected $description = 'Probe Smoobu createReservation to surface the verbatim rejection reason.';
@@ -52,6 +66,15 @@ class DiagSmoobuCreateProbe extends Command
         $to = $this->option('to');
         $guestEmail = $this->option('guest-email') ?: 'qa-probe@hotel-tech.ai';
         $commit = (bool) $this->option('commit');
+        $likeProduction = (bool) $this->option('like-production');
+
+        // Price overrides — null when not passed, otherwise cast to the right shape.
+        $priceOverride = $this->option('price');
+        $pricePaidOverride = $this->option('price-paid');
+        $priceStatusOverride = $this->option('price-status');
+        $price = $priceOverride !== null ? (float) $priceOverride : 1.00;
+        $pricePaid = $pricePaidOverride !== null ? (float) $pricePaidOverride : 0.00;
+        $priceStatus = $priceStatusOverride !== null ? (int) $priceStatusOverride : 0;
 
         // ── Validate inputs ──
         if (!$orgId) {
@@ -116,24 +139,65 @@ class DiagSmoobuCreateProbe extends Command
         // (legacy kebab amount) + priceStatus (docs-compliant 0/1
         // paid flag). Mirrors BookingEngineService::confirm() so this
         // probe surfaces the exact same rejection paths.
-        $payload = [
-            'arrivalDate'      => $from,
-            'departureDate'    => $to,
-            'apartmentId'      => (int) $apartmentId,
-            'channelId'        => $resolvedChannelId,
-            'firstName'        => 'QA',
-            'lastName'         => 'Probe',
-            'email'            => $guestEmail,
-            'phone'            => '+10000000000',
-            'adults'           => 1,
-            'children'         => 0,
-            'price'            => 1.00,
-            'price-paid'       => 0.00,
-            'priceStatus'      => 0,
-            'notice'           => 'Internal diagnostic probe — safe to delete. Sent by diag:smoobu-create-probe.',
-        ];
+        //
+        // Two payload shapes:
+        //   Default (minimal)   — known-good baseline. Always sends channelId
+        //                         even when 0 (so we can see Smoobu's reaction).
+        //   --like-production    — verbatim replay of BookingEngineService::confirm()'s
+        //                         single-room payload: adds country, language='en',
+        //                         type='reservation' (avoids Blocked Channel default),
+        //                         assistant-notice; channelId dropped when 0;
+        //                         array_filter strips null/empty at the end.
+        if ($likeProduction) {
+            $payload = [
+                'apartmentId'      => (int) $apartmentId,
+                'arrivalDate'      => $from,
+                'departureDate'    => $to,
+                'firstName'        => 'QA',
+                'lastName'         => 'Probe',
+                'email'            => $guestEmail,
+                'phone'            => '+10000000000',
+                'country'          => 'LV',
+                'adults'           => 1,
+                'children'         => 0,
+                'price'            => $price,
+                'price-paid'       => $pricePaid,
+                'priceStatus'      => $priceStatus,
+                'language'         => 'en',
+                'notice'           => 'Internal diagnostic probe — safe to delete. Sent by diag:smoobu-create-probe (--like-production).',
+                'assistant-notice' => 'HotelTech booking widget',
+                'type'             => 'reservation',
+            ];
+            // Match production's conditional include — channelId only when > 0.
+            // Production never sends channelId=0 (would trigger Smoobu's default
+            // Blocked Channel behaviour on some accounts).
+            if ($resolvedChannelId > 0) {
+                $payload['channelId'] = $resolvedChannelId;
+            }
+            // Production's final cleanup step — drop null + empty-string values.
+            $payload = array_filter($payload, fn ($v) => $v !== null && $v !== '');
+        } else {
+            $payload = [
+                'arrivalDate'      => $from,
+                'departureDate'    => $to,
+                'apartmentId'      => (int) $apartmentId,
+                'channelId'        => $resolvedChannelId,
+                'firstName'        => 'QA',
+                'lastName'         => 'Probe',
+                'email'            => $guestEmail,
+                'phone'            => '+10000000000',
+                'adults'           => 1,
+                'children'         => 0,
+                'price'            => $price,
+                'price-paid'       => $pricePaid,
+                'priceStatus'      => $priceStatus,
+                'notice'           => 'Internal diagnostic probe — safe to delete. Sent by diag:smoobu-create-probe.',
+            ];
+        }
 
+        $modeLabel = $likeProduction ? 'LIKE-PRODUCTION (replays confirm() payload shape verbatim)' : 'MINIMAL (known-good baseline)';
         $this->info("Probe target: org={$orgId} ({$org->name}), apartment={$apartmentId}, {$from} → {$to}");
+        $this->line("Mode: {$modeLabel}");
         $this->newLine();
 
         $this->info('═══ Channel ID resolution ═══');
