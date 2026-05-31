@@ -87,6 +87,15 @@ class ChatConversation extends Model
         return $this->belongsTo(Visitor::class, 'visitor_id');
     }
 
+    /**
+     * The external channel account this conversation lives on (Messenger
+     * Page, future WhatsApp number, etc). NULL for web-widget conversations.
+     */
+    public function channelAccount()
+    {
+        return $this->belongsTo(ChatChannelAccount::class, 'channel_account_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

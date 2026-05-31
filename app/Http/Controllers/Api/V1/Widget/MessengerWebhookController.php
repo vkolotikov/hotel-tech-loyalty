@@ -127,9 +127,20 @@ class MessengerWebhookController extends Controller
 
             foreach (($entry['messaging'] ?? []) as $messaging) {
                 try {
-                    // Skip delivery + read receipts in Phase 1 — they're useful
-                    // for read-status UI but not for the receive path.
-                    if (isset($messaging['delivery']) || isset($messaging['read'])) {
+                    // Phase 2 — status receipts. message_deliveries arrives
+                    // when Meta hands the message to the recipient's device;
+                    // message_reads when they actually read it. We stamp
+                    // chat_messages.is_read for the latter so the engagement
+                    // drawer shows blue-tick UI. Deliveries are best-effort
+                    // logged only (no UI for them yet).
+                    if (isset($messaging['read'])) {
+                        $this->handleReadReceipt($account, $messaging);
+                        continue;
+                    }
+                    if (isset($messaging['delivery'])) {
+                        // Acked to wire, no further action — keep returning
+                        // 200 so Meta doesn't retry. Future: surface count
+                        // on the engagement row as a delivered tick.
                         continue;
                     }
                     if (!isset($messaging['message']) && !isset($messaging['postback'])) {
@@ -149,6 +160,39 @@ class MessengerWebhookController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Mark every outbound message in the conversation as read up to the
+     * `read.watermark` ms timestamp Meta gives us.
+     *
+     * Why watermark-based: Meta sends one `read` event per Page→user thread
+     * (not per message), with a millisecond cutoff. Every outbound message
+     * the agent or AI sent up to that cutoff is now read. We bulk-update
+     * chat_messages.is_read accordingly.
+     */
+    private function handleReadReceipt(\App\Models\ChatChannelAccount $account, array $messaging): void
+    {
+        $psid       = (string) ($messaging['sender']['id'] ?? '');
+        $watermark  = (int)    ($messaging['read']['watermark'] ?? 0);
+        if ($psid === '' || $watermark <= 0) return;
+
+        $conversation = \App\Models\ChatConversation::query()
+            ->withoutGlobalScopes()
+            ->where('channel_account_id', $account->id)
+            ->where('external_thread_id', $psid)
+            ->first();
+        if ($conversation === null) return;
+
+        $cutoff = \Carbon\Carbon::createFromTimestampMs($watermark);
+
+        \App\Models\ChatMessage::query()
+            ->withoutGlobalScopes()
+            ->where('conversation_id', $conversation->id)
+            ->where('direction', \App\Models\ChatMessage::DIRECTION_OUTBOUND)
+            ->where('is_read', false)
+            ->where('created_at', '<=', $cutoff)
+            ->update(['is_read' => true]);
     }
 
     /**

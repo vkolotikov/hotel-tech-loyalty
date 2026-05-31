@@ -758,6 +758,24 @@ class WidgetChatController extends Controller
                     'last_message_at' => now(),
                     'messages_count' => $chatConv->messages_count + 2,
                 ]);
+
+                // Phase 2 — when this conversation lives on an external
+                // channel (Messenger today, WhatsApp/Instagram later), also
+                // forward the AI reply via that channel's Send API. The
+                // router skips internal channels (widget/web/mobile) and
+                // returns immediately. Failures don't bubble up — the local
+                // ChatMessage row stays as the source of truth and any
+                // failure is logged + recorded on the channel account.
+                try {
+                    app(\App\Services\Channels\ChannelRouter::class)
+                        ->sendOutbound($chatConv, $aiMsg, 'ai');
+                } catch (\Throwable $e) {
+                    \Log::error('widget.ai.channel_dispatch_failed', [
+                        'conversation_id' => $chatConv->id,
+                        'channel'         => $chatConv->channel,
+                        'error'           => $e->getMessage(),
+                    ]);
+                }
             }
         } catch (\Throwable $e) {
             \Log::warning('Widget inbox save failed: ' . $e->getMessage());

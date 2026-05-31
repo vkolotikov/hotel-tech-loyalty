@@ -432,6 +432,22 @@ class ChatInboxController extends Controller
             'agent_typing_until'   => null, // clear typing as the message lands
         ]);
 
+        // Phase 2 — forward to external channel (Messenger, etc.) when the
+        // conversation isn't on the local widget. 'agent' sender_kind lets
+        // the router use the HUMAN_AGENT tag (7-day window) if past Meta's
+        // 24h standard reply window. Failure is logged but doesn't fail
+        // the request — the agent already sees their message landed locally.
+        try {
+            app(\App\Services\Channels\ChannelRouter::class)
+                ->sendOutbound($conversation, $message, 'agent');
+        } catch (\Throwable $e) {
+            \Log::error('inbox.agent.channel_dispatch_failed', [
+                'conversation_id' => $conversation->id,
+                'channel'         => $conversation->channel,
+                'error'           => $e->getMessage(),
+            ]);
+        }
+
         return response()->json($message->load('senderUser:id,name'));
     }
 
