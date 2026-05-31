@@ -389,6 +389,11 @@ Route::get('/form/{embedKey}', function (string $embedKey) {
 // Apple's reviewers fetch it during App Review, and changing the URL would
 // break the link in the App Store entry.
 Route::get('/privacy', fn () => view('privacy'));
+// Terms of Service + Data Deletion instructions — required for Meta App
+// Review (alongside privacy) and for various platform-store listings.
+// Same auth-less, stable-URL guarantees as /privacy.
+Route::get('/terms', fn () => view('terms'));
+Route::get('/data-deletion', fn () => view('data-deletion'));
 
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
@@ -397,7 +402,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|form/|privacy).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|form/|privacy|terms|data-deletion).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
