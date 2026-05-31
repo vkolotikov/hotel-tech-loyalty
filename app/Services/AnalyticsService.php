@@ -435,12 +435,16 @@ class AnalyticsService
         $since = now()->subDays($days);
 
         // Up / down / lateral counts from the assessment table.
+        // tier_assessments has no organization_id column — join through
+        // loyalty_members so the count is properly tenant-scoped.
         $rows = DB::table('tier_assessments')
-            ->where('created_at', '>=', $since)
-            ->whereNotNull('old_tier_id')
-            ->whereNotNull('new_tier_id')
-            ->select('old_tier_id', 'new_tier_id', DB::raw('COUNT(*) as count'))
-            ->groupBy('old_tier_id', 'new_tier_id')
+            ->join('loyalty_members', 'tier_assessments.member_id', '=', 'loyalty_members.id')
+            ->where('loyalty_members.organization_id', app('current_organization_id'))
+            ->where('tier_assessments.created_at', '>=', $since)
+            ->whereNotNull('tier_assessments.old_tier_id')
+            ->whereNotNull('tier_assessments.new_tier_id')
+            ->select('tier_assessments.old_tier_id', 'tier_assessments.new_tier_id', DB::raw('COUNT(*) as count'))
+            ->groupBy('tier_assessments.old_tier_id', 'tier_assessments.new_tier_id')
             ->get();
 
         $tierMap = LoyaltyTier::all(['id', 'name', 'color_hex', 'sort_order'])->keyBy('id');

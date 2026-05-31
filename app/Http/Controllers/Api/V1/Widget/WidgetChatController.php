@@ -522,6 +522,7 @@ class WidgetChatController extends Controller
             ChatMessage::create([
                 'conversation_id' => $existingChatConv->id,
                 'sender_type' => 'visitor',
+                'direction' => ChatMessage::DIRECTION_INBOUND,
                 'content' => $request->message,
                 'created_at' => now(),
             ]);
@@ -561,6 +562,7 @@ class WidgetChatController extends Controller
             ChatMessage::create([
                 'conversation_id' => $existingChatConv->id,
                 'sender_type'     => 'visitor',
+                'direction'       => ChatMessage::DIRECTION_INBOUND,
                 'content'         => $request->message,
                 'created_at'      => now(),
             ]);
@@ -569,6 +571,7 @@ class WidgetChatController extends Controller
             $aiMsg = ChatMessage::create([
                 'conversation_id' => $existingChatConv->id,
                 'sender_type'     => 'ai',
+                'direction'       => ChatMessage::DIRECTION_OUTBOUND,
                 'content'         => $escalationMsg,
                 'created_at'      => now(),
             ]);
@@ -748,12 +751,14 @@ class WidgetChatController extends Controller
                 ChatMessage::create([
                     'conversation_id' => $chatConv->id,
                     'sender_type' => 'visitor',
+                    'direction' => ChatMessage::DIRECTION_INBOUND,
                     'content' => $request->message,
                     'created_at' => now(),
                 ]);
                 $aiMsg = ChatMessage::create([
                     'conversation_id' => $chatConv->id,
                     'sender_type' => 'ai',
+                    'direction' => ChatMessage::DIRECTION_OUTBOUND,
                     'content' => $aiResponse,
                     'created_at' => now(),
                 ]);
@@ -1227,6 +1232,7 @@ class WidgetChatController extends Controller
         $msg = ChatMessage::create([
             'conversation_id'  => $conv->id,
             'sender_type'      => 'visitor',
+            'direction'        => ChatMessage::DIRECTION_INBOUND,
             'content'          => $file->getClientOriginalName(),
             'attachment_url'   => $url,
             'attachment_type'  => $type,

@@ -326,6 +326,7 @@ class ChatInboxController extends Controller
             'conversation_id' => $id,
             'sender_type' => 'system',
             'sender_user_id' => $request->user()->id,
+            'direction' => ChatMessage::DIRECTION_OUTBOUND,
             'content' => "Conversation assigned to " . \App\Models\User::find($request->user_id)?->name,
             'created_at' => now(),
         ]);
@@ -356,6 +357,7 @@ class ChatInboxController extends Controller
             'conversation_id' => $id,
             'sender_type' => 'system',
             'sender_user_id' => $request->user()->id,
+            'direction' => ChatMessage::DIRECTION_OUTBOUND,
             'content' => "Status changed to {$request->status}",
             'created_at' => now(),
         ]);
@@ -390,6 +392,7 @@ class ChatInboxController extends Controller
             'conversation_id' => $id,
             'sender_type'     => 'system',
             'sender_user_id'  => $request->user()->id,
+            'direction'       => ChatMessage::DIRECTION_OUTBOUND,
             'content'         => $request->boolean('ai_enabled')
                 ? 'AI auto-reply re-enabled by agent'
                 : 'AI auto-reply paused by agent',
@@ -414,6 +417,7 @@ class ChatInboxController extends Controller
             'conversation_id' => $id,
             'sender_type' => 'agent',
             'sender_user_id' => $user->id,
+            'direction' => ChatMessage::DIRECTION_OUTBOUND,
             'content' => $request->content,
             'created_at' => now(),
         ]);
@@ -476,6 +480,7 @@ class ChatInboxController extends Controller
             'conversation_id' => $id,
             'sender_type'     => 'agent',
             'sender_user_id'  => $user->id,
+            'direction'       => ChatMessage::DIRECTION_OUTBOUND,
             'content'         => $file->getClientOriginalName(),
             'attachment_url'  => $url,
             'attachment_type' => $type,

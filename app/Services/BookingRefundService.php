@@ -6,7 +6,10 @@ use App\Mail\BookingRefundMail;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\PointsTransaction;
+use App\Models\RefundAttempt;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -61,91 +64,165 @@ class BookingRefundService
         // resolution, etc.) read from the right tenant.
         app()->instance('current_organization_id', (int) $mirror->organization_id);
 
-        if ($mirror->payment_status === 'refunded') {
-            throw new \RuntimeException('Booking is already fully refunded.');
+        // ── Lock per-mirror so an admin refund + a concurrent
+        // `charge.refunded` webhook can't both enter applyRefund() at
+        // the same time. The webhook's own idempotency gate
+        // (refund_attempts < 60s freshness check + last_refund_id)
+        // catches the case where the webhook arrives AFTER the lock
+        // is released; this lock catches the case where it arrives
+        // WHILE the admin is still inside the body.
+        $lock = Cache::lock("refund:{$mirror->id}", 30);
+        try {
+            // 10s blocking acquire — long enough to wait out a sister
+            // request that's mid-Stripe-call, short enough to fail
+            // fast if something is truly stuck.
+            $lock->block(10);
+        } catch (LockTimeoutException $e) {
+            throw new \RuntimeException(
+                "Another refund is currently being processed for this booking. Please retry in a moment."
+            );
         }
 
-        // ── Step 1: actually issue the Stripe refund (or trust the
-        // pre-existing id when called from the webhook path).
-        if ($issueStripeRefund) {
-            if ($mirror->payment_method === 'mock') {
-                // No Stripe call for mock bookings — just flip status below.
-                $stripeRefundId = 'mock_refund_' . bin2hex(random_bytes(8));
-            } elseif ($mirror->payment_method === 'stripe' && $mirror->stripe_payment_intent_id) {
-                $refund = $this->stripe->refund(
-                    $mirror->stripe_payment_intent_id,
-                    $amount,
-                    $reason,
-                );
-                $stripeRefundId = $refund->id;
-            } else {
-                throw new \RuntimeException(
-                    'No Stripe payment attached. Refund manually via your PMS or accounting tool.'
-                );
+        try {
+            if ($mirror->payment_status === 'refunded') {
+                throw new \RuntimeException('Booking is already fully refunded.');
             }
+
+            // ── Step 1a: write a PENDING marker BEFORE calling Stripe.
+            // This is what the racing `charge.refunded` webhook reads
+            // (via the 60-second freshness lookup in
+            // BookingPublicController::handleChargeRefunded) to decide
+            // "the admin flow is mid-flight, skip me."
+            //
+            // The intent id is the natural correlation key — for mock
+            // refunds we synthesise one so the schema stays uniform.
+            $attemptIntentId = $mirror->stripe_payment_intent_id
+                ?: ('mock_pi_' . $mirror->id);
+
+            $attempt = RefundAttempt::create([
+                'organization_id'   => (int) $mirror->organization_id,
+                'mirror_id'         => $mirror->id,
+                'payment_intent_id' => $attemptIntentId,
+                'requested_at'      => now(),
+            ]);
+
+            // ── Step 1b: actually issue the Stripe refund (or trust the
+            // pre-existing id when called from the webhook path).
+            try {
+                if ($issueStripeRefund) {
+                    if ($mirror->payment_method === 'mock') {
+                        // No Stripe call for mock bookings — just flip status below.
+                        $stripeRefundId = 'mock_refund_' . bin2hex(random_bytes(8));
+                    } elseif ($mirror->payment_method === 'stripe' && $mirror->stripe_payment_intent_id) {
+                        $refund = $this->stripe->refund(
+                            $mirror->stripe_payment_intent_id,
+                            $amount,
+                            $reason,
+                        );
+                        $stripeRefundId = $refund->id;
+                    } else {
+                        throw new \RuntimeException(
+                            'No Stripe payment attached. Refund manually via your PMS or accounting tool.'
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Record the failure on the attempt row so an operator
+                // can audit what was tried. Then re-throw — caller
+                // (controller / webhook) handles the error response.
+                $attempt->update([
+                    'error'        => substr($e->getMessage(), 0, 2000),
+                    'completed_at' => now(),
+                ]);
+                throw $e;
+            }
+
+            // ── Step 2: compute is_full + new refunded total.
+            $priceTotal = (float) ($mirror->price_total ?? 0);
+            $thisRefund = (float) ($amount ?? $priceTotal);
+            $alreadyRefunded = (float) ($mirror->refunded_amount ?? 0);
+            $cumulative = round($alreadyRefunded + $thisRefund, 2);
+            // Floating-point safety: 1¢ tolerance for "is this the full amount?"
+            $isFull = $amount === null || $cumulative >= ($priceTotal - 0.01);
+
+            // ── Step 3: persist refund state on the mirror IMMEDIATELY
+            // (before the side-effect block). Two reasons:
+            //   1. The racing `charge.refunded` webhook's *secondary*
+            //      idempotency gate is `last_refund_id` — stamping it
+            //      here closes the window between "attempt row written"
+            //      and "the long Smoobu + email tail finishes."
+            //   2. If Smoobu or email throws on the tail, we still want
+            //      Stripe's source-of-truth refund state mirrored
+            //      locally — staff can see the refund happened.
+            $mirror->update([
+                'payment_status'  => $isFull ? 'refunded' : 'partially_refunded',
+                'refunded_amount' => $cumulative,
+                'refunded_at'     => $isFull ? now() : $mirror->refunded_at,
+                'last_refund_id'  => $stripeRefundId,
+            ]);
+
+            // Stamp the refund id on the attempt row so post-hoc audit
+            // ties attempt → refund cleanly.
+            $attempt->update(['refund_id' => $stripeRefundId]);
+
+            // ── Step 4: reverse loyalty points (full refunds only — partial
+            // refunds don't mathematically map to "which" points to reverse).
+            $reversedPoints = 0;
+            if ($isFull) {
+                $reversedPoints = $this->reverseLoyaltyPoints($mirror, $staff);
+            }
+
+            // ── Step 5: cancel the Smoobu reservation (best-effort, full only).
+            $pmsCancelled = false;
+            if ($isFull && $this->shouldCancelPms($mirror)) {
+                $pmsCancelled = $this->cancelPmsReservation($mirror);
+            }
+
+            // ── Step 6: email the guest.
+            $emailSent = $this->sendRefundEmail($mirror, $thisRefund, $isFull);
+
+            // ── Step 7: audit-log the outcome.
+            AuditLog::record('booking_refunded', $mirror,
+                [
+                    'amount'           => $amount,
+                    'cumulative'       => $cumulative,
+                    'is_full'          => $isFull,
+                    'reason'           => $reason,
+                    'refund_id'        => $stripeRefundId,
+                    'reversed_points'  => $reversedPoints,
+                    'pms_cancelled'    => $pmsCancelled,
+                    'email_sent'       => $emailSent,
+                    'source'           => $staff ? 'admin' : 'webhook',
+                ],
+                ['payment_status' => $mirror->payment_status],
+                $staff,
+                "Refund " . ($isFull ? '(full)' : "(partial — €" . number_format($thisRefund, 2) . ")")
+                    . " for booking #{$mirror->id}"
+                    . " · points reversed: {$reversedPoints}"
+                    . " · PMS cancelled: " . ($pmsCancelled ? 'yes' : 'no')
+                    . " · email: " . ($emailSent ? 'sent' : 'skipped'),
+            );
+
+            // Mark the attempt complete so the 60-second freshness
+            // window starts ticking down. (The webhook still treats
+            // any row younger than 60s as "in flight" regardless —
+            // completed_at is informational + helps audit, not the
+            // gate itself.)
+            $attempt->update(['completed_at' => now()]);
+
+            return [
+                'is_full'         => $isFull,
+                'refund_id'       => $stripeRefundId,
+                'reversed_points' => $reversedPoints,
+                'pms_cancelled'   => $pmsCancelled,
+                'email_sent'      => $emailSent,
+            ];
+        } finally {
+            // Always release — even if a downstream throw bubbles up,
+            // we don't want the next legitimate refund attempt to wait
+            // 30s for the TTL to expire.
+            optional($lock)->release();
         }
-
-        // ── Step 2: compute is_full + new refunded total.
-        $priceTotal = (float) ($mirror->price_total ?? 0);
-        $thisRefund = (float) ($amount ?? $priceTotal);
-        $alreadyRefunded = (float) ($mirror->refunded_amount ?? 0);
-        $cumulative = round($alreadyRefunded + $thisRefund, 2);
-        // Floating-point safety: 1¢ tolerance for "is this the full amount?"
-        $isFull = $amount === null || $cumulative >= ($priceTotal - 0.01);
-
-        // ── Step 3: persist refund state on the mirror.
-        $mirror->update([
-            'payment_status'  => $isFull ? 'refunded' : 'partially_refunded',
-            'refunded_amount' => $cumulative,
-            'refunded_at'     => $isFull ? now() : $mirror->refunded_at,
-            'last_refund_id'  => $stripeRefundId,
-        ]);
-
-        // ── Step 4: reverse loyalty points (full refunds only — partial
-        // refunds don't mathematically map to "which" points to reverse).
-        $reversedPoints = 0;
-        if ($isFull) {
-            $reversedPoints = $this->reverseLoyaltyPoints($mirror, $staff);
-        }
-
-        // ── Step 5: cancel the Smoobu reservation (best-effort, full only).
-        $pmsCancelled = false;
-        if ($isFull && $this->shouldCancelPms($mirror)) {
-            $pmsCancelled = $this->cancelPmsReservation($mirror);
-        }
-
-        // ── Step 6: email the guest.
-        $emailSent = $this->sendRefundEmail($mirror, $thisRefund, $isFull);
-
-        // ── Step 7: audit-log the outcome.
-        AuditLog::record('booking_refunded', $mirror,
-            [
-                'amount'           => $amount,
-                'cumulative'       => $cumulative,
-                'is_full'          => $isFull,
-                'reason'           => $reason,
-                'refund_id'        => $stripeRefundId,
-                'reversed_points'  => $reversedPoints,
-                'pms_cancelled'    => $pmsCancelled,
-                'email_sent'       => $emailSent,
-                'source'           => $staff ? 'admin' : 'webhook',
-            ],
-            ['payment_status' => $mirror->payment_status],
-            $staff,
-            "Refund " . ($isFull ? '(full)' : "(partial — €" . number_format($thisRefund, 2) . ")")
-                . " for booking #{$mirror->id}"
-                . " · points reversed: {$reversedPoints}"
-                . " · PMS cancelled: " . ($pmsCancelled ? 'yes' : 'no')
-                . " · email: " . ($emailSent ? 'sent' : 'skipped'),
-        );
-
-        return [
-            'is_full'         => $isFull,
-            'refund_id'       => $stripeRefundId,
-            'reversed_points' => $reversedPoints,
-            'pms_cancelled'   => $pmsCancelled,
-            'email_sent'      => $emailSent,
-        ];
     }
 
     /**

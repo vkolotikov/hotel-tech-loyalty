@@ -57,6 +57,7 @@ class ReapStaleChatConversations extends Command
                 'organization_id' => $conv->organization_id,
                 'conversation_id' => $conv->id,
                 'sender_type'     => 'system',
+                'direction'       => ChatMessage::DIRECTION_OUTBOUND,
                 'content'         => "Auto-resolved after {$hours}h of inactivity",
                 'created_at'      => now(),
             ]);

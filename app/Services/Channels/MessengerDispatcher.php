@@ -6,7 +6,6 @@ use App\Models\ChatChannelAccount;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Visitor;
-use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -70,9 +69,19 @@ class MessengerDispatcher implements ChannelDispatcher
         // Idempotency: same mid arriving twice (Meta retries on 5xx, network
         // glitches) is a no-op. Cheap pre-check before any conversation
         // upsert work.
+        //
+        // withoutGlobalScopes() is load-bearing here: ChatMessage uses
+        // BelongsToOrganization, and the webhook entry runs without a bound
+        // current_organization_id, so TenantScope would otherwise short-circuit
+        // every query to WHERE 1=0 and the dedup check would silently no-op
+        // — letting every duplicate webhook through to the insert path.
+        // Also scope by channel_account_id so two Pages reusing the same
+        // Meta mid namespace never collide.
         $mid = (string) ($payload['message']['mid'] ?? $payload['postback']['mid'] ?? '');
         if ($mid !== '') {
             $existing = ChatMessage::query()
+                ->withoutGlobalScopes()
+                ->where('channel_account_id', $account->id)
                 ->where('channel_message_id', $mid)
                 ->first();
             if ($existing !== null) {
@@ -144,21 +153,37 @@ class MessengerDispatcher implements ChannelDispatcher
                     'content'            => $body,
                     'content_type'       => empty($attachments) ? 'text' : 'media',
                     'is_read'            => false,
+                    'channel_account_id' => $account->id,
                     'channel_message_id' => $mid !== '' ? $mid : null,
                     'attachments_data'   => $attachments ?: null,
-                    'metadata'           => $payload,
+                    // Allowlisted subset of the raw Meta payload. The full
+                    // webhook carries PSIDs, Meta CDN tokens, and other
+                    // sender/recipient surface area we don't want sitting in
+                    // chat_messages forever (privacy + bloat). Anything we
+                    // need later (mid for dedup audits, timestamp for
+                    // ordering forensics, quick_reply payload, echo flag for
+                    // outbound mirror handling) is captured explicitly.
+                    'metadata'           => [
+                        'mid'         => $payload['message']['mid'] ?? null,
+                        'timestamp'   => $payload['timestamp'] ?? null,
+                        'quick_reply' => $payload['message']['quick_reply'] ?? null,
+                        'is_echo'     => $payload['message']['is_echo'] ?? null,
+                    ],
                     'created_at'         => isset($payload['timestamp'])
                         ? now()->createFromTimestampMs((int) $payload['timestamp'])
                         : now(),
                 ]);
-            } catch (QueryException $e) {
+            } catch (UniqueConstraintViolationException) {
                 // Unique-index violation = duplicate that slipped past the
-                // pre-check (two webhooks arriving simultaneously). Return
-                // null — the winner's row is the source of truth.
-                if (str_contains($e->getMessage(), 'duplicate') || $e->getCode() === '23505') {
-                    return null;
-                }
-                throw $e;
+                // pre-check (two webhooks arriving simultaneously). Re-fetch
+                // the winner's row so the caller still gets a ChatMessage
+                // back (mirrors the resolveVisitor() pattern in this file).
+                $winner = ChatMessage::query()
+                    ->withoutGlobalScopes()
+                    ->where('channel_account_id', $account->id)
+                    ->where('channel_message_id', $mid)
+                    ->first();
+                return $winner; // null if even the re-fetch misses (shouldn't happen)
             }
 
             // Bump conversation counters in the same transaction so the

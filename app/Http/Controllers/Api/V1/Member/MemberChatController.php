@@ -133,6 +133,7 @@ class MemberChatController extends Controller
         $msg = ChatMessage::create([
             'conversation_id' => $conv->id,
             'sender_type'     => 'visitor',
+            'direction'       => ChatMessage::DIRECTION_INBOUND,
             'content'         => $validated['content'],
             'is_read'         => false,
             'created_at'      => now(),

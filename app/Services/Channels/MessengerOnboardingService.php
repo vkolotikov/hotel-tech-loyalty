@@ -60,9 +60,18 @@ class MessengerOnboardingService
      *           &client_id=APP_ID&client_secret=APP_SECRET
      *           &fb_exchange_token=SHORT_LIVED
      *
+     * After exchange, immediately hits /debug_token to introspect what
+     * scopes Meta actually granted (FBLB only honours scopes the admin
+     * approved in the asset-sharing dialog — the requested-vs-granted
+     * gap is what makes "I granted everything and still see no Pages"
+     * so confusing). Returns a structured payload instead of a bare
+     * string so callers can persist scopes + expiry on the connection
+     * for later health checks.
+     *
+     * @return array{token:string, scopes:array, granular_scopes:array, expires_at:?int, data_access_expires_at:?int, is_valid:bool}
      * @throws RuntimeException on failure
      */
-    public function exchangeUserToken(string $shortLivedToken): string
+    public function exchangeUserToken(string $shortLivedToken): array
     {
         $appId     = (string) config('services.meta.app_id', '');
         $appSecret = (string) config('services.meta.app_secret', '');
@@ -89,7 +98,112 @@ class MessengerOnboardingService
         if ($longLived === '') {
             throw new RuntimeException('Meta returned no access_token from exchange');
         }
-        return $longLived;
+
+        // Introspect the brand-new long-lived token. Best-effort — if
+        // /debug_token errors, we still return a usable token (just
+        // without scope context). Granular scopes' target_ids array is
+        // the single most useful diagnostic for FBLB onboarding: it
+        // tells us WHICH Pages the admin actually shared.
+        $debug = $this->debugToken($longLived);
+
+        Log::info('messenger.onboarding.exchange.debug_token', [
+            'is_valid'             => $debug['is_valid'] ?? null,
+            'scopes'               => $debug['scopes'] ?? [],
+            'granular_scopes'      => $debug['granular_scopes'] ?? [],
+            'expires_at'           => $debug['expires_at'] ?? null,
+            'data_access_expires_at' => $debug['data_access_expires_at'] ?? null,
+        ]);
+
+        return [
+            'token'                  => $longLived,
+            'scopes'                 => $debug['scopes'] ?? [],
+            'granular_scopes'        => $debug['granular_scopes'] ?? [],
+            'expires_at'             => $debug['expires_at'] ?? null,
+            'data_access_expires_at' => $debug['data_access_expires_at'] ?? null,
+            'is_valid'               => $debug['is_valid'] ?? true,
+        ];
+    }
+
+    /**
+     * Introspect any user or page token via Meta's /debug_token endpoint.
+     * Uses the app-token form (`app_id|app_secret`) so we can call this
+     * without holding another user token.
+     *
+     * Returns a normalised shape — Meta's raw response nests data under
+     * `data` and the keys are inconsistent (some endpoints return camelCase,
+     * /debug_token uses snake_case). We flatten + default to make caller
+     * code straightforward.
+     *
+     * @return array{scopes:array, granular_scopes:array, expires_at:?int, data_access_expires_at:?int, is_valid:bool, app_id:?string, user_id:?string}
+     */
+    private function debugToken(string $token): array
+    {
+        $appId     = (string) config('services.meta.app_id', '');
+        $appSecret = (string) config('services.meta.app_secret', '');
+        $base      = rtrim((string) config('services.meta.graph_url', 'https://graph.facebook.com'), '/');
+        $ver       = (string) config('services.meta.graph_version', 'v25.0');
+
+        if ($appId === '' || $appSecret === '' || $token === '') {
+            return [
+                'scopes'                 => [],
+                'granular_scopes'        => [],
+                'expires_at'             => null,
+                'data_access_expires_at' => null,
+                'is_valid'               => false,
+                'app_id'                 => null,
+                'user_id'                => null,
+            ];
+        }
+
+        try {
+            $resp = Http::timeout(10)
+                ->withQueryParameters([
+                    'input_token'  => $token,
+                    'access_token' => "{$appId}|{$appSecret}",
+                ])
+                ->acceptJson()
+                ->get("{$base}/{$ver}/debug_token");
+
+            if (! $resp->successful()) {
+                Log::warning('messenger.onboarding.debug_token.failed', [
+                    'status' => $resp->status(),
+                    'body'   => $resp->json('error') ?? $resp->body(),
+                ]);
+                return [
+                    'scopes'                 => [],
+                    'granular_scopes'        => [],
+                    'expires_at'             => null,
+                    'data_access_expires_at' => null,
+                    'is_valid'               => false,
+                    'app_id'                 => null,
+                    'user_id'                => null,
+                ];
+            }
+
+            $data = (array) ($resp->json('data') ?? []);
+            return [
+                'scopes'                 => (array) ($data['scopes'] ?? []),
+                'granular_scopes'        => (array) ($data['granular_scopes'] ?? []),
+                'expires_at'             => isset($data['expires_at']) ? (int) $data['expires_at'] : null,
+                'data_access_expires_at' => isset($data['data_access_expires_at']) ? (int) $data['data_access_expires_at'] : null,
+                'is_valid'               => (bool) ($data['is_valid'] ?? false),
+                'app_id'                 => isset($data['app_id']) ? (string) $data['app_id'] : null,
+                'user_id'                => isset($data['user_id']) ? (string) $data['user_id'] : null,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('messenger.onboarding.debug_token.exception', [
+                'message' => $e->getMessage(),
+            ]);
+            return [
+                'scopes'                 => [],
+                'granular_scopes'        => [],
+                'expires_at'             => null,
+                'data_access_expires_at' => null,
+                'is_valid'               => false,
+                'app_id'                 => null,
+                'user_id'                => null,
+            ];
+        }
     }
 
     /**
@@ -98,23 +212,35 @@ class MessengerOnboardingService
      * directly — the Page tokens returned here inherit the long-lived
      * lifetime of the user token they were derived from.
      *
-     * Endpoint: GET /me/accounts?fields=id,name,picture,access_token,tasks
+     * Three-pronged fetch (lessons learned from FBLB asset sharing):
      *
-     * Filter strategy (lessons learned): Facebook Login for Business
-     * asset sharing returns `tasks` inconsistently — sometimes absent,
-     * sometimes empty array, sometimes populated. The original strict
-     * filter ("tasks must include MESSAGING or MANAGE") rejected every
-     * page when tasks was absent. New strategy:
+     *   A. GET /me/accounts — Pages the user personally administers.
+     *      This is the classic Facebook Login flow's only source.
+     *   B. GET /me/businesses — Business Manager IDs the user is part of.
+     *   C. For each business:
+     *      - GET /{biz_id}/owned_pages — Pages the business owns
+     *      - GET /{biz_id}/client_pages — Pages the business manages on
+     *        behalf of clients (the "asset-sharing" flow)
      *
+     * Under FBLB an admin can share their employer's Page WITHOUT
+     * actually being an admin of the Page — the Business owns it and
+     * grants the partner business access. Those Pages don't appear under
+     * /me/accounts at all, only via the business endpoints. Skipping
+     * Step C is why the customer sees an empty list after granting
+     * scopes.
+     *
+     * Filter strategy: `tasks` is unreliable across the three sources.
      *   - If `tasks` is populated AND doesn't include MESSAGING/MANAGE,
      *     reject (clearly wrong scope grant).
-     *   - If `tasks` is absent/empty, accept (FBLB flow that didn't
-     *     surface the field). The subsequent Send API call will
-     *     return a clear permission error if the page really can't
-     *     be messaged, so we don't lose any safety.
+     *   - If `tasks` is absent/empty, accept (FBLB asset-share rows
+     *     often omit it). The subsequent Send API call gates on real
+     *     permission, so we don't lose safety.
      *
-     * Page must have an access_token to be useful — that's the hard
-     * filter that excludes garbage entries.
+     * Page must have an access_token to be useful. Merging strategy:
+     * dedupe by Page ID, prefer the row with a non-empty access_token —
+     * /me/businesses' nested endpoints sometimes return Pages without
+     * a token (when the user can SEE the asset but isn't authorised to
+     * message as it), which would be useless to us.
      *
      * @return array<int, array{id:string,name:string,picture_url:?string,access_token:string}>
      */
@@ -123,33 +249,70 @@ class MessengerOnboardingService
         $base = rtrim((string) config('services.meta.graph_url', 'https://graph.facebook.com'), '/');
         $ver  = (string) config('services.meta.graph_version', 'v25.0');
 
-        $resp = Http::timeout(15)
-            ->withQueryParameters([
-                'fields'       => 'id,name,picture.type(large),access_token,tasks',
-                'access_token' => $userToken,
-                'limit'        => 100,
-            ])
-            ->acceptJson()
-            ->get("{$base}/{$ver}/me/accounts");
+        // ─── Step A: /me/accounts ───────────────────────────────────
+        $accountsRows = $this->fetchPageList(
+            "{$base}/{$ver}/me/accounts",
+            $userToken,
+            'id,name,picture.type(large),access_token,tasks',
+            'me_accounts',
+        );
 
-        $this->ensureSuccessful($resp, 'Listing Pages failed');
+        // ─── Step B: /me/businesses ─────────────────────────────────
+        $businesses = $this->fetchBusinesses($userToken);
 
-        $rows = (array) ($resp->json('data') ?? []);
+        // ─── Step C: per-business owned + client pages ──────────────
+        $ownedBizRows = [];
+        $clientBizRows = [];
+        foreach ($businesses as $biz) {
+            $bizId = (string) ($biz['id'] ?? '');
+            if ($bizId === '') continue;
 
-        // Log what Meta returned for diagnostic purposes. Page IDs +
-        // tasks shape only — not the access_tokens (don't log secrets).
-        Log::info('messenger.onboarding.list_pages.meta_response', [
-            'count'   => count($rows),
-            'sample'  => array_map(fn ($r) => [
-                'id'    => $r['id'] ?? null,
-                'name'  => $r['name'] ?? null,
-                'tasks' => $r['tasks'] ?? null,
-                'has_token' => !empty($r['access_token']),
-            ], array_slice($rows, 0, 10)),
+            $ownedBizRows = array_merge($ownedBizRows, $this->fetchPageList(
+                "{$base}/{$ver}/{$bizId}/owned_pages",
+                $userToken,
+                'id,name,picture.type(large),access_token,tasks',
+                "biz:{$bizId}:owned",
+            ));
+
+            $clientBizRows = array_merge($clientBizRows, $this->fetchPageList(
+                "{$base}/{$ver}/{$bizId}/client_pages",
+                $userToken,
+                'id,name,picture.type(large),access_token,tasks',
+                "biz:{$bizId}:client",
+            ));
+        }
+
+        // Merge + dedupe by page id. Prefer rows with a non-empty
+        // access_token; if multiple have a token, last-write-wins which
+        // is fine since they're all equivalent Page Access Tokens.
+        $byId = [];
+        $allRows = array_merge($accountsRows, $ownedBizRows, $clientBizRows);
+        foreach ($allRows as $row) {
+            $pid = (string) ($row['id'] ?? '');
+            if ($pid === '') continue;
+            $existing = $byId[$pid] ?? null;
+            // Prefer the row that actually has a token.
+            if ($existing === null) {
+                $byId[$pid] = $row;
+                continue;
+            }
+            $existingHasToken = !empty($existing['access_token']);
+            $candidateHasToken = !empty($row['access_token']);
+            if ($candidateHasToken && !$existingHasToken) {
+                $byId[$pid] = $row;
+            }
+        }
+
+        Log::info('messenger.onboarding.list_pages.raw_counts', [
+            'me_accounts'          => count($accountsRows),
+            'businesses'           => count($businesses),
+            'owned_biz_pages'      => count($ownedBizRows),
+            'client_biz_pages'     => count($clientBizRows),
+            'final_unique_pre_filter' => count($byId),
         ]);
 
         $pages = [];
-        foreach ($rows as $row) {
+        foreach ($byId as $row) {
             $tokenStr = (string) ($row['access_token'] ?? '');
             if ($tokenStr === '') continue; // hard filter — no token = can't do anything
 
@@ -181,6 +344,84 @@ class MessengerOnboardingService
     }
 
     /**
+     * Fetch a single page-list endpoint with consistent error handling
+     * + diagnostic logging. Returns [] on non-2xx (FBLB calls can 400
+     * if a particular business doesn't grant the right scope; that's
+     * NOT fatal — other businesses might still yield pages).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchPageList(string $url, string $userToken, string $fields, string $sourceLabel): array
+    {
+        try {
+            $resp = Http::timeout(15)
+                ->withQueryParameters([
+                    'fields'       => $fields,
+                    'access_token' => $userToken,
+                    'limit'        => 100,
+                ])
+                ->acceptJson()
+                ->get($url);
+
+            if (! $resp->successful()) {
+                Log::info('messenger.onboarding.list_pages.source_failed', [
+                    'source' => $sourceLabel,
+                    'status' => $resp->status(),
+                    'error'  => $resp->json('error.message') ?? null,
+                ]);
+                return [];
+            }
+
+            return (array) ($resp->json('data') ?? []);
+        } catch (\Throwable $e) {
+            Log::info('messenger.onboarding.list_pages.source_exception', [
+                'source'  => $sourceLabel,
+                'message' => $e->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch the list of Business Manager accounts the user belongs to.
+     * Best-effort: returns [] on failure (the user might have granted
+     * pages_show_list but not business_management).
+     *
+     * @return array<int, array{id:string, name?:string}>
+     */
+    private function fetchBusinesses(string $userToken): array
+    {
+        $base = rtrim((string) config('services.meta.graph_url', 'https://graph.facebook.com'), '/');
+        $ver  = (string) config('services.meta.graph_version', 'v25.0');
+
+        try {
+            $resp = Http::timeout(15)
+                ->withQueryParameters([
+                    'fields'       => 'id,name',
+                    'access_token' => $userToken,
+                    'limit'        => 100,
+                ])
+                ->acceptJson()
+                ->get("{$base}/{$ver}/me/businesses");
+
+            if (! $resp->successful()) {
+                Log::info('messenger.onboarding.list_businesses.failed', [
+                    'status' => $resp->status(),
+                    'error'  => $resp->json('error.message') ?? null,
+                ]);
+                return [];
+            }
+
+            return (array) ($resp->json('data') ?? []);
+        } catch (\Throwable $e) {
+            Log::info('messenger.onboarding.list_businesses.exception', [
+                'message' => $e->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Connect a Page to a brand. Idempotent: re-running for the same
      * (org, page_id) updates the existing row instead of erroring on
      * the UNIQUE constraint, so a customer can recover from a stale
@@ -208,14 +449,36 @@ class MessengerOnboardingService
             ->where('external_id', $pageId)
             ->first();
 
+        // Introspect the Page Access Token so we can record what it
+        // actually grants. The page-token scopes are typically a subset
+        // of the user-token scopes (Meta strips anything that's not
+        // applicable to a Page). Stash them so checkTokenHealth() can
+        // later distinguish "expired" vs "scopes-revoked" vs
+        // "scopes-stripped-by-meta".
+        $pageDebug = $this->debugToken($pageToken);
+        Log::info('messenger.onboarding.connect.page_token_debug', [
+            'page_id'                => $pageId,
+            'is_valid'               => $pageDebug['is_valid'] ?? null,
+            'scopes'                 => $pageDebug['scopes'] ?? [],
+            'expires_at'             => $pageDebug['expires_at'] ?? null,
+            'data_access_expires_at' => $pageDebug['data_access_expires_at'] ?? null,
+        ]);
+
         $payload = [
-            'brand_id'           => $brand?->id,
-            'display_name'       => $displayName ?: ($account?->display_name ?: "Page {$pageId}"),
-            'display_avatar_url' => $avatarUrl ?: $account?->display_avatar_url,
-            'page_access_token'  => $pageToken,
-            'status'             => ChatChannelAccount::STATUS_ACTIVE,
-            'token_verified_at'  => now(),
-            'last_error'         => null,
+            'brand_id'              => $brand?->id,
+            'display_name'          => $displayName ?: ($account?->display_name ?: "Page {$pageId}"),
+            'display_avatar_url'    => $avatarUrl ?: $account?->display_avatar_url,
+            'page_access_token'     => $pageToken,
+            'status'                => ChatChannelAccount::STATUS_ACTIVE,
+            'token_verified_at'     => now(),
+            'last_error'            => null,
+            'token_scopes'          => $pageDebug['scopes'] ?? [],
+            'token_expires_at'      => isset($pageDebug['expires_at']) && $pageDebug['expires_at'] > 0
+                ? \Carbon\Carbon::createFromTimestamp($pageDebug['expires_at'])
+                : null,
+            'data_access_expires_at' => isset($pageDebug['data_access_expires_at']) && $pageDebug['data_access_expires_at'] > 0
+                ? \Carbon\Carbon::createFromTimestamp($pageDebug['data_access_expires_at'])
+                : null,
         ];
 
         if ($account !== null) {
@@ -298,6 +561,17 @@ class MessengerOnboardingService
      * Health-check a stored token by hitting GET /me. Used by the UI's
      * status badge + the future daily cron that flips rows to
      * `reauth_required` when their token has died.
+     *
+     * Uses stored scopes + expiry from `connectPage()` to distinguish:
+     *   - 'expired'        — token_expires_at is in the past
+     *   - 'scope_missing'  — required messaging scope not in stored scopes
+     *   - 'revoked'        — Meta returns an error (e.g. user removed app)
+     *   - 'active'         — /me succeeds
+     *
+     * The distinction matters in the UI: an expired token can be cured
+     * by a silent refresh path, a revoked token needs the customer to
+     * re-run Facebook Login, and a scope_missing row needs the customer
+     * to re-share assets with the right permissions checked.
      */
     public function checkTokenHealth(ChatChannelAccount $account): bool
     {
@@ -305,9 +579,39 @@ class MessengerOnboardingService
         $ver  = (string) config('services.meta.graph_version', 'v25.0');
 
         if (empty($account->getAttributes()['page_access_token'])) {
+            $account->forceFill([
+                'status'     => ChatChannelAccount::STATUS_REAUTH,
+                'last_error' => 'Token health: no token stored',
+            ])->save();
             return false;
         }
 
+        // Local check 1: token_expires_at is past → 'expired'.
+        if ($account->token_expires_at !== null && $account->token_expires_at->isPast()) {
+            $account->forceFill([
+                'status'     => ChatChannelAccount::STATUS_REAUTH,
+                'last_error' => "Token health: expired at {$account->token_expires_at->toIso8601String()}",
+            ])->save();
+            return false;
+        }
+
+        // Local check 2: required messaging scope absent from stored
+        // scopes → 'scope_missing'. We require pages_messaging at minimum.
+        $stored = (array) ($account->token_scopes ?? []);
+        if (!empty($stored)) {
+            $required = ['pages_messaging'];
+            $missing = array_values(array_diff($required, $stored));
+            if (!empty($missing)) {
+                $account->forceFill([
+                    'status'     => ChatChannelAccount::STATUS_REAUTH,
+                    'last_error' => 'Token health: scope_missing — ' . implode(', ', $missing),
+                ])->save();
+                return false;
+            }
+        }
+
+        // Remote check: hit /me. Distinguish revoked-by-user from
+        // generic Meta-side errors.
         $resp = Http::timeout(8)
             ->withQueryParameters([
                 'fields'       => 'id',
@@ -324,10 +628,23 @@ class MessengerOnboardingService
             return true;
         }
 
-        $err = $resp->json('error.message') ?? "HTTP {$resp->status()}";
+        // Meta uses error subcodes to indicate the failure class.
+        // code=190 with subcode 458/463/464/467 means the user revoked
+        // the grant or the token expired; anything else is an opaque
+        // platform error we shouldn't treat as revoked.
+        $err      = $resp->json('error');
+        $code     = $err['code'] ?? null;
+        $subcode  = $err['error_subcode'] ?? null;
+        $message  = $err['message'] ?? "HTTP {$resp->status()}";
+
+        $isRevoked = (int) $code === 190
+            && in_array((int) $subcode, [458, 463, 464, 467], true);
+
+        $label = $isRevoked ? 'revoked' : 'error';
+
         $account->forceFill([
             'status'     => ChatChannelAccount::STATUS_REAUTH,
-            'last_error' => "Token health check failed: {$err}",
+            'last_error' => "Token health: {$label} — {$message}",
         ])->save();
         return false;
     }

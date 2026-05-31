@@ -52,12 +52,18 @@ class ChatChannelAccount extends Model
         'last_error',
         'meta_config',
         'connected_by_user_id',
+        'token_scopes',
+        'token_expires_at',
+        'data_access_expires_at',
     ];
 
     protected $casts = [
-        'meta_config'       => 'array',
-        'token_verified_at' => 'datetime',
-        'last_webhook_at'   => 'datetime',
+        'meta_config'            => 'array',
+        'token_verified_at'      => 'datetime',
+        'last_webhook_at'        => 'datetime',
+        'token_scopes'           => 'array',
+        'token_expires_at'       => 'datetime',
+        'data_access_expires_at' => 'datetime',
     ];
 
     protected $hidden = [

@@ -45,7 +45,15 @@ class MessengerIntegrationController extends Controller
             'configured'       => $appId !== '' && config('services.meta.app_secret') !== null && config('services.meta.app_secret') !== '',
             'app_id'           => $appId,                                  // safe to expose; embeds in client-side JS
             'graph_version'    => $graphVersion,
-            'required_scopes'  => ['pages_show_list', 'pages_messaging', 'pages_manage_metadata'],
+            // business_management is needed to enumerate Pages shared via
+            // Facebook Login for Business asset-sharing — without it,
+            // /me/businesses + the per-business owned_pages / client_pages
+            // endpoints return zero rows and the customer sees an empty
+            // list even after granting every other scope. NOTE: adding
+            // this scope requires Meta App Review approval; the code
+            // change is harmless before approval (Meta just declines to
+            // grant it in the FB.login dialog).
+            'required_scopes'  => ['pages_show_list', 'pages_messaging', 'pages_manage_metadata', 'business_management'],
             'subscribed_fields' => ['messages', 'messaging_postbacks', 'message_deliveries', 'message_reads'],
         ]);
     }
@@ -87,8 +95,13 @@ class MessengerIntegrationController extends Controller
         ]);
 
         try {
-            $longLived = $this->service->exchangeUserToken($request->input('user_token'));
-            $pages = $this->service->listManageablePages($longLived);
+            // exchangeUserToken returns an array since the FBLB
+            // hardening — we only need the bare token here for the
+            // Pages call, but the debug fields are also exposed in
+            // the response so the admin UI can surface what scopes
+            // Meta actually granted vs what was requested.
+            $exchange = $this->service->exchangeUserToken($request->input('user_token'));
+            $pages    = $this->service->listManageablePages($exchange['token']);
         } catch (RuntimeException $e) {
             return response()->json([
                 'error' => 'meta_call_failed',
@@ -109,7 +122,19 @@ class MessengerIntegrationController extends Controller
         }
         unset($p);
 
-        return response()->json(['data' => $pages]);
+        return response()->json([
+            'data' => $pages,
+            // Surface what Meta actually granted on the user token — the
+            // admin UI can warn "you requested X but Meta only granted Y"
+            // when the lists diverge. Useful for debugging FBLB onboarding
+            // where the customer thinks they granted everything.
+            'token' => [
+                'scopes'                 => $exchange['scopes'] ?? [],
+                'granular_scopes'        => $exchange['granular_scopes'] ?? [],
+                'expires_at'             => $exchange['expires_at'] ?? null,
+                'data_access_expires_at' => $exchange['data_access_expires_at'] ?? null,
+            ],
+        ]);
     }
 
     /**

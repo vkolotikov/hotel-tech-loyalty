@@ -127,6 +127,15 @@ class HotelSetting extends Model
     /**
      * Load every setting for the given org as [key => typed_value], cached.
      * Front-loads what would otherwise be N per-key queries per request.
+     *
+     * IMPORTANT: ENCRYPTED_KEYS entries are excluded from the cached map.
+     * Under CACHE_STORE=database (Laravel Cloud default) cached values land
+     * in Postgres as plaintext — defeating the at-rest encryption. Callers
+     * that need encrypted secrets should query directly (see
+     * StripeService::setting() / SmoobuClient::setting() for the pattern:
+     * withoutGlobalScopes() + ->first() + $row->value so the decrypt
+     * accessor runs). The cache wouldn't help those callers anyway since
+     * they're already hot per-request.
      */
     private static function cachedMapFor(int $orgId): array
     {
@@ -134,6 +143,7 @@ class HotelSetting extends Model
             "org:{$orgId}:hotel_settings",
             self::CACHE_TTL,
             fn () => static::all()
+                ->reject(fn (self $s) => in_array($s->key, self::ENCRYPTED_KEYS, true))
                 ->mapWithKeys(fn (self $s) => [$s->key => $s->typed_value])
                 ->all()
         );

@@ -45,6 +45,7 @@ class SettingsController extends Controller
      * fall back to the platform's `.env` and charge OUR Stripe account
      * (or worse, leak across tenants).
      */
+    // Payment-class secrets (Stripe + Smoobu webhook secret) must NOT be env-fallbacked — each tenant configures their own.
     private const ENV_FALLBACKS = [
         'ai_openai_api_key'            => 'OPENAI_API_KEY',
         'ai_openai_model'              => 'OPENAI_MODEL',
@@ -53,7 +54,6 @@ class SettingsController extends Controller
         'booking_smoobu_api_key'       => 'SMOOBU_API_KEY',
         'booking_smoobu_channel_id'    => 'SMOOBU_CHANNEL_ID',
         'booking_smoobu_base_url'      => 'SMOOBU_BASE_URL',
-        'booking_smoobu_webhook_secret' => 'SMOOBU_WEBHOOK_SECRET',
         'mail_host'                    => 'MAIL_HOST',
         'mail_port'                    => 'MAIL_PORT',
         'mail_username'                => 'MAIL_USERNAME',

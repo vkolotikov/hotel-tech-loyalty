@@ -7,11 +7,13 @@ use App\Models\DomainEvent;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Models\Organization;
 use App\Models\PointExpiryBucket;
 use App\Models\PointsTransaction;
 use App\Models\TierAssessment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class LoyaltyService
@@ -569,26 +571,95 @@ class LoyaltyService
 
     /**
      * Expire points using bucket-based strategy.
+     *
+     * Runs in console (hourly cron) with no tenant binding, so we iterate
+     * org-by-org and bind current_organization_id around each org's work.
+     * PointExpiryBucket has no organization_id of its own — it's scoped
+     * via member_id IN (the org's members). The member fetch goes through
+     * the bound tenant context so BelongsToOrganization/TenantScope return
+     * real LoyaltyMember rows (not null). Without this binding, the old
+     * implementation crashed because $bucket->member was null for every
+     * bucket and decrement() / PointsTransaction::create() blew up.
      */
     public function expirePoints(): int
     {
         $expired = 0;
 
+        $priorOrgId  = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $priorOrgObj = app()->bound('current_organization') ? app('current_organization') : null;
+
+        try {
+            Organization::query()->orderBy('id')->chunkById(50, function ($orgs) use (&$expired) {
+                foreach ($orgs as $org) {
+                    app()->instance('current_organization_id', $org->id);
+                    app()->instance('current_organization', $org);
+
+                    try {
+                        $expired += $this->expirePointsForOrg($org);
+                    } catch (\Throwable $e) {
+                        Log::warning('expirePoints failed for org ' . $org->id . ': ' . $e->getMessage());
+                    } finally {
+                        app()->forgetInstance('current_organization_id');
+                        app()->forgetInstance('current_organization');
+                    }
+                }
+            });
+        } finally {
+            // Restore prior bound state (if any) so callers that DO have a
+            // tenant context don't see it wiped after this method returns.
+            if ($priorOrgId !== null) {
+                app()->instance('current_organization_id', $priorOrgId);
+            }
+            if ($priorOrgObj !== null) {
+                app()->instance('current_organization', $priorOrgObj);
+            }
+        }
+
+        return $expired;
+    }
+
+    /**
+     * Per-org bucket sweep. Caller MUST have bound current_organization_id
+     * to $org->id before invoking this — that's what makes LoyaltyMember
+     * lookups return real rows instead of null via TenantScope's fail-closed
+     * 1=0 clause.
+     */
+    private function expirePointsForOrg(Organization $org): int
+    {
+        $expired = 0;
+
+        // Collect this org's member ids in the bound tenant context. We do NOT
+        // ->with('member') on the bucket query — the buckets table has no
+        // organization_id, and loading the member relationship across thousands
+        // of buckets in one go bypasses any per-batch consistency anyway. We
+        // fetch members fresh in the inner loop.
+        $memberIds = LoyaltyMember::where('organization_id', $org->id)->pluck('id');
+        if ($memberIds->isEmpty()) {
+            return 0;
+        }
+
         $buckets = PointExpiryBucket::where('expires_at', '<', now())
             ->where('is_expired', false)
             ->where('remaining_points', '>', 0)
-            ->with('member')
+            ->whereIn('member_id', $memberIds)
             ->get();
 
         foreach ($buckets as $bucket) {
-            DB::transaction(function () use ($bucket, &$expired) {
+            DB::transaction(function () use ($bucket, $org, &$expired) {
                 $points = $bucket->remaining_points;
-                $member = $bucket->member;
+                $member = LoyaltyMember::find($bucket->member_id);
+                if (!$member) {
+                    // Bucket points at a member that isn't visible — skip rather
+                    // than crash. Could only happen if the member row was hard-
+                    // deleted while this bucket survived.
+                    return;
+                }
 
                 $member->decrement('current_points', $points);
                 $bucket->update(['remaining_points' => 0, 'is_expired' => true]);
 
                 PointsTransaction::create([
+                    'organization_id' => $member->organization_id ?? $org->id,
                     'member_id'       => $member->id,
                     'type'            => 'expire',
                     'points'          => -$points,

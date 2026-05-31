@@ -550,11 +550,27 @@ class BookingPublicController extends Controller
                 ->where('stripe_payment_intent_id', $intent->id)
                 ->first();
 
-            if ($mirror && $mirror->payment_status !== 'paid') {
+            // Guard against clobbering terminal / mid-refund states.
+            // payment_intent.succeeded can arrive late (Stripe retries
+            // on its own schedule), so by the time we see it the mirror
+            // may already be 'refunded', 'partially_refunded', or
+            // 'disputed' — flipping back to 'paid' loses real money
+            // movement. Only flip when the mirror is still in a
+            // pre-payment state.
+            $preCaptureStates = ['pending', 'authorized', null];
+            if ($mirror && in_array($mirror->payment_status, $preCaptureStates, true)) {
                 $mirror->update([
                     'payment_status' => 'paid',
                     'payment_method' => 'stripe',
                     'price_paid'     => $intent->amount / 100,
+                ]);
+            } elseif ($mirror && !in_array($mirror->payment_status, $preCaptureStates, true) && $mirror->payment_status !== 'paid') {
+                // Mirror already moved past 'paid' (refunded / disputed /
+                // partially_refunded). Log + leave untouched.
+                \Illuminate\Support\Facades\Log::info('Stripe payment_intent.succeeded ignored — mirror already in terminal state', [
+                    'mirror_id'      => $mirror->id,
+                    'payment_status' => $mirror->payment_status,
+                    'pi_id'          => $intent->id,
                 ]);
             } elseif (!$mirror && $holdToken && $orgId) {
                 // ORPHAN RECOVERY: Stripe charged the guest but our
@@ -577,62 +593,120 @@ class BookingPublicController extends Controller
                         app()->instance('current_organization_id', (int) $orgId);
 
                         $payload = $hold->payload_json ?? [];
-                        \App\Models\BookingMirror::create([
-                            'organization_id'   => (int) $orgId,
-                            'reservation_id'    => 'ORPHAN-' . substr($intent->id, -10),
-                            'booking_reference' => 'PI-' . substr($intent->id, -8),
-                            'booking_type'      => 'reservation',
-                            'booking_state'     => 'confirmed',
-                            'apartment_id'      => $payload['unit_id'] ?? null,
-                            'apartment_name'    => $payload['unit_name'] ?? ($intent->metadata->unit_name ?? 'Room'),
-                            'channel_name'      => 'Website',
-                            'guest_name'        => trim(($payload['guest']['first_name'] ?? '') . ' ' . ($payload['guest']['last_name'] ?? '')) ?: ($intent->charges?->data[0]?->billing_details?->name ?? null),
-                            'guest_email'       => $payload['guest']['email'] ?? ($intent->charges?->data[0]?->billing_details?->email ?? null),
-                            'guest_phone'       => $payload['guest']['phone'] ?? null,
-                            'adults'            => $payload['adults'] ?? null,
-                            'children'          => $payload['children'] ?? null,
-                            'arrival_date'      => $payload['check_in'] ?? ($intent->metadata->check_in ?? null),
-                            'departure_date'    => $payload['check_out'] ?? ($intent->metadata->check_out ?? null),
-                            'price_total'       => $intent->amount / 100,
-                            'price_paid'        => $intent->amount / 100,
-                            'payment_status'    => 'paid',
-                            'payment_method'    => 'stripe',
-                            'stripe_payment_intent_id' => $intent->id,
-                            // pending_pms_sync flags it for the retry
-                            // cron — Smoobu wasn't called yet.
-                            'internal_status'   => 'pending_pms_sync',
-                            'synced_at'         => null,
-                        ]);
 
-                        \Illuminate\Support\Facades\Log::warning('Stripe orphan recovered — mirror created from PI metadata', [
-                            'org_id'     => $orgId,
-                            'pi_id'      => $intent->id,
-                            'hold_token' => $holdToken,
-                        ]);
+                        // Race protection: confirm() may finish the
+                        // BookingMirror create on the user-facing
+                        // request at the same instant Stripe's webhook
+                        // gets here. A dedicated migration adds a
+                        // unique index on (organization_id,
+                        // stripe_payment_intent_id) so the loser of
+                        // that race hits 23505. Catch + re-fetch the
+                        // winning row + ensure it's marked paid so we
+                        // don't end up with two mirrors for one PI.
+                        // $orphanCreated tells the email block below
+                        // whether confirm() already owns the booking
+                        // (don't double-send) or whether we recovered
+                        // it ourselves (we must send).
+                        $orphanCreated = false;
+                        try {
+                            \App\Models\BookingMirror::create([
+                                'organization_id'   => (int) $orgId,
+                                'reservation_id'    => 'ORPHAN-' . substr($intent->id, -10),
+                                'booking_reference' => 'PI-' . substr($intent->id, -8),
+                                'booking_type'      => 'reservation',
+                                'booking_state'     => 'confirmed',
+                                'apartment_id'      => $payload['unit_id'] ?? null,
+                                'apartment_name'    => $payload['unit_name'] ?? ($intent->metadata->unit_name ?? 'Room'),
+                                'channel_name'      => 'Website',
+                                'guest_name'        => trim(($payload['guest']['first_name'] ?? '') . ' ' . ($payload['guest']['last_name'] ?? '')) ?: ($intent->charges?->data[0]?->billing_details?->name ?? null),
+                                'guest_email'       => $payload['guest']['email'] ?? ($intent->charges?->data[0]?->billing_details?->email ?? null),
+                                'guest_phone'       => $payload['guest']['phone'] ?? null,
+                                'adults'            => $payload['adults'] ?? null,
+                                'children'          => $payload['children'] ?? null,
+                                'arrival_date'      => $payload['check_in'] ?? ($intent->metadata->check_in ?? null),
+                                'departure_date'    => $payload['check_out'] ?? ($intent->metadata->check_out ?? null),
+                                'price_total'       => $intent->amount / 100,
+                                'price_paid'        => $intent->amount / 100,
+                                'payment_status'    => 'paid',
+                                'payment_method'    => 'stripe',
+                                'stripe_payment_intent_id' => $intent->id,
+                                // pending_pms_sync flags it for the retry
+                                // cron — Smoobu wasn't called yet.
+                                'internal_status'   => 'pending_pms_sync',
+                                'synced_at'         => null,
+                            ]);
+                            $orphanCreated = true;
+                        } catch (\Illuminate\Database\UniqueConstraintViolationException $raceEx) {
+                            // confirm() already created a mirror for
+                            // this PI. Re-fetch it, then flip to paid
+                            // only if it's still in a pre-capture
+                            // state (don't clobber refunded / disputed
+                            // / partially_refunded — see FIX C above).
+                            $existingMirror = \App\Models\BookingMirror::withoutGlobalScopes()
+                                ->where('organization_id', (int) $orgId)
+                                ->where('stripe_payment_intent_id', $intent->id)
+                                ->first();
+
+                            if ($existingMirror && in_array($existingMirror->payment_status, ['pending', 'authorized', null], true)) {
+                                $existingMirror->update([
+                                    'payment_status' => 'paid',
+                                    'payment_method' => 'stripe',
+                                    'price_paid'     => $intent->amount / 100,
+                                ]);
+                                \Illuminate\Support\Facades\Log::info('Stripe orphan-recovery race resolved — flipped existing mirror to paid', [
+                                    'org_id'    => $orgId,
+                                    'pi_id'     => $intent->id,
+                                    'mirror_id' => $existingMirror->id,
+                                ]);
+                            } else {
+                                \Illuminate\Support\Facades\Log::info('Stripe orphan-recovery race resolved — existing mirror left untouched', [
+                                    'org_id'         => $orgId,
+                                    'pi_id'          => $intent->id,
+                                    'mirror_id'      => $existingMirror?->id,
+                                    'payment_status' => $existingMirror?->payment_status,
+                                ]);
+                            }
+                            // $orphanCreated stays false — confirm()
+                            // owns the email path for this booking.
+                        }
+
+                        if ($orphanCreated) {
+                            \Illuminate\Support\Facades\Log::warning('Stripe orphan recovered — mirror created from PI metadata', [
+                                'org_id'     => $orgId,
+                                'pi_id'      => $intent->id,
+                                'hold_token' => $holdToken,
+                            ]);
+                        }
 
                         // Send the confirmation email the normal flow
                         // would have sent. Best-effort — a failed email
                         // must not crash the webhook handler. Signature
                         // matches BookingEngineService::sendBookingEmails(
                         //   array $guest, array $payload, array $response, ?int $orgId)
-                        try {
-                            $recoveredGuest = $payload['guest'] ?? [];
-                            if (empty($recoveredGuest['email'])) {
-                                $recoveredGuest['email'] = $intent->charges?->data[0]?->billing_details?->email ?? null;
+                        // Skipped when confirm() won the race — it
+                        // already sent the email through its own path,
+                        // so sending again here would double-email the
+                        // guest.
+                        if ($orphanCreated) {
+                            try {
+                                $recoveredGuest = $payload['guest'] ?? [];
+                                if (empty($recoveredGuest['email'])) {
+                                    $recoveredGuest['email'] = $intent->charges?->data[0]?->billing_details?->email ?? null;
+                                }
+                                if (!empty($recoveredGuest['email'])) {
+                                    app(BookingEngineService::class)->sendBookingEmails(
+                                        $recoveredGuest,
+                                        $payload,
+                                        ['id' => 'ORPHAN-' . substr($intent->id, -10)],
+                                        (int) $orgId,
+                                    );
+                                }
+                            } catch (\Throwable $emailErr) {
+                                \Illuminate\Support\Facades\Log::warning('Orphan recovery email failed (non-fatal)', [
+                                    'pi_id' => $intent->id,
+                                    'error' => $emailErr->getMessage(),
+                                ]);
                             }
-                            if (!empty($recoveredGuest['email'])) {
-                                app(BookingEngineService::class)->sendBookingEmails(
-                                    $recoveredGuest,
-                                    $payload,
-                                    ['id' => 'ORPHAN-' . substr($intent->id, -10)],
-                                    (int) $orgId,
-                                );
-                            }
-                        } catch (\Throwable $emailErr) {
-                            \Illuminate\Support\Facades\Log::warning('Orphan recovery email failed (non-fatal)', [
-                                'pi_id' => $intent->id,
-                                'error' => $emailErr->getMessage(),
-                            ]);
                         }
                     }
                 } catch (\Throwable $e) {
@@ -678,16 +752,16 @@ class BookingPublicController extends Controller
             // Refund issued — sync our state. Fires for refunds initiated from
             // the Stripe Dashboard, async settlement reversals, and our own
             // admin refunds (idempotency check below dedupes our own actions).
-            $this->handleChargeRefunded($event->data->object);
+            $this->handleChargeRefunded($event->data->object, (int) $orgId);
         } elseif ($event->type === 'charge.dispute.created') {
             // Chargeback opened. Stripe holds the funds pending review. We
             // flag the booking so staff see it — do NOT auto-refund yet,
             // since most disputes are won (i.e. funds released back to us).
-            $this->handleChargeDisputeCreated($event->data->object);
+            $this->handleChargeDisputeCreated($event->data->object, (int) $orgId);
         } elseif ($event->type === 'charge.dispute.closed') {
             // Dispute decided. If lost (status='lost'), funds were debited
             // → treat as refunded. If won, restore payment_status to 'paid'.
-            $this->handleChargeDisputeClosed($event->data->object);
+            $this->handleChargeDisputeClosed($event->data->object, (int) $orgId);
         }
 
         return response()->json(['received' => true]);
@@ -725,15 +799,35 @@ class BookingPublicController extends Controller
         return null;
     }
 
-    private function handleChargeRefunded(\Stripe\Charge $charge): void
+    private function handleChargeRefunded(\Stripe\Charge $charge, int $orgId): void
     {
         $paymentIntentId = $charge->payment_intent;
         if (!$paymentIntentId) return;
 
+        // Cross-tenant guard: only match a mirror whose organization_id
+        // equals the org we resolved + verified the signature against.
+        // Without this, a tenant with a valid webhook secret could
+        // forge a payload referencing another tenant's PI id and pivot
+        // into their mirror.
         $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
             ->where('stripe_payment_intent_id', $paymentIntentId)
             ->first();
-        if (!$mirror) return;
+        if (!$mirror) {
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'stripe.webhook.cross_tenant_attempt',
+                'subject_type'    => 'stripe_charge',
+                'subject_id'      => null,
+                'new_values'      => [
+                    'event'              => 'charge.refunded',
+                    'payment_intent_id'  => $paymentIntentId,
+                    'charge_id'          => $charge->id ?? null,
+                ],
+                'description'     => "Stripe charge.refunded received for PI {$paymentIntentId} but no mirror in org {$orgId}",
+            ]);
+            return;
+        }
 
         // Find the most recent refund on the charge.
         $refunds = $charge->refunds->data ?? [];
@@ -773,15 +867,37 @@ class BookingPublicController extends Controller
         }
     }
 
-    private function handleChargeDisputeCreated(\Stripe\Dispute $dispute): void
+    private function handleChargeDisputeCreated(\Stripe\Dispute $dispute, int $orgId): void
     {
         $paymentIntentId = $dispute->payment_intent;
         if (!$paymentIntentId) return;
 
+        // Cross-tenant guard. For dispute events, $orgId was derived
+        // by resolveStripeWebhookOrg() via the BookingMirror lookup
+        // itself — the signature was then verified with THAT org's
+        // webhook secret. So if a mirror exists, its organization_id
+        // must equal $orgId by construction. Defence in depth: re-
+        // enforce the constraint so any future change to the resolver
+        // can't accidentally route a dispute to the wrong tenant.
         $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
             ->where('stripe_payment_intent_id', $paymentIntentId)
             ->first();
-        if (!$mirror) return;
+        if (!$mirror) {
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'stripe.webhook.cross_tenant_attempt',
+                'subject_type'    => 'stripe_dispute',
+                'subject_id'      => null,
+                'new_values'      => [
+                    'event'              => 'charge.dispute.created',
+                    'payment_intent_id'  => $paymentIntentId,
+                    'dispute_id'         => $dispute->id ?? null,
+                ],
+                'description'     => "Stripe charge.dispute.created received for PI {$paymentIntentId} but no mirror in org {$orgId}",
+            ]);
+            return;
+        }
 
         try {
             app(\App\Services\BookingRefundService::class)->flagDisputed(
@@ -796,15 +912,31 @@ class BookingPublicController extends Controller
         }
     }
 
-    private function handleChargeDisputeClosed(\Stripe\Dispute $dispute): void
+    private function handleChargeDisputeClosed(\Stripe\Dispute $dispute, int $orgId): void
     {
         $paymentIntentId = $dispute->payment_intent;
         if (!$paymentIntentId) return;
 
+        // Cross-tenant guard — same reasoning as handleChargeDisputeCreated.
         $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
             ->where('stripe_payment_intent_id', $paymentIntentId)
             ->first();
-        if (!$mirror) return;
+        if (!$mirror) {
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'stripe.webhook.cross_tenant_attempt',
+                'subject_type'    => 'stripe_dispute',
+                'subject_id'      => null,
+                'new_values'      => [
+                    'event'              => 'charge.dispute.closed',
+                    'payment_intent_id'  => $paymentIntentId,
+                    'dispute_id'         => $dispute->id ?? null,
+                ],
+                'description'     => "Stripe charge.dispute.closed received for PI {$paymentIntentId} but no mirror in org {$orgId}",
+            ]);
+            return;
+        }
 
         $status = $dispute->status ?? '';
 
@@ -875,31 +1007,29 @@ class BookingPublicController extends Controller
         // Smoobu lets each org configure their own webhook URL. We
         // require the org to include `?org={widget_token}` in that URL
         // so we can look up THEIR booking_smoobu_webhook_secret from
-        // hotel_settings and verify against it. This is per-tenant and
-        // beats the previous global env-only secret.
-        //
-        // Legacy fallback: if no `?org=` query param is present we
-        // still accept the env secret so deployments mid-migration
-        // keep working. The fallback path is logged so customers
-        // know to update their Smoobu webhook URL.
+        // hotel_settings and verify against it. This is strictly
+        // per-tenant — the previous env-fallback path was a
+        // cross-tenant pivot risk (an attacker who learns the
+        // platform-wide secret could submit reservation webhooks for
+        // any org), so it has been removed.
         // ──────────────────────────────────────────────────────────────
         $providedSecret = (string) $request->header('X-Webhook-Secret', '');
         $orgToken = $request->query('org');
-        $resolvedOrgId = null;
-        $expectedSecret = null;
 
-        if ($orgToken) {
-            $org = \App\Models\Organization::where('widget_token', $orgToken)->first(['id']);
-            if (!$org) {
-                return response()->json(['error' => 'Unknown org token'], 401);
-            }
-            $resolvedOrgId = (int) $org->id;
-            app()->instance('current_organization_id', $resolvedOrgId);
-            $expectedSecret = HotelSetting::getValue('booking_smoobu_webhook_secret') ?: null;
-        } else {
-            \Illuminate\Support\Facades\Log::warning('Smoobu webhook called without ?org= token — falling back to env secret. Customer should update their Smoobu webhook URL.');
-            $expectedSecret = config('services.smoobu.webhook_secret');
+        if (!$orgToken) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu webhook rejected — missing ?org= token. Customer must update their Smoobu webhook URL to include ?org={widget_token}.');
+            return response()->json(['error' => 'org token required'], 401);
         }
+
+        $org = \App\Models\Organization::where('widget_token', $orgToken)->first(['id']);
+        if (!$org) {
+            \Illuminate\Support\Facades\Log::warning('Smoobu webhook rejected — unknown org token', ['org_token' => $orgToken]);
+            return response()->json(['error' => 'org token required'], 401);
+        }
+
+        $resolvedOrgId = (int) $org->id;
+        app()->instance('current_organization_id', $resolvedOrgId);
+        $expectedSecret = HotelSetting::getValue('booking_smoobu_webhook_secret') ?: null;
 
         if (!$expectedSecret || !hash_equals((string) $expectedSecret, $providedSecret)) {
             return response()->json(['error' => 'Unauthorized'], 401);

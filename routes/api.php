@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Member\BookingController;
 use App\Http\Controllers\Api\V1\Member\ReferralController;
 use App\Http\Controllers\Api\V1\Chatbot\ChatbotController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\DiagController;
 use App\Http\Controllers\Api\V1\Admin\MemberAdminController;
 use App\Http\Controllers\Api\V1\Admin\ScanController;
 use App\Http\Controllers\Api\V1\Admin\NfcController;
@@ -120,10 +121,12 @@ Route::prefix('v1')->group(function () {
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
     // Apple Wallet pkpass — public route that accepts a Sanctum token
-// via ?token= query because Safari navigations to the .pkpass URL
-// can't carry an Authorization header. Token is resolved inside the
-// controller using PersonalAccessToken::findToken.
-Route::get('v1/member/card/apple-wallet', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'apple']);
+    // via ?token= query because Safari navigations to the .pkpass URL
+    // can't carry an Authorization header. Token is resolved inside the
+    // controller using PersonalAccessToken::findToken.
+    // NOTE: this route sits inside Route::prefix('v1') above, so the path
+    // is just 'member/...' — adding 'v1/' here would produce /api/v1/v1/...
+    Route::get('member/card/apple-wallet', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'apple']);
 
 Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('config',                [BookingPublicController::class, 'config']);
@@ -212,9 +215,6 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
         Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1');
     });
-
-    // ─── Public diagnostic endpoint (no auth) ────────────────────────────────
-    Route::get('billing/diag', [AuthController::class, 'billingDiag']);
 
     // ─── External integration API (Sanctum personal access tokens) ──────────
     // For third-party systems (FDS Card Builder, Zapier, custom integrations)
@@ -311,6 +311,15 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Organization setup
             Route::get('setup/status',       [SetupController::class, 'status']);
             Route::post('setup/initialize',  [SetupController::class, 'initialize']);
+
+            // ─── Ops Diagnostics (super_admin only) ────────────────────────────
+            // SaaS connectivity probe — DNS resolve + /up health + /auth/token
+            // ping. Replaces the old public /billing/diag, which leaked a JWT
+            // signing oracle via ?token=. NO token verification, NO secret
+            // length disclosure. Tightly throttled because the probes hit the
+            // upstream SaaS API on every call.
+            Route::get('diag/billing', [DiagController::class, 'billing'])
+                ->middleware(['admin:super_admin', 'throttle:5,1']);
 
             // ─── Brands (multi-brand portfolio) ────────────────────────────────
             // Phase 1 of the multi-brand rollout. Single-brand orgs keep one

@@ -91,9 +91,14 @@ class ChannelRouter
     public function sendOutbound(
         ChatConversation $conversation,
         ChatMessage $message,
-        string $senderKind = 'agent',
+        string $senderKind,
         ?array $attachments = null,
     ): bool {
+        assert(
+            in_array($senderKind, ['ai', 'agent', 'system'], true),
+            'ChannelRouter::sendOutbound expects $senderKind in [ai, agent, system]; got ' . $senderKind
+        );
+
         $dispatcher = $this->for($conversation);
         if ($dispatcher === null) {
             return true; // internal channel — nothing to do, signal "fine"
@@ -139,9 +144,12 @@ class ChannelRouter
         try {
             $externalMid = $dispatcher->send($conversation, $message->content, $attachments, $opts);
             if ($externalMid !== '') {
+                // direction is now stamped at ChatMessage::create time by every
+                // outbound producer (AI reply, agent reply, system note). We
+                // only need to record the channel-side message id here for
+                // delivery/read receipt correlation in subsequent webhooks.
                 $message->forceFill([
                     'channel_message_id' => $externalMid,
-                    'direction'          => ChatMessage::DIRECTION_OUTBOUND,
                 ])->saveQuietly();
             }
             return true;

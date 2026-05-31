@@ -28,7 +28,11 @@ class ChatMessage extends Model
         // is Meta's mid.* used for idempotency; direction is the cheaper-
         // to-filter form of (sender_type=visitor → inbound, else outbound).
         // attachments_data carries normalised attachment metadata that
-        // outlives the raw webhook `metadata` blob.
+        // outlives the raw webhook `metadata` blob. channel_account_id
+        // scopes the idempotency dedup so two Pages reusing the same Meta
+        // mid namespace never collide (also backs the partial unique index
+        // chat_messages_channel_dedup_unique).
+        'channel_account_id',
         'channel_message_id',
         'direction',
         'attachments_data',

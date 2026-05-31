@@ -401,6 +401,7 @@ class AvailabilityService
         $rooms = $this->getRooms();
         if (empty($rooms)) return ['prices' => [], 'availability' => []];
 
+        $orgId     = app()->bound('current_organization_id') ? app('current_organization_id') : null;
         $unitIds   = array_keys($rooms);
         $prices    = [];
         $available = [];
@@ -410,6 +411,25 @@ class AvailabilityService
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Calendar prices fetch failed', ['error' => $e->getMessage()]);
             $daily = [];
+        }
+
+        // Pre-compute booked counts per (apartment, date) for the WHOLE
+        // window in ONE query per room — so the per-day fallback below
+        // doesn't fire N×days SQL hits. Used by the no-Smoobu-entry
+        // branch to verify there's still inventory left even when the
+        // PMS rate-calendar has a gap for this date.
+        //
+        // The mirror's link to a room is `apartment_id` — Smoobu's room
+        // id, which is also the key we use in the $rooms map (pms_id,
+        // or stringified DB id as fallback for admin-created rooms).
+        // Manual rooms (no pms_id) have no Smoobu bookings so their map
+        // entry is just empty, which is correct.
+        $bookedByDate = [];
+        foreach ($rooms as $unitId => $room) {
+            $key = (string) $unitId;
+            $bookedByDate[$key] = $this->bookedCountsByDate(
+                $key, $start, $end, $orgId,
+            );
         }
 
         $current = new \DateTime($start);
@@ -434,14 +454,21 @@ class AvailabilityService
                     continue;
                 }
 
-                // No Smoobu entry — optimistic fallback to base price. The
-                // booking page's final availability check will reject the
-                // dates if the PMS later disagrees.
+                // No Smoobu entry for this date. Optimistic fallback to
+                // base price — BUT only if our local mirror has inventory
+                // left. Without this check, every PMS rate-calendar gap
+                // turned the date into "available" even when we'd already
+                // sold every unit through Smoobu's own channel manager.
                 $base = (float) ($room['base_price'] ?? $room['price_per_night'] ?? 0);
-                if ($base > 0) {
-                    $anyAvailable = true;
-                    $cheapest     = min($cheapest, $base);
-                }
+                if ($base <= 0) continue;
+
+                $inventory   = max(1, (int) ($room['inventory_count'] ?? 1));
+                $bookedCount = (int) ($bookedByDate[$key][$dateStr] ?? 0);
+                $remaining   = $inventory - $bookedCount;
+                if ($remaining < 1) continue;
+
+                $anyAvailable = true;
+                $cheapest     = min($cheapest, $base);
             }
 
             $prices[$dateStr]    = $cheapest === PHP_INT_MAX ? 0 : (float) $cheapest;
@@ -450,6 +477,64 @@ class AvailabilityService
         }
 
         return ['prices' => $prices, 'availability' => $available];
+    }
+
+    /**
+     * Date-indexed booked-count map for a single room across a window.
+     *
+     * Returns ['2026-06-10' => 2, '2026-06-11' => 1, …] — one entry per
+     * date in [$from, $to] inclusive that has at least one overlapping
+     * non-cancelled booking. Dates with zero bookings are omitted (the
+     * caller treats missing keys as 0).
+     *
+     * The query pulls every overlapping mirror once, then explodes each
+     * stay across its date range in PHP. This is far cheaper than
+     * N×days SQL roundtrips when calendarPrices() is asked for a
+     * 12-month window (~360 dates × however-many rooms).
+     */
+    private function bookedCountsByDate(string $apartmentId, string $from, string $to, ?int $orgId): array
+    {
+        $rows = BookingMirror::withoutGlobalScopes()
+            ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
+            ->where('apartment_id', $apartmentId)
+            ->whereNotIn('booking_state', ['cancelled'])
+            ->where(function ($q) {
+                $q->whereNull('internal_status')
+                  ->orWhereNotIn('internal_status', ['cancelled']);
+            })
+            ->where(function ($q) {
+                // payment_status is nullable on rows synced from Smoobu
+                // before a payment was attached — those still count as
+                // booked. Only refunded/cancelled mirrors free the slot.
+                $q->whereNull('payment_status')
+                  ->orWhereNotIn('payment_status', ['refunded', 'cancelled']);
+            })
+            ->where('arrival_date', '<=', $to)
+            ->where('departure_date', '>', $from)
+            ->get(['arrival_date', 'departure_date']);
+
+        $counts = [];
+        $windowStart = new \DateTime($from);
+        $windowEnd   = new \DateTime($to);
+
+        foreach ($rows as $row) {
+            // departure_date is the checkout morning — the night BEFORE
+            // is the last billable one. Iterate [arrival, departure)
+            // intersected with [windowStart, windowEnd].
+            $arrival   = new \DateTime($row->arrival_date);
+            $departure = new \DateTime($row->departure_date);
+
+            $cursor = max($arrival, $windowStart);
+            $stop   = min($departure, (clone $windowEnd)->modify('+1 day'));
+
+            while ($cursor < $stop) {
+                $d = $cursor->format('Y-m-d');
+                $counts[$d] = ($counts[$d] ?? 0) + 1;
+                $cursor->modify('+1 day');
+            }
+        }
+
+        return $counts;
     }
 
     /**
