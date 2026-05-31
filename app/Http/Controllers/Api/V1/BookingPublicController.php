@@ -504,6 +504,9 @@ class BookingPublicController extends Controller
             // BookingEngineService wraps transient Smoobu PMS failures from
             // the in-lock recheck as HTTP 503. PI was already captured by
             // the time we reached the service layer → rescue before returning.
+            $this->logConfirmFailureWithContext('service_http', $validated, $e, [
+                'http_status' => $e->getStatusCode(),
+            ]);
             $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
@@ -522,6 +525,13 @@ class BookingPublicController extends Controller
             // mismatch on succeeded PI, Stripe retrieve failure, inventory race,
             // Smoobu fatal reject (rooms + combos). All paths where the PI may
             // be in requires_capture / succeeded with no booking written.
+            //
+            // This is the dominant failure mode for "Smoobu rejected my
+            // booking" — write a structured audit row BEFORE the rescue so
+            // diag:recent-confirm-failures can surface the exact verbatim
+            // exception message for the operator. Includes file:line so
+            // ops can grep the source if needed.
+            $this->logConfirmFailureWithContext('service_runtime', $validated, $e);
             $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
@@ -535,6 +545,7 @@ class BookingPublicController extends Controller
             // verification passed, so PI is captured/held with no booking.
             // Rescue first, then re-throw so the framework handler can
             // produce its usual 500 response (with full detail for staff).
+            $this->logConfirmFailureWithContext('unhandled', $validated, $e);
             $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
@@ -542,6 +553,92 @@ class BookingPublicController extends Controller
                 $e,
             );
             throw $e;
+        }
+    }
+
+    /**
+     * Write a `booking.confirm.failed` audit row with the FULL verbatim
+     * exception detail. This is the smoking-gun trail that
+     * `diag:recent-confirm-failures` reads to surface "why did Smoobu
+     * reject this booking?" without grepping `laravel.log`.
+     *
+     * Captured fields:
+     *   - original_message       — verbatim exception message (e.g. the
+     *     exact Smoobu API error body that BookingEngineService::confirm
+     *     wrapped into a RuntimeException)
+     *   - original_exception_class
+     *   - file:line              — where the throw originated, for source grep
+     *   - stage                  — service_http | service_runtime | unhandled
+     *   - hold_token, pi_id      — for cross-referencing with diag:pi-context
+     *   - unit_id, check_in,
+     *     check_out, guest_email — reconstructed from the active hold
+     *     (best-effort; rescue path tolerates missing hold)
+     *
+     * Audit writes are wrapped in try/catch so a logging failure never
+     * masks the underlying exception — the rescue path that fires
+     * immediately after this method needs to run regardless.
+     */
+    private function logConfirmFailureWithContext(string $stage, array $validated, \Throwable $original, array $extra = []): void
+    {
+        try {
+            $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+            $holdToken = $validated['hold_token'] ?? null;
+            $piId = $validated['payment_intent_id'] ?? null;
+
+            // Reconstruct hold context so the audit row is self-sufficient
+            // (operator should not need to cross-join holds to read it).
+            $holdContext = [];
+            if ($holdToken) {
+                try {
+                    $holdQuery = \App\Models\BookingHold::withoutGlobalScopes()
+                        ->where('hold_token', $holdToken);
+                    if ($orgId) {
+                        $holdQuery->where('organization_id', $orgId);
+                    }
+                    $hold = $holdQuery->first();
+                    if ($hold) {
+                        $payload = $hold->payload_json ?? [];
+                        $holdContext = [
+                            'unit_id'    => $payload['unit_id'] ?? null,
+                            'unit_ids'   => $payload['unit_ids'] ?? null,
+                            'check_in'   => $payload['check_in'] ?? null,
+                            'check_out'  => $payload['check_out'] ?? null,
+                            'nights'     => $payload['nights'] ?? null,
+                            'adults'     => $payload['adults'] ?? null,
+                            'children'   => $payload['children'] ?? null,
+                            'gross_total' => $payload['gross_total'] ?? null,
+                            'guest_email' => $payload['guest']['email'] ?? ($validated['guest']['email'] ?? null),
+                            'is_combo'   => $payload['is_combo'] ?? false,
+                        ];
+                    }
+                } catch (\Throwable) {
+                    // best-effort
+                }
+            }
+
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'booking.confirm.failed',
+                'subject_type'    => 'stripe_payment',
+                'subject_id'      => null,
+                'new_values'      => array_merge([
+                    'stage'                    => $stage,
+                    'original_message'         => mb_substr((string) $original->getMessage(), 0, 2000),
+                    'original_exception_class' => get_class($original),
+                    'file_line'                => $original->getFile() . ':' . $original->getLine(),
+                    'hold_token'               => $holdToken,
+                    'pi_id'                    => $piId,
+                    'guest_email'              => $validated['guest']['email'] ?? null,
+                ], $holdContext, $extra),
+                'description'     => "Confirm failed ({$stage}): " . mb_substr((string) $original->getMessage(), 0, 200),
+            ]);
+        } catch (\Throwable $auditErr) {
+            \Illuminate\Support\Facades\Log::error('booking.confirm.failed audit-log write failed', [
+                'stage' => $stage,
+                'pi_id' => $validated['payment_intent_id'] ?? null,
+                'audit_error' => $auditErr->getMessage(),
+                'original_message' => $original->getMessage(),
+            ]);
         }
     }
 
