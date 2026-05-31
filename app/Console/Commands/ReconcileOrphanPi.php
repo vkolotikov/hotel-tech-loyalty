@@ -446,13 +446,22 @@ class ReconcileOrphanPi extends Command
         try {
             $refund = $stripe->refund($piId, null, 'requested_by_customer');
         } catch (\Throwable $e) {
-            $this->error('Stripe refund failed: ' . $e->getMessage());
+            // Restricted-key permission failure: surface the actionable
+            // dashboard URL so the operator can flip the scope on without
+            // hunting through Stripe support docs. Same self-heal pattern
+            // used in stripe:cancel-pi and BookingRefundService.
+            $scope = StripeService::isRestrictedKeyPermissionError($e);
+            $errorMsg = $scope
+                ? StripeService::restrictedKeyMessage('auto-refund this orphan PaymentIntent', $scope, $piId)
+                : ('Stripe refund failed: ' . $e->getMessage());
+            $this->error($errorMsg);
             $this->auditLog($orgId, 'booking.reconcile.orphan', [
-                'path'              => 'B_refund_failed',
+                'path'              => $scope ? 'B_refund_restricted_key' : 'B_refund_failed',
                 'payment_intent_id' => $piId,
                 'amount'            => $amountMaj,
-                'error'             => mb_substr($e->getMessage(), 0, 480),
-            ], "Reconcile-orphan refund FAILED for PI {$piId}");
+                'error'             => mb_substr($errorMsg, 0, 480),
+                'restricted_scope'  => $scope,
+            ], "Reconcile-orphan refund FAILED for PI {$piId}" . ($scope ? " (restricted key missing {$scope})" : ''));
             return self::FAILURE;
         }
 

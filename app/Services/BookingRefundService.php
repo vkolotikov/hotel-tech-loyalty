@@ -127,6 +127,26 @@ class BookingRefundService
                     }
                 }
             } catch (\Throwable $e) {
+                // Restricted-key footgun (rk_live_* missing refunds:write):
+                // upgrade the cryptic Stripe error into an actionable
+                // "open dashboard → enable scope → save" message so the
+                // admin issuing the refund can self-heal in 30 seconds.
+                // Falls back to the original error for every other failure
+                // mode (auth, network, etc.).
+                $scope = StripeService::isRestrictedKeyPermissionError($e);
+                if ($scope) {
+                    $actionable = StripeService::restrictedKeyMessage(
+                        'refunds',
+                        $scope,
+                        $mirror->stripe_payment_intent_id,
+                    );
+                    $attempt->update([
+                        'error'        => substr($actionable, 0, 2000),
+                        'completed_at' => now(),
+                    ]);
+                    throw new \RuntimeException($actionable, 0, $e);
+                }
+
                 // Record the failure on the attempt row so an operator
                 // can audit what was tried. Then re-throw — caller
                 // (controller / webhook) handles the error response.

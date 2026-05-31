@@ -225,6 +225,79 @@ class StripeService
     }
 
     /**
+     * Detect Stripe restricted-key permission failures. Restricted keys
+     * (`rk_live_*` / `rk_test_*`) carry a scoped permission grant — refund,
+     * dispute, customer.read, etc. When a call hits a scope the key lacks,
+     * Stripe returns either a PermissionException OR an InvalidRequestException
+     * whose message reads `"The provided key 'rk_live_…' does not have …
+     * access to refunds"` or similar.
+     *
+     * Returns the inferred scope name (e.g. `refunds:write`) when the
+     * exception matches the restricted-key error pattern, or null otherwise.
+     * Callers should turn a non-null return value into the actionable
+     * "open dashboard → enable scope → save" message so ops can self-heal
+     * in 30 seconds rather than spelunk Stripe support docs.
+     */
+    public static function isRestrictedKeyPermissionError(\Throwable $e): ?string
+    {
+        $msg = $e->getMessage();
+
+        $matches =
+            $e instanceof \Stripe\Exception\PermissionException
+            || (
+                $e instanceof \Stripe\Exception\InvalidRequestException
+                && (
+                    preg_match('/provided key.*does not have.*access/i', $msg)
+                    || preg_match('/You do not have permission/i', $msg)
+                )
+            );
+
+        if (!$matches) {
+            return null;
+        }
+
+        // Try to pull the resource Stripe complained about out of the
+        // message so the caller can map it to a Stripe Dashboard scope id
+        // (Stripe's `core_resource:write` taxonomy). Common shapes:
+        //   "...does not have access to refunds"
+        //   "...does not have the required permissions for this operation. Required: refunds_write"
+        //   "...You do not have permission to perform this request on 'refunds'."
+        $resource = null;
+        if (preg_match('/access to (\w+)/i', $msg, $m)) {
+            $resource = strtolower($m[1]);
+        } elseif (preg_match('/Required:\s*(\w+)_(read|write)/i', $msg, $m)) {
+            return strtolower($m[1]) . ':' . strtolower($m[2]);
+        } elseif (preg_match('/on\s+[\'"]([\w_]+)[\'"]/i', $msg, $m)) {
+            $resource = strtolower($m[1]);
+        }
+
+        // Default to `:write` when the exception class doesn't disambiguate
+        // — read-permission failures are vanishingly rare (every read scope
+        // is on by default when you mint a restricted key).
+        return $resource ? "{$resource}:write" : 'unknown:write';
+    }
+
+    /**
+     * Build the canonical "fix it in 30 sec" message every Stripe caller
+     * should emit when isRestrictedKeyPermissionError() returns non-null.
+     * Op-friendly: links straight to the Dashboard page that fixes the
+     * problem PLUS the PI's payment row so staff can issue the refund
+     * manually from there while the key is still missing the scope.
+     */
+    public static function restrictedKeyMessage(string $operation, string $scope, ?string $paymentIntentId = null): string
+    {
+        $msg = "Your restricted Stripe key doesn't have permission for {$operation}. "
+            . "Fix in 30 sec: open https://dashboard.stripe.com/apikeys → edit your key → "
+            . "enable {$scope} → save.";
+
+        if ($paymentIntentId) {
+            $msg .= " Or refund this PI manually at https://dashboard.stripe.com/payments/{$paymentIntentId}.";
+        }
+
+        return $msg;
+    }
+
+    /**
      * Load a setting via Eloquent so the model's getValueAttribute accessor
      * runs and decrypts ENCRYPTED_KEYS transparently. Using ->value('value')
      * would skip the accessor and return ciphertext for stripe_* keys.

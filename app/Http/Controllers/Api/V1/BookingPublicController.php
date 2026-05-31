@@ -684,10 +684,36 @@ class BookingPublicController extends Controller
                     'amount'    => isset($refund->amount) ? $refund->amount / 100 : null,
                 ]);
             } catch (\Throwable $refundErr) {
-                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
-                    'pre_refund_status' => $status,
-                    'refund_error'      => $refundErr->getMessage(),
-                ]);
+                // Restricted-key permission failure on the auto-refund:
+                // log the dashboard URL so ops can flip the scope AND
+                // manually refund the orphan PI from the Stripe payment
+                // page in the same browser tab. Distinct audit action
+                // ('pi_rescue_restricted_key') so we can dashboard-query
+                // "how many bookings did this footgun cost us this week?"
+                $scope = StripeService::isRestrictedKeyPermissionError($refundErr);
+                if ($scope) {
+                    $dashUrl = "https://dashboard.stripe.com/payments/{$intentId}";
+                    $actionable = StripeService::restrictedKeyMessage(
+                        'auto-refund an orphan captured PaymentIntent',
+                        $scope,
+                        $intentId,
+                    );
+                    \Illuminate\Support\Facades\Log::error(
+                        "Booking confirm — PI rescue refund blocked by restricted key. Dashboard: {$dashUrl}",
+                        ['pi_id' => $intentId, 'scope_missing' => $scope, 'message' => $actionable],
+                    );
+                    $this->logPiRescueOutcome($orgId, 'pi_rescue_restricted_key', $intentId, $context, $original, [
+                        'pre_refund_status' => $status,
+                        'scope_missing'     => $scope,
+                        'actionable'        => $actionable,
+                        'dashboard_url'     => $dashUrl,
+                    ]);
+                } else {
+                    $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+                        'pre_refund_status' => $status,
+                        'refund_error'      => $refundErr->getMessage(),
+                    ]);
+                }
             }
             return;
         }
@@ -906,10 +932,11 @@ class BookingPublicController extends Controller
                 'subject_id'      => null,
                 'new_values'      => $payload,
                 'description'     => match ($action) {
-                    'pi_cancelled'      => "Confirm failed — PI {$intentId} cancelled to release held funds",
-                    'pi_refunded'       => "Confirm failed — PI {$intentId} refunded (already captured)",
-                    'pi_rescue_failed'  => "Confirm failed — PI {$intentId} rescue FAILED, ops must manually verify",
-                    default             => "Confirm rescue: {$action} on PI {$intentId}",
+                    'pi_cancelled'              => "Confirm failed — PI {$intentId} cancelled to release held funds",
+                    'pi_refunded'               => "Confirm failed — PI {$intentId} refunded (already captured)",
+                    'pi_rescue_failed'          => "Confirm failed — PI {$intentId} rescue FAILED, ops must manually verify",
+                    'pi_rescue_restricted_key'  => "Confirm failed — PI {$intentId} refund BLOCKED by restricted Stripe key; refund manually via dashboard",
+                    default                     => "Confirm rescue: {$action} on PI {$intentId}",
                 },
             ]);
         } catch (\Throwable $auditErr) {
@@ -921,7 +948,7 @@ class BookingPublicController extends Controller
             ]);
         }
 
-        $logLevel = $action === 'pi_rescue_failed' ? 'error' : 'warning';
+        $logLevel = in_array($action, ['pi_rescue_failed', 'pi_rescue_restricted_key'], true) ? 'error' : 'warning';
         \Illuminate\Support\Facades\Log::{$logLevel}("Booking confirm PI rescue: {$action}", $payload);
     }
 

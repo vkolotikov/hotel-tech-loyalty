@@ -136,8 +136,19 @@ class StripeCancelPi extends Command
                     'reason'         => 'requested_by_customer',
                 ]);
             } catch (\Throwable $e) {
-                $this->error('Refund failed: ' . $e->getMessage());
-                $this->auditFailure($orgId, $intentId, 'refund', $e->getMessage(), $reason);
+                // Special-case the restricted-key footgun: surface the
+                // actionable "open dashboard, enable scope" message so the
+                // operator can self-heal instead of pasting the raw error
+                // into Slack and waiting for someone to decode it.
+                $scope = StripeService::isRestrictedKeyPermissionError($e);
+                if ($scope) {
+                    $actionable = StripeService::restrictedKeyMessage('refund this PaymentIntent', $scope, $intentId);
+                    $this->error($actionable);
+                    $this->auditFailure($orgId, $intentId, 'refund', $actionable, $reason);
+                } else {
+                    $this->error('Refund failed: ' . $e->getMessage());
+                    $this->auditFailure($orgId, $intentId, 'refund', $e->getMessage(), $reason);
+                }
                 return self::FAILURE;
             }
 
