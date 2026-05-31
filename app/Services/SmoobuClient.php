@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\HotelSetting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -119,57 +120,64 @@ class SmoobuClient
      * Reservations list. We saw exactly this in the wild.
      *
      * Resolution order:
-     *   1. Admin-configured booking_smoobu_channel_id (per-brand → per-org).
-     *   2. Auto-detect from GET /channels — look for an entry that is
-     *      manually-usable and not blocked. We accept entries whose
-     *      name matches direct/website/manual/api patterns OR whose
-     *      `is_blocked_channel` flag is explicitly false.
-     *   3. Last resort: cast to (int) which yields 0 so the caller can
-     *      still attempt the call (Smoobu will return a clear error
-     *      that propagates to the admin).
+     *   1. Admin-configured booking_smoobu_channel_id (per-brand → per-org)
+     *      — VALIDATED against the live /channels list. If the pinned id
+     *      matches an OTA / blocked channel, or doesn't exist on the
+     *      account at all, we log a warning and FALL THROUGH to auto-detect
+     *      rather than push bookings into a wrong-attribution channel.
+     *      (If /channels itself is unreachable we trust the pin — better
+     *      to push to the admin's pick than to fail closed during a
+     *      Smoobu outage.)
+     *   2. Auto-detect from GET /channels — two-pass selection:
+     *        A) Prefer channels whose `type === 'direct_booking'` (Smoobu's
+     *           own canonical marker) OR whose name matches a
+     *           direct/website/manual/api pattern.
+     *        B) Fall back to the first non-OTA, non-blocked candidate.
+     *      Result is cached for 1 hour per org+brand via Laravel Cache so
+     *      we don't hit /channels on every booking confirm.
+     *   3. Strict mode (booking confirm path): throw a clear
+     *      RuntimeException with marker text "Smoobu channel configuration"
+     *      so the caller can surface a "contact support" message to the
+     *      guest instead of "room not available".
+     *      Non-strict mode (admin discovery, diagnostic commands): return 0
+     *      so the caller can surface "no suggestion" UX without bombing
+     *      the whole request.
      *
-     * Result is cached for the lifetime of this SmoobuClient instance
-     * to avoid /channels round-trips on every booking.
+     * In-instance cache (`$this->resolvedDirectChannelId`) protects
+     * back-to-back calls within the same request; the 1h Cache layer
+     * survives across requests.
      */
-    public function resolveDirectChannelId(): int
+    public function resolveDirectChannelId(bool $strict = false): int
     {
         $this->boot();
 
-        // 1. Configured value wins. This is the path admins should be on —
-        //    auto-detection from /channels is unreliable because the API
-        //    response shape varies between accounts.
-        if (!empty($this->channelId) && ((int) $this->channelId) > 0) {
-            return (int) $this->channelId;
-        }
+        $orgId   = $this->loadedForOrg ?? 0;
+        $brandId = $this->loadedForBrand ?? 0;
+        $cacheKey = "smoobu:direct_channel_id:{$orgId}:{$brandId}";
+        $cacheTtl = 3600; // 1 hour — cheap to recompute, expensive to call /channels on every confirm
 
-        // Cached lookup — set on first successful resolution.
-        if (!empty($this->resolvedDirectChannelId)) {
-            return $this->resolvedDirectChannelId;
-        }
-
-        // Mock mode: synthesize a placeholder so the local-only
-        // booking flow doesn't crash.
+        // Mock mode short-circuits everything: synthesise a placeholder so
+        // the local-only booking flow doesn't crash. Caching not needed.
         if ($this->isMock) {
             return $this->resolvedDirectChannelId = 1;
         }
 
-        // 2. Ask Smoobu. Two-pass selection:
-        //    A) Prefer channels whose name matches direct/website/manual/api.
-        //    B) Fall back to the first non-OTA, non-blocked channel.
-        //
-        //    `is_blocked_channel` is not always present in Smoobu's
-        //    response — we can't rely on it. The reliable signal is the
-        //    NAME blacklist below: any channel whose name contains
-        //    "blocked" / "block" (English) or "блок" (Cyrillic, for
-        //    Smoobu accounts in RU/UA/LV locales) is ignored. Likewise
-        //    we skip names that clearly identify OTA channels we shouldn't
-        //    attribute our own widget bookings to.
+        // In-instance cache wins (set on first successful resolution within
+        // this request).
+        if (!empty($this->resolvedDirectChannelId)) {
+            return $this->resolvedDirectChannelId;
+        }
+
+        // Pull the live channel list ONCE — used for both (a) validating
+        // the admin-pinned id and (b) auto-detect when there is no pin.
+        // Wrapped in try/catch so a Smoobu outage doesn't kill the whole
+        // booking flow.
+        $items = null;
+        $listError = null;
         try {
-            $resp = $this->get('/channels');
+            $resp  = $this->get('/channels');
             $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
 
-            // Log what we got so admins can see the actual set if they need
-            // to manually pick a channel ID. One log line per resolution.
             Log::info('SmoobuClient: /channels resolved', [
                 'count'    => count($items),
                 'channels' => array_map(fn ($c) => [
@@ -178,48 +186,146 @@ class SmoobuClient
                     'type' => $c['type'] ?? null,
                 ], $items),
             ]);
+        } catch (\Throwable $e) {
+            $listError = $e->getMessage();
+            Log::warning('SmoobuClient: /channels lookup failed', ['error' => $listError]);
+        }
 
-            $blockNamePattern = '/(blocked|block channel|блок)/i';
-            $otaNamePattern   = '/(booking\.?com|airbnb|expedia|vrbo|hotels?\.com|agoda|trip\.com|hostelworld|despegar)/i';
-            $directNamePattern = '/(direct|website|manual|\bapi\b|own.?website|direct.?booking)/i';
+        $blockNamePattern  = '/(blocked|block channel|блок)/i';
+        $otaNamePattern    = '/(booking\.?com|airbnb|expedia|vrbo|hotels?\.com|agoda|trip\.com|hostelworld|despegar)/i';
+        $directNamePattern = '/(direct|website|manual|\bapi\b|own.?website|direct.?booking)/i';
 
-            $candidates = [];
-            foreach ($items as $ch) {
-                $id   = (int) ($ch['id'] ?? 0);
-                $name = (string) ($ch['name'] ?? '');
-                $declaredBlocked = (bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false);
-                if ($id <= 0) continue;
-                if ($declaredBlocked) continue;
-                if (preg_match($blockNamePattern, $name)) continue;
-                if (preg_match($otaNamePattern, $name)) continue;
-                $candidates[] = ['id' => $id, 'name' => $name];
+        // Helper — classify a channel record as "direct/usable for our own
+        // widget bookings" vs "OTA / blocked / unknown".
+        $isUsableDirect = function (array $ch) use ($blockNamePattern, $otaNamePattern): bool {
+            $id   = (int) ($ch['id'] ?? 0);
+            $name = (string) ($ch['name'] ?? '');
+            $type = (string) ($ch['type'] ?? '');
+            if ($id <= 0) return false;
+            if ((bool) ($ch['is_blocked_channel'] ?? $ch['blocked'] ?? false)) return false;
+            if (preg_match($blockNamePattern, $name)) return false;
+            if (preg_match($otaNamePattern, $name)) return false;
+            // Smoobu's `type` field, when present, distinguishes channels
+            // managed via the channel manager (OTA pulls) from the account's
+            // own direct/website channel. Names like 'channel' or types like
+            // 'ota_*' are signs we shouldn't attribute widget bookings here.
+            if ($type !== '' && preg_match('/^(ota|channel_manager|ical|pms_pull)/i', $type)) return false;
+            return true;
+        };
+
+        // ── 1. Admin-pinned channel id — VALIDATE before trusting ──
+        if (!empty($this->channelId) && ((int) $this->channelId) > 0) {
+            $pinnedId = (int) $this->channelId;
+
+            // If /channels is unreachable we can't validate. Trust the pin —
+            // failing closed during a Smoobu outage would be worse than
+            // pushing to the admin's last-known-good channel.
+            if ($items === null) {
+                Log::info('SmoobuClient: trusting admin-pinned channel without validation (channels listing unavailable)', [
+                    'pinned' => $pinnedId,
+                    'reason' => $listError,
+                ]);
+                return $this->resolvedDirectChannelId = $pinnedId;
             }
 
-            // Pass A: prefer direct-style names.
+            $matched = null;
+            foreach ($items as $ch) {
+                if ((int) ($ch['id'] ?? 0) === $pinnedId) {
+                    $matched = $ch;
+                    break;
+                }
+            }
+
+            if ($matched !== null && $isUsableDirect($matched)) {
+                // Pinned id is real AND usable. Cache + return.
+                Cache::put($cacheKey, $pinnedId, $cacheTtl);
+                return $this->resolvedDirectChannelId = $pinnedId;
+            }
+
+            // Pin is bad. Log loudly so ops can see + fix the override,
+            // then fall through to auto-detect.
+            Log::warning('SmoobuClient: admin-pinned channel id is unusable, falling back to auto-detect', [
+                'pinned'        => $pinnedId,
+                'found_in_list' => $matched !== null,
+                'matched_name'  => $matched['name'] ?? null,
+                'matched_type'  => $matched['type'] ?? null,
+                'reason'        => $matched === null
+                    ? 'not_in_channels_list'
+                    : 'classified_as_ota_or_blocked',
+            ]);
+        }
+
+        // ── 2. Auto-detect — check per-org cross-request cache first ──
+        $cached = Cache::get($cacheKey);
+        if (is_int($cached) && $cached > 0 && $items !== null) {
+            // Re-verify the cached pick is still usable — channel lists
+            // change as admins add/remove OTA hookups.
+            foreach ($items as $ch) {
+                if ((int) ($ch['id'] ?? 0) === $cached && $isUsableDirect($ch)) {
+                    return $this->resolvedDirectChannelId = $cached;
+                }
+            }
+            // Stale cache — drop it and fall through to re-resolve.
+            Cache::forget($cacheKey);
+        }
+
+        // 2-a. Live auto-detect from the channels list we already fetched.
+        if ($items !== null) {
+            $candidates = [];
+            foreach ($items as $ch) {
+                if (!$isUsableDirect($ch)) continue;
+                $candidates[] = [
+                    'id'   => (int) $ch['id'],
+                    'name' => (string) ($ch['name'] ?? ''),
+                    'type' => (string) ($ch['type'] ?? ''),
+                ];
+            }
+
+            // Pass A1: prefer Smoobu's own `type === 'direct_booking'` marker.
             foreach ($candidates as $c) {
-                if (preg_match($directNamePattern, $c['name'])) {
-                    Log::info('SmoobuClient: resolved direct channel by name match', $c);
+                if (strcasecmp($c['type'], 'direct_booking') === 0) {
+                    Log::info('SmoobuClient: resolved direct channel by type=direct_booking', $c);
+                    Cache::put($cacheKey, $c['id'], $cacheTtl);
                     return $this->resolvedDirectChannelId = $c['id'];
                 }
             }
-            // Pass B: take the first non-OTA, non-blocked candidate.
+            // Pass A2: prefer direct-style names (Direct / Website / Manual / API).
+            foreach ($candidates as $c) {
+                if (preg_match($directNamePattern, $c['name'])) {
+                    Log::info('SmoobuClient: resolved direct channel by name match', $c);
+                    Cache::put($cacheKey, $c['id'], $cacheTtl);
+                    return $this->resolvedDirectChannelId = $c['id'];
+                }
+            }
+            // Pass B: first non-OTA, non-blocked candidate.
             if (!empty($candidates)) {
                 $pick = $candidates[0];
                 Log::info('SmoobuClient: resolved direct channel as first non-OTA fallback', $pick);
+                Cache::put($cacheKey, $pick['id'], $cacheTtl);
                 return $this->resolvedDirectChannelId = $pick['id'];
             }
 
             Log::warning('SmoobuClient: no usable direct channel found', [
-                'candidates' => count($candidates),
-                'total'      => count($items),
+                'total_channels' => count($items),
             ]);
-        } catch (\Throwable $e) {
-            Log::warning('SmoobuClient: /channels lookup failed', ['error' => $e->getMessage()]);
         }
 
-        // 3. Give up. Returning 0 makes the caller refuse the push (the
-        //    "send blocked-channel placeholder" failure mode is now visible
-        //    in BookingEngineService::confirm rather than silent).
+        // ── 3. Give up ──
+        // Strict mode (booking confirm path) — throw a marker exception so
+        // the user-facing error can route to "contact support" instead of
+        // the generic "room not available" message.
+        if ($strict) {
+            $detail = $items === null
+                ? "PMS channels list unreachable ({$listError})"
+                : 'no direct channel is available in this account';
+            throw new \RuntimeException(
+                "Smoobu channel configuration error: {$detail}. "
+                . 'Please contact support so we can finish wiring up your direct-booking channel.'
+            );
+        }
+
+        // Non-strict (diagnostic / admin discovery) — preserve legacy
+        // contract by returning 0 so callers can render "no suggestion" UX.
         return 0;
     }
 
@@ -709,6 +815,48 @@ class SmoobuClient
         return $this->request('DELETE', $path, [], ['ok' => true]);
     }
 
+    /**
+     * Render an HTTP response body as a single-line excerpt suitable for
+     * embedding in an exception message + CLI output + audit log.
+     *
+     * Smoobu's error responses are typically small JSON objects like
+     *   {"detail":"channelId 70 not allowed for this account"}
+     * Re-encoding via json_decode + json_encode strips formatting noise
+     * (pretty-print whitespace, unnecessary unicode escapes) so the
+     * excerpt reads cleanly in one line. Non-JSON bodies (HTML 502 pages,
+     * plain-text errors) fall through to the raw string with newlines
+     * collapsed.
+     *
+     * Result is hard-capped at $maxLen characters with an "…" suffix on
+     * truncation so a misbehaving server can't drown our logs in a
+     * 100 KB HTML payload.
+     */
+    private function formatBodyExcerpt(string $body, int $maxLen = 1000): string
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return '(empty body)';
+        }
+
+        // Try JSON first — strip pretty-print whitespace, drop unicode escapes.
+        $decoded = json_decode($body, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $reencoded = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($reencoded !== false) {
+                $body = $reencoded;
+            }
+        } else {
+            // Plain text / HTML — collapse newlines + runs of whitespace so the
+            // excerpt sits on a single line.
+            $body = preg_replace('/\s+/', ' ', $body) ?? $body;
+        }
+
+        if (mb_strlen($body) > $maxLen) {
+            $body = mb_substr($body, 0, $maxLen) . '…';
+        }
+        return $body;
+    }
+
     private function request(string $method, string $path, array $options, array $default = []): array
     {
         // Most paths are relative to the configured `/api` base URL.
@@ -772,8 +920,30 @@ class SmoobuClient
             $isRetryable = $status === 429 || $status >= 500;
 
             if (!$isRetryable || $attempt >= self::RATE_LIMIT_RETRIES) {
-                Log::error("Smoobu {$method} {$path} failed", ['status' => $status, 'body' => $response->body(), 'attempts' => $attempt + 1]);
-                throw new \RuntimeException("Smoobu API error: {$status}");
+                $rawBody = (string) $response->body();
+                Log::error("Smoobu {$method} {$path} failed", ['status' => $status, 'body' => $rawBody, 'attempts' => $attempt + 1]);
+
+                // Build a diagnostic message that carries the actual Smoobu
+                // reason all the way out to callers (and into audit logs).
+                // Previously this exception only carried the HTTP status code,
+                // forcing staff to grep laravel.log to see WHY a booking was
+                // rejected. The body — usually a small JSON error object —
+                // contains the real cause (invalid channelId, unknown
+                // apartmentId, missing required field, etc.).
+                $excerpt = $this->formatBodyExcerpt($rawBody, 1000);
+                $hint = '';
+                // Reservation-create 404s are almost always a bad channel id —
+                // either pointing at an OTA channel we're not allowed to write
+                // to, or a channel that no longer exists. Point staff at the
+                // diagnostic command rather than making them guess.
+                if ($status === 404 && $method === 'POST' && str_contains($path, '/reservations')) {
+                    $cid = (int) ($this->resolvedDirectChannelId ?: (int) $this->channelId);
+                    $hint = " — common cause: channel_id ({$cid}) is an OTA channel or doesn't exist. Run 'php artisan diag:smoobu-channels --org=<id>' to list valid direct channels.";
+                }
+
+                throw new \RuntimeException(
+                    "Smoobu API error: {$status} {$method} {$path} — {$excerpt}{$hint}"
+                );
             }
 
             // Honour Retry-After if present; otherwise exponential backoff.

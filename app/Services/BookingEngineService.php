@@ -404,7 +404,14 @@ class BookingEngineService
                 // /channels so the reservation lands in Smoobu's New
                 // Reservations list rather than the "Blocked Channel"
                 // bucket. SmoobuClient caches the resolution.
-                $channelId = (int) ($this->smoobu->resolveDirectChannelId() ?: 0);
+                //
+                // strict=true: when no usable direct channel exists, throw
+                // a "Smoobu channel configuration" RuntimeException. The
+                // outer catch (below) detects that marker and re-throws a
+                // "contact support" message to the guest instead of the
+                // generic "room no longer available" — the room IS available,
+                // we just can't attribute the booking correctly.
+                $channelId = (int) ($this->smoobu->resolveDirectChannelId(true) ?: 0);
 
                 // Smoobu API: price-paid marks the booking as paid.
                 // Compute "is this booking paid?" inline — the full
@@ -581,6 +588,14 @@ class BookingEngineService
                 // the entire transaction after the guest already paid.
                 $isTransient =
                     preg_match('/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i', $msg);
+                // Override: "Smoobu channel configuration" errors from
+                // resolveDirectChannelId() are ALWAYS fatal regardless of
+                // incidental transient-looking sub-strings in $listError.
+                // A retry won't fix a misconfigured channel — we need a
+                // human in the loop.
+                if (stripos($msg, 'Smoobu channel configuration') !== false) {
+                    $isTransient = false;
+                }
                 $pmsFatal = !$isTransient ? $msg : null;
 
                 if ($pmsFatal) {
@@ -601,6 +616,17 @@ class BookingEngineService
             }
 
             if ($pmsFatal) {
+                // Special-case: Smoobu channel configuration errors are a
+                // misconfiguration on our side, not a room-availability
+                // problem. Surface a "contact support" message so the guest
+                // doesn't get pushed to pick a different room they don't
+                // actually need to change.
+                if (stripos($pmsFatal, 'Smoobu channel configuration') !== false) {
+                    throw new \RuntimeException(
+                        'Booking could not be confirmed because of a PMS configuration issue on our side. '
+                        . 'Your card has NOT been charged. Please contact support so we can complete this booking for you.'
+                    );
+                }
                 throw new \RuntimeException('Booking could not be confirmed: this room is no longer available. Please choose another.');
             }
 

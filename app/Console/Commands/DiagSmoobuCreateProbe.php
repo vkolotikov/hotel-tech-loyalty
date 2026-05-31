@@ -84,6 +84,15 @@ class DiagSmoobuCreateProbe extends Command
         // Bind tenant so SmoobuClient picks up THIS org's API key.
         app()->instance('current_organization_id', $orgId);
 
+        // ── Print the channel context FIRST ──
+        // Single probe run now shows both the channel table (with the
+        // ✅/❌/⚠ verdict against the admin-pinned channel id) AND the
+        // rejection reason from the create call below. That's the
+        // smoking-gun pair an operator needs to see together.
+        $this->info('═══ Smoobu channel context (diag:smoobu-channels) ═══');
+        $this->call('diag:smoobu-channels', ['--org' => $orgId]);
+        $this->newLine();
+
         // ── Resolve channel id (and explain the chain) ──
         $resolvedChannelId = $smoobu->resolveDirectChannelId();
         $configuredChannelId = $smoobu->channelId();
