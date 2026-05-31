@@ -23,6 +23,7 @@ import { MenuSettings } from '../components/MenuSettings'
 import { TeamSettings } from '../components/TeamSettings'
 import { AiUsagePanel } from '../components/AiUsagePanel'
 import { ApiTokensPanel } from '../components/ApiTokensPanel'
+import { MessengerConnectPanel } from '../components/MessengerConnectPanel'
 import { DocumentationCenter } from '../components/DocumentationCenter'
 
 /* ─── Constants ────────────────────────────────────────────────────────── */
@@ -1575,6 +1576,16 @@ export function Settings() {
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1 mb-3">Developer API</h3>
           <ApiTokensPanel />
+        </div>
+
+        {/* Messaging Channels — OAuth-based integrations that don't fit
+            the standard credential-input panel pattern. Each lives in its
+            own self-contained component with its own connect/disconnect
+            flow. Today: Facebook Messenger. Future: WhatsApp Cloud API,
+            Instagram Messaging — same Settings section. */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1 mb-3">Messaging Channels</h3>
+          <MessengerConnectPanel />
         </div>
 
         {allSections.map(group => {
