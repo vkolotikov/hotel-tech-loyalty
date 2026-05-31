@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\IdempotencyReplay;
+use App\Exceptions\SmoobuUnavailable;
 use App\Mail\BookingConfirmationMail;
 use App\Mail\BookingMembershipMail;
 use App\Models\AuditLog;
@@ -339,9 +340,19 @@ class BookingEngineService
             // seconds ago and Smoobu's webhook hasn't reached us yet,
             // our mirror still says "available" and we'd happily
             // double-book. This single API call asks Smoobu what it
-            // really thinks RIGHT NOW. Wrapped in try/catch so a
-            // transient API error doesn't block the booking — but a
-            // confirmed "not available" is a hard stop.
+            // really thinks RIGHT NOW.
+            //
+            // Failure modes:
+            //   - "not available" → hard stop (RuntimeException, surfaced
+            //     to the guest as "just booked through another channel").
+            //   - transient PMS error (5xx, timeout, network) → fail
+            //     CLOSED via SmoobuUnavailable. Pre-fix we logged + kept
+            //     going, which can double-book on top of a freshly-sold
+            //     OTA room when Smoobu is flapping. The outer handler
+            //     turns this into a 503 so the guest can retry. The
+            //     createReservation call below is NOT a substitute for
+            //     the recheck — it can succeed before Smoobu has
+            //     reconciled the OTA inventory write.
             try {
                 $liveRates = $this->smoobu->getRates(
                     $payload['check_in'],
@@ -358,15 +369,13 @@ class BookingEngineService
                 // Our own thrown unavailable error — re-throw.
                 throw $e;
             } catch (\Throwable $e) {
-                // Transient Smoobu API failure — log but don't block.
-                // The createReservation call below will fail hard if
-                // Smoobu actually rejects, so we still have a second
-                // line of defence.
-                \Illuminate\Support\Facades\Log::warning('Live availability re-check failed at confirm', [
+                // Transient Smoobu API failure — fail closed.
+                \Illuminate\Support\Facades\Log::warning('Live availability re-check failed at confirm — failing closed', [
                     'org_id'  => $orgId,
                     'unit_id' => $apartmentId,
                     'error'   => $e->getMessage(),
                 ]);
+                throw new SmoobuUnavailable('PMS unavailable — try again');
             }
 
             // ── Create reservation in Smoobu ────────────────────────
@@ -648,6 +657,36 @@ class BookingEngineService
             // and already wrote the cached response. The transaction is
             // rolled back automatically, so no partial state remains.
             return array_merge($replay->response, ['replayed' => true]);
+        } catch (SmoobuUnavailable $e) {
+            // Transient Smoobu failure during the in-lock recheck. The
+            // DB transaction is rolled back automatically (any partial
+            // mirror writes vanish) and the PG advisory lock releases
+            // with the transaction. Audit so we can spot how often this
+            // fires; rethrow as a 503 so the controller layer returns a
+            // clear "pms_unavailable" payload to the widget.
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.confirm.pms_transient_skip',
+                    'subject_type'    => 'booking_hold',
+                    'subject_id'      => $hold->id ?? null,
+                    'new_values'      => [
+                        'unit_id'    => $payload['unit_id'] ?? null,
+                        'check_in'   => $payload['check_in'] ?? null,
+                        'check_out'  => $payload['check_out'] ?? null,
+                        'request_id' => $requestId,
+                        'error'      => $e->getMessage(),
+                    ],
+                    'description'     => 'Smoobu live re-check failed transiently; confirm aborted with 503 so guest can retry.',
+                ]);
+            } catch (\Throwable $_) {
+                // Audit best-effort.
+            }
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(
+                503,
+                'PMS is temporarily unavailable. Please try again in a moment.',
+                $e,
+            );
         }
 
         // Lifecycle: a confirmed widget booking is real engagement. If the

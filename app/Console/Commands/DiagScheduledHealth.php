@@ -6,6 +6,8 @@ use App\Models\ScheduledCommandRun;
 use Cron\CronExpression;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Report last-run status for every currently-scheduled command, so an
@@ -86,15 +88,79 @@ class DiagScheduledHealth extends Command
             return ($order[$a['health']] ?? 9) <=> ($order[$b['health']] ?? 9);
         });
 
+        // Also surface stuck framework-schedule cache_locks rows. With
+        // `CACHE_STORE=database` the overlap-prevention lock for every
+        // ->withoutOverlapping() schedule lives in `cache_locks`. If a
+        // worker dies mid-run, the row is left behind and every
+        // subsequent scheduler tick is SKIPPED silently until the
+        // expiration lapses. Worse: the DB cache driver doesn't GC
+        // expired rows, so a row with a corrupt/future `expiration`
+        // value can stall a cron indefinitely. Any row whose
+        // `expiration <= now()` is a leak — those should never persist.
+        $stuckLocks = $this->detectStuckScheduleLocks();
+
         if ($this->option('json')) {
-            $this->line(json_encode($rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $this->line(json_encode([
+                'commands'    => $rows,
+                'stuck_locks' => $stuckLocks,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         } else {
             $this->renderTable($rows);
+            if (!empty($stuckLocks)) {
+                $this->newLine();
+                $this->warn(sprintf(
+                    'Detected %d stuck framework-schedule cache_locks row(s). '
+                        . 'Release with: php artisan schedule:release-lock --expired',
+                    count($stuckLocks),
+                ));
+                foreach ($stuckLocks as $lock) {
+                    $this->line('  <fg=red>' . $lock['key'] . '</> exp=' . $lock['expiration']
+                        . ' (' . $lock['expired_seconds_ago'] . 's ago)');
+                }
+            }
         }
 
         $counts = array_count_values(array_column($rows, 'health'));
         $bad = ($counts['fail'] ?? 0) + ($counts['stale'] ?? 0) + ($counts['never'] ?? 0);
+        // Treat stuck locks as a failure signal too — they're the most
+        // common reason a healthy-looking codebase has stalled crons.
+        if (!empty($stuckLocks)) {
+            $bad++;
+        }
         return $bad > 0 ? 1 : 0;
+    }
+
+    /**
+     * Detect framework-schedule cache_locks rows whose expiration has
+     * already lapsed but the row is still present. Under the database
+     * cache driver these rows DO NOT get auto-purged, so a single
+     * worker crash mid-run leaves a zombie that blocks the next tick.
+     *
+     * @return array<int, array{key:string, expiration:int, expired_seconds_ago:int}>
+     */
+    private function detectStuckScheduleLocks(): array
+    {
+        try {
+            if (!Schema::hasTable('cache_locks')) {
+                return [];
+            }
+
+            $now = time();
+            $rows = DB::table('cache_locks')
+                ->where('key', 'like', 'framework-schedule%')
+                ->where('expiration', '<=', $now)
+                ->orderBy('expiration')
+                ->get(['key', 'expiration']);
+
+            return $rows->map(fn ($r) => [
+                'key'                 => $r->key,
+                'expiration'          => (int) $r->expiration,
+                'expired_seconds_ago' => $now - (int) $r->expiration,
+            ])->all();
+        } catch (\Throwable) {
+            // Diagnostic must never throw.
+            return [];
+        }
     }
 
     private function renderTable(array $rows): void

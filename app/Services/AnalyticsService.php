@@ -17,6 +17,17 @@ class AnalyticsService
     private const TTL_MEDIUM = 900;   // 15 minutes — for analytics charts
     private const TTL_LONG   = 3600;  // 1 hour — for slow-moving data
 
+    // Audit-fix wave: every Cache::remember key in this file is suffixed
+    // with ':org:' . app('current_organization_id') so the first tenant to
+    // populate the cache doesn't pin their results for every other tenant
+    // until TTL expiry. We deliberately use app('current_organization_id')
+    // (no fallback) — if the binding is missing, calling these methods is
+    // a bug and BindingResolutionException is the right loud failure.
+    private static function orgKey(string $key): string
+    {
+        return $key . ':org:' . app('current_organization_id');
+    }
+
     /* ────────────────────────────────────────────────
      *  DB-agnostic SQL helpers (MySQL + PostgreSQL)
      * ──────────────────────────────────────────────── */
@@ -127,7 +138,8 @@ class AnalyticsService
 
     public function getDashboardKpis(): array
     {
-        return Cache::remember('dashboard:loyalty_kpis', self::TTL_SHORT, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('dashboard:loyalty_kpis'), self::TTL_SHORT, function () {
             $now = now();
             $monthStart = $now->copy()->startOfMonth();
             $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
@@ -220,7 +232,8 @@ class AnalyticsService
 
     public function getTierDistribution(): array
     {
-        return Cache::remember('analytics:tier_distribution', self::TTL_LONG, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('analytics:tier_distribution'), self::TTL_LONG, function () {
             return LoyaltyTier::leftJoin('loyalty_members', function ($join) {
                     $join->on('loyalty_tiers.id', '=', 'loyalty_members.tier_id')
                          ->where('loyalty_members.is_active', true);
@@ -241,7 +254,8 @@ class AnalyticsService
 
     public function getPointsOverTime(int $days = 30): array
     {
-        return Cache::remember("analytics:points_over_time:{$days}", self::TTL_SHORT, function () use ($days) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:points_over_time:{$days}"), self::TTL_SHORT, function () use ($days) {
             return PointsTransaction::select(
                     DB::raw('DATE(created_at) as date'),
                     DB::raw("SUM(CASE WHEN points > 0 AND is_reversed = false THEN points ELSE 0 END) as earned"),
@@ -257,7 +271,8 @@ class AnalyticsService
 
     public function getMemberGrowth(int $months = 12): array
     {
-        return Cache::remember("analytics:member_growth:{$months}", self::TTL_MEDIUM, function () use ($months) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:member_growth:{$months}"), self::TTL_MEDIUM, function () use ($months) {
             $yearSql = self::yearSql('joined_at');
             $monthSql = self::monthSql('joined_at');
 
@@ -301,7 +316,8 @@ class AnalyticsService
      */
     public function getCohortRetention(int $months = 6): array
     {
-        return Cache::remember("analytics:cohort_retention:{$months}", self::TTL_LONG, function () use ($months) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:cohort_retention:{$months}"), self::TTL_LONG, function () use ($months) {
             $months = max(1, min(12, $months));
             $startOfWindow = now()->startOfMonth()->subMonths($months - 1);
 
@@ -488,7 +504,8 @@ class AnalyticsService
 
     public function getTopMembers(int $limit = 10): array
     {
-        return Cache::remember("analytics:top_members:{$limit}", self::TTL_MEDIUM, function () use ($limit) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:top_members:{$limit}"), self::TTL_MEDIUM, function () use ($limit) {
             return LoyaltyMember::with(['user:id,name,email', 'tier:id,name,color_hex'])
                 ->where('is_active', true)
                 ->orderByDesc('lifetime_points')
@@ -511,7 +528,8 @@ class AnalyticsService
 
     public function getRevenueByRoomType(): array
     {
-        return Cache::remember('analytics:revenue_by_room_type', self::TTL_MEDIUM, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('analytics:revenue_by_room_type'), self::TTL_MEDIUM, function () {
             return Booking::select('room_type', DB::raw('SUM(total_amount) as revenue'), DB::raw('COUNT(*) as stays'))
                 ->whereNotNull('room_type')
                 ->groupBy('room_type')
@@ -523,7 +541,8 @@ class AnalyticsService
 
     public function getWeeklyKpiSummary(): array
     {
-        return Cache::remember('analytics:weekly_kpi_summary', self::TTL_SHORT, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('analytics:weekly_kpi_summary'), self::TTL_SHORT, function () {
             $weekStart = now()->startOfWeek();
             $lastWeekStart = now()->subWeek()->startOfWeek();
             $lastWeekEnd = now()->subWeek()->endOfWeek();
@@ -585,7 +604,8 @@ class AnalyticsService
     public function getExpiryForecast(int $months = 6): array
     {
         $ymSql = self::yearMonthSql('expires_at');
-        return Cache::remember("analytics:expiry_forecast:{$months}", self::TTL_LONG, function () use ($months, $ymSql) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:expiry_forecast:{$months}"), self::TTL_LONG, function () use ($months, $ymSql) {
             return PointExpiryBucket::where('is_expired', false)
                 ->where('remaining_points', '>', 0)
                 ->where('expires_at', '<=', now()->addMonths($months))
@@ -600,7 +620,8 @@ class AnalyticsService
     public function getRevenueTrend(int $months = 12): array
     {
         $ymSql = self::yearMonthSql('created_at');
-        return Cache::remember("analytics:revenue_trend:{$months}", self::TTL_MEDIUM, function () use ($months, $ymSql) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:revenue_trend:{$months}"), self::TTL_MEDIUM, function () use ($months, $ymSql) {
             return Booking::selectRaw("{$ymSql} as month, SUM(total_amount) as revenue, COUNT(*) as bookings")
                 ->where('created_at', '>=', now()->subMonths($months))
                 ->groupBy('month')
@@ -612,7 +633,8 @@ class AnalyticsService
 
     public function getBookingTrends(int $days = 30): array
     {
-        return Cache::remember("analytics:booking_trends:{$days}", self::TTL_SHORT, function () use ($days) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:booking_trends:{$days}"), self::TTL_SHORT, function () use ($days) {
             return Booking::selectRaw("DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue, SUM(nights) as nights")
                 ->where('created_at', '>=', now()->subDays($days))
                 ->groupBy('date')
@@ -630,7 +652,8 @@ class AnalyticsService
      */
     public function getServiceBookingTrends(int $days = 30): array
     {
-        return Cache::remember("analytics:service_booking_trends:{$days}", self::TTL_SHORT, function () use ($days) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:service_booking_trends:{$days}"), self::TTL_SHORT, function () use ($days) {
             return \App\Models\ServiceBooking::selectRaw("DATE(start_at) as date, COUNT(*) as bookings")
                 ->where('start_at', '>=', now()->subDays($days))
                 ->whereNotIn('status', ['cancelled', 'no_show'])
@@ -646,7 +669,8 @@ class AnalyticsService
      */
     public function getMemberEngagement(): array
     {
-        return Cache::remember('analytics:member_engagement', self::TTL_MEDIUM, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('analytics:member_engagement'), self::TTL_MEDIUM, function () {
             $now = now();
             $d30 = $now->copy()->subDays(30);
             $d90 = $now->copy()->subDays(90);
@@ -674,7 +698,8 @@ class AnalyticsService
      */
     public function getPointsDistribution(): array
     {
-        return Cache::remember('analytics:points_distribution', self::TTL_MEDIUM, function () {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey('analytics:points_distribution'), self::TTL_MEDIUM, function () {
             $stats = LoyaltyMember::where('is_active', true)
                 ->selectRaw("SUM(CASE WHEN current_points = 0 THEN 1 ELSE 0 END) as r0")
                 ->selectRaw("SUM(CASE WHEN current_points BETWEEN 1 AND 500 THEN 1 ELSE 0 END) as r1")
@@ -701,7 +726,8 @@ class AnalyticsService
     public function getRedemptionTrend(int $months = 12): array
     {
         $ymSql = self::yearMonthSql('created_at');
-        return Cache::remember("analytics:redemption_trend:{$months}", self::TTL_LONG, function () use ($months, $ymSql) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:redemption_trend:{$months}"), self::TTL_LONG, function () use ($months, $ymSql) {
             $rows = PointsTransaction::where('is_reversed', false)
                 ->where('created_at', '>=', now()->subMonths($months)->startOfMonth())
                 ->selectRaw("{$ymSql} as month")
@@ -728,7 +754,8 @@ class AnalyticsService
     public function getBookingMetrics(int $months = 12): array
     {
         $ymSql = self::yearMonthSql('created_at');
-        return Cache::remember("analytics:booking_metrics:{$months}", self::TTL_MEDIUM, function () use ($months, $ymSql) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:booking_metrics:{$months}"), self::TTL_MEDIUM, function () use ($months, $ymSql) {
             return Booking::selectRaw("{$ymSql} as month, AVG(nights) as avg_nights, AVG(total_amount) as avg_spend, COUNT(*) as bookings")
                 ->where('created_at', '>=', now()->subMonths($months))
                 ->groupBy('month')
@@ -764,7 +791,8 @@ class AnalyticsService
      */
     public function getHotelOpsKpis(int $days = 30): array
     {
-        return Cache::remember("analytics:hotel_ops:{$days}", self::TTL_SHORT, function () use ($days) {
+        // org-scoped cache key — see audit-fix wave comment
+        return Cache::remember(self::orgKey("analytics:hotel_ops:{$days}"), self::TTL_SHORT, function () use ($days) {
             $winStart = now()->subDays($days - 1)->startOfDay();
             $winEnd   = now()->startOfDay(); // last counted *night*
 
@@ -826,6 +854,9 @@ class AnalyticsService
 
     /**
      * Bust dashboard-related caches. Call after points/member/booking changes.
+     *
+     * Every cached key in this file is org-scoped via self::orgKey() — the
+     * forget list must match or the pre-bust value lingers until TTL.
      */
     public static function clearDashboardCache(): void
     {
@@ -838,7 +869,7 @@ class AnalyticsService
             'analytics:points_distribution',
         ];
         foreach ($keys as $key) {
-            Cache::forget($key);
+            Cache::forget(self::orgKey($key));
         }
     }
 }

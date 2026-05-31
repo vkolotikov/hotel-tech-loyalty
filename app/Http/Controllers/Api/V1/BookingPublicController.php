@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\HotelSetting;
+use App\Models\RefundAttempt;
 use App\Services\AvailabilityService;
 use App\Services\BookingEngineService;
 use App\Services\SmoobuClient;
@@ -449,6 +450,19 @@ class BookingPublicController extends Controller
                 $request->ip(),
             );
             return response()->json($result, 201);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // BookingEngineService wraps transient Smoobu PMS failures from
+            // the in-lock recheck as HTTP 503 so we can render a meaningful
+            // "PMS unavailable" hint to the widget instead of a generic
+            // error. Surface the code so the widget can show a friendly
+            // retry message rather than the "something went wrong" toast.
+            if ($e->getStatusCode() === 503) {
+                return response()->json([
+                    'error' => $e->getMessage(),
+                    'code'  => 'pms_unavailable',
+                ], 503);
+            }
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
@@ -825,6 +839,28 @@ class BookingPublicController extends Controller
                     'charge_id'          => $charge->id ?? null,
                 ],
                 'description'     => "Stripe charge.refunded received for PI {$paymentIntentId} but no mirror in org {$orgId}",
+            ]);
+            return;
+        }
+
+        // Freshness skip: BookingRefundService::applyRefund() writes a
+        // RefundAttempt row BEFORE calling Stripe's refund API, then stamps
+        // mirror.last_refund_id immediately after Stripe success. There is
+        // still a 0.5-2s window between those two writes during which the
+        // webhook can race in and reach this handler before last_refund_id
+        // is set — the existing idempotency check on last_refund_id below
+        // would miss it and we'd double-apply the side effects (PMS cancel,
+        // points reversal, email). If a recent (<60s) attempt exists for
+        // this mirror + PI, the admin flow is still in flight; return 200
+        // no-op and let it finish.
+        $hot = RefundAttempt::query()
+            ->where('mirror_id', $mirror->id)
+            ->where('payment_intent_id', $mirror->stripe_payment_intent_id)
+            ->where('requested_at', '>=', now()->subSeconds(60))
+            ->exists();
+        if ($hot) {
+            \Illuminate\Support\Facades\Log::info('charge.refunded skipped — admin flow in flight', [
+                'mirror_id' => $mirror->id,
             ]);
             return;
         }
