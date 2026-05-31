@@ -475,6 +475,27 @@ class BookingPublicController extends Controller
                 $request->ip(),
             );
 
+            // Manual-capture commit. BookingMirror is persisted + DB
+            // transaction committed at this point. Capture the held
+            // funds NOW so the customer's card statement moves from
+            // "pending hold" to "charged". The PI was authorised when
+            // the widget ran stripe.confirmPayment() in paymentIntent()
+            // — it's been sitting in `requires_capture` since then.
+            //
+            // Capture failure is tolerated: BookingMirror is real, the
+            // 7-day Stripe auth window gives the bookings:capture-pending-pis
+            // cron plenty of room to retry. The guest's auth is still
+            // held; we just haven't moved the money yet. Surface a
+            // soft hint to the widget via `payment_capture_pending`
+            // so callers that care can show a nuance message.
+            $captureFlag = $this->capturePaymentIntentIfNeeded(
+                $validated['payment_intent_id'] ?? null,
+                $result,
+            );
+            if ($captureFlag !== null) {
+                $result['payment_capture_pending'] = $captureFlag;
+            }
+
             // Successful booking (or IdempotencyReplay served from the winner's
             // cached response — `replayed: true` is set by the service). PI is
             // legitimately captured for this booking; no rescue.
@@ -537,9 +558,14 @@ class BookingPublicController extends Controller
      * Outcomes:
      *   - PI in requires_capture / requires_action / requires_payment_method
      *     / requires_confirmation → `paymentIntents->cancel()` (release the
-     *     authorisation without a refund round-trip).
+     *     authorisation without a refund round-trip). With manual-capture
+     *     enabled, requires_capture is the COMMON failure path: confirmPayment
+     *     succeeds on the widget → PI lands in requires_capture → confirm()
+     *     throws before we get to capture → cancel is the right move.
      *   - PI succeeded → `StripeService::refund()` directly (no mirror exists,
-     *     so we can't go through BookingRefundService).
+     *     so we can't go through BookingRefundService). This path used to be
+     *     dominant (auto-capture) and now only fires for already-captured
+     *     legacy PIs or rare races where capture ran but the response throw'd.
      *   - PI canceled / processing / null → no-op (nothing to rescue).
      *   - Any Stripe error during rescue → audit-log + Log::error so ops can
      *     manually clean up.
@@ -671,6 +697,166 @@ class BookingPublicController extends Controller
             'reason' => 'unknown_status',
             'status' => $status,
         ]);
+    }
+
+    /**
+     * Capture a manual-capture PaymentIntent right after a successful
+     * BookingEngineService::confirm()/confirmCombo(). Idempotent +
+     * tolerant of every plausible failure mode:
+     *
+     *   - Mock PI (`pi_mock_*`) → skip, return null (no flag in response).
+     *   - No PI on the booking (e.g. payment skipped, $0 booking) → skip.
+     *   - Stripe disabled for this org → skip.
+     *   - PI already `succeeded` → no-op (legacy auto-capture PIs land
+     *     here directly; nothing to capture).
+     *   - PI `requires_capture` → call paymentIntents->capture(). On
+     *     success, flip the BookingMirror (if we can find it) to paid.
+     *     On failure, audit-log + leave mirror untouched so the retry
+     *     cron picks it up — return true so the response carries
+     *     `payment_capture_pending: true`.
+     *   - Any other status (canceled, processing, requires_action…) →
+     *     audit-log "captureable status missing", return null.
+     *
+     * Returns:
+     *   true  → capture failed; cron will retry
+     *   false → capture succeeded
+     *   null  → no capture relevant (mock, no PI, no Stripe, etc.)
+     *
+     * The booking response is NOT failed if this method fails — the
+     * BookingMirror is committed, the guest's auth is still held, and
+     * the retry cron has up to 6 days to finish the job.
+     */
+    private function capturePaymentIntentIfNeeded(?string $intentId, array $result): ?bool
+    {
+        // Mock PIs never touched Stripe.
+        if ($intentId && str_starts_with($intentId, 'pi_mock_')) {
+            return null;
+        }
+
+        // No PI = no payment leg (e.g. zero-cost booking, or PMS-channel
+        // booking confirmed without taking funds via Stripe).
+        if (!$intentId) {
+            return null;
+        }
+
+        $stripe = app(StripeService::class);
+        if (!$stripe->isEnabled()) {
+            return null;
+        }
+
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+
+        // Look up the PI to decide what to do. Skip capture if it's
+        // already succeeded (legacy auto-capture PIs created BEFORE
+        // this change land in succeeded after confirmPayment, no
+        // capture needed). Skip + log if it's in any non-captureable
+        // status so ops can spot anomalies.
+        try {
+            $intent = $stripe->retrievePaymentIntent($intentId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Booking capture — retrieve failed; will let cron retry', [
+                'pi_id' => $intentId,
+                'error' => $e->getMessage(),
+            ]);
+            return true; // tell the widget to expect a delayed capture
+        }
+
+        $status = $intent->status ?? null;
+
+        if ($status === 'succeeded') {
+            // Already captured (legacy auto-capture PI). Backfill the
+            // mirror's payment_status if it's still in an
+            // authorised-but-not-paid state.
+            $this->markMirrorPaid($intentId, $orgId);
+            return false;
+        }
+
+        if ($status !== 'requires_capture') {
+            // Unusual: the widget says confirm succeeded but the PI
+            // isn't in the captureable state. Log + skip — we don't
+            // want to throw because the booking is real and the guest
+            // has been told it's confirmed.
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.capture.skipped_status',
+                    'subject_type'    => 'stripe_payment',
+                    'subject_id'      => null,
+                    'new_values'      => [
+                        'payment_intent_id' => $intentId,
+                        'status'            => $status,
+                    ],
+                    'description'     => "Capture skipped for PI {$intentId} — status was {$status}, expected requires_capture",
+                ]);
+            } catch (\Throwable) {
+                // best-effort
+            }
+            return true; // cron will probe + decide later
+        }
+
+        // The happy path. Capture, flip mirror to paid, return false.
+        try {
+            $stripe->capturePaymentIntent($intentId);
+            $this->markMirrorPaid($intentId, $orgId);
+            return false;
+        } catch (\Throwable $e) {
+            // Capture itself failed (Stripe outage, bank refused the
+            // capture). Booking stays real, auth is still in place at
+            // the bank, cron will retry. Audit-log so ops know.
+            \Illuminate\Support\Facades\Log::error('Booking capture failed — cron will retry', [
+                'pi_id' => $intentId,
+                'org_id' => $orgId,
+                'error' => $e->getMessage(),
+            ]);
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.capture.failed',
+                    'subject_type'    => 'stripe_payment',
+                    'subject_id'      => null,
+                    'new_values'      => [
+                        'payment_intent_id' => $intentId,
+                        'error'             => mb_substr($e->getMessage(), 0, 480),
+                    ],
+                    'description'     => "Manual capture failed for PI {$intentId} — cron will retry",
+                ]);
+            } catch (\Throwable) {
+                // best-effort
+            }
+            return true;
+        }
+    }
+
+    /**
+     * Flip every BookingMirror linked to this PI from
+     * authorized/null/pending → paid. Group bookings have one PI across
+     * several mirrors (booking_group_id-linked) so we update all in one
+     * sweep. Idempotent: rows already in `paid` (or terminal states like
+     * `refunded`) are not touched.
+     */
+    private function markMirrorPaid(string $intentId, ?int $orgId): void
+    {
+        try {
+            $query = \App\Models\BookingMirror::withoutGlobalScopes()
+                ->where('stripe_payment_intent_id', $intentId)
+                ->whereIn('payment_status', ['authorized', 'pending', '']);
+            if ($orgId) {
+                $query->where('organization_id', $orgId);
+            }
+            $query->get()->each(function ($mirror) {
+                $mirror->update([
+                    'payment_status' => 'paid',
+                    'payment_method' => $mirror->payment_method ?: 'stripe',
+                    'price_paid'     => $mirror->price_total,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            // Don't let a mirror update failure fail the response.
+            \Illuminate\Support\Facades\Log::warning('Booking capture — mirror flip to paid failed', [
+                'pi_id' => $intentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

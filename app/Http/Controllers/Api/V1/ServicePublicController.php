@@ -516,6 +516,18 @@ class ServicePublicController extends Controller
 
         $this->logSubmission($orgId, $idempotency, $data, $booking->id, 'success');
 
+        // Manual-capture commit. The PI created in /services/payment-intent
+        // landed in `requires_capture` after stripe.confirmPayment() on
+        // the widget. ServiceBooking row is now persisted; capture the
+        // held funds. Capture failure does NOT fail the request — the
+        // booking is real, the guest's auth is still held, and a future
+        // cron / admin action can finish the capture within ~7 days.
+        $captureFlag = $this->capturePaymentIntentIfNeeded(
+            $data['payment_intent_id'] ?? null,
+            $booking,
+            $isMockBooking,
+        );
+
         // ── Transactional emails ───────────────────────────────────────────
         // 1) Service confirmation goes to every booking, no questions asked.
         // 2) Membership-welcome only fires when the guest has no `welcomed_at`
@@ -535,10 +547,115 @@ class ServicePublicController extends Controller
             $this->sendServiceBookingEmails($booking->load(['service', 'master', 'extras']), $orgId);
         }
 
-        return response()->json([
+        $payload = [
             'booking_reference' => $booking->booking_reference,
             'booking'           => $booking->load(['service', 'master', 'extras']),
-        ], 201);
+        ];
+        if ($captureFlag !== null) {
+            $payload['payment_capture_pending'] = $captureFlag;
+        }
+
+        return response()->json($payload, 201);
+    }
+
+    /**
+     * Capture a manual-capture PaymentIntent right after the
+     * ServiceBooking row is committed. Mirrors the helper in
+     * BookingPublicController; tolerates every plausible failure mode
+     * (mock PI, no Stripe, retrieve failure, already succeeded, capture
+     * itself throwing). Returns true if capture is pending (retry cron
+     * will handle), false if captured cleanly, null if no capture
+     * relevant.
+     */
+    private function capturePaymentIntentIfNeeded(?string $intentId, ServiceBooking $booking, bool $isMock): ?bool
+    {
+        if ($isMock) {
+            return null;
+        }
+        if ($intentId && str_starts_with($intentId, 'pi_mock_')) {
+            return null;
+        }
+        if (!$intentId) {
+            return null;
+        }
+
+        $stripe = app(StripeService::class);
+        if (!$stripe->isEnabled()) {
+            return null;
+        }
+
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+
+        try {
+            $intent = $stripe->retrievePaymentIntent($intentId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Service booking capture — retrieve failed; will let cron retry', [
+                'pi_id' => $intentId,
+                'error' => $e->getMessage(),
+            ]);
+            return true;
+        }
+
+        $status = $intent->status ?? null;
+
+        if ($status === 'succeeded') {
+            // Legacy auto-capture PI — already captured. Flip the
+            // booking to paid if it's still authorized.
+            try {
+                if (in_array($booking->payment_status, ['authorized', 'pending', null, ''], true)) {
+                    $booking->update(['payment_status' => 'paid']);
+                }
+            } catch (\Throwable) {}
+            return false;
+        }
+
+        if ($status !== 'requires_capture') {
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'service_booking.capture.skipped_status',
+                    'subject_type'    => 'stripe_payment',
+                    'subject_id'      => null,
+                    'new_values'      => [
+                        'payment_intent_id' => $intentId,
+                        'status'            => $status,
+                        'service_booking_id' => $booking->id,
+                    ],
+                    'description'     => "Service-booking capture skipped for PI {$intentId} — status was {$status}, expected requires_capture",
+                ]);
+            } catch (\Throwable) {}
+            return true;
+        }
+
+        try {
+            $stripe->capturePaymentIntent($intentId);
+            try {
+                $booking->update(['payment_status' => 'paid']);
+            } catch (\Throwable) {}
+            return false;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Service booking capture failed — cron will retry', [
+                'pi_id' => $intentId,
+                'org_id' => $orgId,
+                'service_booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
+            try {
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'service_booking.capture.failed',
+                    'subject_type'    => 'stripe_payment',
+                    'subject_id'      => null,
+                    'new_values'      => [
+                        'payment_intent_id'  => $intentId,
+                        'service_booking_id' => $booking->id,
+                        'error'              => mb_substr($e->getMessage(), 0, 480),
+                    ],
+                    'description'     => "Manual capture failed for service-booking PI {$intentId} — cron will retry",
+                ]);
+            } catch (\Throwable) {}
+            return true;
+        }
     }
 
     /**

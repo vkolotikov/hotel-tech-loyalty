@@ -116,6 +116,18 @@ Schedule::command('bookings:retry-pms-sync')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+// Capture authorised-but-not-yet-captured Stripe PaymentIntents.
+// Backstop for the synchronous capture path inside confirm(): if Stripe
+// rate-limits us or the bank's network hiccups during the capture call,
+// the BookingMirror is already committed but the funds are still in
+// `requires_capture`. This cron walks rows older than 5 min (so we don't
+// race against an in-flight confirm) and younger than 6 days (one day
+// inside Stripe's 7-day auth window). 10-min cadence keeps the typical
+// capture lag under that window without hammering Stripe's API.
+Schedule::command('bookings:capture-pending-pis')
+    ->everyTenMinutes()
+    ->withoutOverlapping(15);
+
 // Engagement Hub daily summary email. Hourly cron — the command itself
 // gates on each org's local 8am (so a Tokyo org and a New York org both
 // get their summary at 8am local) and dedupes via

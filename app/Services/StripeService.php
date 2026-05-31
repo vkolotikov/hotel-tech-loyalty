@@ -84,6 +84,16 @@ class StripeService
             'description'          => $description,
             'metadata'             => $metadata,
             'automatic_payment_methods' => ['enabled' => true],
+            // Authorize-then-capture flow. The PI lands in
+            // `requires_capture` after stripe.confirmPayment() succeeds on
+            // the widget; the booking flow calls capturePaymentIntent()
+            // after the BookingMirror is persisted + DB transaction
+            // committed. If anything fails between authorisation and
+            // capture, the rescue helper cancels the PI and the bank
+            // releases the hold within a few days (Stripe's hold window
+            // for cards is ~7 days). Customer's statement shows a
+            // pending hold, not a captured charge.
+            'capture_method'       => 'manual',
         ]);
 
         return [
@@ -104,6 +114,30 @@ class StripeService
         }
 
         return $this->client->paymentIntents->retrieve($paymentIntentId);
+    }
+
+    /**
+     * Capture an authorised PaymentIntent (manual-capture flow).
+     *
+     * Caller MUST verify the PI is in `requires_capture` before invoking
+     * — Stripe's capture API throws on any other status. The booking
+     * confirm path checks the cached PI status after retrieval and only
+     * captures when the status is right.
+     *
+     * On success the PI flips to `succeeded`. On Stripe outage / bank
+     * decline the caller should NOT roll back the BookingMirror — the
+     * booking is real, we'll retry the capture via cron within the 7-day
+     * authorisation window.
+     */
+    public function capturePaymentIntent(string $paymentIntentId): \Stripe\PaymentIntent
+    {
+        $this->boot();
+
+        if (!$this->client) {
+            throw new \RuntimeException('Stripe is not configured for this organization.');
+        }
+
+        return $this->client->paymentIntents->capture($paymentIntentId);
     }
 
     /**
