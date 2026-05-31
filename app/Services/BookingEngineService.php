@@ -342,6 +342,21 @@ class BookingEngineService
             // double-book. This single API call asks Smoobu what it
             // really thinks RIGHT NOW.
             //
+            // Acceptance logic mirrors AvailabilityService::check():
+            //   (a) per-day getDailyRates() — every requested night is
+            //       available + priced → ACCEPT.
+            //   (b) aggregate getRates() — unit reports available + price
+            //       → ACCEPT.
+            //   (c) NEITHER Smoobu source has data for the unit AND the
+            //       room has a DB base_price → ACCEPT (pass-through). This
+            //       is the same fallback availability uses for rooms
+            //       outside Smoobu's published rate window. Without this,
+            //       a booking that the widget showed as available (via
+            //       base_price fallback) would be hard-stopped at confirm
+            //       because Smoobu's rate calendar happens not to cover
+            //       that date — divergence that costs the booking.
+            //   Otherwise: Smoobu actively says unavailable → HARD STOP.
+            //
             // Failure modes:
             //   - "not available" → hard stop (RuntimeException, surfaced
             //     to the guest as "just booked through another channel").
@@ -354,16 +369,99 @@ class BookingEngineService
             //     the recheck — it can succeed before Smoobu has
             //     reconciled the OTA inventory write.
             try {
-                $liveRates = $this->smoobu->getRates(
-                    $payload['check_in'],
-                    $payload['check_out'],
-                    [$apartmentId],
-                );
-                $liveData = $liveRates['data'] ?? $liveRates;
-                $unitLive = $liveData[$apartmentId] ?? null;
-                if ($unitLive !== null && !($unitLive['available'] ?? false)) {
-                    $this->logSubmission('failure', 'pms_unavailable', 'PMS reports unit unavailable at confirm', $data, $requestId, $idempotencyKey);
-                    throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                // Build the night-window list the same way availability does
+                // (checkIn..checkOut-1 inclusive), so per-day verification
+                // covers every night the guest is paying for.
+                $nights = [];
+                $cur    = new \DateTime($payload['check_in']);
+                $endDt  = new \DateTime($payload['check_out']);
+                while ($cur < $endDt) {
+                    $nights[] = $cur->format('Y-m-d');
+                    $cur->modify('+1 day');
+                }
+
+                // Tier (a): per-day data. Source of truth when present.
+                $dailyAvailable = false;
+                $dailyHadData   = false;
+                try {
+                    $daily   = $this->smoobu->getDailyRates(
+                        $payload['check_in'],
+                        $payload['check_out'],
+                        [$apartmentId],
+                    );
+                    $perDay  = $daily[$apartmentId] ?? null;
+                    if (is_array($perDay) && !empty($perDay) && !empty($nights)) {
+                        $dailyHadData = true;
+                        $dailyAvailable = true;
+                        foreach ($nights as $d) {
+                            $day = $perDay[$d] ?? null;
+                            if (!$day || !($day['available'] ?? false) || (float) ($day['price'] ?? 0) <= 0) {
+                                $dailyAvailable = false;
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Daily-rates fetch failed — fall through to aggregate.
+                    \Illuminate\Support\Facades\Log::info('Confirm live recheck: daily rates fetch failed, falling back to aggregate', [
+                        'org_id'  => $orgId,
+                        'unit_id' => $apartmentId,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+
+                if (!$dailyHadData || !$dailyAvailable) {
+                    // Tier (b): aggregate getRates(). Either the daily call
+                    // had no data for this unit, OR daily reported unavail
+                    // (which can be a rate-calendar artefact, not a real
+                    // block) — we need a second opinion from the aggregate.
+                    $liveRates = $this->smoobu->getRates(
+                        $payload['check_in'],
+                        $payload['check_out'],
+                        [$apartmentId],
+                    );
+                    $liveData = $liveRates['data'] ?? $liveRates;
+                    $unitLive = $liveData[$apartmentId] ?? null;
+
+                    $aggregateAvailable = $unitLive !== null
+                        && ($unitLive['available'] ?? false)
+                        && (float) ($unitLive['price'] ?? 0) > 0;
+
+                    if (!$aggregateAvailable) {
+                        // Both Smoobu sources are either silent or reporting
+                        // unavailable. Distinguish "no data" from "actively
+                        // unavailable":
+                        //   - daily had data AND said unavailable, OR
+                        //   - aggregate has data AND said unavailable
+                        // → HARD STOP. Smoobu actually knows about this
+                        //   unit/date and says no.
+                        //
+                        // If neither source has data at all, fall back to
+                        // base_price the way availability does — refusing
+                        // here would diverge from what the widget offered.
+                        $aggregateHadData = $unitLive !== null
+                            && (isset($unitLive['available']) || isset($unitLive['price']));
+
+                        if ($dailyHadData || $aggregateHadData) {
+                            $this->logSubmission('failure', 'pms_unavailable', 'PMS reports unit unavailable at confirm', $data, $requestId, $idempotencyKey);
+                            throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                        }
+
+                        // Tier (c): no Smoobu data at all. Check the room's
+                        // DB base_price as the availability fallback does.
+                        // If base_price is 0 the widget couldn't have
+                        // surfaced this room either, so refuse.
+                        $base = (float) ($rooms->base_price ?? 0);
+                        if ($base <= 0) {
+                            $this->logSubmission('failure', 'pms_unavailable', 'PMS has no data and room has no base_price at confirm', $data, $requestId, $idempotencyKey);
+                            throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                        }
+
+                        \Illuminate\Support\Facades\Log::info('Confirm live recheck: no Smoobu data — accepting via base_price fallback (matches availability)', [
+                            'org_id'  => $orgId,
+                            'unit_id' => $apartmentId,
+                        ]);
+                    }
                 }
             } catch (\RuntimeException $e) {
                 // Our own thrown unavailable error — re-throw.
