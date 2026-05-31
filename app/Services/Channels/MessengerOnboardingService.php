@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -99,8 +100,21 @@ class MessengerOnboardingService
      *
      * Endpoint: GET /me/accounts?fields=id,name,picture,access_token,tasks
      *
-     * Filters out Pages where the user doesn't have at least the
-     * MESSAGING task (i.e. can't actually send messages on the Page).
+     * Filter strategy (lessons learned): Facebook Login for Business
+     * asset sharing returns `tasks` inconsistently — sometimes absent,
+     * sometimes empty array, sometimes populated. The original strict
+     * filter ("tasks must include MESSAGING or MANAGE") rejected every
+     * page when tasks was absent. New strategy:
+     *
+     *   - If `tasks` is populated AND doesn't include MESSAGING/MANAGE,
+     *     reject (clearly wrong scope grant).
+     *   - If `tasks` is absent/empty, accept (FBLB flow that didn't
+     *     surface the field). The subsequent Send API call will
+     *     return a clear permission error if the page really can't
+     *     be messaged, so we don't lose any safety.
+     *
+     * Page must have an access_token to be useful — that's the hard
+     * filter that excludes garbage entries.
      *
      * @return array<int, array{id:string,name:string,picture_url:?string,access_token:string}>
      */
@@ -121,22 +135,48 @@ class MessengerOnboardingService
         $this->ensureSuccessful($resp, 'Listing Pages failed');
 
         $rows = (array) ($resp->json('data') ?? []);
+
+        // Log what Meta returned for diagnostic purposes. Page IDs +
+        // tasks shape only — not the access_tokens (don't log secrets).
+        Log::info('messenger.onboarding.list_pages.meta_response', [
+            'count'   => count($rows),
+            'sample'  => array_map(fn ($r) => [
+                'id'    => $r['id'] ?? null,
+                'name'  => $r['name'] ?? null,
+                'tasks' => $r['tasks'] ?? null,
+                'has_token' => !empty($r['access_token']),
+            ], array_slice($rows, 0, 10)),
+        ]);
+
         $pages = [];
         foreach ($rows as $row) {
-            $tasks = (array) ($row['tasks'] ?? []);
-            // MESSAGING is the minimum task that allows our integration to
-            // act on the user's behalf. Without it, a connect-attempt
-            // would succeed locally but the Send API would 403.
-            if (!in_array('MESSAGING', $tasks, true) && !in_array('MANAGE', $tasks, true)) {
+            $tokenStr = (string) ($row['access_token'] ?? '');
+            if ($tokenStr === '') continue; // hard filter — no token = can't do anything
+
+            $tasks = $row['tasks'] ?? null;
+            // Only reject when tasks IS present AND lacks the right capability.
+            // FBLB asset-sharing often omits tasks entirely; treat that as
+            // "trust the grant, let Send API gate on actual permission".
+            if (is_array($tasks) && !empty($tasks)
+                && !in_array('MESSAGING', $tasks, true)
+                && !in_array('MANAGE', $tasks, true)
+            ) {
                 continue;
             }
+
             $pages[] = [
                 'id'           => (string) ($row['id'] ?? ''),
                 'name'         => (string) ($row['name'] ?? ''),
                 'picture_url'  => $row['picture']['data']['url'] ?? null,
-                'access_token' => (string) ($row['access_token'] ?? ''),
+                'access_token' => $tokenStr,
             ];
         }
+
+        Log::info('messenger.onboarding.list_pages.filtered', [
+            'returned' => count($pages),
+            'page_ids' => array_column($pages, 'id'),
+        ]);
+
         return $pages;
     }
 
