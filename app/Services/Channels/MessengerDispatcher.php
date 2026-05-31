@@ -161,9 +161,12 @@ class MessengerDispatcher implements ChannelDispatcher
 
     public function send(ChatConversation $conversation, string $text, ?array $attachments = null, array $opts = []): string
     {
+        // withoutGlobalScopes() because callers include console commands,
+        // queue workers, and the webhook handler — none of which bind a
+        // tenant. TenantScope is fail-closed and would silently return null.
         $account = $conversation->relationLoaded('channelAccount')
             ? $conversation->getRelation('channelAccount')
-            : ChatChannelAccount::find($conversation->channel_account_id);
+            : ChatChannelAccount::query()->withoutGlobalScopes()->find($conversation->channel_account_id);
 
         if ($account === null || !$account->isActive()) {
             throw new RuntimeException('Messenger account is not active for this conversation');

@@ -99,16 +99,27 @@ class ChannelRouter
             return true; // internal channel — nothing to do, signal "fine"
         }
 
-        // Reload the conversation's channel_account relation for token + page id.
-        $conversation->loadMissing('channelAccount');
-        $account = $conversation->getRelation('channelAccount');
+        // Load the linked account WITHOUT global scopes. We're often called
+        // from contexts that don't have a tenant bound (console commands,
+        // queued jobs, cross-tenant webhook handlers), and BelongsToOrganization's
+        // TenantScope is fail-closed — it would return null and we'd silently
+        // refuse to send. Look up directly by id then prime the relation so
+        // the dispatcher doesn't repeat the work.
+        $account = $conversation->channel_account_id !== null
+            ? \App\Models\ChatChannelAccount::query()
+                ->withoutGlobalScopes()
+                ->find($conversation->channel_account_id)
+            : null;
         if ($account === null || !$account->isActive()) {
             Log::warning('channel_router.skipped.no_active_account', [
                 'conversation_id' => $conversation->id,
                 'channel'         => $conversation->channel,
+                'channel_account_id' => $conversation->channel_account_id,
+                'account_status'  => $account?->status,
             ]);
             return false;
         }
+        $conversation->setRelation('channelAccount', $account);
 
         // Window-rule enforcement (Messenger-specific for now; the
         // dispatcher interface stays channel-agnostic. WhatsApp's window
