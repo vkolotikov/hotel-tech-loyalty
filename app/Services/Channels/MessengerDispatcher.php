@@ -7,6 +7,7 @@ use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Visitor;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -84,10 +85,18 @@ class MessengerDispatcher implements ChannelDispatcher
         // two conversation rows.
         return DB::transaction(function () use ($account, $payload, $psid, $mid) {
             $conversation = ChatConversation::query()
+                ->withoutGlobalScopes()
                 ->where('channel_account_id', $account->id)
                 ->where('external_thread_id', $psid)
                 ->lockForUpdate()
                 ->first();
+
+            // Resolve/create the Visitor row for this PSID. EngagementFeedService
+            // queries OUT from visitors → conversations, so a conversation
+            // without a visitor_id is invisible in /engagement. We give each
+            // PSID its own Visitor scoped to the org, keyed by a stable
+            // "fb:<psid>" visitor_key (same shape as other channels will use).
+            $visitor = $this->resolveVisitor($account, $psid);
 
             if ($conversation === null) {
                 $conversation = ChatConversation::create([
@@ -96,17 +105,23 @@ class MessengerDispatcher implements ChannelDispatcher
                     'channel'            => ChatChannelAccount::CHANNEL_MESSENGER,
                     'external_thread_id' => $psid,
                     'channel_account_id' => $account->id,
+                    'visitor_id'         => $visitor->id,
                     // Default AI on — matches the agreed product behaviour
                     // for FB DMs (auto-reply unless admin takes over).
                     'ai_enabled'         => true,
                     'status'             => 'active',
-                    'visitor_name'       => 'Messenger user',
+                    'visitor_name'       => $visitor->display_name ?? 'Messenger user',
                     'visitor_country'    => null,
                     // Source signal so the engagement row shows a Messenger
                     // badge instead of the web-widget badge.
                     'session_id'         => 'fb_' . $psid,
                     'last_message_at'    => now(),
                 ]);
+            } elseif ($conversation->visitor_id === null) {
+                // Heal legacy conversations that were created before this
+                // dispatcher started linking visitors. One self-repair on
+                // the next inbound; backfill command covers the rest.
+                $conversation->forceFill(['visitor_id' => $visitor->id])->save();
             }
 
             // Build the inbound message.
@@ -218,6 +233,56 @@ class MessengerDispatcher implements ChannelDispatcher
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────
+
+    /**
+     * Resolve or create the Visitor row for a Messenger PSID, scoped to
+     * the account's org. Idempotent (uses Visitor's UNIQUE (org_id,
+     * visitor_key) constraint as the dedup point) and tolerates the
+     * webhook-race case where two simultaneous deliveries both try to
+     * insert.
+     *
+     * `visitor_key` is `fb:<psid>` — a stable, channel-prefixed identifier.
+     * WhatsApp/Instagram dispatchers will follow the same pattern
+     * (`wa:<phone>`, `ig:<igsid>`) so the visitor_key namespace stays
+     * collision-free across channels.
+     *
+     * withoutGlobalScopes() because we're often called from contexts
+     * (console, webhook handler) where no tenant is bound.
+     */
+    private function resolveVisitor(ChatChannelAccount $account, string $psid): Visitor
+    {
+        $visitorKey = 'fb:' . $psid;
+
+        $existing = Visitor::query()->withoutGlobalScopes()
+            ->where('organization_id', $account->organization_id)
+            ->where('visitor_key', $visitorKey)
+            ->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        try {
+            return Visitor::create([
+                'organization_id'    => $account->organization_id,
+                'brand_id'           => $account->brand_id,
+                'visitor_key'        => $visitorKey,
+                'display_name'       => 'Messenger user',
+                'first_seen_at'      => now(),
+                'last_seen_at'       => now(),
+                'visit_count'        => 1,
+                'page_views_count'   => 0,
+                'messages_count'     => 0,
+                'is_lead'            => false,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // Two simultaneous webhook deliveries raced past the pre-check;
+            // the loser re-fetches the row the winner just created.
+            return Visitor::query()->withoutGlobalScopes()
+                ->where('organization_id', $account->organization_id)
+                ->where('visitor_key', $visitorKey)
+                ->firstOrFail();
+        }
+    }
 
     /**
      * Reduce Meta's attachment shape to our normalised view. Stored on
