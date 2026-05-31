@@ -172,7 +172,18 @@ class DiagSmoobuChannels extends Command
         $this->newLine();
 
         if (empty($classified)) {
-            $this->warn('No channels returned by Smoobu. Check that the API key is valid and that channels exist on the account.');
+            // Smoobu's GET /channels isn't part of the public API on most
+            // accounts — it returns their marketing homepage HTML (~10KB)
+            // on a 200 OK. SmoobuClient::listChannels() detects that and
+            // short-circuits to []. Either way (HTML page OR a genuinely
+            // empty channels list), the only working configuration is for
+            // the admin to pin a channel id manually — auto-detect can't
+            // resolve anything against an empty list.
+            $this->newLine();
+            $this->warn("Smoobu's GET /channels endpoint is not available on this account.");
+            $this->line("The admin-pinned channel_id is the only way to configure which channel new reservations are attributed to.");
+            $this->line("  Current pinned: " . ($pinnedId > 0 ? (string) $pinnedId : '<empty>'));
+            $this->line("Verify in Smoobu admin → Settings → Channels that this matches your Website / Direct channel ID.");
             return self::FAILURE;
         }
 

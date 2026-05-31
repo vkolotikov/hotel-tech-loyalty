@@ -111,10 +111,15 @@ class DiagSmoobuCreateProbe extends Command
         }
 
         // ── Build the createReservation payload ──
+        // Field names match Smoobu's documented createReservation
+        // contract — apartmentId (NOT arrivalApartment), price-paid
+        // (legacy kebab amount) + priceStatus (docs-compliant 0/1
+        // paid flag). Mirrors BookingEngineService::confirm() so this
+        // probe surfaces the exact same rejection paths.
         $payload = [
             'arrivalDate'      => $from,
             'departureDate'    => $to,
-            'arrivalApartment' => (int) $apartmentId,
+            'apartmentId'      => (int) $apartmentId,
             'channelId'        => $resolvedChannelId,
             'firstName'        => 'QA',
             'lastName'         => 'Probe',
@@ -123,7 +128,8 @@ class DiagSmoobuCreateProbe extends Command
             'adults'           => 1,
             'children'         => 0,
             'price'            => 1.00,
-            'pricePaid'        => 0.00,
+            'price-paid'       => 0.00,
+            'priceStatus'      => 0,
             'notice'           => 'Internal diagnostic probe — safe to delete. Sent by diag:smoobu-create-probe.',
         ];
 

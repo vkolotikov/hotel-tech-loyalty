@@ -315,10 +315,17 @@ class DiagPiContext extends Command
         array $payload,
         int $channelId,
     ): array {
+        // Field names match Smoobu's documented createReservation
+        // contract — apartmentId (NOT arrivalApartment), price-paid
+        // (legacy kebab amount) + priceStatus (docs-compliant 0/1
+        // paid flag). Mirrors BookingEngineService::confirm() so an
+        // operator pasting this into Postman hits the same code path.
+        $gross = (float) ($payload['gross_total'] ?? 0);
+
         return [
             'arrivalDate'      => $checkIn,
             'departureDate'    => $checkOut,
-            'arrivalApartment' => $unitId ? (int) $unitId : null,
+            'apartmentId'      => $unitId ? (int) $unitId : null,
             'channelId'        => $channelId,
             'firstName'        => $guest['first_name'] ?? '',
             'lastName'         => $guest['last_name'] ?? '',
@@ -326,8 +333,9 @@ class DiagPiContext extends Command
             'phone'            => $guest['phone'] ?? '',
             'adults'           => (int) ($payload['adults'] ?? 2),
             'children'         => (int) ($payload['children'] ?? 0),
-            'price'            => (float) ($payload['gross_total'] ?? 0),
-            'pricePaid'        => (float) ($payload['gross_total'] ?? 0),
+            'price'            => $gross,
+            'price-paid'       => $gross,
+            'priceStatus'      => $gross > 0 ? 1 : 0,
             'notice'           => $payload['special_requests'] ?? '',
         ];
     }

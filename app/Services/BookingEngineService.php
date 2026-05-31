@@ -525,7 +525,14 @@ class BookingEngineService
                     'adults'        => (int) $payload['adults'],
                     'children'      => (int) $payload['children'],
                     'price'         => $grossTotal,
+                    // Smoobu's current docs use the integer flag
+                    // `priceStatus` (0 = unpaid, 1 = paid). The legacy
+                    // kebab `price-paid` (amount) is kept additively in
+                    // case Smoobu still honors it — they may silently
+                    // ignore it, but it's harmless. Both fields stay
+                    // in sync: priceStatus=1 iff any amount was paid.
                     'price-paid'    => $paidAmount,
+                    'priceStatus'   => $paidAmount > 0 ? 1 : 0,
                     'language'      => 'en',
                     'notice'        => $notice ?: null,
                     'assistant-notice' => $assistantNotice,
@@ -1384,6 +1391,13 @@ class BookingEngineService
                     $unitName    = $room['unit_name'] ?? 'Room';
 
                     // Build Smoobu payload for this room.
+                    //
+                    // priceStatus (docs-compliant) + price-paid (legacy
+                    // kebab) ship additively — same pattern as the
+                    // single-room confirm() path. Per-room paid amount
+                    // is the full room subtotal when the parent combo's
+                    // payment_status is 'paid'.
+                    $roomPaid = $paymentStatus === 'paid' ? $roomTotal : 0;
                     $smoobuPayload = [
                         'arrivalDate'   => $checkIn,
                         'departureDate' => $checkOut,
@@ -1395,6 +1409,8 @@ class BookingEngineService
                         'adults'        => $adults,
                         'children'      => $children,
                         'price'         => $roomTotal,
+                        'price-paid'    => $roomPaid,
+                        'priceStatus'   => $roomPaid > 0 ? 1 : 0,
                         'notice'        => ($data['special_requests'] ?? '')
                             . (count($rooms) > 1 ? " [Combo {$groupId} — room " . ($idx + 1) . '/' . count($rooms) . ']' : ''),
                     ];

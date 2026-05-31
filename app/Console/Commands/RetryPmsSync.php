@@ -75,6 +75,12 @@ class RetryPmsSync extends Command
                 app()->forgetInstance('current_brand_id');
 
                 try {
+                    // priceStatus (docs-compliant) + price-paid (legacy
+                    // kebab) ship additively — same pattern as the
+                    // confirm() path. The mirror was created in
+                    // pending_pms_sync state, so price_paid is what was
+                    // actually captured by Stripe at booking time.
+                    $pricePaid = (float) ($mirror->price_paid ?? 0);
                     $result = $smoobu->createReservation([
                         'apartmentId'   => $mirror->apartment_id,
                         'arrivalDate'   => $mirror->arrival_date instanceof \DateTimeInterface
@@ -91,6 +97,8 @@ class RetryPmsSync extends Command
                         'adults'        => (int) ($mirror->adults ?? 1),
                         'children'      => (int) ($mirror->children ?? 0),
                         'price'         => (float) ($mirror->price_total ?? 0),
+                        'price-paid'    => $pricePaid,
+                        'priceStatus'   => $pricePaid > 0 ? 1 : 0,
                         'language'      => 'en',
                     ]);
 

@@ -170,13 +170,15 @@ class SmoobuClient
 
         // Pull the live channel list ONCE — used for both (a) validating
         // the admin-pinned id and (b) auto-detect when there is no pin.
-        // Wrapped in try/catch so a Smoobu outage doesn't kill the whole
-        // booking flow.
+        // Routes through listChannels() so HTML-marketing-page responses
+        // (Smoobu returns these when /channels isn't enabled for the
+        // account) are detected + short-circuited identically here and
+        // in the admin "Discover channels" picker.
         $items = null;
         $listError = null;
         try {
-            $resp  = $this->get('/channels');
-            $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
+            $resp  = $this->listChannels();
+            $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : [];
 
             Log::info('SmoobuClient: /channels resolved', [
                 'count'    => count($items),
@@ -217,13 +219,15 @@ class SmoobuClient
         if (!empty($this->channelId) && ((int) $this->channelId) > 0) {
             $pinnedId = (int) $this->channelId;
 
-            // If /channels is unreachable we can't validate. Trust the pin —
-            // failing closed during a Smoobu outage would be worse than
-            // pushing to the admin's last-known-good channel.
-            if ($items === null) {
+            // If /channels is unreachable OR returned an empty list (Smoobu's
+            // HTML-marketing-page response surfaces as []), we can't
+            // validate. Trust the pin — failing closed during a Smoobu
+            // outage / on accounts where /channels isn't enabled would be
+            // worse than pushing to the admin's last-known-good channel.
+            if ($items === null || empty($items)) {
                 Log::info('SmoobuClient: trusting admin-pinned channel without validation (channels listing unavailable)', [
                     'pinned' => $pinnedId,
-                    'reason' => $listError,
+                    'reason' => $listError ?? 'channels_endpoint_returned_empty',
                 ]);
                 return $this->resolvedDirectChannelId = $pinnedId;
             }
@@ -308,6 +312,17 @@ class SmoobuClient
             Log::warning('SmoobuClient: no usable direct channel found', [
                 'total_channels' => count($items),
             ]);
+
+            // Hint when the list is genuinely empty (no admin pin + no
+            // channels in the auto-detected list, often because Smoobu's
+            // /channels endpoint is unavailable on this account): tell ops
+            // to pin a channel id manually in Settings.
+            if (empty($items)) {
+                Log::warning('SmoobuClient: /channels endpoint returned no candidates — admin must pin booking_smoobu_channel_id manually in Settings → Integrations → Smoobu. Find the correct id in Smoobu admin → Settings → Channels.', [
+                    'org_id'   => $orgId,
+                    'brand_id' => $brandId,
+                ]);
+            }
         }
 
         // ── 3. Give up ──
@@ -330,10 +345,28 @@ class SmoobuClient
     }
 
     /**
+     * Process-wide flag to ensure we log the "GET /channels returned HTML"
+     * warning at most once per process. The endpoint doesn't exist in
+     * Smoobu's public API and returns a ~10KB marketing homepage; without
+     * this gate every booking confirm spams the same warning.
+     */
+    private static bool $loggedChannelsHtmlWarning = false;
+
+    /**
      * Return raw /channels response for the admin to inspect. Used by the
      * Settings → Integrations → Smoobu "Discover channels" picker so admins
      * can copy the right channel ID into booking_smoobu_channel_id rather
      * than relying on auto-detection.
+     *
+     * Smoobu's `GET /channels` endpoint isn't part of the public API on
+     * most accounts — calling it returns their marketing homepage HTML
+     * (~10KB of `<!DOCTYPE html>…`) instead of JSON. We detect that
+     * pattern via the raw HTTP body BEFORE the JSON-parsing path (which
+     * would throw with an unhelpful "Smoobu API error" since the response
+     * is still 200 OK), short-circuit to an empty array, and log a
+     * one-shot warning so the auto-detect path falls through to the
+     * admin-pinned channel id (the only working configuration when
+     * /channels is unavailable).
      */
     public function listChannels(): array
     {
@@ -347,7 +380,48 @@ class SmoobuClient
                 'note' => 'Mock mode — configure booking_smoobu_api_key to fetch real channels.',
             ];
         }
-        $resp = $this->get('/channels');
+
+        // Inline a single HTTP GET so we can inspect the RAW body before
+        // JSON-decoding. Smoobu serves an HTML marketing page on a 200 OK
+        // when /channels isn't enabled for the account — going through
+        // request()'s normal path would either treat it as a successful
+        // empty array (worse: silent fallthrough to "no channels found")
+        // or throw an opaque JSON error. Skipping the retry loop is
+        // intentional too: the symptom (200 + HTML) is not transient.
+        try {
+            $url = "{$this->baseUrl}/channels";
+            $response = Http::withHeaders(['Api-Key' => $this->apiKey])
+                ->timeout($this->timeout)
+                ->get($url);
+        } catch (\Throwable $e) {
+            Log::warning('SmoobuClient: /channels lookup failed', ['error' => $e->getMessage()]);
+            return ['channels' => []];
+        }
+
+        if (!$response->successful()) {
+            Log::warning('SmoobuClient: /channels returned non-success', [
+                'status' => $response->status(),
+                'body'   => $this->formatBodyExcerpt((string) $response->body(), 200),
+            ]);
+            return ['channels' => []];
+        }
+
+        $rawBody = (string) $response->body();
+        $trimmed = ltrim($rawBody);
+
+        // HTML detection — any body whose first non-whitespace char is `<`
+        // is Smoobu's marketing homepage, not the JSON list we asked for.
+        if ($trimmed !== '' && $trimmed[0] === '<') {
+            if (!self::$loggedChannelsHtmlWarning) {
+                Log::warning('SmoobuClient: GET /channels returned HTML instead of JSON — endpoint is not available on this account. Falling back to admin-pinned channel id.', [
+                    'body_excerpt' => $this->formatBodyExcerpt($rawBody, 200),
+                ]);
+                self::$loggedChannelsHtmlWarning = true;
+            }
+            return ['channels' => []];
+        }
+
+        $resp  = $response->json() ?? [];
         $items = is_array($resp['channels'] ?? null) ? $resp['channels'] : (is_array($resp) ? $resp : []);
         return ['channels' => $items];
     }
@@ -1041,12 +1115,25 @@ class SmoobuClient
 
     private function mockCreateReservation(array $data): array
     {
+        // Read the docs-compliant `apartmentId` first; fall back to
+        // legacy `arrivalApartment` so the mock stays honest if any
+        // caller still emits the old name. Real prod callers all
+        // send apartmentId now.
+        $apartmentId = $data['apartmentId'] ?? $data['arrivalApartment'] ?? '';
+        // Dual-read arrival/departure too — request-side uses
+        // arrivalDate/departureDate, response-side uses arrival/departure.
+        $arrival   = $data['arrivalDate']   ?? $data['arrival']   ?? '';
+        $departure = $data['departureDate'] ?? $data['departure'] ?? '';
+        // Echo `price-paid` if the caller sent one — confirm()'s
+        // diagnostic path reads it back via $smoobuPayload['price-paid'].
+        $pricePaid = $data['price-paid'] ?? 0;
+
         return [
             'id'            => rand(100000, 999999),
             'reference-id'  => 'BK-' . strtoupper(substr(md5(uniqid()), 0, 8)),
-            'apartment'     => ['id' => $data['arrivalApartment'] ?? '', 'name' => ''],
-            'arrival'       => $data['arrival'] ?? '',
-            'departure'     => $data['departure'] ?? '',
+            'apartment'     => ['id' => $apartmentId, 'name' => ''],
+            'arrival'       => $arrival,
+            'departure'     => $departure,
             'channel'       => ['id' => $this->channelId, 'name' => 'Website'],
             'guest-name'    => ($data['firstName'] ?? '') . ' ' . ($data['lastName'] ?? ''),
             'email'         => $data['email'] ?? '',
@@ -1054,7 +1141,7 @@ class SmoobuClient
             'adults'        => $data['adults'] ?? 2,
             'children'      => $data['children'] ?? 0,
             'price'         => $data['price'] ?? 0,
-            'price-paid'    => 0,
+            'price-paid'    => $pricePaid,
         ];
     }
 
