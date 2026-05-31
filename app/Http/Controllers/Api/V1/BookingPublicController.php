@@ -384,6 +384,12 @@ class BookingPublicController extends Controller
     {
         $this->bindOrg($request);
 
+        // Validation runs BEFORE the outer try/catch so a malformed body
+        // returns 422 the standard way. If the customer's widget already
+        // created a PI in paymentIntent() but then sent a broken /confirm,
+        // the PI on Stripe is still in requires_payment_method (the widget
+        // validates client-side before submit so confirmPayment never ran)
+        // — no captured funds, no rescue needed.
         $validated = $request->validate([
             'hold_token'           => 'required|string',
             'guest.first_name'     => 'required|string|max:100',
@@ -395,67 +401,94 @@ class BookingPublicController extends Controller
             'special_requests'     => 'nullable|string|max:2000',
         ]);
 
-        // Mock mode: any booking confirmed while booking_mock_mode=true gets
-        // stamped as paid via the mock channel so it shows up clearly in
-        // admin reports as "not a real charge". config() returns
-        // payment_enabled=false when mock mode is on so the widget skips
-        // Stripe Elements; we stamp here too in case a payment_intent_id
-        // does come through (defensive against stale frontends).
-        $mockMode = HotelSetting::getValue('booking_mock_mode');
-        if ($mockMode === true || $mockMode === 'true') {
-            $validated['payment_method'] = 'mock';
-            $validated['payment_status'] = 'paid';
-            // Fall through to booking creation — skip Stripe verification entirely.
-        } elseif (!empty($validated['payment_intent_id'])) {
-            // Mock-mode short-circuit. paymentIntent() returns ids prefixed
-            // with `pi_mock_` when booking_mock_mode is on; we trust them
-            // without contacting Stripe and stamp the booking as paid via
-            // the mock channel so admins can spot it later.
-            if (str_starts_with($validated['payment_intent_id'], 'pi_mock_')) {
+        // ─────────────────────────────────────────────────────────────
+        // SAFETY NET — wrap every 4xx/5xx exit path in a rescue block.
+        // Customer's widget has already called stripe.confirmPayment()
+        // client-side by the time we get here, so the PaymentIntent is
+        // typically in requires_capture or succeeded state. Any failure
+        // path that returns 400/4xx/5xx without first cancelling or
+        // refunding the PI leaves the customer with money stuck in
+        // limbo. Catch every exit, attempt PI rescue, then re-raise
+        // so existing response-shaping below still runs.
+        // ─────────────────────────────────────────────────────────────
+        try {
+            // Mock mode: any booking confirmed while booking_mock_mode=true gets
+            // stamped as paid via the mock channel so it shows up clearly in
+            // admin reports as "not a real charge". config() returns
+            // payment_enabled=false when mock mode is on so the widget skips
+            // Stripe Elements; we stamp here too in case a payment_intent_id
+            // does come through (defensive against stale frontends).
+            $mockMode = HotelSetting::getValue('booking_mock_mode');
+            if ($mockMode === true || $mockMode === 'true') {
                 $validated['payment_method'] = 'mock';
                 $validated['payment_status'] = 'paid';
-            } else {
-                $stripe = app(StripeService::class);
-                if ($stripe->isEnabled()) {
-                    try {
-                        $intent = $stripe->retrievePaymentIntent($validated['payment_intent_id']);
-                        if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
-                            return response()->json([
-                                'error' => 'Payment has not been completed. Status: ' . $intent->status,
-                            ], 400);
+                // Fall through to booking creation — skip Stripe verification entirely.
+            } elseif (!empty($validated['payment_intent_id'])) {
+                // Mock-mode short-circuit. paymentIntent() returns ids prefixed
+                // with `pi_mock_` when booking_mock_mode is on; we trust them
+                // without contacting Stripe and stamp the booking as paid via
+                // the mock channel so admins can spot it later.
+                if (str_starts_with($validated['payment_intent_id'], 'pi_mock_')) {
+                    $validated['payment_method'] = 'mock';
+                    $validated['payment_status'] = 'paid';
+                } else {
+                    $stripe = app(StripeService::class);
+                    if ($stripe->isEnabled()) {
+                        try {
+                            $intent = $stripe->retrievePaymentIntent($validated['payment_intent_id']);
+                            if (!in_array($intent->status, ['succeeded', 'requires_capture'])) {
+                                // PI not in a good state — but it's also NOT
+                                // succeeded/requires_capture, so no held funds
+                                // to rescue. Throw a tagged exception so the
+                                // outer catch can return 400 without rescue.
+                                throw new \RuntimeException(
+                                    'Payment has not been completed. Status: ' . $intent->status,
+                                );
+                            }
+                            // Verify the payment intent belongs to this booking (hold_token in metadata).
+                            // CRITICAL: the PI is in succeeded/requires_capture here, so funds ARE held.
+                            // The outer try/catch must rescue this one.
+                            if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
+                                throw new \RuntimeException('Payment does not match this booking.');
+                            }
+                            // Attach payment method info to the booking data
+                            $validated['payment_method'] = 'stripe';
+                            $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
+                        } catch (\RuntimeException $e) {
+                            // Re-throw — outer catch decides whether to rescue.
+                            throw $e;
+                        } catch (\Throwable $e) {
+                            // Stripe API call failed (network, deleted PI, wrong
+                            // key). We can't determine PI state from inside this
+                            // catch — assume worst-case (funds held) and let
+                            // the outer rescue probe Stripe directly.
+                            throw new \RuntimeException('Unable to verify payment: ' . $e->getMessage());
                         }
-                        // Verify the payment intent belongs to this booking (hold_token in metadata)
-                        if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
-                            return response()->json([
-                                'error' => 'Payment does not match this booking.',
-                            ], 400);
-                        }
-                        // Attach payment method info to the booking data
-                        $validated['payment_method'] = 'stripe';
-                        $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
-                    } catch (\Throwable $e) {
-                        return response()->json([
-                            'error' => 'Unable to verify payment: ' . $e->getMessage(),
-                        ], 400);
                     }
                 }
             }
-        }
 
-        try {
             $result = $booking->confirm(
                 $validated,
                 $request->header('Idempotency-Key'),
                 $request->header('X-Request-Id'),
                 $request->ip(),
             );
+
+            // Successful booking (or IdempotencyReplay served from the winner's
+            // cached response — `replayed: true` is set by the service). PI is
+            // legitimately captured for this booking; no rescue.
             return response()->json($result, 201);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             // BookingEngineService wraps transient Smoobu PMS failures from
-            // the in-lock recheck as HTTP 503 so we can render a meaningful
-            // "PMS unavailable" hint to the widget instead of a generic
-            // error. Surface the code so the widget can show a friendly
-            // retry message rather than the "something went wrong" toast.
+            // the in-lock recheck as HTTP 503. PI was already captured by
+            // the time we reached the service layer → rescue before returning.
+            $this->rescuePaymentIntentOnConfirmFailure(
+                $validated['payment_intent_id'] ?? null,
+                $validated['hold_token'] ?? null,
+                ['stage' => 'service_http', 'status' => $e->getStatusCode()],
+                $e,
+            );
             if ($e->getStatusCode() === 503) {
                 return response()->json([
                     'error' => $e->getMessage(),
@@ -464,8 +497,246 @@ class BookingPublicController extends Controller
             }
             return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         } catch (\RuntimeException $e) {
+            // The full RuntimeException surface: PI status mismatch, hold-token
+            // mismatch on succeeded PI, Stripe retrieve failure, inventory race,
+            // Smoobu fatal reject (rooms + combos). All paths where the PI may
+            // be in requires_capture / succeeded with no booking written.
+            $this->rescuePaymentIntentOnConfirmFailure(
+                $validated['payment_intent_id'] ?? null,
+                $validated['hold_token'] ?? null,
+                ['stage' => 'service_runtime', 'message' => $e->getMessage()],
+                $e,
+            );
             return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            // Anything else — TypeError, PHP fatal, DB drop. Same risk
+            // surface as RuntimeException: exception fires AFTER Stripe
+            // verification passed, so PI is captured/held with no booking.
+            // Rescue first, then re-throw so the framework handler can
+            // produce its usual 500 response (with full detail for staff).
+            $this->rescuePaymentIntentOnConfirmFailure(
+                $validated['payment_intent_id'] ?? null,
+                $validated['hold_token'] ?? null,
+                ['stage' => 'unhandled', 'class' => get_class($e)],
+                $e,
+            );
+            throw $e;
         }
+    }
+
+    /**
+     * Cancel or refund a PaymentIntent when /confirm fails after the
+     * customer's card was authorised/captured. Without this, the guest's
+     * bank shows a pending charge for days while we have no booking.
+     *
+     * Lookup precedence for the PI id:
+     *   1. The payload's `payment_intent_id` (the widget's own value).
+     *   2. The active hold's `payload_json.stripe_payment_intent_id`
+     *      (stamped by paymentIntent() when the intent was first created).
+     *
+     * Outcomes:
+     *   - PI in requires_capture / requires_action / requires_payment_method
+     *     / requires_confirmation → `paymentIntents->cancel()` (release the
+     *     authorisation without a refund round-trip).
+     *   - PI succeeded → `StripeService::refund()` directly (no mirror exists,
+     *     so we can't go through BookingRefundService).
+     *   - PI canceled / processing / null → no-op (nothing to rescue).
+     *   - Any Stripe error during rescue → audit-log + Log::error so ops can
+     *     manually clean up.
+     */
+    private function rescuePaymentIntentOnConfirmFailure(
+        ?string $intentId,
+        ?string $holdToken,
+        array $context,
+        \Throwable $original,
+    ): void {
+        // Mock intents never touched Stripe — nothing to rescue.
+        if ($intentId && str_starts_with($intentId, 'pi_mock_')) {
+            return;
+        }
+
+        // Fall back to the hold's cached intent id if the request didn't
+        // carry one (early validation failures, ValidationException paths
+        // that ran before the widget could attach the id).
+        if (!$intentId && $holdToken) {
+            try {
+                $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+                $holdQuery = \App\Models\BookingHold::withoutGlobalScopes()
+                    ->where('hold_token', $holdToken);
+                if ($orgId) {
+                    $holdQuery->where('organization_id', $orgId);
+                }
+                $hold = $holdQuery->first();
+                if ($hold) {
+                    $payload = $hold->payload_json ?? [];
+                    $intentId = $payload['stripe_payment_intent_id'] ?? null;
+                }
+            } catch (\Throwable $lookupErr) {
+                // Don't let the rescue path crash on a DB blip.
+                \Illuminate\Support\Facades\Log::warning('PI rescue — hold lookup failed', [
+                    'hold_token' => $holdToken,
+                    'error'      => $lookupErr->getMessage(),
+                ]);
+            }
+        }
+
+        if (!$intentId) {
+            return;
+        }
+
+        $stripe = app(StripeService::class);
+        if (!$stripe->isEnabled()) {
+            return;
+        }
+
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+
+        // Re-fetch the PI to see its current status. The earlier retrieve
+        // in confirm() may have thrown (that's how we got into this catch),
+        // so we can't trust any cached state.
+        try {
+            $intent = $stripe->retrievePaymentIntent($intentId);
+        } catch (\Throwable $retrieveErr) {
+            // Can't even read the PI — attempt a cancel anyway as best
+            // effort, since cancel is a no-op when the PI is already in
+            // a terminal state. If that also fails, audit-log so ops
+            // know there's a possibly-stranded auth at Stripe.
+            try {
+                $client = new \Stripe\StripeClient((string) $this->extractSecretKey($orgId));
+                $client->paymentIntents->cancel($intentId);
+                $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
+                    'note' => 'cancel issued without status check (retrieve failed)',
+                ]);
+                return;
+            } catch (\Throwable $cancelErr) {
+                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+                    'retrieve_error' => $retrieveErr->getMessage(),
+                    'cancel_error'   => $cancelErr->getMessage(),
+                ]);
+                return;
+            }
+        }
+
+        $status = $intent->status ?? null;
+
+        // Already-terminal states: nothing to rescue.
+        if (in_array($status, ['canceled'], true)) {
+            return;
+        }
+
+        // Cancellable states — release the authorisation without a refund.
+        if (in_array($status, [
+            'requires_capture',
+            'requires_action',
+            'requires_payment_method',
+            'requires_confirmation',
+            'processing',
+        ], true)) {
+            try {
+                $client = new \Stripe\StripeClient((string) $this->extractSecretKey($orgId));
+                $client->paymentIntents->cancel($intentId);
+                $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
+                    'pre_cancel_status' => $status,
+                ]);
+            } catch (\Throwable $cancelErr) {
+                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+                    'pre_cancel_status' => $status,
+                    'cancel_error'      => $cancelErr->getMessage(),
+                ]);
+            }
+            return;
+        }
+
+        // Succeeded → already captured. Issue a refund directly via
+        // StripeService — we can't route through BookingRefundService
+        // because no BookingMirror exists (transaction rolled back).
+        if ($status === 'succeeded') {
+            try {
+                $refund = $stripe->refund($intentId, null, 'requested_by_customer');
+                $this->logPiRescueOutcome($orgId, 'pi_refunded', $intentId, $context, $original, [
+                    'refund_id' => $refund->id ?? null,
+                    'amount'    => isset($refund->amount) ? $refund->amount / 100 : null,
+                ]);
+            } catch (\Throwable $refundErr) {
+                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+                    'pre_refund_status' => $status,
+                    'refund_error'      => $refundErr->getMessage(),
+                ]);
+            }
+            return;
+        }
+
+        // Unknown / unexpected status — log so ops can investigate.
+        $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+            'reason' => 'unknown_status',
+            'status' => $status,
+        ]);
+    }
+
+    /**
+     * Pull the org's Stripe secret key for a one-off paymentIntents->cancel
+     * call. StripeService doesn't expose a `cancel()` method, so we construct
+     * a client locally — but always read the encrypted key via the model
+     * accessor (not ->value('value') which bypasses decryption).
+     */
+    private function extractSecretKey(?int $orgId): ?string
+    {
+        if (!$orgId) return null;
+        try {
+            $row = HotelSetting::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('key', 'stripe_secret_key')
+                ->first();
+            return $row?->value ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Single audit-log + Log channel for every rescue outcome.
+     * Actions: booking.confirm.pi_cancelled / pi_refunded / pi_rescue_failed.
+     */
+    private function logPiRescueOutcome(
+        ?int $orgId,
+        string $action,
+        string $intentId,
+        array $context,
+        \Throwable $original,
+        array $extra = [],
+    ): void {
+        $payload = array_merge([
+            'payment_intent_id' => $intentId,
+            'original_error'    => $original->getMessage(),
+            'original_class'    => get_class($original),
+            'confirm_context'   => $context,
+        ], $extra);
+
+        try {
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => "booking.confirm.{$action}",
+                'subject_type'    => 'stripe_payment',
+                'subject_id'      => null,
+                'new_values'      => $payload,
+                'description'     => match ($action) {
+                    'pi_cancelled'      => "Confirm failed — PI {$intentId} cancelled to release held funds",
+                    'pi_refunded'       => "Confirm failed — PI {$intentId} refunded (already captured)",
+                    'pi_rescue_failed'  => "Confirm failed — PI {$intentId} rescue FAILED, ops must manually verify",
+                    default             => "Confirm rescue: {$action} on PI {$intentId}",
+                },
+            ]);
+        } catch (\Throwable $auditErr) {
+            // Don't let audit-log failures swallow the rescue signal.
+            \Illuminate\Support\Facades\Log::error('PI rescue audit-log write failed', [
+                'action' => $action,
+                'pi_id'  => $intentId,
+                'error'  => $auditErr->getMessage(),
+            ]);
+        }
+
+        $logLevel = $action === 'pi_rescue_failed' ? 'error' : 'warning';
+        \Illuminate\Support\Facades\Log::{$logLevel}("Booking confirm PI rescue: {$action}", $payload);
     }
 
     /** GET /v1/booking/calendar-prices — cheapest per-night price for each day in range. */
