@@ -544,6 +544,7 @@ class BookingEngineService
                 // enhancement can push real price-elements once we've
                 // verified the API behaviour.
                 $nights = max(1, (int) round((strtotime($payload['check_out']) - strtotime($payload['check_in'])) / 86400));
+                $roomTotal = (float) ($payload['room_total'] ?? ($grossTotal - ($payload['extras_total'] ?? 0)));
                 $roomPerNight = $nights > 0 ? round($roomTotal / $nights, 2) : 0.0;
                 $assistantSections = [];
 
