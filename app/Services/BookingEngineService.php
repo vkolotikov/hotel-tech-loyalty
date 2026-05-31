@@ -467,13 +467,16 @@ class BookingEngineService
                 // Our own thrown unavailable error — re-throw.
                 throw $e;
             } catch (\Throwable $e) {
-                // Transient Smoobu API failure — fail closed.
+                // Transient Smoobu API failure — fail closed. Preserve the
+                // verbatim Smoobu/cURL message as `previous` so the audit log
+                // can walk the chain down to the actual cause instead of
+                // showing the generic wrapper.
                 \Illuminate\Support\Facades\Log::warning('Live availability re-check failed at confirm — failing closed', [
                     'org_id'  => $orgId,
                     'unit_id' => $apartmentId,
                     'error'   => $e->getMessage(),
                 ]);
-                throw new SmoobuUnavailable('PMS unavailable — try again');
+                throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
             }
 
             // ── Create reservation in Smoobu ────────────────────────
@@ -495,6 +498,7 @@ class BookingEngineService
             //       customer for a room they didn't actually get.
             $pmsResult = null;
             $pmsFatal = null;
+            $pmsFatalException = null;
             try {
                 $grossTotal = (float) $payload['gross_total'];
                 // Channel resolution: prefer the configured channel id;
@@ -612,7 +616,7 @@ class BookingEngineService
                 // field entirely and let Smoobu use its account-level
                 // default API channel.
                 $smoobuPayload = [
-                    'apartmentId'   => $payload['unit_id'],
+                    'apartmentId'   => (int) $payload['unit_id'],
                     'arrivalDate'   => $payload['check_in'],
                     'departureDate' => $payload['check_out'],
                     'firstName'     => $guest['first_name'] ?? '',
@@ -702,6 +706,13 @@ class BookingEngineService
                     $isTransient = false;
                 }
                 $pmsFatal = !$isTransient ? $msg : null;
+                // Hold the verbatim exception so the outer fatal-throw
+                // below can pass it as `previous`. Without this the
+                // Smoobu API body is lost when we rewrap into the
+                // generic "this room is no longer available" message.
+                if (!$isTransient) {
+                    $pmsFatalException = $e;
+                }
 
                 if ($pmsFatal) {
                     $this->logSubmission('failure', 'pms_rejected', $msg, $data, $requestId, $idempotencyKey);
@@ -721,6 +732,13 @@ class BookingEngineService
             }
 
             if ($pmsFatal) {
+                // Preserve the original Smoobu exception (captured in the
+                // createReservation catch above) as `previous` so the audit
+                // log can walk the cause chain down to the verbatim API body
+                // (e.g. "Smoobu API error: 422 POST /reservations — {…}")
+                // instead of only seeing this user-facing wrapper.
+                $pmsCause = $pmsFatalException ?? null;
+
                 // Special-case: Smoobu channel configuration errors are a
                 // misconfiguration on our side, not a room-availability
                 // problem. Surface a "contact support" message so the guest
@@ -729,10 +747,16 @@ class BookingEngineService
                 if (stripos($pmsFatal, 'Smoobu channel configuration') !== false) {
                     throw new \RuntimeException(
                         'Booking could not be confirmed because of a PMS configuration issue on our side. '
-                        . 'Your card has NOT been charged. Please contact support so we can complete this booking for you.'
+                        . 'Your card has NOT been charged. Please contact support so we can complete this booking for you.',
+                        0,
+                        $pmsCause,
                     );
                 }
-                throw new \RuntimeException('Booking could not be confirmed: this room is no longer available. Please choose another.');
+                throw new \RuntimeException(
+                    'Booking could not be confirmed: this room is no longer available. Please choose another.',
+                    0,
+                    $pmsCause,
+                );
             }
 
             $result = $pmsResult ?: [
@@ -1515,6 +1539,7 @@ class BookingEngineService
 
                     $pmsResult  = null;
                     $pmsFatal   = null;
+                    $pmsFatalException = null;
                     $isTransient = false;
 
                     try {
@@ -1527,6 +1552,11 @@ class BookingEngineService
                         );
                         if (!$isTransient) {
                             $pmsFatal = $msg;
+                            // Preserve the verbatim Smoobu exception so the
+                            // outer rewrap can pass it as `previous` —
+                            // otherwise the audit log only sees our generic
+                            // "no longer available" message.
+                            $pmsFatalException = $e;
                         }
                     }
 
@@ -1542,7 +1572,9 @@ class BookingEngineService
                             }
                         }
                         throw new \RuntimeException(
-                            "Room \"{$unitName}\" is no longer available. Please choose a different combination."
+                            "Room \"{$unitName}\" is no longer available. Please choose a different combination.",
+                            0,
+                            $pmsFatalException,
                         );
                     }
 

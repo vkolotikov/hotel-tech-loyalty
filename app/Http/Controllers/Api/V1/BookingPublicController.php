@@ -461,8 +461,10 @@ class BookingPublicController extends Controller
                             // Stripe API call failed (network, deleted PI, wrong
                             // key). We can't determine PI state from inside this
                             // catch — assume worst-case (funds held) and let
-                            // the outer rescue probe Stripe directly.
-                            throw new \RuntimeException('Unable to verify payment: ' . $e->getMessage());
+                            // the outer rescue probe Stripe directly. Pass the
+                            // original as `previous` so the audit log's cause
+                            // chain shows the raw Stripe error.
+                            throw new \RuntimeException('Unable to verify payment: ' . $e->getMessage(), 0, $e);
                         }
                     }
                 }
@@ -563,11 +565,17 @@ class BookingPublicController extends Controller
      * reject this booking?" without grepping `laravel.log`.
      *
      * Captured fields:
-     *   - original_message       — verbatim exception message (e.g. the
-     *     exact Smoobu API error body that BookingEngineService::confirm
-     *     wrapped into a RuntimeException)
+     *   - original_message       — verbatim exception message. We surface
+     *     the DEEPEST cause in the chain here so operators see Smoobu's
+     *     actual API body (e.g. "Smoobu API error: 422 POST /reservations
+     *     — {…}") rather than the generic outer wrapper
+     *     ("Booking could not be confirmed: this room is no longer
+     *     available…") that BookingEngineService::confirm() throws.
      *   - original_exception_class
      *   - file:line              — where the throw originated, for source grep
+     *   - original_cause_chain   — full {class, message, file, line} for
+     *     each level of getPrevious(), top-down, up to 5 levels deep. Lets
+     *     operators see the entire wrap chain at a glance.
      *   - stage                  — service_http | service_runtime | unhandled
      *   - hold_token, pi_id      — for cross-referencing with diag:pi-context
      *   - unit_id, check_in,
@@ -584,6 +592,30 @@ class BookingPublicController extends Controller
             $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
             $holdToken = $validated['hold_token'] ?? null;
             $piId = $validated['payment_intent_id'] ?? null;
+
+            // Walk the previous-exception chain up to 5 levels deep so the
+            // audit row carries the full causal stack. Cycle-safe via
+            // SplObjectStorage in case someone wires a self-referential
+            // `previous`. The deepest level wins for `original_message` —
+            // that's the verbatim Smoobu / Stripe / cURL error our outer
+            // wrappers cover up.
+            $causeChain = [];
+            $deepest = $original;
+            $seen = new \SplObjectStorage();
+            $cursor = $original;
+            $depth = 0;
+            while ($cursor instanceof \Throwable && $depth < 5 && !$seen->contains($cursor)) {
+                $seen->attach($cursor);
+                $causeChain[] = [
+                    'class'   => get_class($cursor),
+                    'message' => mb_substr((string) $cursor->getMessage(), 0, 2000),
+                    'file'    => $cursor->getFile(),
+                    'line'    => $cursor->getLine(),
+                ];
+                $deepest = $cursor;
+                $cursor = $cursor->getPrevious();
+                $depth++;
+            }
 
             // Reconstruct hold context so the audit row is self-sufficient
             // (operator should not need to cross-join holds to read it).
@@ -623,14 +655,21 @@ class BookingPublicController extends Controller
                 'subject_id'      => null,
                 'new_values'      => array_merge([
                     'stage'                    => $stage,
-                    'original_message'         => mb_substr((string) $original->getMessage(), 0, 2000),
-                    'original_exception_class' => get_class($original),
-                    'file_line'                => $original->getFile() . ':' . $original->getLine(),
+                    // Deepest cause's message — usually the verbatim Smoobu
+                    // API body. The outer wrapper's message is preserved in
+                    // `original_cause_chain[0].message`.
+                    'original_message'         => mb_substr((string) $deepest->getMessage(), 0, 2000),
+                    'original_exception_class' => get_class($deepest),
+                    'file_line'                => $deepest->getFile() . ':' . $deepest->getLine(),
+                    'wrapper_message'          => mb_substr((string) $original->getMessage(), 0, 2000),
+                    'wrapper_exception_class'  => get_class($original),
+                    'wrapper_file_line'        => $original->getFile() . ':' . $original->getLine(),
+                    'original_cause_chain'     => $causeChain,
                     'hold_token'               => $holdToken,
                     'pi_id'                    => $piId,
                     'guest_email'              => $validated['guest']['email'] ?? null,
                 ], $holdContext, $extra),
-                'description'     => "Confirm failed ({$stage}): " . mb_substr((string) $original->getMessage(), 0, 200),
+                'description'     => "Confirm failed ({$stage}): " . mb_substr((string) $deepest->getMessage(), 0, 200),
             ]);
         } catch (\Throwable $auditErr) {
             \Illuminate\Support\Facades\Log::error('booking.confirm.failed audit-log write failed', [
