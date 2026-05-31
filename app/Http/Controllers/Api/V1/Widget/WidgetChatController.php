@@ -44,7 +44,7 @@ class WidgetChatController extends Controller
     private function resolveVisitor(Request $request, int $orgId, ?string $cookieId = null): Visitor
     {
         $ip = (string) $request->ip();
-        $ua = substr((string) $request->header('User-Agent'), 0, 500);
+        $ua = mb_substr((string) $request->header('User-Agent'), 0, 2000);
         // Fingerprint deliberately EXCLUDES the widget cookie — if a visitor
         // clears cookies or opens a private tab, the cookieId changes but
         // IP + UA usually don't, and we want those sessions to collapse to
@@ -58,9 +58,13 @@ class WidgetChatController extends Controller
             ->first();
 
         $now      = now();
-        $pageUrl  = $request->input('page_url') ?: $request->header('Referer');
-        $pageTitle = $request->input('page_title');
-        $referrer = $request->input('referrer') ?: $request->header('Referer');
+        // Cap URL-class strings at 4K. Columns are now TEXT (migration
+        // 2026_05_31_120000) but a hostile site shoving in a 1MB tracker
+        // string shouldn't bloat our row size. 4K covers every legit URL
+        // I've seen — including Instagram redirect chains with fbclid.
+        $pageUrl  = mb_substr((string) ($request->input('page_url') ?: $request->header('Referer')), 0, 4000) ?: null;
+        $pageTitle = mb_substr((string) $request->input('page_title'), 0, 1000) ?: null;
+        $referrer = mb_substr((string) ($request->input('referrer') ?: $request->header('Referer')), 0, 4000) ?: null;
 
         // Geolocate the IP (cached for 24h to keep us under free-tier limits).
         $geo = $this->geolocateIp($ip);
