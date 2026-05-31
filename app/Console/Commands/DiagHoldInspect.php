@@ -37,24 +37,24 @@ use Illuminate\Console\Command;
  *   php artisan diag:hold-inspect hld_abc123 --org=42
  *   php artisan diag:hold-inspect 7891 --org=42
  *   php artisan diag:hold-inspect hld_abc123                   # cross-tenant lookup
+ *   php artisan diag:hold-inspect --latest --org=42            # most-recent hold in org 42
+ *   php artisan diag:hold-inspect --org=42                     # equivalent to --latest
  */
 class DiagHoldInspect extends Command
 {
     protected $signature = 'diag:hold-inspect
-                            {hold_token_or_id : BookingHold.hold_token OR primary key id}
-                            {--org= : Organization id (optional; widens search when set)}';
+                            {hold_token_or_id? : BookingHold.hold_token OR primary key id (omit with --latest or alone to use the most recent hold)}
+                            {--org= : Organization id (optional; widens search when set)}
+                            {--latest : Use the most-recent BookingHold (optionally filtered by --org). Implied when no positional argument is supplied.}';
 
     protected $description = 'Dump a BookingHold row with var_dump-style per-field type info on payload_json.';
 
     public function handle(StripeService $stripe): int
     {
-        $needle = (string) $this->argument('hold_token_or_id');
+        $needleArg = $this->argument('hold_token_or_id');
+        $needle = $needleArg !== null ? (string) $needleArg : '';
         $orgId = $this->option('org') !== null ? (int) $this->option('org') : null;
-
-        if ($needle === '') {
-            $this->error('hold_token_or_id is required.');
-            return self::FAILURE;
-        }
+        $useLatest = (bool) $this->option('latest') || $needle === '';
 
         // Resolve org (optional). When given, bind it so any downstream
         // service that reads current_organization_id picks it up; either
@@ -69,24 +69,39 @@ class DiagHoldInspect extends Command
             app()->instance('current_organization_id', $orgId);
         }
 
-        // Locate the hold. Try hold_token first (the common case — pi
-        // metadata, frontend state, Stripe Dashboard all carry the
-        // token). Fall back to numeric primary key when the token lookup
-        // misses. Always cross-tenant unless --org is given.
+        // Locate the hold. When --latest (or no positional arg) is in play,
+        // grab the most-recent row (optionally filtered by --org). Otherwise
+        // try hold_token first (the common case — pi metadata, frontend
+        // state, Stripe Dashboard all carry the token). Fall back to
+        // numeric primary key when the token lookup misses. Always
+        // cross-tenant unless --org is given.
         $query = BookingHold::withoutGlobalScope(TenantScope::class);
         if ($orgId) {
             $query->where('organization_id', $orgId);
         }
 
-        $hold = (clone $query)->where('hold_token', $needle)->first();
-        if (!$hold && ctype_digit($needle)) {
-            $hold = (clone $query)->where('id', (int) $needle)->first();
-        }
+        if ($useLatest) {
+            $hold = (clone $query)->orderByDesc('id')->first();
+            if (!$hold) {
+                $this->error('No BookingHold found' . ($orgId ? " in org {$orgId}." : ' (searched across all orgs).'));
+                return self::FAILURE;
+            }
+            $this->info('Using most-recent BookingHold: id=' . $hold->id
+                . ', token=' . ($hold->hold_token ?? '—')
+                . ', org=' . ($hold->organization_id ?? '—')
+                . ', created_at=' . ($hold->created_at?->toDateTimeString() ?? '—'));
+            $this->newLine();
+        } else {
+            $hold = (clone $query)->where('hold_token', $needle)->first();
+            if (!$hold && ctype_digit($needle)) {
+                $hold = (clone $query)->where('id', (int) $needle)->first();
+            }
 
-        if (!$hold) {
-            $this->error("No BookingHold matched '{$needle}'"
-                . ($orgId ? " in org {$orgId}." : ' (searched across all orgs).'));
-            return self::FAILURE;
+            if (!$hold) {
+                $this->error("No BookingHold matched '{$needle}'"
+                    . ($orgId ? " in org {$orgId}." : ' (searched across all orgs).'));
+                return self::FAILURE;
+            }
         }
 
         // ── 1. Hold row metadata ─────────────────────────────────────

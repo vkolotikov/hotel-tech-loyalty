@@ -24,6 +24,8 @@ use Illuminate\Console\Command;
  *   php artisan diag:confirm-replay vKZV8tpHsFbYOLgV3rEoP6OyvLmIhL4Y0J5vqrk9yHF7GArY
  *   php artisan diag:confirm-replay <token> --org=12
  *   php artisan diag:confirm-replay <token> --json
+ *   php artisan diag:confirm-replay --latest --org=12        # most-recent hold in org 12
+ *   php artisan diag:confirm-replay --org=12                 # equivalent to --latest
  *
  * --dry-run is implicit — this command NEVER writes to the database
  * and NEVER POSTs to Smoobu. Read-only by construction.
@@ -31,8 +33,9 @@ use Illuminate\Console\Command;
 class DiagConfirmReplay extends Command
 {
     protected $signature = 'diag:confirm-replay
-                            {hold_token : BookingHold.hold_token to replay}
+                            {hold_token? : BookingHold.hold_token to replay (omit with --latest or alone to use the most recent hold)}
                             {--org= : Organization id (auto-derived from the hold if omitted)}
+                            {--latest : Use the most-recent BookingHold (optionally filtered by --org). Implied when no positional argument is supplied.}
                             {--dry-run : No-op flag — this command never writes (kept for shell-script clarity)}
                             {--json : Output machine-readable JSON instead of a human table}';
 
@@ -48,26 +51,45 @@ class DiagConfirmReplay extends Command
 
     public function handle(SmoobuClient $smoobu, StripeService $stripe): int
     {
-        $holdToken = (string) $this->argument('hold_token');
-        $orgOpt    = $this->option('org');
-        $asJson    = (bool) $this->option('json');
+        $holdTokenArg = $this->argument('hold_token');
+        $holdToken    = $holdTokenArg !== null ? (string) $holdTokenArg : '';
+        $orgOpt       = $this->option('org');
+        $asJson       = (bool) $this->option('json');
+        $useLatest    = (bool) $this->option('latest') || $holdToken === '';
 
         // ── Step 1: lookup hold ──────────────────────────────────────
         // We do this BEFORE binding the org so we can support callers
         // who don't know the org but do have the hold token. If --org
         // is omitted we read it off the hold row itself.
-        $hold = BookingHold::withoutGlobalScopes()
-            ->where('hold_token', $holdToken)
-            ->first();
+        if ($useLatest) {
+            $latestQuery = BookingHold::withoutGlobalScopes();
+            if ($orgOpt !== null) {
+                $latestQuery->where('organization_id', (int) $orgOpt);
+            }
+            $hold = $latestQuery->orderByDesc('id')->first();
+            if (!$hold) {
+                $this->recordStep(1, 'Look up most-recent BookingHold', false,
+                    'no holds found' . ($orgOpt !== null ? " in org {$orgOpt}" : ' (searched across all orgs)'));
+                $this->renderOutput($asJson);
+                return self::FAILURE;
+            }
+            $holdToken = (string) $hold->hold_token;
+            $this->recordStep(1, 'Look up most-recent BookingHold', true,
+                "hold_id={$hold->id}, token={$holdToken}, org={$hold->organization_id}, status={$hold->status}");
+        } else {
+            $hold = BookingHold::withoutGlobalScopes()
+                ->where('hold_token', $holdToken)
+                ->first();
 
-        if (!$hold) {
-            $this->recordStep(1, 'Look up BookingHold by token', false, 'hold not found');
-            $this->renderOutput($asJson);
-            return self::FAILURE;
+            if (!$hold) {
+                $this->recordStep(1, 'Look up BookingHold by token', false, 'hold not found');
+                $this->renderOutput($asJson);
+                return self::FAILURE;
+            }
+
+            $this->recordStep(1, 'Look up BookingHold by token', true,
+                "hold_id={$hold->id}, org={$hold->organization_id}, status={$hold->status}");
         }
-
-        $this->recordStep(1, 'Look up BookingHold by token', true,
-            "hold_id={$hold->id}, org={$hold->organization_id}, status={$hold->status}");
 
         // Bind tenant context now that we know the org — SmoobuClient,
         // StripeService, and any global-scoped models all read this.

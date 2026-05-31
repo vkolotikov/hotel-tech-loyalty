@@ -148,23 +148,40 @@ class DiagRecentConfirmFailures extends Command
             return self::SUCCESS;
         }
 
+        // When -v / -vv / -vvv (any verbose level) is set, dump the raw
+        // verbatim Smoobu rejection in full — no truncation at all. This
+        // is the load-bearing detail when a customer ticket lands and
+        // you need the exact text Smoobu returned. Otherwise cap at
+        // 2000 chars (was 120) so the typical "channel id missing" /
+        // "guest email required" payload + any field-level breakdown
+        // Smoobu attaches still fits without scrolling laravel.log.
+        $isVerbose = $this->getOutput()->isVerbose();
+        $reasonCap = $isVerbose ? null : 2000;
+        $reasonHeader = $isVerbose
+            ? 'Reason (verbatim)'
+            : 'Reason (truncated ' . $reasonCap . ')';
+
         $tableRows = [];
         foreach ($parsed as $p) {
             $unit = (string) ($p['unit_id'] ?? '');
             $dates = ($p['check_in'] ?? '?') . '→' . ($p['check_out'] ?? '?');
+            $reason = (string) $p['original_message'];
+            if ($reasonCap !== null && mb_strlen($reason) > $reasonCap) {
+                $reason = mb_substr($reason, 0, $reasonCap) . '…';
+            }
             $tableRows[] = [
                 $p['created_at'],
                 $this->colorAction($p['action']),
                 $unit !== '' ? $unit : '—',
                 $dates,
                 $p['pi_id'] ?: '—',
-                mb_substr((string) $p['original_message'], 0, 120),
+                $reason,
                 $p['hold_token'] ? mb_substr((string) $p['hold_token'], 0, 14) . '…' : '—',
             ];
         }
 
         $this->table(
-            ['Created', 'Action', 'Unit', 'Dates', 'PI', 'Reason (truncated 120)', 'Hold'],
+            ['Created', 'Action', 'Unit', 'Dates', 'PI', $reasonHeader, 'Hold'],
             $tableRows,
         );
 
