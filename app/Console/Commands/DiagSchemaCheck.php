@@ -135,6 +135,20 @@ class DiagSchemaCheck extends Command
             'reason'   => 'Stripe event-id dedup table. Migration 2026_06_01_120200.',
         ];
 
+        // ─── 2026-06-02 extras / Smoobu richness migration ─────────────
+        // booking_mirror.extras_json — denormalised snapshot of selected
+        // extras (name, qty, unit_price, line_total) at confirm time so
+        // orphan recovery + retry sync + emails don't re-resolve from a
+        // moving catalog. Combo bookings used to lose extras entirely;
+        // this column is the persistence anchor.
+        $checks[] = [
+            'table'    => 'booking_mirror',
+            'column'   => 'extras_json',
+            'expected' => 'present (jsonb)',
+            'matches'  => fn (array $col): bool => in_array(strtolower((string) $col['data_type']), ['jsonb', 'json'], true),
+            'reason'   => 'Extras snapshot for emails + Smoobu priceElements + admin queries. Migration 2026_06_02_120000.',
+        ];
+
         return $checks;
     }
 
