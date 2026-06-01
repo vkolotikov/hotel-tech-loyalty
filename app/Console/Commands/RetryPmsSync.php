@@ -89,6 +89,102 @@ class RetryPmsSync extends Command
                     // pending_pms_sync state, so price_paid is what was
                     // actually captured by Stripe at booking time.
                     $pricePaid = (float) ($mirror->price_paid ?? 0);
+                    $priceTotal = (float) ($mirror->price_total ?? 0);
+
+                    // Reconstruct the night count from arrival/departure so
+                    // we can build the basePrice + addon priceElements lines.
+                    $nights = 1;
+                    try {
+                        $arrival   = $mirror->arrival_date instanceof \DateTimeInterface
+                            ? $mirror->arrival_date
+                            : new \DateTimeImmutable((string) $mirror->arrival_date);
+                        $departure = $mirror->departure_date instanceof \DateTimeInterface
+                            ? $mirror->departure_date
+                            : new \DateTimeImmutable((string) $mirror->departure_date);
+                        $nights = max(1, $arrival->diff($departure)->days);
+                    } catch (\Throwable) {
+                        // Bad-date defensive fallback — leave at 1.
+                    }
+
+                    // Recover the snapshotted extras off the mirror. Empty
+                    // array (or absent column on a pre-migration row) just
+                    // means no extras to ship as addons.
+                    $extras = is_array($mirror->extras_json) ? $mirror->extras_json : [];
+                    $extrasTotal = 0.0;
+                    foreach ($extras as $ex) {
+                        $extrasTotal += (float) ($ex['line_total'] ?? 0);
+                    }
+                    $roomTotal = round(max(0.0, $priceTotal - $extrasTotal), 2);
+
+                    // Build priceElements (basePrice + addons).
+                    $priceElements = [];
+                    $priceElements[] = [
+                        'type'         => 'basePrice',
+                        'name'         => sprintf(
+                            '%s × %d night%s',
+                            (string) ($mirror->apartment_name ?? 'Accommodation'),
+                            $nights,
+                            $nights === 1 ? '' : 's',
+                        ),
+                        'amount'       => $roomTotal,
+                        'quantity'     => $nights,
+                        'currencyCode' => 'EUR',
+                        'sortOrder'    => 1,
+                    ];
+                    $sortOrder = 2;
+                    foreach ($extras as $ex) {
+                        $priceElements[] = [
+                            'type'         => 'addon',
+                            'name'         => (string) ($ex['name'] ?? 'Extra'),
+                            'amount'       => (float) ($ex['line_total'] ?? 0),
+                            'quantity'     => max(1, (int) ($ex['quantity'] ?? 1)),
+                            'currencyCode' => 'EUR',
+                            'sortOrder'    => $sortOrder++,
+                        ];
+                    }
+
+                    // Itemised assistant-notice — what staff see in
+                    // Smoobu's reservation-detail panel. Mirrors the
+                    // confirm() path so retry-recovered bookings carry
+                    // the same level of context.
+                    $assistantLines = [];
+                    $assistantLines[] = 'Booked via: Website / Direct widget (PMS-sync retry)';
+                    if ($mirror->stripe_payment_intent_id) {
+                        $assistantLines[] = 'Stripe ref: ' . $mirror->stripe_payment_intent_id;
+                    }
+                    if ($pricePaid > 0) {
+                        $assistantLines[] = sprintf(
+                            'Payment: Stripe (€%s paid)',
+                            number_format($pricePaid, 2, '.', ''),
+                        );
+                    } else {
+                        $assistantLines[] = sprintf('Payment: unpaid (€%s due)', number_format($priceTotal, 2, '.', ''));
+                    }
+                    $assistantLines[] = '─────────────';
+                    $assistantLines[] = sprintf(
+                        'Accommodation: %d night%s = €%s',
+                        $nights,
+                        $nights === 1 ? '' : 's',
+                        number_format($roomTotal, 2, '.', ''),
+                    );
+                    if (!empty($extras)) {
+                        $assistantLines[] = 'Extras:';
+                        foreach ($extras as $ex) {
+                            $qty   = max(1, (int) ($ex['quantity'] ?? 1));
+                            $unit  = (float) ($ex['unit_price'] ?? 0);
+                            $line  = (float) ($ex['line_total'] ?? 0);
+                            $name  = (string) ($ex['name'] ?? 'Extra');
+                            $assistantLines[] = sprintf(
+                                '  · %s%s = €%s',
+                                $name,
+                                $qty > 1 ? ' ×' . $qty . ' @ €' . number_format($unit, 2, '.', '') : '',
+                                number_format($line, 2, '.', ''),
+                            );
+                        }
+                    }
+                    $assistantLines[] = '─────────────';
+                    $assistantLines[] = 'Total: €' . number_format($priceTotal, 2, '.', '');
+
                     // Use resolveDirectChannelId (non-strict on cron — we
                     // don't want to blow up a retry over a channel config
                     // issue) and only inject channelId when > 0, matching
@@ -108,9 +204,14 @@ class RetryPmsSync extends Command
                         'phone'         => $mirror->guest_phone ?? '',
                         'adults'        => (int) ($mirror->adults ?? 1),
                         'children'      => (int) ($mirror->children ?? 0),
-                        'price'         => (float) ($mirror->price_total ?? 0),
+                        'price'         => $priceTotal,
                         'price-paid'    => $pricePaid,
                         'priceStatus'   => $pricePaid > 0 ? 1 : 0,
+                        'prepayment'       => $pricePaid,
+                        'prepaymentStatus' => $pricePaid > 0 ? 1 : 0,
+                        'prepayment-paid'  => $pricePaid > 0,
+                        'priceElements'    => $priceElements,
+                        'assistant-notice' => implode("\n", $assistantLines),
                         'language'      => 'en',
                         // 'type' avoids Smoobu's blocked-channel default
                         // — single-room confirm() ships this for the same

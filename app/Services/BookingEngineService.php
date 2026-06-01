@@ -568,6 +568,46 @@ class BookingEngineService
                 }
                 $assistantSections[] = implode("\n", $sourceLines);
 
+                // Build extras snapshot ONCE — used for three things:
+                //   (a) the assistant-notice line-item breakdown below,
+                //   (b) the priceElements payload sent to Smoobu,
+                //   (c) the extras_json column on booking_mirror (so admin
+                //       queries, refund math, and orphan-recovery emails
+                //       don't have to re-resolve a moving catalog).
+                // Shape per item:
+                //   { id, name, price_type, unit_price, quantity, line_total }
+                $extrasSnapshot = [];
+                if (!empty($payload['extras']) && is_array($payload['extras'])) {
+                    $catalog = collect($this->loadExtrasConfig());
+                    foreach ($payload['extras'] as $ex) {
+                        $extraId = (string) ($ex['id'] ?? '');
+                        $qty     = max(1, (int) ($ex['quantity'] ?? 1));
+                        $def     = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
+                        if (!$def) continue;
+
+                        $name     = (string) ($def['name'] ?? $extraId);
+                        $unit     = (float)  ($def['price'] ?? 0);
+                        $priceType = (string) ($def['price_type'] ?? $def['type'] ?? 'per_stay');
+                        // calcExtras() multiplies per_guest extras by adults.
+                        // Mirror that here so the snapshot's line_total ==
+                        // what the customer was actually charged for.
+                        $effectiveUnit = $priceType === 'per_guest'
+                            ? round($unit * max(1, (int) $payload['adults']), 2)
+                            : $unit;
+                        $lineTotal = round($effectiveUnit * $qty, 2);
+                        if ($name === '') continue;
+
+                        $extrasSnapshot[] = [
+                            'id'         => $extraId,
+                            'name'       => $name,
+                            'price_type' => $priceType,
+                            'unit_price' => $effectiveUnit,
+                            'quantity'   => $qty,
+                            'line_total' => $lineTotal,
+                        ];
+                    }
+                }
+
                 // Itemised price breakdown — base accommodation then each
                 // extra. Builds the same kind of receipt staff are used to
                 // seeing from channel-pulled bookings.
@@ -579,32 +619,56 @@ class BookingEngineService
                     number_format($roomPerNight, 2, '.', ''),
                     number_format($roomTotal, 2, '.', '')
                 );
-                if (!empty($payload['extras']) && is_array($payload['extras'])) {
-                    $catalog = collect($this->loadExtrasConfig());
-                    $hasAnyExtra = false;
-                    foreach ($payload['extras'] as $ex) {
-                        $extraId  = (string) ($ex['id'] ?? '');
-                        $qty      = max(1, (int) ($ex['quantity'] ?? 1));
-                        $def      = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
-                        $name     = (string) ($def['name'] ?? $extraId);
-                        $unit     = (float)  ($def['price'] ?? 0);
-                        $lineTotal = round($unit * $qty, 2);
-                        if ($name === '') continue;
-                        if (!$hasAnyExtra) {
-                            $breakdownLines[] = 'Extras:';
-                            $hasAnyExtra = true;
-                        }
+                if (!empty($extrasSnapshot)) {
+                    $breakdownLines[] = 'Extras:';
+                    foreach ($extrasSnapshot as $ex) {
                         $breakdownLines[] = sprintf(
                             '  · %s%s = €%s',
-                            $name,
-                            $qty > 1 ? " ×{$qty} @ €" . number_format($unit, 2, '.', '') : '',
-                            number_format($lineTotal, 2, '.', '')
+                            $ex['name'],
+                            $ex['quantity'] > 1
+                                ? ' ×' . $ex['quantity'] . ' @ €' . number_format($ex['unit_price'], 2, '.', '')
+                                : '',
+                            number_format($ex['line_total'], 2, '.', '')
                         );
                     }
                 }
                 $breakdownLines[] = '─────────────';
                 $breakdownLines[] = 'Total: €' . number_format($grossTotal, 2, '.', '');
                 $assistantSections[] = implode("\n", $breakdownLines);
+
+                // Build Smoobu priceElements array — basePrice for the
+                // accommodation, then one `addon` per extra. Smoobu's
+                // documented field shape per element:
+                //   { type, name, amount, quantity, currencyCode, sortOrder }
+                // We keep the top-level `price` = $grossTotal so it acts as
+                // the source-of-truth total even if Smoobu's internal sum
+                // doesn't quite match (rounding). Their UI prefers
+                // priceElements for the display breakdown.
+                $priceElements = [];
+                $priceElements[] = [
+                    'type'         => 'basePrice',
+                    'name'         => sprintf(
+                        '%s × %d night%s',
+                        (string) ($payload['unit_name'] ?? 'Accommodation'),
+                        $nights,
+                        $nights === 1 ? '' : 's',
+                    ),
+                    'amount'       => round($roomTotal, 2),
+                    'quantity'     => $nights,
+                    'currencyCode' => 'EUR',
+                    'sortOrder'    => 1,
+                ];
+                $sortOrder = 2;
+                foreach ($extrasSnapshot as $ex) {
+                    $priceElements[] = [
+                        'type'         => 'addon',
+                        'name'         => $ex['name'],
+                        'amount'       => $ex['line_total'],
+                        'quantity'     => $ex['quantity'],
+                        'currencyCode' => 'EUR',
+                        'sortOrder'    => $sortOrder++,
+                    ];
+                }
 
                 // Join with a visual divider so each section is easy to
                 // scan in Smoobu's reservation-detail panel.
@@ -636,6 +700,19 @@ class BookingEngineService
                     // in sync: priceStatus=1 iff any amount was paid.
                     'price-paid'    => $paidAmount,
                     'priceStatus'   => $paidAmount > 0 ? 1 : 0,
+                    // Prepayment fields (Smoobu's "Deposit received" badge):
+                    // when fully paid this == price. prepaymentStatus is
+                    // the documented camelCase flag; we send it alongside
+                    // the kebab `prepayment-paid` boolean for back-compat.
+                    'prepayment'        => $paidAmount,
+                    'prepaymentStatus'  => $paidAmount > 0 ? 1 : 0,
+                    'prepayment-paid'   => $paidAmount > 0,
+                    // Itemised price breakdown that Smoobu renders as a
+                    // receipt in its reservation detail panel. Top-level
+                    // `price` stays as source-of-truth gross total; the
+                    // basePrice element is roomTotal-only so Smoobu's
+                    // internal sum (basePrice + addons) matches.
+                    'priceElements' => $priceElements,
                     'language'      => 'en',
                     'notice'        => $notice ?: null,
                     'assistant-notice' => $assistantNotice,
@@ -798,6 +875,11 @@ class BookingEngineService
                 'stripe_payment_intent_id' => $paymentIntentId,
                 'internal_status'   => $internalStatus,
                 'synced_at'         => $pmsResult ? now() : null,
+                // Snapshot the resolved extras so admin queries + refund
+                // math + orphan-recovery emails are self-contained — no
+                // need to re-walk the booking_extras catalog (which can
+                // be renamed / repriced / soft-deleted at any time).
+                'extras_json'       => $extrasSnapshot,
             ]);
 
             // Persist line-item breakdown so admin booking detail can show the
@@ -1507,13 +1589,45 @@ class BookingEngineService
         // matching single-room confirm() behaviour.
         $comboChannelId = (int) ($this->smoobu->resolveDirectChannelId(false) ?: 0);
 
+        // Resolve extras snapshot ONCE — extras are not per-room in the
+        // widget UI, they belong to the whole booking. We attach the
+        // full extras line set to the FIRST room mirror only (and bill
+        // them as priceElement addons on that Smoobu reservation);
+        // sibling rooms get extras_json = [] so admin pages can tell
+        // "no extras here" from "missing data".
+        $comboExtrasSnapshot = [];
+        if (!empty($payload['extras']) && is_array($payload['extras'])) {
+            $catalog = collect($this->loadExtrasConfig());
+            foreach ($payload['extras'] as $ex) {
+                $extraId = (string) ($ex['id'] ?? '');
+                $qty     = max(1, (int) ($ex['quantity'] ?? 1));
+                $def     = $catalog->first(fn ($c) => (string) ($c['id'] ?? '') === $extraId);
+                if (!$def) continue;
+                $name      = (string) ($def['name'] ?? $extraId);
+                if ($name === '') continue;
+                $unit      = (float) ($def['price'] ?? 0);
+                $priceType = (string) ($def['price_type'] ?? $def['type'] ?? 'per_stay');
+                $effectiveUnit = $priceType === 'per_guest'
+                    ? round($unit * max(1, (int) $adults), 2)
+                    : $unit;
+                $comboExtrasSnapshot[] = [
+                    'id'         => $extraId,
+                    'name'       => $name,
+                    'price_type' => $priceType,
+                    'unit_price' => $effectiveUnit,
+                    'quantity'   => $qty,
+                    'line_total' => round($effectiveUnit * $qty, 2),
+                ];
+            }
+        }
+
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use (
                 &$mirrors, &$succeededSmoobu,
                 $rooms, $hold, $guest, $guestId, $orgId, $groupId,
                 $checkIn, $checkOut, $nights, $adults, $children,
                 $paymentMethod, $paymentStatus, $piId, $data, $payload,
-                $idempotencyKey, $requestId, $comboChannelId,
+                $idempotencyKey, $requestId, $comboChannelId, $comboExtrasSnapshot,
             ) {
                 $hold->update(['status' => 'consumed']);
 
@@ -1521,6 +1635,7 @@ class BookingEngineService
                     $apartmentId = $room['unit_id'];
                     $roomTotal   = $room['room_total'];
                     $unitName    = $room['unit_name'] ?? 'Room';
+                    $isFirstRoom = ($idx === 0);
 
                     // Build Smoobu payload for this room.
                     //
@@ -1529,7 +1644,78 @@ class BookingEngineService
                     // single-room confirm() path. Per-room paid amount
                     // is the full room subtotal when the parent combo's
                     // payment_status is 'paid'.
-                    $roomPaid = $paymentStatus === 'paid' ? $roomTotal : 0;
+                    //
+                    // Extras are billed as priceElement addons on the
+                    // FIRST room only. The widget treats extras as
+                    // belonging to the booking, not to a specific room;
+                    // attaching them to the first reservation keeps the
+                    // total accurate without splitting a single guest-
+                    // facing line across N rooms.
+                    $extrasTotalThisRoom = 0.0;
+                    if ($isFirstRoom) {
+                        foreach ($comboExtrasSnapshot as $ex) {
+                            $extrasTotalThisRoom += (float) $ex['line_total'];
+                        }
+                    }
+                    $smoobuRoomPrice = round($roomTotal + $extrasTotalThisRoom, 2);
+                    $roomPaid = $paymentStatus === 'paid' ? $smoobuRoomPrice : 0;
+
+                    // Build priceElements (basePrice + addons on first room).
+                    $priceElementsThisRoom = [];
+                    $priceElementsThisRoom[] = [
+                        'type'         => 'basePrice',
+                        'name'         => sprintf(
+                            '%s × %d night%s',
+                            $unitName,
+                            (int) $nights,
+                            $nights === 1 ? '' : 's',
+                        ),
+                        'amount'       => round((float) $roomTotal, 2),
+                        'quantity'     => (int) $nights,
+                        'currencyCode' => 'EUR',
+                        'sortOrder'    => 1,
+                    ];
+                    if ($isFirstRoom && !empty($comboExtrasSnapshot)) {
+                        $sortOrder = 2;
+                        foreach ($comboExtrasSnapshot as $ex) {
+                            $priceElementsThisRoom[] = [
+                                'type'         => 'addon',
+                                'name'         => $ex['name'],
+                                'amount'       => $ex['line_total'],
+                                'quantity'     => $ex['quantity'],
+                                'currencyCode' => 'EUR',
+                                'sortOrder'    => $sortOrder++,
+                            ];
+                        }
+                    }
+
+                    // Itemised assistant-notice block per room.
+                    $assistantLines = [];
+                    $assistantLines[] = "Combo booking {$groupId} — room " . ($idx + 1) . '/' . count($rooms);
+                    if ($piId) {
+                        $assistantLines[] = 'Stripe ref: ' . $piId;
+                    }
+                    $assistantLines[] = sprintf(
+                        'Accommodation: %d night%s = €%s',
+                        (int) $nights,
+                        $nights === 1 ? '' : 's',
+                        number_format((float) $roomTotal, 2, '.', ''),
+                    );
+                    if ($isFirstRoom && !empty($comboExtrasSnapshot)) {
+                        $assistantLines[] = 'Extras (charged on this reservation):';
+                        foreach ($comboExtrasSnapshot as $ex) {
+                            $assistantLines[] = sprintf(
+                                '  · %s%s = €%s',
+                                $ex['name'],
+                                $ex['quantity'] > 1
+                                    ? ' ×' . $ex['quantity'] . ' @ €' . number_format($ex['unit_price'], 2, '.', '')
+                                    : '',
+                                number_format($ex['line_total'], 2, '.', ''),
+                            );
+                        }
+                    }
+                    $assistantLines[] = 'Room total: €' . number_format($smoobuRoomPrice, 2, '.', '');
+
                     $smoobuPayload = [
                         'arrivalDate'   => $checkIn,
                         'departureDate' => $checkOut,
@@ -1540,9 +1726,14 @@ class BookingEngineService
                         'phone'         => $guest['phone'] ?? '',
                         'adults'        => $adults,
                         'children'      => $children,
-                        'price'         => $roomTotal,
+                        'price'         => $smoobuRoomPrice,
                         'price-paid'    => $roomPaid,
                         'priceStatus'   => $roomPaid > 0 ? 1 : 0,
+                        // Prepayment fields — when fully paid this == price.
+                        'prepayment'        => $roomPaid,
+                        'prepaymentStatus'  => $roomPaid > 0 ? 1 : 0,
+                        'prepayment-paid'   => $roomPaid > 0,
+                        'priceElements' => $priceElementsThisRoom,
                         // type='reservation' avoids Smoobu's blocked-channel
                         // default — single-room confirm() ships this for
                         // the same reason. Audit 2026-06-01 finding #2.
@@ -1550,6 +1741,7 @@ class BookingEngineService
                         'language'      => 'en',
                         'notice'        => ($data['special_requests'] ?? '')
                             . (count($rooms) > 1 ? " [Combo {$groupId} — room " . ($idx + 1) . '/' . count($rooms) . ']' : ''),
+                        'assistant-notice' => implode("\n", $assistantLines),
                     ];
                     // Audit 2026-06-01 finding #1: only inject channelId
                     // when > 0; sending an explicit 0 lands the booking
@@ -1654,13 +1846,17 @@ class BookingEngineService
                         'children'                 => $children,
                         'arrival_date'             => $checkIn,
                         'departure_date'           => $checkOut,
-                        'price_total'              => $roomTotal,
-                        'price_paid'               => $paymentStatus === 'paid' ? $roomTotal : 0,
+                        'price_total'              => $smoobuRoomPrice,
+                        'price_paid'               => $paymentStatus === 'paid' ? $smoobuRoomPrice : 0,
                         'payment_method'           => $paymentMethod,
                         'payment_status'           => $paymentStatus,
                         'stripe_payment_intent_id' => $piId,
                         'internal_status'          => $internalStatus,
                         'synced_at'                => $pmsResult ? now() : null,
+                        // Extras only attach to the FIRST room mirror;
+                        // sibling rooms get an empty array so admin code
+                        // can distinguish "no extras" from "missing data".
+                        'extras_json'              => $isFirstRoom ? $comboExtrasSnapshot : [],
                     ]);
                     $mirrors[] = $mirror;
                 }
@@ -1797,6 +1993,46 @@ class BookingEngineService
             }
         }
 
+        // Pull payment + mirror context from the freshly-written booking so
+        // the guest + admin emails can render Stripe status / method / last4
+        // / receipt URL without re-plumbing the controller-level $data array
+        // down here. $response carries booking_reference and reservation_id;
+        // we look up the mirror via either.
+        $mirror = null;
+        try {
+            $q = BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId);
+            if (!empty($response['booking_reference'])) {
+                $q->where('booking_reference', $response['booking_reference']);
+            } elseif (!empty($response['reservation_id'])) {
+                $q->where('reservation_id', $response['reservation_id']);
+            } elseif (!empty($response['mirror_id'])) {
+                $q->where('id', $response['mirror_id']);
+            } else {
+                $q = null;
+            }
+            if ($q) {
+                $mirror = $q->latest('id')->first();
+            }
+        } catch (\Throwable) { /* email is best-effort */ }
+
+        $paymentMethod    = $mirror->payment_method ?? ($payload['payment_method'] ?? null);
+        $paymentStatus    = $mirror->payment_status ?? ($response['payment_status'] ?? ($payload['payment_status'] ?? null));
+        $paymentReference = $mirror->stripe_payment_intent_id ?? null;
+        $paymentBrand     = $mirror->card_brand ?? null;
+        $paymentLast4     = $mirror->card_last4 ?? null;
+        $receiptUrl       = $mirror->last_charge_receipt_url ?? null;
+
+        // Branding for the email header + footer.
+        $brandLogoUrl      = $this->resolveSetting($orgId, 'company_logo', '') ?: null;
+        $brandPrimaryColor = $this->resolveSetting($orgId, 'primary_color', '') ?: null;
+        $contactPhone      = $this->resolveSetting($orgId, 'company_phone', '') ?: null;
+        $hotelAddress      = $this->resolveSetting($orgId, 'company_address', '') ?: null;
+
+        // Unit metadata for the "Your room" card. Optional — the widget can
+        // pass these through when known; old payloads omit silently.
+        $unitImageUrl  = $payload['unit_image_url'] ?? null;
+        $unitMaxGuests = isset($payload['unit_max_guests']) ? (int) $payload['unit_max_guests'] : null;
+
         // 1) Booking Confirmation Email — queued for durability. With
         //    queue=sync (default on fresh installs) this runs inline like
         //    ->send() did; with queue=redis/database the worker handles
@@ -1821,6 +2057,24 @@ class BookingEngineService
                 extras: $extrasBreakdown,
                 policies: $policies,
                 supportEmail: $supportEmail,
+                bookingDate: optional($mirror?->created_at)->toIso8601String() ?? now()->toIso8601String(),
+                unitImageUrl: $unitImageUrl,
+                unitMaxGuests: $unitMaxGuests,
+                arrivalTime: $payload['arrival_time'] ?? null,
+                specialRequests: $payload['special_requests'] ?? null,
+                guestEmail: $email,
+                guestPhone: $guest['phone'] ?? null,
+                guestAddress: $guest['address'] ?? null,
+                paymentMethod: $paymentMethod,
+                paymentBrand: $paymentBrand,
+                paymentLast4: $paymentLast4,
+                paymentStatus: $paymentStatus,
+                paymentReference: $paymentReference,
+                receiptUrl: $receiptUrl,
+                brandLogoUrl: $brandLogoUrl,
+                brandPrimaryColor: $brandPrimaryColor,
+                contactPhone: $contactPhone,
+                hotelAddress: $hotelAddress,
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Booking confirmation email failed', [
@@ -1858,7 +2112,20 @@ class BookingEngineService
                     currency:         $payload['currency'] ?? 'EUR',
                     extras:           $extrasBreakdown,
                     specialRequests:  $payload['special_requests'] ?? null,
-                    paymentStatus:    $response['payment_status'] ?? null,
+                    paymentStatus:    $paymentStatus,
+                    paymentMethod:    $paymentMethod,
+                    paymentReference: $paymentReference,
+                    mirrorId:         $mirror?->id,
+                    customerLtv:      (function () use ($email, $orgId) {
+                        try {
+                            $g = Guest::withoutGlobalScopes()
+                                ->where('organization_id', $orgId)
+                                ->where('email', $email)
+                                ->first(['total_revenue']);
+                            return $g ? (float) $g->total_revenue : null;
+                        } catch (\Throwable) { return null; }
+                    })(),
+                    adminUrl:         rtrim(config('app.frontend_url') ?? config('app.url') ?? 'https://loyalty.hotel-tech.ai', '/'),
                 ),
             );
         } catch (\Throwable $e) {

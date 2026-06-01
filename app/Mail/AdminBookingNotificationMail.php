@@ -53,6 +53,10 @@ class AdminBookingNotificationMail extends Mailable
         public ?string $specialRequests = null,
         public ?string $paymentStatus = null,
         public string $adminUrl = 'https://loyalty.hotel-tech.ai',
+        public ?string $paymentMethod = null,
+        public ?string $paymentReference = null,   // Stripe PaymentIntent id, etc.
+        public ?int $mirrorId = null,              // BookingMirror.id — drives the deep-link
+        public ?float $customerLtv = null,         // Lifetime value in $currency if available
     ) {}
 
     public function envelope(): Envelope

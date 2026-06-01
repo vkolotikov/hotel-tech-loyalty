@@ -56,9 +56,22 @@
               <div style="color:#22c55e;font-size:32px;font-weight:800;letter-spacing:-0.5px;margin-top:4px;">
                 {{ number_format($grossTotal, 2) }} <span style="font-size:14px;font-weight:600;color:#86efac;">{{ $currency }}</span>
               </div>
-              @if($paymentStatus)
-                <div style="margin-top:8px;display:inline-block;padding:3px 10px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:6px;color:#93c5fd;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
-                  {{ $paymentStatus }}
+              @if($paymentStatus || $paymentMethod)
+                <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
+                  @if($paymentStatus)
+                    <span style="display:inline-block;padding:3px 10px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:6px;color:#93c5fd;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">{{ str_replace('_',' ',$paymentStatus) }}</span>
+                  @endif
+                  @if($paymentMethod)
+                    <span style="display:inline-block;padding:3px 10px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.32);border-radius:6px;color:#cbd5e1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">{{ $paymentMethod }}</span>
+                  @endif
+                  @if($customerLtv !== null)
+                    <span style="display:inline-block;padding:3px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;color:#fde68a;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">LTV {{ number_format($customerLtv, 2) }} {{ $currency }}</span>
+                  @endif
+                </div>
+              @endif
+              @if($paymentReference)
+                <div style="margin-top:8px;color:#64748b;font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;">
+                  {{ $paymentReference }}
                 </div>
               @endif
             </div>
@@ -217,7 +230,12 @@
         {{-- CTA --}}
         <tr>
           <td style="padding:24px 28px;text-align:center;">
-            <a href="{{ $adminUrl }}/{{ $kind === 'service' ? 'bookings' : 'bookings' }}"
+            @php
+                $cta = $kind === 'service'
+                    ? ($adminUrl . '/service-bookings' . ($mirrorId ? '/' . $mirrorId : ''))
+                    : ($adminUrl . '/bookings' . ($mirrorId ? '/' . $mirrorId : ''));
+            @endphp
+            <a href="{{ $cta }}"
                style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#a8862d);color:#1a1a1a;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:0.3px;padding:14px 32px;border-radius:10px;">
               Open in admin →
             </a>

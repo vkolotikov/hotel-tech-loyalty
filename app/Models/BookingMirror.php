@@ -33,6 +33,7 @@ class BookingMirror extends Model
         'payment_method', 'payment_status', 'stripe_payment_intent_id', 'internal_status', 'invoice_state',
         'source_created_at', 'source_updated_at', 'synced_at', 'lifecycle_counted_at', 'raw_json',
         'pms_sync_attempts', 'pms_sync_last_attempt_at', 'pms_sync_last_error',
+        'extras_json',
     ];
 
     protected $casts = [
@@ -52,6 +53,7 @@ class BookingMirror extends Model
         'lifecycle_counted_at' => 'datetime',
         'pms_sync_last_attempt_at' => 'datetime',
         'raw_json'          => 'array',
+        'extras_json'       => 'array',
     ];
 
     public function guest(): BelongsTo
