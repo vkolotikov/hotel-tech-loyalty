@@ -105,6 +105,36 @@ class DiagSchemaCheck extends Command
             'reason'   => 'Race-safe refund attempt marker. Migration 2026_05_31_130000.',
         ];
 
+        // ─── 2026-06-01 audit-wave migrations ─────────────────────────
+        // booking_mirror partial unique on (organization_id, stripe_payment_intent_id)
+        // — the constraint orphan-recovery code has always claimed.
+        $checks[] = [
+            'kind'     => 'index',
+            'table'    => 'booking_mirror',
+            'index'    => 'booking_mirror_org_pi_unique',
+            'expected' => 'unique partial index',
+            'reason'   => 'Race-protection for stripeWebhook orphan recovery. Migration 2026_06_01_120000.',
+        ];
+
+        // booking_mirror composite index on (organization_id, source_updated_at)
+        // for incremental sync.
+        $checks[] = [
+            'kind'     => 'index',
+            'table'    => 'booking_mirror',
+            'index'    => 'booking_mirror_org_modified_idx',
+            'expected' => 'composite index',
+            'reason'   => 'Incremental sync index. Migration 2026_06_01_120100.',
+        ];
+
+        // stripe_webhook_events table for event-id dedup.
+        $checks[] = [
+            'table'    => 'stripe_webhook_events',
+            'column'   => null,
+            'expected' => 'table exists',
+            'matches'  => fn (array $col): bool => true,
+            'reason'   => 'Stripe event-id dedup table. Migration 2026_06_01_120200.',
+        ];
+
         return $checks;
     }
 
@@ -163,8 +193,12 @@ class DiagSchemaCheck extends Command
     private function runCheck(array $check): array
     {
         $table  = $check['table'];
-        $column = $check['column'];
-        $target = $column ? "{$table}.{$column}" : $table;
+        $column = $check['column'] ?? null;
+        $kind   = $check['kind'] ?? 'column';
+        $index  = $check['index'] ?? null;
+        $target = $kind === 'index'
+            ? "{$table}[index:{$index}]"
+            : ($column ? "{$table}.{$column}" : $table);
         $base = [
             'target'   => $target,
             'expected' => $check['expected'],
@@ -176,6 +210,19 @@ class DiagSchemaCheck extends Command
                 return $base + [
                     'actual' => '<table missing>',
                     'status' => 'missing',
+                ];
+            }
+
+            // Index existence check (Postgres pg_indexes).
+            if ($kind === 'index' && $index !== null) {
+                $exists = DB::table('pg_indexes')
+                    ->where('schemaname', DB::raw('current_schema()'))
+                    ->where('tablename', $table)
+                    ->where('indexname', $index)
+                    ->exists();
+                return $base + [
+                    'actual' => $exists ? 'present' : '<index missing>',
+                    'status' => $exists ? 'ok' : 'missing',
                 ];
             }
 
