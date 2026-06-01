@@ -323,36 +323,43 @@ class WidgetChatController extends Controller
     }
 
     /**
-     * Like absolutizeUrl(), but for files we store ourselves: verifies
-     * the underlying file actually exists on the public disk before
-     * handing the URL to the widget. Stale avatar references that
-     * point at deleted uploads return null so the widget renders its
-     * branded initial fallback instead of logging a 404 to the
-     * console (which Lighthouse flags).
+     * Like absolutizeUrl(), but for the assistant avatar shown in the
+     * widget header.
+     *
+     * History: an earlier ship (2026-05-28) added a Storage::exists()
+     * check here to avoid Lighthouse's "image 404" console warning.
+     * That check turned out to cause MORE missing-avatar reports than
+     * it prevented on Laravel Cloud's multi-instance setup:
+     *   - Admin uploads avatar on instance A → file lives on A's local
+     *     public disk.
+     *   - Widget config request hits instance B → Storage::disk('public')
+     *     ->exists() returns false because B's local disk has nothing
+     *     → resolveAvatarUrl returned null → widget rendered the
+     *     company-initial fallback even though the file exists fine
+     *     on CDN / DO Spaces.
+     *   - Cache::remember('widget:config:…', 60s) pinned the wrong
+     *     result for a full minute, so refreshes didn't help.
+     *
+     * Fix (2026-06-02): trust the URL. The widget's hotel-chat.js has
+     * an img.onerror handler that swaps in the company-initial bubble
+     * when the image genuinely 404s, so the user-visible fallback still
+     * fires for actually-missing avatars — without producing false
+     * negatives on every Laravel Cloud avatar that lives on DO Spaces
+     * or on a different instance's local disk.
+     *
+     * Long-term fix: set MEDIA_DISK=do (or any shared object store) so
+     * every instance can resolve the same URL. Documented in
+     * apps/loyalty/CLAUDE.md.
      */
     private function resolveAvatarUrl(?string $url): ?string
     {
         if (!$url) return null;
-        // External URLs we trust — let them render and 404 if the
-        // remote host has moved them. We can't check those server-side.
+        // External URLs (DO Spaces CDN, custom domains, externally
+        // hosted brand assets) we trust unconditionally.
         if (preg_match('#^https?://#i', $url)) return $url;
-        // Map `/storage/foo/bar.jpg` → `foo/bar.jpg` on the public disk
-        // and check it exists. The public disk is the same one used by
-        // MediaService::upload(), so this catches the common case where
-        // an admin deleted the avatar but the DB still references it.
-        $path = ltrim($url, '/');
-        if (str_starts_with($path, 'storage/')) {
-            $diskPath = substr($path, strlen('storage/'));
-            try {
-                if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($diskPath)) {
-                    return null;
-                }
-            } catch (\Throwable) {
-                // Disk lookup failed — trust the URL and let the
-                // browser fall through. Better to attempt the load
-                // than blank the avatar on a transient disk error.
-            }
-        }
+        // Relative `/storage/…` paths — absolutize for the widget
+        // (which runs on the customer's domain). Existence check
+        // intentionally NOT performed; see docblock above.
         return $this->absolutizeUrl($url);
     }
 
