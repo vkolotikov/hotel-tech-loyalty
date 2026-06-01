@@ -95,6 +95,18 @@ export function Engagement() {
   const [range, setRange] = useState<'today' | 'week' | 'month' | 'all'>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  // Sort order persists across sessions so agents who prefer chronological
+  // triage (oldest first — "clear the backlog") don't have to re-set it.
+  const [sort, setSort] = useState<'priority' | 'recent' | 'oldest'>(
+    () => {
+      if (typeof window === 'undefined') return 'priority'
+      const stored = localStorage.getItem('engagement-sort')
+      return stored === 'recent' || stored === 'oldest' ? stored : 'priority'
+    }
+  )
+  useEffect(() => {
+    try { localStorage.setItem('engagement-sort', sort) } catch {}
+  }, [sort])
   // Focus mode — collapses the entire filter card (range + filter chips +
   // intent + search) into a slim 1-line summary so the agent can devote
   // the viewport to the conversation rows. Persisted across sessions.
@@ -138,9 +150,9 @@ export function Engagement() {
     data: EngagementRow[]
     meta: { current_page: number; last_page: number; total: number; per_page: number }
   }>({
-    queryKey: ['engagement', 'feed', filter, range, search, page],
+    queryKey: ['engagement', 'feed', filter, range, search, page, sort],
     queryFn: () => api.get('/v1/admin/engagement/feed', {
-      params: { filter, range, search, page, per_page: 50, sort: 'priority' },
+      params: { filter, range, search, page, per_page: 50, sort },
     }).then(r => r.data),
     refetchInterval: 5_000,
     placeholderData: (prev) => prev,
@@ -426,14 +438,30 @@ export function Engagement() {
             already visible as a row badge). Intent tagging continues
             server-side for display purposes; just no filter chip for it. */}
 
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
-          <input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder={t('engagement.filters.search_placeholder', 'Search by name, email, phone, IP, city, or page…')}
-            className="w-full bg-dark-bg border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors"
-          />
+        <div className="flex items-stretch gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-secondary" />
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              placeholder={t('engagement.filters.search_placeholder', 'Search by name, email, phone, IP, city, or page…')}
+              className="w-full bg-dark-bg border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors"
+            />
+          </div>
+          {/* Sort dropdown — Priority (smart score) / Newest / Oldest.
+              Persists across sessions via localStorage. Re-uses the feed
+              query's sort param; backend supports 'priority' | 'recent'
+              | 'oldest' (see EngagementFeedService). */}
+          <select
+            value={sort}
+            onChange={(e) => { setSort(e.target.value as 'priority' | 'recent' | 'oldest'); setPage(1) }}
+            className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors cursor-pointer"
+            title={t('engagement.filters.sort_title', 'Sort order')}
+          >
+            <option value="priority">{t('engagement.filters.sort_priority', 'Priority')}</option>
+            <option value="recent">{t('engagement.filters.sort_newest', 'Newest first')}</option>
+            <option value="oldest">{t('engagement.filters.sort_oldest', 'Oldest first')}</option>
+          </select>
         </div>
       </div>
       )}

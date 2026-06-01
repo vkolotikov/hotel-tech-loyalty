@@ -339,6 +339,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
             Route::get('engagement/filter-counts',  [EngagementController::class, 'filterCounts']);
             Route::get('engagement/conversations/{id}/brief', [EngagementController::class, 'brief']);
+            // Per-message translation (en/ru/de/fr/es/lv) — used by the
+            // EngagementDrawer translate button so agents can read foreign-
+            // language chats without leaving the inbox.
+            Route::post('engagement/translate',     [EngagementController::class, 'translate']);
 
             // ─── Per-user preferences (Engagement daily summary opt-in, etc.) ──
             Route::get('me/preferences',            [MeController::class, 'preferences']);

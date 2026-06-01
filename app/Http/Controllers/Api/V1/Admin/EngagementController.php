@@ -96,4 +96,38 @@ class EngagementController extends Controller
             'data' => $this->aiService->briefForConversation($conversation, $forceRefresh),
         ]);
     }
+
+    /**
+     * POST /v1/admin/engagement/translate
+     *
+     * Translate arbitrary chat text into a target language. Used by the
+     * EngagementDrawer's per-message translate button so agents can read
+     * a Latvian or Russian conversation in English (or vice versa) at a
+     * glance.
+     *
+     * Body: { text: string, target: 'en'|'ru'|'de'|'fr'|'es'|'lv' }
+     *
+     * The endpoint is intentionally generic (just takes raw text) instead
+     * of taking a message_id — that way the frontend can also translate
+     * the visitor's name, custom fields, or any other inline string
+     * without a dedicated endpoint per surface.
+     */
+    public function translate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text'   => 'required|string|max:4000',
+            'target' => 'required|string|max:30',
+        ]);
+
+        try {
+            $result = $this->aiService->translateText($validated['text'], $validated['target']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'translation_failed',
+                'message' => 'Translation failed: ' . $e->getMessage(),
+            ], 502);
+        }
+
+        return response()->json(['data' => $result]);
+    }
 }

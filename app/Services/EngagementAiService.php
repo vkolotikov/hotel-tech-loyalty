@@ -241,4 +241,94 @@ PROMPT;
         $clean = strtolower(trim((string) $raw));
         return in_array($clean, self::INTENTS, true) ? $clean : 'other';
     }
+
+    /**
+     * Translate arbitrary chat text into a target language. Used by the
+     * EngagementDrawer's per-message translate button so agents can read
+     * conversations in any language at a glance without leaving the inbox.
+     *
+     * Light-weight by design — no caching here (the frontend caches the
+     * translated text per message id), single gpt-4o-mini call, low temp
+     * for determinism. Returns the translated string + the detected source
+     * language (helpful when the agent wants to know what the original was).
+     *
+     * @return array{translated: string, source_language: ?string}
+     */
+    public function translateText(string $text, string $targetLanguage): array
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return ['translated' => '', 'source_language' => null];
+        }
+
+        // Hard cap on input length — anything longer than 4000 chars is
+        // either a user pasting a wall of marketing copy or a malicious
+        // payload. Stripe-style mb_substr instead of substr for unicode.
+        $text = mb_substr($text, 0, 4000);
+
+        // Sanitise target language to a short whitelist so a caller can't
+        // route through arbitrary prompt text. Add languages as needed.
+        $targetLabel = match (strtolower(trim($targetLanguage))) {
+            'en', 'english'                       => 'English',
+            'ru', 'russian', 'русский'            => 'Russian',
+            'de', 'german', 'deutsch'             => 'German',
+            'fr', 'french', 'français', 'francais' => 'French',
+            'es', 'spanish', 'español', 'espanol' => 'Spanish',
+            'lv', 'latvian', 'latviešu', 'latviesu' => 'Latvian',
+            default                                => 'English',
+        };
+
+        $prompt = <<<PROMPT
+You are a professional translator. Translate the user's message into {$targetLabel}.
+
+Rules:
+- Return ONLY a JSON object: {"translated": "<translated text>", "source_language": "<ISO 639-1 code of detected source>"}
+- Preserve formatting (line breaks, lists, urls) verbatim.
+- If the message is already in {$targetLabel}, set translated = the original text exactly and source_language to the matching ISO code.
+- Do NOT add commentary, do NOT translate URLs or email addresses, do NOT explain idioms.
+
+Message to translate:
+---
+{$text}
+---
+PROMPT;
+
+        try {
+            $response = OpenAI::chat()->create([
+                'model'           => self::MODEL,
+                'messages'        => [['role' => 'user', 'content' => $prompt]],
+                'max_tokens'      => 1200,
+                'temperature'     => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ]);
+
+            $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+            if ($orgId) {
+                app(\App\Services\AiUsageService::class)->recordUsage(
+                    orgId: $orgId,
+                    model: self::MODEL,
+                    inputTokens: (int) ($response->usage->promptTokens ?? 0),
+                    outputTokens: (int) ($response->usage->completionTokens ?? 0),
+                    feature: 'engagement_translate',
+                );
+            }
+
+            $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded) || !isset($decoded['translated'])) {
+                throw new \RuntimeException('Translator returned non-JSON: ' . substr($raw, 0, 200));
+            }
+
+            return [
+                'translated'      => (string) $decoded['translated'],
+                'source_language' => isset($decoded['source_language']) ? (string) $decoded['source_language'] : null,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('EngagementAiService::translateText failed', [
+                'target' => $targetLabel,
+                'error'  => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
 }

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X, User, MessageSquare, Map, FileText, Send, Bot, CheckCircle2, UserPlus,
   Mail, Phone, MapPin, Clock, Eye, Globe, Briefcase, ExternalLink, Star,
-  Sparkles, RefreshCw,
+  Sparkles, RefreshCw, Languages,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
@@ -457,14 +457,92 @@ function ConversationTab({
 }) {
   if (!conv) return <Loading />
 
+  // Translation state — agents can flip the whole transcript into
+  // English / Russian (or any supported language). Cached per message
+  // id so re-toggling doesn't re-call OpenAI for the same string.
+  const [translateTo, setTranslateTo] = useState<'off' | 'en' | 'ru' | 'de' | 'fr' | 'es' | 'lv'>('off')
+  const [translations, setTranslations] = useState<Record<string, { text: string; lang: string }>>({})
+  const [translating, setTranslating] = useState(false)
+
+  // When translateTo changes (and isn't 'off'), batch-translate any
+  // messages not yet cached for that language. We compose a per-message
+  // cache key as `${msg.id}:${lang}` so different languages don't fight.
+  useEffect(() => {
+    if (translateTo === 'off') return
+    const messages = conv.messages ?? []
+    const toFetch = messages.filter(m => {
+      if (!m.content || !m.content.trim()) return false
+      return !translations[`${m.id}:${translateTo}`]
+    })
+    if (toFetch.length === 0) return
+    let cancelled = false
+    setTranslating(true)
+    ;(async () => {
+      for (const m of toFetch) {
+        if (cancelled) return
+        try {
+          const { data } = await api.post('/v1/admin/engagement/translate', {
+            text: m.content, target: translateTo,
+          })
+          if (cancelled) return
+          setTranslations(prev => ({
+            ...prev,
+            [`${m.id}:${translateTo}`]: {
+              text: data?.data?.translated ?? m.content,
+              lang: data?.data?.source_language ?? '',
+            },
+          }))
+        } catch {
+          // Silent skip — the failed message just shows in its original
+          // language. A bulk OpenAI hiccup shouldn't break the inbox.
+        }
+      }
+      if (!cancelled) setTranslating(false)
+    })()
+    return () => { cancelled = true }
+  }, [translateTo, conv.messages])
+
   return (
     <>
+      {/* Translate toolbar — lets the agent flip the whole transcript
+          into any supported language. Off by default so no AI cost is
+          incurred unless explicitly requested. */}
+      <div className="border-b border-dark-border px-4 py-2 flex items-center gap-2 bg-dark-surface">
+        <Languages size={14} className="text-t-secondary" />
+        <span className="text-[11px] text-t-secondary">Translate:</span>
+        <select
+          value={translateTo}
+          onChange={(e) => setTranslateTo(e.target.value as typeof translateTo)}
+          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs outline-none focus:border-accent transition-colors cursor-pointer"
+        >
+          <option value="off">Off</option>
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
+          <option value="lv">Latviešu</option>
+        </select>
+        {translating && (
+          <span className="text-[10px] text-t-secondary flex items-center gap-1">
+            <RefreshCw size={10} className="animate-spin" />
+            Translating…
+          </span>
+        )}
+      </div>
+
       {/* Messages — guard against undefined in case the endpoint shape
           shifts again. Empty array == "no messages yet" UI. */}
       <div ref={messagesScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2.5">
         {(conv.messages ?? []).length === 0 ? (
           <div className="text-center text-t-secondary text-sm py-8">No messages yet.</div>
-        ) : (conv.messages ?? []).map(m => <MessageBubble key={m.id} message={m} />)}
+        ) : (conv.messages ?? []).map(m => (
+          <MessageBubble
+            key={m.id}
+            message={m}
+            translation={translateTo !== 'off' ? translations[`${m.id}:${translateTo}`] : undefined}
+          />
+        ))}
       </div>
 
       {/* Composer — only enabled when AI is OFF (otherwise the agent should
@@ -501,7 +579,13 @@ function ConversationTab({
   )
 }
 
-function MessageBubble({ message: m }: { message: ConversationDetail['messages'][number] }) {
+function MessageBubble({
+  message: m,
+  translation,
+}: {
+  message: ConversationDetail['messages'][number]
+  translation?: { text: string; lang: string }
+}) {
   const fromVisitor = m.sender_type === 'visitor'
   const fromAi = m.sender_type === 'ai'
   const fromAgent = m.sender_type === 'agent'
@@ -523,14 +607,31 @@ function MessageBubble({ message: m }: { message: ConversationDetail['messages']
     ? (m.sender_user?.name ?? 'Agent')
     : 'System'
 
+  // When a translation is provided, show the translated text as the primary
+  // body + the original underneath in muted text. The agent can read whichever
+  // they prefer and the original stays available for verification.
+  const showTranslation = !!translation && translation.text && translation.text !== m.content
+
   return (
     <div className={`flex ${align}`}>
       <div className={`max-w-[80%] rounded-lg px-3 py-2 ${bubble}`}>
         <div className="text-[9px] uppercase tracking-wide font-bold opacity-60 mb-0.5 flex items-center gap-1">
           {fromAi && <Bot size={9} />}
           {senderLabel} · {relativeTime(m.created_at)}
+          {showTranslation && translation?.lang && (
+            <span className="opacity-70 normal-case font-normal">· translated from {translation.lang}</span>
+          )}
         </div>
-        <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+        {showTranslation ? (
+          <>
+            <div className="text-sm whitespace-pre-wrap break-words">{translation!.text}</div>
+            <div className="mt-1.5 pt-1.5 border-t border-white/10 text-[11px] whitespace-pre-wrap break-words opacity-60">
+              {m.content}
+            </div>
+          </>
+        ) : (
+          <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+        )}
       </div>
     </div>
   )

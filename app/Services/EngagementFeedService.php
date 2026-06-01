@@ -80,7 +80,15 @@ class EngagementFeedService
         // then we score each row in PHP and re-sort the page.
         // For very large orgs (>10k visitors), the priority score can be
         // pushed into a generated column or materialised view; deferred.
-        $query->orderByDesc('last_seen_at');
+        //
+        // When the caller asks for 'oldest', flip the SQL order so the
+        // paginator pulls the right set of rows; the PHP-side re-sort is
+        // skipped for 'oldest' + 'recent' (already in correct order).
+        if (($params['sort'] ?? 'priority') === 'oldest') {
+            $query->orderBy('last_seen_at');
+        } else {
+            $query->orderByDesc('last_seen_at');
+        }
 
         $perPage = max(10, min(200, (int) ($params['per_page'] ?? 50)));
         $page = max(1, (int) ($params['page'] ?? 1));
@@ -100,7 +108,9 @@ class EngagementFeedService
         } elseif ($sort === 'engagement') {
             $rows = $rows->sortByDesc(fn ($r) => $r['page_views_count'] + $r['messages_count'] * 5)->values();
         }
-        // 'recent' is already SQL-sorted by last_seen_at desc — no PHP re-sort.
+        // 'recent' / 'newest' (already SQL-sorted DESC by last_seen_at) and
+        // 'oldest' (SQL-sorted ASC above) need no PHP re-sort — pagination
+        // boundaries match the SQL order.
 
         // Replace the paginator's items with the scored rows so the paginator
         // metadata (current_page, last_page, total) is correct.
