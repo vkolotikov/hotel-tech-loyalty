@@ -1172,6 +1172,35 @@ class BookingPublicController extends Controller
             return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
         }
 
+        // Event-ID dedup (audit 2026-06-01 finding #4). Stripe explicitly
+        // recommends this — they may resend the same event during network
+        // blips. Per-action idempotency (last_refund_id, mirror status
+        // guards) is defense-in-depth but doesn't close every window.
+        // Insert-then-23505-skip pattern, mirrors smoobu_webhook_events.
+        try {
+            \App\Models\StripeWebhookEvent::create([
+                'organization_id'   => (int) $orgId,
+                'event_id'          => (string) $event->id,
+                'event_type'        => (string) $event->type,
+                'payment_intent_id' => $this->extractPiId($event),
+                'charge_id'         => $this->extractChargeId($event),
+                'received_at'       => now(),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            // Duplicate event delivery — already processed. Ack and skip.
+            \Illuminate\Support\Facades\Log::info('Stripe webhook event already processed (dedup hit)', [
+                'event_id'   => $event->id,
+                'event_type' => $event->type,
+            ]);
+            return response()->json(['received' => true, 'duplicate' => true]);
+        } catch (\Throwable $e) {
+            // Don't let the dedup table failure block legitimate events;
+            // fall through to handling and rely on per-action idempotency.
+            \Illuminate\Support\Facades\Log::warning('Stripe webhook dedup insert failed', [
+                'event_id' => $event->id, 'error' => $e->getMessage(),
+            ]);
+        }
+
         // Handle relevant events
         if ($event->type === 'payment_intent.succeeded') {
             $intent = $event->data->object;
@@ -1396,9 +1425,89 @@ class BookingPublicController extends Controller
             // Dispute decided. If lost (status='lost'), funds were debited
             // → treat as refunded. If won, restore payment_status to 'paid'.
             $this->handleChargeDisputeClosed($event->data->object, (int) $orgId);
+        } elseif ($event->type === 'payment_intent.canceled') {
+            // Manual-capture auth expiry / explicit cancel (audit 2026-06-01
+            // finding #2). Under capture_method='manual', when a PI's 7-day
+            // hold window expires OR our rescue helper cancels the PI, Stripe
+            // fires payment_intent.canceled. Without this branch, the mirror
+            // sits in payment_status='authorized' forever and the capture
+            // cron keeps trying to capture a dead PI.
+            $this->handlePaymentIntentCanceled($event->data->object, (int) $orgId);
         }
 
         return response()->json(['received' => true]);
+    }
+
+    /**
+     * Extract payment_intent id from any Stripe event for the dedup table.
+     * Charge events carry `data.object.payment_intent`. PI events carry
+     * `data.object.id` directly. Dispute events use `data.object.payment_intent`.
+     */
+    private function extractPiId(\Stripe\Event $event): ?string
+    {
+        $obj = $event->data->object ?? null;
+        if (!$obj) return null;
+        $type = (string) $event->type;
+        if (str_starts_with($type, 'payment_intent.')) return (string) ($obj->id ?? '') ?: null;
+        return (string) ($obj->payment_intent ?? '') ?: null;
+    }
+
+    private function extractChargeId(\Stripe\Event $event): ?string
+    {
+        $obj = $event->data->object ?? null;
+        if (!$obj) return null;
+        $type = (string) $event->type;
+        if (str_starts_with($type, 'charge.')) return (string) ($obj->id ?? '') ?: null;
+        return (string) ($obj->latest_charge ?? '') ?: null;
+    }
+
+    /**
+     * Handle Stripe `payment_intent.canceled` (audit 2026-06-01).
+     *
+     * Fires when:
+     * - Our rescue helper called paymentIntents.cancel() after a /confirm failure
+     * - Stripe auto-cancelled an expired authorization (7 days under manual capture)
+     * - Admin cancelled via Stripe Dashboard
+     *
+     * Flip the mirror payment_status to 'cancelled' so the capture cron
+     * stops chasing a dead PI + so the admin UI shows the correct state.
+     */
+    private function handlePaymentIntentCanceled(\Stripe\PaymentIntent $intent, int $orgId): void
+    {
+        $piId = (string) $intent->id;
+        $mirror = \App\Models\BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('stripe_payment_intent_id', $piId)
+            ->first();
+        if (!$mirror) {
+            \Illuminate\Support\Facades\Log::info('payment_intent.canceled: no mirror', [
+                'pi_id' => $piId, 'org' => $orgId,
+            ]);
+            return;
+        }
+        if (in_array($mirror->payment_status, ['refunded', 'partially_refunded', 'cancelled', 'paid'], true)) {
+            // Already moved to a terminal state — don't clobber.
+            return;
+        }
+        try {
+            $mirror->update(['payment_status' => 'cancelled']);
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'booking.payment.canceled',
+                'subject_type'    => 'booking_mirror',
+                'subject_id'      => $mirror->id,
+                'new_values'      => [
+                    'payment_intent_id'   => $piId,
+                    'cancellation_reason' => (string) ($intent->cancellation_reason ?? ''),
+                    'prior_status'        => $mirror->getOriginal('payment_status'),
+                ],
+                'description'     => "Stripe PI {$piId} canceled (reason=" . ($intent->cancellation_reason ?: 'unspecified') . ")",
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('payment_intent.canceled handler failed', [
+                'mirror_id' => $mirror->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -1507,10 +1616,19 @@ class BookingPublicController extends Controller
         }
 
         try {
+            // Audit 2026-06-01 finding A2: the literal 'webhook' fallback
+            // always failed StripeService::refund()'s reason whitelist
+            // (which accepts only duplicate / fraudulent /
+            // requested_by_customer). The refund silently went through
+            // without a reason. Pass through Stripe's actual reason value
+            // when present; let null mean null.
+            $stripeReason = is_object($latest)
+                ? ($latest->reason ?? null)
+                : ($latest['reason'] ?? null);
             app(\App\Services\BookingRefundService::class)->applyRefund(
                 $mirror,
                 $refundAmt,
-                $latest->reason ?? ($latest['reason'] ?? 'webhook'),
+                $stripeReason,
                 $refundId,
                 false, // refund already exists on Stripe — don't issue a second one
                 null,
@@ -1691,7 +1809,12 @@ class BookingPublicController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $payload = $request->all();
+        // Audit 2026-06-01 finding B3: use raw body bytes for hashing
+        // (positions us for any future Smoobu body-signature scheme +
+        // makes the dedup hash more reliable across Laravel input-bag
+        // normalisation).
+        $rawBody = (string) $request->getContent();
+        $payload = json_decode($rawBody, true) ?: $request->all();
         $action  = $payload['action'] ?? null;
         $data    = $payload['data'] ?? $payload;
         $reservationId = $data['id'] ?? $data['reservation_id'] ?? null;
@@ -1703,16 +1826,26 @@ class BookingPublicController extends Controller
         // canonicalised body and insert into smoobu_webhook_events with
         // a unique index on body_hash. Duplicate → 23505 → caught here
         // → return 200 no-op. Smoobu stops retrying.
+        //
+        // Audit 2026-06-01 finding C4: row written BEFORE upsert means a
+        // 500 on upsert (transient DB / Smoobu fetch failure) gets
+        // replayed as 200 no-op on Smoobu's retry — the booking is
+        // silently lost. Mitigation: keep the upfront write (it's the
+        // fast-path dedup) BUT delete the dedup row when the upsert
+        // catch fires, so Smoobu's retry actually re-processes the
+        // payload.
         // ──────────────────────────────────────────────────────────────
         $bodyHash = \App\Models\SmoobuWebhookEvent::hashBody($payload);
+        $dedupRowId = null;
         try {
-            \App\Models\SmoobuWebhookEvent::create([
+            $dedupRow = \App\Models\SmoobuWebhookEvent::create([
                 'organization_id' => $resolvedOrgId,
                 'body_hash'       => $bodyHash,
                 'action'          => $action ? mb_substr((string) $action, 0, 60) : null,
                 'reservation_id'  => $reservationId ? mb_substr((string) $reservationId, 0, 60) : null,
                 'received_at'     => now(),
             ]);
+            $dedupRowId = $dedupRow->id;
         } catch (\Illuminate\Database\QueryException $e) {
             // 23505 = unique violation. Same body already processed.
             if ($e->getCode() === '23505' || str_contains($e->getMessage(), 'smoobu_webhook_events_body_hash_unique')) {
@@ -1831,6 +1964,15 @@ class BookingPublicController extends Controller
                 'action'         => $action,
                 'error'          => $e->getMessage(),
             ]);
+            // Audit 2026-06-01 finding C4: delete the dedup row so
+            // Smoobu's retry can actually re-process. Without this,
+            // the next delivery hits the unique index and returns 200
+            // no-op — booking silently lost.
+            if ($dedupRowId) {
+                try {
+                    \App\Models\SmoobuWebhookEvent::query()->where('id', $dedupRowId)->delete();
+                } catch (\Throwable) {}
+            }
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
         }
 

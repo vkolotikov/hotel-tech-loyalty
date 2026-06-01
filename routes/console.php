@@ -147,6 +147,17 @@ Schedule::command('loyalty:send-digest')
     ->hourly()
     ->withoutOverlapping(10);
 
+// Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
+// PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
+// forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)
+// and a GDPR data-minimisation concern. Runs once a day at 03:45 local —
+// off-peak everywhere. Default keeps 7 days of expired holds so a customer
+// service rep can still inspect a hold from a guest complaint, but anything
+// older is gone.
+Schedule::command('bookings:prune-holds')
+    ->dailyAt('03:45')
+    ->withoutOverlapping(30);
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReleasesScheduleLock;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Services\IntegrationStatus;
@@ -32,6 +33,8 @@ use Illuminate\Support\Facades\Log;
  */
 class RetryPmsSync extends Command
 {
+    use ReleasesScheduleLock;
+
     protected const MAX_ATTEMPTS = 5;
 
     protected $signature = 'bookings:retry-pms-sync
@@ -42,6 +45,11 @@ class RetryPmsSync extends Command
 
     public function handle(SmoobuClient $smoobu): int
     {
+        // Register expired-lock cleanup before any work — protects against
+        // SIGTERM/OOM mid-run leaving a zombie framework-schedule lock that
+        // blocks future ticks. Same pattern shipped on SyncSmoobuBookings.
+        $this->releaseScheduleLockOnShutdown();
+
         if (!IntegrationStatus::isEnabled('smoobu')) {
             $this->info('Smoobu integration is globally disabled — skipping.');
             return self::SUCCESS;
@@ -81,15 +89,19 @@ class RetryPmsSync extends Command
                     // pending_pms_sync state, so price_paid is what was
                     // actually captured by Stripe at booking time.
                     $pricePaid = (float) ($mirror->price_paid ?? 0);
-                    $result = $smoobu->createReservation([
-                        'apartmentId'   => $mirror->apartment_id,
+                    // Use resolveDirectChannelId (non-strict on cron — we
+                    // don't want to blow up a retry over a channel config
+                    // issue) and only inject channelId when > 0, matching
+                    // single-room confirm()'s pattern. Sending an explicit
+                    // 0 lands the booking in Smoobu's Blocked Channel.
+                    $payload = [
+                        'apartmentId'   => (int) $mirror->apartment_id,
                         'arrivalDate'   => $mirror->arrival_date instanceof \DateTimeInterface
                                             ? $mirror->arrival_date->format('Y-m-d')
                                             : (string) $mirror->arrival_date,
                         'departureDate' => $mirror->departure_date instanceof \DateTimeInterface
                                             ? $mirror->departure_date->format('Y-m-d')
                                             : (string) $mirror->departure_date,
-                        'channelId'     => (int) ($smoobu->channelId() ?: 0),
                         'firstName'     => $this->firstName($mirror->guest_name),
                         'lastName'      => $this->lastName($mirror->guest_name),
                         'email'         => $mirror->guest_email ?? '',
@@ -100,7 +112,16 @@ class RetryPmsSync extends Command
                         'price-paid'    => $pricePaid,
                         'priceStatus'   => $pricePaid > 0 ? 1 : 0,
                         'language'      => 'en',
-                    ]);
+                        // 'type' avoids Smoobu's blocked-channel default
+                        // — single-room confirm() ships this for the same
+                        // reason. See audit 2026-06-01 finding RetryPmsSync.
+                        'type'          => 'reservation',
+                    ];
+                    $channelId = (int) ($smoobu->resolveDirectChannelId(false) ?: 0);
+                    if ($channelId > 0) {
+                        $payload['channelId'] = $channelId;
+                    }
+                    $result = $smoobu->createReservation($payload);
 
                     // Smoobu accepted — write back the real reservation_id
                     // (the placeholder LOCAL-* id stays as a redirect via

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReleasesScheduleLock;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\ServiceBooking;
@@ -56,6 +57,8 @@ use Illuminate\Support\Facades\Log;
  */
 class CapturePendingPaymentIntents extends Command
 {
+    use ReleasesScheduleLock;
+
     protected $signature = 'bookings:capture-pending-pis
                             {--org= : Limit to a single organization id}
                             {--dry-run : Probe + report without calling capture}
@@ -65,12 +68,26 @@ class CapturePendingPaymentIntents extends Command
 
     public function handle(StripeService $stripe): int
     {
+        // Stuck-lock guard — same pattern as SyncSmoobuBookings.
+        $this->releaseScheduleLockOnShutdown();
+
         $orgFilter = $this->option('org') ? (int) $this->option('org') : null;
         $dryRun    = (bool) $this->option('dry-run');
         $limit     = (int) ($this->option('limit') ?: 200);
 
         $minAge = now()->subMinutes(5);
         $maxAge = now()->subDays(6);
+
+        // STALE-AUTH RECONCILIATION: rows older than 6 days that are still
+        // 'authorized' are past the safe capture window. Reconcile them
+        // separately — retrieve PI from Stripe to see whether the auth
+        // expired (canceled) or is still alive. Audit 2026-06-01 finding:
+        // previously these were silently excluded by the >6d upper bound
+        // and stuck in 'authorized' forever.
+        $staleCount = $this->reconcileStaleAuths($stripe, $orgFilter, $dryRun);
+        if ($staleCount > 0) {
+            $this->info("Stale-auth reconciliation processed {$staleCount} row(s).");
+        }
 
         // ── Bookings (rooms) ───────────────────────────────────────────
         $bookings = BookingMirror::withoutGlobalScopes()
@@ -308,6 +325,10 @@ class CapturePendingPaymentIntents extends Command
      * Flip a BookingMirror (and any siblings in the same booking_group
      * sharing the same PI — combo bookings) to paid. Skip mirrors
      * already in a terminal state so we don't clobber refunds.
+     *
+     * Audit 2026-06-01: includes orWhereNull because Postgres `IN` never
+     * matches NULL. Orphan-recovered mirrors with null payment_status
+     * would otherwise stay null after capture.
      */
     private function markBookingPaid(BookingMirror $mirror): void
     {
@@ -315,7 +336,10 @@ class CapturePendingPaymentIntents extends Command
             $query = BookingMirror::withoutGlobalScopes()
                 ->where('organization_id', $mirror->organization_id)
                 ->where('stripe_payment_intent_id', $mirror->stripe_payment_intent_id)
-                ->whereIn('payment_status', ['authorized', 'pending', '']);
+                ->where(function ($q) {
+                    $q->whereIn('payment_status', ['authorized', 'pending', ''])
+                      ->orWhereNull('payment_status');
+                });
             $query->get()->each(function ($m) {
                 $m->update([
                     'payment_status' => 'paid',
@@ -329,6 +353,81 @@ class CapturePendingPaymentIntents extends Command
                 'error'     => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Stale-auth reconciliation (audit 2026-06-01).
+     *
+     * For mirrors and service bookings older than 6 days that are still
+     * 'authorized' or 'pending', retrieve the PI and decide:
+     * - canceled → flip to 'capture_expired' + audit
+     * - succeeded → flip to 'paid' (a sibling process captured it)
+     * - requires_capture → still capturable somehow (rare) → leave; the
+     *   main sweep will pick it up if it's now < 6 days, otherwise audit
+     *   and leave for staff.
+     * - retrieve fails → leave + audit.
+     *
+     * Returns count of rows processed.
+     */
+    private function reconcileStaleAuths(StripeService $stripe, ?int $orgFilter, bool $dryRun): int
+    {
+        $cutoff = now()->subDays(6);
+        // Look back 30 days max to keep the sweep bounded; anything older
+        // is operations-only territory.
+        $floor = now()->subDays(30);
+
+        $mirrors = BookingMirror::withoutGlobalScopes()
+            ->whereIn('payment_status', ['authorized', 'pending'])
+            ->whereNotNull('stripe_payment_intent_id')
+            ->where('stripe_payment_intent_id', 'like', 'pi_%')
+            ->where('stripe_payment_intent_id', 'not like', 'pi_mock_%')
+            ->where('created_at', '<', $cutoff)
+            ->where('created_at', '>=', $floor)
+            ->when($orgFilter, fn($q) => $q->where('organization_id', $orgFilter))
+            ->orderBy('id')
+            ->limit(100)
+            ->get();
+
+        $processed = 0;
+        foreach ($mirrors as $mirror) {
+            $piId = (string) $mirror->stripe_payment_intent_id;
+            app()->instance('current_organization_id', (int) $mirror->organization_id);
+            if (!$stripe->isEnabled()) continue;
+            try {
+                $intent = $stripe->retrievePaymentIntent($piId);
+            } catch (\Throwable $e) {
+                Log::warning('Stale-auth reconcile — retrieve failed', [
+                    'mirror_id' => $mirror->id, 'pi_id' => $piId, 'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+            $status = (string) ($intent->status ?? '');
+            $processed++;
+            if ($dryRun) {
+                $this->line("[dry-run] stale auth mirror #{$mirror->id} PI {$piId} status={$status}");
+                continue;
+            }
+            try {
+                if ($status === 'canceled' || $status === 'requires_payment_method') {
+                    $mirror->update(['payment_status' => 'capture_expired']);
+                    $this->auditOutcome($mirror->organization_id, 'booking.capture.auth_expired', $piId, [
+                        'mirror_id' => $mirror->id, 'stripe_status' => $status, 'age_days' => $mirror->created_at?->diffInDays(now()),
+                    ], "PI {$piId} authorization expired/cancelled before capture (status={$status}, mirror age > 6d). Flipped to capture_expired.");
+                } elseif ($status === 'succeeded') {
+                    $this->markBookingPaid($mirror);
+                } else {
+                    // Unexpected — audit but don't touch the mirror.
+                    $this->auditOutcome($mirror->organization_id, 'booking.capture.stale_unhandled', $piId, [
+                        'mirror_id' => $mirror->id, 'stripe_status' => $status,
+                    ], "Stale auth mirror #{$mirror->id} has PI in unexpected state {$status}");
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Stale-auth reconcile — update failed', [
+                    'mirror_id' => $mirror->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+        return $processed;
     }
 
     private function auditOutcome(?int $orgId, string $action, string $piId, array $extra, string $description): void

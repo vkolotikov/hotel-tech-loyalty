@@ -1498,13 +1498,22 @@ class BookingEngineService
         $succeededSmoobu = [];
         $mirrors         = [];
 
+        // Resolve direct channel ONCE before the loop (audit 2026-06-01
+        // finding #1). confirmCombo previously omitted channelId AND type
+        // entirely, sending every combo room to Smoobu's Blocked Channel
+        // (grey calendar, invisible in New Reservations). Use non-strict
+        // resolution so a misconfigured channel doesn't blow up the combo
+        // path — a missing channel falls back to omitting the key,
+        // matching single-room confirm() behaviour.
+        $comboChannelId = (int) ($this->smoobu->resolveDirectChannelId(false) ?: 0);
+
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use (
                 &$mirrors, &$succeededSmoobu,
                 $rooms, $hold, $guest, $guestId, $orgId, $groupId,
                 $checkIn, $checkOut, $nights, $adults, $children,
                 $paymentMethod, $paymentStatus, $piId, $data, $payload,
-                $idempotencyKey, $requestId,
+                $idempotencyKey, $requestId, $comboChannelId,
             ) {
                 $hold->update(['status' => 'consumed']);
 
@@ -1534,9 +1543,20 @@ class BookingEngineService
                         'price'         => $roomTotal,
                         'price-paid'    => $roomPaid,
                         'priceStatus'   => $roomPaid > 0 ? 1 : 0,
+                        // type='reservation' avoids Smoobu's blocked-channel
+                        // default — single-room confirm() ships this for
+                        // the same reason. Audit 2026-06-01 finding #2.
+                        'type'          => 'reservation',
+                        'language'      => 'en',
                         'notice'        => ($data['special_requests'] ?? '')
                             . (count($rooms) > 1 ? " [Combo {$groupId} — room " . ($idx + 1) . '/' . count($rooms) . ']' : ''),
                     ];
+                    // Audit 2026-06-01 finding #1: only inject channelId
+                    // when > 0; sending an explicit 0 lands the booking
+                    // in Smoobu's Blocked Channel.
+                    if ($comboChannelId > 0) {
+                        $smoobuPayload['channelId'] = $comboChannelId;
+                    }
 
                     $pmsResult  = null;
                     $pmsFatal   = null;
@@ -1563,6 +1583,7 @@ class BookingEngineService
 
                     // Fatal on any room → compensate + abort.
                     if ($pmsFatal) {
+                        $cancelFailures = [];
                         foreach ($succeededSmoobu as $prev) {
                             try {
                                 $this->smoobu->cancelReservation($prev['id']);
@@ -1570,7 +1591,33 @@ class BookingEngineService
                                 \Illuminate\Support\Facades\Log::error('Combo rollback: could not cancel Smoobu reservation', [
                                     'smoobu_id' => $prev['id'], 'error' => $cancelErr->getMessage(),
                                 ]);
+                                $cancelFailures[] = (string) ($prev['id'] ?? '');
                             }
+                        }
+                        // Audit 2026-06-01 finding C1/D1: persistent audit
+                        // log for orphan Smoobu reservations so staff can
+                        // see them (and manually cancel) — Log::error was
+                        // not visible from the admin UI.
+                        if (!empty($cancelFailures)) {
+                            try {
+                                \App\Models\AuditLog::create([
+                                    'organization_id' => $orgId,
+                                    'action'          => 'booking.combo.orphan_smoobu_reservation',
+                                    'subject_type'    => 'smoobu_reservation',
+                                    'subject_id'      => null,
+                                    'new_values'      => [
+                                        'booking_group_id'   => $groupId,
+                                        'orphan_smoobu_ids'  => $cancelFailures,
+                                        'failed_room_name'   => $unitName,
+                                        'guest_email'        => $guest['email'] ?? null,
+                                        'check_in'           => $checkIn,
+                                        'check_out'          => $checkOut,
+                                    ],
+                                    'description'     => 'Combo rollback left ' . count($cancelFailures)
+                                        . ' Smoobu reservation(s) live. Cancel manually in Smoobu admin: '
+                                        . implode(', ', $cancelFailures),
+                                ]);
+                            } catch (\Throwable) {}
                         }
                         throw new \RuntimeException(
                             "Room \"{$unitName}\" is no longer available. Please choose a different combination.",
@@ -1620,6 +1667,54 @@ class BookingEngineService
             });
         } catch (\RuntimeException $e) {
             throw $e;
+        } catch (\Throwable $e) {
+            // Audit 2026-06-01 finding C3: PHP \Error (TypeError, undefined
+            // variable, OOM) was bypassing the RuntimeException catch. The
+            // transaction rolls back so mirrors vanish, but the per-room
+            // try/catch inside the loop had no chance to compensating-
+            // cancel succeeded Smoobu reservations — they were orphaned.
+            // Widen the outer catch to \Throwable so any non-RuntimeException
+            // error also runs the rollback path. Compensating-cancel + audit
+            // logging here too. Then rewrap as RuntimeException with $e as
+            // previous so the controller's existing handlers still fire.
+            $cancelFailures = [];
+            foreach ($succeededSmoobu as $prev) {
+                try {
+                    $this->smoobu->cancelReservation($prev['id']);
+                } catch (\Throwable $cancelErr) {
+                    $cancelFailures[] = (string) ($prev['id'] ?? '');
+                    \Illuminate\Support\Facades\Log::error('Combo rollback (Throwable path) — could not cancel Smoobu reservation', [
+                        'smoobu_id' => $prev['id'], 'error' => $cancelErr->getMessage(),
+                    ]);
+                }
+            }
+            if (!empty($cancelFailures)) {
+                try {
+                    \App\Models\AuditLog::create([
+                        'organization_id' => $orgId,
+                        'action'          => 'booking.combo.orphan_smoobu_reservation',
+                        'subject_type'    => 'smoobu_reservation',
+                        'subject_id'      => null,
+                        'new_values'      => [
+                            'booking_group_id'   => $groupId,
+                            'orphan_smoobu_ids'  => $cancelFailures,
+                            'php_fatal_class'    => $e::class,
+                            'php_fatal_message'  => $e->getMessage(),
+                            'guest_email'        => $guest['email'] ?? null,
+                            'check_in'           => $checkIn,
+                            'check_out'          => $checkOut,
+                        ],
+                        'description'     => 'PHP fatal during combo confirm left ' . count($cancelFailures)
+                            . ' Smoobu reservation(s) live. Cancel manually in Smoobu admin: '
+                            . implode(', ', $cancelFailures) . '. Error: ' . $e->getMessage(),
+                    ]);
+                } catch (\Throwable) {}
+            }
+            throw new \RuntimeException(
+                'Booking could not be confirmed: this room is no longer available. Please choose another.',
+                0,
+                $e,
+            );
         }
 
         $response = [

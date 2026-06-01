@@ -84,8 +84,22 @@ class BookingRefundService
         }
 
         try {
+            // ── Pre-flight checks BEFORE writing the attempt row.
+            // Audit 2026-06-01 finding C3: writing the RefundAttempt
+            // before these throws left orphan rows that then false-
+            // positive the 60s webhook freshness gate.
             if ($mirror->payment_status === 'refunded') {
                 throw new \RuntimeException('Booking is already fully refunded.');
+            }
+            // Audit 2026-06-01 finding D-disputed: refunding a disputed
+            // charge always 400s on Stripe ("charge_disputed"). Guide
+            // staff to the dispute resolution flow instead of letting
+            // them eat a cryptic Stripe error.
+            if ($mirror->payment_status === 'disputed') {
+                throw new \RuntimeException(
+                    'This booking has an open Stripe dispute. Respond via the Stripe Dashboard dispute flow at '
+                    . 'https://dashboard.stripe.com/disputes — do not issue a separate refund.'
+                );
             }
 
             // ── Step 1a: write a PENDING marker BEFORE calling Stripe.
@@ -165,7 +179,23 @@ class BookingRefundService
             // Floating-point safety: 1¢ tolerance for "is this the full amount?"
             $isFull = $amount === null || $cumulative >= ($priceTotal - 0.01);
 
-            // ── Step 3: persist refund state on the mirror IMMEDIATELY
+            // Combo-aware sibling discovery (audit 2026-06-01 finding 10).
+            // For combo bookings (multi-room single-PI), refund a single
+            // mirror via ->first() would leave N-1 siblings still paid
+            // with active Smoobu reservations. Walk all mirrors sharing
+            // the same booking_group_id (when set) — apply side effects
+            // to each, but only ONE Stripe refund + ONE email.
+            $siblings = collect([$mirror]);
+            if (!empty($mirror->booking_group_id)) {
+                $siblings = BookingMirror::withoutGlobalScopes()
+                    ->where('organization_id', $mirror->organization_id)
+                    ->where('booking_group_id', $mirror->booking_group_id)
+                    ->whereNotIn('payment_status', ['refunded', 'cancelled'])
+                    ->get();
+                if ($siblings->isEmpty()) $siblings = collect([$mirror]);
+            }
+
+            // ── Step 3: persist refund state on each mirror IMMEDIATELY
             // (before the side-effect block). Two reasons:
             //   1. The racing `charge.refunded` webhook's *secondary*
             //      idempotency gate is `last_refund_id` — stamping it
@@ -174,12 +204,17 @@ class BookingRefundService
             //   2. If Smoobu or email throws on the tail, we still want
             //      Stripe's source-of-truth refund state mirrored
             //      locally — staff can see the refund happened.
-            $mirror->update([
-                'payment_status'  => $isFull ? 'refunded' : 'partially_refunded',
-                'refunded_amount' => $cumulative,
-                'refunded_at'     => $isFull ? now() : $mirror->refunded_at,
-                'last_refund_id'  => $stripeRefundId,
-            ]);
+            foreach ($siblings as $sibling) {
+                $sibCumulative = $sibling->id === $mirror->id
+                    ? $cumulative
+                    : (float) ($sibling->refunded_amount ?? 0) + (float) ($sibling->price_total ?? 0);
+                $sibling->update([
+                    'payment_status'  => $isFull ? 'refunded' : 'partially_refunded',
+                    'refunded_amount' => $sibling->id === $mirror->id ? $cumulative : $sibling->price_total,
+                    'refunded_at'     => $isFull ? now() : $sibling->refunded_at,
+                    'last_refund_id'  => $stripeRefundId,
+                ]);
+            }
 
             // Stamp the refund id on the attempt row so post-hoc audit
             // ties attempt → refund cleanly.
@@ -187,19 +222,56 @@ class BookingRefundService
 
             // ── Step 4: reverse loyalty points (full refunds only — partial
             // refunds don't mathematically map to "which" points to reverse).
+            // Across all sibling mirrors for combo bookings.
             $reversedPoints = 0;
             if ($isFull) {
-                $reversedPoints = $this->reverseLoyaltyPoints($mirror, $staff);
+                foreach ($siblings as $sibling) {
+                    $reversedPoints += $this->reverseLoyaltyPoints($sibling, $staff);
+                }
             }
 
-            // ── Step 5: cancel the Smoobu reservation (best-effort, full only).
+            // ── Step 5: cancel the Smoobu reservation per sibling
+            // (best-effort, full only). Each mirror in a combo has its
+            // own Smoobu reservation_id — must cancel each individually.
             $pmsCancelled = false;
-            if ($isFull && $this->shouldCancelPms($mirror)) {
-                $pmsCancelled = $this->cancelPmsReservation($mirror);
+            $pmsCancelFailures = [];
+            if ($isFull) {
+                foreach ($siblings as $sibling) {
+                    if ($this->shouldCancelPms($sibling)) {
+                        if ($this->cancelPmsReservation($sibling)) {
+                            $pmsCancelled = true;
+                        } else {
+                            $pmsCancelFailures[] = $sibling->reservation_id;
+                        }
+                    }
+                }
             }
 
-            // ── Step 6: email the guest.
+            // ── Step 6: email the guest. Only ONE email per refund event
+            // even for combo bookings (single combined PI = single refund).
             $emailSent = $this->sendRefundEmail($mirror, $thisRefund, $isFull);
+
+            // ── Step 6b: if any sibling Smoobu cancellation failed,
+            // write a SEPARATE audit row so the operator can see the
+            // orphan Smoobu reservations needing manual cleanup.
+            // Audit 2026-06-01 finding D1: previously these failures
+            // only emitted Log::error which nobody read.
+            if (!empty($pmsCancelFailures)) {
+                try {
+                    AuditLog::record('booking.refund.pms_cancel_failed', $mirror,
+                        [
+                            'failed_smoobu_ids' => $pmsCancelFailures,
+                            'booking_group_id'  => $mirror->booking_group_id,
+                        ],
+                        null,
+                        $staff,
+                        'Refund succeeded but ' . count($pmsCancelFailures)
+                            . ' Smoobu reservation(s) could not be cancelled — '
+                            . 'cancel manually in Smoobu admin: '
+                            . implode(', ', $pmsCancelFailures),
+                    );
+                } catch (\Throwable) {}
+            }
 
             // ── Step 7: audit-log the outcome.
             AuditLog::record('booking_refunded', $mirror,
@@ -211,6 +283,8 @@ class BookingRefundService
                     'refund_id'        => $stripeRefundId,
                     'reversed_points'  => $reversedPoints,
                     'pms_cancelled'    => $pmsCancelled,
+                    'pms_cancel_failures' => $pmsCancelFailures,
+                    'sibling_count'    => $siblings->count(),
                     'email_sent'       => $emailSent,
                     'source'           => $staff ? 'admin' : 'webhook',
                 ],
@@ -218,6 +292,7 @@ class BookingRefundService
                 $staff,
                 "Refund " . ($isFull ? '(full)' : "(partial — €" . number_format($thisRefund, 2) . ")")
                     . " for booking #{$mirror->id}"
+                    . ($siblings->count() > 1 ? " + " . ($siblings->count() - 1) . ' combo sibling(s)' : '')
                     . " · points reversed: {$reversedPoints}"
                     . " · PMS cancelled: " . ($pmsCancelled ? 'yes' : 'no')
                     . " · email: " . ($emailSent ? 'sent' : 'skipped'),
