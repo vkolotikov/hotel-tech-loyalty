@@ -149,6 +149,20 @@ class DiagSchemaCheck extends Command
             'reason'   => 'Extras snapshot for emails + Smoobu priceElements + admin queries. Migration 2026_06_02_120000.',
         ];
 
+        // ─── 2026-06-02 Messenger FBLB connect fix ────────────────────
+        // chat_channel_accounts.display_avatar_url widened from
+        // varchar(500) to TEXT. Facebook CDN profile-picture URLs
+        // are signed (embedded auth tokens) and routinely 700-1500
+        // chars, so the old cap rejected every connect attempt with
+        // "The avatar url field must not be greater than 500 characters".
+        $checks[] = [
+            'table'    => 'chat_channel_accounts',
+            'column'   => 'display_avatar_url',
+            'expected' => 'TEXT',
+            'matches'  => $isText,
+            'reason'   => 'Facebook Page avatar URLs exceed varchar(500). Migration 2026_06_02_130000.',
+        ];
+
         return $checks;
     }
 

@@ -159,7 +159,11 @@ class MessengerIntegrationController extends Controller
             'page_token'   => 'required|string|min:20',
             'brand_id'     => 'nullable|integer',
             'display_name' => 'nullable|string|max:255',
-            'avatar_url'   => 'nullable|url|max:500',
+            // Facebook CDN avatar URLs are signed (embedded auth tokens)
+            // and routinely 700-1500 chars. 2048 is a defensive ceiling
+            // — the column itself is TEXT (migration 2026_06_02_130000).
+            // The old max:500 cap rejected every FBLB connect attempt.
+            'avatar_url'   => 'nullable|url|max:2048',
         ]);
 
         $user = $request->user();
