@@ -258,6 +258,258 @@ class MessengerIntegrationController extends Controller
     }
 
     /**
+     * POST /v1/admin/integrations/messenger/{id}/diagnose
+     *
+     * End-to-end Messenger pipeline check for one Page. Returns a
+     * structured checklist that the admin UI renders as a traffic-light
+     * panel — every check has an actionable detail + next-step hint
+     * when failing. Helps the customer self-diagnose "I connected but
+     * messages don't arrive" without spelunking the Meta dashboard.
+     *
+     * Checks:
+     *   1. Token health    (uses MessengerOnboardingService::checkTokenHealth)
+     *   2. Page subscription state (GET /<page_id>/subscribed_apps on Meta)
+     *   3. 'messages' field actually subscribed (most common silent failure)
+     *   4. Last webhook receipt — if "never" + token is healthy + subscription
+     *      is fine, points the user at Meta App Review (Dev Mode app webhooks
+     *      only fire for Role users).
+     */
+    public function diagnose(Request $request, int $id): JsonResponse
+    {
+        $account = ChatChannelAccount::query()
+            ->where('channel', ChatChannelAccount::CHANNEL_MESSENGER)
+            ->findOrFail($id);
+
+        $checks = [];
+
+        // 1. Token health
+        try {
+            $this->service->checkTokenHealth($account);
+            $account->refresh();
+            $checks[] = [
+                'key'    => 'token',
+                'label'  => 'Page access token',
+                'status' => $account->status === ChatChannelAccount::STATUS_ACTIVE ? 'ok' : 'fail',
+                'detail' => $account->status === ChatChannelAccount::STATUS_ACTIVE
+                    ? 'Token is valid and responds to Meta /me.'
+                    : ($account->last_error ?: 'Token check failed.'),
+                'fix'    => $account->status === ChatChannelAccount::STATUS_ACTIVE ? null
+                    : 'Click "Reconnect" and run the Facebook Login flow again to get a fresh page token.',
+            ];
+        } catch (\Throwable $e) {
+            $checks[] = [
+                'key' => 'token', 'label' => 'Page access token', 'status' => 'fail',
+                'detail' => 'Token check threw: ' . $e->getMessage(),
+                'fix' => 'Click "Reconnect" to get a fresh page token.',
+            ];
+        }
+
+        // 2 + 3. Meta-side subscription
+        $expectedAppId = (string) config('services.meta.app_id', '');
+        try {
+            $base = rtrim((string) config('services.meta.graph_url', 'https://graph.facebook.com'), '/');
+            $ver  = (string) config('services.meta.graph_version', 'v25.0');
+            $resp = \Illuminate\Support\Facades\Http::timeout(10)
+                ->withQueryParameters(['access_token' => $account->page_access_token])
+                ->acceptJson()
+                ->get("{$base}/{$ver}/{$account->external_id}/subscribed_apps");
+
+            if (!$resp->successful()) {
+                $checks[] = [
+                    'key' => 'subscription', 'label' => 'Page → app webhook subscription', 'status' => 'fail',
+                    'detail' => 'Meta /subscribed_apps API call failed: ' . ($resp->json('error.message') ?? "HTTP {$resp->status()}"),
+                    'fix' => 'Click "Resubscribe to webhooks" below to retry.',
+                ];
+                $checks[] = [
+                    'key' => 'messages_field', 'label' => 'messages field subscribed', 'status' => 'unknown',
+                    'detail' => 'Could not verify (upstream subscription check failed).',
+                    'fix' => null,
+                ];
+            } else {
+                $subscribedApps = $resp->json('data') ?? [];
+                $matched = null;
+                foreach ($subscribedApps as $app) {
+                    if ((string) ($app['id'] ?? '') === $expectedAppId) {
+                        $matched = $app;
+                        break;
+                    }
+                }
+                if (!$matched) {
+                    $checks[] = [
+                        'key' => 'subscription', 'label' => 'Page → app webhook subscription', 'status' => 'fail',
+                        'detail' => empty($subscribedApps)
+                            ? 'Meta says NO apps are subscribed to this Page.'
+                            : 'Our app (id=' . $expectedAppId . ') is not in the subscribed list. Other apps may be — but not ours.',
+                        'fix' => 'Click "Resubscribe to webhooks" below.',
+                    ];
+                    $checks[] = [
+                        'key' => 'messages_field', 'label' => 'messages field subscribed', 'status' => 'fail',
+                        'detail' => 'Cannot verify until our app is in the subscribed list.',
+                        'fix' => null,
+                    ];
+                } else {
+                    $fields = is_array($matched['subscribed_fields'] ?? null) ? $matched['subscribed_fields'] : [];
+                    $checks[] = [
+                        'key' => 'subscription', 'label' => 'Page → app webhook subscription', 'status' => 'ok',
+                        'detail' => 'App subscribed to Page (subscribed_fields=' . (empty($fields) ? '(none)' : implode(', ', $fields)) . ').',
+                        'fix' => null,
+                    ];
+                    $hasMessages = in_array('messages', $fields, true);
+                    $checks[] = [
+                        'key' => 'messages_field', 'label' => 'messages field subscribed', 'status' => $hasMessages ? 'ok' : 'fail',
+                        'detail' => $hasMessages
+                            ? "The 'messages' webhook field is active. Inbound DMs will fire on next message."
+                            : "App is subscribed to the Page but NOT to the 'messages' field. Inbound DMs WON'T fire.",
+                        'fix' => $hasMessages ? null : 'Click "Resubscribe to webhooks" — this re-runs subscribe with the full field set (messages + messaging_postbacks + message_deliveries + message_reads).',
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            $checks[] = [
+                'key' => 'subscription', 'label' => 'Page → app webhook subscription', 'status' => 'fail',
+                'detail' => 'Subscription probe threw: ' . $e->getMessage(),
+                'fix' => 'Click "Resubscribe to webhooks" to retry.',
+            ];
+        }
+
+        // 4. Last webhook receipt
+        $lastWebhook = $account->last_webhook_at;
+        if ($lastWebhook) {
+            $checks[] = [
+                'key' => 'webhook_activity', 'label' => 'Webhook activity',
+                'status' => 'ok',
+                'detail' => 'Last webhook arrived ' . $lastWebhook->diffForHumans() . ' (' . $lastWebhook->toDateTimeString() . ').',
+                'fix' => null,
+            ];
+        } else {
+            // Token + subscription fine but never received → most likely
+            // app is in Development Mode without App Review for messaging.
+            $tokenOk = $account->status === ChatChannelAccount::STATUS_ACTIVE;
+            $subOk = false;
+            foreach ($checks as $c) {
+                if ($c['key'] === 'messages_field' && $c['status'] === 'ok') { $subOk = true; break; }
+            }
+            if ($tokenOk && $subOk) {
+                $checks[] = [
+                    'key' => 'webhook_activity', 'label' => 'Webhook activity',
+                    'status' => 'warn',
+                    'detail' => 'No webhooks received yet, but token + subscription look healthy. '
+                        . 'Most common cause: Meta app is in Development Mode + not App Review-approved for the messaging permission. '
+                        . 'In Development Mode, Meta only forwards webhooks from users with Admin/Developer/Tester roles on the Meta App.',
+                    'fix' => '1) Verify your Facebook account has a Role on the Meta App. '
+                        . '2) Send a DM from that role-bearing account to the Page. '
+                        . '3) OR submit App Review for "Messenger Platform" advanced access to receive webhooks from anyone. '
+                        . '4) Meanwhile, click "Send test webhook" to verify the receive pipeline works end-to-end without Meta.',
+                ];
+            } else {
+                $checks[] = [
+                    'key' => 'webhook_activity', 'label' => 'Webhook activity',
+                    'status' => 'warn',
+                    'detail' => 'No webhooks received yet. Resolve the failing checks above first.',
+                    'fix' => null,
+                ];
+            }
+        }
+
+        return response()->json([
+            'data' => [
+                'account_id'      => $account->id,
+                'external_id'     => $account->external_id,
+                'display_name'    => $account->display_name,
+                'status'          => $account->status,
+                'last_webhook_at' => $account->last_webhook_at?->toIso8601String(),
+                'last_error'      => $account->last_error,
+                'meta_app_id'     => $expectedAppId,
+                'checks'          => $checks,
+            ],
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/integrations/messenger/{id}/resubscribe
+     *
+     * Re-runs the /<page_id>/subscribed_apps POST with our full field
+     * set. Idempotent on Meta's side — safe to click repeatedly.
+     */
+    public function resubscribe(Request $request, int $id): JsonResponse
+    {
+        $account = ChatChannelAccount::query()
+            ->where('channel', ChatChannelAccount::CHANNEL_MESSENGER)
+            ->findOrFail($id);
+
+        try {
+            $this->service->subscribePageWebhooks($account);
+            $account->forceFill(['last_error' => null])->save();
+        } catch (RuntimeException $e) {
+            $account->markError("Webhook re-subscribe failed: {$e->getMessage()}");
+            return response()->json([
+                'error'   => 'meta_call_failed',
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+
+        return response()->json([
+            'status'  => 'resubscribed',
+            'detail'  => 'POST /' . $account->external_id . '/subscribed_apps succeeded. Click "Diagnose" to re-check the field list.',
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/integrations/messenger/{id}/simulate-webhook
+     *
+     * Fires a fabricated inbound DM through MessengerDispatcher
+     * directly, bypassing Meta entirely. Lets the customer verify
+     * the receive pipeline (visitor creation, conversation upsert,
+     * Engagement feed surfacing) works end-to-end before App Review
+     * is approved.
+     */
+    public function simulateWebhook(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'text' => 'nullable|string|max:500',
+        ]);
+
+        $account = ChatChannelAccount::query()
+            ->where('channel', ChatChannelAccount::CHANNEL_MESSENGER)
+            ->findOrFail($id);
+
+        $text = $data['text'] ?? 'Hello from the admin simulator';
+        $psid = 'sim_' . \Illuminate\Support\Str::random(16);
+        $mid  = 'sim_mid_' . substr(md5($psid . '|' . $text . '|' . microtime(true)), 0, 24);
+
+        $payload = [
+            'sender'    => ['id' => $psid],
+            'recipient' => ['id' => $account->external_id],
+            'timestamp' => (int) round(microtime(true) * 1000),
+            'message'   => ['mid' => $mid, 'text' => $text],
+        ];
+
+        try {
+            $dispatcher = app(\App\Services\Channels\MessengerDispatcher::class);
+            $message = $dispatcher->handleIncoming($account, $payload);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'simulate_failed',
+                'message' => 'Dispatcher threw: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        if ($message === null) {
+            return response()->json([
+                'status' => 'duplicate',
+                'detail' => 'Idempotency dedup hit — the synthesised mid already exists. Retry to get a fresh one (this is the expected guard, not a bug).',
+            ]);
+        }
+
+        return response()->json([
+            'status'  => 'received',
+            'detail'  => 'Simulated inbound message persisted (id=' . $message->id . ', conversation_id=' . $message->conversation_id . '). Open /engagement — the row should appear at the top within ~5 sec.',
+            'message_id'      => $message->id,
+            'conversation_id' => $message->conversation_id,
+        ]);
+    }
+
+    /**
      * DELETE /v1/admin/integrations/messenger/{id}
      *
      * Disconnect a Page. Removes our local row and (when this was the

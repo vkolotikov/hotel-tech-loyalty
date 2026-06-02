@@ -65,6 +65,24 @@ interface PageOption {
   already_connected: boolean
 }
 
+interface DiagnosticCheck {
+  key: string
+  label: string
+  status: 'ok' | 'fail' | 'warn' | 'unknown'
+  detail: string
+  fix: string | null
+}
+interface DiagnosticResult {
+  account_id: number
+  external_id: string
+  display_name: string | null
+  status: string
+  last_webhook_at: string | null
+  last_error: string | null
+  meta_app_id: string
+  checks: DiagnosticCheck[]
+}
+
 declare global {
   interface Window {
     FB?: any
@@ -248,6 +266,59 @@ export function MessengerConnectPanel() {
     }
   }
 
+  // Diagnostic state — keyed by account id so multiple connected Pages
+  // can each have their own open panel. The shape mirrors the backend's
+  // diagnose endpoint response.
+  const [diagnostics, setDiagnostics] = useState<Record<number, DiagnosticResult | null>>({})
+  const [diagBusy, setDiagBusy] = useState<Record<number, boolean>>({})
+
+  const diagnoseAccount = async (account: MessengerAccount) => {
+    setDiagBusy(prev => ({ ...prev, [account.id]: true }))
+    try {
+      const { data } = await api.post(`/v1/admin/integrations/messenger/${account.id}/diagnose`)
+      setDiagnostics(prev => ({ ...prev, [account.id]: data.data }))
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Diagnose failed')
+    } finally {
+      setDiagBusy(prev => ({ ...prev, [account.id]: false }))
+    }
+  }
+
+  const resubscribeAccount = async (account: MessengerAccount) => {
+    try {
+      const { data } = await api.post(`/v1/admin/integrations/messenger/${account.id}/resubscribe`)
+      toast.success(data.detail ?? 'Resubscribed')
+      // Auto-rerun diagnose so the operator sees the field list update.
+      diagnoseAccount(account)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Resubscribe failed')
+    }
+  }
+
+  const simulateWebhook = async (account: MessengerAccount) => {
+    try {
+      const { data } = await api.post(`/v1/admin/integrations/messenger/${account.id}/simulate-webhook`, {
+        text: `Test message from admin · ${new Date().toLocaleTimeString()}`,
+      })
+      if (data.status === 'received') {
+        toast.success(data.detail ?? 'Test message sent — check Engagement')
+        // Refresh the account row so last_webhook_at updates.
+        verifyAccount(account)
+      } else {
+        toast(data.detail ?? 'Simulator returned ' + data.status, { icon: 'ℹ️' })
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Simulate failed')
+    }
+  }
+
+  const closeDiagnostic = (accountId: number) => {
+    setDiagnostics(prev => {
+      const { [accountId]: _, ...rest } = prev
+      return rest
+    })
+  }
+
   // ── Render ────────────────────────────────────────────────────────
 
   return (
@@ -320,6 +391,12 @@ export function MessengerConnectPanel() {
               onVerify={() => verifyAccount(a)}
               onReconnect={() => reconnectAccount(a)}
               onDisconnect={() => disconnectAccount(a)}
+              onDiagnose={() => diagnoseAccount(a)}
+              onResubscribe={() => resubscribeAccount(a)}
+              onSimulate={() => simulateWebhook(a)}
+              onCloseDiagnostic={() => closeDiagnostic(a.id)}
+              diagnostic={diagnostics[a.id] ?? null}
+              diagBusy={Boolean(diagBusy[a.id])}
               configReady={Boolean(config?.configured)}
             />
           ))}
@@ -377,12 +454,20 @@ export function MessengerConnectPanel() {
 // ─── ConnectedRow ────────────────────────────────────────────────────
 
 function ConnectedRow({
-  account, onVerify, onReconnect, onDisconnect, configReady,
+  account, onVerify, onReconnect, onDisconnect,
+  onDiagnose, onResubscribe, onSimulate, onCloseDiagnostic,
+  diagnostic, diagBusy, configReady,
 }: {
   account: MessengerAccount
   onVerify: () => void
   onReconnect: () => void
   onDisconnect: () => void
+  onDiagnose: () => void
+  onResubscribe: () => void
+  onSimulate: () => void
+  onCloseDiagnostic: () => void
+  diagnostic: DiagnosticResult | null
+  diagBusy: boolean
   configReady: boolean
 }) {
   const statusMeta = {
@@ -437,9 +522,18 @@ function ConnectedRow({
 
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
+          onClick={onDiagnose}
+          disabled={diagBusy}
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-500/15 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-50"
+          title="Run a full pipeline check (token, Meta subscription, webhook delivery)"
+        >
+          <RefreshCw size={11} className={diagBusy ? 'animate-spin' : ''} />
+          Diagnose
+        </button>
+        <button
           onClick={onVerify}
           className="p-1.5 rounded-md text-t-secondary hover:text-white hover:bg-white/[0.04]"
-          title="Verify token health"
+          title="Verify token health only"
         >
           <RefreshCw size={13} />
         </button>
@@ -459,6 +553,79 @@ function ConnectedRow({
           <Trash2 size={13} />
         </button>
       </div>
+
+      {/* Diagnostic checklist + recovery actions.
+          Renders below the row once the operator clicks Diagnose.
+          Mounts in a div that breaks out of the parent's flex
+          via -ml-12 + col-span trick — kept as a tail child so
+          the existing row layout stays untouched. */}
+      {diagnostic && (
+        <div className="basis-full mt-4 -ml-12 pl-12 border-t border-dark-border pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-semibold text-white">
+              Pipeline check
+              <span className="text-t-secondary font-normal ml-2">
+                · app id {diagnostic.meta_app_id || '(unknown)'} · last webhook {relativeTime(diagnostic.last_webhook_at)}
+              </span>
+            </div>
+            <button
+              onClick={onCloseDiagnostic}
+              className="text-[11px] text-t-secondary hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {diagnostic.checks.map(c => {
+              const meta = {
+                ok:      { dot: 'bg-emerald-400', text: 'text-emerald-300', label: 'OK' },
+                fail:    { dot: 'bg-red-400',     text: 'text-red-300',     label: 'FAIL' },
+                warn:    { dot: 'bg-amber-400',   text: 'text-amber-300',   label: 'WARN' },
+                unknown: { dot: 'bg-gray-500',    text: 'text-gray-400',    label: '?' },
+              }[c.status]
+              return (
+                <div key={c.key} className="bg-dark-bg border border-dark-border rounded-lg p-3">
+                  <div className="flex items-start gap-2.5">
+                    <span className={`w-2 h-2 mt-1.5 rounded-full ${meta.dot} flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-white">{c.label}</span>
+                        <span className={`text-[10px] uppercase tracking-wider font-bold ${meta.text}`}>{meta.label}</span>
+                      </div>
+                      <p className="text-[11px] text-t-secondary leading-relaxed mt-1 whitespace-pre-line">{c.detail}</p>
+                      {c.fix && (
+                        <p className="text-[11px] text-blue-300/90 leading-relaxed mt-1.5 whitespace-pre-line">
+                          → {c.fix}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <button
+              onClick={onResubscribe}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-500/15 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20"
+            >
+              <RefreshCw size={11} />
+              Resubscribe to webhooks
+            </button>
+            <button
+              onClick={onSimulate}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-purple-500/15 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20"
+            >
+              Send test webhook
+            </button>
+            <span className="text-[10px] text-t-secondary/70 ml-auto">
+              Test webhook bypasses Meta — useful pre-App-Review.
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

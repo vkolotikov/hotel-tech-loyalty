@@ -364,6 +364,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('integrations/messenger',                 [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'connect']);
             Route::post('integrations/messenger/{id}/reconnect',  [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'reconnect']);
             Route::post('integrations/messenger/{id}/verify',     [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'verify']);
+            // Self-diagnose pipeline + recover actions so admins can
+            // figure out "I connected but messages don't arrive" without
+            // CLI access. See MessengerIntegrationController for the
+            // checklist shape.
+            Route::post('integrations/messenger/{id}/diagnose',         [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'diagnose']);
+            Route::post('integrations/messenger/{id}/resubscribe',      [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'resubscribe']);
+            Route::post('integrations/messenger/{id}/simulate-webhook', [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'simulateWebhook']);
             Route::delete('integrations/messenger/{id}',          [\App\Http\Controllers\Api\V1\Admin\MessengerIntegrationController::class, 'destroy']);
 
             Route::get('dashboard/summary',       [DashboardController::class, 'summary']);
