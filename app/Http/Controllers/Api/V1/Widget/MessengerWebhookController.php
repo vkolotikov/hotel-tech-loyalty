@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1\Widget;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChatChannelAccount;
+use App\Models\ChatConversation;
+use App\Services\Channels\MessengerAiResponder;
 use App\Services\Channels\MessengerDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,6 +37,7 @@ class MessengerWebhookController extends Controller
 {
     public function __construct(
         private readonly MessengerDispatcher $dispatcher,
+        private readonly MessengerAiResponder $aiResponder,
     ) {
     }
 
@@ -146,7 +149,23 @@ class MessengerWebhookController extends Controller
                     if (!isset($messaging['message']) && !isset($messaging['postback'])) {
                         continue;
                     }
-                    $this->dispatcher->handleIncoming($account, $messaging);
+                    $inbound = $this->dispatcher->handleIncoming($account, $messaging);
+
+                    // Phase-2 piece the dispatcher always pointed at but
+                    // never landed: fire the AI auto-reply on every fresh
+                    // inbound. Skipped silently when the inbound is a
+                    // dedup hit (null), an empty event (null), or the
+                    // conversation has ai_enabled=false. Never throws —
+                    // the responder catches its own errors and audit-logs.
+                    if ($inbound !== null) {
+                        $conversation = ChatConversation::query()
+                            ->withoutGlobalScopes()
+                            ->where('id', $inbound->conversation_id)
+                            ->first();
+                        if ($conversation !== null) {
+                            $this->aiResponder->respond($account, $conversation, $inbound);
+                        }
+                    }
                 } catch (\Throwable $e) {
                     // Per-event try/catch so one malformed entry doesn't
                     // abort the whole batch (Meta sends batches up to 1000).

@@ -504,11 +504,46 @@ class MessengerIntegrationController extends Controller
             ]);
         }
 
+        // Fire the AI auto-reply in skip_send mode. We don't actually call
+        // Meta's Send API for a synthetic PSID (it would 400 with "Object
+        // with ID 'sim_xxx' does not exist"), but we DO want the admin to
+        // see the AI's answer in /engagement to verify the full pipeline
+        // (knowledge lookup → model call → persist) end-to-end. Errors are
+        // captured inside the responder and surfaced via the AI reply id
+        // on the response payload.
+        $aiReply = null;
+        try {
+            $conversation = \App\Models\ChatConversation::query()
+                ->withoutGlobalScopes()
+                ->where('id', $message->conversation_id)
+                ->first();
+            if ($conversation !== null) {
+                $responder = app(\App\Services\Channels\MessengerAiResponder::class);
+                $aiReply = $responder->respond($account, $conversation, $message, ['skip_send' => true]);
+            }
+        } catch (\Throwable $e) {
+            // Non-fatal — the inbound is already persisted and visible.
+            \Illuminate\Support\Facades\Log::warning('messenger.simulate.ai_responder_failed', [
+                'account_id' => $account->id,
+                'error'      => $e->getMessage(),
+            ]);
+        }
+
+        $detail = 'Simulated inbound message persisted (id=' . $message->id
+            . ', conversation_id=' . $message->conversation_id . '). Open /engagement — the row should appear at the top within ~5 sec.';
+        if ($aiReply !== null) {
+            $detail .= ' AI generated a reply (' . mb_strlen((string) $aiReply->content) . ' chars). Send API was skipped (synthetic PSID).';
+        } else {
+            $detail .= ' AI did NOT reply — check that the chatbot is configured (Settings → AI Chat) and ai_enabled is true on this conversation.';
+        }
+
         return response()->json([
-            'status'  => 'received',
-            'detail'  => 'Simulated inbound message persisted (id=' . $message->id . ', conversation_id=' . $message->conversation_id . '). Open /engagement — the row should appear at the top within ~5 sec.',
+            'status'          => 'received',
+            'detail'          => $detail,
             'message_id'      => $message->id,
             'conversation_id' => $message->conversation_id,
+            'ai_reply_id'     => $aiReply?->id,
+            'ai_reply_text'   => $aiReply?->content,
         ]);
     }
 
