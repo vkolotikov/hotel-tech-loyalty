@@ -610,41 +610,55 @@ class MessengerOnboardingService
             }
         }
 
-        // Remote check: hit /me. Distinguish revoked-by-user from
-        // generic Meta-side errors.
-        $resp = Http::timeout(8)
-            ->withQueryParameters([
-                'fields'       => 'id',
-                'access_token' => $account->page_access_token,
-            ])
-            ->get("{$base}/{$ver}/me");
+        // Remote check: use /debug_token instead of /me.
+        //
+        // History: an earlier ship used GET /me?fields=id with the page
+        // token. Meta tightened the /me endpoint to require
+        // pages_read_engagement — even for the trivial "what's my id"
+        // call. Tokens minted via FBLB with only pages_messaging +
+        // pages_manage_metadata (the scopes actually needed to receive
+        // and reply to DMs) started failing the health check with
+        //   (#100) Object does not exist, cannot be loaded due to
+        //   missing permission... requires 'pages_read_engagement'
+        // even though the token works fine for the live messaging path.
+        // This mis-flagged healthy tokens as 'error' and confused
+        // operators clicking Diagnose.
+        //
+        // /debug_token uses the App Access Token (app_id|app_secret) to
+        // introspect ANY token — no page-side permissions required. It
+        // returns is_valid (the canonical health signal) plus scopes,
+        // expiry, and granular grants. This is the documented way to
+        // verify a Page Access Token per Meta's own debugging guidance.
+        $debug = $this->debugToken($account->page_access_token);
 
-        if ($resp->successful()) {
-            $account->forceFill([
+        if ($debug['is_valid']) {
+            // Opportunistically refresh stored scopes + expiry — they
+            // can change between connects (e.g. user revoked a scope
+            // via FB Account Center).
+            $payload = [
                 'status'            => ChatChannelAccount::STATUS_ACTIVE,
                 'token_verified_at' => now(),
                 'last_error'        => null,
-            ])->saveQuietly();
+            ];
+            if (!empty($debug['scopes'])) {
+                $payload['token_scopes'] = $debug['scopes'];
+            }
+            if ($debug['expires_at'] !== null && $debug['expires_at'] > 0) {
+                $payload['token_expires_at'] = \Carbon\Carbon::createFromTimestamp($debug['expires_at']);
+            }
+            if ($debug['data_access_expires_at'] !== null && $debug['data_access_expires_at'] > 0) {
+                $payload['data_access_expires_at'] = \Carbon\Carbon::createFromTimestamp($debug['data_access_expires_at']);
+            }
+            $account->forceFill($payload)->saveQuietly();
             return true;
         }
 
-        // Meta uses error subcodes to indicate the failure class.
-        // code=190 with subcode 458/463/464/467 means the user revoked
-        // the grant or the token expired; anything else is an opaque
-        // platform error we shouldn't treat as revoked.
-        $err      = $resp->json('error');
-        $code     = $err['code'] ?? null;
-        $subcode  = $err['error_subcode'] ?? null;
-        $message  = $err['message'] ?? "HTTP {$resp->status()}";
-
-        $isRevoked = (int) $code === 190
-            && in_array((int) $subcode, [458, 463, 464, 467], true);
-
-        $label = $isRevoked ? 'revoked' : 'error';
-
+        // debug_token returned is_valid=false → token genuinely dead
+        // (revoked / expired / wrong app). Distinct from the old /me
+        // path which conflated permission errors with token death.
         $account->forceFill([
             'status'     => ChatChannelAccount::STATUS_REAUTH,
-            'last_error' => "Token health: {$label} — {$message}",
+            'last_error' => 'Token health: revoked or expired — re-run the Facebook Login flow to mint a new Page Access Token.',
         ])->save();
         return false;
     }

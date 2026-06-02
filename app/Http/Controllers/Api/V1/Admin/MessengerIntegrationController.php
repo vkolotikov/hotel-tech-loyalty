@@ -393,13 +393,16 @@ class MessengerIntegrationController extends Controller
                 $checks[] = [
                     'key' => 'webhook_activity', 'label' => 'Webhook activity',
                     'status' => 'warn',
-                    'detail' => 'No webhooks received yet, but token + subscription look healthy. '
-                        . 'Most common cause: Meta app is in Development Mode + not App Review-approved for the messaging permission. '
-                        . 'In Development Mode, Meta only forwards webhooks from users with Admin/Developer/Tester roles on the Meta App.',
-                    'fix' => '1) Verify your Facebook account has a Role on the Meta App. '
-                        . '2) Send a DM from that role-bearing account to the Page. '
-                        . '3) OR submit App Review for "Messenger Platform" advanced access to receive webhooks from anyone. '
-                        . '4) Meanwhile, click "Send test webhook" to verify the receive pipeline works end-to-end without Meta.',
+                    'detail' =>
+                        "No webhooks received yet, but token + subscription are healthy.\n\n"
+                        . "Most likely cause: your Meta App is in Development Mode.\n\n"
+                        . "Meta only forwards webhooks from users who have a Role (Admin / Developer / Tester) on the Meta App until the app is approved through App Review for advanced access. "
+                        . "If a regular Facebook user (or yourself, from an account without a Role) sends a DM, Meta silently drops the webhook.",
+                    'fix' =>
+                        "Pick one of the following:\n"
+                        . "  A. Quick test — add your Facebook account as a Tester on the Meta App dashboard (Roles → Add People → Testers), accept the invite at https://developers.facebook.com/notifications, then send a fresh DM to the Page.\n"
+                        . "  B. Real users — submit App Review for the 'Messenger Platform' / pages_messaging advanced access at https://developers.facebook.com/apps/{$expectedAppId}/app-review/.\n"
+                        . "  C. Right now — click \"Send test webhook\" below to verify the receive pipeline (Visitor / Conversation / Engagement feed) works end-to-end without Meta.",
                 ];
             } else {
                 $checks[] = [
