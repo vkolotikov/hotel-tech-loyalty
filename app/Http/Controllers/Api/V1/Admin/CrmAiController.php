@@ -358,4 +358,70 @@ class CrmAiController extends Controller
             'output'  => $output,
         ]);
     }
+
+    /**
+     * POST /v1/admin/crm-ai/voice-usage
+     *
+     * Ship 9 — voice billing. The realtime API emits a `response.done`
+     * event after every assistant turn carrying token totals broken down
+     * into text + audio + cached input. The frontend forwards them here;
+     * we sum into a single (input, output) pair and record through the
+     * same AiUsageService pipeline every other AI surface uses, so the
+     * admin Settings → AI Usage panel shows voice spend in the same
+     * KPI strip / sparkline / by-feature breakdown.
+     *
+     * Cost is computed via MODEL_PRICING; gpt-realtime entries pin the
+     * audio rate ($32 in / $64 out per 1M tokens). Always returns 200
+     * even on bad input — usage logging must never block the realtime
+     * channel.
+     */
+    public function recordVoiceUsage(Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'model'               => 'required|string|max:80',
+                'input_text_tokens'   => 'nullable|integer|min:0|max:1000000',
+                'input_audio_tokens'  => 'nullable|integer|min:0|max:1000000',
+                'input_cached_tokens' => 'nullable|integer|min:0|max:1000000',
+                'output_text_tokens'  => 'nullable|integer|min:0|max:1000000',
+                'output_audio_tokens' => 'nullable|integer|min:0|max:1000000',
+            ]);
+
+            $user = $request->user();
+            $orgId = (int) $user->organization_id;
+
+            $inputTotal  = (int) ($data['input_text_tokens'] ?? 0)
+                + (int) ($data['input_audio_tokens'] ?? 0)
+                + (int) ($data['input_cached_tokens'] ?? 0);
+            $outputTotal = (int) ($data['output_text_tokens'] ?? 0)
+                + (int) ($data['output_audio_tokens'] ?? 0);
+
+            // Never record empty rows — the realtime API occasionally
+            // emits a final `response.done` with zero usage on
+            // turn-cancellations.
+            if ($inputTotal === 0 && $outputTotal === 0) {
+                return response()->json(['recorded' => false, 'reason' => 'empty_usage']);
+            }
+
+            app(\App\Services\AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: $data['model'],
+                inputTokens: $inputTotal,
+                outputTokens: $outputTotal,
+                feature: 'voice_agent',
+                kind: 'chat',
+            );
+
+            return response()->json([
+                'recorded'      => true,
+                'input_tokens'  => $inputTotal,
+                'output_tokens' => $outputTotal,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('voice_usage.record_failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['recorded' => false, 'error' => $e->getMessage()], 200);
+        }
+    }
 }

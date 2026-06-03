@@ -61,6 +61,14 @@ class AiUsageService
         'gpt-4.1-nano'                   => ['input' => 0.10,  'output' => 0.40],
         'gpt-5'                          => ['input' => 5.00,  'output' => 20.00],
         'gpt-5-mini'                     => ['input' => 0.50,  'output' => 2.00],
+        // OpenAI Realtime (voice agent) — audio token rates from the GA
+        // pricing page. Realtime billing reports input_audio_tokens +
+        // output_audio_tokens via the response.done event; recordUsage()
+        // sums them as input/output and prices at the audio rate. Text
+        // tokens in a realtime session are tiny by comparison (system
+        // prompt + tool args) — slight under-bill is acceptable.
+        'gpt-realtime'                   => ['input' => 32.00, 'output' => 64.00],
+        'gpt-realtime-2025-08-28'        => ['input' => 32.00, 'output' => 64.00],
         // OpenAI embeddings (total tokens only)
         'text-embedding-3-small'         => ['total' => 0.02],
         'text-embedding-3-large'         => ['total' => 0.13],

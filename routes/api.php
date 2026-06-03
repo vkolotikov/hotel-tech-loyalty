@@ -964,6 +964,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Voice-agent tool execution endpoint — see CrmVoiceToolset.
             // Frontend forwards every realtime function_call event here.
             Route::post('crm-ai/voice-tool',              [CrmAiController::class, 'executeVoiceTool']);
+            // Ship 9 — voice usage billing.
+            Route::post('crm-ai/voice-usage',             [CrmAiController::class, 'recordVoiceUsage']);
             Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
             Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
             Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);

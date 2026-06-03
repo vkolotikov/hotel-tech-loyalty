@@ -482,6 +482,25 @@ export default function AiChat() {
             break
           case 'response.done':
             setVoiceStatus('Listening…')
+            // Ship 9 — voice billing. The response.done event carries
+            // the per-turn token counts; forward them so the
+            // AiUsageService ledger has a per-call row. Best-effort —
+            // ledger writes never block voice.
+            try {
+              const usage = event.response?.usage
+              if (usage) {
+                const inputDetails = usage.input_token_details ?? {}
+                const outputDetails = usage.output_token_details ?? {}
+                api.post('/v1/admin/crm-ai/voice-usage', {
+                  model: sessionModel || 'gpt-realtime-2025-08-28',
+                  input_text_tokens:   inputDetails.text_tokens ?? 0,
+                  input_audio_tokens:  inputDetails.audio_tokens ?? 0,
+                  input_cached_tokens: inputDetails.cached_tokens ?? 0,
+                  output_text_tokens:  outputDetails.text_tokens ?? 0,
+                  output_audio_tokens: outputDetails.audio_tokens ?? 0,
+                }).catch(() => {/* swallow — usage logging is best-effort */})
+              }
+            } catch {/* defensive */}
             break
 
           /* Tool-call wiring (Ship 4).
