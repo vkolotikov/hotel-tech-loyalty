@@ -186,6 +186,82 @@ class CrmVoiceToolset
                     'additionalProperties' => false,
                 ],
             ],
+            // ── Ship 8: Chat / Engagement voice tools ─────────────────
+            [
+                'type' => 'function',
+                'name' => 'engagement_hot_leads',
+                'description' => 'List visitors currently flagged as hot leads (captured contact + online OR on /book OR booking_inquiry intent). Use when user asks "any hot leads in chat right now".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'range' => ['type' => 'string', 'enum' => ['today', 'week', 'all'], 'description' => 'Default today.'],
+                        'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 30, 'description' => 'Default 15.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'engagement_waiting_human',
+                'description' => 'Conversations where AI is paused and a visitor message is awaiting a staff reply. The "who needs me right now" question.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'min_wait_minutes' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 1440, 'description' => 'Default 0 (any wait).'],
+                        'limit'            => ['type' => 'integer', 'minimum' => 1, 'maximum' => 30, 'description' => 'Default 15.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'engagement_conversation_brief',
+                'description' => 'AI-generated brief + intent for a specific chat conversation. Cached 5 min. Use BEFORE replying or taking over from AI.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'conversation_id' => ['type' => 'integer'],
+                        'refresh'         => ['type' => 'boolean'],
+                    ],
+                    'required' => ['conversation_id'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'engagement_summarize_today',
+                'description' => 'Engagement day-rollup: total conversations, online visitors, hot-leads count, AI-handled count, unanswered count + top-5 by wait time, channel breakdown (web/messenger/etc).',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => new \stdClass(),
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'engagement_list_channel',
+                'description' => 'Recent conversations on a specific channel (messenger / instagram / whatsapp / widget). Use for "show me recent Messenger DMs" or "any Instagram inquiries".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'channel' => ['type' => 'string', 'enum' => ['widget', 'messenger', 'instagram', 'whatsapp']],
+                        'limit'   => ['type' => 'integer', 'minimum' => 1, 'maximum' => 30, 'description' => 'Default 15.'],
+                    ],
+                    'required' => ['channel'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'engagement_channel_health',
+                'description' => 'Status of connected external chat accounts (Messenger / Instagram / WhatsApp Pages): active vs reauth-required, last_webhook_at, last_error, token_expires_at. Use when user asks "are all our channels working".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'channel' => ['type' => 'string', 'enum' => ['messenger', 'instagram', 'whatsapp'], 'description' => 'Optional filter.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
             // ── Ship 7: Mutation tools (CONFIRMATION REQUIRED) ─────────
             // The CONFIRM list in VoicePromptBuilder makes the model
             // verbally ask the user before invoking these. The
@@ -1082,6 +1158,198 @@ class CrmVoiceToolset
             'query' => $query,
             'matches' => $rows->map(fn (Inquiry $i) => $this->summariseInquiry($i))->all(),
             'total' => $rows->count(),
+        ];
+    }
+
+    // ─── Engagement / chat voice tools (Ship 8) ─────────────────────
+
+    private function tool_engagement_hot_leads(array $args, int $orgId, int $userId): array
+    {
+        $range = (string) ($args['range'] ?? 'today');
+        $limit = max(1, min((int) ($args['limit'] ?? 15), 30));
+        $feed = app(EngagementFeedService::class);
+        $paginator = $feed->feed($orgId, [
+            'filter'   => 'hot_lead',
+            'range'    => $range,
+            'per_page' => $limit,
+        ]);
+
+        $rows = collect($paginator->items())->map(fn ($r) => $this->compactEngagementRow($r))->all();
+        return ['range' => $range, 'leads' => $rows, 'total' => $paginator->total()];
+    }
+
+    private function tool_engagement_waiting_human(array $args, int $orgId, int $userId): array
+    {
+        $minWait = max(0, (int) ($args['min_wait_minutes'] ?? 0));
+        $limit   = max(1, min((int) ($args['limit'] ?? 15), 30));
+        $feed = app(EngagementFeedService::class);
+
+        $paginator = $feed->feed($orgId, [
+            'filter'   => 'unanswered',
+            'range'    => 'today',
+            'per_page' => $limit * 2, // over-fetch so we can post-filter by wait
+        ]);
+
+        $threshold = $minWait > 0 ? now()->subMinutes($minWait) : null;
+        $rows = collect($paginator->items())
+            ->filter(function ($r) use ($threshold) {
+                if (!$threshold) return true;
+                $last = $r['last_message_at'] ?? null;
+                if (!$last) return false;
+                try {
+                    return \Carbon\Carbon::parse($last)->lessThanOrEqualTo($threshold);
+                } catch (\Throwable) {
+                    return true;
+                }
+            })
+            ->take($limit)
+            ->map(fn ($r) => $this->compactEngagementRow($r))
+            ->all();
+
+        return [
+            'min_wait_minutes' => $minWait,
+            'conversations'    => $rows,
+            'total'            => count($rows),
+        ];
+    }
+
+    private function tool_engagement_conversation_brief(array $args, int $orgId, int $userId): array
+    {
+        $convId  = (int) ($args['conversation_id'] ?? 0);
+        $refresh = (bool) ($args['refresh'] ?? false);
+        if ($convId <= 0) return ['error' => 'conversation_id is required.'];
+
+        $conv = \App\Models\ChatConversation::withoutGlobalScopes()
+            ->where('id', $convId)
+            ->where('organization_id', $orgId)
+            ->first();
+        if (!$conv) return ['error' => 'Conversation not found.', 'conversation_id' => $convId];
+
+        $svc = app(\App\Services\EngagementAiService::class);
+        return $svc->briefForConversation($conv, $refresh);
+    }
+
+    private function tool_engagement_summarize_today(array $args, int $orgId, int $userId): array
+    {
+        $feed = app(EngagementFeedService::class);
+        $kpis = $feed->kpis($orgId);
+
+        // Per-channel breakdown for today
+        $today = now()->startOfDay();
+        $channelCounts = \App\Models\ChatConversation::query()
+            ->where('organization_id', $orgId)
+            ->where('last_message_at', '>=', $today)
+            ->selectRaw('COALESCE(channel, ?) as channel, COUNT(*) as cnt', ['widget'])
+            ->groupBy('channel')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$r->channel => (int) $r->cnt])
+            ->toArray();
+
+        // Top 5 unanswered by wait
+        $waiting = $feed->feed($orgId, [
+            'filter' => 'unanswered',
+            'range'  => 'today',
+            'per_page' => 5,
+        ]);
+
+        return [
+            'date' => now()->toDateString(),
+            'kpis' => $kpis,
+            'by_channel_today' => $channelCounts,
+            'top_unanswered'   => collect($waiting->items())->map(fn ($r) => $this->compactEngagementRow($r))->all(),
+        ];
+    }
+
+    private function tool_engagement_list_channel(array $args, int $orgId, int $userId): array
+    {
+        $channel = strtolower((string) ($args['channel'] ?? 'widget'));
+        $limit   = max(1, min((int) ($args['limit'] ?? 15), 30));
+
+        $rows = \App\Models\ChatConversation::query()
+            ->where('organization_id', $orgId)
+            ->where('channel', $channel)
+            ->with([
+                'visitor:id,display_name,email,phone,country,is_lead,last_seen_at',
+                'channelAccount:id,channel,display_name,external_id,status',
+            ])
+            ->orderByDesc('last_message_at')
+            ->limit($limit)
+            ->get();
+
+        return [
+            'channel' => $channel,
+            'conversations' => $rows->map(fn ($c) => [
+                'id'              => $c->id,
+                'visitor_name'    => $c->visitor?->display_name ?? $c->visitor_name,
+                'visitor_email'   => $c->visitor?->email,
+                'visitor_phone'   => $c->visitor?->phone,
+                'intent_tag'      => $c->intent_tag,
+                'messages_count'  => (int) $c->messages_count,
+                'lead_captured'   => (bool) $c->lead_captured,
+                'ai_enabled'      => (bool) $c->ai_enabled,
+                'status'          => $c->status,
+                'channel_account' => $c->channelAccount ? [
+                    'display_name' => $c->channelAccount->display_name,
+                    'external_id'  => $c->channelAccount->external_id,
+                    'status'       => $c->channelAccount->status,
+                ] : null,
+                'last_message_at' => $c->last_message_at?->toIso8601String(),
+            ])->all(),
+            'total' => $rows->count(),
+        ];
+    }
+
+    private function tool_engagement_channel_health(array $args, int $orgId, int $userId): array
+    {
+        $channelFilter = $args['channel'] ?? null;
+
+        $query = \App\Models\ChatChannelAccount::query()
+            ->where('organization_id', $orgId);
+        if ($channelFilter) {
+            $query->where('channel', strtolower((string) $channelFilter));
+        }
+
+        $rows = $query->orderBy('channel')->orderBy('display_name')->get();
+
+        return [
+            'accounts' => $rows->map(fn ($a) => [
+                'id'              => $a->id,
+                'channel'         => $a->channel,
+                'display_name'    => $a->display_name,
+                'external_id'     => $a->external_id,
+                'status'          => $a->status,
+                'last_webhook_at' => $a->last_webhook_at?->toIso8601String(),
+                'last_error'      => $a->last_error,
+                'token_expires_at' => $a->token_expires_at?->toIso8601String(),
+                'data_access_expires_at' => $a->data_access_expires_at?->toIso8601String(),
+            ])->all(),
+            'total'    => $rows->count(),
+            'reauth_required_count' => (int) $rows->where('status', \App\Models\ChatChannelAccount::STATUS_REAUTH)->count(),
+        ];
+    }
+
+    /**
+     * Reduce an EngagementFeedService row down to the fields voice
+     * actually needs. Keeps payload tight so the model can verbalise
+     * without re-summarising.
+     */
+    private function compactEngagementRow(array $r): array
+    {
+        return [
+            'visitor_id'           => $r['visitor_id'] ?? ($r['id'] ?? null),
+            'conversation_id'      => $r['conversation_id'] ?? null,
+            'display_name'         => $r['display_name'] ?? null,
+            'email'                => $r['email'] ?? null,
+            'phone'                => $r['phone'] ?? null,
+            'country'              => $r['country'] ?? null,
+            'is_online'            => (bool) ($r['is_online'] ?? false),
+            'is_hot_lead'          => (bool) ($r['is_hot_lead'] ?? false),
+            'intent_tag'           => $r['intent_tag'] ?? null,
+            'channel'              => $r['channel'] ?? 'widget',
+            'last_message_preview' => $r['last_message_preview'] ?? null,
+            'last_message_at'      => $r['last_message_at'] ?? null,
+            'unread_count'         => (int) ($r['unread_count'] ?? 0),
+            'priority_score'       => (int) ($r['priority_score'] ?? 0),
         ];
     }
 
