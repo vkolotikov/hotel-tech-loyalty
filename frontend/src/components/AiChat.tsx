@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import {
   X, Send, Loader2, Sparkles, Trash2, Maximize2, Minimize2,
   Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff,
-  Wrench, MoreHorizontal, Users, BedDouble, Gift, BarChart3, BookOpen,
+  Wrench, MoreHorizontal, Users, CalendarClock, TrendingUp,
 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
@@ -89,10 +89,13 @@ function humaniseTool(name: string): string {
 }
 
 /**
- * Suggestion groups for the empty-state welcome screen. Each group
- * carries an icon + accent so the grid scans visually before the user
- * reads the prompts. Accents reuse existing Tailwind palette tokens
- * so they pick up the org-themed primary tint automatically.
+ * Suggestion groups for the empty-state welcome screen.
+ *
+ * Industry-neutral by design: this widget ships in hospitality, beauty,
+ * medical, legal, real estate, education, fitness, and restaurant
+ * deployments. Hotel-specific vocabulary ("arrivals", "in-house",
+ * "PMS bookings") doesn't survive that — we keep prompts to verbs the
+ * AI can resolve correctly in any vertical.
  */
 const SUGGESTION_GROUPS: Array<{
   label: string
@@ -103,63 +106,36 @@ const SUGGESTION_GROUPS: Array<{
   items: string[]
 }> = [
   {
-    label: 'CRM & Guests',
-    icon: Users,
+    label: 'Today',
+    icon: CalendarClock,
     accent: 'text-sky-400',
     bg: 'bg-sky-500/10',
     border: 'hover:border-sky-500/40',
     items: [
-      "How many arrivals today?",
-      "Show in-house VIP guests",
-      "What's our pipeline value?",
+      "Plan my day",
+      "What's overdue?",
     ],
   },
   {
-    label: 'Booking Engine',
-    icon: BedDouble,
-    accent: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'hover:border-emerald-500/40',
-    items: [
-      "Show PMS booking dashboard for this month",
-      "Which bookings are unpaid?",
-      "Forecast occupancy for next 2 weeks",
-    ],
-  },
-  {
-    label: 'Loyalty',
-    icon: Gift,
+    label: 'Customers',
+    icon: Users,
     accent: 'text-primary-400',
     bg: 'bg-primary-500/10',
     border: 'hover:border-primary-500/40',
     items: [
-      "Show Gold tier members",
-      "Analyze churn risk for member #1",
-      "What loyalty offers are active?",
+      "Show my hot leads",
+      "Find a customer by name",
     ],
   },
   {
-    label: 'AI & Reports',
-    icon: BarChart3,
-    accent: 'text-purple-400',
-    bg: 'bg-purple-500/10',
-    border: 'hover:border-purple-500/40',
+    label: 'Insights',
+    icon: TrendingUp,
+    accent: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    border: 'hover:border-emerald-500/40',
     items: [
-      "Generate weekly performance report",
-      "Detect anomalies or unusual patterns",
-      "Find stale inquiries and create follow-ups",
-    ],
-  },
-  {
-    label: 'System Guide',
-    icon: BookOpen,
-    accent: 'text-slate-300',
-    bg: 'bg-slate-500/10',
-    border: 'hover:border-slate-400/40',
-    items: [
-      "How do I use this platform?",
-      "What are the best practices for daily operations?",
-      "How do I set up the booking widget on my website?",
+      "What's stuck or slipping?",
+      "Summarize this week",
     ],
   },
 ]
@@ -1285,7 +1261,7 @@ export default function AiChat() {
               <div>
                 <div className="text-[17px] font-bold text-white tracking-tight mb-1">How can I help?</div>
                 <div className="text-[12px] text-[#9c9c9e] max-w-[290px] mx-auto leading-relaxed">
-                  Ask anything about your guests, bookings, loyalty program, planner, or chat — by text or by voice.
+                  Ask anything about your day, customers, or business — by text or by voice.
                 </div>
               </div>
             </div>
@@ -1448,7 +1424,7 @@ export default function AiChat() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={listening ? 'Listening…' : 'Ask anything about guests, loyalty, reservations…'}
+            placeholder={listening ? 'Listening…' : 'Ask anything — by text or voice'}
             disabled={loading}
             rows={1}
             className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
