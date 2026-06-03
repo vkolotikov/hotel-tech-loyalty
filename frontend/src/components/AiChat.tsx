@@ -4,9 +4,34 @@ import { api } from '../lib/api'
 import {
   X, Send, Loader2, Sparkles, Trash2, Maximize2, Minimize2,
   Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff,
+  Wrench,
 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
+
+type VoiceToolCall = {
+  callId: string
+  name: string
+  startedAt: number
+  status: 'running' | 'ok' | 'error'
+  durationMs?: number
+}
+
+/**
+ * Humanise a snake_case tool name into a verb phrase the user can hear
+ * spoken naturally (and read as a chip). Keeps the chip terse.
+ */
+const VOICE_TOOL_LABELS: Record<string, string> = {
+  today_snapshot: 'Pulling today\'s snapshot',
+  engagement_pulse: 'Checking live chat',
+  crm_list_inquiries: 'Searching inquiries',
+  planner_list_backlog: 'Pulling your backlog',
+  get_member: 'Looking up member',
+}
+function humaniseTool(name: string): string {
+  if (VOICE_TOOL_LABELS[name]) return VOICE_TOOL_LABELS[name]
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
 const SUGGESTION_GROUPS = [
   {
@@ -172,6 +197,19 @@ export default function AiChat() {
   const voiceDcRef = useRef<RTCDataChannel | null>(null)
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Ship 4 — voice agent v2 surface
+  const [voiceUserPartial, setVoiceUserPartial] = useState('')         // live user transcript (delta stream)
+  const [voiceAssistantPartial, setVoiceAssistantPartial] = useState('') // live assistant transcript (delta stream)
+  const [voiceToolCalls, setVoiceToolCalls] = useState<VoiceToolCall[]>([])
+  const [voiceLevel, setVoiceLevel] = useState(0) // 0..1 mic amplitude for the waveform pulse
+  const voiceAudioCtxRef = useRef<AudioContext | null>(null)
+  const voiceAnalyserRef = useRef<AnalyserNode | null>(null)
+  const voiceLevelFrameRef = useRef<number | null>(null)
+  // Track call_id → JSON-argument-string buffer in case OpenAI streams the
+  // arguments as deltas rather than landing them whole on `.done`. Some
+  // realtime model snapshots do, even though the GA spec says otherwise.
+  const voiceArgsBufferRef = useRef<Record<string, string>>({})
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
@@ -321,9 +359,10 @@ export default function AiChat() {
       voiceAudioRef.current = audioEl
       pc.ontrack = (e) => { audioEl.srcObject = e.streams[0] }
 
-      // 4. Get mic
+      // 4. Get mic + start waveform driver for the overlay rings
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       stream.getTracks().forEach(track => pc.addTrack(track, stream))
+      startMicWaveform(stream)
 
       // 5. Data channel
       const dc = pc.createDataChannel('oai-events')
@@ -340,29 +379,76 @@ export default function AiChat() {
       dc.onmessage = (e) => {
         const event = JSON.parse(e.data)
         switch (event.type) {
+          /* Streaming assistant transcript — feed the live banner so the
+           * staff sees what the AI is saying as it's said, not only after.
+           */
+          case 'response.audio_transcript.delta':
+            if (typeof event.delta === 'string') {
+              setVoiceAssistantPartial(prev => prev + event.delta)
+            }
+            break
           case 'response.audio_transcript.done':
             if (event.transcript) {
               setMessages(prev => [...prev, { role: 'assistant', content: event.transcript }])
+              setVoiceAssistantPartial('')
+            }
+            break
+
+          /* Streaming user transcript — same idea for the inbound mic.
+           * gpt-4o-transcribe emits deltas via input_audio_transcription.
+           */
+          case 'conversation.item.input_audio_transcription.delta':
+            if (typeof event.delta === 'string') {
+              setVoiceUserPartial(prev => prev + event.delta)
             }
             break
           case 'conversation.item.input_audio_transcription.completed':
             if (event.transcript) {
               setMessages(prev => [...prev, { role: 'user', content: event.transcript }])
+              setVoiceUserPartial('')
             }
             break
+
           case 'input_audio_buffer.speech_started':
             setVoiceStatus('Listening…')
+            setVoiceUserPartial('')
             break
           case 'input_audio_buffer.speech_stopped':
-            setVoiceStatus('Processing…')
+            setVoiceStatus('Thinking…')
             break
           case 'response.audio.started':
           case 'response.created':
             setVoiceStatus('Speaking…')
+            setVoiceAssistantPartial('')
             break
           case 'response.done':
             setVoiceStatus('Listening…')
             break
+
+          /* Tool-call wiring (Ship 4).
+           *
+           * The GA realtime model emits arguments-streamed-then-complete.
+           * Some snapshots also emit just `.done` with the full string.
+           * Buffer deltas under call_id so either path works.
+           */
+          case 'response.function_call_arguments.delta':
+            if (event.call_id && typeof event.delta === 'string') {
+              const buf = voiceArgsBufferRef.current
+              buf[event.call_id] = (buf[event.call_id] ?? '') + event.delta
+            }
+            break
+          case 'response.function_call_arguments.done':
+            if (event.call_id && event.name) {
+              const buf = voiceArgsBufferRef.current
+              const argsString =
+                (typeof event.arguments === 'string' && event.arguments.length > 0)
+                  ? event.arguments
+                  : (buf[event.call_id] ?? '{}')
+              delete buf[event.call_id]
+              runVoiceTool(event.call_id, event.name, argsString)
+            }
+            break
+
           case 'error':
             console.error('Realtime error:', event.error)
             break
@@ -402,6 +488,94 @@ export default function AiChat() {
     }
   }, [voiceCallActive])
 
+  /**
+   * Execute a voice-agent tool call: ship the args to /voice-tool,
+   * forward the result back into the WebRTC data channel as a
+   * `function_call_output`, then `response.create` so the model
+   * continues speaking with the new context.
+   *
+   * Always returns control to the model. On error we still post a
+   * function_call_output (with `{error: ...}`) so the conversation
+   * doesn't deadlock waiting on a never-arriving response.
+   */
+  const runVoiceTool = useCallback(async (callId: string, name: string, argsString: string) => {
+    const dc = voiceDcRef.current
+    if (!dc) return
+    const startedAt = Date.now()
+
+    const newCall: VoiceToolCall = { callId, name, startedAt, status: 'running' }
+    setVoiceToolCalls(prev => [newCall, ...prev].slice(0, 5))
+    setVoiceStatus(humaniseTool(name) + '…')
+
+    let parsedArgs: any = {}
+    try { parsedArgs = JSON.parse(argsString || '{}') } catch { parsedArgs = {} }
+
+    let output: any
+    let ok = true
+    try {
+      const res = await api.post('/v1/admin/crm-ai/voice-tool', {
+        name,
+        args: parsedArgs,
+        call_id: callId,
+      })
+      output = res.data?.output ?? { error: 'No output payload returned' }
+      if (output && typeof output === 'object' && 'error' in output) ok = false
+    } catch (err: any) {
+      ok = false
+      output = { error: err?.response?.data?.message || err?.message || 'Tool call failed' }
+    }
+
+    const durationMs = Date.now() - startedAt
+    setVoiceToolCalls(prev => prev.map(tc => (
+      tc.callId === callId ? { ...tc, status: ok ? 'ok' : 'error', durationMs } : tc
+    )))
+
+    try {
+      dc.send(JSON.stringify({
+        type: 'conversation.item.create',
+        item: {
+          type: 'function_call_output',
+          call_id: callId,
+          output: JSON.stringify(output),
+        },
+      }))
+      dc.send(JSON.stringify({ type: 'response.create' }))
+    } catch (sendErr) {
+      console.error('Voice tool result post-back failed', sendErr)
+    }
+  }, [])
+
+  /* Mic waveform driver — drives the concentric pulse rings on the
+   * full-screen voice overlay. AnalyserNode produces a frequency byte
+   * frame each rAF; we normalise to 0..1 and let CSS scale a ring.
+   * Stops when the call ends. */
+  const startMicWaveform = useCallback((stream: MediaStream) => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      voiceAudioCtxRef.current = ctx
+      const source = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      source.connect(analyser)
+      voiceAnalyserRef.current = analyser
+      const buf = new Uint8Array(analyser.frequencyBinCount)
+      const tick = () => {
+        if (!voiceAnalyserRef.current) return
+        voiceAnalyserRef.current.getByteFrequencyData(buf)
+        let sum = 0
+        for (let i = 0; i < buf.length; i++) sum += buf[i]
+        const avg = sum / buf.length
+        setVoiceLevel(Math.min(1, avg / 128))
+        voiceLevelFrameRef.current = requestAnimationFrame(tick)
+      }
+      tick()
+    } catch (err) {
+      console.warn('Waveform analyser failed to start', err)
+    }
+  }, [])
+
   const endVoiceCall = useCallback(() => {
     if (voiceDcRef.current) { try { voiceDcRef.current.close() } catch {} voiceDcRef.current = null }
     if (voicePcRef.current) {
@@ -410,8 +584,25 @@ export default function AiChat() {
       voicePcRef.current = null
     }
     if (voiceAudioRef.current) { voiceAudioRef.current.srcObject = null; voiceAudioRef.current = null }
+
+    // Waveform cleanup
+    if (voiceLevelFrameRef.current !== null) {
+      cancelAnimationFrame(voiceLevelFrameRef.current)
+      voiceLevelFrameRef.current = null
+    }
+    voiceAnalyserRef.current = null
+    if (voiceAudioCtxRef.current) {
+      try { voiceAudioCtxRef.current.close() } catch {}
+      voiceAudioCtxRef.current = null
+    }
+    voiceArgsBufferRef.current = {}
+
     setVoiceCallActive(false)
     setVoiceStatus('')
+    setVoiceLevel(0)
+    setVoiceUserPartial('')
+    setVoiceAssistantPartial('')
+    // Keep voiceToolCalls so the user can see what ran in the last call.
   }, [])
 
   /* ── Send ── */
@@ -541,29 +732,116 @@ export default function AiChat() {
         </div>
       </div>
 
-      {/* Voice Call Overlay */}
+      {/* Voice Call Overlay — full-viewport, mic-reactive waveform, live
+        * transcript stream, tool-call chips, status pill. */}
       {voiceCallActive && (
-        <div className="absolute inset-0 z-10 bg-dark-bg/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 rounded-2xl">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
-              <Phone size={32} className="text-dark-bg" />
+        <div className="fixed inset-0 z-[60] bg-gradient-to-br from-[#0a0a0c] via-[#0c0c12] to-[#080810] backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
+          {/* Top: live status pill + tool-call chips */}
+          <div className="w-full max-w-2xl flex flex-col items-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/30 rounded-full px-4 py-1.5 text-primary-300 text-xs font-medium uppercase tracking-wider">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
+              </span>
+              {voiceStatus || 'Connecting…'}
             </div>
-            <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-primary-400/30 animate-ping" />
-            <div className="absolute -inset-3 rounded-full border border-primary-400/15 animate-pulse" />
+
+            {voiceToolCalls.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+                {voiceToolCalls.slice(0, 4).map(tc => (
+                  <div
+                    key={tc.callId}
+                    className={[
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                      tc.status === 'running'
+                        ? 'bg-blue-500/10 border-blue-400/30 text-blue-200'
+                        : tc.status === 'ok'
+                          ? 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
+                          : 'bg-red-500/10 border-red-400/30 text-red-200',
+                    ].join(' ')}
+                    title={tc.name}
+                  >
+                    {tc.status === 'running' ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <Wrench size={11} />
+                    )}
+                    {humaniseTool(tc.name)}
+                    {tc.durationMs !== undefined && (
+                      <span className="opacity-50">· {Math.round(tc.durationMs)}ms</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="text-center">
-            <div className="text-white font-semibold text-base">Voice Call Active</div>
-            <div className="text-primary-400 text-sm mt-1">{voiceStatus}</div>
+
+          {/* Middle: pulsing waveform orb */}
+          <div className="relative flex items-center justify-center my-4">
+            {/* Outer pulse rings reactive to mic input level (0..1) */}
+            <div
+              className="absolute rounded-full border border-primary-400/15"
+              style={{
+                width: 320 + voiceLevel * 80,
+                height: 320 + voiceLevel * 80,
+                transition: 'width 80ms ease-out, height 80ms ease-out',
+              }}
+            />
+            <div
+              className="absolute rounded-full border border-primary-400/25"
+              style={{
+                width: 240 + voiceLevel * 60,
+                height: 240 + voiceLevel * 60,
+                transition: 'width 80ms ease-out, height 80ms ease-out',
+              }}
+            />
+            <div
+              className="absolute rounded-full border-2 border-primary-400/40"
+              style={{
+                width: 180 + voiceLevel * 40,
+                height: 180 + voiceLevel * 40,
+                transition: 'width 80ms ease-out, height 80ms ease-out',
+              }}
+            />
+            {/* Solid core */}
+            <div
+              className="rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-2xl shadow-primary-500/40"
+              style={{
+                width: 140 + voiceLevel * 20,
+                height: 140 + voiceLevel * 20,
+                transition: 'width 60ms ease-out, height 60ms ease-out',
+              }}
+            >
+              <Phone size={56} className="text-dark-bg" strokeWidth={2.4} />
+            </div>
           </div>
+
+          {/* Bottom-middle: live transcript banner */}
+          <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-end gap-2 pb-6 overflow-hidden">
+            {voiceUserPartial && (
+              <div className="self-end max-w-[80%] bg-primary-600/90 text-dark-bg rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium shadow-lg">
+                {voiceUserPartial}
+              </div>
+            )}
+            {voiceAssistantPartial && (
+              <div className="self-start max-w-[80%] bg-dark-surface/95 text-white border border-dark-border rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-lg">
+                {voiceAssistantPartial}
+              </div>
+            )}
+            {!voiceUserPartial && !voiceAssistantPartial && (
+              <p className="self-center text-[12px] text-[#636366] text-center">
+                Speak naturally — I can search any data, plan your day, change leads, manage members.
+              </p>
+            )}
+          </div>
+
+          {/* Bottom: end-call button */}
           <button
             onClick={endVoiceCall}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30 mt-2"
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-7 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30"
           >
-            <PhoneOff size={16} /> End Call
+            <PhoneOff size={18} /> End Call
           </button>
-          <p className="text-[11px] text-[#636366] max-w-[250px] text-center mt-2">
-            Speak naturally — the AI will respond in voice. Transcripts appear in chat history.
-          </p>
         </div>
       )}
 
