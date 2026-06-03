@@ -186,6 +186,152 @@ class CrmVoiceToolset
                     'additionalProperties' => false,
                 ],
             ],
+            // ── Ship 6: Leads + Deals voice tools ─────────────────────
+            [
+                'type' => 'function',
+                'name' => 'crm_hot_leads',
+                'description' => 'Return inquiries the AI rates as likely to close: ai_win_probability >= threshold (default 60) OR priority=high, created within the window (default 7d). Use this when the user asks "what hot leads do we have" or "anything urgent in the pipeline".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'window_days'           => ['type' => 'integer', 'minimum' => 1, 'maximum' => 90, 'description' => 'How far back to look. Default 7.'],
+                        'min_win_probability'   => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100, 'description' => 'Default 60.'],
+                        'limit'                 => ['type' => 'integer', 'minimum' => 1, 'maximum' => 30, 'description' => 'Default 15.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_overdue_followups',
+                'description' => 'Open inquiries with overdue follow-up tasks OR last_contacted_at older than the threshold. Step 1 of the day-planning playbook.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'cold_days'   => ['type' => 'integer', 'minimum' => 1, 'maximum' => 60, 'description' => 'Days since last contact before counting as overdue. Default 7.'],
+                        'limit'       => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'description' => 'Default 25.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_change_stage',
+                'description' => 'Move an inquiry between OPEN pipeline stages (kind=open). For mark-won or mark-lost use crm_mark_won / crm_mark_lost. Confirmation NOT required for open-state moves.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id' => ['type' => 'integer'],
+                        'stage_slug' => ['type' => 'string', 'description' => 'Target pipeline_stage.slug (must be kind=open).'],
+                    ],
+                    'required' => ['inquiry_id', 'stage_slug'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_get_inquiry_brief',
+                'description' => 'AI-generated brief + intent + win-probability + going-cold risk + suggested action for an inquiry. Cached 15 min on the row. Use BEFORE crm_change_stage / crm_mark_won / crm_mark_lost to confirm the right call.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id' => ['type' => 'integer'],
+                        'refresh'    => ['type' => 'boolean', 'description' => 'Force regenerate (skip cache).'],
+                    ],
+                    'required' => ['inquiry_id'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_create_activity',
+                'description' => 'Log a note / call / email / meeting / file on an inquiry. Confirmation NOT required (low blast radius). For type=call/email/meeting also bumps last_contacted_at.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id'        => ['type' => 'integer'],
+                        'type'              => ['type' => 'string', 'enum' => ['note', 'call', 'email', 'meeting', 'file']],
+                        'subject'           => ['type' => 'string'],
+                        'body'              => ['type' => 'string'],
+                        'direction'         => ['type' => 'string', 'enum' => ['inbound', 'outbound']],
+                        'duration_minutes'  => ['type' => 'integer', 'minimum' => 0, 'maximum' => 1440],
+                    ],
+                    'required' => ['inquiry_id', 'type'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_create_task',
+                'description' => 'Create a follow-up task linked to an inquiry (or unlinked). Defaults assigned_to to the calling user. Confirmation NOT required.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id'    => ['type' => 'integer'],
+                        'guest_id'      => ['type' => 'integer'],
+                        'title'         => ['type' => 'string'],
+                        'description'   => ['type' => 'string'],
+                        'type'          => ['type' => 'string', 'enum' => ['call', 'email', 'meeting', 'whatsapp', 'sms', 'video_call', 'send_proposal', 'follow_up', 'site_visit', 'demo', 'contract', 'discovery', 'custom']],
+                        'due_at'        => ['type' => 'string', 'description' => 'ISO8601 datetime.'],
+                        'assigned_to'   => ['type' => 'integer', 'description' => 'User id. Defaults to the calling user.'],
+                    ],
+                    'required' => ['title'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_stuck_deals',
+                'description' => 'Open inquiries that have been in their current stage for >= min_days_in_stage without an activity. Useful for "what is stuck" / "anything sitting too long".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'min_days_in_stage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 365, 'description' => 'Default 14.'],
+                        'min_value'         => ['type' => 'number', 'description' => 'Minimum total_value.'],
+                        'limit'             => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'description' => 'Default 20.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_pipeline_value_by_stage',
+                'description' => 'Aggregate open-inquiry count + total_value grouped by pipeline_stage. With weighted=true multiplies value by the stage default_win_probability.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'pipeline_slug' => ['type' => 'string'],
+                        'weighted'      => ['type' => 'boolean'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_pipeline_movement',
+                'description' => 'Stage transitions over a period: new leads, won/lost counts + value, top lost-reasons. Use for "how is the pipeline this week" / "what changed".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'period' => ['type' => 'string', 'enum' => ['today', 'this_week', 'last_week', 'this_month'], 'description' => 'Default this_week.'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_find_by_contact',
+                'description' => 'Search CRM by guest name / email / phone / company. Returns matching inquiries with their guest + stage. Use when the user mentions a person or company by name.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query'  => ['type' => 'string'],
+                        'limit'  => ['type' => 'integer', 'minimum' => 1, 'maximum' => 25, 'description' => 'Default 10.'],
+                    ],
+                    'required' => ['query'],
+                    'additionalProperties' => false,
+                ],
+            ],
             [
                 'type' => 'function',
                 'name' => 'planner_move_task',
@@ -549,6 +695,361 @@ class CrmVoiceToolset
             'lifetime_points' => (int) $member->lifetime_points,
             'status'          => $member->status ?? null,
             'member_since'    => $member->created_at?->toDateString(),
+        ];
+    }
+
+    // ─── Leads / Deals voice tools (Ship 6) ─────────────────────────────
+
+    private function tool_crm_hot_leads(array $args, int $orgId, int $userId): array
+    {
+        $windowDays = max(1, min((int) ($args['window_days'] ?? 7), 90));
+        $minWinProb = max(0, min((int) ($args['min_win_probability'] ?? 60), 100));
+        $limit      = max(1, min((int) ($args['limit'] ?? 15), 30));
+        $since      = now()->subDays($windowDays);
+
+        $rows = Inquiry::query()
+            ->with(['guest:id,name,email,phone,company', 'pipelineStage:id,slug,name,kind'])
+            ->whereNotIn('status', ['Confirmed', 'Lost'])
+            ->where('created_at', '>=', $since)
+            ->where(function ($q) use ($minWinProb) {
+                $q->where('ai_win_probability', '>=', $minWinProb)
+                  ->orWhere('priority', 'High');
+            })
+            ->orderByDesc('ai_win_probability')
+            ->orderByDesc('total_value')
+            ->limit($limit)
+            ->get();
+
+        return [
+            'window_days' => $windowDays,
+            'min_win_probability' => $minWinProb,
+            'inquiries' => $rows->map(fn (Inquiry $i) => $this->summariseInquiry($i))->all(),
+            'total' => $rows->count(),
+        ];
+    }
+
+    private function tool_crm_overdue_followups(array $args, int $orgId, int $userId): array
+    {
+        $coldDays = max(1, min((int) ($args['cold_days'] ?? 7), 60));
+        $limit    = max(1, min((int) ($args['limit'] ?? 25), 50));
+        $threshold = now()->subDays($coldDays);
+
+        $rows = Inquiry::query()
+            ->with(['guest:id,name,email,phone,company', 'pipelineStage:id,slug,name,kind'])
+            ->whereNotIn('status', ['Confirmed', 'Lost'])
+            ->where(function ($q) use ($threshold) {
+                $q->where('last_contacted_at', '<', $threshold)
+                  ->orWhereNull('last_contacted_at');
+            })
+            ->orderByRaw('last_contacted_at ASC NULLS FIRST')
+            ->limit($limit)
+            ->get();
+
+        return [
+            'cold_days' => $coldDays,
+            'inquiries' => $rows->map(fn (Inquiry $i) => $this->summariseInquiry($i))->all(),
+            'total'     => $rows->count(),
+        ];
+    }
+
+    private function tool_crm_change_stage(array $args, int $orgId, int $userId): array
+    {
+        $inquiryId = (int) ($args['inquiry_id'] ?? 0);
+        $slug      = trim((string) ($args['stage_slug'] ?? ''));
+        if ($inquiryId <= 0 || $slug === '') {
+            return ['error' => 'inquiry_id and stage_slug are required.'];
+        }
+
+        $inquiry = Inquiry::find($inquiryId);
+        if (!$inquiry) {
+            return ['error' => 'Inquiry not found.', 'inquiry_id' => $inquiryId];
+        }
+
+        $stage = \App\Models\PipelineStage::query()
+            ->where('pipeline_id', $inquiry->pipeline_id)
+            ->where('slug', $slug)
+            ->first();
+
+        if (!$stage) {
+            $available = \App\Models\PipelineStage::query()
+                ->where('pipeline_id', $inquiry->pipeline_id)
+                ->get(['slug', 'name', 'kind'])
+                ->all();
+            return [
+                'error' => "Unknown stage slug '{$slug}' for this inquiry's pipeline.",
+                'available_stages' => $available,
+            ];
+        }
+
+        if (in_array(strtolower((string) $stage->kind), ['won', 'lost'], true)) {
+            return [
+                'error' => "This tool only moves between OPEN stages. Use crm_mark_won / crm_mark_lost for terminal transitions.",
+                'target_kind' => $stage->kind,
+            ];
+        }
+
+        $inquiry->forceFill(['pipeline_stage_id' => $stage->id])->save();
+
+        \App\Models\Activity::create([
+            'organization_id'    => $inquiry->organization_id,
+            'brand_id'           => $inquiry->brand_id,
+            'inquiry_id'         => $inquiry->id,
+            'guest_id'           => $inquiry->guest_id,
+            'corporate_account_id' => $inquiry->corporate_account_id,
+            'type'               => 'status_change',
+            'subject'            => "Moved to {$stage->name}",
+            'metadata'           => ['to_slug' => $stage->slug, 'via' => 'voice_agent'],
+            'created_by'         => $userId,
+            'occurred_at'        => now(),
+        ]);
+
+        return [
+            'ok' => true,
+            'inquiry_id' => $inquiry->id,
+            'stage' => [
+                'slug' => $stage->slug,
+                'name' => $stage->name,
+                'kind' => $stage->kind,
+            ],
+        ];
+    }
+
+    private function tool_crm_get_inquiry_brief(array $args, int $orgId, int $userId): array
+    {
+        $inquiryId = (int) ($args['inquiry_id'] ?? 0);
+        if ($inquiryId <= 0) return ['error' => 'inquiry_id is required.'];
+
+        $req = new \Illuminate\Http\Request($this->stringifyArgs([
+            'refresh' => !empty($args['refresh']) ? '1' : null,
+        ]));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\InquiryController::class);
+        return $controller->aiBrief($req, $inquiryId)->getData(true);
+    }
+
+    private function tool_crm_create_activity(array $args, int $orgId, int $userId): array
+    {
+        $inquiryId = (int) ($args['inquiry_id'] ?? 0);
+        if ($inquiryId <= 0) return ['error' => 'inquiry_id is required.'];
+
+        $inquiry = Inquiry::find($inquiryId);
+        if (!$inquiry) return ['error' => 'Inquiry not found.', 'inquiry_id' => $inquiryId];
+
+        $payload = [];
+        foreach (['type', 'subject', 'body', 'direction'] as $k) {
+            if (isset($args[$k])) $payload[$k] = (string) $args[$k];
+        }
+        if (isset($args['duration_minutes'])) {
+            $payload['duration_minutes'] = (int) $args['duration_minutes'];
+        }
+
+        $req = new \Illuminate\Http\Request($payload);
+        $req->setUserResolver(fn () => \App\Models\User::find($userId));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\ActivityController::class);
+        return $controller->store($inquiry, $req)->getData(true);
+    }
+
+    private function tool_crm_create_task(array $args, int $orgId, int $userId): array
+    {
+        $payload = [];
+        foreach (['inquiry_id', 'guest_id', 'assigned_to'] as $k) {
+            if (isset($args[$k])) $payload[$k] = (int) $args[$k];
+        }
+        foreach (['title', 'description', 'type', 'due_at'] as $k) {
+            if (isset($args[$k])) $payload[$k] = (string) $args[$k];
+        }
+
+        $req = new \Illuminate\Http\Request($payload);
+        $req->setUserResolver(fn () => \App\Models\User::find($userId));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\TaskController::class);
+        return $controller->store($req)->getData(true);
+    }
+
+    private function tool_crm_stuck_deals(array $args, int $orgId, int $userId): array
+    {
+        $minDays = max(1, min((int) ($args['min_days_in_stage'] ?? 14), 365));
+        $minValue = isset($args['min_value']) ? (float) $args['min_value'] : 0.0;
+        $limit   = max(1, min((int) ($args['limit'] ?? 20), 50));
+        $threshold = now()->subDays($minDays);
+
+        $rows = Inquiry::query()
+            ->with(['guest:id,name,email,phone,company', 'pipelineStage:id,slug,name,kind'])
+            ->whereNotIn('status', ['Confirmed', 'Lost'])
+            ->where('updated_at', '<', $threshold)
+            ->when($minValue > 0, fn ($q) => $q->where('total_value', '>=', $minValue))
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->get();
+
+        $deals = $rows->map(function (Inquiry $i) {
+            $base = $this->summariseInquiry($i);
+            $base['days_in_stage'] = $i->updated_at ? (int) $i->updated_at->diffInDays(now()) : null;
+            return $base;
+        })->all();
+
+        return [
+            'min_days_in_stage' => $minDays,
+            'deals' => $deals,
+            'total' => count($deals),
+            'total_value_at_risk' => round(array_sum(array_map(fn ($d) => (float) ($d['total_value'] ?? 0), $deals)), 2),
+        ];
+    }
+
+    private function tool_crm_pipeline_value_by_stage(array $args, int $orgId, int $userId): array
+    {
+        $pipelineSlug = $args['pipeline_slug'] ?? null;
+        $weighted = (bool) ($args['weighted'] ?? false);
+
+        $pipeline = $pipelineSlug
+            ? \App\Models\Pipeline::where('slug', $pipelineSlug)->first()
+            : \App\Models\Pipeline::where('is_default', true)->first();
+
+        if (!$pipeline) {
+            return ['error' => $pipelineSlug ? "No pipeline with slug '{$pipelineSlug}'." : 'No default pipeline configured.'];
+        }
+
+        $stages = \App\Models\PipelineStage::query()
+            ->where('pipeline_id', $pipeline->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        $totals = ['count' => 0, 'value' => 0.0, 'weighted' => 0.0];
+        $rows = $stages->map(function ($stage) use (&$totals) {
+            $base = Inquiry::query()
+                ->where('pipeline_stage_id', $stage->id)
+                ->whereNotIn('status', ['Confirmed', 'Lost']);
+            $count = (int) (clone $base)->count();
+            $value = (float) (clone $base)->sum('total_value');
+            $prob = (int) ($stage->default_win_probability ?? 0);
+            $weighted = round($value * ($prob / 100), 2);
+            $totals['count'] += $count;
+            $totals['value'] += $value;
+            $totals['weighted'] += $weighted;
+            return [
+                'slug' => $stage->slug,
+                'name' => $stage->name,
+                'kind' => $stage->kind,
+                'count' => $count,
+                'total_value' => round($value, 2),
+                'weighted_value' => $weighted,
+                'default_win_probability' => $prob,
+            ];
+        })->all();
+
+        return [
+            'pipeline' => ['id' => $pipeline->id, 'slug' => $pipeline->slug, 'name' => $pipeline->name],
+            'weighted_requested' => $weighted,
+            'stages' => $rows,
+            'totals' => [
+                'open_count' => $totals['count'],
+                'open_value' => round($totals['value'], 2),
+                'weighted_value' => round($totals['weighted'], 2),
+            ],
+        ];
+    }
+
+    private function tool_crm_pipeline_movement(array $args, int $orgId, int $userId): array
+    {
+        $period = (string) ($args['period'] ?? 'this_week');
+        [$from, $to] = match ($period) {
+            'today'      => [now()->startOfDay(),       now()],
+            'last_week'  => [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()],
+            'this_month' => [now()->startOfMonth(),     now()],
+            default      => [now()->startOfWeek(),      now()],
+        };
+
+        $newLeads = (int) Inquiry::whereBetween('created_at', [$from, $to])->count();
+        $won = Inquiry::where('status', 'Confirmed')->whereBetween('updated_at', [$from, $to]);
+        $lost = Inquiry::where('status', 'Lost')->whereBetween('updated_at', [$from, $to]);
+
+        $wonCount = (int) (clone $won)->count();
+        $wonValue = round((float) (clone $won)->sum('total_value'), 2);
+        $lostCount = (int) (clone $lost)->count();
+        $lostValue = round((float) (clone $lost)->sum('total_value'), 2);
+
+        $topLost = \DB::table('activities')
+            ->whereBetween('created_at', [$from, $to])
+            ->where('type', 'status_change')
+            ->whereJsonContains('metadata->kind', 'lost')
+            ->selectRaw("metadata->>'lost_reason_label' as label, COUNT(*) as count")
+            ->groupBy('label')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->get()
+            ->map(fn ($r) => ['label' => $r->label ?? 'unspecified', 'count' => (int) $r->count])
+            ->all();
+
+        return [
+            'period'     => $period,
+            'from'       => $from->toIso8601String(),
+            'to'         => $to->toIso8601String(),
+            'new_leads'  => $newLeads,
+            'won_count'  => $wonCount,
+            'won_value'  => $wonValue,
+            'lost_count' => $lostCount,
+            'lost_value' => $lostValue,
+            'net_pipeline_delta_value' => round($wonValue - $lostValue, 2),
+            'top_lost_reasons' => $topLost,
+        ];
+    }
+
+    private function tool_crm_find_by_contact(array $args, int $orgId, int $userId): array
+    {
+        $query = trim((string) ($args['query'] ?? ''));
+        if ($query === '') return ['error' => 'query is required.'];
+        $limit = max(1, min((int) ($args['limit'] ?? 10), 25));
+        $term = '%' . $query . '%';
+
+        $rows = Inquiry::query()
+            ->with(['guest:id,name,email,phone,company', 'pipelineStage:id,slug,name,kind'])
+            ->where(function ($q) use ($term) {
+                $q->whereHas('guest', function ($g) use ($term) {
+                    $g->where('name', 'ilike', $term)
+                      ->orWhere('email', 'ilike', $term)
+                      ->orWhere('phone', 'ilike', $term)
+                      ->orWhere('company', 'ilike', $term);
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+
+        return [
+            'query' => $query,
+            'matches' => $rows->map(fn (Inquiry $i) => $this->summariseInquiry($i))->all(),
+            'total' => $rows->count(),
+        ];
+    }
+
+    /**
+     * Compact inquiry summary used across the leads/deals tools. Keeps
+     * payload shape identical so the model can format any of these
+     * results without branching on which tool produced them.
+     */
+    private function summariseInquiry(Inquiry $i): array
+    {
+        return [
+            'id'                  => $i->id,
+            'subject'             => $i->subject,
+            'status'              => $i->status,
+            'priority'            => $i->priority,
+            'total_value'         => $i->total_value,
+            'stage'               => $i->pipelineStage ? [
+                'slug' => $i->pipelineStage->slug,
+                'name' => $i->pipelineStage->name,
+                'kind' => $i->pipelineStage->kind,
+            ] : null,
+            'check_in'            => $i->check_in instanceof \Carbon\Carbon ? $i->check_in->toDateString() : $i->check_in,
+            'check_out'           => $i->check_out instanceof \Carbon\Carbon ? $i->check_out->toDateString() : $i->check_out,
+            'guest'               => $i->guest ? [
+                'id'      => $i->guest->id,
+                'name'    => $i->guest->name,
+                'email'   => $i->guest->email,
+                'phone'   => $i->guest->phone,
+                'company' => $i->guest->company,
+            ] : null,
+            'last_contacted_at'   => $i->last_contacted_at?->toIso8601String(),
+            'ai_win_probability'  => $i->ai_win_probability,
+            'ai_going_cold_risk'  => $i->ai_going_cold_risk,
         ];
     }
 }
