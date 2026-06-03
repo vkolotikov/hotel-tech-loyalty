@@ -122,6 +122,87 @@ class CrmVoiceToolset
                     'additionalProperties' => false,
                 ],
             ],
+            // ── Ship 5: Planner / day-planning voice tools ─────────────
+            [
+                'type' => 'function',
+                'name' => 'planner_find_free_slots',
+                'description' => 'Find free time gaps on a date (and optionally for a specific employee) within the work window. Use this when the user asks "when can I fit X" or "when is Anna free tomorrow".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'date'                 => ['type' => 'string', 'description' => 'ISO date YYYY-MM-DD.'],
+                        'employee_name'        => ['type' => 'string', 'description' => 'Restrict to a specific employee.'],
+                        'work_start'           => ['type' => 'string', 'description' => 'HH:MM (24h). Default 09:00.'],
+                        'work_end'             => ['type' => 'string', 'description' => 'HH:MM (24h). Default 18:00.'],
+                        'min_duration_minutes' => ['type' => 'integer', 'minimum' => 5, 'maximum' => 1440, 'description' => 'Minimum gap to surface. Default 15.'],
+                    ],
+                    'required' => ['date'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'planner_suggest_staff',
+                'description' => 'Rank active staff for a task by skill allowlist + same-day capacity. Use BEFORE assigning a task or when the user asks "who should do this".',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_group'        => ['type' => 'string', 'description' => 'Task group (e.g. Housekeeping, Maintenance, F&B).'],
+                        'task_date'         => ['type' => 'string', 'description' => 'ISO date YYYY-MM-DD.'],
+                        'duration_minutes'  => ['type' => 'integer', 'minimum' => 5, 'maximum' => 1440, 'description' => 'Expected task duration. Default 60.'],
+                        'limit'             => ['type' => 'integer', 'minimum' => 1, 'maximum' => 25, 'description' => 'Max candidates to return. Default 5.'],
+                    ],
+                    'required' => ['task_group', 'task_date'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'planner_workload_week',
+                'description' => 'Per-employee scheduled minutes for a Mon-Sun week with an overbooked flag (>8h any day or >40h total). Use this to answer "who is overbooked this week" or before suggesting reassignments.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'week_start' => ['type' => 'string', 'description' => 'ISO date for Monday of the week (YYYY-MM-DD).'],
+                    ],
+                    'required' => ['week_start'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'planner_auto_plan_day',
+                'description' => 'Deterministic auto-fit of unscheduled tasks into the work window in priority order. apply=false PREVIEWS the proposed schedule; apply=true commits it. ALWAYS call apply=false first and read back the proposal before committing.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'date'          => ['type' => 'string', 'description' => 'ISO date YYYY-MM-DD.'],
+                        'employee_name' => ['type' => 'string'],
+                        'work_start'    => ['type' => 'string', 'description' => 'HH:MM. Default 09:00.'],
+                        'work_end'      => ['type' => 'string', 'description' => 'HH:MM. Default 18:00.'],
+                        'apply'         => ['type' => 'boolean', 'description' => 'Default false. When true, commits the previously-computed proposal set.'],
+                    ],
+                    'required' => ['date'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'planner_move_task',
+                'description' => 'Reschedule / reassign / unschedule a planner task. Setting task_date=null moves the task to the backlog. Open-state moves do NOT require user confirmation.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_id'             => ['type' => 'integer'],
+                        'task_date'           => ['type' => 'string', 'description' => 'ISO date YYYY-MM-DD or null to unschedule.'],
+                        'start_time'          => ['type' => 'string', 'description' => 'HH:MM (24h).'],
+                        'employee_name'       => ['type' => 'string'],
+                        'assigned_to_user_id' => ['type' => 'integer'],
+                    ],
+                    'required' => ['task_id'],
+                    'additionalProperties' => false,
+                ],
+            ],
         ];
     }
 
@@ -323,6 +404,108 @@ class CrmVoiceToolset
             ])->all(),
             'total' => $rows->count(),
         ];
+    }
+
+    // ─── Planner voice tools (Ship 5) ─────────────────────────────────
+    //
+    // These delegate to PlannerController where possible by re-running
+    // the existing methods with a synthetic Request. That keeps
+    // validation + auto-plan + free-slot algorithms in one place and
+    // ensures voice + admin UI return identical shapes.
+
+    private function tool_planner_find_free_slots(array $args, int $orgId, int $userId): array
+    {
+        $req = new \Illuminate\Http\Request($this->stringifyArgs($args));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\PlannerController::class);
+        return $controller->freeSlots($req)->getData(true);
+    }
+
+    private function tool_planner_suggest_staff(array $args, int $orgId, int $userId): array
+    {
+        $req = new \Illuminate\Http\Request($this->stringifyArgs($args));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\PlannerController::class);
+        return $controller->suggestStaff($req)->getData(true);
+    }
+
+    private function tool_planner_workload_week(array $args, int $orgId, int $userId): array
+    {
+        $req = new \Illuminate\Http\Request($this->stringifyArgs($args));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\PlannerController::class);
+        return $controller->workloadWeek($req)->getData(true);
+    }
+
+    private function tool_planner_auto_plan_day(array $args, int $orgId, int $userId): array
+    {
+        $apply = (bool) ($args['apply'] ?? false);
+        unset($args['apply']);
+        $req = new \Illuminate\Http\Request($this->stringifyArgs($args));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\PlannerController::class);
+
+        $preview = $controller->autoPlanDay($req)->getData(true);
+        if (!$apply) {
+            return ['mode' => 'preview'] + $preview;
+        }
+
+        // Commit the proposed schedule.
+        $applyReq = new \Illuminate\Http\Request([
+            'proposals' => array_map(fn ($p) => [
+                'task_id'          => $p['task_id'],
+                'start_time'       => $p['start_time'],
+                'duration_minutes' => $p['duration_minutes'] ?? null,
+            ], $preview['proposals'] ?? []),
+        ]);
+        $applyResult = $controller->autoPlanApply($applyReq)->getData(true);
+
+        return [
+            'mode'      => 'applied',
+            'proposals' => $preview['proposals'] ?? [],
+            'skipped'   => $preview['skipped'] ?? [],
+            'work'      => $preview['work'] ?? null,
+            'applied'   => $applyResult['applied'] ?? 0,
+            'race_skipped' => $applyResult['skipped'] ?? 0,
+        ];
+    }
+
+    private function tool_planner_move_task(array $args, int $orgId, int $userId): array
+    {
+        $taskId = (int) ($args['task_id'] ?? 0);
+        if ($taskId <= 0) {
+            return ['error' => 'task_id is required.'];
+        }
+        unset($args['task_id']);
+
+        // Coerce nullable task_date — JSON null comes through as PHP null,
+        // but Request::all() ignores null entries on stringified input; we
+        // need to make sure unschedule semantics survive.
+        $payload = [];
+        foreach (['task_date', 'start_time', 'employee_name'] as $k) {
+            if (array_key_exists($k, $args)) {
+                $payload[$k] = $args[$k] === null ? null : (string) $args[$k];
+            }
+        }
+        if (isset($args['assigned_to_user_id'])) {
+            $payload['assigned_to_user_id'] = (int) $args['assigned_to_user_id'];
+        }
+
+        $req = new \Illuminate\Http\Request($payload);
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\PlannerController::class);
+        return $controller->moveTask($req, $taskId)->getData(true);
+    }
+
+    /**
+     * The Request constructor expects scalar query / body values.
+     * Convert booleans/nulls to strings so validators don't choke.
+     * Plain strings/ints/floats pass through unchanged.
+     */
+    private function stringifyArgs(array $args): array
+    {
+        $out = [];
+        foreach ($args as $k => $v) {
+            if (is_bool($v)) $out[$k] = $v ? '1' : '0';
+            elseif ($v === null) continue;
+            else $out[$k] = $v;
+        }
+        return $out;
     }
 
     private function tool_get_member(array $args, int $orgId, int $userId): array

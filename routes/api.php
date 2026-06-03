@@ -864,6 +864,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // until the frontend POSTs to /apply.
             Route::post('planner/auto-plan',              [PlannerController::class, 'autoPlanDay']);
             Route::post('planner/auto-plan/apply',        [PlannerController::class, 'autoPlanApply']);
+            // Ship 5 — voice-agent day-planning surface
+            Route::get('planner/free-slots',              [PlannerController::class, 'freeSlots']);
+            Route::post('planner/suggest-staff',          [PlannerController::class, 'suggestStaff']);
+            Route::get('planner/workload-week',           [PlannerController::class, 'workloadWeek']);
 
             // Backlog drawer: unscheduled tasks (task_date IS NULL).
             // scope=mine (default) returns the current user's bucket,

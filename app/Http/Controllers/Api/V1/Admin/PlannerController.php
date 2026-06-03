@@ -843,4 +843,280 @@ class PlannerController extends Controller
         [$h, $m] = array_pad(explode(':', $hhmm), 2, '0');
         return ((int) $h) * 60 + ((int) $m);
     }
+
+    /**
+     * GET /v1/admin/planner/free-slots
+     *
+     * Compute free time intervals on a date for an optional employee.
+     * Returns each gap as { start: 'HH:MM', end: 'HH:MM', minutes }
+     * within the work window. Inverse of autoPlanDay's busy scan.
+     *
+     * Shipped for the voice agent's day-planning playbook: "When can
+     * I fit a 90-min meeting with Anna tomorrow?" → AI reads back the
+     * free slots without having to call auto-plan.
+     */
+    public function freeSlots(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'date'                  => 'required|date_format:Y-m-d',
+            'employee_name'         => 'nullable|string|max:120',
+            'work_start'            => 'nullable|regex:/^\d{2}:\d{2}$/',
+            'work_end'              => 'nullable|regex:/^\d{2}:\d{2}$/',
+            'min_duration_minutes'  => 'nullable|integer|min:5|max:1440',
+        ]);
+
+        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
+        $workEndMin   = $this->hhmmToMin($data['work_end']   ?? '18:00');
+        $minMinutes   = (int) ($data['min_duration_minutes'] ?? 15);
+
+        $q = PlannerTask::query()
+            ->where('task_date', $data['date'])
+            ->where('completed', false)
+            ->whereNotNull('start_time');
+        if (!empty($data['employee_name'])) {
+            $q->where('employee_name', $data['employee_name']);
+        }
+
+        $busy = $q->get()
+            ->map(function ($t) {
+                $start = $this->hhmmToMin(substr((string) $t->start_time, 0, 5));
+                $duration = (int) ($t->duration_minutes ?? 30);
+                return ['start' => $start, 'end' => $start + $duration];
+            })
+            ->sortBy('start')
+            ->values()
+            ->all();
+
+        // Merge overlapping busy ranges so the inversion below is clean.
+        $merged = [];
+        foreach ($busy as $b) {
+            if (!empty($merged) && $b['start'] <= end($merged)['end']) {
+                $merged[count($merged) - 1]['end'] = max(end($merged)['end'], $b['end']);
+            } else {
+                $merged[] = $b;
+            }
+        }
+
+        $slots = [];
+        $cursor = $workStartMin;
+        foreach ($merged as $b) {
+            $gap = $b['start'] - $cursor;
+            if ($gap >= $minMinutes) {
+                $slots[] = [
+                    'start'   => sprintf('%02d:%02d', intdiv($cursor, 60), $cursor % 60),
+                    'end'     => sprintf('%02d:%02d', intdiv($b['start'], 60), $b['start'] % 60),
+                    'minutes' => $gap,
+                ];
+            }
+            $cursor = max($cursor, $b['end']);
+        }
+        if ($workEndMin - $cursor >= $minMinutes) {
+            $slots[] = [
+                'start'   => sprintf('%02d:%02d', intdiv($cursor, 60), $cursor % 60),
+                'end'     => sprintf('%02d:%02d', intdiv($workEndMin, 60), $workEndMin % 60),
+                'minutes' => $workEndMin - $cursor,
+            ];
+        }
+
+        return response()->json([
+            'date'  => $data['date'],
+            'employee_name' => $data['employee_name'] ?? null,
+            'work'  => [
+                'start' => sprintf('%02d:%02d', intdiv($workStartMin, 60), $workStartMin % 60),
+                'end'   => sprintf('%02d:%02d', intdiv($workEndMin, 60), $workEndMin % 60),
+            ],
+            'slots' => $slots,
+            'busy'  => array_map(fn ($b) => [
+                'start' => sprintf('%02d:%02d', intdiv($b['start'], 60), $b['start'] % 60),
+                'end'   => sprintf('%02d:%02d', intdiv($b['end'], 60), $b['end'] % 60),
+            ], $merged),
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/planner/suggest-staff
+     *
+     * Rank active staff for a given task by skills + same-day capacity.
+     * Honour the `staff.planner_skills` jsonb allowlist — null means
+     * "claim anything", otherwise the task_group must be in the list.
+     * Score is current_free_capacity_minutes desc, with ties broken by
+     * last_login_at recency (avoid suggesting a staffer who hasn't
+     * logged in in a month).
+     */
+    public function suggestStaff(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'task_group'        => 'required|string|max:80',
+            'task_date'         => 'required|date_format:Y-m-d',
+            'duration_minutes'  => 'nullable|integer|min:5|max:1440',
+            'work_start'        => 'nullable|regex:/^\d{2}:\d{2}$/',
+            'work_end'          => 'nullable|regex:/^\d{2}:\d{2}$/',
+            'limit'             => 'nullable|integer|min:1|max:25',
+        ]);
+
+        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
+        $workEndMin   = $this->hhmmToMin($data['work_end']   ?? '18:00');
+        $windowMin    = max(60, $workEndMin - $workStartMin);
+        $duration     = (int) ($data['duration_minutes'] ?? 60);
+        $limit        = (int) ($data['limit'] ?? 5);
+        $group        = $data['task_group'];
+
+        $staff = \App\Models\Staff::query()
+            ->where('is_active', true)
+            ->with('user:id,name,email')
+            ->get();
+
+        $tasks = PlannerTask::query()
+            ->where('task_date', $data['task_date'])
+            ->where('completed', false)
+            ->whereNotNull('start_time')
+            ->get(['employee_name', 'duration_minutes', 'priority']);
+
+        $loadByEmployee = [];
+        $highByEmployee = [];
+        foreach ($tasks as $t) {
+            $name = (string) ($t->employee_name ?? '');
+            if ($name === '') continue;
+            $loadByEmployee[$name] = ($loadByEmployee[$name] ?? 0) + (int) ($t->duration_minutes ?? 30);
+            if (strtolower((string) $t->priority) === 'high') {
+                $highByEmployee[$name] = ($highByEmployee[$name] ?? 0) + 1;
+            }
+        }
+
+        $candidates = [];
+        foreach ($staff as $s) {
+            // Skill gate — managers + super_admins bypass.
+            $isManager = in_array($s->role, ['super_admin', 'manager'], true);
+            $skills = is_array($s->planner_skills) ? $s->planner_skills : null;
+            $hasSkill = $isManager || $skills === null || in_array($group, $skills, true);
+            if (!$hasSkill) {
+                continue;
+            }
+
+            $name = (string) ($s->user?->name ?? '');
+            if ($name === '') continue;
+            $usedMin = (int) ($loadByEmployee[$name] ?? 0);
+            $freeMin = max(0, $windowMin - $usedMin);
+            $highCount = (int) ($highByEmployee[$name] ?? 0);
+
+            // Filter out anyone who simply has no room for the task.
+            if ($freeMin < $duration) continue;
+
+            $lastLogin = $s->last_login_at instanceof \Carbon\Carbon
+                ? $s->last_login_at->timestamp
+                : 0;
+            // Score: free capacity (higher = better), break ties by
+            // recency of login (more recent = better) and fewer same-
+            // day high-priority tasks already on plate.
+            $score = $freeMin - ($highCount * 30);
+            $reasonBits = [];
+            $reasonBits[] = "has {$freeMin} min free today";
+            if ($isManager) $reasonBits[] = 'manager';
+            elseif ($skills === null) $reasonBits[] = 'no skill restrictions';
+            else $reasonBits[] = "skilled in {$group}";
+            if ($highCount > 0) $reasonBits[] = "{$highCount} high-priority task" . ($highCount > 1 ? 's' : '') . ' today';
+
+            $candidates[] = [
+                'user_id'        => (int) $s->user_id,
+                'name'           => $name,
+                'role'           => (string) $s->role,
+                'free_minutes'   => $freeMin,
+                'used_minutes'   => $usedMin,
+                'high_priority_count' => $highCount,
+                'last_login_at'  => $s->last_login_at?->toIso8601String(),
+                'reason'         => implode(' · ', $reasonBits),
+                'score'          => $score,
+                '_recency'       => $lastLogin,
+            ];
+        }
+
+        usort($candidates, function ($a, $b) {
+            if ($a['score'] !== $b['score']) return $b['score'] <=> $a['score'];
+            return $b['_recency'] <=> $a['_recency'];
+        });
+
+        $candidates = array_slice($candidates, 0, $limit);
+        // Strip internal sort key before responding.
+        foreach ($candidates as &$c) unset($c['_recency']);
+
+        return response()->json([
+            'task_group'       => $group,
+            'task_date'        => $data['task_date'],
+            'duration_minutes' => $duration,
+            'window'           => [
+                'start' => sprintf('%02d:%02d', intdiv($workStartMin, 60), $workStartMin % 60),
+                'end'   => sprintf('%02d:%02d', intdiv($workEndMin, 60), $workEndMin % 60),
+            ],
+            'candidates'       => $candidates,
+        ]);
+    }
+
+    /**
+     * GET /v1/admin/planner/workload-week
+     *
+     * Per-employee scheduled minutes across a Mon-Sun week, with an
+     * `overbooked` flag when any single day exceeds 8h or the week
+     * exceeds 40h. Mirrors the Schedule view's workload bar logic so
+     * voice answers match what the user sees.
+     */
+    public function workloadWeek(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'week_start' => 'required|date_format:Y-m-d',
+        ]);
+
+        $weekStart = \Carbon\Carbon::parse($data['week_start']);
+        $weekEnd   = $weekStart->copy()->addDays(6);
+
+        $tasks = PlannerTask::query()
+            ->whereBetween('task_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->where('completed', false)
+            ->whereNotNull('employee_name')
+            ->get(['employee_name', 'task_date', 'duration_minutes']);
+
+        $byEmployee = [];
+        foreach ($tasks as $t) {
+            $name = (string) $t->employee_name;
+            $dayKey = $t->task_date instanceof \Carbon\Carbon
+                ? $t->task_date->toDateString()
+                : (string) $t->task_date;
+            $minutes = (int) ($t->duration_minutes ?? 30);
+
+            if (!isset($byEmployee[$name])) {
+                $byEmployee[$name] = [
+                    'employee_name'  => $name,
+                    'total_minutes'  => 0,
+                    'task_count'     => 0,
+                    'days'           => [],
+                ];
+            }
+            $byEmployee[$name]['total_minutes'] += $minutes;
+            $byEmployee[$name]['task_count']++;
+            $byEmployee[$name]['days'][$dayKey] = ($byEmployee[$name]['days'][$dayKey] ?? 0) + $minutes;
+        }
+
+        $rows = [];
+        foreach ($byEmployee as $emp) {
+            $maxDay = empty($emp['days']) ? 0 : max($emp['days']);
+            $overbooked = $maxDay > 480 || $emp['total_minutes'] > 2400;
+            $emp['max_day_minutes'] = $maxDay;
+            $emp['overbooked']      = $overbooked;
+            $emp['days']            = array_map(
+                fn ($k, $v) => ['date' => $k, 'minutes' => (int) $v],
+                array_keys($emp['days']),
+                array_values($emp['days']),
+            );
+            usort($emp['days'], fn ($a, $b) => strcmp($a['date'], $b['date']));
+            $rows[] = $emp;
+        }
+
+        usort($rows, fn ($a, $b) => $b['total_minutes'] <=> $a['total_minutes']);
+
+        return response()->json([
+            'week_start' => $weekStart->toDateString(),
+            'week_end'   => $weekEnd->toDateString(),
+            'employees'  => $rows,
+            'total_employees' => count($rows),
+        ]);
+    }
 }
