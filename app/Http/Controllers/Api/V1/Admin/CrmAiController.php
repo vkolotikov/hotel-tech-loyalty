@@ -141,8 +141,41 @@ class CrmAiController extends Controller
     }
 
     /**
+     * Default voice model for the admin AI voice agent. Pinned to a dated
+     * snapshot so a silent breaking upgrade can't strand prod. Alias
+     * "gpt-realtime" also works. Older "gpt-4o-realtime-preview*" snapshots
+     * are deprecated as of 2026-05-12 — Beta interface removed.
+     */
+    private const REALTIME_MODEL_DEFAULT = 'gpt-realtime-2025-08-28';
+
+    /**
+     * Voices supported by the GA Realtime API. `marin` + `cedar` are the
+     * new GA voices with substantially better prosody; the rest are legacy
+     * carryovers that still resolve on the GA model.
+     */
+    private const REALTIME_VOICES_GA = [
+        'marin', 'cedar',                                                              // GA
+        'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse',         // legacy
+    ];
+
+    /**
      * POST /api/v1/admin/crm-ai/realtime-session
-     * Creates an ephemeral OpenAI Realtime API session for voice-to-voice in admin AI chat.
+     *
+     * Mints an ephemeral OpenAI Realtime API client secret for the admin
+     * voice agent's WebRTC SDP exchange.
+     *
+     * Uses the GA endpoint /v1/realtime/client_secrets (the legacy
+     * /v1/realtime/sessions was retired with the Beta interface on
+     * 2026-05-12).
+     *
+     * Session JSON conforms to the GA shape:
+     *   - `output_modalities` (replaces flat `modalities`)
+     *   - `audio.{input,output}` nested config (was flat siblings)
+     *   - `audio.input.turn_detection` = `semantic_vad` (model-driven —
+     *     significantly better than server_vad for hospitality chatter)
+     *   - `audio.input.transcription.model` = `gpt-4o-transcribe`
+     *   - `tools` reserved for Ship 3 (left empty here so this ship is
+     *     pure model-bump risk).
      */
     public function createRealtimeSession(Request $request): JsonResponse
     {
@@ -153,68 +186,154 @@ class CrmAiController extends Controller
 
         $orgId = $request->user()->organization_id;
         $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $orgId)->first();
-
-        $voice = $voiceConfig->voice ?? 'alloy';
-        $model = $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview';
-        $temperature = $voiceConfig->temperature ?? 0.8;
-
-        // Build admin-specific instructions
         $user = $request->user();
-        $instructions = <<<PROMPT
-# Identity
-You are the AI Assistant for Hotel Tech Platform — an admin tool for hotel staff.
 
-# Context
-You're speaking with {$user->name}, a hotel staff member. Help them with:
-- CRM data: guests, inquiries, reservations, corporate accounts
-- Loyalty program: members, points, tiers, offers, benefits
-- Booking engine: PMS bookings, calendar, payments
-- Campaigns, venues, events
-- Platform guidance and best practices
+        $model = $this->resolveModel($voiceConfig);
+        $voice = $this->resolveVoice($voiceConfig);
+        $temperature = (float) ($voiceConfig->temperature ?? 0.7);
+        $instructions = $this->resolveInstructions($voiceConfig, $user);
 
-# Tone
-Professional but friendly. Be concise in voice — keep answers to 2-3 sentences. If they ask for data you can't look up in voice mode, suggest they use the text chat for detailed queries.
-
-# Rules
-- This is an internal admin tool, not guest-facing
-- You can discuss sensitive data like revenue, guest info, bookings
-- If asked to perform actions (create records, award points), explain that actions require the text chat — voice mode is for quick questions and guidance
-- Be proactive with suggestions and tips
-PROMPT;
-
-        if ($voiceConfig && $voiceConfig->voice_instructions) {
-            $instructions = $voiceConfig->voice_instructions;
-        }
+        $sessionPayload = [
+            'session' => [
+                'type'              => 'realtime',
+                'model'             => $model,
+                'output_modalities' => ['audio'],
+                'instructions'      => $instructions,
+                'audio'             => [
+                    'input' => [
+                        'format'         => 'pcm16',
+                        'turn_detection' => [
+                            'type'      => 'semantic_vad',
+                            'eagerness' => 'medium',
+                        ],
+                        'transcription'  => [
+                            'model' => 'gpt-4o-transcribe',
+                        ],
+                    ],
+                    'output' => [
+                        'format' => 'pcm16',
+                        'voice'  => $voice,
+                        'speed'  => 1.0,
+                    ],
+                ],
+                'temperature' => $temperature,
+                'tool_choice' => 'auto',
+                'tools'       => [], // Ship 3 wires the toolset
+            ],
+        ];
 
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
-            ])->post('https://api.openai.com/v1/realtime/sessions', [
-                'model' => $model,
-                'voice' => $voice,
-                'instructions' => $instructions,
-                'input_audio_transcription' => ['model' => 'gpt-4o-transcribe'],
-                'temperature' => $temperature,
-            ]);
+                // No OpenAI-Beta: realtime=v1 header — Beta interface removed 2026-05-12.
+            ])
+                ->timeout(30)
+                ->post('https://api.openai.com/v1/realtime/client_secrets', $sessionPayload);
 
             if ($response->failed()) {
+                \Illuminate\Support\Facades\Log::warning('crm_ai.realtime_session.failed', [
+                    'status' => $response->status(),
+                    'body'   => mb_substr((string) $response->body(), 0, 1000),
+                    'org_id' => $orgId,
+                    'model'  => $model,
+                ]);
                 return response()->json([
-                    'error' => 'Failed to create realtime session',
+                    'error'   => 'Failed to create realtime session',
                     'details' => $response->json(),
                 ], 502);
             }
 
             $data = $response->json();
 
+            // GA endpoint returns { value, expires_at, session: {...} }.
+            // Old endpoint returned { id, client_secret: { value, expires_at } }.
+            // Read defensively so a future shape tweak doesn't strand the SPA.
+            $clientSecret = $data['value']
+                ?? $data['client_secret']['value']
+                ?? null;
+            $expiresAt = $data['expires_at']
+                ?? $data['client_secret']['expires_at']
+                ?? null;
+
+            if ($clientSecret === null) {
+                return response()->json([
+                    'error'   => 'Realtime session response missing client secret',
+                    'details' => $data,
+                ], 502);
+            }
+
             return response()->json([
-                'client_secret' => $data['client_secret']['value'] ?? null,
-                'expires_at' => $data['client_secret']['expires_at'] ?? null,
-                'session_id' => $data['id'] ?? null,
-                'voice' => $voice,
-                'model' => $model,
+                'client_secret' => $clientSecret,
+                'expires_at'    => $expiresAt,
+                'session_id'    => $data['id'] ?? $data['session']['id'] ?? null,
+                'voice'         => $voice,
+                'model'         => $model,
             ]);
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('crm_ai.realtime_session.exception', [
+                'error'  => $e->getMessage(),
+                'org_id' => $orgId,
+            ]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Resolve the realtime model, transparently migrating orgs that pinned
+     * a now-deprecated `gpt-4o-realtime-preview*` snapshot. We can't keep
+     * those alive on the new GA endpoint, so anything matching that prefix
+     * gets the current default.
+     */
+    private function resolveModel(?\App\Models\VoiceAgentConfig $cfg): string
+    {
+        $configured = $cfg?->realtime_model;
+        if (!$configured || str_starts_with(strtolower((string) $configured), 'gpt-4o-realtime')) {
+            return self::REALTIME_MODEL_DEFAULT;
+        }
+        return $configured;
+    }
+
+    /**
+     * Resolve the voice. Default 'marin' (GA-recommended). Validates against
+     * the GA-supported list — admin-saved legacy voices stay honoured.
+     */
+    private function resolveVoice(?\App\Models\VoiceAgentConfig $cfg): string
+    {
+        $configured = strtolower((string) ($cfg?->voice ?? ''));
+        if ($configured === '' || !in_array($configured, self::REALTIME_VOICES_GA, true)) {
+            return 'marin';
+        }
+        return $configured;
+    }
+
+    private function resolveInstructions(?\App\Models\VoiceAgentConfig $cfg, $user): string
+    {
+        // Ship 2 introduces VoicePromptBuilder. Until then keep the inline
+        // prompt but strip the "actions require text chat" line — Ship 7
+        // adds the confirmation modal so voice mutations become real.
+        if ($cfg && $cfg->voice_instructions) {
+            return $cfg->voice_instructions;
+        }
+        $userName = (string) ($user->name ?? 'there');
+        return <<<PROMPT
+# Identity
+You are the AI Assistant for the Hotel Tech Platform — a voice copilot for hotel staff.
+
+# Context
+You're speaking with {$userName}, a hotel staff member. Help them with:
+- CRM data: guests, inquiries, reservations, corporate accounts
+- Loyalty program: members, points, tiers, offers, benefits
+- Booking engine: PMS bookings, calendar, payments
+- Campaigns, venues, events, planner / day planning
+- Platform guidance and best practices
+
+# Tone
+Professional but friendly. Speak conversationally — short sentences, no markdown, no bullet lists when speaking aloud. Confirm key identifying details (guest name, dates, amounts) when relevant. Match the user's language.
+
+# Rules
+- Internal admin tool, not guest-facing — you can discuss sensitive data.
+- Never invent IDs, names, prices, or stages. If you don't know, say so.
+- Stay concise — 2-3 sentences per turn is the sweet spot.
+PROMPT;
     }
 }

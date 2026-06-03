@@ -308,7 +308,7 @@ export default function AiChat() {
     try {
       // 1. Get ephemeral token
       const res = await api.post('/v1/admin/crm-ai/realtime-session')
-      const { client_secret } = res.data
+      const { client_secret, model: sessionModel } = res.data
       if (!client_secret) throw new Error('No client secret received')
 
       // 2. Create PeerConnection
@@ -375,11 +375,20 @@ export default function AiChat() {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      const sdpRes = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
-        body: pc.localDescription!.sdp,
-      })
+      // Use the model the backend returned (per-org VoiceAgentConfig may override
+      // the default). Falling back to a hardcoded model here would silently
+      // re-route every org to the same model regardless of admin config — that
+      // was the original bug (pinning gpt-4o-realtime-preview, which is now
+      // deprecated).
+      const realtimeModel = sessionModel || 'gpt-realtime-2025-08-28'
+      const sdpRes = await fetch(
+        `https://api.openai.com/v1/realtime?model=${encodeURIComponent(realtimeModel)}`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
+          body: pc.localDescription!.sdp,
+        },
+      )
 
       if (!sdpRes.ok) throw new Error('SDP exchange failed')
       const answerSdp = await sdpRes.text()
