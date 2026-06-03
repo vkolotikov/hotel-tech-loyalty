@@ -218,7 +218,7 @@ class CrmAiController extends Controller
                 ],
                 'temperature' => $temperature,
                 'tool_choice' => 'auto',
-                'tools'       => [], // Ship 3 wires the toolset
+                'tools'       => app(\App\Services\CrmVoiceToolset::class)->getTools(),
             ],
         ];
 
@@ -315,5 +315,47 @@ class CrmAiController extends Controller
     private function resolveInstructions(?\App\Models\VoiceAgentConfig $cfg, $user): string
     {
         return app(\App\Services\VoicePromptBuilder::class)->build($user, $cfg);
+    }
+
+    /**
+     * POST /v1/admin/crm-ai/voice-tool
+     *
+     * Executes a voice-agent tool call routed from the browser. The
+     * OpenAI Realtime session emits `response.function_call_arguments.done`
+     * events; the frontend forwards them here, the server dispatches via
+     * `CrmVoiceToolset::execute()`, and the result goes back into the
+     * WebRTC data channel as a `function_call_output`.
+     *
+     * Auth: standard `auth:sanctum` + `CheckSubscription` from the admin
+     * group. `$user->organization_id` becomes the bound tenant. The
+     * caller's `id` becomes the actor (used by mutation tools in Ship 7).
+     *
+     * Always returns HTTP 200 — even on tool errors — so the realtime
+     * session never has to retry. The error payload is forwarded to the
+     * model so it can speak something useful instead of going silent.
+     */
+    public function executeVoiceTool(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name'    => 'required|string|max:80',
+            'args'    => 'nullable|array',
+            'call_id' => 'nullable|string|max:200',
+        ]);
+
+        $user = $request->user();
+        $orgId = (int) $user->organization_id;
+
+        $output = app(\App\Services\CrmVoiceToolset::class)->execute(
+            name: $data['name'],
+            args: (array) ($data['args'] ?? []),
+            orgId: $orgId,
+            userId: (int) $user->id,
+        );
+
+        return response()->json([
+            'call_id' => $data['call_id'] ?? null,
+            'name'    => $data['name'],
+            'output'  => $output,
+        ]);
     }
 }
