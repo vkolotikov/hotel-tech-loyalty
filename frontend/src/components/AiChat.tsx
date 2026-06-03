@@ -315,6 +315,131 @@ export default function AiChat() {
     return () => document.removeEventListener('mousedown', close)
   }, [menuOpen])
 
+  /* ── Launcher position (drag-to-move + auto-shift) ── */
+  // Coordinates are stored as offsets from the bottom-right viewport
+  // corner (CSS `right` + `bottom`) so the launcher stays docked when
+  // the window resizes. Persists per-user via localStorage so a moved
+  // button stays where the user put it.
+  const LAUNCHER_POS_KEY = 'loyalty-ai-launcher-pos'
+  const LAUNCHER_SIZE = 56 // matches w-14 h-14 below
+  const DEFAULT_LAUNCHER_POS = { right: 20, bottom: 20 }
+  const [launcherPos, setLauncherPos] = useState<{ right: number; bottom: number }>(() => {
+    try {
+      const saved = localStorage.getItem(LAUNCHER_POS_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed?.right === 'number' && typeof parsed?.bottom === 'number') return parsed
+      }
+    } catch {}
+    return DEFAULT_LAUNCHER_POS
+  })
+  // True while a pointer drag is in flight — used to suppress the
+  // click event that fires immediately after a successful drag, so a
+  // moved button doesn't also open the panel.
+  const launcherDragRef = useRef<{ moved: boolean } | null>(null)
+
+  // Auto-shift: when a right-docked drawer / modal overlaps the
+  // launcher's footer area, lift it so it stops covering the
+  // Cancel/Create buttons typically docked at the bottom of those
+  // drawers. The user can still drag wherever they want; this is
+  // just a sensible default that fires when needed.
+  const [autoShiftPx, setAutoShiftPx] = useState(0)
+  useEffect(() => {
+    if (open) { setAutoShiftPx(0); return }
+    const detect = () => {
+      // Probe the spot the launcher would otherwise sit (its centre).
+      // If an interactive footer-region element is right there, lift
+      // the launcher above it.
+      const cx = window.innerWidth - launcherPos.right - LAUNCHER_SIZE / 2
+      const cy = window.innerHeight - launcherPos.bottom - LAUNCHER_SIZE / 2
+      const probe = document.elementFromPoint(cx, cy) as HTMLElement | null
+      if (!probe) { setAutoShiftPx(0); return }
+      // Walk up looking for a fixed/sticky drawer/dialog footer or
+      // any anchored action surface. We match common drawer roles +
+      // a few known Tailwind shapes we use across the app.
+      let node: HTMLElement | null = probe
+      let found: HTMLElement | null = null
+      let depth = 0
+      while (node && depth < 8) {
+        const role = node.getAttribute?.('role')
+        const ariaModal = node.getAttribute?.('aria-modal')
+        const cls = node.className || ''
+        const looksLikeDrawer =
+          role === 'dialog' ||
+          ariaModal === 'true' ||
+          /\bfixed\b/.test(cls) && /\b(right-0|inset-0|inset-y-0)\b/.test(cls)
+        if (looksLikeDrawer) { found = node; break }
+        node = node.parentElement
+        depth++
+      }
+      if (!found) { setAutoShiftPx(0); return }
+      // Found a covering drawer. Lift the launcher by ~72px so it
+      // clears a typical footer with Cancel/Save buttons.
+      setAutoShiftPx(72)
+    }
+    detect()
+    // Re-check when the DOM mutates (drawer opens / closes / page
+    // route changes) and on resize.
+    const obs = new MutationObserver(detect)
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'role', 'aria-modal'] })
+    window.addEventListener('resize', detect)
+    return () => {
+      obs.disconnect()
+      window.removeEventListener('resize', detect)
+    }
+  }, [open, launcherPos.right, launcherPos.bottom])
+
+  const beginLauncherDrag = (e: React.PointerEvent) => {
+    // Only start a drag for the primary pointer button.
+    if (e.button !== 0) return
+    const startX = e.clientX
+    const startY = e.clientY
+    const startPos = { ...launcherPos }
+    const ctx = { moved: false }
+    launcherDragRef.current = ctx
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      // 4-px dead-zone so a normal click doesn't register as drag.
+      if (!ctx.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+      ctx.moved = true
+      const margin = 8
+      const newRight = Math.max(margin, Math.min(window.innerWidth - LAUNCHER_SIZE - margin, startPos.right - dx))
+      const newBottom = Math.max(margin, Math.min(window.innerHeight - LAUNCHER_SIZE - margin, startPos.bottom - dy))
+      setLauncherPos({ right: newRight, bottom: newBottom })
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      if (ctx.moved) {
+        // Save the final position; the click that follows
+        // pointerup is suppressed below.
+        setLauncherPos(curr => {
+          try { localStorage.setItem(LAUNCHER_POS_KEY, JSON.stringify(curr)) } catch {}
+          return curr
+        })
+        // Keep moved=true for a tick so the click handler bails.
+        setTimeout(() => { launcherDragRef.current = null }, 50)
+      } else {
+        launcherDragRef.current = null
+      }
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  const onLauncherClick = () => {
+    // If a drag just finished, swallow this click — don't open the panel.
+    if (launcherDragRef.current?.moved) return
+    setOpen(true)
+  }
+
+  const resetLauncherPos = () => {
+    setLauncherPos(DEFAULT_LAUNCHER_POS)
+    try { localStorage.removeItem(LAUNCHER_POS_KEY) } catch {}
+  }
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
@@ -837,15 +962,24 @@ export default function AiChat() {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
-        className="group fixed bottom-5 right-5 z-50 flex items-center gap-2"
-        title="AI Assistant — click to start"
+        onClick={onLauncherClick}
+        onPointerDown={beginLauncherDrag}
+        // Disable native HTML5 drag image so the button stays under the
+        // pointer cleanly while moving.
+        onDragStart={(e) => e.preventDefault()}
+        style={{
+          right: launcherPos.right,
+          bottom: launcherPos.bottom + autoShiftPx,
+          touchAction: 'none', // prevent page scroll while dragging
+        }}
+        className="group fixed z-50 flex items-center gap-2 select-none cursor-grab active:cursor-grabbing"
+        title="AI Assistant — click to start · drag to reposition"
         aria-label="Open AI Assistant"
       >
         {/* Hover label slides in to introduce the agent without using up
           * real-estate at rest. Hidden on mobile. */}
         <span className="hidden sm:inline-block px-3 py-1.5 rounded-full bg-dark-surface border border-dark-border text-white text-xs font-medium shadow-lg opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
-          Ask AI · Voice or text
+          Ask AI · drag to move
         </span>
         <span className="relative flex items-center justify-center">
           {/* Soft outer glow halo */}
@@ -857,7 +991,7 @@ export default function AiChat() {
             <Sparkles size={24} className="text-dark-bg group-hover:rotate-12 transition-transform" strokeWidth={2.4} />
           </span>
           {/* Online indicator */}
-          <span className="absolute top-0 right-0 flex items-center justify-center">
+          <span className="absolute top-0 right-0 flex items-center justify-center pointer-events-none">
             <span className="absolute w-3 h-3 rounded-full bg-emerald-400/40 animate-ping" />
             <span className="relative w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-dark-bg" />
           </span>
@@ -945,6 +1079,16 @@ export default function AiChat() {
                   {expanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                   {expanded ? 'Compact view' : 'Expand view'}
                 </button>
+                {(launcherPos.right !== DEFAULT_LAUNCHER_POS.right || launcherPos.bottom !== DEFAULT_LAUNCHER_POS.bottom) && (
+                  <button
+                    onClick={() => { resetLauncherPos(); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                    title="Move the floating button back to the bottom-right corner"
+                  >
+                    <MoreHorizontal size={13} />
+                    Reset button position
+                  </button>
+                )}
                 {messages.length > 0 && (
                   <button
                     onClick={() => { clearChat(); setMenuOpen(false) }}
