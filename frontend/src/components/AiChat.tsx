@@ -710,11 +710,15 @@ export default function AiChat() {
       setVoiceCallActive(false)
       setVoiceStatus('')
 
-      // Ship 10 — friendlier error mapping. NotAllowed = browser
-      // permission denied; NotFound = no input device; the rest fall
-      // through to the raw error so we can still triage from Sentry.
+      // Friendlier error mapping. NotAllowed = browser permission
+      // denied; NotFound = no input device; 400 = our session payload
+      // didn't pass OpenAI's validator (surface the upstream details so
+      // we can debug from the user's screen, not just laravel.log).
       const name = err?.name
       let userMsg = err?.message || 'Unknown error'
+      const upstreamStatus = err?.response?.data?.upstream_status
+      const upstreamDetails = err?.response?.data?.details
+
       if (name === 'NotAllowedError' || name === 'SecurityError') {
         userMsg = 'Microphone access denied. Click the microphone icon in your browser address bar, allow access, then try again.'
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
@@ -723,6 +727,12 @@ export default function AiChat() {
         userMsg = 'Voice is not configured for this workspace. Ask your admin to add an OpenAI API key in Settings → System.'
       } else if (typeof userMsg === 'string' && userMsg.includes('SDP exchange failed')) {
         userMsg = 'Could not reach OpenAI Realtime. Check your network — corporate firewalls sometimes block WebRTC traffic.'
+      } else if (upstreamStatus && upstreamDetails) {
+        // Anything OpenAI rejected — surface the actual reason so
+        // staff can paste it into a bug report instead of guessing.
+        const reason = upstreamDetails?.error?.message
+          || (typeof upstreamDetails === 'string' ? upstreamDetails : JSON.stringify(upstreamDetails).slice(0, 280))
+        userMsg = `Voice service rejected the request (${upstreamStatus}): ${reason}`
       }
       alert('Voice call failed: ' + userMsg)
     }

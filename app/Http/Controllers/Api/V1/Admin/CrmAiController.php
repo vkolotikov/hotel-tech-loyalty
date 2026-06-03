@@ -190,46 +190,57 @@ class CrmAiController extends Controller
 
         $model = $this->resolveModel($voiceConfig);
         $voice = $this->resolveVoice($voiceConfig);
-        $temperature = (float) ($voiceConfig->temperature ?? 0.7);
         $instructions = $this->resolveInstructions($voiceConfig, $user);
 
-        // Build the session payload conservatively. Some realtime-API
-        // fields ship behind feature flags or are added per-snapshot;
-        // anything that risks rejecting the whole request without a
-        // clear win goes behind a defensive guard.
+        // Build the session payload to match the OpenAI GA docs exactly
+        // (verified 2026-06-03 against developers.openai.com/api/docs/
+        //  api-reference/realtime-sessions/create-realtime-client-secret).
+        //
+        // Key shape decisions documented inline because previous-ship
+        // shapes have already cost us 400s in prod:
+        //
+        // - `audio.input.format` is an OBJECT, not a flat string.
+        //   A string ("pcm16") gets rejected with a deep validator path
+        //   error. The canonical pair is { type: "audio/pcm", rate: 24000 }.
+        // - `output_modalities` accepts only ["text"], ["audio"], or
+        //   ["text","audio"]. Audio-only is the minimal-example default
+        //   in the docs; transcripts still stream via the dedicated
+        //   audio.input.transcription model.
+        // - `turn_detection: server_vad` is the safest default. The newer
+        //   `semantic_vad` is documented but rejecting it for now keeps
+        //   the connection reliable; we can promote it once we have a
+        //   green prod baseline.
+        // - `temperature`, `tool_choice`, `speed` removed -- not in the
+        //   minimal example. OpenAI may accept them but every undocumented
+        //   field is one more way a snapshot rev can 400 us. Defaults are
+        //   sane.
         $sessionPayload = [
             'session' => [
                 'type'              => 'realtime',
                 'model'             => $model,
-                // Include text so the WebRTC client gets transcript
-                // events alongside audio. Audio-only modality blocks
-                // response.audio_transcript.* events on some snapshots.
-                'output_modalities' => ['audio', 'text'],
+                'output_modalities' => ['audio'],
                 'instructions'      => $instructions,
                 'audio'             => [
                     'input' => [
-                        'format'         => 'pcm16',
+                        'format'         => [
+                            'type' => 'audio/pcm',
+                            'rate' => 24000,
+                        ],
                         'turn_detection' => [
-                            'type'      => 'semantic_vad',
-                            'eagerness' => 'medium',
-                            // idle_timeout_ms was a Ship-10 polish add but
-                            // is rejected by current GA snapshots with a
-                            // 400. Dropped until verified. We can put it
-                            // back behind a feature flag once OpenAI
-                            // confirms support.
+                            'type' => 'server_vad',
                         ],
                         'transcription'  => [
                             'model' => 'gpt-4o-transcribe',
                         ],
                     ],
                     'output' => [
-                        'format' => 'pcm16',
+                        'format' => [
+                            'type' => 'audio/pcm',
+                            'rate' => 24000,
+                        ],
                         'voice'  => $voice,
-                        'speed'  => 1.0,
                     ],
                 ],
-                'temperature' => $temperature,
-                'tool_choice' => 'auto',
                 'tools'       => app(\App\Services\CrmVoiceToolset::class)->getTools(),
             ],
         ];
