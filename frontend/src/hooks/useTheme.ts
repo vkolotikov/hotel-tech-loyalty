@@ -73,6 +73,52 @@ function surfaceShade(hex: string, amount: number): string {
   return `${r} ${g} ${b}`
 }
 
+/**
+ * Apply a colour palette to the DOM's CSS variables immediately —
+ * no React state, no query roundtrip, no flicker. Used by both the
+ * useTheme hook (after server fetch) and Settings → Theme presets
+ * (the moment the staff clicks a preset, before the network save
+ * round-trips). Same logic in both places, so a preset's instant
+ * preview matches the eventual saved state exactly.
+ */
+export function applyThemeToDom(colors: Partial<ThemeColors>): void {
+  const merged: ThemeColors = { ...DEFAULTS, ...colors } as ThemeColors
+  const root = document.documentElement
+
+  const shades = generateShades(merged.primary_color)
+  root.style.setProperty('--color-primary-50',  shades[50])
+  root.style.setProperty('--color-primary-100', shades[100])
+  root.style.setProperty('--color-primary-200', shades[200])
+  root.style.setProperty('--color-primary-300', shades[300])
+  root.style.setProperty('--color-primary-400', shades[400])
+  root.style.setProperty('--color-primary-500', shades[500])
+  root.style.setProperty('--color-primary-600', shades[600])
+  root.style.setProperty('--color-primary-700', shades[700])
+  root.style.setProperty('--color-primary-800', shades[800])
+  root.style.setProperty('--color-primary-900', shades[900])
+
+  root.style.setProperty('--color-dark-bg',       hexToRgb(merged.background_color))
+  root.style.setProperty('--color-dark-surface',  hexToRgb(merged.surface_color))
+  root.style.setProperty('--color-dark-surface2', surfaceShade(merged.surface_color, 8))
+  root.style.setProperty('--color-dark-surface3', surfaceShade(merged.surface_color, 16))
+  root.style.setProperty('--color-dark-surface4', surfaceShade(merged.surface_color, 24))
+  root.style.setProperty('--color-dark-border',   hexToRgb(merged.border_color))
+  root.style.setProperty('--color-dark-border2',  surfaceShade(merged.border_color, 12))
+
+  root.style.setProperty('--color-text-primary',   hexToRgb(merged.text_color))
+  root.style.setProperty('--color-text-secondary', hexToRgb(merged.text_secondary_color))
+
+  root.style.setProperty('--color-accent',  hexToRgb(merged.accent_color))
+  root.style.setProperty('--color-error',   hexToRgb(merged.error_color))
+  root.style.setProperty('--color-warning', hexToRgb(merged.warning_color))
+  root.style.setProperty('--color-info',    hexToRgb(merged.info_color))
+
+  document.body.style.backgroundColor = merged.background_color
+  document.body.style.color = merged.text_color
+}
+
+export type { ThemeColors }
+
 export function useTheme() {
   const { data } = useQuery<ThemeColors>({
     queryKey: ['admin-theme'],
@@ -84,43 +130,7 @@ export function useTheme() {
   const theme = { ...DEFAULTS, ...data }
 
   useEffect(() => {
-    const root = document.documentElement
-
-    // Primary color shades
-    const shades = generateShades(theme.primary_color)
-    root.style.setProperty('--color-primary-50', shades[50])
-    root.style.setProperty('--color-primary-100', shades[100])
-    root.style.setProperty('--color-primary-200', shades[200])
-    root.style.setProperty('--color-primary-300', shades[300])
-    root.style.setProperty('--color-primary-400', shades[400])
-    root.style.setProperty('--color-primary-500', shades[500])
-    root.style.setProperty('--color-primary-600', shades[600])
-    root.style.setProperty('--color-primary-700', shades[700])
-    root.style.setProperty('--color-primary-800', shades[800])
-    root.style.setProperty('--color-primary-900', shades[900])
-
-    // Dark surfaces
-    root.style.setProperty('--color-dark-bg', hexToRgb(theme.background_color))
-    root.style.setProperty('--color-dark-surface', hexToRgb(theme.surface_color))
-    root.style.setProperty('--color-dark-surface2', surfaceShade(theme.surface_color, 8))
-    root.style.setProperty('--color-dark-surface3', surfaceShade(theme.surface_color, 16))
-    root.style.setProperty('--color-dark-surface4', surfaceShade(theme.surface_color, 24))
-    root.style.setProperty('--color-dark-border', hexToRgb(theme.border_color))
-    root.style.setProperty('--color-dark-border2', surfaceShade(theme.border_color, 12))
-
-    // Text colors
-    root.style.setProperty('--color-text-primary', hexToRgb(theme.text_color))
-    root.style.setProperty('--color-text-secondary', hexToRgb(theme.text_secondary_color))
-
-    // Accent / status colors
-    root.style.setProperty('--color-accent', hexToRgb(theme.accent_color))
-    root.style.setProperty('--color-error', hexToRgb(theme.error_color))
-    root.style.setProperty('--color-warning', hexToRgb(theme.warning_color))
-    root.style.setProperty('--color-info', hexToRgb(theme.info_color))
-
-    // Apply to body directly for immediate visual effect
-    document.body.style.backgroundColor = theme.background_color
-    document.body.style.color = theme.text_color
+    applyThemeToDom(theme)
   }, [
     theme.primary_color, theme.background_color, theme.surface_color,
     theme.border_color, theme.text_color, theme.text_secondary_color,

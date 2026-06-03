@@ -1,8 +1,9 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
+import { applyThemeToDom } from '../hooks/useTheme'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -11,7 +12,7 @@ import {
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
   BookOpen, Search, GitBranch, ClipboardList, Activity,
-  Building2, ArrowLeft,
+  Building2, ArrowLeft, Undo2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -67,7 +68,7 @@ interface ThemePreset {
 
 const PRESETS: Record<string, ThemePreset> = {
   'Gold Luxury': {
-    description: 'Warm gold on charcoal — classic five-star feel',
+    description: 'Warm gold on charcoal — premium, refined',
     colors: {
       primary_color: '#c9a84c', secondary_color: '#1e1e1e', accent_color: '#32d74b',
       background_color: '#0d0d0d', surface_color: '#161616', text_color: '#ffffff',
@@ -84,8 +85,8 @@ const PRESETS: Record<string, ThemePreset> = {
       error_color: '#ef4444', warning_color: '#eab308', info_color: '#06b6d4',
     },
   },
-  'Emerald Resort': {
-    description: 'Lush green & amber — wellness retreats and spas',
+  'Emerald': {
+    description: 'Lush green & amber — wellness, eco, outdoor',
     colors: {
       primary_color: '#10b981', secondary_color: '#1a2332', accent_color: '#f59e0b',
       background_color: '#0c1117', surface_color: '#141e29', text_color: '#f0fdf4',
@@ -94,7 +95,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Rose Boutique': {
-    description: 'Warm rose & peach — boutique and lifestyle hotels',
+    description: 'Warm rose & peach — boutique & lifestyle',
     colors: {
       primary_color: '#e11d48', secondary_color: '#1c1017', accent_color: '#fb923c',
       background_color: '#0f0708', surface_color: '#1c1017', text_color: '#fff1f2',
@@ -103,7 +104,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Ocean Breeze': {
-    description: 'Cyan & violet — coastal resorts and beach clubs',
+    description: 'Cyan & violet — fresh, modern, calm',
     colors: {
       primary_color: '#06b6d4', secondary_color: '#0f2937', accent_color: '#a78bfa',
       background_color: '#0a1a24', surface_color: '#0f2937', text_color: '#ecfeff',
@@ -112,7 +113,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Midnight Purple': {
-    description: 'Violet & pink — nightlife venues and city hotels',
+    description: 'Violet & pink — bold, creative, after-dark',
     colors: {
       primary_color: '#8b5cf6', secondary_color: '#1a1625', accent_color: '#f472b6',
       background_color: '#0e0b16', surface_color: '#1a1625', text_color: '#f5f3ff',
@@ -121,7 +122,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Sunset Coral': {
-    description: 'Coral & amber — Mediterranean & desert resorts',
+    description: 'Coral & amber — warm, energetic, hospitable',
     colors: {
       primary_color: '#f97316', secondary_color: '#1f1410', accent_color: '#fbbf24',
       background_color: '#120906', surface_color: '#1f1410', text_color: '#fff7ed',
@@ -129,8 +130,8 @@ const PRESETS: Record<string, ThemePreset> = {
       error_color: '#ef4444', warning_color: '#facc15', info_color: '#38bdf8',
     },
   },
-  'Forest Spa': {
-    description: 'Pine & sage — mountain lodges and eco retreats',
+  'Forest': {
+    description: 'Pine & sage — natural, grounded, calm',
     colors: {
       primary_color: '#16a34a', secondary_color: '#0f1a14', accent_color: '#84cc16',
       background_color: '#08120c', surface_color: '#0f1a14', text_color: '#f0fdf4',
@@ -148,7 +149,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Slate Modern': {
-    description: 'Cool slate & cyan — modern minimalist business hotels',
+    description: 'Cool slate & cyan — clean, professional, neutral',
     colors: {
       primary_color: '#64748b', secondary_color: '#0f172a', accent_color: '#06b6d4',
       background_color: '#020617', surface_color: '#0f172a', text_color: '#f1f5f9',
@@ -157,7 +158,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Tropical Mint': {
-    description: 'Mint & teal — Caribbean resorts and beach properties',
+    description: 'Mint & teal — light, fresh, summer',
     colors: {
       primary_color: '#14b8a6', secondary_color: '#0a1f1d', accent_color: '#fde047',
       background_color: '#04110f', surface_color: '#0a1f1d', text_color: '#f0fdfa',
@@ -165,8 +166,8 @@ const PRESETS: Record<string, ThemePreset> = {
       error_color: '#fb7185', warning_color: '#facc15', info_color: '#38bdf8',
     },
   },
-  'Burgundy Wine': {
-    description: 'Rich burgundy & gold — vineyard estates and wine country',
+  'Burgundy': {
+    description: 'Rich burgundy & gold — premium, mature, classic',
     colors: {
       primary_color: '#9f1239', secondary_color: '#1a0a0f', accent_color: '#d4af37',
       background_color: '#0e0608', surface_color: '#1a0a0f', text_color: '#fff1f2',
@@ -175,7 +176,7 @@ const PRESETS: Record<string, ThemePreset> = {
     },
   },
   'Sky Minimal': {
-    description: 'Sky blue & soft gray — light, airy and modern',
+    description: 'Sky blue & soft gray — light, airy, modern',
     colors: {
       primary_color: '#0ea5e9', secondary_color: '#0f1a23', accent_color: '#a78bfa',
       background_color: '#050b12', surface_color: '#0f1a23', text_color: '#f0f9ff',
@@ -378,14 +379,81 @@ export function Settings() {
     }
   }
 
+  /**
+   * Snapshot of the colour values right BEFORE the most recent preset
+   * apply -- so the user can undo within a 15-second window if they
+   * picked the wrong one. Mirrors the snapshot pattern we use on
+   * destructive bulk mutations elsewhere in the app.
+   */
+  const [undoSnapshot, setUndoSnapshot] = useState<{
+    colors: Record<string, string>
+    fromPresetName: string | null
+    toPresetName: string
+    expiresAt: number
+  } | null>(null)
+
+  /**
+   * Apply a preset. Order matters:
+   *   1. Snapshot the current colors so undo can revert.
+   *   2. Push the new palette to the DOM via applyThemeToDom() so the
+   *      page re-themes INSTANTLY -- no waiting for the network
+   *      round-trip + admin-theme query refetch. Previously the click
+   *      felt broken because the visual flip lagged the save toast.
+   *   3. Persist to the backend in the background.
+   *   4. After save, refetch admin-theme so the server-truth matches
+   *      what we already painted (and any other tab on the same
+   *      session picks it up).
+   */
   const applyPreset = (name: string) => {
     const p = PRESETS[name]
     if (!p) return
+
+    // Snapshot current colors before flipping
+    const previousColors: Record<string, string> = {}
+    for (const k of COLOR_KEYS) previousColors[k] = getVal(k) || ''
+    const previousPreset = detectActivePreset()
+    setUndoSnapshot({
+      colors: previousColors,
+      fromPresetName: previousPreset,
+      toPresetName: name,
+      expiresAt: Date.now() + 15_000,
+    })
+
+    // Instant visual apply -- the user sees the theme flip the moment
+    // they click, instead of after ~500ms of network latency.
+    applyThemeToDom(p.colors as any)
+
     setEditedSettings(prev => ({ ...prev, ...p.colors }))
-    // Auto-save preset immediately
     const settings = Object.entries(p.colors).map(([key, value]) => ({ key, value }))
     saveMutation.mutate(settings)
   }
+
+  /**
+   * Revert to the colour palette that was active before the most
+   * recent applyPreset() call. Same instant-apply + persist flow.
+   */
+  const undoPreset = () => {
+    if (!undoSnapshot) return
+    const { colors, fromPresetName } = undoSnapshot
+    // Restore previous colors via DOM and queued save
+    applyThemeToDom(colors as any)
+    setEditedSettings(prev => ({ ...prev, ...colors }))
+    const settings = Object.entries(colors).map(([key, value]) => ({ key, value }))
+    saveMutation.mutate(settings)
+    setUndoSnapshot(null)
+    toast.success(fromPresetName ? `Reverted to "${fromPresetName}"` : 'Theme reverted')
+  }
+
+  /**
+   * Auto-clear the undo snapshot when the 15-second window expires
+   * so the "Undo" affordance disappears once it's no longer relevant.
+   */
+  useEffect(() => {
+    if (!undoSnapshot) return
+    const ms = Math.max(0, undoSnapshot.expiresAt - Date.now())
+    const t = setTimeout(() => setUndoSnapshot(null), ms)
+    return () => clearTimeout(t)
+  }, [undoSnapshot?.expiresAt])
 
   // Detect which preset (if any) matches the current colors
   const detectActivePreset = (): string | null => {
@@ -660,8 +728,8 @@ export function Settings() {
 
         {/* Theme Presets */}
         <div className={cardClass} style={cardStyle}>
-          <div className="flex items-start justify-between mb-1">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="flex items-start justify-between mb-1 gap-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
               <Palette size={15} className="text-emerald-400" /> Theme Presets
               {activePreset && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
@@ -669,12 +737,24 @@ export function Settings() {
                 </span>
               )}
             </h3>
-            <button onClick={() => applyPreset(DEFAULT_PRESET)}
-              className="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
-              <RotateCcw size={11} /> Reset to default
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {undoSnapshot && (
+                <button
+                  onClick={undoPreset}
+                  className="text-[11px] font-medium text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5"
+                  title={`Revert to ${undoSnapshot.fromPresetName || 'previous colors'}`}
+                >
+                  <Undo2 size={11} />
+                  Undo "{undoSnapshot.toPresetName}"
+                </button>
+              )}
+              <button onClick={() => applyPreset(DEFAULT_PRESET)}
+                className="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
+                <RotateCcw size={11} /> Reset to default
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mb-4">Pick a curated palette tailored to your hotel style — applies instantly.</p>
+          <p className="text-xs text-gray-500 mb-4">Pick a curated palette to match your brand mood — applies instantly across the whole admin.</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {Object.entries(PRESETS).map(([name, preset]) => {
               const isActive = activePreset === name
