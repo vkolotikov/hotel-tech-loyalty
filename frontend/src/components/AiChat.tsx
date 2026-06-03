@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import {
   X, Send, Loader2, Sparkles, Trash2, Maximize2, Minimize2,
   Bot, User, ChevronRight, Zap, Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff,
-  Wrench,
+  Wrench, MoreHorizontal, Users, BedDouble, Gift, BarChart3, BookOpen,
 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string; actions?: any[] }
@@ -88,9 +88,26 @@ function humaniseTool(name: string): string {
   return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-const SUGGESTION_GROUPS = [
+/**
+ * Suggestion groups for the empty-state welcome screen. Each group
+ * carries an icon + accent so the grid scans visually before the user
+ * reads the prompts. Accents reuse existing Tailwind palette tokens
+ * so they pick up the org-themed primary tint automatically.
+ */
+const SUGGESTION_GROUPS: Array<{
+  label: string
+  icon: typeof Users
+  accent: string  // text color
+  bg: string     // tile bg
+  border: string // tile border (hover)
+  items: string[]
+}> = [
   {
     label: 'CRM & Guests',
+    icon: Users,
+    accent: 'text-sky-400',
+    bg: 'bg-sky-500/10',
+    border: 'hover:border-sky-500/40',
     items: [
       "How many arrivals today?",
       "Show in-house VIP guests",
@@ -99,6 +116,10 @@ const SUGGESTION_GROUPS = [
   },
   {
     label: 'Booking Engine',
+    icon: BedDouble,
+    accent: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    border: 'hover:border-emerald-500/40',
     items: [
       "Show PMS booking dashboard for this month",
       "Which bookings are unpaid?",
@@ -107,6 +128,10 @@ const SUGGESTION_GROUPS = [
   },
   {
     label: 'Loyalty',
+    icon: Gift,
+    accent: 'text-primary-400',
+    bg: 'bg-primary-500/10',
+    border: 'hover:border-primary-500/40',
     items: [
       "Show Gold tier members",
       "Analyze churn risk for member #1",
@@ -115,6 +140,10 @@ const SUGGESTION_GROUPS = [
   },
   {
     label: 'AI & Reports',
+    icon: BarChart3,
+    accent: 'text-purple-400',
+    bg: 'bg-purple-500/10',
+    border: 'hover:border-purple-500/40',
     items: [
       "Generate weekly performance report",
       "Detect anomalies or unusual patterns",
@@ -123,6 +152,10 @@ const SUGGESTION_GROUPS = [
   },
   {
     label: 'System Guide',
+    icon: BookOpen,
+    accent: 'text-slate-300',
+    bg: 'bg-slate-500/10',
+    border: 'hover:border-slate-400/40',
     items: [
       "How do I use this platform?",
       "What are the best practices for daily operations?",
@@ -268,6 +301,19 @@ export default function AiChat() {
   // Mutation confirmation queue: one pending modal at a time, resolved
   // by the user clicking Approve / Reject in <ConfirmActionModal>.
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
+
+  // Header overflow menu (TTS / clear / expand). Keeps the title row
+  // uncluttered while the panel is at 420px width.
+  const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-ai-menu]')) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [menuOpen])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -792,11 +838,30 @@ export default function AiChat() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 w-13 h-13 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-dark-bg flex items-center justify-center shadow-lg shadow-primary-500/30 z-50 transition-all hover:scale-110 hover:shadow-xl hover:shadow-primary-500/40 group"
-        title="AI Assistant"
+        className="group fixed bottom-5 right-5 z-50 flex items-center gap-2"
+        title="AI Assistant — click to start"
+        aria-label="Open AI Assistant"
       >
-        <Sparkles size={22} className="group-hover:rotate-12 transition-transform" />
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-dark-bg animate-pulse" />
+        {/* Hover label slides in to introduce the agent without using up
+          * real-estate at rest. Hidden on mobile. */}
+        <span className="hidden sm:inline-block px-3 py-1.5 rounded-full bg-dark-surface border border-dark-border text-white text-xs font-medium shadow-lg opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
+          Ask AI · Voice or text
+        </span>
+        <span className="relative flex items-center justify-center">
+          {/* Soft outer glow halo */}
+          <span className="absolute inset-0 -m-1.5 rounded-full bg-primary-500/25 blur-md opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all" />
+          {/* Slow ambient pulse ring */}
+          <span className="absolute inset-0 rounded-full border border-primary-400/40 animate-ping opacity-50" />
+          {/* Core button */}
+          <span className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-xl shadow-primary-500/40 group-hover:scale-105 group-active:scale-95 transition-transform">
+            <Sparkles size={24} className="text-dark-bg group-hover:rotate-12 transition-transform" strokeWidth={2.4} />
+          </span>
+          {/* Online indicator */}
+          <span className="absolute top-0 right-0 flex items-center justify-center">
+            <span className="absolute w-3 h-3 rounded-full bg-emerald-400/40 animate-ping" />
+            <span className="relative w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-dark-bg" />
+          </span>
+        </span>
       </button>
     )
   }
@@ -807,54 +872,96 @@ export default function AiChat() {
 
   return (
     <div className={`fixed bottom-5 right-5 ${panelSize} bg-dark-bg border border-dark-border rounded-2xl shadow-2xl shadow-black/50 z-50 flex flex-col overflow-hidden transition-all duration-300`}>
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-dark-surface to-dark-surface2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/20">
-            <Sparkles size={16} className="text-dark-bg" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-white flex items-center gap-1.5">
-              AI Assistant
-              <span className="text-[9px] font-medium bg-primary-500/15 text-primary-400 px-1.5 py-0.5 rounded-full">Claude + GPT Realtime</span>
+      {/* Header — compact, no title-wrap. Identity stack on the left,
+        * Voice CTA + overflow menu + close on the right. */}
+      <div className="px-3.5 py-3 border-b border-dark-border flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-dark-surface/90 to-dark-surface2/90 backdrop-blur-sm">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="relative flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/30">
+              <Sparkles size={16} className="text-dark-bg" strokeWidth={2.4} />
             </div>
-            <div className="text-[11px] text-[#636366]">CRM · Loyalty · Planner · Voice</div>
+            {/* Tiny "online" pip on the avatar */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-dark-surface" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-white truncate">AI Assistant</span>
+              {voiceCallActive && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-red-500/15 text-red-300 px-1.5 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> Live
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-[#7e7e80] truncate">
+              CRM · Loyalty · Planner · Voice
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          {/* Voice Call — primary affordance now that the agent can take
-            * real actions via voice. Sits left of the smaller icons. */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Voice Call — primary affordance. */}
           <button
             onClick={voiceCallActive ? endVoiceCall : startVoiceCall}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
               voiceCallActive
                 ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30'
-                : 'bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-dark-bg shadow-md shadow-primary-500/30'
+                : 'bg-gradient-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-dark-bg shadow-md shadow-primary-500/30'
             }`}
             title={voiceCallActive ? 'End voice call' : 'Start a voice call — speak naturally to plan your day, search any data, take actions'}
           >
             {voiceCallActive ? <PhoneOff size={13} /> : <Phone size={13} />}
-            <span className="hidden sm:inline">{voiceCallActive ? 'End' : 'Voice'}</span>
+            <span>{voiceCallActive ? 'End' : 'Voice'}</span>
           </button>
-          {/* TTS toggle */}
-          {hasSpeechSynthesis && (
+          {/* Overflow menu — TTS toggle, clear chat, expand panel. */}
+          <div className="relative" data-ai-menu>
             <button
-              onClick={() => { if (speaking) stopSpeaking(); setTtsEnabled(!ttsEnabled) }}
-              className={`p-1.5 rounded-lg transition-colors ${ttsEnabled ? 'bg-primary-500/15 text-primary-400' : 'hover:bg-dark-surface text-[#636366] hover:text-gray-300'}`}
-              title={ttsEnabled ? 'Voice responses ON — click to disable' : 'Voice responses OFF — click to enable'}
+              onClick={() => setMenuOpen(o => !o)}
+              className="p-1.5 rounded-lg hover:bg-dark-surface text-[#7e7e80] hover:text-white transition-colors"
+              title="More options"
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
             >
-              {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              <MoreHorizontal size={16} />
             </button>
-          )}
-          {messages.length > 0 && (
-            <button onClick={clearChat} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-gray-300 transition-colors" title="Clear chat">
-              <Trash2 size={14} />
-            </button>
-          )}
-          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-gray-300 transition-colors" title={expanded ? 'Minimize' : 'Expand'}>
-            {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          </button>
-          <button onClick={() => { stopSpeaking(); setOpen(false) }} className="p-1.5 rounded-lg hover:bg-dark-surface text-[#636366] hover:text-white transition-colors">
+            {menuOpen && (
+              <div className="absolute top-full right-0 mt-1.5 w-52 bg-dark-surface border border-dark-border rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-20 py-1 text-[12px]">
+                {hasSpeechSynthesis && (
+                  <button
+                    onClick={() => { if (speaking) stopSpeaking(); setTtsEnabled(!ttsEnabled); setMenuOpen(false) }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      {ttsEnabled ? <Volume2 size={13} className="text-primary-400" /> : <VolumeX size={13} />}
+                      Read responses aloud
+                    </span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ttsEnabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-dark-bg text-[#7e7e80] border border-dark-border'}`}>
+                      {ttsEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+                )}
+                <button
+                  onClick={() => { setExpanded(!expanded); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                >
+                  {expanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                  {expanded ? 'Compact view' : 'Expand view'}
+                </button>
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => { clearChat(); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-500/10 text-[#d8d8d8] hover:text-red-300 transition-colors border-t border-dark-border"
+                  >
+                    <Trash2 size={13} />
+                    Clear conversation
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => { stopSpeaking(); setOpen(false) }}
+            className="p-1.5 rounded-lg hover:bg-dark-surface text-[#7e7e80] hover:text-white transition-colors"
+            title="Close"
+          >
             <X size={16} />
           </button>
         </div>
@@ -1022,40 +1129,80 @@ export default function AiChat() {
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {messages.length === 0 && (
-          <div className="space-y-5 py-2">
-            {/* Welcome */}
+          <div className="space-y-5 pt-1 pb-2">
+            {/* Hero — bigger headline with soft accent halo around the icon. */}
             <div className="text-center space-y-3">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-700/10 flex items-center justify-center border border-primary-500/20">
-                <Sparkles size={26} className="text-primary-400" />
+              <div className="relative w-16 h-16 mx-auto">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/30 to-primary-700/0 blur-xl opacity-80" />
+                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
+                  <Sparkles size={28} className="text-dark-bg" strokeWidth={2.4} />
+                </div>
               </div>
               <div>
-                <div className="text-base font-semibold text-white mb-1">How can I help?</div>
-                <div className="text-xs text-t-secondary max-w-[280px] mx-auto">
-                  I can search any data, manage bookings & loyalty, analyze trends, generate reports, and guide you through every feature.
-                  {hasSpeechRecognition && <span className="block mt-1 text-primary-400/70">Tap the mic button to use voice input.</span>}
+                <div className="text-[17px] font-bold text-white tracking-tight mb-1">How can I help?</div>
+                <div className="text-[12px] text-[#9c9c9e] max-w-[290px] mx-auto leading-relaxed">
+                  Ask anything about your guests, bookings, loyalty program, planner, or chat — by text or by voice.
                 </div>
               </div>
             </div>
 
-            {/* Suggestion Groups */}
-            <div className="space-y-3">
-              {SUGGESTION_GROUPS.map(group => (
-                <div key={group.label}>
-                  <div className="text-[10px] font-semibold text-[#636366] uppercase tracking-wider mb-1.5 px-1">{group.label}</div>
-                  <div className="space-y-1">
-                    {group.items.map(q => (
-                      <button
-                        key={q}
-                        onClick={() => send(q)}
-                        className="group flex items-center w-full text-left text-xs text-[#a0a0a0] hover:text-white bg-dark-surface hover:bg-dark-surface2 border border-dark-border hover:border-primary-500/30 rounded-xl px-3 py-2.5 transition-all"
-                      >
-                        <ChevronRight size={12} className="text-[#636366] group-hover:text-primary-400 mr-2 flex-shrink-0 transition-colors" />
-                        <span className="flex-1">{q}</span>
-                      </button>
-                    ))}
+            {/* Voice hero card — promotes the headline modality without
+              * making it the only path. Hidden during an active call. */}
+            {!voiceCallActive && (
+              <button
+                onClick={startVoiceCall}
+                className="group block w-full text-left rounded-2xl overflow-hidden bg-gradient-to-br from-primary-500/15 via-primary-600/8 to-transparent border border-primary-500/25 hover:border-primary-400/50 hover:from-primary-500/20 transition-all active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 p-3.5">
+                  <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-primary-500/30">
+                    <span className="absolute inset-0 rounded-xl border border-primary-300/40 animate-ping opacity-50" />
+                    <Phone size={20} className="text-dark-bg" strokeWidth={2.4} />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-white flex items-center gap-1.5">
+                      Start a voice call
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-primary-500/25 text-primary-200 px-1.5 py-0.5 rounded-full">New</span>
+                    </div>
+                    <div className="text-[11px] text-primary-200/80 mt-0.5 leading-snug">
+                      Speak naturally — plan your day, search data, take actions hands-free.
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-primary-300/70 group-hover:text-primary-200 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
-              ))}
+              </button>
+            )}
+
+            {/* Suggestion groups — each carries an icon + accent so the
+              * grid scans visually before the user reads. */}
+            <div className="space-y-3.5">
+              {SUGGESTION_GROUPS.map(group => {
+                const Icon = group.icon
+                return (
+                  <div key={group.label}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <div className={`w-5 h-5 rounded-md ${group.bg} flex items-center justify-center`}>
+                        <Icon size={11} className={group.accent} strokeWidth={2.5} />
+                      </div>
+                      <div className="text-[10.5px] font-semibold text-[#7e7e80] uppercase tracking-wider">
+                        {group.label}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {group.items.map(q => (
+                        <button
+                          key={q}
+                          onClick={() => send(q)}
+                          className={`group flex items-center w-full text-left text-[12.5px] text-[#b8b8ba] hover:text-white bg-dark-surface/70 hover:bg-dark-surface border border-dark-border ${group.border} rounded-xl px-3 py-2.5 transition-all active:scale-[0.99]`}
+                        >
+                          <span className={`w-1 h-1 rounded-full ${group.accent.replace('text-', 'bg-')} opacity-50 group-hover:opacity-100 mr-2.5 flex-shrink-0 transition-opacity`} />
+                          <span className="flex-1 leading-snug">{q}</span>
+                          <ChevronRight size={12} className="text-[#5a5a5c] group-hover:text-white opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
