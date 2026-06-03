@@ -562,7 +562,22 @@ export default function AiChat() {
       console.error('Voice call error:', err)
       setVoiceCallActive(false)
       setVoiceStatus('')
-      alert('Voice call failed: ' + (err.message || 'Unknown error'))
+
+      // Ship 10 — friendlier error mapping. NotAllowed = browser
+      // permission denied; NotFound = no input device; the rest fall
+      // through to the raw error so we can still triage from Sentry.
+      const name = err?.name
+      let userMsg = err?.message || 'Unknown error'
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        userMsg = 'Microphone access denied. Click the microphone icon in your browser address bar, allow access, then try again.'
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        userMsg = 'No microphone found. Plug in a mic or check your system audio settings.'
+      } else if (typeof userMsg === 'string' && userMsg.includes('OpenAI API key')) {
+        userMsg = 'Voice is not configured for this workspace. Ask your admin to add an OpenAI API key in Settings → System.'
+      } else if (typeof userMsg === 'string' && userMsg.includes('SDP exchange failed')) {
+        userMsg = 'Could not reach OpenAI Realtime. Check your network — corporate firewalls sometimes block WebRTC traffic.'
+      }
+      alert('Voice call failed: ' + userMsg)
     }
   }, [voiceCallActive])
 
@@ -801,23 +816,25 @@ export default function AiChat() {
           <div>
             <div className="text-sm font-semibold text-white flex items-center gap-1.5">
               AI Assistant
-              <span className="text-[9px] font-medium bg-primary-500/15 text-primary-400 px-1.5 py-0.5 rounded-full">Claude + GPT-4o</span>
+              <span className="text-[9px] font-medium bg-primary-500/15 text-primary-400 px-1.5 py-0.5 rounded-full">Claude + GPT Realtime</span>
             </div>
-            <div className="text-[11px] text-[#636366]">CRM, Loyalty, Planning & Analytics</div>
+            <div className="text-[11px] text-[#636366]">CRM · Loyalty · Planner · Voice</div>
           </div>
         </div>
-        <div className="flex items-center gap-0.5">
-          {/* Voice Call */}
+        <div className="flex items-center gap-1">
+          {/* Voice Call — primary affordance now that the agent can take
+            * real actions via voice. Sits left of the smaller icons. */}
           <button
             onClick={voiceCallActive ? endVoiceCall : startVoiceCall}
-            className={`p-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
               voiceCallActive
-                ? 'bg-red-500/20 text-red-400 animate-pulse'
-                : 'hover:bg-dark-surface text-[#636366] hover:text-green-400'
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30'
+                : 'bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-dark-bg shadow-md shadow-primary-500/30'
             }`}
-            title={voiceCallActive ? 'End voice call' : 'Start voice call'}
+            title={voiceCallActive ? 'End voice call' : 'Start a voice call — speak naturally to plan your day, search any data, take actions'}
           >
-            {voiceCallActive ? <PhoneOff size={14} /> : <Phone size={14} />}
+            {voiceCallActive ? <PhoneOff size={13} /> : <Phone size={13} />}
+            <span className="hidden sm:inline">{voiceCallActive ? 'End' : 'Voice'}</span>
           </button>
           {/* TTS toggle */}
           {hasSpeechSynthesis && (

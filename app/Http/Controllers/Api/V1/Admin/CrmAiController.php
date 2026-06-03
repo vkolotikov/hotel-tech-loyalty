@@ -205,6 +205,13 @@ class CrmAiController extends Controller
                         'turn_detection' => [
                             'type'      => 'semantic_vad',
                             'eagerness' => 'medium',
+                            // Proactively prompt after long silence so the
+                            // agent feels alive in a slow conversation
+                            // (e.g. user is reading something on-screen).
+                            // 20s strikes a balance between "still alive"
+                            // and "stop interrupting me". GA-only field;
+                            // older snapshots ignore it.
+                            'idle_timeout_ms' => 20000,
                         ],
                         'transcription'  => [
                             'model' => 'gpt-4o-transcribe',
