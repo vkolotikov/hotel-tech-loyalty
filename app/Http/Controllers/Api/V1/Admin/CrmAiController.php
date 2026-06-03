@@ -193,11 +193,18 @@ class CrmAiController extends Controller
         $temperature = (float) ($voiceConfig->temperature ?? 0.7);
         $instructions = $this->resolveInstructions($voiceConfig, $user);
 
+        // Build the session payload conservatively. Some realtime-API
+        // fields ship behind feature flags or are added per-snapshot;
+        // anything that risks rejecting the whole request without a
+        // clear win goes behind a defensive guard.
         $sessionPayload = [
             'session' => [
                 'type'              => 'realtime',
                 'model'             => $model,
-                'output_modalities' => ['audio'],
+                // Include text so the WebRTC client gets transcript
+                // events alongside audio. Audio-only modality blocks
+                // response.audio_transcript.* events on some snapshots.
+                'output_modalities' => ['audio', 'text'],
                 'instructions'      => $instructions,
                 'audio'             => [
                     'input' => [
@@ -205,13 +212,11 @@ class CrmAiController extends Controller
                         'turn_detection' => [
                             'type'      => 'semantic_vad',
                             'eagerness' => 'medium',
-                            // Proactively prompt after long silence so the
-                            // agent feels alive in a slow conversation
-                            // (e.g. user is reading something on-screen).
-                            // 20s strikes a balance between "still alive"
-                            // and "stop interrupting me". GA-only field;
-                            // older snapshots ignore it.
-                            'idle_timeout_ms' => 20000,
+                            // idle_timeout_ms was a Ship-10 polish add but
+                            // is rejected by current GA snapshots with a
+                            // 400. Dropped until verified. We can put it
+                            // back behind a feature flag once OpenAI
+                            // confirms support.
                         ],
                         'transcription'  => [
                             'model' => 'gpt-4o-transcribe',
@@ -238,16 +243,28 @@ class CrmAiController extends Controller
                 ->post('https://api.openai.com/v1/realtime/client_secrets', $sessionPayload);
 
             if ($response->failed()) {
+                // Log the FULL OpenAI error body so future failures are
+                // triageable without re-running the request. Bumped from
+                // 1000 to 4000 chars because realtime errors often quote
+                // the offending JSON-path field which can be deep.
                 \Illuminate\Support\Facades\Log::warning('crm_ai.realtime_session.failed', [
                     'status' => $response->status(),
-                    'body'   => mb_substr((string) $response->body(), 0, 1000),
+                    'body'   => mb_substr((string) $response->body(), 0, 4000),
                     'org_id' => $orgId,
                     'model'  => $model,
+                    'voice'  => $voice,
+                    'tools_count' => count($sessionPayload['session']['tools'] ?? []),
                 ]);
+                // Forward the upstream status when it's a 4xx so the
+                // client can distinguish "OpenAI rejected our request"
+                // (4xx) from "we couldn't reach OpenAI" (502/5xx).
+                $upstream = $response->status();
+                $forwardStatus = ($upstream >= 400 && $upstream < 500) ? 400 : 502;
                 return response()->json([
-                    'error'   => 'Failed to create realtime session',
-                    'details' => $response->json(),
-                ], 502);
+                    'error'           => 'Failed to create realtime session',
+                    'upstream_status' => $upstream,
+                    'details'         => $response->json() ?? mb_substr((string) $response->body(), 0, 500),
+                ], $forwardStatus);
             }
 
             $data = $response->json();

@@ -57,7 +57,24 @@ class CrmAiService
 
             if (!$hasToolUse) return ['response' => $this->extractText($res['content']), 'actions' => $actions];
 
-            $messages[] = ['role' => 'assistant', 'content' => $res['content']];
+            // Sanitize the assistant content before round 2. Anthropic's
+            // tool_use blocks must have `input` as a JSON object, even when
+            // it's empty -- but PHP's json_decode parses `{}` as an empty
+            // array which re-encodes as `[]` (JSON array), tripping the
+            // validator with "messages.N.content[K].input: Input should be
+            // an object". Force empty/numeric tool inputs back to stdClass
+            // so they serialize as `{}`.
+            $cleanContent = array_map(function ($block) {
+                if (($block['type'] ?? '') === 'tool_use') {
+                    $input = $block['input'] ?? [];
+                    if (!is_array($input) || empty($input) || array_is_list($input)) {
+                        $block['input'] = (object) (is_array($input) ? $input : []);
+                    }
+                }
+                return $block;
+            }, $res['content']);
+
+            $messages[] = ['role' => 'assistant', 'content' => $cleanContent];
             $messages[] = ['role' => 'user',      'content' => $toolResults];
         }
 
