@@ -186,6 +186,71 @@ class CrmVoiceToolset
                     'additionalProperties' => false,
                 ],
             ],
+            // ── Ship 7: Mutation tools (CONFIRMATION REQUIRED) ─────────
+            // The CONFIRM list in VoicePromptBuilder makes the model
+            // verbally ask the user before invoking these. The
+            // frontend ConfirmActionModal is the safety net for cases
+            // where the model decides to skip the ritual.
+            [
+                'type' => 'function',
+                'name' => 'award_points',
+                'description' => 'Award loyalty points to a member. CONFIRMATION REQUIRED: read back the member name + amount + reason before invoking. Use get_member first to confirm identity.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'member_id'   => ['type' => 'integer', 'description' => 'Loyalty member id (from get_member).'],
+                        'points'      => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000000, 'description' => 'Points to award.'],
+                        'description' => ['type' => 'string', 'description' => 'Spoken reason / note attached to the ledger entry.'],
+                    ],
+                    'required' => ['member_id', 'points', 'description'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'redeem_points',
+                'description' => 'Redeem (deduct) loyalty points from a member balance. CONFIRMATION REQUIRED: read back the member name + amount + reason. Use get_member first to confirm balance >= amount.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'member_id'   => ['type' => 'integer'],
+                        'points'      => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000000],
+                        'description' => ['type' => 'string'],
+                    ],
+                    'required' => ['member_id', 'points', 'description'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_mark_won',
+                'description' => 'Mark an inquiry as won. CONFIRMATION REQUIRED. Auto-creates a draft reservation when property + dates are present. Use crm_get_inquiry_brief first.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id' => ['type' => 'integer'],
+                        'note'       => ['type' => 'string', 'description' => 'Optional context note saved on the timeline.'],
+                    ],
+                    'required' => ['inquiry_id'],
+                    'additionalProperties' => false,
+                ],
+            ],
+            [
+                'type' => 'function',
+                'name' => 'crm_mark_lost',
+                'description' => 'Mark an inquiry as lost. CONFIRMATION REQUIRED. Resolves lost_reason_slug against the org taxonomy; returns available_reasons on bad slug.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inquiry_id'        => ['type' => 'integer'],
+                        'lost_reason_slug'  => ['type' => 'string'],
+                        'lost_reason_id'    => ['type' => 'integer'],
+                        'note'              => ['type' => 'string'],
+                    ],
+                    'required' => ['inquiry_id'],
+                    'additionalProperties' => false,
+                ],
+            ],
             // ── Ship 6: Leads + Deals voice tools ─────────────────────
             [
                 'type' => 'function',
@@ -1018,6 +1083,166 @@ class CrmVoiceToolset
             'matches' => $rows->map(fn (Inquiry $i) => $this->summariseInquiry($i))->all(),
             'total' => $rows->count(),
         ];
+    }
+
+    // ─── Mutation tools (Ship 7) ────────────────────────────────────
+    //
+    // Reach these ONLY after the user has verbally confirmed and
+    // the frontend ConfirmActionModal has been approved. Even so,
+    // we re-validate every input server-side because a compromised
+    // browser could call /voice-tool with arbitrary args.
+
+    private function tool_award_points(array $args, int $orgId, int $userId): array
+    {
+        $memberId = (int) ($args['member_id'] ?? 0);
+        $points   = (int) ($args['points'] ?? 0);
+        $desc     = trim((string) ($args['description'] ?? ''));
+
+        if ($memberId <= 0 || $points <= 0 || $desc === '') {
+            return ['error' => 'member_id, points, description are required and must be positive.'];
+        }
+        if ($points > 1000000) {
+            return ['error' => 'Refusing to award more than 1,000,000 points in a single call. Split into multiple awards if intentional.'];
+        }
+
+        $member = LoyaltyMember::find($memberId);
+        if (!$member) return ['error' => 'Member not found.', 'member_id' => $memberId];
+
+        $staff = \App\Models\User::find($userId);
+
+        try {
+            $tx = app(\App\Services\LoyaltyService::class)->awardPoints(
+                member: $member,
+                points: $points,
+                description: $desc,
+                type: 'earn',
+                staff: $staff,
+                reasonCode: 'voice_agent',
+                sourceType: 'voice_agent',
+                idempotencyKey: 'voice-award-' . $userId . '-' . $memberId . '-' . microtime(true),
+            );
+        } catch (\Throwable $e) {
+            return ['error' => 'Award failed: ' . $e->getMessage()];
+        }
+
+        $member->refresh();
+        return [
+            'ok' => true,
+            'transaction_id' => $tx->id,
+            'member_id'      => $member->id,
+            'member_name'    => $member->user?->name,
+            'points_awarded' => $points,
+            'new_balance'    => (int) $member->current_points,
+            'description'    => $desc,
+        ];
+    }
+
+    private function tool_redeem_points(array $args, int $orgId, int $userId): array
+    {
+        $memberId = (int) ($args['member_id'] ?? 0);
+        $points   = (int) ($args['points'] ?? 0);
+        $desc     = trim((string) ($args['description'] ?? ''));
+
+        if ($memberId <= 0 || $points <= 0 || $desc === '') {
+            return ['error' => 'member_id, points, description are required and must be positive.'];
+        }
+
+        $member = LoyaltyMember::find($memberId);
+        if (!$member) return ['error' => 'Member not found.', 'member_id' => $memberId];
+
+        if ($points > (int) $member->current_points) {
+            return [
+                'error' => 'Insufficient balance.',
+                'member_id' => $member->id,
+                'requested' => $points,
+                'available' => (int) $member->current_points,
+            ];
+        }
+
+        $staff = \App\Models\User::find($userId);
+
+        try {
+            $tx = app(\App\Services\LoyaltyService::class)->redeemPoints(
+                member: $member,
+                points: $points,
+                description: $desc,
+                staff: $staff,
+                reasonCode: 'voice_agent',
+                sourceType: 'voice_agent',
+                idempotencyKey: 'voice-redeem-' . $userId . '-' . $memberId . '-' . microtime(true),
+            );
+        } catch (\Throwable $e) {
+            return ['error' => 'Redeem failed: ' . $e->getMessage()];
+        }
+
+        $member->refresh();
+        return [
+            'ok' => true,
+            'transaction_id' => $tx->id,
+            'member_id'      => $member->id,
+            'member_name'    => $member->user?->name,
+            'points_redeemed' => $points,
+            'new_balance'    => (int) $member->current_points,
+            'description'    => $desc,
+        ];
+    }
+
+    private function tool_crm_mark_won(array $args, int $orgId, int $userId): array
+    {
+        $inquiryId = (int) ($args['inquiry_id'] ?? 0);
+        if ($inquiryId <= 0) return ['error' => 'inquiry_id is required.'];
+
+        $payload = [];
+        if (isset($args['note'])) $payload['note'] = (string) $args['note'];
+
+        $req = new \Illuminate\Http\Request($payload);
+        $req->setUserResolver(fn () => \App\Models\User::find($userId));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\InquiryController::class);
+        return $controller->markWon($req, $inquiryId)->getData(true);
+    }
+
+    private function tool_crm_mark_lost(array $args, int $orgId, int $userId): array
+    {
+        $inquiryId = (int) ($args['inquiry_id'] ?? 0);
+        if ($inquiryId <= 0) return ['error' => 'inquiry_id is required.'];
+
+        $payload = [];
+        if (isset($args['note'])) $payload['note'] = (string) $args['note'];
+
+        // Resolve slug → id if the model used the friendlier slug form.
+        if (!isset($args['lost_reason_id']) && !empty($args['lost_reason_slug'])) {
+            $slug = trim((string) $args['lost_reason_slug']);
+            $reason = \App\Models\InquiryLostReason::where('slug', $slug)
+                ->where('is_active', true)
+                ->first();
+            if (!$reason) {
+                $available = \App\Models\InquiryLostReason::where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->get(['id', 'slug', 'label'])
+                    ->all();
+                return [
+                    'error' => "Unknown lost_reason_slug '{$slug}'.",
+                    'available_reasons' => $available,
+                ];
+            }
+            $payload['lost_reason_id'] = $reason->id;
+        } elseif (!empty($args['lost_reason_id'])) {
+            $payload['lost_reason_id'] = (int) $args['lost_reason_id'];
+        } else {
+            $available = \App\Models\InquiryLostReason::where('is_active', true)
+                ->orderBy('sort_order')
+                ->get(['id', 'slug', 'label'])
+                ->all();
+            return [
+                'error' => 'lost_reason_slug or lost_reason_id required.',
+                'available_reasons' => $available,
+            ];
+        }
+
+        $req = new \Illuminate\Http\Request($payload);
+        $req->setUserResolver(fn () => \App\Models\User::find($userId));
+        $controller = app(\App\Http\Controllers\Api\V1\Admin\InquiryController::class);
+        return $controller->markLost($req, $inquiryId)->getData(true);
     }
 
     /**

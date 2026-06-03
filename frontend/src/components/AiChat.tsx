@@ -13,8 +13,63 @@ type VoiceToolCall = {
   callId: string
   name: string
   startedAt: number
-  status: 'running' | 'ok' | 'error'
+  status: 'running' | 'ok' | 'error' | 'declined'
   durationMs?: number
+}
+
+/**
+ * Tools that require a human OK before the actual mutation lands.
+ * Must match VoicePromptBuilder::CONFIRM_TOOLS on the backend.
+ *
+ * Even when the model verbally confirmed and respected the policy,
+ * the modal acts as a safety net for misheard names + numbers
+ * (the killer scenario is "Lena" vs "Lana", or "five hundred" vs
+ * "fifty"). One extra click is cheap; an accidental 50,000 point
+ * award is not.
+ */
+const MUTATION_REQUIRES_CONFIRM = new Set<string>([
+  'award_points',
+  'redeem_points',
+  'crm_mark_won',
+  'crm_mark_lost',
+])
+
+type PendingConfirm = {
+  callId: string
+  name: string
+  args: any
+  resolve: (approved: boolean) => void
+}
+
+/** Format a tool's args into a human-friendly one-paragraph readback. */
+function summariseConfirmAction(name: string, args: any): { title: string; body: string } {
+  switch (name) {
+    case 'award_points':
+      return {
+        title: 'Award points',
+        body: `Award ${args.points ?? '?'} points to member #${args.member_id ?? '?'} — ${args.description ?? ''}`,
+      }
+    case 'redeem_points':
+      return {
+        title: 'Redeem points',
+        body: `Redeem ${args.points ?? '?'} points from member #${args.member_id ?? '?'} — ${args.description ?? ''}`,
+      }
+    case 'crm_mark_won':
+      return {
+        title: 'Mark inquiry WON',
+        body: `Inquiry #${args.inquiry_id ?? '?'}${args.note ? `. Note: ${args.note}` : ''}. This may auto-create a draft reservation.`,
+      }
+    case 'crm_mark_lost':
+      return {
+        title: 'Mark inquiry LOST',
+        body: `Inquiry #${args.inquiry_id ?? '?'}, reason: ${args.lost_reason_slug ?? `id ${args.lost_reason_id}`}${args.note ? `. Note: ${args.note}` : ''}.`,
+      }
+    default:
+      return {
+        title: humaniseTool(name),
+        body: JSON.stringify(args, null, 2),
+      }
+  }
 }
 
 /**
@@ -209,6 +264,10 @@ export default function AiChat() {
   // arguments as deltas rather than landing them whole on `.done`. Some
   // realtime model snapshots do, even though the GA spec says otherwise.
   const voiceArgsBufferRef = useRef<Record<string, string>>({})
+
+  // Mutation confirmation queue: one pending modal at a time, resolved
+  // by the user clicking Approve / Reject in <ConfirmActionModal>.
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -510,6 +569,39 @@ export default function AiChat() {
     let parsedArgs: any = {}
     try { parsedArgs = JSON.parse(argsString || '{}') } catch { parsedArgs = {} }
 
+    // Ship 7 — confirmation gate. If this tool is in the mutation set,
+    // pause here for the user to approve or reject via the modal. The
+    // model's verbal readback is the first layer; this is the safety
+    // net against misheard names + numbers.
+    if (MUTATION_REQUIRES_CONFIRM.has(name)) {
+      setVoiceStatus('Awaiting your confirmation…')
+      const approved = await new Promise<boolean>(resolve => {
+        setPendingConfirm({ callId, name, args: parsedArgs, resolve })
+      })
+      setPendingConfirm(null)
+      if (!approved) {
+        setVoiceToolCalls(prev => prev.map(tc =>
+          tc.callId === callId
+            ? { ...tc, status: 'declined' as const, durationMs: Date.now() - startedAt }
+            : tc
+        ))
+        try {
+          voiceDcRef.current?.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'function_call_output',
+              call_id: callId,
+              output: JSON.stringify({ ok: false, declined: true, reason: 'user_declined' }),
+            },
+          }))
+          voiceDcRef.current?.send(JSON.stringify({ type: 'response.create' }))
+        } catch {}
+        setVoiceStatus('Listening…')
+        return
+      }
+      setVoiceStatus(humaniseTool(name) + '…')
+    }
+
     let output: any
     let ok = true
     try {
@@ -757,7 +849,9 @@ export default function AiChat() {
                         ? 'bg-blue-500/10 border-blue-400/30 text-blue-200'
                         : tc.status === 'ok'
                           ? 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
-                          : 'bg-red-500/10 border-red-400/30 text-red-200',
+                          : tc.status === 'declined'
+                            ? 'bg-purple-500/10 border-purple-400/30 text-purple-200'
+                            : 'bg-red-500/10 border-red-400/30 text-red-200',
                     ].join(' ')}
                     title={tc.name}
                   >
@@ -842,6 +936,50 @@ export default function AiChat() {
           >
             <PhoneOff size={18} /> End Call
           </button>
+        </div>
+      )}
+
+      {/* Mutation confirmation modal (Ship 7) — sits on top of the voice
+        * overlay. While this is up, the model has paused on the
+        * function_call event and is waiting for our reply. */}
+      {pendingConfirm && (
+        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-400/20 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
+                <Zap size={16} className="text-amber-300" />
+              </div>
+              <div>
+                <div className="text-white font-semibold text-sm">Confirm action</div>
+                <div className="text-amber-200/80 text-[11px]">The voice agent wants to make a change.</div>
+              </div>
+            </div>
+            <div className="px-5 py-4 space-y-2">
+              {(() => {
+                const s = summariseConfirmAction(pendingConfirm.name, pendingConfirm.args)
+                return (
+                  <>
+                    <div className="text-[11px] uppercase tracking-wider font-semibold text-[#a0a0a0]">{s.title}</div>
+                    <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                  </>
+                )
+              })()}
+            </div>
+            <div className="px-5 py-3 bg-dark-bg/40 border-t border-dark-border flex items-center justify-end gap-2">
+              <button
+                onClick={() => pendingConfirm.resolve(false)}
+                className="px-4 py-2 rounded-lg bg-dark-surface border border-dark-border hover:border-red-400/50 text-[#c8c8c8] hover:text-red-300 text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => pendingConfirm.resolve(true)}
+                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-dark-bg text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/30"
+              >
+                Approve & run
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
