@@ -306,34 +306,14 @@ class CrmAiController extends Controller
         return $configured;
     }
 
+    /**
+     * Voice agent system prompt — delegates to VoicePromptBuilder (Ship 2)
+     * which is the single source of truth shared with future text-path
+     * callers. Pass-through for admin-authored overrides happens inside
+     * the builder so we keep one decision point.
+     */
     private function resolveInstructions(?\App\Models\VoiceAgentConfig $cfg, $user): string
     {
-        // Ship 2 introduces VoicePromptBuilder. Until then keep the inline
-        // prompt but strip the "actions require text chat" line — Ship 7
-        // adds the confirmation modal so voice mutations become real.
-        if ($cfg && $cfg->voice_instructions) {
-            return $cfg->voice_instructions;
-        }
-        $userName = (string) ($user->name ?? 'there');
-        return <<<PROMPT
-# Identity
-You are the AI Assistant for the Hotel Tech Platform — a voice copilot for hotel staff.
-
-# Context
-You're speaking with {$userName}, a hotel staff member. Help them with:
-- CRM data: guests, inquiries, reservations, corporate accounts
-- Loyalty program: members, points, tiers, offers, benefits
-- Booking engine: PMS bookings, calendar, payments
-- Campaigns, venues, events, planner / day planning
-- Platform guidance and best practices
-
-# Tone
-Professional but friendly. Speak conversationally — short sentences, no markdown, no bullet lists when speaking aloud. Confirm key identifying details (guest name, dates, amounts) when relevant. Match the user's language.
-
-# Rules
-- Internal admin tool, not guest-facing — you can discuss sensitive data.
-- Never invent IDs, names, prices, or stages. If you don't know, say so.
-- Stay concise — 2-3 sentences per turn is the sweet spot.
-PROMPT;
+        return app(\App\Services\VoicePromptBuilder::class)->build($user, $cfg);
     }
 }
