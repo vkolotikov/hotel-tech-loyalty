@@ -1232,8 +1232,12 @@ class WidgetChatController extends Controller
         }
 
         $file = $request->file('file');
-        $path = $file->storePublicly('chat-attachments', 'public');
-        $url  = '/storage/' . $path;
+        // Route through MediaService so attachments land on shared
+        // storage (DO Spaces in prod). storePublicly(..., 'public')
+        // pins to a single Laravel Cloud instance's local disk and
+        // disappears when the visitor's next request hits a different
+        // instance -- same bug pattern as the chat-avatar fix.
+        $url  = \App\Services\MediaService::upload($file, 'chat-attachments');
         $type = str_starts_with((string) $file->getMimeType(), 'image/') ? 'image' : 'file';
 
         $msg = ChatMessage::create([

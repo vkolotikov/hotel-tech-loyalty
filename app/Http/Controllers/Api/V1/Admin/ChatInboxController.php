@@ -472,8 +472,12 @@ class ChatInboxController extends Controller
             ->findOrFail($id);
 
         $file = $request->file('file');
-        $path = $file->storePublicly('chat-attachments', 'public');
-        $url  = '/storage/' . $path;
+        // Route through MediaService so admin-sent attachments land on
+        // shared storage (DO Spaces in prod). The customer's widget
+        // will fetch this URL from a potentially different Laravel
+        // Cloud instance than the one that received the upload --
+        // local-disk paths break that handoff.
+        $url  = \App\Services\MediaService::upload($file, 'chat-attachments');
         $type = str_starts_with((string) $file->getMimeType(), 'image/') ? 'image' : 'file';
 
         $msg = ChatMessage::create([

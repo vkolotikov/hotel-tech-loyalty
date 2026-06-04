@@ -118,9 +118,21 @@ class ChatWidgetConfigController extends Controller
     }
 
     /**
-     * Upload an assistant avatar image. Stored in storage/app/public/chat-avatars/
-     * and returns the relative URL so the frontend can write it into
-     * `assistant_avatar_url` and persist via the normal update endpoint.
+     * Upload an assistant avatar image.
+     *
+     * Routes through MediaService so the file lands on the configured
+     * media disk (DO Spaces in production, local public disk in dev).
+     * This was the load-bearing fix for the "chat avatar disappears
+     * intermittently" report -- previously the file was written
+     * directly to `storage/app/public/chat-avatars/` on a single
+     * Laravel Cloud instance via storePublicly(..., 'public'). Any
+     * subsequent widget config request that hit a different instance
+     * returned a URL whose file did not exist there -> the widget's
+     * onerror handler kicked in and showed the company-initial
+     * fallback (e.g. "F" for FDS Cards).
+     *
+     * Also cleans up the prior avatar file when an admin replaces it,
+     * so we don't leak orphans in the bucket.
      */
     public function uploadAvatar(Request $request): JsonResponse
     {
@@ -130,12 +142,22 @@ class ChatWidgetConfigController extends Controller
 
         try {
             $orgId = $request->user()->organization_id;
-            $path  = $request->file('file')->storePublicly('chat-avatars', 'public');
-            $url   = '/storage/' . $path;
 
-            // Persist immediately so the new avatar takes effect without a
-            // separate save click — matches how logo upload works elsewhere.
+            // Resolve any existing avatar so we can drop it after the
+            // upload succeeds. Done before the upload so failures
+            // don't accidentally orphan the old file.
             $config = ChatWidgetConfig::where('organization_id', $orgId)->first();
+            $previousAvatarUrl = $config?->assistant_avatar_url;
+
+            // Upload via MediaService -- multi-instance safe.
+            $url = \App\Services\MediaService::upload(
+                $request->file('file'),
+                'chat-avatars',
+            );
+
+            // Persist immediately so the new avatar takes effect without
+            // a separate save click -- matches how logo upload works
+            // elsewhere.
             if (!$config) {
                 $config = ChatWidgetConfig::create([
                     'organization_id'      => $orgId,
@@ -145,6 +167,21 @@ class ChatWidgetConfigController extends Controller
                 ]);
             } else {
                 $config->update(['assistant_avatar_url' => $url]);
+            }
+
+            // Best-effort cleanup of the prior file. Swallowed because a
+            // failed delete must not turn a successful upload into an
+            // error response.
+            if ($previousAvatarUrl && $previousAvatarUrl !== $url) {
+                try {
+                    \App\Services\MediaService::delete($previousAvatarUrl);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('chat_widget.avatar.delete_prior_failed', [
+                        'org_id' => $orgId,
+                        'url'    => $previousAvatarUrl,
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
             }
 
             return response()->json(['assistant_avatar_url' => $url]);
