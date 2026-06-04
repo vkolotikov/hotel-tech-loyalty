@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport, INQUIRY_LIST_FIELD_META } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Trash2, UserCircle2, Inbox } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Trash2, UserCircle2, Inbox, Users, TrendingUp, CheckSquare, FileText, Star, Flame } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 // DailyOpsBar + PipelineInsights moved to /pipeline?tab=insights so this
 // page stays focused on managing leads. See InquiryInsights.tsx.
@@ -802,127 +802,267 @@ export function Inquiries() {
                       fields hit /v1/admin/guests/:id (partial PUT), lead
                       fields hit /v1/admin/inquiries/:id. */}
                   {isExpanded && (
-                    <tr className="bg-dark-bg/40 border-b border-dark-border/50">
-                      <td colSpan={expandColSpan} className="px-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.customer', 'Customer')}</div>
+                    <tr className="bg-dark-bg/50 border-b border-dark-border/50">
+                      <td colSpan={expandColSpan} className="px-5 py-5">
+                        {/*
+                          Expanded panel — v2 layout:
+                            • 3 section cards (Customer · Opportunity · Next task & Notes)
+                            • Soft accent borders matching the row's design language
+                            • Optional AI Smart Panel in the Opportunity card surfacing
+                              ai_brief + ai_suggested_action when the row has been
+                              analysed by InquiryAiService.
+                            • Lifetime-stats chip strip on the Customer card when the
+                              guest has stays_count / total_spent data.
+                            • Field labels prefixed with subtle dot accent.
+                        */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                          {/* ─── CUSTOMER ─────────────────────────────────────── */}
+                          <div className="rounded-xl border border-sky-500/15 bg-sky-500/[0.03] p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="inline-flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-md bg-sky-500/15 border border-sky-500/25 flex items-center justify-center">
+                                  <Users size={11} className="text-sky-400" strokeWidth={2.5} />
+                                </div>
+                                <div className="text-[10.5px] uppercase tracking-wider text-sky-300/80 font-bold">
+                                  {t('inquiries.row.expanded.customer', 'Customer')}
+                                </div>
+                              </div>
                               {inq.guest?.id && (
                                 <button
                                   type="button"
                                   onClick={() => setCustomerDrawerGuestId(inq.guest.id)}
-                                  className="inline-flex items-center gap-1 text-[10px] text-primary-400 hover:text-primary-300 normal-case tracking-normal"
+                                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/[0.08] hover:bg-primary-500/[0.15] border border-primary-500/25 rounded-md px-2 py-1 transition-colors"
                                 >
                                   <UserCircle2 size={11} /> {t('inquiries.row.expanded.view_full_customer', 'View full customer')}
                                 </button>
                               )}
                             </div>
+
                             {inq.guest?.id ? (
                               <>
-                                <div>
-                                  <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.company', 'Company')}</div>
-                                  <EditableField
-                                    value={inq.guest.company ?? ''}
-                                    onSave={async (v) => {
-                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { company: v })
-                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <div className="text-[10px] text-t-secondary mb-0.5">VIP</div>
-                                  <EditableField
-                                    variant="select"
-                                    value={inq.guest.vip_level ?? ''}
-                                    options={[
-                                      { value: 'Standard', label: 'Standard' },
-                                      { value: 'Silver', label: 'Silver' },
-                                      { value: 'Gold', label: 'Gold' },
-                                      { value: 'Diamond', label: 'Diamond' },
-                                    ]}
-                                    onSave={async (v) => {
-                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { vip_level: v })
-                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.nationality', 'Nationality')}</div>
-                                  <EditableField
-                                    value={inq.guest.nationality ?? ''}
-                                    onSave={async (v) => {
-                                      await api.put(`/v1/admin/guests/${inq.guest.id}`, { nationality: v })
-                                      qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                    }}
-                                  />
+                                {/* Lifetime / loyalty stats — only renders when
+                                  * the guest has activity to show off, so brand
+                                  * new contacts don't get a row of zeros. */}
+                                {(inq.guest.stays_count > 0 || inq.guest.total_spent > 0 || inq.guest.vip_level) && (
+                                  <div className="flex items-center flex-wrap gap-1.5 mb-3">
+                                    {inq.guest.vip_level && inq.guest.vip_level !== 'Standard' && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                        <Star size={9} className="fill-amber-300" /> {inq.guest.vip_level}
+                                      </span>
+                                    )}
+                                    {inq.guest.stays_count > 0 && (
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-white/[0.04] border border-white/10 text-gray-200">
+                                        {inq.guest.stays_count} {inq.guest.stays_count === 1 ? t('inquiries.row.expanded.stay', 'stay') : t('inquiries.row.expanded.stays', 'stays')}
+                                      </span>
+                                    )}
+                                    {inq.guest.total_spent > 0 && (
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 tabular-nums">
+                                        {settings.currency_symbol}{Number(inq.guest.total_spent).toLocaleString()} {t('inquiries.row.expanded.ltv', 'LTV')}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="space-y-2.5">
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                      <span className="w-1 h-1 rounded-full bg-sky-400/60" />
+                                      {t('inquiries.row.expanded.company', 'Company')}
+                                    </div>
+                                    <EditableField
+                                      value={inq.guest.company ?? ''}
+                                      onSave={async (v) => {
+                                        await api.put(`/v1/admin/guests/${inq.guest.id}`, { company: v })
+                                        qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                      <span className="w-1 h-1 rounded-full bg-sky-400/60" />
+                                      VIP
+                                    </div>
+                                    <EditableField
+                                      variant="select"
+                                      value={inq.guest.vip_level ?? ''}
+                                      options={[
+                                        { value: 'Standard', label: 'Standard' },
+                                        { value: 'Silver', label: 'Silver' },
+                                        { value: 'Gold', label: 'Gold' },
+                                        { value: 'Diamond', label: 'Diamond' },
+                                      ]}
+                                      onSave={async (v) => {
+                                        await api.put(`/v1/admin/guests/${inq.guest.id}`, { vip_level: v })
+                                        qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                      <span className="w-1 h-1 rounded-full bg-sky-400/60" />
+                                      {t('inquiries.row.expanded.nationality', 'Nationality')}
+                                    </div>
+                                    <EditableField
+                                      value={inq.guest.nationality ?? ''}
+                                      onSave={async (v) => {
+                                        await api.put(`/v1/admin/guests/${inq.guest.id}`, { nationality: v })
+                                        qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               </>
                             ) : (
-                              <div className="text-gray-700 italic text-[11px]">{t('inquiries.row.expanded.no_guest_linked', 'No guest linked')}</div>
+                              <div className="text-gray-600 italic text-[12px]">{t('inquiries.row.expanded.no_guest_linked', 'No guest linked')}</div>
                             )}
                           </div>
-                          <div className="space-y-2">
-                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold">{t('inquiries.row.expanded.opportunity', 'Opportunity')}</div>
-                            {inq.property?.name && <div className="text-gray-300 px-2.5"><span className="text-t-secondary">{t('inquiries.row.expanded.property', 'Property')}: </span>{inq.property.name}</div>}
-                            <div>
-                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.owner', 'Owner')}</div>
-                              <EditableField
-                                variant="select"
-                                value={inq.assigned_to ?? ''}
-                                options={settings.lead_owners.map(o => ({ value: o, label: o }))}
-                                onSave={async (v) => {
-                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { assigned_to: v })
-                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                }}
-                              />
+
+                          {/* ─── OPPORTUNITY (+ AI Smart Panel) ──────────────── */}
+                          <div className="rounded-xl border border-primary-500/15 bg-primary-500/[0.025] p-4">
+                            <div className="inline-flex items-center gap-2 mb-3">
+                              <div className="w-6 h-6 rounded-md bg-primary-500/15 border border-primary-500/25 flex items-center justify-center">
+                                <TrendingUp size={11} className="text-primary-300" strokeWidth={2.5} />
+                              </div>
+                              <div className="text-[10.5px] uppercase tracking-wider text-primary-300/80 font-bold">
+                                {t('inquiries.row.expanded.opportunity', 'Opportunity')}
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.source', 'Source')}</div>
-                              <EditableField
-                                value={inq.source ?? ''}
-                                onSave={async (v) => {
-                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { source: v })
-                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                }}
-                              />
+
+                            {/* AI Smart Panel — only renders when there's
+                              * something to show. Surfaces the brief, the
+                              * suggested next action, and the going-cold flag.
+                              * Win probability already lives in the row's AI
+                              * Signal cell so we don't repeat it here. */}
+                            {(inq.ai_brief || inq.ai_suggested_action) && (
+                              <div className="rounded-lg border border-primary-500/25 bg-gradient-to-br from-primary-500/[0.08] to-transparent p-3 mb-3">
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                  <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary-300">
+                                    <Sparkles size={11} />
+                                    {t('inquiries.row.expanded.ai_brief', 'AI Brief')}
+                                  </div>
+                                  {(inq.ai_going_cold_risk ?? '').toLowerCase() === 'high' && (
+                                    <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-300">
+                                      <Flame size={9} /> {t('inquiries.row.expanded.going_cold', 'Going cold')}
+                                    </span>
+                                  )}
+                                </div>
+                                {inq.ai_suggested_action && (
+                                  <div className="text-[12px] italic text-primary-200/95 mb-2 leading-snug">
+                                    {inq.ai_suggested_action}
+                                  </div>
+                                )}
+                                {inq.ai_brief && (
+                                  <div className="text-[11.5px] text-gray-300 leading-relaxed line-clamp-3">
+                                    {inq.ai_brief}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="space-y-2.5">
+                              {inq.property?.name && (
+                                <div>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                    <span className="w-1 h-1 rounded-full bg-primary-400/60" />
+                                    {t('inquiries.row.expanded.property', 'Property')}
+                                  </div>
+                                  <div className="text-[12px] text-gray-200">{inq.property.name}</div>
+                                </div>
+                              )}
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                  <span className="w-1 h-1 rounded-full bg-primary-400/60" />
+                                  {t('inquiries.row.expanded.owner', 'Owner')}
+                                </div>
+                                <EditableField
+                                  variant="select"
+                                  value={inq.assigned_to ?? ''}
+                                  options={settings.lead_owners.map(o => ({ value: o, label: o }))}
+                                  onSave={async (v) => {
+                                    await api.put(`/v1/admin/inquiries/${inq.id}`, { assigned_to: v })
+                                    qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                  <span className="w-1 h-1 rounded-full bg-primary-400/60" />
+                                  {t('inquiries.row.expanded.source', 'Source')}
+                                </div>
+                                <EditableField
+                                  value={inq.source ?? ''}
+                                  onSave={async (v) => {
+                                    await api.put(`/v1/admin/inquiries/${inq.id}`, { source: v })
+                                    qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                  <span className="w-1 h-1 rounded-full bg-primary-400/60" />
+                                  {t('inquiries.row.expanded.type', 'Type')}
+                                </div>
+                                <EditableField
+                                  variant="select"
+                                  value={inq.inquiry_type ?? ''}
+                                  options={settings.inquiry_types.map(it => ({ value: it, label: it }))}
+                                  onSave={async (v) => {
+                                    await api.put(`/v1/admin/inquiries/${inq.id}`, { inquiry_type: v })
+                                    qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                  }}
+                                />
+                              </div>
+                              {inq.last_contacted_at && (
+                                <div className="pt-1 text-[11px] text-gray-500">
+                                  {t('inquiries.row.expanded.last_contact', 'Last contact')}:{' '}
+                                  <span className="text-gray-300">
+                                    {new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <div className="text-[10px] text-t-secondary mb-0.5">{t('inquiries.row.expanded.type', 'Type')}</div>
-                              <EditableField
-                                variant="select"
-                                value={inq.inquiry_type ?? ''}
-                                options={settings.inquiry_types.map(it => ({ value: it, label: it }))}
-                                onSave={async (v) => {
-                                  await api.put(`/v1/admin/inquiries/${inq.id}`, { inquiry_type: v })
-                                  qc.invalidateQueries({ queryKey: ['inquiries'] })
-                                }}
-                              />
-                            </div>
-                            {inq.last_contacted_at && <div className="text-gray-300 px-2.5"><span className="text-t-secondary">{t('inquiries.row.expanded.last_contact', 'Last contact')}: </span>{new Date(inq.last_contacted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                           </div>
-                          <div className="space-y-1.5">
-                            <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold flex items-center justify-between">
-                              <span>{t('inquiries.row.expanded.next_task', 'Next task')}</span>
+
+                          {/* ─── NEXT TASK / NOTES ──────────────────────────── */}
+                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.025] p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="inline-flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
+                                  <CheckSquare size={11} className="text-emerald-400" strokeWidth={2.5} />
+                                </div>
+                                <div className="text-[10.5px] uppercase tracking-wider text-emerald-300/80 font-bold">
+                                  {t('inquiries.row.expanded.next_task', 'Next task')}
+                                </div>
+                              </div>
                               <button
                                 onClick={() => setTaskDrawer({ inquiryId: inq.id })}
-                                className="text-[10px] text-primary-400 hover:text-primary-300 inline-flex items-center gap-1 normal-case tracking-normal"
+                                className="text-[10.5px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] border border-emerald-500/25 rounded-md px-2 py-1 inline-flex items-center gap-1 transition-colors"
                               >
                                 <Plus size={10} /> {t('inquiries.row.expanded.add_task', 'Add task')}
                               </button>
                             </div>
+
                             {inq.next_task_type && !inq.next_task_completed ? (
-                              <div className={`rounded-lg border p-3 ${isOverdue ? 'border-red-500/40 bg-red-500/5' : 'border-dark-border bg-dark-surface2'}`}>
+                              <div className={`rounded-lg border p-3 ${isOverdue ? 'border-red-500/40 bg-red-500/5' : 'border-emerald-500/25 bg-dark-surface2/60'}`}>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <ListChecks size={12} className={isOverdue ? 'text-red-400' : 'text-amber-400'} />
-                                  <span className="text-white font-semibold">{inq.next_task_type}</span>
+                                  <ListChecks size={12} className={isOverdue ? 'text-red-400' : 'text-emerald-400'} />
+                                  <span className="text-[12.5px] text-white font-semibold truncate">{inq.next_task_type}</span>
                                 </div>
-                                {inq.next_task_due && <div className={isOverdue ? 'text-red-400' : 'text-t-secondary'}>{t('inquiries.row.expanded.due', 'Due')} {inq.next_task_due}</div>}
-                                {inq.next_task_notes && <div className="text-t-secondary mt-1 italic line-clamp-2">{inq.next_task_notes}</div>}
-                                <div className="flex items-center gap-3 mt-2">
+                                {inq.next_task_due && (
+                                  <div className={`text-[11px] font-semibold ${isOverdue ? 'text-red-400' : 'text-gray-400'}`}>
+                                    {t('inquiries.row.expanded.due', 'Due')} {inq.next_task_due}
+                                  </div>
+                                )}
+                                {inq.next_task_notes && (
+                                  <div className="text-[11px] text-gray-500 mt-1 italic line-clamp-2 leading-snug">
+                                    {inq.next_task_notes}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/[0.06]">
                                   <button
                                     onClick={() => completeMutation.mutate(inq.id)}
-                                    className="text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+                                    className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
                                   >
                                     <CheckCircle2 size={11} /> {t('inquiries.row.expanded.mark_done', 'Mark done')}
                                   </button>
@@ -934,28 +1074,35 @@ export function Inquiries() {
                                       due_at: inq.next_task_due,
                                       notes: inq.next_task_notes,
                                     } })}
-                                    className="text-[11px] text-primary-400 hover:text-primary-300 inline-flex items-center gap-1"
+                                    className="text-[11px] font-medium text-primary-300 hover:text-primary-200"
                                   >
                                     {t('inquiries.row.expanded.edit', 'Edit')}
                                   </button>
                                   <button
                                     onClick={() => cancelNextTaskMutation.mutate(inq.id)}
-                                    className="text-[11px] text-red-400 hover:text-red-300 inline-flex items-center gap-1 ml-auto"
+                                    className="text-[11px] font-medium text-gray-500 hover:text-red-300 inline-flex items-center gap-1 ml-auto"
                                   >
                                     <XIcon size={10} /> {t('inquiries.row.expanded.cancel_task', 'Cancel')}
                                   </button>
                                 </div>
                               </div>
                             ) : inq.next_task_completed ? (
-                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
-                                <CheckCircle2 size={12} className="text-emerald-400" />
-                                <span className="text-emerald-400">{t('inquiries.row.expanded.task_done', 'Task complete')}</span>
+                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-3 inline-flex items-center gap-2 text-[12px] text-emerald-300 font-semibold">
+                                <CheckCircle2 size={13} /> {t('inquiries.row.expanded.task_done', 'Task complete')}
                               </div>
                             ) : (
-                              <div className="text-gray-700 italic">{t('inquiries.row.expanded.no_task', 'No task scheduled. Click Add task to create one.')}</div>
+                              <div className="text-[11.5px] text-gray-600 italic">
+                                {t('inquiries.row.expanded.no_task', 'No task scheduled yet — click Add task to create one.')}
+                              </div>
                             )}
-                            <div className="pt-2">
-                              <div className="text-[10px] uppercase tracking-wider text-t-secondary font-bold mb-1">{t('inquiries.row.expanded.notes', 'Notes')}</div>
+
+                            <div className="mt-4 pt-4 border-t border-white/[0.05]">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <FileText size={11} className="text-emerald-400/70" />
+                                <div className="text-[10.5px] uppercase tracking-wider text-emerald-300/80 font-bold">
+                                  {t('inquiries.row.expanded.notes', 'Notes')}
+                                </div>
+                              </div>
                               <EditableField
                                 variant="textarea"
                                 value={inq.notes ?? ''}
@@ -965,14 +1112,14 @@ export function Inquiries() {
                                   qc.invalidateQueries({ queryKey: ['inquiries'] })
                                 }}
                               />
+                              <button
+                                type="button"
+                                onClick={() => setInquiryDrawerId(inq.id)}
+                                className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/[0.06] hover:bg-primary-500/[0.12] border border-primary-500/20 rounded-md px-2 py-1 transition-colors"
+                              >
+                                <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open full detail')}
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setInquiryDrawerId(inq.id)}
-                              className="inline-flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 pt-1"
-                            >
-                              <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open in panel')}
-                            </button>
                           </div>
                         </div>
                       </td>
