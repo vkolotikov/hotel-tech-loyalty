@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, triggerExport, INQUIRY_LIST_FIELD_META } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
-import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Pencil, Trash2, UserCircle2 } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, CheckCircle2, Download, Filter, AlertCircle, Sparkles, Loader2, List as ListIcon, LayoutGrid, MoreHorizontal, ChevronDown, Trophy, XCircle, Eye, EyeOff, X as XIcon, ListChecks, Trash2, UserCircle2, Inbox } from 'lucide-react'
 import { ContactActions } from '../components/ContactActions'
 // DailyOpsBar + PipelineInsights moved to /pipeline?tab=insights so this
 // page stays focused on managing leads. See InquiryInsights.tsx.
-import { InquiryQuickActions, InquiryTouchSummary } from '../components/InquiryQuickActions'
-import { BrandBadge } from '../components/BrandBadge'
+// InquiryQuickActions / InquiryTouchSummary / BrandBadge consumed
+// via <LeadRow /> now; left out of the page-level imports.
 import { SavedViews } from '../components/SavedViews'
 import { CustomFieldsForm, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 import { TaskDrawer } from '../components/TaskDrawer'
@@ -20,6 +20,7 @@ import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { CustomerDrawer } from '../components/CustomerDrawer'
 import { InquiryDrawer } from '../components/InquiryDrawer'
 import { AddInquiryDrawer } from '../components/AddInquiryDrawer'
+import LeadRow from '../components/LeadRow'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -333,6 +334,18 @@ export function Inquiries() {
     onError: () => toast.error('Priority change failed'),
   })
 
+  /**
+   * One-click priority cycle for the new row layout — Low → Normal → High → Low.
+   * The dedicated priority popover stays available via the kebab menu for
+   * power users who want to jump straight to a value.
+   */
+  const cyclePriority = (id: number, current?: string | null) => {
+    const order = ['Low', 'Normal', 'High']
+    const idx = order.indexOf((current ?? 'Normal') as string)
+    const next = order[(idx + 1) % order.length]
+    priorityMutation.mutate({ id, priority: next })
+  }
+
   // Task save — sets/clears next_task_* on the inquiry. Submitting an
   // empty type clears the task (back-end accepts nullable).
   const taskMutation = useMutation({
@@ -626,18 +639,16 @@ export function Inquiries() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-border">
-                {/* Bulk-select column is always rendered now so the
-                    feature is discoverable without admin opt-in. The
-                    fieldCfg.list.bulk_select flag now controls
-                    visibility-at-rest: when ON, checkboxes are always
-                    visible (sticky-column-like behaviour for power
-                    users); when OFF (the default), checkboxes are
-                    invisible until you hover a row or until ANY row is
-                    selected — at which point all checkboxes pop so
-                    multi-select stays one click away. */}
-                <th className={`text-center px-3 py-3 w-8 transition-opacity ${fieldCfg.list.bulk_select || selected.size > 0 ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
-                    title={t('inquiries.bulk.header_tooltip', 'Select all on this page')}>
+              <tr className="border-b border-dark-border bg-dark-bg/40 sticky top-0 z-10 backdrop-blur-sm">
+                {/* Bulk-select column is always rendered so the feature
+                    is discoverable without admin opt-in. fieldCfg.list.bulk_select
+                    controls visibility-at-rest. */}
+                <th
+                  className={`text-center pl-3 pr-2 py-2.5 w-10 transition-opacity ${
+                    fieldCfg.list.bulk_select || selected.size > 0 ? 'opacity-100' : 'opacity-40 hover:opacity-100'
+                  }`}
+                  title={t('inquiries.bulk.header_tooltip', 'Select all on this page')}
+                >
                   <input type="checkbox"
                     checked={inquiries.length > 0 && inquiries.every((i: any) => selected.has(i.id))}
                     onChange={() => setSelected(prev => {
@@ -647,352 +658,141 @@ export function Inquiries() {
                       else       inquiries.forEach((i: any) => next.add(i.id))
                       return next
                     })}
-                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer"
+                  />
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.guest', 'Guest')}</th>
-                {fieldCfg.list.stay && <SortHeader col="check_in" label={t('inquiries.table.stay', 'Stay')} />}
-                {fieldCfg.list.value && <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} />}
-                <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.status', 'Status')}</th>
-                {fieldCfg.list.owner && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.owner', 'Owner')}</th>}
-                {fieldCfg.list.touches && <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.touches', 'Touches')}</th>}
-                {fieldCfg.list.next_task && <SortHeader col="next_task_due" label={t('inquiries.table.next_task', 'Next Task')} />}
+                <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                  {t('inquiries.table.lead', 'Lead')}
+                </th>
+                {fieldCfg.list.stay && <SortHeader col="check_in" label={t('inquiries.table.stay_or_event', 'Stay / Event')} />}
+                {fieldCfg.list.value && (
+                  <th className="text-right px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} />
+                  </th>
+                )}
+                <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                  {t('inquiries.table.stage', 'Stage')}
+                </th>
+                {fieldCfg.list.ai_signal && (
+                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    <SortHeader col="ai_win_probability" label={t('inquiries.table.ai_signal', 'AI signal')} />
+                  </th>
+                )}
+                {fieldCfg.list.owner && (
+                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    {t('inquiries.table.owner_source', 'Owner · Source')}
+                  </th>
+                )}
+                {fieldCfg.list.next_task && (
+                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    <SortHeader col="next_task_due" label={t('inquiries.table.next_action', 'Next action')} />
+                  </th>
+                )}
+                {fieldCfg.list.touches && (
+                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    {t('inquiries.table.touches', 'Touches')}
+                  </th>
+                )}
                 {listColumns.map(col => (
-                  <th key={col.id} className="text-left px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap" title={col.help_text ?? undefined}>
+                  <th
+                    key={col.id}
+                    className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap"
+                    title={col.help_text ?? undefined}
+                  >
                     {col.label}
                   </th>
                 ))}
-                <th className="text-right px-4 py-3 text-xs font-medium text-t-secondary whitespace-nowrap">{t('inquiries.table.actions', 'Actions')}</th>
-                <th className="px-2 py-3 w-10" />
+                <th className="px-2 py-2.5 w-16" />
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">{t('inquiries.table.loading', 'Loading…')}</td></tr>}
-              {!isLoading && inquiries.length === 0 && <tr><td colSpan={20} className="px-4 py-8 text-center text-[#636366]">{t('inquiries.table.no_results', 'No inquiries found')}</td></tr>}
+              {isLoading && (
+                <tr>
+                  <td colSpan={20} className="px-4 py-16 text-center">
+                    <Loader2 size={28} className="mx-auto text-gray-600 animate-spin" />
+                    <div className="text-[12px] text-gray-500 mt-3">{t('inquiries.table.loading', 'Loading…')}</div>
+                  </td>
+                </tr>
+              )}
+              {!isLoading && inquiries.length === 0 && (
+                <tr>
+                  <td colSpan={20} className="px-4 py-16 text-center">
+                    <div className="mx-auto max-w-[420px] flex flex-col items-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center">
+                        <Inbox size={26} className="text-gray-600" />
+                      </div>
+                      {/* Two-tier copy: the leading line names the state,
+                          the secondary line tells staff how leads land
+                          here so they know what next-step to take. */}
+                      <div className="text-[15px] font-semibold text-white">
+                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly)
+                          ? t('inquiries.empty.filtered_title', 'No leads match these filters')
+                          : t('inquiries.empty.title', 'No leads yet')}
+                      </div>
+                      <div className="text-[12.5px] text-gray-500 leading-relaxed">
+                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly)
+                          ? t('inquiries.empty.filtered_body', 'Try clearing a filter or two — or use Add Inquiry to create one manually.')
+                          : t('inquiries.empty.body', 'Inquiries from your booking widget, chat, and lead forms land here automatically. Add one manually to get started.')}
+                      </div>
+                      <button
+                        onClick={() => setShowCreate(true)}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-primary-500 hover:bg-primary-400 text-dark-bg transition-colors"
+                      >
+                        <Plus size={13} /> {t('inquiries.add_inquiry', 'Add Inquiry')}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
               {inquiries.map((inq: any) => {
                 const isOverdue = inq.next_task_due && !inq.next_task_completed && new Date(inq.next_task_due) < new Date()
-                const nights = inq.check_in && inq.check_out
-                  ? Math.max(0, Math.round((new Date(inq.check_out).getTime() - new Date(inq.check_in).getTime()) / 86400000))
-                  : null
-                const fmtShort = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                // Lead-score chip — sourced from InquiryAiService's
-                // ai_win_probability (0-100). Color thresholds matched to
-                // typical sales-pipeline conventions: green = solid, amber
-                // = needs nurture, red = at risk.
-                const score: number | null = (typeof inq.ai_win_probability === 'number') ? inq.ai_win_probability : null
-                const scoreColor = score == null
-                  ? null
-                  : score >= 70 ? { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
-                    : score >= 40 ? { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
-                    : { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
-                // Age/freshness chip — "Fresh" for <24h, "Nd old" for normal
-                // ageing, "Cold Nd" when there's been no contact for a week+.
-                // Gives staff a glanceable sense of how this lead is doing
-                // without opening the detail page.
-                const createdAt = inq.created_at ? new Date(inq.created_at) : null
-                const lastContact = inq.last_contacted_at ? new Date(inq.last_contacted_at) : null
-                const ageDays = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / 86_400_000) : null
-                const daysSinceContact = lastContact ? Math.floor((Date.now() - lastContact.getTime()) / 86_400_000) : null
-                const isClosedKind = inq.pipeline_stage?.kind === 'won' || inq.pipeline_stage?.kind === 'lost'
-                const ageChip = (ageDays === null || isClosedKind)
-                  ? null
-                  : ageDays < 1
-                    ? { label: t('inquiries.row.age_fresh', 'Fresh'), cls: 'text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20' }
-                    : ((daysSinceContact === null && ageDays >= 7) || (daysSinceContact !== null && daysSinceContact >= 7))
-                      ? { label: t('inquiries.row.age_cold', { d: daysSinceContact ?? ageDays, defaultValue: 'Cold {{d}}d' }), cls: 'text-amber-300/90 bg-amber-500/10 border-amber-500/20' }
-                      : { label: t('inquiries.row.age_days', { d: ageDays, defaultValue: '{{d}}d old' }), cls: 'text-gray-500 bg-white/[0.02] border-white/10' }
                 const isExpanded = expandedRow === inq.id
-                // Total column span for the expanded row, derived live from the
-                // visible-column toggles so the colspan stays correct when admins
-                // reshape the table via Settings → Pipeline Layout.
-                const expandColSpan = 3 // bulk-select (always rendered now) + Guest + Actions trailing
+                // expandColSpan tracks the visible-column toggles so the
+                // expanded panel's <td colSpan> stays right when admins
+                // reshape the table via Field Manager. Counts: bulk + Lead +
+                // Stage + trailing actions (4) + each gated column.
+                const expandColSpan = 4
                   + (fieldCfg.list.stay ? 1 : 0)
                   + (fieldCfg.list.value ? 1 : 0)
-                  + 1 // Status
+                  + ((fieldCfg.list as any).ai_signal ? 1 : 0)
                   + (fieldCfg.list.owner ? 1 : 0)
-                  + (fieldCfg.list.touches ? 1 : 0)
                   + (fieldCfg.list.next_task ? 1 : 0)
+                  + (fieldCfg.list.touches ? 1 : 0)
                   + listColumns.length
-                // Priority left-edge stripe — inset box-shadow on the
-                // <tr> so the 3px color hint sits flush against the left
-                // edge of the row without disturbing the table layout.
-                // Low / no priority stays unstriped; Medium gets a quiet
-                // blue, High a clear red.
-                const priorityStripe = inq.priority === 'High'
-                  ? 'inset 3px 0 0 #ef4444'   // red
-                  : inq.priority === 'Medium'
-                    ? 'inset 3px 0 0 #3b82f6' // blue
-                    : null
                 return (
                 <React.Fragment key={inq.id}>
-                  <tr
-                    className={`group border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors cursor-pointer ${isOverdue ? 'bg-red-500/5' : ''} ${selected.has(inq.id) ? 'bg-primary-500/[0.04]' : ''} ${isExpanded ? 'bg-white/[0.02]' : ''}`}
-                    style={priorityStripe ? { boxShadow: priorityStripe } : undefined}
-                    onClick={(e) => {
-                      // Open the lead drawer on row click. Skip if the click
-                      // bubbled from an interactive element (button, link,
-                      // input, select) or anything inside a dropdown menu —
-                      // those handle their own action.
-                      const tgt = e.target as HTMLElement | null
-                      if (!tgt) return
-                      if (tgt.closest('button, a, input, select, textarea, label, [data-menu-root], [data-row-noopen]')) return
-                      // Don't fire if user is selecting text in a cell.
-                      if (window.getSelection()?.toString()) return
-                      setInquiryDrawerId(inq.id)
-                    }}
-                  >
-                    {/* Bulk-select cell — always rendered (see <thead>
-                        comment). Visible when selected, when admin opted
-                        into always-on via fieldCfg, or on row hover via
-                        the parent <tr>'s group class. */}
-                    <td className={`px-3 py-3 text-center transition-opacity ${fieldCfg.list.bulk_select || selected.has(inq.id) || selected.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      <input type="checkbox" checked={selected.has(inq.id)}
-                        onChange={() => setSelected(prev => {
-                          const next = new Set(prev); next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id); return next
-                        })}
-                        className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
-                    </td>
-
-                    {/* Guest cell — name, company, property + source pills,
-                        contact links. Heavy lifting in this cell so the
-                        rest of the row stays narrow. CRM Phase 1: name
-                        is a Link to the new lead detail page. */}
-                    <td className="px-4 py-3 max-w-[280px]">
-                      <div className="flex items-center gap-2">
-                        {scoreColor && (
-                          <span
-                            className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-7 rounded-md text-[11px] font-bold tabular-nums border ${scoreColor.bg} ${scoreColor.text} ${scoreColor.border}`}
-                            title={t('inquiries.score.tooltip', 'AI win probability')}
-                          >
-                            {score}
-                          </span>
-                        )}
-                        {inq.guest?.id ? (
-                          <Link
-                            to={`/guests/${inq.guest.id}`}
-                            className="font-semibold text-white hover:text-primary-300 truncate transition-colors"
-                            title={t('inquiries.row.open_customer', 'Open customer')}
-                          >
-                            {inq.guest?.full_name ?? '—'}
-                          </Link>
-                        ) : (
-                          <span className="font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</span>
-                        )}
-                        {ageChip && (
-                          <span
-                            className={`flex-shrink-0 inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ageChip.cls}`}
-                            title={t('inquiries.row.age_tooltip', 'Days since the lead was created — turns amber when there\'s been no contact in 7+ days')}
-                          >
-                            {ageChip.label}
-                          </span>
-                        )}
-                      </div>
-                      {inq.guest?.company && <div className="text-[11px] text-gray-500 truncate">{inq.guest.company}</div>}
-                      {/* Email + phone shown as text so staff can scan
-                          contact info without clicking the action pills. */}
-                      {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) && (
-                        <div className="text-[11px] text-gray-400 mt-0.5 truncate space-x-2">
-                          {inq.guest?.email && <span className="truncate">{inq.guest.email}</span>}
-                          {(inq.guest?.phone || inq.guest?.mobile) && <span className="text-gray-500">· {inq.guest.phone || inq.guest.mobile}</span>}
-                        </div>
-                      )}
-                      {/* Compressed metadata line — property and the typed
-                          source pill only. Inquiry type lives in the
-                          expanded row; raw source strings without a
-                          system-source badge (e.g. "fds_card_builder")
-                          are dropped here to cut clutter and surfaced in
-                          the expand panel instead. */}
-                      {(inq.property?.name || (inq.source && SOURCE_BADGES[inq.source]) || inq.brand_id || (fieldCfg.list.country && inq.guest?.country)) && (
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {inq.property?.name && (
-                            <span className="text-[10px] text-gray-500">{inq.property.name}</span>
-                          )}
-                          {fieldCfg.list.country && inq.guest?.country && (
-                            <span className="text-[10px] text-gray-500 inline-flex items-center gap-0.5">
-                              <span aria-hidden>·</span>
-                              <span>{inq.guest.country}</span>
-                            </span>
-                          )}
-                          {inq.source && SOURCE_BADGES[inq.source] && (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
-                          )}
-                          <BrandBadge brandId={inq.brand_id} />
-                        </div>
-                      )}
-                      {/* Always-visible quick-contact pills. ContactActions
-                          renders Email / Call / SMS / WhatsApp depending on
-                          which channels are populated; chat-captured leads
-                          typically have phone (so WhatsApp lights up) and
-                          email-form leads have email. Empty state surfaces
-                          explicitly so staff can spot rows that need
-                          enrichment from the chat dialog. */}
-                      {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) ? (
-                        <div className="mt-1.5">
-                          <ContactActions email={inq.guest?.email} phone={inq.guest?.phone || inq.guest?.mobile} compact />
-                        </div>
-                      ) : (
-                        <div className="mt-1.5 text-[10px] text-gray-700 italic">
-                          {t('inquiries.row.no_contacts', 'No contact info yet')}
-                        </div>
-                      )}
-                    </td>
-
-                    {fieldCfg.list.stay && (
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        {inq.check_in || inq.check_out ? (
-                          <>
-                            <div className="text-gray-300">
-                              {inq.check_in ? fmtShort(inq.check_in) : '—'} → {inq.check_out ? fmtShort(inq.check_out) : '—'}
-                            </div>
-                            <div className="text-[10px] text-gray-600">
-                              {nights !== null && `${nights}n`}{nights !== null && inq.num_rooms ? ' · ' : ''}
-                              {inq.num_rooms ? `${inq.num_rooms} room${inq.num_rooms === 1 ? '' : 's'}` : ''}
-                              {inq.room_type_requested && (nights !== null || inq.num_rooms) ? ' · ' : ''}
-                              {inq.room_type_requested ?? ''}
-                            </div>
-                          </>
-                        ) : <span className="text-gray-700">—</span>}
-                      </td>
-                    )}
-
-                    {/* Value cell — soft-pill emerald chip with the
-                        amount tabular-aligned so a column of values
-                        reads cleanly. Empty rows collapse to a quiet
-                        em-dash so the column doesn't pull the eye. */}
-                    {fieldCfg.list.value && (
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {inq.total_value ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300 text-sm font-bold tabular-nums">
-                            {settings.currency_symbol}{Number(inq.total_value).toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-700 text-xs">—</span>
-                        )}
-                      </td>
-                    )}
-
-                    {/* Status pill — clickable to change inline. Phase 6
-                        polish: prefer the live pipeline_stage's color
-                        when available (custom pipelines, renamed stages),
-                        falling back to STATUS_COLORS for legacy rows.
-                        Priority chip below is now inline-editable too. */}
-                    <td className="px-4 py-3" data-menu-root>
-                      {(() => {
-                        const stageColor = inq.pipeline_stage?.color
-                        const stageStyle: React.CSSProperties = stageColor
-                          ? { background: stageColor + '20', color: stageColor, border: `1px solid ${stageColor}40` }
-                          : {}
-                        const stageClass = stageColor
-                          ? 'border'
-                          : (STATUS_COLORS[inq.status] ?? 'bg-gray-500/20 text-t-secondary')
-                        return (
-                          <button onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect()
-                              setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status'
-                                ? null
-                                : { id: inq.id, type: 'status', anchor: rect })
-                            }}
-                            title={t('inquiries.table.click_to_change_status', 'Click to change status')}
-                            style={stageStyle}
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap inline-flex items-center gap-1 hover:brightness-110 transition-all ${stageClass}`}>
-                            {inq.status} <ChevronDown size={9} />
-                          </button>
-                        )
-                      })()}
-                      <button
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'priority'
-                            ? null
-                            : { id: inq.id, type: 'priority', anchor: rect })
-                        }}
-                        title={t('inquiries.table.click_to_change_priority', 'Click to change priority')}
-                        className={`block text-[10px] mt-1 font-bold hover:underline ${PRIORITY_COLORS[inq.priority] ?? 'text-t-secondary'}`}
-                      >
-                        {inq.priority ?? '—'}
-                      </button>
-                    </td>
-
-                    {fieldCfg.list.owner && (
-                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                        {inq.assigned_to || <span className="text-gray-700">unassigned</span>}
-                      </td>
-                    )}
-
-                    {fieldCfg.list.touches && (
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <InquiryTouchSummary inquiry={inq} />
-                      </td>
-                    )}
-
-                    {fieldCfg.list.next_task && (
-                      <td className="px-4 py-3">
-                        <NextTaskCard
-                          inquiry={inq}
-                          isOverdue={isOverdue}
-                          onAdd={() => setTaskDrawer({ inquiryId: inq.id })}
-                          onEdit={() => setTaskDrawer({ inquiryId: inq.id, task: {
-                            id: 0,
-                            inquiry_id: inq.id,
-                            title: inq.next_task_type,
-                            due_at: inq.next_task_due,
-                            notes: inq.next_task_notes,
-                          } })}
-                          onComplete={() => completeMutation.mutate(inq.id)}
-                          onCancel={() => cancelNextTaskMutation.mutate(inq.id)}
-                          t={t}
-                        />
-                      </td>
-                    )}
-
-                    {/* Custom-field columns — only the ones flagged
-                        show_in_list. Cell renderer is type-aware so
-                        booleans show as Yes/No, dates as locale, multi-
-                        selects as comma-joined chips. */}
-                    {listColumns.map(col => {
-                      const v = inq.custom_data?.[col.key]
-                      return (
-                        <td key={col.id} className="px-4 py-3 text-xs whitespace-nowrap text-gray-300">
-                          {renderCustomListValue(col.type, v)}
-                        </td>
-                      )
+                  <LeadRow
+                    inquiry={inq}
+                    fieldCfg={fieldCfg as any}
+                    listColumns={listColumns}
+                    renderCustomListValue={renderCustomListValue}
+                    sourceBadges={SOURCE_BADGES}
+                    statusColors={STATUS_COLORS}
+                    currencySymbol={settings.currency_symbol || ''}
+                    isSelected={selected.has(inq.id)}
+                    anySelected={selected.size > 0}
+                    isExpanded={isExpanded}
+                    onToggleSelect={() => setSelected(prev => {
+                      const next = new Set(prev)
+                      next.has(inq.id) ? next.delete(inq.id) : next.add(inq.id)
+                      return next
                     })}
-
-                    {/* Inline quick actions — Won / Lost shortcuts.
-                        Hidden by default, fade in on row hover or when
-                        any button inside has keyboard focus, so the row
-                        reads cleaner at rest while staying one tap
-                        away. focus-within keeps it accessible when
-                        tabbing through. */}
-                    <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                      <InquiryQuickActions inquiry={inq}
-                        onStatus={(id, status) => statusMutation.mutate({ id, status })} />
-                    </td>
-
-                    {/* Trailing column — expand toggle + overflow menu.
-                        Chevron drives the row's expanded state; the
-                        kebab keeps access to the Task editor + view
-                        detail menu. */}
-                    <td className="px-2 py-3" data-menu-root>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => setExpandedRow(isExpanded ? null : inq.id)}
-                          title={isExpanded ? t('inquiries.row.collapse', 'Collapse') : t('inquiries.row.expand', 'Expand')}
-                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors"
-                        >
-                          <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                        </button>
-                        <button onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect()
-                            setOpenMenu(openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action'
-                              ? null
-                              : { id: inq.id, type: 'action', anchor: rect })
-                          }}
-                          title={t('inquiries.table.more', 'More')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#636366] hover:text-white transition-colors">
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    onToggleExpand={() => setExpandedRow(isExpanded ? null : inq.id)}
+                    onOpenStatusMenu={(rect) => setOpenMenu(
+                      openMenu !== null && openMenu.id === inq.id && openMenu.type === 'status'
+                        ? null
+                        : { id: inq.id, type: 'status', anchor: rect }
+                    )}
+                    onOpenActionMenu={(rect) => setOpenMenu(
+                      openMenu !== null && openMenu.id === inq.id && openMenu.type === 'action'
+                        ? null
+                        : { id: inq.id, type: 'action', anchor: rect }
+                    )}
+                    onOpenPriorityCycle={() => cyclePriority(inq.id, inq.priority)}
+                    onOpenInquiryDrawer={() => setInquiryDrawerId(inq.id)}
+                    onAddTask={() => setTaskDrawer({ inquiryId: inq.id })}
+                    t={t as any}
+                  />
 
                   {/* Expanded detail row — full-width drawer showing
                       contact details, AI brief, notes, and next-task
@@ -2069,89 +1869,12 @@ export function Inquiries() {
  * label so the raw ISO `2026-05-15T00:00:00.000000Z` never reaches the
  * user. Icons replace the verb labels for a tighter row.
  */
-function NextTaskCard({
-  inquiry: inq,
-  isOverdue,
-  onAdd, onEdit, onComplete, onCancel,
-  t,
-}: {
-  inquiry: any
-  isOverdue: boolean
-  onAdd: () => void
-  onEdit: () => void
-  onComplete: () => void
-  onCancel: () => void
-  t: any
-}) {
-  if (inq.next_task_completed) {
-    return (
-      <div className="inline-flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-          <CheckCircle2 size={10} /> {t('inquiries.table.task_done', 'Done')}
-        </span>
-        <button type="button" onClick={onAdd}
-          className="text-[10px] text-[#636366] hover:text-primary-400 inline-flex items-center gap-1">
-          <Plus size={10} /> {t('inquiries.table.add_another', 'Add another')}
-        </button>
-      </div>
-    )
-  }
-  if (!inq.next_task_type) {
-    return (
-      <button type="button" onClick={onAdd}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-dark-border text-[11px] text-[#636366] hover:text-primary-400 hover:border-primary-500/50 transition-colors">
-        <Plus size={11} /> {t('inquiries.table.add_task', 'Add task')}
-      </button>
-    )
-  }
-
-  const due = inq.next_task_due ? new Date(inq.next_task_due) : null
-  let dueLabel: string | null = null
-  if (due && !isNaN(due.getTime())) {
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const d2 = new Date(due); d2.setHours(0, 0, 0, 0)
-    const diffDays = Math.round((d2.getTime() - today.getTime()) / 86_400_000)
-    if (diffDays < 0)      dueLabel = t('inquiries.table.due_overdue', 'Overdue')
-    else if (diffDays === 0) dueLabel = t('inquiries.table.due_today', 'Today')
-    else if (diffDays === 1) dueLabel = t('inquiries.table.due_tomorrow', 'Tomorrow')
-    else if (diffDays < 7)   dueLabel = due.toLocaleDateString(undefined, { weekday: 'short' })
-    else                     dueLabel = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  }
-
-  return (
-    <div className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1.5 ${isOverdue ? 'border-red-500/30 bg-red-500/[0.06]' : 'border-dark-border bg-white/[0.02]'}`}>
-      <div className="min-w-0">
-        <button type="button" onClick={onEdit}
-          className="text-xs font-medium text-white hover:text-primary-400 truncate text-left block max-w-[160px]"
-          title={inq.next_task_type}>
-          {inq.next_task_type}
-        </button>
-        {dueLabel && (
-          <div className={`text-[10px] font-semibold ${isOverdue ? 'text-red-400' : 'text-[#9a9aa0]'}`}>
-            {dueLabel}
-          </div>
-        )}
-      </div>
-      <div className="flex items-center gap-0.5 pl-1 border-l border-dark-border">
-        <button type="button" onClick={onComplete}
-          title={t('inquiries.table.mark_done', 'Mark done')}
-          className="p-1 rounded hover:bg-emerald-500/15 text-emerald-400 transition-colors">
-          <CheckCircle2 size={12} />
-        </button>
-        <button type="button" onClick={onEdit}
-          title={t('inquiries.table.edit_task', 'Edit task')}
-          className="p-1 rounded hover:bg-primary-500/15 text-primary-400 transition-colors">
-          <Pencil size={11} />
-        </button>
-        <button type="button" onClick={onCancel}
-          title={t('inquiries.table.cancel_task', 'Cancel task')}
-          className="p-1 rounded hover:bg-red-500/15 text-red-400 transition-colors">
-          <XIcon size={12} />
-        </button>
-      </div>
-    </div>
-  )
-}
+/*
+ * NextTaskCard removed in the leads-v2 row refactor. Its replacement is
+ * the simpler <NextActionCell> + the kebab-menu surface in <LeadRow>.
+ * Active-task editing inside the expanded row uses the TaskDrawer
+ * directly. No call sites remain.
+ */
 
 /**
  * Guest picker for the Add Inquiry modal. Phase 6.5: when no existing

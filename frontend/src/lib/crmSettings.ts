@@ -37,11 +37,12 @@ export interface InquiryFieldConfig {
   list: {
     stay: boolean
     value: boolean
-    owner: boolean
-    touches: boolean
+    owner: boolean        // covers owner + source chip (combined column in v2 row)
+    touches: boolean      // touch counters; in v2 row they fold into the AI signal hover popover
     next_task: boolean
     bulk_select: boolean
-    country: boolean   // small country chip in the guest cell — handy for international hotels / clinics
+    country: boolean      // small country chip in the guest cell — handy for international hotels / clinics
+    ai_signal: boolean    // v2 column: AI win probability + going-cold risk
   }
   detail: {
     contact_section: boolean           // email + phone block on the profile column
@@ -179,6 +180,7 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
     touches: true, next_task: true,
     bulk_select: false, // hidden by default — admins opt in
     country: false,     // off by default — niche for most orgs
+    ai_signal: true,    // v2 row default-on; cells render blank when there's no AI run yet so no churn for legacy data
   },
   detail: {
     contact_section: true, stay_section: true,
@@ -237,12 +239,13 @@ export const DEFAULT_DEAL_FIELDS: DealFieldConfig = {
 
 export const INQUIRY_LIST_FIELD_META: Array<{ key: keyof InquiryFieldConfig['list']; label: string; description?: string }> = [
   { key: 'bulk_select', label: 'Bulk select', description: 'Checkbox column for multi-row actions' },
-  { key: 'country', label: 'Guest country', description: 'Shows guest nationality flag/name' },
-  { key: 'stay', label: 'Stay dates', description: 'Check-in → check-out + room count' },
-  { key: 'value', label: 'Value', description: 'Estimated booking value' },
-  { key: 'owner', label: 'Owner', description: 'Assigned salesperson' },
-  { key: 'touches', label: 'Touches', description: 'Outreach activity summary' },
-  { key: 'next_task', label: 'Next task', description: 'Upcoming task with due-date relativity' },
+  { key: 'country', label: 'Guest country', description: 'Shows guest nationality / flag in the identity cell' },
+  { key: 'stay', label: 'Stay / Event', description: 'Check-in → check-out + room count, or event name + pax' },
+  { key: 'value', label: 'Value', description: 'Estimated total value (currency-aware)' },
+  { key: 'ai_signal', label: 'AI signal', description: 'Win probability + going-cold risk — hover for the suggested next action' },
+  { key: 'owner', label: 'Owner + Source', description: 'Assigned salesperson plus the channel the lead came from' },
+  { key: 'touches', label: 'Touches', description: 'Outreach activity counters (folded into the AI signal hover popover in v2 — leave off unless you need a dedicated column)' },
+  { key: 'next_task', label: 'Next action', description: 'Upcoming task with relative due-date colour-coding' },
 ]
 
 export const DEAL_LIST_FIELD_META: Array<{ key: keyof DealFieldConfig['list']; label: string; description?: string }> = [
