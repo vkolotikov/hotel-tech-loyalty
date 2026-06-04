@@ -193,6 +193,91 @@ class CrmAiService
 
     /**
      * Pull a CRM guest (customer) out of unstructured text — email
+     * Sibling to extractLead() but built for the chat widget's auto-
+     * capture pipeline. Key differences:
+     *
+     *   - Vertical-neutral system prompt (no hotel jargon). The same
+     *     widget ships across hospitality, beauty, legal, real-estate,
+     *     manufacturing, agency, etc. -- "room_type" naming would
+     *     confuse the model for verticals where the product is a
+     *     business card or a metal sign.
+     *   - Takes the visitor's accumulated chat messages, not a single
+     *     paste. The first message in a chat almost always contains
+     *     the name + company + product + ballpark price; later
+     *     messages refine.
+     *   - Schema gives generic field names that map cleanly onto the
+     *     inquiries.{subject, room_type_requested, num_rooms, total_value}
+     *     legacy columns (re-used as product / quantity / price).
+     *
+     * Returns the same { success, data } shape as the other extract*
+     * methods so callers can integrate uniformly.
+     */
+    public function extractLeadFromChat(string $conversationText): array
+    {
+        if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured'];
+        if (mb_strlen(trim($conversationText)) < 12) return ['success' => false, 'error' => 'Too little context'];
+
+        $system = "You extract sales-lead information from chat-widget transcripts. "
+            . "The widget is embedded on the customer's own website and serves a wide range "
+            . "of industries: hospitality, beauty/spa, medical, legal, real-estate, agencies, "
+            . "manufacturing, restaurants, education, fitness. Never assume hotel context.\n\n"
+            . "Goal: pull EXACTLY what the visitor stated. Do not invent values. Leave fields "
+            . "blank when the visitor never mentioned them. Do not guess country from language. "
+            . "Do not guess a price band -- only fill it if the visitor named a number or a "
+            . "stated budget. Do not guess company size or quantity.\n\n"
+            . "Field-mapping conventions used by callers:\n"
+            . "  product           = what the visitor wants to buy / book / order (free text)\n"
+            . "  quantity          = how many units, if explicit\n"
+            . "  estimated_value   = total budget or price the visitor mentioned (numeric)\n"
+            . "  subject           = a one-sentence summary of the request (you write this)\n"
+            . "  inquiry_type      = Quote / Booking / Support / Partnership / Other\n\n"
+            . "Use the message context to write a short professional subject line that names "
+            . "the product + quantity when possible (e.g. 'Quote: 500 premium metal cards'). "
+            . "Keep the subject under 90 chars.";
+
+        $tools = [[
+            'name' => 'save_chat_lead',
+            'description' => 'Save the structured lead pulled from the chat transcript.',
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'customer_name'    => ['type' => 'string', 'description' => 'Full name the visitor introduced themselves with'],
+                    'email'            => ['type' => 'string', 'description' => 'Email mentioned in the conversation'],
+                    'phone'            => ['type' => 'string', 'description' => 'Phone mentioned in the conversation'],
+                    'company'          => ['type' => 'string', 'description' => 'Company / brand name the visitor represents'],
+                    'position_title'   => ['type' => 'string', 'description' => 'Job title / role (e.g. Founder, Marketing Manager)'],
+                    'country'          => ['type' => 'string', 'description' => 'Country if EXPLICITLY mentioned (do not infer from language)'],
+                    'guest_type'       => ['type' => 'string', 'enum' => ['Individual', 'Corporate', 'Travel Agent', 'Group'], 'description' => 'Best-fit category'],
+                    'inquiry_type'     => ['type' => 'string', 'description' => 'Quote, Booking, Support, Partnership, Information, Other'],
+                    'product'          => ['type' => 'string', 'description' => 'What the visitor wants to purchase / book (free text, no hotel jargon)'],
+                    'quantity'         => ['type' => 'integer', 'description' => 'Number of units / rooms / sessions if explicit'],
+                    'estimated_value' => ['type' => 'number', 'description' => 'Total value the visitor mentioned (number only, no currency)'],
+                    'subject'          => ['type' => 'string', 'description' => 'One-sentence summary of the request, < 90 chars'],
+                    'special_requests' => ['type' => 'string', 'description' => 'Customisations / requirements the visitor listed'],
+                    'priority'         => ['type' => 'string', 'enum' => ['Low', 'Normal', 'High'], 'description' => 'High only if the visitor explicitly signals urgency'],
+                ],
+                'required' => [],
+            ],
+        ]];
+
+        $messages = [['role' => 'user', 'content' => "Extract sales-lead information from this chat transcript:\n\n" . $conversationText]];
+
+        try {
+            $res = $this->call($system, $messages, $tools, ['type' => 'tool', 'name' => 'save_chat_lead']);
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => 'Extraction call failed: ' . $e->getMessage()];
+        }
+
+        foreach ($res['content'] ?? [] as $block) {
+            if (($block['type'] ?? '') === 'tool_use' && ($block['name'] ?? '') === 'save_chat_lead') {
+                return ['success' => true, 'data' => (array) ($block['input'] ?? [])];
+            }
+        }
+
+        return ['success' => false, 'error' => 'No structured fields extracted'];
+    }
+
+    /**
      * signature, scraped contact card, manual paste from a business
      * card photo, etc. Mirrors extractMember but with Guest-table
      * fields (company, position_title, location, VIP/importance).

@@ -881,6 +881,32 @@ export function Inquiries() {
                                   <div>
                                     <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
                                       <span className="w-1 h-1 rounded-full bg-sky-400/60" />
+                                      {t('inquiries.row.expanded.position', 'Title / Role')}
+                                    </div>
+                                    <EditableField
+                                      value={inq.guest.position_title ?? ''}
+                                      onSave={async (v) => {
+                                        await api.put(`/v1/admin/guests/${inq.guest.id}`, { position_title: v })
+                                        qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                      <span className="w-1 h-1 rounded-full bg-sky-400/60" />
+                                      {t('inquiries.row.expanded.country', 'Country')}
+                                    </div>
+                                    <EditableField
+                                      value={inq.guest.country ?? ''}
+                                      onSave={async (v) => {
+                                        await api.put(`/v1/admin/guests/${inq.guest.id}`, { country: v })
+                                        qc.invalidateQueries({ queryKey: ['inquiries'] })
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1 font-medium uppercase tracking-wide">
+                                      <span className="w-1 h-1 rounded-full bg-sky-400/60" />
                                       VIP
                                     </div>
                                     <EditableField

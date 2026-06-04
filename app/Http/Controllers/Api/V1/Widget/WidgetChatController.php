@@ -848,6 +848,15 @@ class WidgetChatController extends Controller
 
         $orgId = $conv->organization_id;
 
+        // AI-extract structured fields from the visitor's accumulated
+        // chat messages BEFORE we create the Guest, so the Guest can
+        // land with a real name + company + country instead of
+        // "Chat Visitor". Vertical-neutral extraction; works for
+        // hospitality, beauty, manufacturing, agency, etc. Failure is
+        // non-fatal -- the regex-extracted email/phone still get
+        // captured below.
+        $extracted = $this->aiExtractChatLead($conv, $message);
+
         // Prefer an existing guest matched by email — avoids polluting the
         // CRM with duplicates when the same person chats multiple times.
         $guest = null;
@@ -855,10 +864,23 @@ class WidgetChatController extends Controller
             $guest = Guest::where('organization_id', $orgId)->where('email', $email)->first();
         }
 
+        // Compose the best name + country we can. Precedence:
+        //   1. AI-extracted (visitor typed it explicitly)
+        //   2. Existing conversation visitor_name / visitor.display_name
+        //   3. "Chat Visitor" placeholder
+        $extractedName = trim((string) ($extracted['customer_name'] ?? ''));
+        $displayName   = $extractedName !== ''
+            ? $extractedName
+            : ($conv->visitor_name ?: ($visitor?->display_name) ?: 'Chat Visitor');
+
+        // Country sourcing: AI extraction first (visitor said it),
+        // falls back to the Visitor row's IP-geolocation country.
+        $extractedCountry = trim((string) ($extracted['country'] ?? ''));
+        $countryToSave = $extractedCountry !== ''
+            ? $extractedCountry
+            : ($visitor?->country ?: null);
+
         if (!$guest) {
-            $displayName = $conv->visitor_name
-                ?: ($visitor?->display_name)
-                ?: 'Chat Visitor';
             $nameParts = explode(' ', $displayName, 2);
             $guest = Guest::create([
                 'organization_id'  => $orgId,
@@ -867,26 +889,82 @@ class WidgetChatController extends Controller
                 'full_name'        => $displayName,
                 'email'            => $email ?: $conv->visitor_email,
                 'phone'            => $phone ?: $conv->visitor_phone,
-                'guest_type'       => 'Individual',
+                // AI-extracted profile fields. Only set when present
+                // so empty extractions don't shove empty strings in.
+                'company'          => $this->niceOrNull($extracted['company'] ?? null),
+                'position_title'   => $this->niceOrNull($extracted['position_title'] ?? null),
+                'country'          => $countryToSave,
+                'guest_type'       => $this->niceOrNull($extracted['guest_type'] ?? null) ?: 'Individual',
                 'lead_source'      => 'Chat Widget',
                 'lifecycle_status' => 'Lead',
                 'last_activity_at' => now(),
             ]);
         } else {
+            // Fill in blanks on an existing guest -- never overwrite
+            // staff-curated data. Same fill-blank semantics CrmAiService::
+            // extractGuest uses on the admin side.
             $updates = [];
             if (!$guest->phone && $phone) $updates['phone'] = $phone;
             if (!$guest->email && $email) $updates['email'] = $email;
+            if (!$guest->company       && !empty($extracted['company']))        $updates['company']        = $this->niceOrNull($extracted['company']);
+            if (!$guest->position_title && !empty($extracted['position_title'])) $updates['position_title'] = $this->niceOrNull($extracted['position_title']);
+            if (!$guest->country        && $countryToSave)                       $updates['country']        = $countryToSave;
+            // Promote the visible name when the original guest record was
+            // just "Chat Visitor" and the AI now has a real name.
+            if (($guest->full_name === 'Chat Visitor' || empty($guest->full_name)) && $extractedName !== '') {
+                $updates['full_name'] = $displayName;
+                $parts = explode(' ', $displayName, 2);
+                $updates['first_name'] = $parts[0] ?? $guest->first_name;
+                $updates['last_name']  = $parts[1] ?? $guest->last_name;
+            }
             if ($updates) $guest->update($updates + ['last_activity_at' => now()]);
         }
 
-        $inquiry = Inquiry::create([
-            'organization_id' => $orgId,
-            'guest_id'        => $guest->id,
-            'notes'           => "Auto-captured from chat conversation #{$conv->id}: \"" . mb_substr($message, 0, 500) . "\"",
-            'source'          => 'chatbot',
-            'status'          => 'new',
-            'inquiry_type'    => 'general',
-        ]);
+        // Build the Inquiry from extracted fields + the chat verbatim
+        // as the notes backstop so staff can always see the source.
+        $extractedSubject = $this->niceOrNull($extracted['subject'] ?? null);
+        $extractedProduct = $this->niceOrNull($extracted['product'] ?? null);
+        $extractedType    = $this->niceOrNull($extracted['inquiry_type'] ?? null);
+        $extractedValue   = isset($extracted['estimated_value']) && is_numeric($extracted['estimated_value'])
+            ? (float) $extracted['estimated_value']
+            : null;
+        $extractedQty     = isset($extracted['quantity']) && is_numeric($extracted['quantity'])
+            ? (int) $extracted['quantity']
+            : null;
+        $extractedPriority = in_array(($extracted['priority'] ?? null), ['Low', 'Normal', 'High'], true)
+            ? $extracted['priority']
+            : null;
+        $specialRequests  = $this->niceOrNull($extracted['special_requests'] ?? null);
+
+        // Build the notes body — extracted summary first (the AI's
+        // one-sentence subject + key facts) followed by the verbatim
+        // chat excerpt so staff can always trace back to source.
+        // Inquiry has no `subject` column; this lead block IS the
+        // headline staff read in the expanded panel.
+        $notesParts = [];
+        if ($extractedSubject) {
+            $notesParts[] = '📝 ' . $extractedSubject;
+        }
+        $extractedFacts = [];
+        if ($extractedProduct) $extractedFacts[] = 'Product: ' . $extractedProduct;
+        if ($extractedQty)     $extractedFacts[] = 'Quantity: ' . $extractedQty;
+        if ($extractedValue)   $extractedFacts[] = 'Estimated value: ' . $extractedValue;
+        if ($extractedFacts) $notesParts[] = implode(' · ', $extractedFacts);
+        $notesParts[] = "Auto-captured from chat conversation #{$conv->id}: \"" . mb_substr($message, 0, 500) . '"';
+
+        $inquiry = Inquiry::create(array_filter([
+            'organization_id'      => $orgId,
+            'guest_id'             => $guest->id,
+            'notes'                => implode("\n\n", $notesParts),
+            'source'               => 'chatbot',
+            'status'               => 'new',
+            'inquiry_type'         => $extractedType ?: 'general',
+            'room_type_requested'  => $extractedProduct,
+            'num_rooms'            => $extractedQty,
+            'total_value'          => $extractedValue,
+            'priority'             => $extractedPriority,
+            'special_requests'     => $specialRequests,
+        ], fn ($v) => $v !== null && $v !== ''));
 
         $conv->update([
             'lead_captured' => true,
@@ -926,6 +1004,81 @@ class WidgetChatController extends Controller
                 'conversation_id' => $conv->id,
             ]);
         }
+    }
+
+    /**
+     * Run AI extraction over the visitor's accumulated chat messages
+     * to pull structured lead fields (name, company, country, product,
+     * price, quantity, etc.) out of free-form chat.
+     *
+     * Returns an empty array on any failure -- the caller treats
+     * absence as "no extraction" and proceeds with the basic capture.
+     * Bounded context (last 10 visitor messages, max 8000 chars total)
+     * so a 200-message conversation doesn't drag the token bill.
+     *
+     * Org context binding is required because CrmAiService uses
+     * AiUsageService for plan-cap gating; widgets run in tenant-bound
+     * middleware so current_organization_id is already set.
+     */
+    private function aiExtractChatLead(ChatConversation $conv, string $latestMessage): array
+    {
+        try {
+            // Pull the most-recent visitor messages on this conversation.
+            // Order by id desc + reverse so the AI sees them in
+            // chronological order with the freshest on the bottom (most
+            // useful at the end of the prompt).
+            $rows = ChatMessage::withoutGlobalScopes()
+                ->where('conversation_id', $conv->id)
+                ->where('sender_type', 'visitor')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(['content']);
+            $messages = $rows->reverse()->values()
+                ->map(fn ($m) => trim((string) ($m->content ?? '')))
+                ->filter(fn ($s) => $s !== '')
+                ->all();
+
+            // Ensure the live message is included -- it might not be
+            // persisted yet at the time autoCapture runs.
+            $latest = trim($latestMessage);
+            if ($latest !== '' && !in_array($latest, $messages, true)) {
+                $messages[] = $latest;
+            }
+            if (empty($messages)) return [];
+
+            $context = '';
+            $cap = 8000;
+            foreach ($messages as $i => $m) {
+                $line = '[' . ($i + 1) . '] ' . $m . "\n";
+                if (mb_strlen($context) + mb_strlen($line) > $cap) break;
+                $context .= $line;
+            }
+
+            $res = app(\App\Services\CrmAiService::class)->extractLeadFromChat($context);
+            if (!($res['success'] ?? false)) return [];
+            return (array) ($res['data'] ?? []);
+        } catch (\Throwable $e) {
+            \Log::warning('autoCapture AI extraction failed: ' . $e->getMessage(), [
+                'conversation_id' => $conv->id,
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Normalise an AI-extracted string: trim, drop "null" / "n/a" /
+     * "unknown" sentinels Claude sometimes emits, return null when
+     * effectively empty. Keeps niceOrNull(' ') === null so the
+     * Inquiry::create(array_filter(...)) call below collapses it
+     * out of the payload.
+     */
+    private function niceOrNull(?string $value): ?string
+    {
+        if ($value === null) return null;
+        $trim = trim($value);
+        if ($trim === '') return null;
+        if (in_array(strtolower($trim), ['null', 'n/a', 'na', 'none', 'unknown', '-', '—'], true)) return null;
+        return $trim;
     }
 
     /**
