@@ -211,11 +211,27 @@ class SettingsController extends Controller
             'settings.*.value' => 'present',
         ]);
 
+        // Resolve the bound org once up-front. If we can't, fail hard so
+        // the frontend's "Settings saved" toast can't lie about a write
+        // that landed nowhere. Before this, a misconfigured middleware
+        // could let updates go through with NULL organization_id (or get
+        // silently dropped by the trait), which is exactly the failure
+        // mode behind the "theme preset reverts on refresh" report.
+        $boundOrgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        if (!$boundOrgId) {
+            return response()->json([
+                'message' => 'Cannot save settings — no organization context bound. Please re-login.',
+            ], 422);
+        }
+
+        $written = 0;
+        $skipped = 0;
         foreach ($validated['settings'] as $item) {
             $setting = HotelSetting::where('key', $item['key'])->first();
 
             // Non-super-admins cannot write system-scoped settings.
             if (!$isSuperAdmin && $setting && $setting->scope === 'system') {
+                $skipped++;
                 continue;
             }
 
@@ -223,11 +239,13 @@ class SettingsController extends Controller
             // matches the read-side filter and prevents staff from
             // overwriting SMTP/Stripe/Twilio credentials.
             if (!$isSuperAdmin && $setting && $setting->group === 'integrations') {
+                $skipped++;
                 continue;
             }
 
             // Skip empty secret submissions (user didn't type a new key)
             if (in_array($item['key'], self::SECRET_KEYS) && ($item['value'] === '' || $item['value'] === null)) {
+                $skipped++;
                 continue;
             }
 
@@ -236,6 +254,7 @@ class SettingsController extends Controller
 
             if ($setting) {
                 $setting->update(['value' => $newValue]);
+                $written++;
             } else {
                 // Row doesn't exist for this org yet. Check if the key exists as a
                 // template in any other org (fresh orgs have no seeded settings
@@ -243,6 +262,7 @@ class SettingsController extends Controller
                 // or missing entirely, let the staff user create it for their org.
                 $template = HotelSetting::withoutGlobalScopes()->where('key', $item['key'])->first();
                 if ($template && $template->scope === 'system' && !$isSuperAdmin) {
+                    $skipped++;
                     continue;
                 }
                 // Infer group/type/label from the template when available
@@ -251,13 +271,22 @@ class SettingsController extends Controller
                 $type  = $template?->type ?? ($isEnabledFlag ? 'boolean' : 'string');
                 $label = $template?->label ?? ucwords(str_replace('_', ' ', $item['key']));
                 HotelSetting::create([
-                    'key'   => $item['key'],
-                    'value' => $newValue,
-                    'type'  => $type,
-                    'group' => $group,
-                    'label' => $label,
-                    'scope' => $template?->scope ?? 'company',
+                    'key'             => $item['key'],
+                    'value'           => $newValue,
+                    'type'            => $type,
+                    'group'           => $group,
+                    'label'           => $label,
+                    'scope'           => $template?->scope ?? 'company',
+                    // Defence in depth — the BelongsToOrganization trait's
+                    // `creating` hook already sets this, but if the bound
+                    // context drifts between the auth-check above and the
+                    // hook execution (mid-request middleware swap, queue
+                    // worker reuse, etc.) the trait silently leaves the
+                    // column NULL and the row gets dropped by TenantScope
+                    // on the next read. Explicit beats implicit here.
+                    'organization_id' => $boundOrgId,
                 ]);
+                $written++;
             }
 
             AuditLog::record(
@@ -270,7 +299,11 @@ class SettingsController extends Controller
             );
         }
 
-        return response()->json(['message' => 'Settings updated']);
+        return response()->json([
+            'message' => 'Settings updated',
+            'written' => $written,
+            'skipped' => $skipped,
+        ]);
     }
 
     /**
@@ -435,6 +468,10 @@ class SettingsController extends Controller
             return 'integrations';
         }
         if (str_starts_with($k, 'mobile_')) return 'mobile_app';
+        // Theme/mobile preset NAME (added 2026-06) — keep in the
+        // same groups so the /v1/theme endpoint picks them up alongside
+        // the per-color values.
+        if ($k === 'theme_preset_name') return 'appearance';
         if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';
         if (str_starts_with($k, 'booking_')) return 'booking';
         if (str_starts_with($k, 'mail_')) return 'email';

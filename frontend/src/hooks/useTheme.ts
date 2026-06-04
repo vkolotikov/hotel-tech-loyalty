@@ -119,22 +119,109 @@ export function applyThemeToDom(colors: Partial<ThemeColors>): void {
 
 export type { ThemeColors }
 
+/**
+ * Cache key for the last-known-good theme snapshot in localStorage.
+ *
+ * Why: without this, every page reload paints Gold Luxury defaults for
+ * the first ~200 ms while the /v1/theme query resolves -- the user sees
+ * their carefully-picked Royal Blue / Emerald / etc. flash to default
+ * and back. On a slow connection (or briefly offline), the API call
+ * may not resolve at all, leaving the admin stuck on defaults and
+ * making the user think "my theme didn't save". With the snapshot we
+ * apply the last-known palette synchronously before React even mounts.
+ */
+const THEME_CACHE_KEY = 'loyalty-admin-theme-v1'
+const PRESET_CACHE_KEY = 'loyalty-admin-theme-preset-v1'
+
+interface CachedTheme {
+  colors: Partial<ThemeColors>
+  preset?: string | null
+  savedAt: number
+}
+
+/**
+ * Read the cached theme synchronously. Returns null on any parse error
+ * or when the cache is missing.
+ */
+function readCachedTheme(): CachedTheme | null {
+  try {
+    const raw = localStorage.getItem(THEME_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CachedTheme
+    if (!parsed?.colors || typeof parsed.colors !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Persist the current theme + active preset name to localStorage so the
+ * next page load can paint it instantly. Best-effort -- private mode /
+ * quota exceeded just skip silently.
+ */
+export function persistThemeSnapshot(colors: Partial<ThemeColors>, preset: string | null = null): void {
+  try {
+    const payload: CachedTheme = { colors, preset, savedAt: Date.now() }
+    localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(payload))
+    if (preset) localStorage.setItem(PRESET_CACHE_KEY, preset)
+  } catch {
+    /* quota / privacy mode */
+  }
+}
+
+/**
+ * Read just the cached preset name. Used by the Settings page to keep
+ * the "X active" chip lit while the server fetch is in flight, so the
+ * user always sees confirmation that their picked preset is sticky.
+ */
+export function readCachedPreset(): string | null {
+  try {
+    return localStorage.getItem(PRESET_CACHE_KEY)
+  } catch {
+    return null
+  }
+}
+
+// Paint the cached theme to the DOM as early as possible -- this runs
+// at module-evaluation time, before React mounts. Eliminates the
+// default-palette flash on every reload.
+const _earlySnapshot = typeof window !== 'undefined' ? readCachedTheme() : null
+if (_earlySnapshot?.colors) {
+  applyThemeToDom(_earlySnapshot.colors)
+}
+
 export function useTheme() {
   const { data } = useQuery<ThemeColors>({
     queryKey: ['admin-theme'],
     queryFn: () => api.get('/v1/theme').then(r => r.data.theme),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    // Hydrate from the localStorage snapshot so React's initial render
+    // already has the user's saved palette -- no Gold-Luxury-then-flip
+    // visual jolt.
+    placeholderData: () => {
+      const snap = readCachedTheme()
+      return snap?.colors ? ({ ...DEFAULTS, ...snap.colors } as ThemeColors) : undefined
+    },
   })
 
   const theme = { ...DEFAULTS, ...data }
 
   useEffect(() => {
     applyThemeToDom(theme)
+    // Persist whenever the server hands us a fresh theme so the next
+    // load can use it as the placeholder. We only persist when `data`
+    // is truthy -- the placeholder-only render shouldn't overwrite a
+    // real saved snapshot with itself.
+    if (data) {
+      persistThemeSnapshot(data, readCachedPreset())
+    }
   }, [
     theme.primary_color, theme.background_color, theme.surface_color,
     theme.border_color, theme.text_color, theme.text_secondary_color,
     theme.accent_color, theme.error_color, theme.warning_color, theme.info_color,
+    data,
   ])
 
   return theme

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
-import { applyThemeToDom } from '../hooks/useTheme'
+import { applyThemeToDom, persistThemeSnapshot, readCachedPreset } from '../hooks/useTheme'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -423,8 +423,22 @@ export function Settings() {
     // they click, instead of after ~500ms of network latency.
     applyThemeToDom(p.colors as any)
 
+    // Persist to localStorage immediately so a refresh during the in-
+    // flight save still paints the new theme. Without this, a user who
+    // clicks a preset and reloads the tab before the PUT resolves loses
+    // the change visually until the server catches up (or forever, if
+    // the save errored).
+    persistThemeSnapshot(p.colors, name)
+
     setEditedSettings(prev => ({ ...prev, ...p.colors }))
-    const settings = Object.entries(p.colors).map(([key, value]) => ({ key, value }))
+    // Tag the saved settings with the preset name so the server-side
+    // theme stays self-describing — useful for cross-device consistency
+    // (any other admin browser fetching /v1/theme can see which preset
+    // is "officially" active without per-color reverse engineering).
+    const settings = [
+      ...Object.entries(p.colors).map(([key, value]) => ({ key, value })),
+      { key: 'theme_preset_name', value: name },
+    ]
     saveMutation.mutate(settings)
   }
 
@@ -437,8 +451,14 @@ export function Settings() {
     const { colors, fromPresetName } = undoSnapshot
     // Restore previous colors via DOM and queued save
     applyThemeToDom(colors as any)
+    // Mirror the localStorage snapshot so refresh during the undo's
+    // in-flight save still paints the reverted theme.
+    persistThemeSnapshot(colors, fromPresetName)
     setEditedSettings(prev => ({ ...prev, ...colors }))
-    const settings = Object.entries(colors).map(([key, value]) => ({ key, value }))
+    const settings = [
+      ...Object.entries(colors).map(([key, value]) => ({ key, value })),
+      { key: 'theme_preset_name', value: fromPresetName ?? '' },
+    ]
     saveMutation.mutate(settings)
     setUndoSnapshot(null)
     toast.success(fromPresetName ? `Reverted to "${fromPresetName}"` : 'Theme reverted')
@@ -455,13 +475,36 @@ export function Settings() {
     return () => clearTimeout(t)
   }, [undoSnapshot?.expiresAt])
 
-  // Detect which preset (if any) matches the current colors
+  /**
+   * Detect which preset (if any) matches the current colors.
+   *
+   * Resolution order:
+   *   1. Server-stored `theme_preset_name` setting (added in 2026-06)
+   *      -- authoritative across devices.
+   *   2. Exact color match -- catches legacy orgs that picked a preset
+   *      before the name was being persisted.
+   *   3. localStorage cached name -- bridge between an in-flight save
+   *      and the server fetch landing, so the "X active" chip never
+   *      blanks out mid-save.
+   */
   const detectActivePreset = (): string | null => {
+    // 1. Server-stored name wins
+    const storedName = getVal('theme_preset_name')
+    if (storedName && PRESETS[storedName]) return storedName
+
+    // 2. Fall back to exact color match
     const current: Record<string, string> = {}
     for (const k of COLOR_KEYS) current[k] = (getVal(k) || '').toLowerCase()
     for (const [name, p] of Object.entries(PRESETS)) {
       if (COLOR_KEYS.every(k => current[k] === p.colors[k]?.toLowerCase())) return name
     }
+
+    // 3. localStorage bridge — only honour if the cached name is still
+    // in the PRESETS catalogue (presets removed in a future release
+    // shouldn't show ghost "active" chips)
+    const cached = readCachedPreset()
+    if (cached && PRESETS[cached]) return cached
+
     return null
   }
 
@@ -862,11 +905,18 @@ export function Settings() {
     const buttonStyle  = getVal('mobile_button_style') || 'filled'
     const accentIntensity = getVal('mobile_accent_intensity') || 'vibrant'
 
-    const applyMobilePreset = (preset: Record<string, string>) => {
+    const applyMobilePreset = (preset: Record<string, string>, presetName?: string) => {
       const updates: Record<string, string> = {}
       for (const [k, v] of Object.entries(preset)) updates[`mobile_${k}`] = v
       setEditedSettings(prev => ({ ...prev, ...updates }))
-      const settings = Object.entries(updates).map(([key, value]) => ({ key, value }))
+      // Save the picked preset name alongside the per-color rows so
+      // the "X active" chip lights up correctly after refresh -- and
+      // doesn't depend on every single hex matching byte-for-byte
+      // (which loses to manual tweaks).
+      const settings = [
+        ...Object.entries(updates).map(([key, value]) => ({ key, value })),
+        ...(presetName ? [{ key: 'mobile_preset_name', value: presetName }] : []),
+      ]
       saveMutation.mutate(settings)
     }
 
@@ -923,6 +973,13 @@ export function Settings() {
 
     // Detect active mobile preset
     const activeMobilePreset = (() => {
+      // Server-stored name wins (added in 2026-06 — survives any single-
+      // color tweak the admin makes after picking the preset).
+      const stored = getVal('mobile_preset_name')
+      if (stored && MOBILE_PRESETS.some(p => p.name === stored)) return stored
+
+      // Legacy detection for orgs that picked a preset before the name
+      // started persisting.
       const cur: Record<string, string> = {
         primary_color: primary, background_color: bg, surface_color: surface, secondary_color: surface2,
         text_color: text, text_secondary_color: text2, border_color: border,
@@ -962,7 +1019,7 @@ export function Settings() {
                     </span>
                   )}
                 </h3>
-                <button onClick={() => applyMobilePreset(MOBILE_PRESETS[0].colors)}
+                <button onClick={() => applyMobilePreset(MOBILE_PRESETS[0].colors, MOBILE_PRESETS[0].name)}
                   className="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
                   <RotateCcw size={11} /> Reset
                 </button>
@@ -973,7 +1030,7 @@ export function Settings() {
                   const c = preset.colors
                   const isActive = activeMobilePreset === preset.name
                   return (
-                    <button key={preset.name} onClick={() => applyMobilePreset(c)}
+                    <button key={preset.name} onClick={() => applyMobilePreset(c, preset.name)}
                       className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px hover:shadow-lg ${
                         isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
                       }`}
