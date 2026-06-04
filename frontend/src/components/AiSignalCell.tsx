@@ -53,19 +53,33 @@ export default function AiSignalCell({
   intent,
   size = 'md',
 }: AiSignalCellProps) {
-  const [open, setOpen] = useState(false)
+  /**
+   * Two independent open states. `hover` is transient -- it tracks
+   * mouseenter/leave so the popover behaves as a hover affordance on
+   * desktop. `pinned` is sticky -- it survives mouseleave and only
+   * collapses on an outside-click. Click toggles pinned.
+   *
+   * Originally this was a single `open` state toggled on click AND set
+   * by hover; on touch devices the tap-mapped click then ran immediately
+   * after mouseenter and closed the popover the same gesture had just
+   * opened (the user-reported "first click does nothing" bug). Same
+   * thing on desktop: hover-then-click would close instead of pinning.
+   */
+  const [hover, setHover] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const open = hover || pinned
   const cellRef = useRef<HTMLDivElement | null>(null)
 
-  // Close on outside click — helps when popover stays open after focus
-  // moves to a stage menu or row drawer.
+  // Close on outside click — only relevant while pinned. Hover-driven
+  // open closes naturally on mouseleave.
   useEffect(() => {
-    if (!open) return
+    if (!pinned) return
     const close = (e: MouseEvent) => {
-      if (cellRef.current && !cellRef.current.contains(e.target as Node)) setOpen(false)
+      if (cellRef.current && !cellRef.current.contains(e.target as Node)) setPinned(false)
     }
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
-  }, [open])
+  }, [pinned])
 
   // Nothing to show — keep the cell visually quiet.
   const hasAnyAi = probability != null || coldRisk || suggestedAction || brief || intent
@@ -79,9 +93,9 @@ export default function AiSignalCell({
   return (
     <div
       ref={cellRef}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onClick={(e) => { e.stopPropagation(); setOpen(o => !o) }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={(e) => { e.stopPropagation(); setPinned(p => !p) }}
       className="relative inline-flex flex-col gap-1 cursor-help select-none"
       data-row-noopen
     >
@@ -131,6 +145,11 @@ export default function AiSignalCell({
         <div
           className="absolute z-40 top-full left-0 mt-1.5 w-[300px] bg-dark-surface border border-dark-border rounded-xl shadow-2xl p-3 text-xs cursor-default"
           onClick={(e) => e.stopPropagation()}
+          // Treat hovering the popover as still hovering the cell, so
+          // moving the mouse from cell -> popover doesn't trigger
+          // onMouseLeave-then-onMouseEnter-flicker.
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
         >
           <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase tracking-wider font-bold text-primary-400">
             <Sparkles size={11} />

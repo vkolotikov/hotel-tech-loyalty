@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inquiry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Deals & Fulfillment — the post-sale half of an inquiry's life.
@@ -242,11 +243,20 @@ class DealController extends Controller
             ];
         }
 
-        // Payment status distribution (open deals only)
+        // Payment status distribution (open deals only).
+        //
+        // Postgres trap: groupBy('status') would compile to
+        // `GROUP BY "status"`, which Postgres binds to the inquiries.status
+        // column (the legacy CRM-status mirror New/Confirmed/Lost), NOT to
+        // the SELECT alias of COALESCE(payment_status, 'unset'). That
+        // ambiguity made the query fail with SQLSTATE[42803]
+        // (8 occurrences in Nightwatch). Grouping by the expression
+        // itself sidesteps the ambiguity and works on every supported
+        // engine.
         $paymentRows = $base()
             ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
-            ->selectRaw('COALESCE(payment_status, \'unset\') as status, COUNT(*) as cnt')
-            ->groupBy('status')
+            ->selectRaw("COALESCE(payment_status, 'unset') as status, COUNT(*) as cnt")
+            ->groupBy(DB::raw("COALESCE(payment_status, 'unset')"))
             ->get()
             ->map(fn ($r) => ['status' => $r->status, 'count' => (int) $r->cnt]);
 
