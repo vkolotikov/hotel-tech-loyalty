@@ -491,6 +491,20 @@ class CrmAiService
             }
         };
 
+        // Industry Platform Plan Phase 7 — resolve org industry for the
+        // admin AI's persona + capability headings + snapshot label.
+        // Falls back to hotel for unknown / unbound contexts (hotel
+        // profile is the canonical-English back-compat default).
+        $industry = $safe(
+            fn () => \App\Models\Organization::find(\Illuminate\Support\Facades\Auth::user()?->organization_id)?->resolved_industry,
+            \App\Models\Organization::DEFAULT_INDUSTRY
+        ) ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile = app(\App\Services\IndustryPrompts\IndustryPromptService::class)->for($industry);
+        $workspaceLabel = $profile->workspaceLabel;
+        $platformName = $industry === 'hotel'
+            ? 'Hotel Tech'
+            : 'HexaTech ' . ucfirst($workspaceLabel);
+
         $settings = $safe(fn() => CrmSetting::all()->pluck('value', 'key')->toArray(), []);
         $roomTypes  = implode(', ', ($settings['room_types'] ?? []));
         $inqTypes   = implode(', ', ($settings['inquiry_types'] ?? []));
@@ -520,15 +534,32 @@ class CrmAiService
         $pmsUpcoming  = $safe(fn() => BookingMirror::where('arrival_date', '>=', $today)->where('booking_state', '!=', 'cancelled')->count(), 0);
         $pmsBalance   = $safe(fn() => round((float) BookingMirror::selectRaw('COALESCE(SUM(price_total), 0) - COALESCE(SUM(price_paid), 0) as balance')->value('balance'), 2), 0.0);
 
+        // Phase 7 — industry guardrails injected immediately after the
+        // intro so they sit ABOVE every capability section.
+        //
+        // Reviewer fix: ADMIN AI serves staff, who legitimately need
+        // to discuss patient/customer context (look up records,
+        // summarise visits). The patient-facing 7-rule medical block
+        // would refuse all of that. Prefer `adminGuardrails` when set
+        // (today: medical only); fall back to the customer-facing
+        // `guardrails` for industries where the rules are the same
+        // for both audiences (beauty, restaurant). Hotel guardrail
+        // string is empty, so this is a no-op for existing hotel orgs
+        // — verbatim back-compat.
+        $effectiveGuardrails = $profile->adminGuardrails !== ''
+            ? $profile->adminGuardrails
+            : $profile->guardrails;
+        $guardrailsBlock = $effectiveGuardrails !== '' ? "\n" . $effectiveGuardrails . "\n" : '';
+
         return <<<PROMPT
-You are an expert AI assistant for the Hotel Tech platform — a comprehensive hotel management system. You are the central intelligence hub that connects CRM, Loyalty, Booking Engine, Events, and Operations into a unified workflow.
+You are an expert AI assistant for the {$platformName} platform — a comprehensive {$workspaceLabel} management system. You are the central intelligence hub that connects CRM, Loyalty, Booking Engine, Events, and Operations into a unified workflow.
 
 Your role is threefold:
 1. **Data assistant** — Search, analyze, and report on any data across all modules
 2. **Action executor** — Create, update, and manage records (guests, bookings, points, tasks, settings)
 3. **Strategic advisor** — Provide recommendations, detect issues, forecast trends, and guide best practices
-
-Hotel snapshot ({$today}):
+{$guardrailsBlock}
+Workspace snapshot ({$today}):
 - {$guestCount} guests, {$memberCount} loyalty members, {$activeInq} active inquiries ({$currency}{$pipelineVal} pipeline)
 - {$inHouse} in-house guests, {$arrivalsToday} CRM arrivals today
 - Loyalty: {$totalPoints} total points in circulation, {$activeOffers} active offers
@@ -548,7 +579,7 @@ Capabilities — grouped by module:
 
 **CRM & Guest Management:**
 - Search/create/update guests, inquiries, reservations, corporate accounts
-- View hotel stats and pipeline KPIs
+- View workspace stats and pipeline KPIs
 - Extract leads from raw text (emails, WhatsApp, phone notes)
 
 **Loyalty Program:**
@@ -589,7 +620,7 @@ Capabilities — grouped by module:
 - Analyze stale inquiries and auto-create follow-up tasks
 
 **System Administration:**
-- View and update hotel settings (appearance, integrations, booking config, AI settings)
+- View and update workspace settings (appearance, integrations, booking config, AI settings)
 - Check system health (API keys, data counts, sync status)
 - Audit Log: every significant admin action is recorded (member CRUD, points ops, settings changes, status changes, logins, visitor deletions) with actor + IP + before/after diff. Use this for dispute investigation.
 - Email Templates: reusable transactional + marketing templates with placeholder support, used by campaigns and system events (booking confirm, tier upgrade, points expiry, etc.)
@@ -599,7 +630,7 @@ Capabilities — grouped by module:
 - When user asks "how do I..." or "what should I do about..." — use get_system_guide tool
 
 **Important — two AI systems on this platform:**
-1. *You* (this admin assistant) — Anthropic Claude, for hotel staff. You see all CRM/loyalty/booking data and can take actions via tools.
+1. *You* (this admin assistant) — Anthropic Claude, for {$workspaceLabel} staff. You see all CRM/loyalty/booking data and can take actions via tools.
 2. *Website chatbot* — OpenAI, configured under AI Chat > Chatbot Config, embedded in the customer's website via the chat widget. Different config, different knowledge base, different model. Don't conflate the two when answering questions.
 
 Rules:

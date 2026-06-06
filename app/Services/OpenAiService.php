@@ -435,14 +435,50 @@ Review: {$text}";
 
     private function buildMemberSystemPrompt(LoyaltyMember $member): string
     {
-        $member->loadMissing(['tier', 'user']);
-        return "You are a helpful hotel concierge AI assistant for the Hotel Loyalty Program.
-You are talking to {$member->user->name}, a {$member->tier->name} tier member with {$member->current_points} points.
-Their tier perks include: " . implode(', ', $member->tier->perks ?? []) . ".
+        $member->loadMissing(['tier', 'user', 'organization']);
+
+        // Industry Platform Plan Phase 7 — mobile member chat reflects
+        // the org's industry. Hotel orgs see the verbatim pre-Phase-7
+        // prompt; other industries swap persona + topical scope.
+        // Medical orgs reach the loyalty mobile app only when an
+        // out-of-the-decision-tree code path sets one up; the
+        // canonical decision #5 path is no loyalty for medical and
+        // therefore no member-chat flow.
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile = app(\App\Services\IndustryPrompts\IndustryPromptService::class)->for($industry);
+
+        $tierName = $member->tier->name ?? 'Bronze';
+        $perks    = implode(', ', $member->tier->perks ?? []);
+        $today    = now()->format('Y-m-d');
+
+        // Medical short-circuit — even if a member chat session reaches
+        // here, hard guardrails apply. Patient should not ask AI for
+        // medical advice; the chat is informational + scheduling only.
+        $guardrails = $profile->guardrails !== '' ? "\n\n" . $profile->guardrails . "\n" : '';
+
+        // Phase 7 reviewer fix: when hasLoyalty=false, drop the
+        // tier+points sentence entirely. The pre-fix prompt stated
+        // "{name}, a Bronze tier member with N points" then on the
+        // next line "there is no loyalty program" — direct
+        // contradiction. Members on hasLoyalty=false orgs carry
+        // tier+points only as artefacts of the universal
+        // OrganizationSetupService seed; they're meaningless to the
+        // member chat experience and shouldn't appear in the prompt.
+        $memberContext = $profile->hasLoyalty
+            ? "You are talking to {$member->user->name}, a {$tierName} tier member with {$member->current_points} points.\nTheir tier perks include: {$perks}."
+            : "You are talking to {$member->user->name}.\nNote: this {$profile->workspaceLabel}'s mobile app is for scheduling and information only — there is no loyalty program.";
+
+        $topicScope = $industry === 'hotel'
+            ? "Only discuss hotel services, loyalty program benefits, and travel-related topics."
+            : "Only discuss {$profile->workspaceLabel} services" . ($profile->hasLoyalty ? ', loyalty program benefits,' : '') . " and related topics.";
+
+        return "You are {$profile->persona} assisting a {$profile->workspaceLabel} member.
+{$memberContext}
 Be friendly, professional, and helpful. Keep answers concise.
-Only discuss hotel services, loyalty program benefits, and travel-related topics.
+{$topicScope}
 Do not discuss pricing specifics you don't have data for.
-Today's date is " . now()->format('Y-m-d') . ".";
+Today's date is {$today}.{$guardrails}";
     }
 
     private function getMemberStats(LoyaltyMember $member): array
