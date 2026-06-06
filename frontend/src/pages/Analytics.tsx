@@ -17,6 +17,7 @@ import {
 import { api } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
+import { useAuthStore } from '../stores/authStore'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { Link } from 'react-router-dom'
 import {
@@ -79,6 +80,14 @@ export function Analytics() {
   const [cohortMonths, setCohortMonths] = useState(6)
   const [tierMoveDays, setTierMoveDays] = useState(90)
 
+  // Phase 6.x — gate the 10 hotel-only Analytics endpoints client-side
+  // so they don't fire 422 industry_mismatch responses on every Analytics
+  // page open for non-hotel orgs. The server gate (Phase 6's
+  // requireHotel()) still defends the data; this gate stops the noise
+  // (React Query error toasts, broken empty charts, wasted requests).
+  const userIndustry = useAuthStore(s => s.user?.industry)
+  const isHotelIndustry = !userIndustry || userIndustry === 'hotel'
+
   // Loyalty queries
   const { data: overview } = useQuery({
     queryKey: ['analytics-overview'],
@@ -116,16 +125,19 @@ export function Analytics() {
   const { data: revenue } = useQuery({
     queryKey: ['analytics-revenue'],
     queryFn: () => api.get('/v1/admin/analytics/revenue').then(r => r.data),
+    enabled: isHotelIndustry,
   })
 
   const { data: revenueTrend } = useQuery({
     queryKey: ['analytics-revenue-trend'],
     queryFn: () => api.get('/v1/admin/analytics/revenue-trend?months=12').then(r => r.data),
+    enabled: isHotelIndustry,
   })
 
   const { data: bookingTrends } = useQuery({
     queryKey: ['analytics-booking-trends', bookingDays],
     queryFn: () => api.get(`/v1/admin/analytics/booking-trends?days=${bookingDays}`).then(r => r.data),
+    enabled: isHotelIndustry,
   })
 
   const { data: engagement } = useQuery({
@@ -146,6 +158,7 @@ export function Analytics() {
   const { data: bookingMetrics } = useQuery({
     queryKey: ['analytics-booking-metrics'],
     queryFn: () => api.get('/v1/admin/analytics/booking-metrics?months=12').then(r => r.data),
+    enabled: isHotelIndustry,
   })
 
   // Hotel ops KPIs (occupancy, ADR, RevPAR) — the standard hospitality
@@ -154,6 +167,7 @@ export function Analytics() {
   const { data: hotelOps } = useQuery<any>({
     queryKey: ['analytics-hotel-ops', bookingDays],
     queryFn: () => api.get(`/v1/admin/analytics/hotel-ops?days=${bookingDays}`).then(r => r.data),
+    enabled: isHotelIndustry,
   })
 
   // CRM Pipeline tab was dropped. The queries it fed
@@ -169,7 +183,7 @@ export function Analytics() {
   const { data: occupancy } = useQuery({
     queryKey: ['analytics-occupancy', crmPeriod],
     queryFn: () => api.get(`/v1/admin/analytics/occupancy?period=${crmPeriod}`).then(r => r.data),
-    enabled: activeTab === 'venues',
+    enabled: activeTab === 'venues' && isHotelIndustry,
   })
 
   const { data: vipDist } = useQuery({
@@ -268,6 +282,25 @@ export function Analytics() {
   return (
     <div className="space-y-6">
       <DesktopOnlyBanner pageKey="analytics" message="Analytics charts and dense tables are best viewed on a desktop or tablet. On mobile, charts may require horizontal scrolling." />
+
+      {/* Phase 6.x — non-hotel orgs get a one-line explainer that hotel-
+          shaped widgets are intentionally hidden. The loyalty side
+          (members, points, engagement, etc.) still works for them. */}
+      {!isHotelIndustry && (
+        <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/30 p-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold text-amber-200 mb-0.5">
+              Hotel-specific analytics are hidden on this workspace
+            </div>
+            <div className="text-amber-100/80">
+              Occupancy, ADR, RevPAR, room revenue and PMS booking charts only apply to hotel orgs.
+              Member growth, points distribution, engagement and CRM analytics still work below.
+              Per-industry analytics widgets land in a later ship.
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -351,6 +351,21 @@ img{max-width:100%;display:block}
     source:       @json(request('source', 'widget')),
   }
 
+  /* Industry Platform Plan Phase 9.x — per-industry vocabulary for the
+     services widget. The /services/{token} route resolves the org's
+     industry and passes BookingWidgetVocab::for($industry) into this
+     view. Hotel orgs see the existing universal copy verbatim
+     (back-compat); beauty / medical / restaurant get bespoke labels
+     on the service / provider / details steps. */
+  var VOCAB = @json($vocab ?? [
+    'svc_service_title'  => 'Select a service',
+    'svc_service_sub'    => "Choose the treatment or appointment you'd like to book.",
+    'svc_provider_title' => 'Choose your provider',
+    'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
+    'svc_details_title'  => 'Your details',
+    'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+  ]);
+
   // ─── State ────────────────────────────────────────────────────────
   var state = {
     config: null,
@@ -785,7 +800,8 @@ img{max-width:100%;display:block}
     }
 
     var list = servicesInCategory(state.categoryId)
-    h += '<div class="card"><h2 class="card-title">Select a service</h2><p class="card-sub">Choose the treatment or appointment you\'d like to book.</p>'
+    /* Phase 9.x — services step title + sub flex per industry. */
+    h += '<div class="card"><h2 class="card-title">' + escapeHtml(VOCAB.svc_service_title) + '</h2><p class="card-sub">' + escapeHtml(VOCAB.svc_service_sub) + '</p>'
     if (list.length === 0) {
       h += '<div class="slot-empty">No services available in this category yet.</div>'
     } else {
@@ -823,7 +839,10 @@ img{max-width:100%;display:block}
     if (!svc) return ''
     var masters = mastersForService(svc)
     var h = '<div class="card">'
-    h += '<h2 class="card-title">Choose your provider</h2><p class="card-sub">Pick a specific professional for your appointment.</p>'
+    /* Phase 9.x — provider step title + sub flex per industry
+       ("stylist or therapist" for beauty, "practitioner" for medical,
+       "section" for restaurant). */
+    h += '<h2 class="card-title">' + escapeHtml(VOCAB.svc_provider_title) + '</h2><p class="card-sub">' + escapeHtml(VOCAB.svc_provider_sub) + '</p>'
     // Edge case: service somehow has no configured masters. selectService
     // already skips this step in that case, but if the user lands here
     // via Back navigation we surface a helpful message instead of a void.
@@ -963,7 +982,9 @@ img{max-width:100%;display:block}
   // last screen before confirming is one tidy page.
   function renderStep6Confirm() {
     var h = '<div class="card">'
-    h += '<h2 class="card-title">Your details</h2><p class="card-sub">We\'ll send confirmation to the email you provide.</p>'
+    /* Phase 9.x — "Your details" → "Client / Patient / Diner details"
+       per industry. Sub stays universal. */
+    h += '<h2 class="card-title">' + escapeHtml(VOCAB.svc_details_title) + '</h2><p class="card-sub">' + escapeHtml(VOCAB.svc_details_sub) + '</p>'
     h += '<div class="row">'
     h += '<div class="field"><label>Full name *</label><input data-act="customer" data-field="name" value="' + escapeHtml(state.customer.name) + '" placeholder="Jane Doe" autocomplete="name" autocapitalize="words" spellcheck="false"></div>'
     h += '<div class="field"><label>Email *</label><input type="email" data-act="customer" data-field="email" value="' + escapeHtml(state.customer.email) + '" placeholder="jane@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></div>'

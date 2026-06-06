@@ -231,12 +231,22 @@ Route::get('/services/{token}', function (string $token) {
             ?: '';
     }
     $apiBase = url('/') . '/api';
+
+    // Industry Platform Plan Phase 9.x — same per-industry vocabulary
+    // pattern as the booking widget. The services widget shows
+    // appointments / treatments / consultations / table bookings
+    // depending on the org's industry. Hotel verbatim back-compat.
+    $industry = $org->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
+    $vocab = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
+
     return view('services-widget', [
         'orgId'  => $token,
         'lang'   => request('lang', 'en'),
         'color'  => $color,
         'apiBase' => $apiBase,
         'standalone' => true,
+        'industry' => $industry,
+        'vocab'    => $vocab,
     ]);
 });
 

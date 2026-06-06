@@ -420,6 +420,14 @@ class AuthController extends Controller
             // apps/loyalty/INDUSTRY_PLATFORM_PLAN.md.
             'industry'          => $industry,
             'industry_explicit' => $industryExplicit,
+            // Phase 8.x mobile follow-up — derived from the industry
+            // profile so the mobile member app can gate the "Add to
+            // Apple/Google Wallet" button without probing the
+            // endpoints. Medical orgs (decision #5) return false;
+            // every other industry returns true. Reading via the
+            // IndustryPromptProfile keeps the policy single-sourced.
+            'has_loyalty'       => app(\App\Services\IndustryPrompts\IndustryPromptService::class)
+                ->for($industry)->hasLoyalty,
         ];
 
         return response()->json($data);

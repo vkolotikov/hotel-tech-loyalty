@@ -73,6 +73,19 @@ final class BookingWidgetVocab
             'searching'         => 'Searching…',
             'continue'          => 'Continue',
             'continue_payment'  => 'Continue to Payment',
+
+            // Services widget specifics — Phase 9.x. The services
+            // widget (/services/{token}) already speaks fairly
+            // neutrally ("Choose a category", "Select a service")
+            // but the provider step + details step carry the most
+            // industry-specific weight ("professional" reads as
+            // bland for any vertical; "stylist" / "doctor" lands).
+            'svc_service_title'  => 'Select a service',
+            'svc_service_sub'    => "Choose the treatment or appointment you'd like to book.",
+            'svc_provider_title' => 'Choose your provider',
+            'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
+            'svc_details_title'  => 'Your details',
+            'svc_details_sub'    => "We'll send confirmation to the email you provide.",
         ];
     }
 
@@ -94,6 +107,12 @@ final class BookingWidgetVocab
             'searching'         => 'Searching…',
             'continue'          => 'Continue',
             'continue_payment'  => 'Continue to Payment',
+            'svc_service_title'  => 'Select your treatment',
+            'svc_service_sub'    => "Choose the treatment you'd like to book.",
+            'svc_provider_title' => 'Choose your stylist or therapist',
+            'svc_provider_sub'   => 'Pick the practitioner you would like for your visit.',
+            'svc_details_title'  => 'Client details',
+            'svc_details_sub'    => "We'll send confirmation to the email you provide.",
         ];
     }
 
@@ -115,6 +134,12 @@ final class BookingWidgetVocab
             'searching'         => 'Searching…',
             'continue'          => 'Continue',
             'continue_payment'  => 'Continue to Payment',
+            'svc_service_title'  => 'Select your appointment type',
+            'svc_service_sub'    => "Choose the appointment you'd like to book.",
+            'svc_provider_title' => 'Choose your practitioner',
+            'svc_provider_sub'   => 'Pick the practitioner or doctor for your appointment.',
+            'svc_details_title'  => 'Patient details',
+            'svc_details_sub'    => "We'll send confirmation to the email you provide.",
         ];
     }
 
@@ -136,6 +161,12 @@ final class BookingWidgetVocab
             'searching'         => 'Searching…',
             'continue'          => 'Continue',
             'continue_payment'  => 'Continue to Payment',
+            'svc_service_title'  => 'Select your booking type',
+            'svc_service_sub'    => "Choose the reservation you'd like to make.",
+            'svc_provider_title' => 'Choose your section',
+            'svc_provider_sub'   => 'Pick where you would like to be seated.',
+            'svc_details_title'  => 'Diner details',
+            'svc_details_sub'    => "We'll send confirmation to the email you provide.",
         ];
     }
 }
