@@ -208,7 +208,28 @@ class AuthController extends Controller
 
         $token = $user->createToken($validated['device'] ?? 'api')->plainTextToken;
 
-        $response = ['token' => $token, 'user' => $user];
+        // Industry Platform Plan mobile follow-up — the login response
+        // mirrors /v1/auth/me's industry payload so the mobile app gets
+        // industry + has_loyalty + industry_explicit at login time
+        // without a second round-trip. The User Eloquent model gets the
+        // extra fields appended; ->fresh() reload happens implicitly
+        // via the JSON serialization picking up the appended array.
+        $industry = \App\Models\Organization::DEFAULT_INDUSTRY;
+        $industryExplicit = false;
+        if ($user->organization_id) {
+            $org = \App\Models\Organization::find($user->organization_id);
+            if ($org) {
+                $industry = $org->resolved_industry;
+                $industryExplicit = $org->hasExplicitIndustry();
+            }
+        }
+        $userArray = $user->toArray();
+        $userArray['industry'] = $industry;
+        $userArray['industry_explicit'] = $industryExplicit;
+        $userArray['has_loyalty'] = app(\App\Services\IndustryPrompts\IndustryPromptService::class)
+            ->for($industry)->hasLoyalty;
+
+        $response = ['token' => $token, 'user' => $userArray];
 
         if ($user->isMember()) {
             $response['member'] = LoyaltyMember::withoutGlobalScopes()
