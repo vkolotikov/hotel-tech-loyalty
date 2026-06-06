@@ -18,6 +18,35 @@ class AnalyticsController extends Controller
 {
     public function __construct(protected AnalyticsService $analytics) {}
 
+    /**
+     * Industry Platform Plan Phase 6 — hotel-only endpoint gate.
+     *
+     * Returns a 422 with `industry_mismatch: true` for non-hotel orgs
+     * hitting an endpoint that assumes hotel data shape (occupancy
+     * trend / ADR / room-type revenue / RevPAR / Smoobu booking
+     * metrics). Frontend gates the chart with the same check so a
+     * beauty admin doesn't see a perpetual "loading" spinner; this
+     * is the defence-in-depth server gate.
+     *
+     * Non-hotel orgs get an honest empty-state response instead of
+     * hotel data leaking through. Settings-only industries (legal /
+     * real_estate / education / fitness) fall through to hotel for
+     * v1 — they're deferred to Phase 6.x per decision #7.
+     */
+    protected function requireHotel(): ?JsonResponse
+    {
+        $industry = \Illuminate\Support\Facades\Auth::user()?->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+
+        if ($industry === 'hotel') return null;
+
+        return response()->json([
+            'industry_mismatch' => true,
+            'industry'          => $industry,
+            'message'           => 'This analytics view is hotel-specific. Switch industry in Settings → Industry, or contact support for industry-aware analytics.',
+        ], 422);
+    }
+
     public function overview(): JsonResponse
     {
         return response()->json([
@@ -57,16 +86,25 @@ class AnalyticsController extends Controller
 
     public function revenue(): JsonResponse
     {
+        // Phase 6 — getRevenueByRoomType() groups by room_type which
+        // is a hotel-only concept.
+        if ($gate = $this->requireHotel()) return $gate;
         return response()->json($this->analytics->getRevenueByRoomType());
     }
 
     public function revenueTrend(Request $request): JsonResponse
     {
+        // Phase 6 — reservation-table revenue trend. Hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         return response()->json($this->analytics->getRevenueTrend($request->get('months', 12)));
     }
 
     public function bookingTrends(Request $request): JsonResponse
     {
+        // Phase 6 — `getBookingTrends` returns stay-shaped metrics
+        // (nights / revenue / count) from the loyalty-side Booking
+        // table. Hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         return response()->json($this->analytics->getBookingTrends($request->get('days', 30)));
     }
 
@@ -87,12 +125,17 @@ class AnalyticsController extends Controller
 
     public function bookingMetrics(Request $request): JsonResponse
     {
+        // Phase 6 — Smoobu booking-mirror metrics. Hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         return response()->json($this->analytics->getBookingMetrics($request->get('months', 12)));
     }
 
     /** GET /v1/admin/analytics/hotel-ops?days=N — occupancy/ADR/RevPAR over a window. */
     public function hotelOps(Request $request): JsonResponse
     {
+        // Phase 6 — name says it all: occupancy + ADR + RevPAR are
+        // hotel-only metrics.
+        if ($gate = $this->requireHotel()) return $gate;
         return response()->json($this->analytics->getHotelOpsKpis($request->get('days', 30)));
     }
 
@@ -240,6 +283,9 @@ class AnalyticsController extends Controller
 
     public function bookingChannels(): JsonResponse
     {
+        // Phase 6 — `booking_channel` (Direct / Booking.com / Airbnb)
+        // is a Smoobu PMS construct. Hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         $data = Reservation::select('booking_channel', DB::raw('count(*) as count'), DB::raw('coalesce(sum(total_amount),0) as revenue'))
             ->whereNotNull('booking_channel')
             ->groupBy('booking_channel')
@@ -251,6 +297,8 @@ class AnalyticsController extends Controller
 
     public function revenueComparison(): JsonResponse
     {
+        // Phase 6 — Reservation table revenue MoM. Hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         $currentStart = now()->startOfMonth()->toDateString();
         $currentEnd = now()->endOfMonth()->toDateString();
         $prevStart = now()->subMonth()->startOfMonth()->toDateString();
@@ -275,6 +323,9 @@ class AnalyticsController extends Controller
 
     public function occupancyTrend(Request $request): JsonResponse
     {
+        // Phase 6 — occupancy = in-house / room inventory; entirely
+        // hotel-specific. Non-hotel orgs get 422 industry_mismatch.
+        if ($gate = $this->requireHotel()) return $gate;
         $period = $request->get('period', 'months6');
         $isPg = DB::getDriverName() === 'pgsql';
 
@@ -347,6 +398,11 @@ class AnalyticsController extends Controller
 
     public function venueUtilization(): JsonResponse
     {
+        // Phase 6 — venue/events tables are hospitality / hotel-shape.
+        // Restaurant orgs could conceivably use venues for private
+        // events but the rendered chart shape (utilisation by
+        // venue_type) reads as hotel today. Hotel-only for v1.
+        if ($gate = $this->requireHotel()) return $gate;
         $data = VenueBooking::join('venues', 'venue_bookings.venue_id', '=', 'venues.id')
             ->select('venues.venue_type', DB::raw('count(*) as bookings'), DB::raw('coalesce(sum(venue_bookings.rate_charged),0) as revenue'))
             ->groupBy('venues.venue_type')
@@ -357,6 +413,8 @@ class AnalyticsController extends Controller
 
     public function revenueByProperty(): JsonResponse
     {
+        // Phase 6 — joins reservations on properties; hotel-only.
+        if ($gate = $this->requireHotel()) return $gate;
         $data = Reservation::join('properties', 'reservations.property_id', '=', 'properties.id')
             ->select('properties.name', 'properties.code',
                 DB::raw('count(*) as bookings'),

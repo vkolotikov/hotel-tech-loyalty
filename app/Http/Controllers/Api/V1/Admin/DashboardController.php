@@ -33,91 +33,41 @@ class DashboardController extends Controller
     {
         $loyaltyKpis = $this->analytics->getDashboardKpis();
 
-        // Scope the cache key to the current tenant so one org's CRM KPIs
-        // don't leak into another's response. (Tenant global scope still
-        // fires inside the query — this only fixes the cache collision.)
-        $orgId = \Illuminate\Support\Facades\Auth::user()?->organization_id ?? 'anon';
-        $crmKpis = Cache::remember("dashboard:crm_kpis:{$orgId}", 300, function () use ($orgId) {
-            $today = now()->toDateString();
-            $yesterday = now()->subDay()->toDateString();
-            $monthStart = now()->startOfMonth()->toDateString();
+        // Industry Platform Plan Phase 6 — resolve the org's industry
+        // and dispatch to the per-industry KPI computer. Hotel keeps
+        // the exact pre-Phase-6 bundle (HotelKpiService is a verbatim
+        // copy of the inline closure that lived here). Beauty / medical
+        // / restaurant get bespoke KPI tile arrays plus null-out the
+        // hotel-only flat keys so an existing mobile client doesn't
+        // read stale occupancy_pct / avg_daily_rate values.
+        //
+        // Settings-only industries (legal / real_estate / education /
+        // fitness) fall through to the hotel service for v1 — they're
+        // deferred to Phase 6.x per decision #7.
+        //
+        // Cache key includes the industry suffix so an industry switch
+        // (Phase 4 banner OR Phase 10 Settings switcher) flushes the
+        // cache naturally — the next request sees the new industry's
+        // suffix as a cache miss + recomputes.
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $orgId = $user?->organization_id ?? 'anon';
+        $industry = $user?->organization?->resolved_industry ?? \App\Models\Organization::DEFAULT_INDUSTRY;
 
-            // Batch inquiry stats into one query (was 3 queries → 1)
-            $inquiryStats = Inquiry::selectRaw("
-                COUNT(CASE WHEN status NOT IN ('Confirmed','Lost') THEN 1 END) as active_count,
-                COALESCE(SUM(CASE WHEN status NOT IN ('Confirmed','Lost') THEN total_value END), 0) as pipeline_value,
-                COUNT(*) as total_count,
-                COUNT(CASE WHEN status = 'Confirmed' THEN 1 END) as confirmed_count
-            ")->first();
-
-            // Batch reservation stats — today + yesterday in one query so
-            // the mobile Dashboard can render "↑20% vs yesterday" deltas
-            // without needing a second round-trip.
-            $reservationStats = Reservation::selectRaw("
-                COUNT(CASE WHEN check_in = ?  AND status = 'Confirmed'   THEN 1 END) as arrivals_today,
-                COUNT(CASE WHEN check_in = ?  AND status = 'Confirmed'   THEN 1 END) as arrivals_yesterday,
-                COUNT(CASE WHEN check_out = ? AND status = 'Checked In'  THEN 1 END) as departures_today,
-                COUNT(CASE WHEN check_out = ? AND status = 'Checked In'  THEN 1 END) as departures_yesterday,
-                COUNT(CASE WHEN status = 'Checked In' THEN 1 END) as in_house,
-                COALESCE(SUM(CASE WHEN status = 'Checked Out' AND checked_out_at >= ? THEN total_amount END), 0) as revenue_month,
-                AVG(CASE WHEN status IN ('Confirmed','Checked In','Checked Out') AND check_in >= ? THEN rate_per_night END) as avg_rate
-            ", [$today, $yesterday, $today, $yesterday, $monthStart, $monthStart])->first();
-
-            $totalInquiries = (int) $inquiryStats->total_count;
-            $confirmedInquiries = (int) $inquiryStats->confirmed_count;
-
-            // Occupancy % = in-house / known room inventory. Inventory is
-            // derived from distinct apartment_id values in the PMS mirror
-            // (Smoobu sync). Returns null when inventory is unknown so the
-            // UI can hide the KPI instead of showing a false 0 %.
-            $inHouse = (int) $reservationStats->in_house;
-            $totalUnits = (int) \App\Models\BookingMirror::withoutGlobalScopes()
-                ->where('organization_id', $orgId)
-                ->whereNotNull('apartment_id')
-                ->distinct('apartment_id')
-                ->count('apartment_id');
-            $occupancyPct = null;
-            if ($totalUnits > 0) {
-                $occupancyPct = round(min(100, ($inHouse / max($totalUnits, 1)) * 100));
-            }
-
-            // Service bookings today + yesterday — spa / dining / any service
-            // with a start date on that day. Excludes cancelled / no-show so
-            // the number reflects actual delivered activity.
-            $serviceStats = \App\Models\ServiceBooking::selectRaw("
-                COUNT(CASE WHEN DATE(start_at) = ? THEN 1 END) as today,
-                COUNT(CASE WHEN DATE(start_at) = ? THEN 1 END) as yesterday
-            ", [$today, $yesterday])
-                ->whereNotIn('status', ['cancelled', 'no_show'])
-                ->first();
-
-            // Percent-change helper. Returns 0 when the prior value is zero
-            // rather than +∞ — the mobile UI hides the delta pill on 0 anyway.
-            $pct = function ($now, $prev) {
-                if ((float) $prev <= 0) return 0;
-                return (int) round((($now - $prev) / $prev) * 100);
+        $crmKpis = Cache::remember("dashboard:crm_kpis:{$orgId}:{$industry}", 300, function () use ($orgId, $industry) {
+            $service = match ($industry) {
+                'beauty'     => app(\App\Services\IndustryKpis\BeautyKpiService::class),
+                'medical'    => app(\App\Services\IndustryKpis\MedicalKpiService::class),
+                'restaurant' => app(\App\Services\IndustryKpis\RestaurantKpiService::class),
+                default      => app(\App\Services\IndustryKpis\HotelKpiService::class),
             };
-
-            return [
-                'total_guests'             => Guest::count(),
-                'active_inquiries'         => (int) $inquiryStats->active_count,
-                'pipeline_value'           => (float) $inquiryStats->pipeline_value,
-                'arrivals_today'           => (int) $reservationStats->arrivals_today,
-                'arrivals_change'          => $pct($reservationStats->arrivals_today, $reservationStats->arrivals_yesterday),
-                'departures_today'         => (int) $reservationStats->departures_today,
-                'departures_change'        => $pct($reservationStats->departures_today, $reservationStats->departures_yesterday),
-                'in_house_guests'          => $inHouse,
-                'service_bookings_today'   => (int) $serviceStats->today,
-                'service_bookings_change'  => $pct($serviceStats->today, $serviceStats->yesterday),
-                'occupancy_pct'            => $occupancyPct,
-                'total_units'              => $totalUnits,
-                'crm_revenue_month'        => (float) $reservationStats->revenue_month,
-                'avg_daily_rate'           => (float) ($reservationStats->avg_rate ?? 0),
-                'conversion_rate'          => $totalInquiries > 0 ? round(($confirmedInquiries / $totalInquiries) * 100, 1) : 0,
-            ];
+            return $service->compute((int) $orgId);
         });
 
-        return response()->json(array_merge($loyaltyKpis, $crmKpis));
+        // Surface the resolved industry in the response so frontend
+        // diagnostics + the KPI tile renderer don't need a second
+        // round-trip to /v1/auth/me to know which industry the tiles
+        // were computed for.
+        return response()->json(array_merge($loyaltyKpis, $crmKpis, ['industry' => $industry]));
     }
 
     public function pointsChart(Request $request): JsonResponse

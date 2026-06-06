@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -39,6 +40,26 @@ class User extends Authenticatable
     public function staff()
     {
         return $this->hasOne(Staff::class);
+    }
+
+    /**
+     * The organisation this user belongs to.
+     *
+     * Industry Platform Plan Phase 6 — User does NOT use the
+     * `BelongsToOrganization` trait (the trait defines the relation
+     * for tenant-scoped child models; User is the tenant identity
+     * model, so it doesn't tenant-scope itself). Before Phase 6 no
+     * consumer needed `$user->organization` so the relation was
+     * silently undefined — `$user?->organization?->resolved_industry`
+     * always returned null and every industry-aware code path fell
+     * through to the hotel default. DashboardController +
+     * AnalyticsController::requireHotel + AiUsageController all read
+     * via this accessor, so a single declaration unblocks every
+     * industry-aware path at once.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

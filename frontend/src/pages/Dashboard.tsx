@@ -7,10 +7,70 @@ import {
   ArrowUpRight, ArrowDownRight, ChevronRight, CheckCircle2,
   Hotel, ShieldCheck, Sparkle, FileText, DollarSign, UserCheck,
   PackageCheck, MessageCircle, Timer, Activity,
+  // Phase 6 — icons referenced by kpi_tiles[].icon for the
+  // data-driven KPI grid (server-returned tile array).
+  BedDouble, TrendingUp, PlaneLanding, Briefcase, Receipt,
+  Stethoscope, Utensils,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { money } from '../lib/money'
+import { useVocabulary } from '../lib/vocabulary'
+
+/**
+ * Industry Platform Plan Phase 6 — per-industry KPI tile rendering.
+ *
+ * Maps server-returned `kpi_tiles[].icon` (a lucide-react name as a
+ * string) to the actual icon component. Tiles whose icon isn't in
+ * this map fall back to Activity (always safe — no runtime crash).
+ *
+ * Add an entry here when a new IndustryKpiService uses a new icon.
+ */
+const KPI_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  Activity, BarChart3, BedDouble, Briefcase, Calendar, DollarSign,
+  FileText, Gift, Hotel, MessageSquare, PackageCheck, PlaneLanding,
+  Receipt, Stethoscope, TrendingUp, UserCheck, Users, Utensils,
+}
+
+const KPI_ACCENT_HEX: Record<string, string> = {
+  sky:     '#06b6d4',
+  emerald: '#10b981',
+  amber:   '#f59e0b',
+  violet:  '#a855f7',
+  rose:    '#f43f5e',
+  blue:    '#3b82f6',
+  slate:   '#94a3b8',
+}
+
+interface KpiTileSpec {
+  key: string
+  label: string
+  value: number | string | null
+  delta?: string | null
+  format: 'count' | 'currency' | 'percent' | string
+  icon: string
+  accent: string
+  link?: string | null
+}
+
+function formatTileValue(spec: KpiTileSpec): string {
+  if (spec.value === null || spec.value === undefined) return '—'
+  // Phase 6 reviewer fix: NaN guard. A misbehaving backend that
+  // returns a non-numeric string for a numeric tile would otherwise
+  // render '$NaN' (currency) or 'NaN%' (percent). Display '—'
+  // instead — same fallback as a missing value.
+  const num = Number(spec.value)
+  switch (spec.format) {
+    case 'currency': return Number.isFinite(num) ? money(num) : '—'
+    case 'percent':  return Number.isFinite(num) ? num.toLocaleString() + '%' : '—'
+    case 'count':
+    default:
+      // count falls back to raw string display for safety — a value
+      // arriving as 'N/A' should render as 'N/A', not '—'.
+      if (typeof spec.value === 'string') return spec.value
+      return Number.isFinite(num) ? num.toLocaleString() : '—'
+  }
+}
 
 /**
  * Dashboard — staff landing page.
@@ -76,6 +136,13 @@ function timeOfDayGreetingKey(): 'dashboard.greeting.morning' | 'dashboard.greet
 export function Dashboard() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  // Phase 6 — vocabulary lookup for the server-returned KPI tile
+  // labels. The IndustryKpiService classes emit canonical English
+  // (e.g. "Appointments today"); vocab() flexes them to industry-
+  // correct nouns ("Visits today" for medical's recall flow, etc.)
+  // when an override is registered. Falls back to i18n t() and then
+  // to the raw label.
+  const vocab = useVocabulary()
 
   const { data: kpis } = useQuery({
     queryKey: ['dashboard-kpis'],
@@ -286,40 +353,73 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Numbers that matter — 2x2 stat grid */}
+        {/* Phase 6 — industry-aware 2x2 stat grid. Server returns
+            kpi_tiles[] from the per-industry KPI service (hotel /
+            beauty / medical / restaurant). Tile labels go through
+            vocab() first so Phase 3 vocabulary swaps reach the KPI
+            card too. Falls back to the legacy hardcoded 4-tile
+            layout (Active Members / Revenue MTD / Active 30d /
+            Pipeline) when kpi_tiles isn't returned — keeps mobile
+            apps / external integrations / pre-Phase-6 caches
+            rendering sensibly through the rollout window. */}
         <div className="grid grid-cols-2 gap-3 content-start">
-          <KpiTile
-            label={t('dashboard.kpis.active_members', 'Active Members')}
-            value={(kpis?.engaged_members ?? 0).toLocaleString()}
-            sub={kpis ? t('dashboard.kpis.total_count', { count: kpis.total_members ?? 0, defaultValue: '{{count}} total' }) : undefined}
-            icon={Users}
-            accent="#3b82f6"
-            onClick={() => navigate('/members')}
-          />
-          <KpiTile
-            label={t('dashboard.kpis.revenue_mtd', 'Revenue (MTD)')}
-            value={kpis ? money(kpis.revenue_this_month ?? 0) : '—'}
-            sub={t('dashboard.kpis.this_month', 'This month')}
-            icon={DollarSign}
-            accent="#10b981"
-            onClick={() => navigate('/analytics')}
-          />
-          <KpiTile
-            label={t('dashboard.kpis.active_30d', 'Active in 30d')}
-            value={(kpis?.engaged_members_30d ?? 0).toLocaleString()}
-            sub={kpis?.total_members ? t('dashboard.kpis.percent_of_base', { percent: Math.round(((kpis.engaged_members_30d ?? 0) / kpis.total_members) * 100), defaultValue: '{{percent}}% of base' }) : undefined}
-            icon={Activity}
-            accent="#06b6d4"
-            onClick={() => navigate('/analytics')}
-          />
-          <KpiTile
-            label={t('dashboard.kpis.pipeline', 'Pipeline')}
-            value={kpis ? money(kpis.pipeline_value ?? 0) : '—'}
-            sub={kpis ? t('dashboard.kpis.open_count', { count: kpis.active_inquiries ?? 0, defaultValue: '{{count}} open' }) : undefined}
-            icon={Hotel}
-            accent="#a855f7"
-            onClick={() => navigate('/inquiries')}
-          />
+          {Array.isArray(kpis?.kpi_tiles) && kpis.kpi_tiles.length > 0 ? (
+            (kpis.kpi_tiles as KpiTileSpec[]).map(tile => {
+              const Icon = KPI_ICONS[tile.icon] ?? Activity
+              const accent = KPI_ACCENT_HEX[tile.accent] ?? KPI_ACCENT_HEX.slate
+              // Vocabulary swap first, then the i18n key (constructed
+              // from the tile key for translator workflow), then the
+              // raw English label as the ultimate fallback.
+              const label = vocab(tile.label)
+                ?? t(`dashboard.kpis.${tile.key}`, tile.label)
+              return (
+                <KpiTile
+                  key={tile.key}
+                  label={label}
+                  value={formatTileValue(tile)}
+                  sub={tile.delta ?? undefined}
+                  icon={Icon}
+                  accent={accent}
+                  onClick={tile.link ? () => navigate(tile.link!) : undefined}
+                />
+              )
+            })
+          ) : (
+            <>
+              <KpiTile
+                label={t('dashboard.kpis.active_members', 'Active Members')}
+                value={(kpis?.engaged_members ?? 0).toLocaleString()}
+                sub={kpis ? t('dashboard.kpis.total_count', { count: kpis.total_members ?? 0, defaultValue: '{{count}} total' }) : undefined}
+                icon={Users}
+                accent="#3b82f6"
+                onClick={() => navigate('/members')}
+              />
+              <KpiTile
+                label={t('dashboard.kpis.revenue_mtd', 'Revenue (MTD)')}
+                value={kpis ? money(kpis.revenue_this_month ?? 0) : '—'}
+                sub={t('dashboard.kpis.this_month', 'This month')}
+                icon={DollarSign}
+                accent="#10b981"
+                onClick={() => navigate('/analytics')}
+              />
+              <KpiTile
+                label={t('dashboard.kpis.active_30d', 'Active in 30d')}
+                value={(kpis?.engaged_members_30d ?? 0).toLocaleString()}
+                sub={kpis?.total_members ? t('dashboard.kpis.percent_of_base', { percent: Math.round(((kpis.engaged_members_30d ?? 0) / kpis.total_members) * 100), defaultValue: '{{percent}}% of base' }) : undefined}
+                icon={Activity}
+                accent="#06b6d4"
+                onClick={() => navigate('/analytics')}
+              />
+              <KpiTile
+                label={t('dashboard.kpis.pipeline', 'Pipeline')}
+                value={kpis ? money(kpis.pipeline_value ?? 0) : '—'}
+                sub={kpis ? t('dashboard.kpis.open_count', { count: kpis.active_inquiries ?? 0, defaultValue: '{{count}} open' }) : undefined}
+                icon={Hotel}
+                accent="#a855f7"
+                onClick={() => navigate('/inquiries')}
+              />
+            </>
+          )}
         </div>
       </div>
 
