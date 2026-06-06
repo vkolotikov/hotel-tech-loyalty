@@ -109,9 +109,19 @@ function IndustryPicker({
 
 const BRAND_LOGO_URL =
   (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
-  `${import.meta.env.BASE_URL}hotel-tech-logo.png`
+  // Customer-facing brand is HexaTech (legal: HexaTech Technology Group).
+  // The umbrella + login views show the parent HexaTech logo; sub-brand
+  // host detection (Phase 4) can override via VITE_BRAND_LOGO_URL or by
+  // picking an industry, which swaps to the appropriate sub-brand
+  // monogram fallback when the image fails to load.
+  //
+  // Absolute path on purpose — the asset lives at Laravel's public root
+  // (`public/assets/images/`), NOT inside the Vite SPA bundle which
+  // mounts at `/spa/`. Using `BASE_URL` here would resolve to
+  // `/spa/assets/images/...` which doesn't exist.
+  '/assets/images/hexatech_logo.webp'
 
-function BrandMark({ onClick, compact = false, brand = 'HotelTech', monogram = 'HT' }: {
+function BrandMark({ onClick, compact = false, brand = 'HexaTech', monogram = 'HX' }: {
   onClick?: () => void
   compact?: boolean
   /** Industry Platform Plan Phase 3 — sub-brand display name in the SVG fallback. */
@@ -350,9 +360,13 @@ export function Login() {
   // title in the document.
   const originalTitleRef = useRef<string>(typeof document !== 'undefined' ? document.title : '')
   useEffect(() => {
-    document.title = industryCopy.tabTitle
+    // When the visitor has picked an industry, use that sub-brand's
+    // tab title (e.g. "HotelTechAI — Sign in"). Otherwise default to
+    // the parent brand on the umbrella + login views so the tab
+    // doesn't mis-identify as a sub-brand the visitor never chose.
+    document.title = pickedIndustry ? industryCopy.tabTitle : 'HexaTech — Sign in'
     return () => { document.title = originalTitleRef.current }
-  }, [industryCopy.tabTitle])
+  }, [industryCopy.tabTitle, pickedIndustry])
 
   // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
   // (not the shared axios `api` instance) because its global 401 interceptor
@@ -697,25 +711,25 @@ export function Login() {
   const isForgot = view === 'forgot'
   const isReset = view === 'reset'
 
-  // Phase 2 — sub-brand-aware hero copy on the trial view (and on
-  // login/forgot/reset, the industry-neutral fallback is the hotel
-  // copy because pre-login the user hasn't established context). The
-  // hero column reads from INDUSTRY_COPY when on the trial view, so a
-  // beauty visitor sees "One platform. Better bookings. Loyal clients."
-  // instead of the hotel-flavoured fallback that contradicts the
-  // headline win of Phase 2.
+  // Phase 2 — sub-brand-aware hero copy on the trial view. When the
+  // visitor HAS picked an industry (sub-brand domain or umbrella
+  // picker), INDUSTRY_COPY drives the headline + bullets so they
+  // match the vertical they landed via. Otherwise (login / forgot /
+  // reset / umbrella host pre-pick) the copy is HexaTech-generic —
+  // service-business framing, not hotel-flavoured, because the
+  // umbrella covers hotel + beauty + medical + restaurant + 4 more.
   const heroTitle = isTrial
     ? industryCopy.hero
     : isForgot || isReset
       ? 'Locked out? No problem.'
-      : 'The AI-native platform for modern hotels'
+      : 'One platform. More bookings. Stronger loyalty.'
   const heroSubtitle = isTrial
     ? industryCopy.heroSub
     : isForgot
       ? 'Enter your email and we\'ll send a 6-digit reset code. Valid for 15 minutes.'
       : isReset
         ? 'Enter the code from your email and choose a new password.'
-        : 'CRM, loyalty, bookings, live chat and analytics — unified in one workspace.'
+        : 'AI assistants, bookings, CRM, loyalty and analytics — for hotels, salons, clinics, restaurants and more.'
 
   const formTitle = isTrial
     ? 'Start your free trial'
@@ -730,7 +744,7 @@ export function Login() {
       ? 'We\'ll email you a 6-digit code.'
       : isReset
         ? `Code sent to ${email}`
-        : 'Sign in to your HotelTech workspace'
+        : 'Sign in to your HexaTech workspace'
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-[#060b1e] text-white">
@@ -758,13 +772,18 @@ export function Login() {
 
         <BrandMark
           onClick={() => navigate('/login')}
-          brand={industryCopy.brand}
-          monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HT'}
+          // When the visitor has explicitly picked an industry (sub-
+          // brand domain or umbrella picker), use that sub-brand's
+          // name + monogram. Otherwise default to HexaTech / HX so
+          // the umbrella + login / forgot / reset views read as the
+          // parent brand instead of hotel-flavoured.
+          brand={pickedIndustry ? industryCopy.brand : 'HexaTech'}
+          monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HX'}
         />
 
         <div className="relative z-10 max-w-[520px]">
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
-            AI-native hospitality suite
+            {pickedIndustry ? 'AI-native hospitality suite' : 'AI-native service business suite'}
           </span>
           <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
             {heroTitle}
@@ -793,7 +812,7 @@ export function Login() {
           </ul>
         </div>
 
-        <div className="relative z-10 text-xs text-slate-500">© {new Date().getFullYear()} HotelTech. All rights reserved.</div>
+        <div className="relative z-10 text-xs text-slate-500">© {new Date().getFullYear()} HexaTech. All rights reserved.</div>
       </aside>
 
       {/* ─── Form column ───────────────────────────────────────── */}
@@ -845,7 +864,7 @@ export function Login() {
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="email" value={email} onChange={e => setEmail(e.target.value)}
-                      autoFocus required placeholder="you@hotel.com"
+                      autoFocus required placeholder="you@company.com"
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                   </div>
@@ -938,7 +957,7 @@ export function Login() {
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder="you@hotel.com"
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder="you@company.com"
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
@@ -1094,7 +1113,7 @@ export function Login() {
                   <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder="you@hotel.com"
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder="you@company.com"
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                   </div>
                 </div>
