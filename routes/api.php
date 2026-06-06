@@ -251,6 +251,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware('throttle:30,1');
             Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware('throttle:60,1');
             Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware('throttle:30,1');
+            // Industry Platform Plan Phase 2 — POST /v1/auth/apply-industry
+            // re-applies a CRM + Planner preset against the caller's org.
+            // Throttled hard (5/min) per token; an admin clicking the
+            // Phase 4 mismatch banner OR using the Settings → Industry
+            // switcher should never need more than a handful of switches
+            // in a short window. The data-safety contract (acknowledge
+            // body param) lives in the controller — see applyIndustry().
+            Route::post('apply-industry',     [AuthController::class, 'applyIndustry'])->middleware('throttle:5,1');
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────

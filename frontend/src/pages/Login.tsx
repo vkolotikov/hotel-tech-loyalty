@@ -9,6 +9,103 @@ import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { SUPPORTED_LANGUAGES, type LangCode } from '../i18n'
 import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES } from '../lib/planFeatures'
+import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
+import { industryCopyFor, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
+
+/**
+ * Industry Platform Plan Phase 2 — registration captures industry at
+ * signup time so the new org lands pre-configured. Detection order:
+ *   1. localStorage `signup_industry` — survives the email-verify
+ *      round-trip when the user closes + re-opens the page mid-flow.
+ *   2. Hostname (sub-brand domain → industry id, umbrella → null).
+ *   3. Null → render the 4-card picker as step 1 of the trial view.
+ * Industry then gets POSTed in /v1/auth/trial body; backend validates +
+ * stamps it on the new org row + applies CRM/Planner presets atomically.
+ */
+const SIGNUP_INDUSTRY_KEY = 'signup_industry'
+
+function readPersistedIndustry(): IndustryId | null {
+  try {
+    const raw = localStorage.getItem(SIGNUP_INDUSTRY_KEY)
+    if (!raw) return null
+    return (PICKER_INDUSTRIES as readonly string[]).includes(raw) ? (raw as IndustryId) : null
+  } catch {
+    return null
+  }
+}
+
+function persistIndustry(industry: IndustryId | null): void {
+  try {
+    if (industry) localStorage.setItem(SIGNUP_INDUSTRY_KEY, industry)
+    else localStorage.removeItem(SIGNUP_INDUSTRY_KEY)
+  } catch { /* private mode, quota — silently skip */ }
+}
+
+const INDUSTRY_ICONS: Record<IndustryId, string> = {
+  hotel: '🏨',
+  beauty: '💅',
+  medical: '🩺',
+  restaurant: '🍽️',
+  legal: '⚖️',
+  real_estate: '🏘️',
+  education: '🎓',
+  fitness: '🏋️',
+}
+
+/**
+ * Umbrella host industry picker. Renders when the user lands on
+ * `app.hexa-tech.uk/register` (the umbrella SPA host has no fixed
+ * industry — decision #8 of the Industry Platform Plan).
+ */
+function IndustryPicker({
+  onPick,
+  onCancel,
+}: {
+  onPick: (industry: IndustryId) => void
+  onCancel?: () => void
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-1">What kind of business do you run?</h2>
+        <p className="text-sm text-slate-400">
+          We'll preconfigure your workspace with the right pipeline, planner, vocabulary and AI for your industry.
+          You can change this later in Settings.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {PICKER_INDUSTRIES.map((id) => {
+          const copy = industryCopyFor(id)
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onPick(id)}
+              className="group text-left p-4 rounded-xl border border-white/[0.10] bg-slate-950/40 hover:border-blue-500/40 hover:bg-blue-500/[0.04] transition"
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-2xl leading-none mt-0.5">{INDUSTRY_ICONS[id]}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white text-[15px]">{copy.brand}</div>
+                  <div className="text-xs text-slate-400 mt-1 line-clamp-2">{copy.heroSub}</div>
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs text-slate-400 hover:text-white transition flex items-center gap-1.5"
+        >
+          <ArrowLeft size={14} /> Back to sign in
+        </button>
+      )}
+    </div>
+  )
+}
 
 const BRAND_LOGO_URL =
   (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
@@ -186,6 +283,52 @@ export function Login() {
   const { setAuth } = useAuthStore()
   const { t, i18n } = useTranslation()
 
+  // ─── Industry detection (Phase 2) ───────────────────────────────────────
+  // Resolution: localStorage (survives verify round-trip) → sub-brand
+  // hostname → null (triggers picker on umbrella). Strict-mode detection
+  // returns null for app.hexa-tech.uk + any unmapped staging host so the
+  // picker fires rather than silently falling through to hotel.
+  const [pickedIndustry, setPickedIndustry] = useState<IndustryId | null>(() => {
+    const persisted = readPersistedIndustry()
+    if (persisted) return persisted
+    return detectIndustryFromWindow(true) // strict
+  })
+  // `pickedViaPicker` distinguishes a hostname-derived industry from an
+  // umbrella-picker-derived one. On sub-brand domains the chip stays
+  // hidden (the user already SEES the sub-brand via tab title + hero +
+  // form chrome — no need to re-confirm). On the umbrella OR after the
+  // user re-picks mid-flow, the chip renders with a "change" link so
+  // they can switch back. State-driven so the chip is consistent on the
+  // first render after picking (an earlier draft read localStorage in
+  // the render path, which lagged the effect that writes it).
+  const [pickedViaPicker, setPickedViaPicker] = useState<boolean>(() => {
+    // If localStorage holds a value but hostname doesn't, the user must
+    // have picked previously on the umbrella.
+    return readPersistedIndustry() !== null && detectIndustryFromWindow(true) === null
+  })
+  const industryCopy: IndustryCopy = industryCopyFor(pickedIndustry)
+  // Show the umbrella picker only when the user is on the trial view AND
+  // we don't have an industry from hostname or localStorage yet.
+  const needsPicker = pickedIndustry === null
+
+  // Persist picked industry so closing + re-opening the tab mid-flow
+  // doesn't re-prompt + so the verify-code round-trip preserves choice.
+  useEffect(() => {
+    persistIndustry(pickedIndustry)
+  }, [pickedIndustry])
+
+  // Capture the page's pre-mount title ONCE so cleanup restores the
+  // actual original — not whatever industry title was set on the
+  // previous render. Otherwise a sub-brand swap from hotel → beauty
+  // would write 'BeautyTech.uk — Sign in' into the cleanup's captured
+  // original on the next render, and unmount would leave the wrong
+  // title in the document.
+  const originalTitleRef = useRef<string>(typeof document !== 'undefined' ? document.title : '')
+  useEffect(() => {
+    document.title = industryCopy.tabTitle
+    return () => { document.title = originalTitleRef.current }
+  }, [industryCopy.tabTitle])
+
   // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
   // (not the shared axios `api` instance) because its global 401 interceptor
   // hard-redirects to `/login`, which would strip the `?token=` query and
@@ -347,7 +490,16 @@ export function Login() {
         // Persist signup language as the new user's preference so they
         // land in the admin in the right locale on first sign-in.
         language: i18n.language?.split('-')[0] || 'en',
+        // Phase 2 — captured industry. Backend validates against the
+        // canonical 8-id allowlist + normalises aliases. Optional on
+        // wire so legacy clients keep working; backend falls back to
+        // 'hotel' if absent or invalid.
+        industry: pickedIndustry ?? undefined,
       })
+      // Successful signup — clear the persisted industry so a later
+      // logout + re-register from the same browser doesn't auto-apply
+      // last time's industry without an explicit choice.
+      persistIndustry(null)
       setAuth(data.token, data.user, data.staff)
       navigate('/')
     } catch (err: any) {
@@ -520,13 +672,20 @@ export function Login() {
   const isForgot = view === 'forgot'
   const isReset = view === 'reset'
 
+  // Phase 2 — sub-brand-aware hero copy on the trial view (and on
+  // login/forgot/reset, the industry-neutral fallback is the hotel
+  // copy because pre-login the user hasn't established context). The
+  // hero column reads from INDUSTRY_COPY when on the trial view, so a
+  // beauty visitor sees "One platform. Better bookings. Loyal clients."
+  // instead of the hotel-flavoured fallback that contradicts the
+  // headline win of Phase 2.
   const heroTitle = isTrial
-    ? 'Run your whole hotel on one platform'
+    ? industryCopy.hero
     : isForgot || isReset
       ? 'Locked out? No problem.'
       : 'The AI-native platform for modern hotels'
   const heroSubtitle = isTrial
-    ? 'CRM, loyalty, bookings and a 24/7 AI chatbot — included in your free trial.'
+    ? industryCopy.heroSub
     : isForgot
       ? 'Enter your email and we\'ll send a 6-digit reset code. Valid for 15 minutes.'
       : isReset
@@ -584,11 +743,19 @@ export function Login() {
           <p className="text-[16px] leading-[1.55] text-slate-400 max-w-[460px] mb-7">{heroSubtitle}</p>
 
           <ul className="space-y-3">
-            {[
-              'Unified CRM, loyalty and booking engine',
-              'AI copilot for staff, smart chatbot for guests',
-              'Live chat inbox, visitor tracking and automation',
-            ].map((t) => (
+            {/* Phase 2 — bullets reflect the industry the visitor is
+                signing up for. On the login / forgot / reset views fall
+                back to industry-neutral hospitality framing; INDUSTRY_COPY
+                always has 3 bullets per industry to keep the layout
+                visually consistent. */}
+            {(isTrial
+              ? industryCopy.heroBullets
+              : [
+                  'Unified CRM, loyalty and booking engine',
+                  'AI copilot for staff, smart chatbot for guests',
+                  'Live chat inbox, visitor tracking and automation',
+                ]
+            ).map((t) => (
               <li key={t} className="flex gap-3 items-start text-sm text-slate-300">
                 <span className="shrink-0 w-[22px] h-[22px] rounded-full inline-flex items-center justify-center text-[12px] font-bold bg-green-500/15 text-green-400 border border-green-500/25">✓</span>
                 {t}
@@ -682,10 +849,36 @@ export function Login() {
           )}
 
           {/* ── Trial / Register ────────────────────────────── */}
-          {view === 'trial' && (
+          {view === 'trial' && needsPicker && (
+            <IndustryPicker
+              onPick={(id) => { setPickedIndustry(id); setPickedViaPicker(true) }}
+              onCancel={() => { setView('login'); navigate('/login') }}
+            />
+          )}
+          {view === 'trial' && !needsPicker && (
             <>
+              {/* Picked-industry chip: lets the user confirm + change mid-flow.
+                  Only renders when the umbrella picker actually fired
+                  (sub-brand-domain visitors are showing their own brand
+                  via tab title + hero + form chrome already, no
+                  re-confirmation needed). State-driven so the chip
+                  appears on the SAME render the picker dismisses on —
+                  reading localStorage in the render path lagged behind
+                  the persist-on-effect cycle. */}
+              {pickedViaPicker && (
+                <div className="flex items-center justify-between text-xs mb-3 px-3 py-2 rounded-lg bg-blue-500/[0.08] border border-blue-500/20 text-blue-200">
+                  <span>Configuring for <strong>{industryCopy.brand}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => { setPickedIndustry(null); setPickedViaPicker(false) }}
+                    className="text-blue-300 hover:text-white transition underline-offset-2 hover:underline"
+                  >
+                    change
+                  </button>
+                </div>
+              )}
               <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
-                <strong className="font-semibold">What you get:</strong> full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.
+                <strong className="font-semibold">Welcome to your new {industryCopy.workspaceNoun}:</strong> full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.
               </div>
               <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -698,10 +891,10 @@ export function Login() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Hotel</label>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{industryCopy.orgLabel}</label>
                     <div className="relative">
                       <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="text" value={hotelName} onChange={e => setHotelName(e.target.value)} required placeholder="Grand Hotel"
+                      <input type="text" value={hotelName} onChange={e => setHotelName(e.target.value)} required placeholder={industryCopy.orgPlaceholder}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
@@ -774,7 +967,17 @@ export function Login() {
                           const isSelected = selectedPlan === p.slug
                           const isPopular = p.slug === POPULAR_PLAN_SLUG
                           const features = PLAN_FEATURES[p.slug] || {}
-                          const tagline = p.description || PLAN_TAGLINES[p.slug] || ''
+                          // Phase 2 — on the popular plan card, industry-
+                          // aware tagline ("For growing salons + spas")
+                          // overrides the hotel-flavoured PLAN_TAGLINES
+                          // default. Non-popular cards keep the
+                          // plan-specific PLAN_TAGLINES copy (Starter /
+                          // Enterprise) because the sub-brand framing
+                          // doesn't apply to every tier.
+                          const tagline = p.description
+                            || (isPopular ? industryCopy.planTagline : null)
+                            || PLAN_TAGLINES[p.slug]
+                            || ''
                           return (
                             <button
                               key={p.slug}

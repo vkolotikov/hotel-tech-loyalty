@@ -71,6 +71,11 @@ class SaasAuthMiddleware
                     $request->attributes->set('saas_org_id', $org['id'] ?? '');
                     $request->attributes->set('saas_org_slug', $org['slug'] ?? '');
                     $request->attributes->set('saas_role', $org['role'] ?? '');
+                    // Phase 2 — carry the industry through so authenticateSaasUser
+                    // can stamp it on a fresh org. Empty string = SaaS didn't
+                    // pick one (legacy orgs / super-admin pre-created without
+                    // industry) → loyalty falls back to its own column.
+                    $request->attributes->set('saas_org_industry', $org['industry'] ?? '');
                     $this->authenticateSaasUser($request);
                     return $next($request);
                 }
@@ -185,6 +190,16 @@ class SaasAuthMiddleware
                 'slug' => $data['currentOrgSlug'] ?? '',
                 'name' => $data['currentOrgName'] ?? '',
                 'role' => $data['role'] ?? 'STAFF',
+                // Industry Platform Plan Phase 2 — SaaS forwards the
+                // canonical industry choice (set at register or via
+                // Stripe Checkout return) so the loyalty side can
+                // stamp it on a fresh first-time org without round-
+                // tripping back to the SaaS DB. Empty string when the
+                // SaaS-side org has no industry stamped yet (legacy
+                // orgs before the column existed, or orgs created via
+                // super-admin admin tool without picking) — loyalty
+                // falls back to current_industry from its own column.
+                'industry' => $data['currentOrgIndustry'] ?? '',
             ] : null,
         ];
     }
@@ -220,11 +235,27 @@ class SaasAuthMiddleware
                     $slug = $baseSlug . '-' . $suffix++;
                 }
 
+                // Phase 2 — pull the SaaS-side industry choice off the
+                // request attributes (set by verifyJwt). Empty / unknown
+                // falls back to null so the loyalty column stays NULL
+                // and `resolved_industry` defaults to 'hotel'.
+                $saasIndustry = \App\Models\Organization::normaliseIndustry(
+                    $request->attributes->get('saas_org_industry') ?: null
+                );
+
                 try {
                     $org = Organization::create([
                         'saas_org_id' => $saasOrgId,
                         'name' => $request->attributes->get('saas_org_slug') ?: 'Organization',
                         'slug' => $slug,
+                        // Stamp the JWT-forwarded industry on first-time
+                        // org creation. NULL when SaaS didn't supply one
+                        // (legacy or pre-created by super-admin without
+                        // industry); the org will silently default to
+                        // 'hotel' via the accessor until the admin
+                        // explicitly picks via Phase 4's mismatch banner
+                        // or Phase 10's Settings → Industry switcher.
+                        'industry' => $saasIndustry,
                     ]);
                     $isNew = true;
                 } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
@@ -240,6 +271,23 @@ class SaasAuthMiddleware
                 // Usually means the reconcile raced a restore, or the delete
                 // was rolled back on the SaaS side.
                 $org->update(['saas_deleted_at' => null]);
+            }
+
+            // Phase 2 — silent backfill of industry when SaaS forwards
+            // one AND the loyalty column is unset. Existing orgs created
+            // before the Phase 1 column shipped get their industry
+            // populated on first SSO touch instead of waiting for the
+            // Phase 10 batch backfill. We never overwrite an explicit
+            // loyalty-side choice — admins can switch via apply-industry
+            // and that decision wins over the JWT.
+            if ($org && !$org->hasExplicitIndustry()) {
+                $jwtIndustry = \App\Models\Organization::normaliseIndustry(
+                    $request->attributes->get('saas_org_industry') ?: null
+                );
+                if ($jwtIndustry !== null) {
+                    $org->industry = $jwtIndustry;
+                    $org->save();
+                }
             }
 
             // Auto-setup defaults for new organizations. Run this best-effort —

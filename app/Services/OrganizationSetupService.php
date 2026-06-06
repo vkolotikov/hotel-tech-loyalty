@@ -241,6 +241,16 @@ class OrganizationSetupService
         // Bind org context for BelongsToOrganization trait
         app()->instance('current_organization_id', $org->id);
 
+        // Industry Platform Plan Phase 2 — `seedLoyalty` is true ONLY
+        // for hotel orgs. Non-hotel orgs skip the Bronze→Diamond tier
+        // ladder + room-upgrade benefits + €/points seeds, because
+        // those defaults are hotel-specific and the LoyaltyPresetService
+        // will write industry-appropriate ones in Phase 5. Medical
+        // orgs skip loyalty entirely (decision #5). Hotel keeps today's
+        // behaviour for full back-compat.
+        $resolvedIndustry = $org->resolved_industry;
+        $seedLoyalty = ($resolvedIndustry === Organization::DEFAULT_INDUSTRY);
+
         // Create default property — properties.code is GLOBALLY unique
         // (not scoped to org), so two orgs with similar slugs would collide.
         // Skip if this org already has any property; otherwise pick a code
@@ -274,11 +284,13 @@ class OrganizationSetupService
             ['name' => 'Diamond',  'min_points' => 50000, 'earn_rate' => 3.0,  'color_hex' => '#B9F2FF', 'sort_order' => 5],
         ];
 
-        foreach ($tiers as $tier) {
-            LoyaltyTier::withoutGlobalScopes()->firstOrCreate(
-                ['organization_id' => $org->id, 'name' => $tier['name']],
-                array_merge($tier, ['is_active' => true])
-            );
+        if ($seedLoyalty) {
+            foreach ($tiers as $tier) {
+                LoyaltyTier::withoutGlobalScopes()->firstOrCreate(
+                    ['organization_id' => $org->id, 'name' => $tier['name']],
+                    array_merge($tier, ['is_active' => true])
+                );
+            }
         }
 
         // Create default benefits — code is NOT NULL
@@ -291,23 +303,35 @@ class OrganizationSetupService
             ['name' => 'Airport Transfer', 'code' => 'airport_transfer', 'description' => 'Complimentary airport transfer',        'category' => 'transport',      'sort_order' => 6],
         ];
 
-        foreach ($benefits as $b) {
-            BenefitDefinition::withoutGlobalScopes()->firstOrCreate(
-                ['organization_id' => $org->id, 'code' => $b['code']],
-                array_merge($b, ['is_active' => true])
-            );
+        if ($seedLoyalty) {
+            foreach ($benefits as $b) {
+                BenefitDefinition::withoutGlobalScopes()->firstOrCreate(
+                    ['organization_id' => $org->id, 'code' => $b['code']],
+                    array_merge($b, ['is_active' => true])
+                );
+            }
         }
 
-        // Default settings — type, group, label are NOT NULL
+        // Default settings — type, group, label are NOT NULL.
+        // Loyalty-group settings are gated by `seedLoyalty` so a non-hotel
+        // org doesn't get hotel-shaped welcome bonus / points-per-currency
+        // baked in. Phase 5's LoyaltyPresetService unification will seed
+        // industry-appropriate ones.
         $defaults = [
-            ['key' => 'hotel_name',            'value' => $org->name, 'type' => 'text',   'group' => 'general',    'label' => 'Hotel Name'],
-            ['key' => 'welcome_bonus_points',  'value' => '500',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Welcome Bonus Points'],
-            ['key' => 'referrer_bonus_points', 'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referrer Bonus Points'],
-            ['key' => 'referee_bonus_points',  'value' => '250',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Referee Bonus Points'],
-            ['key' => 'birthday_bonus_points', 'value' => '500',      'type' => 'number', 'group' => 'loyalty',    'label' => 'Birthday Bonus Points'],
-            ['key' => 'points_expiry_months',  'value' => '24',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points Expiry (Months)'],
-            ['key' => 'points_per_currency',   'value' => '10',       'type' => 'number', 'group' => 'loyalty',    'label' => 'Points per Currency Unit'],
-            ['key' => 'currency_symbol',       'value' => '€',        'type' => 'text',   'group' => 'general',    'label' => 'Currency Symbol'],
+            ['key' => 'hotel_name',  'value' => $org->name, 'type' => 'text', 'group' => 'general', 'label' => 'Hotel Name'],
+        ];
+        if ($seedLoyalty) {
+            array_push($defaults,
+                ['key' => 'welcome_bonus_points',  'value' => '500', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Welcome Bonus Points'],
+                ['key' => 'referrer_bonus_points', 'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Referrer Bonus Points'],
+                ['key' => 'referee_bonus_points',  'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Referee Bonus Points'],
+                ['key' => 'birthday_bonus_points', 'value' => '500', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Birthday Bonus Points'],
+                ['key' => 'points_expiry_months',  'value' => '24',  'type' => 'number', 'group' => 'loyalty', 'label' => 'Points Expiry (Months)'],
+                ['key' => 'points_per_currency',   'value' => '10',  'type' => 'number', 'group' => 'loyalty', 'label' => 'Points per Currency Unit'],
+            );
+        }
+        $defaults[] = ['key' => 'currency_symbol', 'value' => '€', 'type' => 'text', 'group' => 'general', 'label' => 'Currency Symbol'];
+        $defaults = array_merge($defaults, [
             // Appearance (brand colors) — needed for theme endpoint + branding UI
             ['key' => 'primary_color',        'value' => '#c9a84c', 'type' => 'string', 'group' => 'appearance', 'label' => 'Primary Color'],
             ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string', 'group' => 'appearance', 'label' => 'Secondary Color'],
@@ -321,7 +345,7 @@ class OrganizationSetupService
             ['key' => 'warning_color',        'value' => '#ffd60a', 'type' => 'string', 'group' => 'appearance', 'label' => 'Warning'],
             ['key' => 'info_color',           'value' => '#0a84ff', 'type' => 'string', 'group' => 'appearance', 'label' => 'Info'],
             ['key' => 'dark_mode_enabled',    'value' => 'true',    'type' => 'boolean','group' => 'appearance', 'label' => 'Dark Mode'],
-        ];
+        ]);
 
         foreach ($defaults as $setting) {
             HotelSetting::withoutGlobalScopes()->firstOrCreate(

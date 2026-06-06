@@ -293,10 +293,20 @@ class AuthController extends Controller
                 while (Organization::where('slug', $slug)->exists()) {
                     $slug = $baseSlug . '-' . $i++;
                 }
+                // Phase 2 — stamp industry on the local org BEFORE
+                // setupDefaults runs. `setupDefaults()` reads
+                // `$org->resolved_industry` to decide whether to seed
+                // Bronze→Diamond tiers + hotel benefits; without this
+                // stamp the accessor falls back to 'hotel' on a fresh
+                // org and a beauty / medical / restaurant org would
+                // silently get hotel loyalty defaults. The SaaS-side
+                // `service-verify-password` response carries the org's
+                // industry exactly for this purpose.
                 $org = Organization::create([
                     'saas_org_id' => $saasOrg['id'],
                     'name'        => $saasOrg['name'] ?? 'Organization',
                     'slug'        => $slug,
+                    'industry'    => Organization::normaliseIndustry($saasOrg['industry'] ?? null),
                 ]);
                 try {
                     app(\App\Services\OrganizationSetupService::class)->setupDefaults($org);
@@ -419,6 +429,173 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out successfully']);
+    }
+
+    /**
+     * POST /v1/auth/apply-industry — Re-apply an industry preset to the
+     * caller's org. Used by:
+     *   1. The Phase 4 sub-domain mismatch banner (admin lands on
+     *      beauty-tech.uk but org.industry='hotel' → one-tap switch).
+     *   2. Phase 10's in-app Settings → Industry switcher.
+     *   3. Recovery path when Phase 2 signup's preset-apply step
+     *      failed (audit row `signup.preset_apply_failed`).
+     *
+     * **Data-safety contract**: when the caller's org has any data in
+     * inquiries / loyalty_members / reservations / booking_mirror /
+     * guests / corporate_accounts / lead_form_submissions / tasks /
+     * planner_tasks / activities / chat_conversations, the body MUST
+     * include `acknowledge: true`. Otherwise we return 409 with a
+     * structured `changes` array the UI can render in a confirmation
+     * modal. This prevents a Phase 4 banner click from silently
+     * reshaping a fully-populated workspace.
+     *
+     * Throttled at 5 requests / minute per Sanctum token via the route
+     * (`throttle:5,1`). This is a per-session token throttle, not a
+     * per-org daily limit — two admins in the same org can each issue
+     * 5/min independently. A stricter per-org RateLimiter (1 switch /
+     * 24h per org) is documented as a Phase 10 hardening item
+     * alongside the in-app Settings → Industry switcher; until then the
+     * acknowledge gate plus the audit log + the UI's confirmation
+     * modal are the load-bearing safety controls.
+     */
+    public function applyIndustry(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'industry'    => 'required|string|max:32',
+            'acknowledge' => 'nullable|boolean',
+        ]);
+
+        $user = $request->user();
+        if (!$user || !$user->organization_id) {
+            return response()->json(['error' => 'No organization context'], 422);
+        }
+
+        $industry = \App\Models\Organization::normaliseIndustry($validated['industry']);
+        if ($industry === null) {
+            return response()->json([
+                'error' => "Unknown industry '{$validated['industry']}'. Allowed: " . implode(', ', \App\Models\Organization::INDUSTRIES),
+            ], 422);
+        }
+
+        $org = \App\Models\Organization::find($user->organization_id);
+        if (!$org) return response()->json(['error' => 'Organization not found'], 404);
+
+        // No-op when the org is already on the requested industry. Save
+        // a wasted preset apply + audit row + the throttle slot.
+        if ($org->resolved_industry === $industry) {
+            return response()->json([
+                'message'  => 'Already configured for ' . $industry,
+                'industry' => $industry,
+                'changed'  => false,
+            ]);
+        }
+
+        // Bind tenant context — preset services read crm_settings via
+        // tenant scope (BelongsToOrganization), so without this the
+        // updateOrCreate calls would fail-closed and quietly write
+        // nothing.
+        app()->instance('current_organization_id', $org->id);
+
+        // Existing-data check. We probe every tenant-scoped table that
+        // carries customer-visible work a preset switch will reshape or
+        // relabel — the count itself isn't the gate, the existence of
+        // ANY data is. The acknowledge flag is the user's "yes, I read
+        // the warnings" signal; the UI must surface the `changes` list
+        // to them first.
+        //
+        // Service businesses (beauty / medical / restaurant) typically
+        // populate guests + tasks + planner_tasks + activities + chat
+        // conversations + lead_form_submissions BEFORE they have any
+        // loyalty_members / reservations / booking_mirror rows. Probing
+        // only the booking-engine tables would have let those orgs slip
+        // through the gate.
+        $probeTables = [
+            'inquiries',
+            'loyalty_members',
+            'reservations',
+            'booking_mirror',
+            'guests',
+            'corporate_accounts',
+            'lead_form_submissions',
+            'tasks',
+            'planner_tasks',
+            'activities',
+            'chat_conversations',
+        ];
+        $hasData = false;
+        foreach ($probeTables as $t) {
+            try {
+                if (\DB::table($t)->where('organization_id', $org->id)->exists()) {
+                    $hasData = true;
+                    break;
+                }
+            } catch (\Illuminate\Database\QueryException) {
+                // Table missing in a partial-deploy environment — ignore
+                // and continue probing. We err on the side of "no data"
+                // here because the acknowledge gate is opt-in.
+            }
+        }
+
+        if ($hasData && empty($validated['acknowledge'])) {
+            return response()->json([
+                'error'       => 'Industry change against an org with existing data requires acknowledge=true.',
+                'requires_acknowledge' => true,
+                'from'        => $org->resolved_industry,
+                'to'          => $industry,
+                'changes'     => [
+                    'Sidebar labels + vocabulary will swap to ' . $industry . ' terminology',
+                    'CRM pipeline + stages will be replaced with the ' . $industry . ' preset (existing inquiries migrate by stage kind — won / lost / open)',
+                    'Lost-reason taxonomy will be reseeded (in-use reasons soft-deactivated, never deleted)',
+                    'Custom fields will be reseeded (existing custom_data on entities is preserved)',
+                    'Planner task groups + templates will be replaced (admin manual templates are kept)',
+                    'Existing customer / member / reservation / booking data is NOT deleted',
+                    // NB: chatbot identity re-application is intentionally
+                    // NOT promised here today. Phase 7 (industry-aware
+                    // AI prompts) will own that re-seed via
+                    // ChatbotBehaviorConfig — until then the existing
+                    // identity stays in place across industry switches.
+                ],
+            ], 409);
+        }
+
+        $beforeIndustry = $org->resolved_industry;
+
+        try {
+            \DB::transaction(function () use ($org, $industry) {
+                $org->industry = $industry;
+                $org->save();
+
+                app(\App\Services\IndustryPresetService::class)->apply($industry);
+                app(\App\Services\PlannerPresetService::class)->apply($industry);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            \App\Models\AuditLog::record(
+                'industry.apply_failed',
+                $org,
+                ['from' => $beforeIndustry, 'to' => $industry, 'error' => $e->getMessage()],
+                [],
+                $user,
+                "Industry apply failed: {$beforeIndustry} → {$industry}"
+            );
+            return response()->json(['error' => 'Industry apply failed: ' . $e->getMessage()], 500);
+        }
+
+        \App\Models\AuditLog::record(
+            'industry.applied',
+            $org,
+            ['industry' => $industry, 'acknowledge' => (bool) ($validated['acknowledge'] ?? false)],
+            ['industry' => $beforeIndustry],
+            $user,
+            "Industry switched: {$beforeIndustry} → {$industry}"
+        );
+
+        return response()->json([
+            'message'  => 'Industry applied.',
+            'industry' => $industry,
+            'from'     => $beforeIndustry,
+            'changed'  => true,
+        ]);
     }
 
     public function updatePushToken(Request $request): JsonResponse
@@ -556,7 +733,22 @@ class AuthController extends Controller
             // so they get the right locale on every device the first time
             // they sign in. Whitelist matches MeController::SUPPORTED_LANGUAGES.
             'language'   => 'nullable|string|in:en,ru,de,fr,es',
+            // Industry Platform Plan Phase 2 — captured at signup by
+            // Login.tsx (sub-brand hostname OR umbrella picker). Optional
+            // on wire so legacy clients keep working; we validate +
+            // normalise via Organization::normaliseIndustry below and
+            // fall back to 'hotel' when missing / invalid (existing
+            // hotel-only behaviour for clients that don't send it).
+            'industry'   => 'nullable|string|max:32',
         ]);
+
+        // Normalise + validate the picked industry. Aliases
+        // (`hospitality` → `restaurant`) are translated here so the
+        // column holds canonical ids only. Invalid / missing falls back
+        // to 'hotel' which matches today's behaviour for orgs that
+        // haven't picked.
+        $industry = \App\Models\Organization::normaliseIndustry($validated['industry'] ?? null)
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
 
         $validated['email'] = strtolower(trim($validated['email']));
 
@@ -598,6 +790,11 @@ class AuthController extends Controller
                     'password' => $validated['password'],
                     'orgName'  => $validated['hotel_name'],
                     'planSlug' => $validated['plan'] ?? 'starter',
+                    // Phase 2 — let SaaS persist a metadata mirror of the
+                    // industry choice so the SSO handoff JWT carries
+                    // `currentOrgIndustry` for the loyalty middleware to
+                    // pick up on first-time org creation.
+                    'industry' => $industry,
                 ]);
 
                 if ($regResponse->successful()) {
@@ -621,8 +818,13 @@ class AuthController extends Controller
                 $org = \App\Models\Organization::firstOrCreate(
                     ['saas_org_id' => $saasOrgId],
                     [
-                        'name' => $validated['hotel_name'],
-                        'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']),
+                        'name'     => $validated['hotel_name'],
+                        'slug'     => \Illuminate\Support\Str::slug($validated['hotel_name']),
+                        // Phase 2 — stamp the canonical industry on the
+                        // row at create time so every reader (sidebar,
+                        // dashboard, AI prompts in later phases) sees
+                        // the right value from the very first request.
+                        'industry' => $industry,
                     ]
                 );
             }
@@ -632,9 +834,20 @@ class AuthController extends Controller
             }
             if (!$org) {
                 $org = \App\Models\Organization::create([
-                    'name' => $validated['hotel_name'],
-                    'slug' => \Illuminate\Support\Str::slug($validated['hotel_name']) . '-' . \Illuminate\Support\Str::random(4),
+                    'name'     => $validated['hotel_name'],
+                    'slug'     => \Illuminate\Support\Str::slug($validated['hotel_name']) . '-' . \Illuminate\Support\Str::random(4),
+                    'industry' => $industry,
                 ]);
+            }
+
+            // Phase 2 — orgs found via existing-user or saas-org-id match
+            // may pre-date Phase 1 and lack the column value. Stamp now
+            // (only when truly unset — we never overwrite an explicit
+            // choice in this path). Same defensive guarantee as Phase 10
+            // backfill would do, just per-org-on-signup.
+            if (!$org->hasExplicitIndustry()) {
+                $org->industry = $industry;
+                $org->save();
             }
 
             // Bind org context for BelongsToOrganization trait
@@ -689,6 +902,53 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             report($e);
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
+        }
+
+        // Phase 2 — apply industry presets atomically against the new
+        // org. CRM (pipeline / stages / lost reasons / 6 entity field
+        // layouts / custom fields) + Planner (groups + templates).
+        // Loyalty preset deferred to Phase 5 (taxonomy misalignment —
+        // `LoyaltyPresetService` uses `hotel_classic` / `hotel_lite` /
+        // `simple_two_tier`, no `medical` / `legal` / `real_estate` /
+        // `education` keys yet).
+        //
+        // Wrapped in ONE outer DB::transaction so a Planner-preset
+        // failure rolls back the CRM-preset writes too — the org never
+        // lives in a half-applied state where the pipeline is on the
+        // new industry but planner_groups still hold the previous /
+        // empty layout. Both preset services internally use
+        // DB::transaction, which compose as Postgres SAVEPOINTs;
+        // failure at any level propagates and the outer rolls back
+        // cleanly. Neither service does external side effects (HTTP /
+        // queue), so DB rollback is a complete reversal.
+        //
+        // The whole block is wrapped in a single try/catch — a preset
+        // failure does NOT block the signup; the user lands in the
+        // admin and the Phase 2 retry UX (apply-industry endpoint)
+        // picks up via the audit-row signal `signup.preset_apply_failed`.
+        try {
+            \DB::transaction(function () use ($industry) {
+                app(\App\Services\IndustryPresetService::class)->apply($industry);
+                app(\App\Services\PlannerPresetService::class)->apply($industry);
+            });
+            \App\Models\AuditLog::record(
+                'signup.presets_applied',
+                $org,
+                ['industry' => $industry, 'services' => ['crm', 'planner']],
+                [],
+                $localUser ?? null,
+                "Applied CRM + Planner presets '{$industry}' on trial signup"
+            );
+        } catch (\Throwable $e) {
+            report($e);
+            \App\Models\AuditLog::record(
+                'signup.preset_apply_failed',
+                $org,
+                ['industry' => $industry, 'services' => ['crm', 'planner'], 'error' => $e->getMessage()],
+                [],
+                $localUser ?? null,
+                "Preset apply failed on trial signup — workspace will retry via apply-industry"
+            );
         }
 
         // Step 4: Provision trial entitlements on the local org.
@@ -762,6 +1022,11 @@ class AuthController extends Controller
                 planName: $planLabel,
                 trialDays: $trialDays,
                 loginUrl: $loginUrl,
+                // Phase 2 — Mailable swaps a handful of subject + body
+                // placeholders ("Hotel Tech" → "BeautyTech" etc.) based
+                // on industry. Full per-industry HTML redesign is
+                // deferred to Phase 8 (token-substitution approach).
+                industry: $industry,
             ));
         } catch (\Throwable $e) {
             report($e);
