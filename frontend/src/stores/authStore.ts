@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { applyServerLanguage } from '../i18n'
+import type { IndustryId } from '../lib/industryHosts'
 
 interface User {
   id: number
@@ -8,6 +9,31 @@ interface User {
   email: string
   user_type: string
   language?: string | null
+  /**
+   * Industry Platform Plan Phase 1 — the org's resolved industry.
+   * Sent by GET /v1/auth/me. Falls back through:
+   *   organizations.industry → crm_settings.industry_preset → 'hotel'
+   * so existing tenants always have a usable value even before the
+   * Phase 10 backfill writes the column. The SPA gates sidebar,
+   * dashboard KPIs, vocabulary, AI behaviour on this.
+   *
+   * **Forward-compat caveat**: stale sessions from before this field was
+   * surfaced (Phase 1 ship) will rehydrate from `loyalty-auth`
+   * localStorage with `industry` undefined until `/v1/auth/me` is hit
+   * again. Phase 4's mismatch banner must treat undefined as "not loaded
+   * yet" rather than "hotel by default" — otherwise refreshing on a
+   * sub-brand domain before /me returns would spuriously prompt to
+   * switch. The persist `version: 1` bump below gives Phase 4 a clean
+   * hook to invalidate stale state if that's not enough.
+   */
+  industry?: IndustryId
+  /**
+   * True when the org has explicitly picked an industry. Distinguishes a
+   * real registration choice from a defaulted-to-hotel fallback. Used by
+   * Phase 4's sub-domain mismatch banner — orgs without an explicit
+   * choice should be silently configured, never prompted.
+   */
+  industry_explicit?: boolean
 }
 
 interface Staff {
@@ -67,6 +93,14 @@ export const useAuthStore = create<AuthState>()(
         return staff?.role === 'super_admin' || staff?.role === 'manager'
       },
     }),
-    { name: 'loyalty-auth' }
+    {
+      name: 'loyalty-auth',
+      // Bumped from implicit 0 → 1 in the Industry Platform Plan Phase 1
+      // ship: `user.industry` + `user.industry_explicit` were added to
+      // the User type. Existing sessions rehydrate without these fields
+      // until the next `/v1/auth/me`. Any future breaking change to the
+      // persisted shape bumps this again + uses `migrate` to translate.
+      version: 1,
+    }
   )
 )

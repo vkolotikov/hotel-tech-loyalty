@@ -40,6 +40,22 @@ return [
     ],
 
     'cors' => [
+        // Read by the custom CORS middleware at app/Http/Middleware/Cors.php
+        // (no config/cors.php in this stack — Laravel's HandleCors is not
+        // wired up; the custom middleware is mounted in bootstrap/app.php).
+        //
+        // Default stays `*` because public widget routes (chat widget +
+        // booking widget) MUST be embeddable on any customer's site. The
+        // Cors middleware already short-circuits public routes to "*"
+        // regardless of this setting, so changing the default here only
+        // affects admin SPA + private API origins.
+        //
+        // Phase 0 of the Industry Platform Plan deliberately ships
+        // documentation-only here: the actual production lockdown
+        // (restricting admin SPA origins to the five sub-brand hosts) is
+        // an ops decision the deploy team makes via env. To lock down,
+        // set the env explicitly:
+        //   CORS_ALLOWED_ORIGINS=https://hotel-tech.ai,https://beauty-tech.uk,https://med.hexa-tech.uk,https://hospitality.hexa-tech.uk,https://app.hexa-tech.uk,https://loyalty.hotel-tech.ai
         'allowed_origins' => env('CORS_ALLOWED_ORIGINS', '*'),
     ],
 

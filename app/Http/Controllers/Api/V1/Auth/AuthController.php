@@ -372,6 +372,28 @@ class AuthController extends Controller
         $staff = Staff::withoutGlobalScopes()
             ->where('user_id', $user->id)->first();
 
+        // Industry Platform Plan Phase 1 — surface the resolved industry on
+        // the bootstrap payload so the SPA can immediately apply
+        // industry-aware behaviour (sidebar gating, dashboard KPIs, AI
+        // vocabulary, mobile theme). Reads via the fallback chain on
+        // Organization (column → crm_settings.industry_preset → 'hotel')
+        // so legacy hotel orgs return a sensible value before the Phase 10
+        // backfill writes the column. `industry_explicit` distinguishes a
+        // real choice from a defaulted-to-hotel fallback — Phase 4's
+        // mismatch banner uses this to avoid prompting orgs that have
+        // never explicitly picked an industry yet.
+        // Organization model is the tenant root — does NOT use
+        // BelongsToOrganization itself, so no global scope to bypass.
+        $industry = \App\Models\Organization::DEFAULT_INDUSTRY;
+        $industryExplicit = false;
+        if ($user->organization_id) {
+            $org = \App\Models\Organization::find($user->organization_id);
+            if ($org) {
+                $industry = $org->resolved_industry;
+                $industryExplicit = $org->hasExplicitIndustry();
+            }
+        }
+
         $data = [
             'id'        => $user->id,
             'name'      => $user->name,
@@ -384,6 +406,10 @@ class AuthController extends Controller
             'language'  => $user->language ?: 'en',
             'loyalty_member' => $member,
             'staff'     => $staff,
+            // Industry Platform Plan — the SPA gates UI on this. See
+            // apps/loyalty/INDUSTRY_PLATFORM_PLAN.md.
+            'industry'          => $industry,
+            'industry_explicit' => $industryExplicit,
         ];
 
         return response()->json($data);
