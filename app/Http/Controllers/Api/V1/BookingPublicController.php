@@ -586,6 +586,78 @@ class BookingPublicController extends Controller
      * masks the underlying exception — the rescue path that fires
      * immediately after this method needs to run regardless.
      */
+    /**
+     * Realtime-alarm threshold for confirm-failure clusters.
+     *
+     * Prevention follow-up to the 2026-05-31 `$roomTotal` outage:
+     * if three or more `booking.confirm.failed` rows for the same
+     * org fire within a 10-minute window, raise a realtime event so
+     * on-call sees it the moment it happens — instead of finding
+     * out hours later from a customer phone call. Cooldown gate
+     * prevents the same cluster from spamming open admin tabs.
+     *
+     * Constants are intentionally const, not config-driven — a bad
+     * env override that disables them would make the platform
+     * silently regress to the pre-prevention state.
+     */
+    private const CONFIRM_FAILURE_THRESHOLD     = 3;
+    private const CONFIRM_FAILURE_WINDOW_MIN    = 10;
+    private const CONFIRM_FAILURE_COOLDOWN_MIN  = 15;
+
+    private function maybeAlertConfirmFailureCluster(int $orgId, \Throwable $deepest, string $stage): void
+    {
+        try {
+            // Recent failures in the sliding window for this org.
+            $windowStart = now()->subMinutes(self::CONFIRM_FAILURE_WINDOW_MIN);
+            $recentCount = \App\Models\AuditLog::where('organization_id', $orgId)
+                ->where('action', 'booking.confirm.failed')
+                ->where('created_at', '>=', $windowStart)
+                ->count();
+
+            if ($recentCount < self::CONFIRM_FAILURE_THRESHOLD) {
+                return;
+            }
+
+            // Cooldown gate: if a realtime alert already fired for
+            // this org inside the cooldown window, suppress. Keeps a
+            // single bad ship from emitting 50 alerts as bookings
+            // pile up against the broken confirm path.
+            $cooldownKey = "booking_confirm_failure_alert:{$orgId}";
+            if (\Illuminate\Support\Facades\Cache::has($cooldownKey)) {
+                return;
+            }
+            \Illuminate\Support\Facades\Cache::put(
+                $cooldownKey,
+                1,
+                now()->addMinutes(self::CONFIRM_FAILURE_COOLDOWN_MIN),
+            );
+
+            // Dispatch the realtime event. Pattern matches `hot_lead`
+            // — useRealtimeEvents on the SPA picks it up + toasts.
+            app(\App\Services\RealtimeEventService::class)->dispatch(
+                'booking_confirm_failure',
+                "Bookings are failing: {$recentCount} in last " . self::CONFIRM_FAILURE_WINDOW_MIN . " min",
+                mb_substr((string) $deepest->getMessage(), 0, 200),
+                [
+                    'org_id'           => $orgId,
+                    'recent_count'     => $recentCount,
+                    'window_minutes'   => self::CONFIRM_FAILURE_WINDOW_MIN,
+                    'latest_stage'     => $stage,
+                    'latest_class'     => get_class($deepest),
+                    'latest_file_line' => $deepest->getFile() . ':' . $deepest->getLine(),
+                    'action_url'       => '/audit?action=booking.confirm.failed',
+                ],
+            );
+        } catch (\Throwable $alarmErr) {
+            // Defensive: an alarm-side failure must NEVER swallow the
+            // primary audit-log write. Best-effort log only.
+            \Illuminate\Support\Facades\Log::warning('booking.confirm.failed realtime alert dispatch failed', [
+                'org_id'      => $orgId,
+                'alarm_error' => $alarmErr->getMessage(),
+            ]);
+        }
+    }
+
     private function logConfirmFailureWithContext(string $stage, array $validated, \Throwable $original, array $extra = []): void
     {
         try {
@@ -671,6 +743,17 @@ class BookingPublicController extends Controller
                 ], $holdContext, $extra),
                 'description'     => "Confirm failed ({$stage}): " . mb_substr((string) $deepest->getMessage(), 0, 200),
             ]);
+
+            // Prevention follow-up to the 2026-05-31 $roomTotal outage:
+            // surface confirm-failure clusters as a realtime alarm so
+            // on-call sees them within seconds instead of waiting for
+            // customer phone calls. Threshold: ≥3 failures in 10 min
+            // for the same org. Fires at-most-once per cluster (the
+            // 10-min cooldown check) so a single bad ship doesn't
+            // spam every open admin tab.
+            if ($orgId) {
+                $this->maybeAlertConfirmFailureCluster($orgId, $deepest, $stage);
+            }
         } catch (\Throwable $auditErr) {
             \Illuminate\Support\Facades\Log::error('booking.confirm.failed audit-log write failed', [
                 'stage' => $stage,

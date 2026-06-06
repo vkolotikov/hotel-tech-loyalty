@@ -24,6 +24,12 @@ const EVENT_ICONS: Record<string, string> = {
   // message). Lets the agent get pinged from any admin page, not just
   // /engagement.
   hot_lead: '🔥',
+  // Prevention follow-up to the 2026-05-31 `$roomTotal` outage —
+  // backend raises this when ≥3 booking.confirm.failed audit rows
+  // fire in a 10-min window for an org. On-call sees the toast +
+  // browser notification immediately instead of finding out hours
+  // later from a customer phone call.
+  booking_confirm_failure: '🚨',
 }
 
 // Query key prefixes to invalidate when specific event types arrive
@@ -35,14 +41,20 @@ const INVALIDATION_MAP: Record<string, string[]> = {
   member:      ['dashboard-kpis', 'members'],
   reservation: ['dashboard-kpis', 'dashboard-recent-activity', 'reservations'],
   hot_lead:    ['engagement', 'inquiries', 'dashboard-kpis'],
+  // Audit log query keys so the new audit row shows up at the top
+  // of /audit?action=booking.confirm.failed after the alert fires.
+  booking_confirm_failure: ['audit-log', 'dashboard-kpis'],
 }
 
 /**
  * Event types that should ALSO fire a browser notification (in addition to
- * the in-app toast). For now only `hot_lead` qualifies — the agent needs
- * to know about a captured lead even when the admin SPA tab is hidden.
+ * the in-app toast). Two types qualify today:
+ *   - hot_lead: the agent needs to know about a captured lead even when
+ *     the admin SPA tab is hidden.
+ *   - booking_confirm_failure: the operator needs to know about a
+ *     booking outage immediately, regardless of which tab is foregrounded.
  */
-const BROWSER_NOTIFY_TYPES = new Set(['hot_lead'])
+const BROWSER_NOTIFY_TYPES = new Set(['hot_lead', 'booking_confirm_failure'])
 
 const POLL_INTERVAL = 5000 // 5 seconds
 const STORAGE_KEY = 'realtime:last_id'

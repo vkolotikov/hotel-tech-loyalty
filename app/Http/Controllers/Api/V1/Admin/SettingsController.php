@@ -755,7 +755,74 @@ class SettingsController extends Controller
         if (!$key) return response()->json(['success' => false, 'message' => 'No secret key configured for this organization']);
 
         $result = $this->curlTest('https://api.stripe.com/v1/balance', ["Authorization: Bearer {$key}"]);
+
+        // Prevention follow-up to the Forrest Glamp restricted-key stuck-
+        // refund situation: when the connection works AND the key is a
+        // restricted `rk_live_*` / `rk_test_*` key, probe for the
+        // refunds:write scope and surface a clear warning. Saves the
+        // operator from finding out only when a refund first fails.
+        if (($result['success'] ?? false) && $this->isRestrictedKeyByPrefix($key)) {
+            try {
+                $stripe = new \Stripe\StripeClient($key);
+                $refundsWritable = $this->probeRefundsWriteAccess($stripe);
+                if (!$refundsWritable) {
+                    $result['warning'] = [
+                        'code'    => 'refunds_write_missing',
+                        'title'   => 'Restricted key cannot issue refunds',
+                        'message' => 'Connection works, but this restricted key is missing the refunds:write scope. '
+                            . 'Refunds via the admin Refund button will fail until you grant it. '
+                            . 'Fix: open https://dashboard.stripe.com/apikeys → edit your key → enable refunds:write → save.',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Best-effort probe — never let the warning logic
+                // break the primary connection-test result.
+                \Illuminate\Support\Facades\Log::info('Stripe refunds:write probe failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json($result);
+    }
+
+    /**
+     * `rk_live_*` and `rk_test_*` are restricted keys with per-resource
+     * scope grants. `sk_live_*` / `sk_test_*` are unrestricted secrets.
+     */
+    private function isRestrictedKeyByPrefix(string $key): bool
+    {
+        return str_starts_with($key, 'rk_live_') || str_starts_with($key, 'rk_test_');
+    }
+
+    /**
+     * Probe whether the key can write refunds. We attempt to refund a
+     * bogus PI id — Stripe responds with InvalidRequestException
+     * "No such payment_intent" when the scope is granted (the call got
+     * far enough to look up the resource), and with a permission-style
+     * error when the scope is missing. Same pattern the
+     * `stripe:check-key-permissions` artisan command uses.
+     */
+    private function probeRefundsWriteAccess(\Stripe\StripeClient $stripe): bool
+    {
+        try {
+            $stripe->refunds->create(['payment_intent' => 'pi_diag_probe_invalid']);
+            // Won't normally reach here.
+            return true;
+        } catch (\Throwable $e) {
+            $missingScope = \App\Services\StripeService::isRestrictedKeyPermissionError($e);
+            if ($missingScope) {
+                return false;
+            }
+            if ($e instanceof \Stripe\Exception\InvalidRequestException) {
+                // Got far enough to look up the (non-existent) PI →
+                // the scope IS granted.
+                return true;
+            }
+            // Inconclusive (auth error, network glitch, etc.) — treat
+            // as "can't confirm missing" so we don't false-positive.
+            return true;
+        }
     }
 
     private function testTwilio(): JsonResponse
