@@ -264,21 +264,23 @@ interface PlanData {
 }
 
 
-/** Hardcoded fallback — mirrors the SaaS plan catalog so prices never go stale. */
+/** Hardcoded fallback — mirrors the SaaS plan catalog so prices never go stale.
+ *  Industry-neutral descriptions (post HexaTech rebrand) — the trial card
+ *  serves hotels + salons + clinics + restaurants + 4 more verticals. */
 const FALLBACK_PLANS: PlanData[] = [
   {
     id: 'starter', name: 'Starter', slug: 'starter',
-    description: 'Perfect for small hotels getting started with guest management.',
+    description: 'For single-location service businesses getting started with customer data and basic loyalty.',
     monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7,
   },
   {
     id: 'growth', name: 'Growth', slug: 'growth',
-    description: 'For growing hotels that need loyalty, bookings, and AI.',
+    description: 'For growing businesses that need bookings, AI chat and member engagement.',
     monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7,
   },
   {
     id: 'enterprise', name: 'Enterprise', slug: 'enterprise',
-    description: 'Full-featured solution for hotel groups and chains.',
+    description: 'For multi-location and multi-brand operators — adds the staff AI copilot, API access and dedicated support.',
     monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7,
   },
 ]

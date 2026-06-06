@@ -19,10 +19,13 @@ interface PlanData {
 // comparison. Edit it in lib/planFeatures.ts.
 import { ALL_FEATURES, PLAN_FEATURES } from '../lib/planFeatures'
 
+// Hardcoded fallback — used only when /v1/plans is empty or errors.
+// Industry-neutral phrasing (post HexaTech rebrand); the full per-tier
+// feature inclusion lives in lib/planFeatures.ts and renders below.
 const FALLBACK_PLANS: PlanData[] = [
-  { id: 'starter', name: 'Starter', slug: 'starter', description: 'For boutique hotels and single properties getting started with guest data and a basic loyalty program. CRM, loyalty tiers and points, manual campaigns. No AI.', monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7 },
-  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing groups that need bookings and AI. Everything in Starter plus the booking engine, AI Chatbot with knowledge base, AI insights and analytics, push campaigns, custom branding and the member mobile app.', monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7 },
-  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'For multi-property operators. Everything in Growth, unlimited properties and members, full API access and webhooks, NFC card support, advanced analytics and dedicated priority support.', monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7 },
+  { id: 'starter', name: 'Starter', slug: 'starter', description: 'For single-location service businesses getting started with customer data, basic loyalty and the member mobile app.', monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7 },
+  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing businesses that need bookings, AI chat and member engagement. Adds the booking engine, website chatbot, live chat inbox, Wallet/NFC cards, analytics and member push.', monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7 },
+  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'For multi-location and multi-brand operators. Adds unlimited locations, brand portfolios, API access, the staff AI copilot and dedicated support with a 99.9% uptime SLA.', monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7 },
 ]
 
 type BillingInterval = 'monthly' | 'yearly'
