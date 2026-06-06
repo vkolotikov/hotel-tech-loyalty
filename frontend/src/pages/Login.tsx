@@ -131,7 +131,11 @@ function BrandMark({ onClick, compact = false, brand = 'HexaTech', monogram = 'H
 }) {
   const [failed, setFailed] = useState(false)
   const Wrapper = onClick ? 'button' : 'div'
-  const height = compact ? 56 : 72
+  // Bumped (2026-06-07) — the previous 72px height felt cramped in
+  // the wide hero column. 112px gives the brand mark proper visual
+  // weight without overwhelming the trial bullets below. Compact
+  // variant (used on tighter contexts) stays a touch smaller.
+  const height = compact ? 72 : 112
 
   if (BRAND_LOGO_URL && !failed) {
     return (
@@ -140,7 +144,11 @@ function BrandMark({ onClick, compact = false, brand = 'HexaTech', monogram = 'H
           src={BRAND_LOGO_URL}
           alt={brand}
           onError={() => setFailed(true)}
-          style={{ height, width: 'auto', display: 'block' }}
+          // max-width caps a wide-aspect logo (the HexaTech mark is
+          // significantly wider than tall) so it doesn't stretch the
+          // hero column header on small viewports. Browser scales
+          // proportionally because we set height + max-width.
+          style={{ height, width: 'auto', maxWidth: 360, display: 'block' }}
           className="drop-shadow-lg"
         />
       </Wrapper>

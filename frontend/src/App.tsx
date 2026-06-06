@@ -94,6 +94,29 @@ function ThemeLoader() {
   return null
 }
 
+/**
+ * Floating admin AI button, gated on auth state. Anonymous visitors
+ * on /login / /register / /forgot-password / /reset-password should
+ * NEVER see the admin chatbot — it serves logged-in staff and has
+ * no useful context for an unauthenticated visitor. Reads `token`
+ * from the auth store so it appears the instant the user logs in
+ * (no page reload required) and disappears on logout.
+ *
+ * The `hidden md:block` wrapper carries the existing desktop-only
+ * rule. AiChat is heavy + bundled lazily, so we also skip the
+ * Suspense boundary entirely when token is null — no chunk fetch
+ * until it's actually needed.
+ */
+function AuthedFloatingAiChat() {
+  const { token } = useAuthStore()
+  if (!token) return null
+  return (
+    <div className="hidden md:block">
+      <Suspense fallback={null}><AiChat /></Suspense>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore()
   const [setupDone, setSetupDone] = useState<boolean | null>(null)
@@ -314,8 +337,12 @@ export default function App() {
         </Routes>
         {/* AiChat is the floating admin AI button. Hidden on mobile —
             the mobile backend app has its own UI primitives + lower-
-            powered devices, and the admin AI is a desktop-shift tool. */}
-        <div className="hidden md:block"><Suspense fallback={null}><AiChat /></Suspense></div>
+            powered devices, and the admin AI is a desktop-shift tool.
+            Also hidden on the public auth views (login / register /
+            forgot / reset) — those screens serve unauthenticated
+            visitors and the admin chatbot has no useful context for
+            them. Gated via AuthedFloatingAiChat below. */}
+        <AuthedFloatingAiChat />
       </BrowserRouter>
     </QueryClientProvider>
   )
