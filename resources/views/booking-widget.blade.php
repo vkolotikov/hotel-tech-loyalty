@@ -395,6 +395,31 @@ var PREFILL_FIRST = (PREFILL_NAME || '').trim().split(/\s+/)[0] || '';
 var PREFILL_LAST  = (PREFILL_NAME || '').trim().split(/\s+/).slice(1).join(' ');
 var SOURCE_TAG    = @json(request('source', ''));
 
+/* Industry Platform Plan Phase 9 — industry-aware UI vocabulary.
+   The /book/{token} route resolves the org's industry and passes a
+   BookingWidgetVocab::for($industry) map into this view. Hotel orgs
+   receive the legacy English strings verbatim (back-compat). Beauty
+   / medical / restaurant get their own labels. The renderer below
+   references VOCAB.* instead of hardcoded literals. */
+var VOCAB = @json($vocab ?? [
+  'steps_no_pay'     => ['Dates & Guests', 'Rooms & Rates', 'Extras', 'Details & Confirm'],
+  'steps_pay'        => ['Dates & Guests', 'Rooms & Rates', 'Extras', 'Guest Details', 'Payment'],
+  'search_title'     => 'Find Your Perfect Stay',
+  'search_sub'       => 'Select your dates and guests to see available rooms',
+  'extras_title'     => 'Enhance Your Stay',
+  'details_title'    => 'Guest Details',
+  'check_in'         => 'Check-in',
+  'check_out'        => 'Check-out',
+  'adults'           => 'Adults',
+  'children'         => 'Children',
+  'select_date'      => 'Select date',
+  'search_button'    => 'Search Rooms',
+  'searching'        => 'Searching…',
+  'continue'         => 'Continue',
+  'continue_payment' => 'Continue to Payment',
+]);
+var INDUSTRY = @json($industry ?? 'hotel');
+
 /* --- State --- */
 var state = {
   step: 1,
@@ -443,8 +468,11 @@ var state = {
 };
 
 var $app = document.getElementById('app');
-var STEPS_NO_PAY = ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm'];
-var STEPS_PAY = ['Dates & Guests','Rooms & Rates','Extras','Guest Details','Payment'];
+/* Phase 9 — step bar labels driven by VOCAB. Hotel orgs receive the
+   legacy strings; non-hotel orgs receive industry-aware step names
+   ('Date & Time' / 'Treatments' / 'Patient Details' / etc.). */
+var STEPS_NO_PAY = (VOCAB.steps_no_pay || ['Dates & Guests','Rooms & Rates','Extras','Details & Confirm']);
+var STEPS_PAY = (VOCAB.steps_pay || ['Dates & Guests','Rooms & Rates','Extras','Guest Details','Payment']);
 function getSteps() { return state.paymentEnabled ? STEPS_PAY : STEPS_NO_PAY; }
 function successStep() { return state.paymentEnabled ? 6 : 5; }
 
@@ -629,33 +657,36 @@ function renderShimmer() {
 function renderSearch() {
   var today = new Date().toISOString().slice(0, 10);
   var h = '<div class="card">';
-  h += '<div class="card-title">Find Your Perfect Stay</div>';
-  h += '<div class="card-sub">Select your dates and guests to see available rooms</div>';
+  /* Phase 9 — search step copy driven by VOCAB so beauty / medical /
+     restaurant orgs see their industry's nouns. Hotel keeps the
+     legacy English strings via the BookingWidgetVocab defaults. */
+  h += '<div class="card-title">' + esc(VOCAB.search_title) + '</div>';
+  h += '<div class="card-sub">' + esc(VOCAB.search_sub) + '</div>';
   if (state.error) h += errorHtml(state.error);
 
   // Date picker triggers
   h += '<div class="row">';
-  h += '<div class="field"><label>Check-in</label>';
+  h += '<div class="field"><label>' + esc(VOCAB.check_in) + '</label>';
   h += '<button class="date-trigger' + (state.calendarOpen && !state.pickingCheckout ? ' active' : '') + '" id="w-ci-trigger">';
   h += svgCalendar();
-  h += '<div class="date-text"><span class="date-label">Check-in</span>';
-  h += state.checkIn ? '<span class="date-value">' + formatDate(state.checkIn) + '</span>' : '<span class="date-placeholder">Select date</span>';
+  h += '<div class="date-text"><span class="date-label">' + esc(VOCAB.check_in) + '</span>';
+  h += state.checkIn ? '<span class="date-value">' + formatDate(state.checkIn) + '</span>' : '<span class="date-placeholder">' + esc(VOCAB.select_date) + '</span>';
   h += '</div></button></div>';
 
-  h += '<div class="field"><label>Check-out</label>';
+  h += '<div class="field"><label>' + esc(VOCAB.check_out) + '</label>';
   h += '<button class="date-trigger' + (state.calendarOpen && state.pickingCheckout ? ' active' : '') + '" id="w-co-trigger">';
   h += svgCalendar();
-  h += '<div class="date-text"><span class="date-label">Check-out</span>';
-  h += state.checkOut ? '<span class="date-value">' + formatDate(state.checkOut) + '</span>' : '<span class="date-placeholder">Select date</span>';
+  h += '<div class="date-text"><span class="date-label">' + esc(VOCAB.check_out) + '</span>';
+  h += state.checkOut ? '<span class="date-value">' + formatDate(state.checkOut) + '</span>' : '<span class="date-placeholder">' + esc(VOCAB.select_date) + '</span>';
   h += '</div></button></div></div>';
 
   h += '<div class="row">';
-  h += field('Adults', selectHtml('w-adults', range(1, 10), state.adults));
-  h += field('Children', selectHtml('w-children', range(0, 6), state.children));
+  h += field(esc(VOCAB.adults), selectHtml('w-adults', range(1, 10), state.adults));
+  h += field(esc(VOCAB.children), selectHtml('w-children', range(0, 6), state.children));
   h += '</div>';
   h += field('Promo Code <span style="font-weight:400;opacity:.7">(optional)</span>', '<input type="text" id="w-promo" value="' + esc(state.promo) + '" placeholder="Enter code">');
   h += '<button class="btn btn-primary" id="w-search"' + (state.searching ? ' disabled' : '') + '>';
-  h += state.searching ? spinner() + ' Searching...' : svgSearch() + ' Search Rooms';
+  h += state.searching ? spinner() + ' ' + esc(VOCAB.searching) : svgSearch() + ' ' + esc(VOCAB.search_button);
   h += '</button>';
   h += '</div>';
 
@@ -1033,7 +1064,9 @@ function renderExtras() {
   var h = '<div class="page-layout">';
   h += '<div>';
   h += '<div class="card">';
-  h += '<div class="card-title">Enhance Your Stay</div>';
+  /* Phase 9 — extras title per industry ("Enhance Your Visit" for
+     beauty/restaurant; "Additional Services" for medical). */
+  h += '<div class="card-title">' + esc(VOCAB.extras_title) + '</div>';
   h += '<div class="card-sub">Add optional extras to make your visit even better</div>';
 
   if (extras.length === 0) {
@@ -1079,7 +1112,9 @@ function renderDetails() {
   h += '<div class="page-layout">';
 
   // Guest form
-  h += '<div class="card"><div class="card-title">Guest Details</div>';
+  /* Phase 9 — "Guest Details" → "Client Details" / "Patient Details"
+     / "Diner Details" per industry. */
+  h += '<div class="card"><div class="card-title">' + esc(VOCAB.details_title) + '</div>';
   h += '<div class="card-sub">Fill in your information to complete the reservation</div>';
   h += '<div class="row">';
   h += field('First Name *', '<input id="w-fname" value="' + esc(state.firstName) + '" placeholder="John" autocomplete="given-name" autocapitalize="words" spellcheck="false">');

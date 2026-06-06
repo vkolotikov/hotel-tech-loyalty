@@ -302,12 +302,23 @@ Route::get('/book/{token}', function (string $token) {
             ->value('value') ?: '';
     }
     $apiBase = url('/') . '/api';
+
+    // Industry Platform Plan Phase 9 — pass industry-aware vocabulary
+    // into the booking widget Blade. The Blade renders the widget
+    // entirely in JS at runtime, so vocab is exposed as a JSON object
+    // (`window.WIDGET_VOCAB`) read by the renderer. Hotel orgs receive
+    // the legacy English strings verbatim — zero behaviour change.
+    $industry = $org->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
+    $vocab = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
+
     return view('booking-widget', [
         'orgId'  => $token,
         'lang'   => request('lang', 'en'),
         'color'  => $color,
         'apiBase' => $apiBase,
         'standalone' => true,
+        'industry' => $industry,
+        'vocab'    => $vocab,
     ]);
 });
 
