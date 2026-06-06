@@ -159,6 +159,24 @@ class EngagementAiService
 
     private function callOpenAi(array $ctx): array
     {
+        // Industry Platform Plan Phase 7.x — resolve industry so the
+        // agent brief speaks the org's vocabulary. The agent is
+        // briefing a CLIENT coordinator at a salon, a PATIENT
+        // coordinator at a clinic, a HOST at a restaurant — not a
+        // generic "hotel agent". Hotel keeps verbatim back-compat.
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        $industry = $orgId
+            ? (\App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry ?? 'hotel')
+            : 'hotel';
+        $profile = app(\App\Services\IndustryPrompts\IndustryPromptService::class)->for($industry);
+        $agentNoun = match ($industry) {
+            'beauty'     => 'salon client coordinator',
+            'medical'    => 'patient coordinator',
+            'restaurant' => 'restaurant host',
+            'legal'      => 'firm client coordinator',
+            default      => 'hotel agent',
+        };
+
         $contactBits = array_filter([
             $ctx['name']    ? "Name: {$ctx['name']}" : null,
             $ctx['email']   ? "Email: {$ctx['email']}" : null,
@@ -180,7 +198,7 @@ class EngagementAiService
         $thread = implode("\n", $msgLines);
 
         $prompt = <<<PROMPT
-You are an AI assistant briefing a hotel agent who's about to take over a
+You are an AI assistant briefing a {$agentNoun} who's about to take over a
 chat from the AI. Your job: a tight 2-3 sentence summary of WHO this
 visitor is and WHAT they want, then a one-word intent tag.
 

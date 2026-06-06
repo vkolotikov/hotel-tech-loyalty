@@ -71,8 +71,17 @@ class VoicePromptBuilder
         $language = trim((string) ($user->language ?? 'auto')) ?: 'auto';
         $snapshot = $this->buildSnapshot();
 
+        // Phase 7.x — resolve the user's org industry so the voice
+        // copilot speaks the right vocabulary ("salon staff member"
+        // for beauty, "clinic staff member" for medical, etc.).
+        // Hotel keeps verbatim back-compat.
+        $industry = $user->organization_id
+            ? (\App\Models\Organization::withoutGlobalScopes()->find($user->organization_id)?->resolved_industry
+                ?? \App\Models\Organization::DEFAULT_INDUSTRY)
+            : \App\Models\Organization::DEFAULT_INDUSTRY;
+
         $sections = array_filter([
-            $this->personaSection($userName),
+            $this->personaSection($userName, $industry),
             $this->nonNegotiableRules($language),
             $this->snapshotSection($snapshot),
             $this->capabilitiesSection(),
@@ -134,11 +143,40 @@ class VoicePromptBuilder
         ];
     }
 
-    private function personaSection(string $userName): string
+    private function personaSection(string $userName, string $industry = 'hotel'): string
     {
+        // Phase 7.x — platform name + staff noun per industry. Hotel
+        // = "Hotel Tech Platform" / "hotel staff member" verbatim.
+        // Non-hotel = "HexaTech {Workspace} Platform" / "{workspace}
+        // staff member". Detail noun "guest details" stays universal
+        // for the voice copilot's sensitive-data warning since admin
+        // staff understand the meaning across industries.
+        $platform = $industry === 'hotel'
+            ? 'Hotel Tech Platform'
+            : 'HexaTech ' . ucfirst(match ($industry) {
+                'beauty'      => 'Salon',
+                'medical'     => 'Clinic',
+                'restaurant'  => 'Restaurant',
+                'legal'       => 'Firm',
+                'real_estate' => 'Agency',
+                'education'   => 'School',
+                'fitness'     => 'Studio',
+                default       => 'Workspace',
+            }) . ' Platform';
+        $staffNoun = match ($industry) {
+            'beauty'      => 'salon staff member',
+            'medical'     => 'clinic staff member',
+            'restaurant'  => 'restaurant staff member',
+            'legal'       => 'firm staff member',
+            'real_estate' => 'agency staff member',
+            'education'   => 'school staff member',
+            'fitness'     => 'studio staff member',
+            default       => 'hotel staff member',
+        };
+
         return <<<P
 # Identity
-You are the admin's AI voice copilot for the Hotel Tech Platform. You are speaking with {$userName}, a hotel staff member, by voice. This is an internal admin tool — you can discuss sensitive data: revenue, guest details, bookings, points, settings.
+You are the admin's AI voice copilot for the {$platform}. You are speaking with {$userName}, a {$staffNoun}, by voice. This is an internal admin tool — you can discuss sensitive data: revenue, customer details, bookings, points, settings.
 
 # How you sound
 Speak conversationally. Short sentences. No markdown, no bullet stacks, no inline links — these were written for screens, not for spoken output. Aim for 2-3 sentences per turn. Pause for the user before launching into a follow-up question. Skip filler openers like "Great question!" — answer directly.

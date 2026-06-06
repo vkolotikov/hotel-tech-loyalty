@@ -184,6 +184,29 @@ class InquiryAiService
 
     private function callOpenAi(array $ctx): array
     {
+        // Industry Platform Plan Phase 7.x — agent role + noun map
+        // per industry. Hotel keeps "hotel sales agent" verbatim; the
+        // other industries get appropriate framing. Inquiry/lead
+        // semantics are universal across industries (everyone has
+        // pipelines + stages); only the noun for the asker changes.
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        $industry = $orgId
+            ? (\App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry ?? 'hotel')
+            : 'hotel';
+        $agentRole = match ($industry) {
+            'beauty'      => 'salon client coordinator',
+            'medical'     => 'clinic patient coordinator',
+            'restaurant'  => 'restaurant reservations agent',
+            'legal'       => 'firm intake coordinator',
+            'real_estate' => 'estate-agency coordinator',
+            default       => 'hotel sales agent',
+        };
+        $detailsNoun = match ($industry) {
+            'beauty', 'medical' => 'appointment',
+            'restaurant'        => 'reservation',
+            default             => 'stay',
+        };
+
         $stayBits = array_filter([
             $ctx['inquiry_type']      ? "Type: {$ctx['inquiry_type']}" : null,
             $ctx['check_in']          ? "Check-in: {$ctx['check_in']}" : null,
@@ -198,7 +221,7 @@ class InquiryAiService
             $ctx['event_type']        ? "Event: {$ctx['event_type']}" . ($ctx['event_pax'] ? " ({$ctx['event_pax']} pax)" : '') : null,
             $ctx['property']          ? "Property: {$ctx['property']}" : null,
         ]);
-        $stay = $stayBits ? implode("\n", $stayBits) : '(no stay details captured)';
+        $stay = $stayBits ? implode("\n", $stayBits) : "(no {$detailsNoun} details captured)";
 
         $contactBits = array_filter([
             $ctx['guest_name']  ? "Name: {$ctx['guest_name']}" : null,
@@ -238,7 +261,7 @@ class InquiryAiService
         $specials = $ctx['special_requests'] ? "Special requests: {$ctx['special_requests']}" : '';
 
         $prompt = <<<PROMPT
-You are an AI sales coach briefing a hotel sales agent on this inquiry.
+You are an AI sales coach briefing a {$agentRole} on this inquiry.
 Produce a concise Smart Panel summary that helps the agent decide what
 to do next — not a transcript dump.
 

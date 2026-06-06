@@ -97,6 +97,20 @@ class OpenAiService
      * member's org when current_organization_id isn't bound (which
      * is the case from queued jobs / scheduled commands).
      */
+    /**
+     * Phase 7.x — resolve the current org's industry for analytical
+     * methods that don't carry a Member model. Defaults to hotel when
+     * org context isn't bound (cron / queue / fresh session).
+     */
+    private function resolveIndustryFromAuthOrg(): string
+    {
+        $orgId = \Illuminate\Support\Facades\Auth::user()?->organization_id
+            ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        if (!$orgId) return \App\Models\Organization::DEFAULT_INDUSTRY;
+        return \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+    }
+
     private function recordResponseUsage($response, string $feature, ?int $orgId = null): void
     {
         $orgId = $orgId ?? (app()->bound('current_organization_id') ? (int) app('current_organization_id') : null);
@@ -119,10 +133,26 @@ class OpenAiService
      */
     public function personalizeOffer(LoyaltyMember $member): array
     {
-        $member->loadMissing(['tier', 'bookings', 'user']);
+        $member->loadMissing(['tier', 'bookings', 'user', 'organization']);
         $stats = $this->getMemberStats($member);
 
-        $prompt = "You are a hotel loyalty program manager. Based on this member's profile, suggest ONE specific, compelling personalized offer.
+        // Phase 7.x — analytical methods are admin-facing background jobs;
+        // the model still benefits from knowing the org's industry so its
+        // offer suggestion lands in the right vocabulary ("a free
+        // 30-minute massage" for beauty, not "a free hotel night").
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $managerRole = match ($industry) {
+            'beauty'      => 'salon loyalty program manager',
+            'restaurant'  => 'restaurant loyalty program manager',
+            'legal'       => 'firm client retention manager',
+            'real_estate' => 'agency client retention manager',
+            'education'   => 'school enrolment manager',
+            'fitness'     => 'studio member retention manager',
+            default       => 'hotel loyalty program manager',
+        };
+
+        $prompt = "You are a {$managerRole}. Based on this member's profile, suggest ONE specific, compelling personalized offer.
 
 Member Profile:
 - Tier: {$member->tier->name}
@@ -155,15 +185,34 @@ Return JSON only with keys: title, description, type (discount/bonus_points/upgr
      */
     public function predictChurn(LoyaltyMember $member): float
     {
-        $member->loadMissing(['bookings', 'pointsTransactions']);
+        $member->loadMissing(['bookings', 'pointsTransactions', 'organization']);
         $stats = $this->getMemberStats($member);
 
-        $prompt = "Analyze this hotel loyalty member and return a churn risk score between 0.0 (very loyal) and 1.0 (about to churn).
+        // Phase 7.x — adapt the "loyalty member" framing to the org's
+        // industry so the model uses the right semantics for "stays" vs
+        // "appointments" vs "reservations" when scoring churn risk.
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $memberNoun = match ($industry) {
+            'beauty'      => 'salon loyalty client',
+            'restaurant'  => 'restaurant loyalty diner',
+            'medical'     => 'returning patient',
+            'fitness'     => 'studio member',
+            'education'   => 'student member',
+            default       => 'hotel loyalty member',
+        };
+        $visitNoun = match ($industry) {
+            'beauty', 'medical' => 'visit',
+            'restaurant'        => 'visit',
+            default             => 'stay',
+        };
+
+        $prompt = "Analyze this {$memberNoun} and return a churn risk score between 0.0 (very loyal) and 1.0 (about to churn).
 
 Data:
-- Days since last stay: {$stats['days_since_last_stay']}
-- Total stays: {$stats['total_stays']}
-- Stays in last 6 months: {$stats['stays_last_6m']}
+- Days since last {$visitNoun}: {$stats['days_since_last_stay']}
+- Total {$visitNoun}s: {$stats['total_stays']}
+- {$visitNoun}s in last 6 months: {$stats['stays_last_6m']}
 - Points redeemed ratio: {$stats['redemption_ratio']}
 - Tier: {$stats['tier']}
 
@@ -191,7 +240,23 @@ Return JSON only with: score (float 0-1), reason (string), recommendation (strin
      */
     public function generateInsightReport(array $kpis): string
     {
-        $prompt = "You are a hotel loyalty program analyst. Write a concise, actionable weekly insight report (3-4 paragraphs) based on these KPIs:
+        // Phase 7.x — analyst role per industry. KPIs are passed in
+        // shaped by the per-industry KpiService (Phase 6) so the
+        // model already sees industry-flavoured numbers; the analyst
+        // framing makes the prose recommendations match.
+        $industry = $this->resolveIndustryFromAuthOrg();
+        $analystRole = match ($industry) {
+            'beauty'      => 'salon loyalty program analyst',
+            'restaurant'  => 'restaurant loyalty program analyst',
+            'medical'     => 'clinic patient retention analyst',
+            'legal'       => 'firm client retention analyst',
+            'real_estate' => 'agency client retention analyst',
+            'education'   => 'school enrolment analyst',
+            'fitness'     => 'studio member retention analyst',
+            default       => 'hotel loyalty program analyst',
+        };
+
+        $prompt = "You are a {$analystRole}. Write a concise, actionable weekly insight report (3-4 paragraphs) based on these KPIs:
 " . json_encode($kpis, JSON_PRETTY_PRINT) . "
 
 Focus on: key trends, what's working, what needs attention, and 2 specific recommendations for next week.";
@@ -217,7 +282,18 @@ Focus on: key trends, what's working, what needs attention, and 2 specific recom
      */
     public function analyzeSentiment(string $text): array
     {
-        $prompt = "Analyze the sentiment of this hotel guest review. Return JSON with: sentiment (positive/neutral/negative), score (-1 to 1), key_themes (array of strings), action_required (boolean).
+        // Phase 7.x — review noun varies by industry; medical orgs
+        // typically don't surface public reviews but the method
+        // stays generic for whichever review system is plugged in.
+        $industry = $this->resolveIndustryFromAuthOrg();
+        $reviewNoun = match ($industry) {
+            'beauty'      => 'salon client review',
+            'medical'     => 'patient feedback',
+            'restaurant'  => 'restaurant review',
+            default       => 'hotel guest review',
+        };
+
+        $prompt = "Analyze the sentiment of this {$reviewNoun}. Return JSON with: sentiment (positive/neutral/negative), score (-1 to 1), key_themes (array of strings), action_required (boolean).
 
 Review: {$text}";
 
@@ -242,16 +318,38 @@ Review: {$text}";
      */
     public function suggestUpsell(LoyaltyMember $member): string
     {
-        $member->loadMissing(['tier', 'bookings', 'user']);
+        $member->loadMissing(['tier', 'bookings', 'user', 'organization']);
         $stats = $this->getMemberStats($member);
 
-        $prompt = "A hotel receptionist just scanned a loyalty card. Suggest a brief, friendly upsell script (2 sentences max) for this member:
+        // Phase 7.x — staff role + visit/resource nouns per industry.
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $staffRole = match ($industry) {
+            'beauty'      => 'salon receptionist',
+            'medical'     => 'clinic receptionist',
+            'restaurant'  => 'restaurant host',
+            'fitness'     => 'studio receptionist',
+            default       => 'hotel receptionist',
+        };
+        $visitNoun = match ($industry) {
+            'beauty', 'medical' => 'Visits',
+            'restaurant'        => 'Visits',
+            default             => 'Stays',
+        };
+        $resourceLabel = match ($industry) {
+            'beauty'      => 'Favorite treatment',
+            'medical'     => 'Frequent appointment type',
+            'restaurant'  => 'Favorite section',
+            default       => 'Favorite room',
+        };
+
+        $prompt = "A {$staffRole} just scanned a loyalty card. Suggest a brief, friendly upsell script (2 sentences max) for this member:
 
 - Name: {$member->user->name}
 - Tier: {$member->tier->name}
 - Points: {$member->current_points}
-- Stays: {$stats['total_stays']}
-- Favorite room: {$stats['favorite_room_type']}";
+- {$visitNoun}: {$stats['total_stays']}
+- {$resourceLabel}: {$stats['favorite_room_type']}";
 
         try {
             $response = OpenAI::chat()->create([

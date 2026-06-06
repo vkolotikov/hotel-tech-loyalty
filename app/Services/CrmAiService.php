@@ -90,8 +90,34 @@ class CrmAiService
         $sources   = ($settings['lead_sources'] ?? []);
         $inquiryTypes = ($settings['inquiry_types'] ?? []);
 
-        $system = "You extract guest inquiry information from raw text (emails, WhatsApp, phone notes, booking requests). "
-            . "This is a hotel CRM. Extract guest and inquiry details. "
+        // Industry Platform Plan Phase 7.x — the extraction prompt
+        // resolves the org's industry so it doesn't tell Claude
+        // "this is a hotel CRM" for a beauty salon. Hotel verbatim
+        // back-compat.
+        $industry = $this->resolveIndustry();
+        $crmFlavour = match ($industry) {
+            'beauty'      => 'beauty salon CRM',
+            'medical'     => 'medical clinic CRM',
+            'restaurant'  => 'restaurant CRM',
+            'legal'       => 'law firm CRM',
+            'real_estate' => 'real-estate agency CRM',
+            'education'   => 'education provider CRM',
+            'fitness'     => 'fitness studio CRM',
+            default       => 'hotel CRM',
+        };
+        $endUserNoun = match ($industry) {
+            'beauty'      => 'client',
+            'medical'     => 'patient',
+            'restaurant'  => 'diner',
+            'legal'       => 'client',
+            'real_estate' => 'client',
+            'education'   => 'student',
+            'fitness'     => 'member',
+            default       => 'guest',
+        };
+
+        $system = "You extract {$endUserNoun} inquiry information from raw text (emails, WhatsApp, phone notes, booking requests). "
+            . "This is a {$crmFlavour}. Extract {$endUserNoun} and inquiry details. "
             . "Room types: " . implode(', ', $roomTypes) . ". "
             . "Inquiry types: " . implode(', ', $inquiryTypes) . ". "
             . "Sources: " . implode(', ', $sources) . ".";
@@ -155,8 +181,22 @@ class CrmAiService
 
         $tiers = LoyaltyTier::where('is_active', true)->orderBy('sort_order')->pluck('name')->toArray();
 
+        // Phase 7.x — beauty/restaurant/etc. also call this for member
+        // enrolment; "hotel loyalty program" framing was misleading.
+        $industry = $this->resolveIndustry();
+        $programNoun = match ($industry) {
+            'beauty'      => 'salon client loyalty program',
+            'restaurant'  => 'restaurant loyalty program',
+            'medical'     => 'patient program',
+            'legal'       => 'firm client program',
+            'real_estate' => 'agency client program',
+            'education'   => 'school student program',
+            'fitness'     => 'studio member program',
+            default       => 'hotel loyalty program',
+        };
+
         $system = "You extract loyalty member information from raw unstructured text (emails, registration forms, business cards, WhatsApp messages, phone notes, CRM notes). "
-            . "This is a hotel loyalty program. Extract personal details for member enrollment. "
+            . "This is a {$programNoun}. Extract personal details for member enrollment. "
             . "Available tiers: " . implode(', ', $tiers) . ". Default to Bronze if unclear. "
             . "Generate a secure temporary password if none is mentioned (8+ chars, mixed case, digits).";
 
@@ -290,11 +330,49 @@ class CrmAiService
     {
         if (!$this->apiKey) return ['success' => false, 'error' => 'AI not configured — add ANTHROPIC_API_KEY to .env'];
 
-        $system = "You extract CRM customer (guest) information from raw unstructured text — email "
+        // Phase 7.x — industry-aware framing. Hotel keeps the legacy
+        // hospitality + leisure-vs-corporate distinction; service
+        // industries use a simpler individual-vs-business split.
+        $industry = $this->resolveIndustry();
+        $crmFlavour = match ($industry) {
+            'beauty'      => 'beauty salon CRM',
+            'medical'     => 'medical clinic CRM',
+            'restaurant'  => 'restaurant CRM',
+            'legal'       => 'law firm CRM',
+            'real_estate' => 'real-estate agency CRM',
+            'education'   => 'education provider CRM',
+            'fitness'     => 'fitness studio CRM',
+            default       => 'hospitality CRM',
+        };
+        $endUserNoun = match ($industry) {
+            'beauty'      => 'client',
+            'medical'     => 'patient',
+            'restaurant'  => 'diner',
+            'legal'       => 'client',
+            'real_estate' => 'client',
+            'education'   => 'student',
+            'fitness'     => 'member',
+            default       => 'guest',
+        };
+        $orgNoun = match ($industry) {
+            'beauty'      => 'salon',
+            'medical'     => 'clinic',
+            'restaurant'  => 'restaurant',
+            'legal'       => 'firm',
+            'real_estate' => 'agency',
+            'education'   => 'school',
+            'fitness'     => 'studio',
+            default       => 'hotel',
+        };
+        $distinctionClause = $industry === 'hotel'
+            ? "Distinguish individual leisure travellers ('Individual') from B2B / corporate contacts ('Corporate'). "
+            : "Distinguish individual {$endUserNoun}s ('Individual') from business / corporate contacts ('Corporate'). ";
+
+        $system = "You extract CRM customer ({$endUserNoun}) information from raw unstructured text — email "
             . "signatures, business cards, scraped contact pages, WhatsApp messages, phone notes, etc. "
-            . "This is for a hospitality CRM. Focus on people the hotel does (or might do) business with. "
-            . "Distinguish individual leisure travellers ('Individual') from B2B / corporate contacts "
-            . "('Corporate'). When in doubt about VIP / importance, leave them blank — never invent. "
+            . "This is for a {$crmFlavour}. Focus on people the {$orgNoun} does (or might do) business with. "
+            . $distinctionClause
+            . "When in doubt about VIP / importance, leave them blank — never invent. "
             . "Phone numbers should be normalised to international format with the country code when "
             . "the surrounding context implies one.";
 
@@ -344,8 +422,22 @@ class CrmAiService
         $rateTypes  = ($settings['rate_types'] ?? []);
         $managers   = ($settings['account_managers'] ?? []);
 
+        // Phase 7.x — flavour the CRM type. Rate types stay
+        // hotel-flavoured by default (admin sets these in CrmSetting)
+        // so the hotel back-compat is preserved even for non-hotel
+        // orgs that haven't reconfigured the rate-type list.
+        $industry = $this->resolveIndustry();
+        $crmFlavour = match ($industry) {
+            'beauty'      => 'beauty salon CRM',
+            'medical'     => 'medical clinic CRM',
+            'restaurant'  => 'restaurant CRM',
+            'legal'       => 'law firm CRM',
+            'real_estate' => 'real-estate agency CRM',
+            default       => 'hotel CRM',
+        };
+
         $system = "You extract corporate account information from raw unstructured text (emails, contracts, proposals, business cards, meeting notes). "
-            . "This is a hotel CRM for managing corporate clients with negotiated rates. "
+            . "This is a {$crmFlavour} for managing corporate clients with negotiated rates. "
             . "Industries: " . implode(', ', $industries ?: ['Technology', 'Finance', 'Healthcare', 'Hospitality', 'Government', 'Education', 'Other']) . ". "
             . "Rate types: " . implode(', ', $rateTypes ?: ['BAR', 'Corporate', 'Government', 'Wholesale']) . ". "
             . "Account managers: " . implode(', ', $managers ?: []) . ".";
@@ -392,6 +484,21 @@ class CrmAiService
     }
 
     /* ────────── Claude HTTP ────────── */
+
+    /**
+     * Industry Platform Plan Phase 7.x — single source of truth for
+     * the org's industry inside CrmAiService. Resolved once per call
+     * site (extract methods + buildSystemPrompt). Defaults to hotel
+     * when org context isn't bound.
+     */
+    private function resolveIndustry(): string
+    {
+        $orgId = \Illuminate\Support\Facades\Auth::user()?->organization_id
+            ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        if (!$orgId) return \App\Models\Organization::DEFAULT_INDUSTRY;
+        return \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+    }
 
     private function call(string $system, array $messages, array $tools, ?array $toolChoice = null): array
     {
