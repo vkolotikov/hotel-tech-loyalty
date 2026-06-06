@@ -54,7 +54,22 @@
                   <p style="margin:2px 0 0;font-size:11px;color:#8e8e93;">awaiting human reply</p>
                 </td>
                 <td width="50%" style="background:#f5f5f7;border-radius:10px;padding:14px 16px;">
-                  <p style="margin:0;font-size:10px;letter-spacing:0.8px;font-weight:700;color:#8e8e93;text-transform:uppercase;">Booking-page · no contact</p>
+                  {{-- Phase 8.x — "Booking-page · no contact" label
+                       flexes per industry: appointment / reservation /
+                       services / etc. Service backend sets
+                       $industry on this payload. --}}
+                  @php
+                    $pageLabel = match ($industry ?? 'hotel') {
+                        'beauty', 'medical' => 'Appointment page · no contact',
+                        'restaurant'        => 'Reservation page · no contact',
+                        'legal'             => 'Consultation page · no contact',
+                        'real_estate'       => 'Viewing page · no contact',
+                        'education'         => 'Enrolment page · no contact',
+                        'fitness'           => 'Class page · no contact',
+                        default             => 'Booking-page · no contact',
+                    };
+                  @endphp
+                  <p style="margin:0;font-size:10px;letter-spacing:0.8px;font-weight:700;color:#8e8e93;text-transform:uppercase;">{{ $pageLabel }}</p>
                   <p style="margin:6px 0 0;font-size:30px;font-weight:800;color:#0a84ff;">{{ $booking_visitors_unconverted }}</p>
                   <p style="margin:2px 0 0;font-size:11px;color:#8e8e93;">missed conversions yesterday</p>
                 </td>

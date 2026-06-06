@@ -112,8 +112,27 @@ class EngagementDailySummaryService
             ->where('is_lead', false)
             ->count();
 
+        // Industry Platform Plan Phase 8.x — surface the org's
+        // industry alongside the existing payload so the Mailable +
+        // Blade can flex the subject + body copy ("Your salon" vs
+        // "Your hotel", "Booking-page no-conversion" vs "Appointment-
+        // page no-conversion"). Hotel verbatim back-compat.
+        $industry = $org?->resolved_industry ?? Organization::DEFAULT_INDUSTRY;
+        $workspaceLabel = match ($industry) {
+            'beauty'      => 'salon',
+            'medical'     => 'clinic',
+            'restaurant'  => 'restaurant',
+            'legal'       => 'firm',
+            'real_estate' => 'agency',
+            'education'   => 'school',
+            'fitness'     => 'studio',
+            default       => 'hotel',
+        };
+
         return [
-            'org_name'                     => (string) ($org?->name ?? 'Your hotel'),
+            'org_name'                     => (string) ($org?->name ?? ('Your ' . $workspaceLabel)),
+            'industry'                     => $industry,
+            'workspace_label'              => $workspaceLabel,
             'date_label'                   => $orgNow->copy()->subDay()->translatedFormat('l, j F Y'),
             'timezone'                     => $tz,
             'hot_leads_count'              => $hotLeadsCount,

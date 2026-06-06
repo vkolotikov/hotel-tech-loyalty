@@ -90,8 +90,27 @@ class LoyaltyDigestService
             ->whereHas('pointsTransactions', fn ($q) => $q->where('points', '>', 0))
             ->count();
 
+        // Phase 8.x — surface industry + workspace label so the
+        // Blade can flex copy ("Your salon's loyalty" vs "Your hotel's
+        // loyalty"). Hotel verbatim back-compat. Medical orgs
+        // shouldn't reach this digest (hasLoyalty=false) but the
+        // workspace fallback is defensive.
+        $industry = $org?->resolved_industry ?? Organization::DEFAULT_INDUSTRY;
+        $workspaceLabel = match ($industry) {
+            'beauty'      => 'salon',
+            'medical'     => 'clinic',
+            'restaurant'  => 'restaurant',
+            'legal'       => 'firm',
+            'real_estate' => 'agency',
+            'education'   => 'school',
+            'fitness'     => 'studio',
+            default       => 'hotel',
+        };
+
         return [
-            'org_name'             => (string) ($org?->name ?? 'Your hotel'),
+            'org_name'             => (string) ($org?->name ?? ('Your ' . $workspaceLabel)),
+            'industry'             => $industry,
+            'workspace_label'      => $workspaceLabel,
             'date_label'           => $orgNow->copy()->subDay()->translatedFormat('l, j F Y'),
             'timezone'             => $tz,
             'new_members'          => $newMembers,
