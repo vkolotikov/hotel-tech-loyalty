@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset } from '../hooks/useTheme'
+import { useVocabulary } from '../lib/vocabulary'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -270,6 +271,11 @@ export function Settings() {
   const { hasFeature, hasProduct } = useSubscription()
   const qc = useQueryClient()
   const { t } = useTranslation()
+  // Phase 3 — wraps tab + tile labels so "Hotel Info" reads "Business
+  // Info" on beauty, "Practice Info" on medical, "Venue Info" on
+  // restaurant. Tab `id` stays canonical — `?tab=general` deep-links
+  // keep working on every industry.
+  const vocab = useVocabulary()
   // Active tab persists to the URL via ?tab= so refreshes + deep links
   // land on the same place. 'home' = the grid index (default).
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1980,10 +1986,15 @@ export function Settings() {
           }
 
           const q = homeSearch.trim().toLowerCase()
+          // Phase 3 — search ALSO matches the industry-relabelled name,
+          // so a beauty admin searching "business" finds the Hotel Info
+          // tab (relabelled to "Business Info"). Canonical English
+          // "hotel" still matches too, so muscle memory keeps working.
           const filteredTabs = !q ? visibleTabs : visibleTabs.filter(tile => {
-            const label = t(`settings.tabs.${tile.id}`, tile.label).toLowerCase()
+            const canonical = t(`settings.tabs.${tile.id}`, tile.label).toLowerCase()
+            const industry = (vocab(tile.label) ?? '').toLowerCase()
             const desc = t(`settings.descs.${tile.id}`, tile.desc).toLowerCase()
-            return label.includes(q) || desc.includes(q)
+            return canonical.includes(q) || industry.includes(q) || desc.includes(q)
           })
 
           return (
@@ -2052,7 +2063,7 @@ export function Settings() {
 
                       <div className="relative mt-auto">
                         <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                          {t(`settings.tabs.${tile.id}`, tile.label)}
+                          {vocab(tile.label) ?? t(`settings.tabs.${tile.id}`, tile.label)}
                         </h3>
                         <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">
                           {t(`settings.descs.${tile.id}`, tile.desc)}
@@ -2069,7 +2080,12 @@ export function Settings() {
         // Non-home: slim breadcrumb + content. Breadcrumb tail
         // (description) dropped 2026-05-30 to match the other hubs.
         const TIcon = tab.icon
-        const label = t(`settings.tabs.${tab.id}`, tab.label)
+        // Industry Platform Plan Phase 3 — vocabulary override flexes
+        // tab labels per industry ("Hotel Info" → "Business Info" for
+        // beauty, "Practice Info" for medical, "Venue Info" for
+        // restaurant). The tab `id` ('general') stays canonical so
+        // `?tab=general` deep-links keep working on every industry.
+        const label = vocab(tab.label) ?? t(`settings.tabs.${tab.id}`, tab.label)
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">

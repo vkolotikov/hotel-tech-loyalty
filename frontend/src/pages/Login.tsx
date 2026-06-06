@@ -111,7 +111,14 @@ const BRAND_LOGO_URL =
   (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
   `${import.meta.env.BASE_URL}hotel-tech-logo.png`
 
-function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact?: boolean }) {
+function BrandMark({ onClick, compact = false, brand = 'HotelTech', monogram = 'HT' }: {
+  onClick?: () => void
+  compact?: boolean
+  /** Industry Platform Plan Phase 3 — sub-brand display name in the SVG fallback. */
+  brand?: string
+  /** Two-letter monogram on the tile. */
+  monogram?: string
+}) {
   const [failed, setFailed] = useState(false)
   const Wrapper = onClick ? 'button' : 'div'
   const height = compact ? 56 : 72
@@ -121,7 +128,7 @@ function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact
       <Wrapper onClick={onClick} className="relative z-10 inline-flex items-center gap-3 text-left">
         <img
           src={BRAND_LOGO_URL}
-          alt="HotelTech"
+          alt={brand}
           onError={() => setFailed(true)}
           style={{ height, width: 'auto', display: 'block' }}
           className="drop-shadow-lg"
@@ -132,10 +139,28 @@ function BrandMark({ onClick, compact = false }: { onClick?: () => void; compact
 
   return (
     <Wrapper onClick={onClick} className="relative z-10 inline-flex items-center gap-3 text-left">
-      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">HT</span>
-      <span className="text-[17px] font-semibold">HotelTech</span>
+      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">{monogram}</span>
+      <span className="text-[17px] font-semibold">{brand}</span>
     </Wrapper>
   )
+}
+
+/** Per-industry monogram for the BrandMark SVG fallback.
+ * Restaurant is 'HX' (HospitalityTech) to disambiguate from
+ * hotel's 'HT' — when the BRAND_LOGO_URL image fails to load, both
+ * brands would otherwise show the same two-letter monogram and
+ * destroy the per-sub-brand visual distinction. The four GTM-
+ * deferred industries (legal / real_estate / education / fitness)
+ * also use 'HX' since they fall back to the umbrella brand. */
+const INDUSTRY_MONOGRAM: Record<IndustryId, string> = {
+  hotel: 'HT',
+  beauty: 'BT',
+  medical: 'MT',
+  restaurant: 'HX',
+  legal: 'HX',
+  real_estate: 'HX',
+  education: 'HX',
+  fitness: 'HX',
 }
 
 /**
@@ -731,7 +756,11 @@ export function Login() {
         <div aria-hidden className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full blur-[80px] bg-blue-500/40 pointer-events-none" />
         <div aria-hidden className="absolute -bottom-36 -right-24 w-[380px] h-[380px] rounded-full blur-[80px] bg-sky-400/30 pointer-events-none" />
 
-        <BrandMark onClick={() => navigate('/login')} />
+        <BrandMark
+          onClick={() => navigate('/login')}
+          brand={industryCopy.brand}
+          monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HT'}
+        />
 
         <div className="relative z-10 max-w-[520px]">
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
@@ -775,7 +804,12 @@ export function Login() {
         }}
       >
         <div className="lg:hidden mb-6 self-start">
-          <BrandMark onClick={() => navigate('/login')} compact />
+          <BrandMark
+            onClick={() => navigate('/login')}
+            compact
+            brand={industryCopy.brand}
+            monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HT'}
+          />
         </div>
 
         <div className={`w-full mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? 'max-w-[440px] lg:max-w-[940px]' : 'max-w-[440px]'}`}>

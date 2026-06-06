@@ -7,6 +7,7 @@ import {
   Check, Info, Wrench,
 } from 'lucide-react'
 import { useSettings } from '../lib/crmSettings'
+import { useVocabulary } from '../lib/vocabulary'
 
 /**
  * Settings → Team. Lists every staff member in the org and lets
@@ -423,6 +424,13 @@ function SectionPicker({ availableGroups, value, onChange }: {
   value: string[] | null
   onChange: (v: string[] | null) => void
 }) {
+  // Phase 3 — surface the industry-localised name next to each
+  // canonical section name. The whitelist storage continues to use
+  // the canonical English `g` value (so an industry switch doesn't
+  // silently change what staff can see); the admin sees the
+  // industry-correct label as primary with the canonical chip beside
+  // it for unambiguous identification.
+  const vocab = useVocabulary()
   const isAll = !value || value.length === 0
   const toggle = (g: string) => {
     const cur = value ?? []
@@ -443,6 +451,7 @@ function SectionPicker({ availableGroups, value, onChange }: {
       <div className="space-y-1">
         {availableGroups.map(g => {
           const checked = !isAll && (value ?? []).includes(g)
+          const localised = vocab(g)
           return (
             <button key={g} onClick={() => toggle(g)}
               className={'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ' +
@@ -450,7 +459,12 @@ function SectionPicker({ availableGroups, value, onChange }: {
               <span className={'w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
                 {checked && <Check size={9} className="text-black" />}
               </span>
-              <span>{g}</span>
+              <span>{localised ?? g}</span>
+              {localised && (
+                <span className="text-[9px] text-gray-500 uppercase tracking-wide ml-auto" title="Saved permissions use this canonical English label">
+                  ({g})
+                </span>
+              )}
             </button>
           )
         })}

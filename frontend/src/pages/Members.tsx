@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Upload, CheckSquare, Square, Users, TrendingUp, Coins, Crown, ArrowUpDown, MessageCircle, Gift } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
+import { useVocabulary } from '../lib/vocabulary'
 import { triggerExport, useSettings } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
@@ -90,6 +91,7 @@ export function Members() {
     + (memberFields.list.joined ? 1 : 0)
     + (memberFields.list.status ? 1 : 0)
   const { t } = useTranslation()
+  const vocab = useVocabulary()
 
   // Gate render: while we don't know yet, show nothing; once we
   // know, either show the wizard or fall through to the real page.
@@ -288,7 +290,7 @@ export function Members() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('members.title', 'Members')}</h1>
+          <h1 className="text-2xl font-bold text-white">{vocab('Members') ?? t('members.title', 'Members')}</h1>
           <p className="text-sm text-t-secondary mt-0.5">{t('members.total', { count: (data as any)?.total ?? 0, defaultValue: '{{count}} total members' })}</p>
         </div>
         <div className="flex items-center gap-2">

@@ -33,6 +33,7 @@ import { BrandSwitcher } from './BrandSwitcher'
 // menu" to the user.
 import { LangSwitcher } from './LangSwitcher'
 import { useTranslation } from 'react-i18next'
+import { useVocabulary } from '../lib/vocabulary'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -183,6 +184,15 @@ const NAV_GROUPS_KEY = 'loyalty-nav-groups'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
+  // Industry Platform Plan Phase 3 — `vocab(defaultLabel)` returns an
+  // industry-specific override (e.g. 'Reservations' → 'Appointments'
+  // for beauty/medical) or null when no override applies. Wrap every
+  // sidebar label resolution so the displayed string flexes per
+  // industry while the `defaultLabel` identity (used by saved
+  // hidden_nav_groups + allowed_nav_groups whitelists) stays
+  // canonical. Whitelists never silently change meaning on industry
+  // switch.
+  const vocab = useVocabulary()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   // Persist per-group expand/collapse state. Groups default to OPEN
   // (missing key = open) — only an explicit `false` means the user
@@ -476,7 +486,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="w-7 h-7 bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Hotel size={15} />
               </div>
-              {!displayCollapsed && <span className="font-bold text-sm truncate">Hotel Loyalty</span>}
+              {!displayCollapsed && <span className="font-bold text-sm truncate">{vocab('Hotel Loyalty') ?? 'Hotel Loyalty'}</span>}
             </>
           )}
           {/* Mobile close button */}
@@ -492,7 +502,24 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Nav */}
         <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
           {visibleGroups.map(({ labelKey, defaultLabel, items, accent }) => {
-            const groupLabel = t(labelKey, defaultLabel)
+            // Phase 3 fallback chain:
+            //   1. vocab(defaultLabel) — industry-specific EN override
+            //   2. t(labelKey, defaultLabel) — i18n translation chain
+            //
+            // **EN-only first ship**. A Russian beauty admin sees
+            // 'Clients' (English vocab override) instead of the Russian
+            // 'Участники' they'd get for the generic Members label.
+            // RU/DE/FR/ES vocabulary follow-up is Phase 3.x. Hotel orgs
+            // (all languages) are unaffected — VOCABULARY.hotel is
+            // empty, so vocab() returns null and i18n chain wins.
+            //
+            // **defaultLabel is the IDENTITY key for the whitelist
+            // storage** (hiddenNavGroups + allowed_nav_groups). The
+            // `key=`, `expandedGroups`, hidden-list check, and per-user
+            // allowed check all continue to use defaultLabel — vocab is
+            // rendering-only. Switching industry never silently changes
+            // what an org has hidden.
+            const groupLabel = vocab(defaultLabel) ?? t(labelKey, defaultLabel)
             const isOpen = displayCollapsed || expandedGroups[defaultLabel] !== false // default open
             // hex8 helper — convert "#rrggbb" to rgba with the supplied alpha.
             // Used for the active-state tint so each group's highlight
@@ -525,7 +552,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
                 {/* Group items */}
                 {isOpen && items.map(({ path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths }) => {
-                  const itemLabel = t(itemLabelKey, itemDefault)
+                  const itemLabel = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
                   const active = path === '/'
                     ? location.pathname === '/'
                     : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p)))
@@ -623,7 +650,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="h-7 max-w-[120px] object-contain" />
             ) : (
-              <span className="font-semibold text-sm truncate">Hotel Loyalty</span>
+              <span className="font-semibold text-sm truncate">{vocab('Hotel Loyalty') ?? 'Hotel Loyalty'}</span>
             )}
           </div>
           <div className="flex-1" />

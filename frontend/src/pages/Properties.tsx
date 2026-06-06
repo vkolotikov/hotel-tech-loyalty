@@ -4,6 +4,7 @@ import { api, resolveImage } from '../lib/api'
 import { Building2, Plus, Pencil, X, Store, Upload, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { PairTabs, LOCATIONS_TABS } from '../components/PairTabs'
+import { useVocabulary } from '../lib/vocabulary'
 
 interface Property {
   id: number
@@ -34,6 +35,7 @@ const OUTLET_TYPES = ['restaurant', 'bar', 'spa', 'gift_shop', 'room_service', '
 
 export function Properties() {
   const qc = useQueryClient()
+  const vocab = useVocabulary()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyPropertyForm)
@@ -151,7 +153,7 @@ export function Properties() {
     <div className="space-y-6">
       <PairTabs tabs={LOCATIONS_TABS} />
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Properties</h1>
+        <h1 className="text-2xl font-bold text-white">{vocab('Properties') ?? 'Properties'}</h1>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyPropertyForm); clearImage() }}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Plus size={16} /> Add Property

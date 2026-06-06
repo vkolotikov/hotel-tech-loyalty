@@ -6,6 +6,7 @@ import {
   Bot, Users, BedDouble, FileText, ClipboardList, LayoutDashboard, Settings as SettingsIcon,
   Eye, EyeOff, Save, Info, Zap, ArrowRight,
 } from 'lucide-react'
+import { useVocabulary } from '../lib/vocabulary'
 
 /**
  * Settings → Menu. Lets admins hide / show the optional left-sidebar
@@ -44,6 +45,12 @@ const LOCKED: { label: string; icon: any; reason: string }[] = [
 
 export function MenuSettings() {
   const qc = useQueryClient()
+  // Phase 3 — render an industry-flexed display label next to the
+  // canonical English label. CRITICAL: the saved `hidden_nav_groups`
+  // array is keyed by CANONICAL label (the `g.label` field below) so
+  // an industry switch never silently changes what an org has hidden.
+  // Admin sees both labels so they understand what they're toggling.
+  const vocab = useVocabulary()
 
   const { data: rawSettings } = useQuery<Record<string, any>>({
     queryKey: ['crm-settings'],
@@ -128,8 +135,17 @@ export function MenuSettings() {
                   <Icon size={15} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={'text-sm font-bold ' + (isHidden ? 'line-through text-gray-500' : 'text-white')}>
-                    {g.label}
+                  <div className={'text-sm font-bold flex items-baseline gap-2 ' + (isHidden ? 'line-through text-gray-500' : 'text-white')}>
+                    <span>{vocab(g.label) ?? g.label}</span>
+                    {/* Show the canonical English identity in a small chip
+                        when the displayed label differs — so the admin
+                        understands the toggle still keys on
+                        "Members & Loyalty" regardless of industry. */}
+                    {vocab(g.label) && (
+                      <span className="text-[10px] font-normal text-gray-500 uppercase tracking-wide" title="Saved settings use this canonical English label">
+                        ({g.label})
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-gray-500 line-clamp-1">{g.description}</div>
                 </div>
