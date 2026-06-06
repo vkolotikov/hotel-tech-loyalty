@@ -59,13 +59,63 @@ class LoyaltyPresetService
     }
 
     /**
+     * Industry Platform Plan Phase 5 — alias resolution for canonical
+     * industry ids that don't have a dedicated preset entry. Lets
+     * `AuthController::startTrial` pass the org's `industry` directly
+     * without knowing whether it maps to a hotel_classic / restaurant /
+     * simple_two_tier preset id.
+     *
+     * `medical` is intentionally NOT in this map — it short-circuits
+     * to no-op (decision #5: no patient loyalty program).
+     *
+     * The picker (POST /v1/admin/loyalty-presets/apply) keeps showing
+     * the 6 canonical preset cards; aliases are an inbound resolution
+     * concern for the industry-platform dispatcher only.
+     */
+    private const ALIASES = [
+        'hotel'       => 'hotel_classic',
+        'hospitality' => 'restaurant',
+        'legal'       => 'simple_two_tier',
+        'real_estate' => 'simple_two_tier',
+        'education'   => 'simple_two_tier',
+    ];
+
+    /**
      * Apply a membership preset. Returns a summary.
      *
-     * @return array{tiers_set:int,tiers_added:int,benefits_added:int,members_on_tiers:int,replaced:bool}
+     * @return array{tiers_set:int,tiers_added:int,benefits_added:int,members_on_tiers:int,replaced:bool,noop?:bool}
      */
     public function apply(string $key, int $organizationId): array
     {
-        $preset = self::PRESETS[$key] ?? null;
+        // Phase 5 — medical short-circuit. Decision #5 says no patient
+        // loyalty program. Stamp `members_preset='medical'` so the
+        // picker can render the dismissed state (LoyaltyPresetController
+        // surfaces the active key), but write NOTHING to LoyaltyTier /
+        // BenefitDefinition / HotelSetting. The existing additive-by-
+        // name guards inside the transaction would never wipe pre-
+        // existing tiers, but skipping the entire transaction avoids
+        // any chance of a transient DB write on a clean slate.
+        if ($key === 'medical') {
+            CrmSetting::updateOrCreate(
+                ['key' => 'members_preset'],
+                ['value' => $key],
+            );
+            return [
+                'tiers_set'        => 0,
+                'tiers_added'      => 0,
+                'benefits_added'   => 0,
+                'members_on_tiers' => 0,
+                'replaced'         => false,
+                'noop'             => true,
+            ];
+        }
+
+        // Phase 5 — alias resolution. The persisted picker stamp at
+        // the end of this method continues to use the RAW input `$key`
+        // (admin's actual choice) so listPresets() highlights the
+        // correct card.
+        $resolvedKey = self::ALIASES[$key] ?? $key;
+        $preset = self::PRESETS[$resolvedKey] ?? null;
         if (!$preset) {
             throw new \InvalidArgumentException("Unknown membership preset '{$key}'.");
         }
@@ -79,16 +129,32 @@ class LoyaltyPresetService
         ];
 
         DB::transaction(function () use ($preset, $key, $organizationId, &$summary) {
-            // Count members already assigned to a tier. If zero, it's
-            // safe to replace cleanly; otherwise we add-only to keep
-            // their tier history intact.
+            // Tier-wipe safety: count ANY member rows for the org, not
+            // just members with `tier_id IS NOT NULL`. A real-estate org
+            // that imported 5k client contacts before configuring tiers
+            // would have member rows with `tier_id = null` — under the
+            // old `whereNotNull('tier_id')` count those orgs would still
+            // hit the clean-replace branch and lose any tier ladder the
+            // admin had since added. Reviewer-flagged data-integrity
+            // bug — the additive-by-name path is the safer default for
+            // any org that already holds member data.
+            $totalMembers = LoyaltyMember::withoutGlobalScopes()
+                ->where('organization_id', $organizationId)
+                ->count();
             $assigned = LoyaltyMember::withoutGlobalScopes()
                 ->where('organization_id', $organizationId)
                 ->whereNotNull('tier_id')
                 ->count();
             $summary['members_on_tiers'] = $assigned;
 
-            if ($assigned === 0) {
+            // Clean-replace ONLY when there are zero members of any
+            // kind. Any member presence — even without a tier_id —
+            // routes to the additive-by-name path. members_on_tiers
+            // continues to report the strictly-assigned count for
+            // historical compatibility.
+            $canReplace = $totalMembers === 0;
+
+            if ($canReplace) {
                 // Clean replacement — only safe when no member rows
                 // reference any tier. Use withoutGlobalScopes to make
                 // sure we're operating on the right org's rows.
@@ -142,11 +208,24 @@ class LoyaltyPresetService
                 $summary['benefits_added']++;
             }
 
-            // Welcome bonus — hotel_setting key/value.
-            HotelSetting::withoutGlobalScopes()->updateOrCreate(
-                ['organization_id' => $organizationId, 'key' => 'welcome_bonus_points'],
-                ['value' => (string) ($preset['welcome_bonus'] ?? 500), 'type' => 'number', 'group' => 'loyalty', 'label' => 'Welcome Bonus Points'],
-            );
+            // Welcome bonus — same data-safety philosophy as tiers +
+            // benefits: only write when the org has no existing
+            // members. An org with 500 members joined under a
+            // hand-tuned 500-point bonus would otherwise have it
+            // silently flipped to the new preset's default (e.g. 100
+            // for beauty) and every new signup from that moment on
+            // would get the lower bonus with no admin notice.
+            // First-signup orgs (totalMembers === 0) still get the
+            // industry-appropriate seed.
+            if ($canReplace) {
+                HotelSetting::withoutGlobalScopes()->updateOrCreate(
+                    ['organization_id' => $organizationId, 'key' => 'welcome_bonus_points'],
+                    ['value' => (string) ($preset['welcome_bonus'] ?? 500), 'type' => 'number', 'group' => 'loyalty', 'label' => 'Welcome Bonus Points'],
+                );
+                $summary['welcome_bonus_set'] = (int) ($preset['welcome_bonus'] ?? 500);
+            } else {
+                $summary['welcome_bonus_preserved'] = true;
+            }
 
             // Stamp the active preset so the picker can highlight it.
             CrmSetting::updateOrCreate(

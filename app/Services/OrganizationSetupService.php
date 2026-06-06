@@ -173,7 +173,7 @@ class OrganizationSetupService
 
                 // Seed an assistant identity from the industry + company
                 // name so the first chat doesn't feel generic.
-                $identity = $this->defaultIdentityFor($industry, $org->name);
+                $identity = self::defaultIdentityFor($industry, $org->name);
                 $behavior = ChatbotBehaviorConfig::firstOrNew(['organization_id' => $org->id]);
                 if (!$behavior->identity)       $behavior->identity = $identity;
                 if (!$behavior->assistant_name) $behavior->assistant_name = $org->name . ' Assistant';
@@ -218,7 +218,16 @@ class OrganizationSetupService
      * already sounds appropriate to the vertical. Admins can rewrite
      * it any time from Settings → AI Chat.
      */
-    private function defaultIdentityFor(string $industry, string $orgName): string
+    /**
+     * Industry Platform Plan Phase 5 — promoted from `private` to
+     * `public static` so `IndustryPresetService::apply()` can re-stamp
+     * `ChatbotBehaviorConfig.identity` when an admin switches industry
+     * (today: identity is set ONCE on first onboarding via
+     * `onboardWithIndustry()` and never refreshed). Same body — no
+     * behavioural change for the existing call site at line 176, which
+     * keeps invoking via `self::defaultIdentityFor(...)`.
+     */
+    public static function defaultIdentityFor(string $industry, string $orgName): string
     {
         return match ($industry) {
             'beauty'      => "You are the AI assistant for {$orgName}, a beauty & spa salon. Help visitors with treatment info, pricing, and booking. Friendly, warm tone.",

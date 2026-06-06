@@ -548,25 +548,44 @@ class AuthController extends Controller
                     'Lost-reason taxonomy will be reseeded (in-use reasons soft-deactivated, never deleted)',
                     'Custom fields will be reseeded (existing custom_data on entities is preserved)',
                     'Planner task groups + templates will be replaced (admin manual templates are kept)',
+                    // Phase 5 — loyalty-side reshapes now happen inside
+                    // the same transaction. Surface them so the
+                    // acknowledge gate is honest:
+                    //   - tiers + benefits add by name (existing rows
+                    //     preserved when org already has members)
+                    //   - welcome bonus is ONLY rewritten when org has
+                    //     zero members (a hotel admin's hand-tuned bonus
+                    //     never silently flips to a different industry's
+                    //     default)
+                    //   - medical short-circuits to no loyalty reshape
+                    //     (decision #5)
+                    ($industry === 'medical'
+                        ? 'Loyalty: medical industry has no loyalty program (existing tiers / benefits / welcome bonus stay; no new ones added)'
+                        : 'Loyalty tiers + benefits will be added by name (existing tiers + benefits preserved); welcome bonus reseeded ONLY for orgs without members'),
+                    'Chatbot identity blurb will be re-seeded for ' . $industry . ' (custom assistant_name stays)',
                     'Existing customer / member / reservation / booking data is NOT deleted',
-                    // NB: chatbot identity re-application is intentionally
-                    // NOT promised here today. Phase 7 (industry-aware
-                    // AI prompts) will own that re-seed via
-                    // ChatbotBehaviorConfig — until then the existing
-                    // identity stays in place across industry switches.
                 ],
             ], 409);
         }
 
         $beforeIndustry = $org->resolved_industry;
 
+        $loyaltySummary = null;
         try {
-            \DB::transaction(function () use ($org, $industry) {
+            \DB::transaction(function () use ($org, $industry, &$loyaltySummary) {
                 $org->industry = $industry;
                 $org->save();
 
                 app(\App\Services\IndustryPresetService::class)->apply($industry);
                 app(\App\Services\PlannerPresetService::class)->apply($industry);
+                // Phase 5 — Loyalty preset now resolves the canonical
+                // industry id (medical → no-op; hospitality →
+                // restaurant; legal / real_estate / education →
+                // simple_two_tier; hotel → hotel_classic) so the
+                // industry switcher writes industry-appropriate tiers +
+                // benefits + welcome bonus instead of stranding the org
+                // on the previous industry's loyalty config.
+                $loyaltySummary = app(\App\Services\LoyaltyPresetService::class)->apply($industry, $org->id);
             });
         } catch (\Throwable $e) {
             report($e);
@@ -584,17 +603,32 @@ class AuthController extends Controller
         \App\Models\AuditLog::record(
             'industry.applied',
             $org,
-            ['industry' => $industry, 'acknowledge' => (bool) ($validated['acknowledge'] ?? false)],
+            [
+                'industry'        => $industry,
+                'acknowledge'     => (bool) ($validated['acknowledge'] ?? false),
+                // Phase 5 — surface loyalty no-op signal + summary so
+                // an audit-log reader can distinguish a real loyalty
+                // reshape (hotel→beauty: tiers added by name) from a
+                // medical short-circuit (no tiers touched).
+                'loyalty_noop'    => (bool) ($loyaltySummary['noop'] ?? false),
+                'loyalty_summary' => $loyaltySummary,
+            ],
             ['industry' => $beforeIndustry],
             $user,
             "Industry switched: {$beforeIndustry} → {$industry}"
+            . (($loyaltySummary['noop'] ?? false) ? ' (loyalty no-op — medical industry)' : '')
         );
 
         return response()->json([
-            'message'  => 'Industry applied.',
-            'industry' => $industry,
-            'from'     => $beforeIndustry,
-            'changed'  => true,
+            'message'         => 'Industry applied.',
+            'industry'        => $industry,
+            'from'            => $beforeIndustry,
+            'changed'         => true,
+            // Phase 5 — surface the loyalty summary so the UI can
+            // render a "what was just done" confirmation (e.g. "5
+            // tiers added by name, 0 benefits replaced, welcome bonus
+            // preserved (existing members)").
+            'loyalty_summary' => $loyaltySummary,
         ]);
     }
 
@@ -904,50 +938,87 @@ class AuthController extends Controller
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
         }
 
-        // Phase 2 — apply industry presets atomically against the new
-        // org. CRM (pipeline / stages / lost reasons / 6 entity field
-        // layouts / custom fields) + Planner (groups + templates).
-        // Loyalty preset deferred to Phase 5 (taxonomy misalignment —
-        // `LoyaltyPresetService` uses `hotel_classic` / `hotel_lite` /
-        // `simple_two_tier`, no `medical` / `legal` / `real_estate` /
-        // `education` keys yet).
+        // Industry Platform Plan Phase 2 + Phase 5 — apply industry
+        // presets atomically against the new org. Three services:
         //
-        // Wrapped in ONE outer DB::transaction so a Planner-preset
-        // failure rolls back the CRM-preset writes too — the org never
-        // lives in a half-applied state where the pipeline is on the
-        // new industry but planner_groups still hold the previous /
-        // empty layout. Both preset services internally use
-        // DB::transaction, which compose as Postgres SAVEPOINTs;
-        // failure at any level propagates and the outer rolls back
-        // cleanly. Neither service does external side effects (HTTP /
-        // queue), so DB rollback is a complete reversal.
+        //   1. IndustryPresetService — CRM (pipeline / stages / lost
+        //      reasons / 6 entity field layouts / custom fields) +
+        //      ChatbotBehaviorConfig identity re-seed (Phase 5).
+        //   2. PlannerPresetService — task groups + starter templates.
+        //   3. LoyaltyPresetService — tiers + benefits + welcome bonus.
         //
-        // The whole block is wrapped in a single try/catch — a preset
-        // failure does NOT block the signup; the user lands in the
-        // admin and the Phase 2 retry UX (apply-industry endpoint)
-        // picks up via the audit-row signal `signup.preset_apply_failed`.
+        // Phase 5 unblock: LoyaltyPresetService now resolves canonical
+        // industry ids via internal ALIASES:
+        //   - hotel       → hotel_classic
+        //   - hospitality → restaurant
+        //   - legal / real_estate / education → simple_two_tier
+        //   - medical     → SHORT-CIRCUITS to a no-op that stamps
+        //     `members_preset='medical'` without writing tiers /
+        //     benefits / welcome bonus (decision #5: no patient
+        //     loyalty program).
+        //
+        // First-signup orgs hit `totalMembers === 0` → clean-replace
+        // path → tiers, benefits, and welcome_bonus_points all written
+        // fresh. Existing-data orgs (members already present) skip
+        // tier replacement entirely (additive-by-name) AND skip the
+        // welcome bonus rewrite (prevents silently flipping a hotel
+        // org's hand-tuned 500 → beauty's 100).
+        //
+        // All three services compose as Postgres SAVEPOINTs inside the
+        // outer DB::transaction — atomic commit or atomic rollback.
+        // None do external side effects (HTTP / queue), so DB rollback
+        // is a complete reversal.
+        //
+        // The block is wrapped in a single try/catch. A preset failure
+        // does NOT block signup — the user lands in the admin and the
+        // Phase 2 retry UX (apply-industry endpoint) picks up via the
+        // `signup.preset_apply_failed` audit-row signal. The
+        // `failed_at` marker captured below names which service threw,
+        // so the retry has a clearer recovery target.
+        $failedAt = null;
+        $loyaltySummary = null;
         try {
-            \DB::transaction(function () use ($industry) {
+            \DB::transaction(function () use ($industry, $org, &$failedAt, &$loyaltySummary) {
+                $failedAt = 'crm';
                 app(\App\Services\IndustryPresetService::class)->apply($industry);
+                $failedAt = 'planner';
                 app(\App\Services\PlannerPresetService::class)->apply($industry);
+                $failedAt = 'loyalty';
+                $loyaltySummary = app(\App\Services\LoyaltyPresetService::class)->apply($industry, $org->id);
+                $failedAt = null;
             });
             \App\Models\AuditLog::record(
                 'signup.presets_applied',
                 $org,
-                ['industry' => $industry, 'services' => ['crm', 'planner']],
+                [
+                    'industry' => $industry,
+                    'services' => ['crm', 'planner', 'loyalty'],
+                    // Phase 5 reviewer fix: surface the loyalty no-op
+                    // signal so audit-log readers don't see "loyalty
+                    // applied" for a medical org that actually wrote
+                    // only one CrmSetting row.
+                    'loyalty_noop' => (bool) ($loyaltySummary['noop'] ?? false),
+                    'loyalty_summary' => $loyaltySummary,
+                ],
                 [],
                 $localUser ?? null,
-                "Applied CRM + Planner presets '{$industry}' on trial signup"
+                "Applied CRM + Planner + Loyalty presets '{$industry}' on trial signup"
+                . (($loyaltySummary['noop'] ?? false) ? ' (loyalty no-op — medical industry)' : '')
             );
         } catch (\Throwable $e) {
             report($e);
             \App\Models\AuditLog::record(
                 'signup.preset_apply_failed',
                 $org,
-                ['industry' => $industry, 'services' => ['crm', 'planner'], 'error' => $e->getMessage()],
+                [
+                    'industry'  => $industry,
+                    'services'  => ['crm', 'planner', 'loyalty'],
+                    'failed_at' => $failedAt,
+                    'error'     => $e->getMessage(),
+                ],
                 [],
                 $localUser ?? null,
-                "Preset apply failed on trial signup — workspace will retry via apply-industry"
+                "Preset apply failed on trial signup (failed at: {$failedAt}) — workspace will retry via apply-industry"
             );
         }
 

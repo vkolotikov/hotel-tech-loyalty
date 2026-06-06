@@ -72,9 +72,18 @@ class LoyaltyPresetController extends Controller
             ['value' => json_encode(now()->toIso8601String())],
         );
 
-        $msg = "Applied: {$summary['tiers_set']} tiers configured, {$summary['benefits_added']} benefits added";
-        if (!$summary['replaced'] && $summary['members_on_tiers'] > 0) {
-            $msg .= " ({$summary['members_on_tiers']} existing members preserved on their tiers)";
+        // Phase 5 — medical no-op summary has tiers_set=0 + tiers_added=0
+        // + benefits_added=0. The pre-Phase-5 message "Applied: 0 tiers
+        // configured, 0 benefits added" reads as a silent failure, not
+        // as the intentional decision #5 design ("no patient loyalty
+        // program"). Branch on the noop flag for a clearer message.
+        if (!empty($summary['noop'])) {
+            $msg = "Medical industry has no loyalty program (no tiers or benefits added). You can still award points + send campaigns manually if needed.";
+        } else {
+            $msg = "Applied: {$summary['tiers_set']} tiers configured, {$summary['benefits_added']} benefits added";
+            if (!$summary['replaced'] && $summary['members_on_tiers'] > 0) {
+                $msg .= " ({$summary['members_on_tiers']} existing members preserved on their tiers)";
+            }
         }
 
         return response()->json(['message' => $msg, 'summary' => $summary]);

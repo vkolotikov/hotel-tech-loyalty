@@ -702,8 +702,12 @@ class PlannerController extends Controller
 
         $date = $data['date'];
         $employee = $data['employee_name'] ?? null;
-        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
-        $workEndMin = $this->hhmmToMin($data['work_end'] ?? '18:00');
+        // Phase 5 — fallback chain: request payload → org's
+        // business_hours_profile → 09:00/18:00 hardcode. Hotel orgs
+        // backfilled to 09:00/18:00 so no behavioural change.
+        $win = $this->resolveWorkWindow($data);
+        $workStartMin = $win['start'];
+        $workEndMin   = $win['end'];
 
         // Priority weight — High first, then Normal, then Low.
         $priorityOrder = ['High' => 0, 'Normal' => 1, 'Low' => 2];
@@ -845,6 +849,103 @@ class PlannerController extends Controller
     }
 
     /**
+     * Industry Platform Plan Phase 5 — resolve the day's work window.
+     *
+     * Precedence:
+     *   1. Explicit request payload (`work_start` / `work_end` HH:MM)
+     *      — preserves the existing API contract.
+     *   2. Org's `crm_settings.business_hours_profile` row — set by the
+     *      Phase 5 backfill migration to `{start:'09:00', end:'18:00'}`
+     *      for every existing org (no silent retiming) and re-written
+     *      by future per-industry default seeders (Phase 5.x for the
+     *      taxonomy + admin UI).
+     *   3. Hardcoded `09:00` / `18:00` fallback — same as before this
+     *      helper existed; only reachable if both the request and the
+     *      crm_settings row are missing or malformed.
+     *
+     * **Forward-compat contract**: business_hours_profile rows MUST
+     * always carry top-level `start` + `end` HH:MM strings, even when
+     * future per-DOW schedules (Tue-Sat) or lunch breaks are added as
+     * sibling keys. These top-level values act as the simple-fallback
+     * window for callers that don't yet understand richer schedules.
+     * The auto-planner / free-slots / suggest-staff endpoints read
+     * these flat keys ONLY today.
+     *
+     * **Tenant binding required**. CrmSetting uses
+     * `BelongsToOrganization` — `current_organization_id` MUST be
+     * bound by tenant middleware before this helper runs. Callers
+     * outside the HTTP request lifecycle (artisan commands, queue
+     * workers) get the explicit-payload-or-hardcoded path so a
+     * console misconfiguration can't silently retime the planner.
+     *
+     * @return array{start:int,end:int}  Minute offsets from 00:00.
+     */
+    private function resolveWorkWindow(array $data): array
+    {
+        $hhmm = '/^\d{2}:\d{2}$/';
+
+        // Tier 1: explicit request payload wins. Already regex-validated
+        // by the parent endpoint's request->validate() — keep treating
+        // it as trusted.
+        $requestStart = $data['work_start'] ?? null;
+        $requestEnd   = $data['work_end']   ?? null;
+
+        // Short-circuit when tenant context is missing. Falling through
+        // to the CrmSetting query under TenantScope's fail-closed
+        // semantics would silently return the hardcoded 09:00/18:00
+        // window with no log signal — a CLI / queue / cron caller would
+        // mis-plan without anyone noticing. Skip straight to tier 3.
+        if (!app()->bound('current_organization_id') || !app('current_organization_id')) {
+            return [
+                'start' => $this->hhmmToMin($requestStart ?: '09:00'),
+                'end'   => $this->hhmmToMin($requestEnd   ?: '18:00'),
+            ];
+        }
+
+        // Tier 2: org's saved profile. JSON-cast row {start,end} read
+        // through the tenant-scoped CrmSetting model. Falls through if
+        // the row is missing, malformed, or has bad-format values.
+        $profileStart = null;
+        $profileEnd   = null;
+        try {
+            $row = \App\Models\CrmSetting::where('key', 'business_hours_profile')->first();
+            $val = $row?->value;
+            if (is_array($val)) {
+                $rawStart = is_string($val['start'] ?? null) ? $val['start'] : null;
+                $rawEnd   = is_string($val['end']   ?? null) ? $val['end']   : null;
+                // Re-validate HH:MM format. An admin who hand-edited
+                // their crm_settings row could leave '9' or '9:00 AM'
+                // — hhmmToMin would silently accept those, producing a
+                // wrong-but-plausible work window. Strict regex matches
+                // the per-request validator (apps/loyalty/backend/.../
+                // PlannerController.php $data['work_start'] regex).
+                $profileStart = ($rawStart !== null && preg_match($hhmm, $rawStart)) ? $rawStart : null;
+                $profileEnd   = ($rawEnd   !== null && preg_match($hhmm, $rawEnd))   ? $rawEnd   : null;
+
+                if (($rawStart !== null && $profileStart === null) || ($rawEnd !== null && $profileEnd === null)) {
+                    \Log::warning('planner.work_window.profile_malformed', [
+                        'org_id' => app('current_organization_id'),
+                        'value'  => $val,
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // CrmSetting query failed (table missing in a fresh test env,
+            // transient Postgres hiccup, schema drift). Log so the
+            // fall-through to the hardcoded default isn't silent.
+            \Log::warning('planner.work_window.profile_lookup_failed', [
+                'org_id' => app('current_organization_id'),
+                'error'  => $e->getMessage(),
+            ]);
+        }
+
+        return [
+            'start' => $this->hhmmToMin($requestStart ?: $profileStart ?: '09:00'),
+            'end'   => $this->hhmmToMin($requestEnd   ?: $profileEnd   ?: '18:00'),
+        ];
+    }
+
+    /**
      * GET /v1/admin/planner/free-slots
      *
      * Compute free time intervals on a date for an optional employee.
@@ -865,8 +966,10 @@ class PlannerController extends Controller
             'min_duration_minutes'  => 'nullable|integer|min:5|max:1440',
         ]);
 
-        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
-        $workEndMin   = $this->hhmmToMin($data['work_end']   ?? '18:00');
+        // Phase 5 — same precedence as autoPlanDay.
+        $win = $this->resolveWorkWindow($data);
+        $workStartMin = $win['start'];
+        $workEndMin   = $win['end'];
         $minMinutes   = (int) ($data['min_duration_minutes'] ?? 15);
 
         $q = PlannerTask::query()
@@ -954,8 +1057,10 @@ class PlannerController extends Controller
             'limit'             => 'nullable|integer|min:1|max:25',
         ]);
 
-        $workStartMin = $this->hhmmToMin($data['work_start'] ?? '09:00');
-        $workEndMin   = $this->hhmmToMin($data['work_end']   ?? '18:00');
+        // Phase 5 — same precedence as autoPlanDay / freeSlots.
+        $win = $this->resolveWorkWindow($data);
+        $workStartMin = $win['start'];
+        $workEndMin   = $win['end'];
         $windowMin    = max(60, $workEndMin - $workStartMin);
         $duration     = (int) ($data['duration_minutes'] ?? 60);
         $limit        = (int) ($data['limit'] ?? 5);

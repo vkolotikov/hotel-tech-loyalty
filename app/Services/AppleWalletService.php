@@ -98,10 +98,17 @@ class AppleWalletService
             'formatVersion'        => 1,
             'passTypeIdentifier'   => $config->apple_pass_type_id,
             'teamIdentifier'       => $config->apple_team_id,
-            'organizationName'     => $config->apple_organization_name ?: 'Hotel Loyalty',
+            // Industry Platform Plan Phase 5 — fallbacks neutralised
+            // from "Hotel Loyalty" to the org's own name (industry-
+            // neutral) so a beauty / medical / restaurant member's
+            // wallet pass doesn't read as hotel-flavoured when the
+            // admin hasn't customised wallet_configs.apple_organization_name.
+            // Phase 9 will customise per industry (visits / appointments
+            // / etc.) — this is the pre-Phase-9 placeholder.
+            'organizationName'     => $config->apple_organization_name ?: ($member->organization?->name ?: 'Membership card'),
             'serialNumber'         => 'm' . $member->id . '_' . $memberNumber,
-            'description'          => 'Hotel loyalty membership card',
-            'logoText'             => $config->apple_organization_name ?: 'Hotel Loyalty',
+            'description'          => trim(($member->organization?->name ? $member->organization->name . ' ' : '') . 'membership card'),
+            'logoText'             => $config->apple_organization_name ?: ($member->organization?->name ?: 'Membership card'),
             'backgroundColor'      => $config->apple_pass_background_color,
             'foregroundColor'      => $config->apple_pass_foreground_color,
             'labelColor'           => $config->apple_pass_label_color,
