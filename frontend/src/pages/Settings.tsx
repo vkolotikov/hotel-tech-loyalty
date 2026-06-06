@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
   BookOpen, Search, GitBranch, ClipboardList, Activity,
-  Building2, ArrowLeft, Undo2, Briefcase,
+  Building2, ArrowLeft, Undo2, Briefcase, AlertTriangle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -307,7 +307,18 @@ export function Settings() {
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({})
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null)
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
+  // Test results include an optional structured `warning` that the
+  // backend surfaces for actionable advisories — e.g. Stripe
+  // restricted-key missing the refunds:write scope (preventive follow-
+  // up to the Forrest Glamp stuck-refund situation). When present, we
+  // render a yellow banner inside the integration card so the operator
+  // can fix it at config time instead of finding out only when a real
+  // refund first fails.
+  const [testResults, setTestResults] = useState<Record<string, {
+    success: boolean
+    message: string
+    warning?: { code: string; title: string; message: string }
+  }>>({})
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [syncingNow, setSyncingNow] = useState<string | null>(null)
   const [showSyncHistory, setShowSyncHistory] = useState<Set<string>>(new Set())
@@ -542,7 +553,20 @@ export function Settings() {
     try {
       const { data } = await api.post('/v1/admin/settings/test-integration', { type })
       setTestResults(prev => ({ ...prev, [type]: data }))
-      data.success ? toast.success(`${type}: ${data.message}`) : toast.error(`${type}: ${data.message}`)
+      if (data.success) {
+        // Even on success the backend may attach a `warning` object
+        // (e.g. Stripe restricted key with no refunds:write). Surface
+        // it as a non-blocking toast so the operator notices on the
+        // spot; the persistent banner in the card body carries the
+        // full fix instructions.
+        if (data.warning) {
+          toast(`${type}: connected — ${data.warning.title}`, { icon: '⚠️' })
+        } else {
+          toast.success(`${type}: ${data.message}`)
+        }
+      } else {
+        toast.error(`${type}: ${data.message}`)
+      }
     } catch {
       setTestResults(prev => ({ ...prev, [type]: { success: false, message: 'Request failed' } }))
       toast.error(`${type}: connection test failed`)
@@ -1537,6 +1561,21 @@ export function Settings() {
                     className={btnPrimary + ' bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 disabled:opacity-40 text-xs'}>
                     {testingIntegration === section.testType ? <><RefreshCw size={12} className="animate-spin" /> Testing...</> : <><Wifi size={12} /> Test Connection</>}
                   </button>
+                </div>
+              )}
+              {/* Backend advisory banner — surfaced via testResults[type].warning.
+                  The Stripe integration uses this to flag a restricted-key
+                  rk_live_* missing the refunds:write scope (the situation that
+                  blocked Forrest Glamp refunds). Visible as long as the test
+                  result carries a warning — clearing it requires re-running
+                  the test with a fixed key. */}
+              {result?.warning && (
+                <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3.5 flex items-start gap-3">
+                  <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-amber-200">{result.warning.title}</p>
+                    <p className="text-[11px] text-amber-100/80 mt-1 leading-relaxed whitespace-pre-line">{result.warning.message}</p>
+                  </div>
                 </div>
               )}
               {/* Per-org Smoobu webhook URL helper. Customers need to
