@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronRight, Link2, Phone,
   Clock, Gift, Tag, Award, Crown, Gem, ShieldCheck, Copy,
   BookOpen, Search, GitBranch, ClipboardList, Activity,
-  Building2, ArrowLeft, Undo2,
+  Building2, ArrowLeft, Undo2, Briefcase,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,7 @@ import { BookingTab } from '../components/settings/BookingTab'
 import { PipelinesAdmin } from '../components/PipelinesAdmin'
 import { PlannerSettings } from '../components/PlannerSettings'
 import { MenuSettings } from '../components/MenuSettings'
+import { IndustrySwitcherPanel } from '../components/IndustrySwitcherPanel'
 import { TeamSettings } from '../components/TeamSettings'
 import { AiUsagePanel } from '../components/AiUsagePanel'
 import { ApiTokensPanel } from '../components/ApiTokensPanel'
@@ -215,6 +216,11 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'general',       label: 'Hotel Info',         icon: Building2,     desc: 'Hotel name, contact info, account',         groups: ['general'],      custom: true },
+  // Phase 10 — in-app industry switcher (parallel to Phase 4's cross-
+  // domain banner). The tab id MUST stay 'industry' — the Phase 4
+  // IndustryMismatchBanner suppresses itself on /settings?tab=industry
+  // to avoid two competing CTAs for the same action.
+  { id: 'industry',      label: 'Industry',           icon: Briefcase,     desc: 'Switch the workspace industry (hotel / beauty / medical / restaurant / …)', custom: true },
   { id: 'branding',      label: 'Branding & Theme',   icon: Palette,       desc: 'Colors, logo, theme presets',               groups: ['appearance'],   custom: true },
   { id: 'loyalty',       label: 'Loyalty Program',    icon: Star,          desc: 'Points, tiers, rewards rules',              groups: ['points'],       custom: true, product: 'loyalty' },
   { id: 'notifications', label: 'Notifications',      icon: Bell,          desc: 'Push and email notification config',        groups: ['notifications'], feature: 'push_notifications' },
@@ -249,6 +255,7 @@ const TABS: Tab[] = [
  */
 const TAB_ACCENTS: Record<string, string> = {
   general:       '#60a5fa', // blue
+  industry:      '#f59e0b', // amber — primary brand colour (matches the Phase 4 mismatch banner)
   branding:      '#f472b6', // pink
   menu:          '#22d3ee', // cyan
   pipelines:     '#c9a84c', // gold
@@ -1910,6 +1917,7 @@ export function Settings() {
       case 'pipelines': return <PipelinesAdmin />
       case 'planner': return <PlannerSettings />
       case 'menu': return <MenuSettings />
+      case 'industry': return <IndustrySwitcherPanel />
       case 'team': return <TeamSettings />
       case 'mobile_app': return renderMobileApp()
       case 'documentation': return <DocumentationCenter />
