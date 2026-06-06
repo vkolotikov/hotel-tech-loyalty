@@ -735,6 +735,13 @@ class ServicePublicController extends Controller
                     extras: $extrasBreakdown,
                     cancellationPolicy: $cancellationPolicy,
                     supportEmail: $supportEmail,
+                    // Phase 8.x — flow org's industry through so the
+                    // subject + Blade flex per industry (Appointment
+                    // for beauty/medical, Reservation for restaurant).
+                    industry: $booking->organization_id
+                        ? \App\Models\Organization::withoutGlobalScopes()
+                            ->find($booking->organization_id)?->resolved_industry
+                        : null,
                 ));
         } catch (\Throwable $e) {
             \Log::warning('Service booking confirmation email failed', [

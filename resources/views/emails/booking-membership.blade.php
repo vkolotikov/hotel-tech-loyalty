@@ -16,10 +16,24 @@
 @endsection
 
 @section('main')
-    <p>Dear {{ $guestName ?: 'Guest' }},</p>
+    @php
+        // Phase 8.x — flex "every stay" → "every visit" per industry.
+        // Hotel verbatim back-compat.
+        $industry = $industry ?? 'hotel';
+        $visitNoun = match ($industry) {
+            'beauty', 'medical', 'restaurant' => 'visit',
+            default                            => 'stay',
+        };
+        $endUserNoun = match ($industry) {
+            'beauty', 'medical', 'legal', 'real_estate' => 'Client',
+            'restaurant'                                => 'Diner',
+            default                                     => 'Guest',
+        };
+    @endphp
+    <p>Dear {{ $guestName ?: $endUserNoun }},</p>
     <p>
         Thank you for booking with {{ $hotelName }}. As part of your reservation we've
-        opened a {{ $tierName }} membership for you — earn points on every stay,
+        opened a {{ $tierName }} membership for you — earn points on every {{ $visitNoun }},
         unlock exclusive offers, and progress through our tiered rewards programme.
     </p>
 
@@ -68,7 +82,7 @@
             <tr>
                 <td width="50%" valign="top" style="padding:6px 8px 6px 0;">
                     <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.78);">
-                        <strong style="color:#e3c66a;">·</strong> Earn points on every stay
+                        <strong style="color:#e3c66a;">·</strong> Earn points on every {{ $visitNoun }}
                     </p>
                 </td>
                 <td width="50%" valign="top" style="padding:6px 0 6px 8px;">

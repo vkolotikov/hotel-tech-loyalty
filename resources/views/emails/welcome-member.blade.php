@@ -16,10 +16,19 @@
 @endsection
 
 @section('main')
+    @php
+        // Phase 8.x — industry-aware "every stay" copy. Hotel orgs see
+        // verbatim back-compat; beauty/restaurant get "every visit",
+        // medical orgs typically never reach this email per decision
+        // #5 but the medical fallback is defensive. $nouns is provided
+        // by HasIndustryVocab trait via the Mailable's with().
+        $visitNoun = $nouns['stays'] ?? 'stays';
+        $industryId = $industry ?? 'hotel';
+    @endphp
     <p>Dear {{ $memberName ?: 'Member' }},</p>
     <p>
         Your {{ $hotelName }} loyalty membership has been created. You can now earn
-        points on every stay, unlock exclusive offers, and progress through our
+        points on every {{ rtrim($visitNoun, 's') }}, unlock exclusive offers, and progress through our
         tiered rewards programme.
     </p>
 

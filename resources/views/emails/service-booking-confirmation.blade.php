@@ -2,11 +2,31 @@
 
 @section('title', 'Reservation confirmed')
 
+@php
+    // Phase 8.x — industry-aware noun choices. $industry passed by
+    // ServiceBookingConfirmationMail::content(). The Blade already
+    // uses "appointment" everywhere (legacy from when this was
+    // built for beauty/spa); now flexes to "reservation" for
+    // restaurant + "appointment" for beauty/medical + a sensible
+    // default ("booking") for other industries.
+    $industry = $industry ?? 'hotel';
+    $bookingNoun = match ($industry) {
+        'beauty', 'medical' => 'appointment',
+        'restaurant'        => 'reservation',
+        default             => 'booking',
+    };
+    $bookingNounUcf = ucfirst($bookingNoun);
+    $partyLabel = match ($industry) {
+        'beauty', 'medical' => 'People',
+        'restaurant'        => 'Diners',
+        default             => 'Guests',
+    };
+@endphp
 @section('hero')
-    <p class="hero-eyebrow">Reservation Confirmed</p>
+    <p class="hero-eyebrow">{{ $bookingNounUcf }} Confirmed</p>
     <h1 class="hero-headline">{{ $serviceName }}</h1>
     <p class="hero-subline">
-        We've reserved your appointment, {{ $guestName }} — confirmation
+        We've reserved your {{ $bookingNoun }}, {{ $guestName }} — confirmation
         <strong style="color:#e3c66a;letter-spacing:1px;">{{ $bookingReference }}</strong>.
     </p>
 @endsection
@@ -14,7 +34,7 @@
 @section('main')
     <p>Dear {{ $guestName }},</p>
     <p>
-        Your {{ $serviceName }} appointment at {{ $hotelName }} is confirmed.
+        Your {{ $serviceName }} {{ $bookingNoun }} at {{ $hotelName }} is confirmed.
         We're looking forward to taking care of you.
     </p>
 
@@ -29,7 +49,7 @@
     @endphp
 
     <div class="panel">
-        <div class="panel-title">Appointment</div>
+        <div class="panel-title">{{ $bookingNounUcf }}</div>
         <table role="presentation" class="row" cellpadding="0" cellspacing="0" border="0">
             <tr><td class="lbl">Service</td><td class="val">{{ $serviceName }}</td></tr>
             @if($masterName)
@@ -39,7 +59,7 @@
             <tr><td class="lbl">Time</td><td class="val">{{ $start->format('g:i A') }} – {{ $end->format('g:i A') }}</td></tr>
             <tr><td class="lbl">Duration</td><td class="val">{{ $durationLabel }}</td></tr>
             @if($partySize > 1)
-                <tr><td class="lbl">Guests</td><td class="val">{{ $partySize }}</td></tr>
+                <tr><td class="lbl">{{ $partyLabel }}</td><td class="val">{{ $partySize }}</td></tr>
             @endif
         </table>
     </div>
@@ -76,7 +96,7 @@
     @endif
 
     <p style="text-align:center;font-size:13px;color:rgba(255,255,255,0.55);margin-top:24px;">
-        Please arrive 10 minutes before your appointment so we can welcome you properly.<br>
+        Please arrive 10 minutes before your {{ $bookingNoun }} so we can welcome you properly.<br>
         See you soon.
     </p>
 @endsection

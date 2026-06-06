@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\HasIndustryVocab;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class WelcomeMemberMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, HasIndustryVocab;
 
     public function __construct(
         public LoyaltyMember $member,
@@ -31,14 +32,14 @@ class WelcomeMemberMail extends Mailable
     {
         return new Content(
             view: 'emails.welcome-member',
-            with: [
+            with: array_merge([
                 'memberName'   => $this->member->user->name,
                 'memberNumber' => $this->member->member_number,
                 'tierName'     => $this->member->tier?->name ?? 'Bronze',
                 'hotelName'    => $this->organization->name,
                 'email'        => $this->member->user->email,
                 'code'         => $this->code,
-            ],
+            ], $this->industryVocabFor($this->organization)),
         );
     }
 }

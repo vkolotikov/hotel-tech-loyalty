@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Services\IndustryPrompts\IndustryPromptService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -37,17 +38,37 @@ class ServiceBookingConfirmationMail extends Mailable
         public array $extras,
         public ?string $cancellationPolicy,
         public string $supportEmail = 'support@hotel-tech.ai',
+        // Phase 8.x — canonical industry id. Null = legacy call site
+        // → falls through to hotel framing (Reservation Confirmed,
+        // hotel vocabulary). The services widget already passes this.
+        public ?string $industry = null,
     ) {}
 
     public function envelope(): Envelope
     {
+        // Phase 8.x — "Reservation" reads as universal across hotel,
+        // restaurant and venue. Beauty + medical orgs better with
+        // "Appointment". Subject line stays content-light to avoid
+        // industry confusion in the inbox preview.
+        $bookingNoun = match ($this->industry) {
+            'beauty', 'medical' => 'Appointment',
+            default             => 'Reservation',
+        };
         return new Envelope(
-            subject: "Reservation Confirmed — {$this->serviceName} at {$this->hotelName}",
+            subject: "{$bookingNoun} Confirmed — {$this->serviceName} at {$this->hotelName}",
         );
     }
 
     public function content(): Content
     {
-        return new Content(view: 'emails.service-booking-confirmation');
+        $industry = $this->industry ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile  = app(IndustryPromptService::class)->for($industry);
+        return new Content(
+            view: 'emails.service-booking-confirmation',
+            with: [
+                'industry' => $industry,
+                'profile'  => $profile,
+            ],
+        );
     }
 }

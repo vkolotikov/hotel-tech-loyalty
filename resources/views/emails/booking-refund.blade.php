@@ -21,13 +21,34 @@
         @endif
     </p>
 
+    @php
+        // Phase 8.x — industry-aware row labels + close.
+        // $industry + $profile passed by BookingRefundMail::content.
+        $industry = $industry ?? 'hotel';
+        $isService = in_array($industry, ['beauty', 'medical'], true);
+        $resourceLabel = match ($industry) {
+            'beauty'      => 'Treatment',
+            'medical'     => 'Appointment',
+            'restaurant'  => 'Table',
+            default       => 'Room',
+        };
+        $arrivalLabel = $isService ? 'Original date' : 'Original check-in';
+        $closeLine    = match ($industry) {
+            'beauty'      => "We're sorry it didn't work out this time — we'd love to welcome you back for a future visit whenever you're ready.",
+            'medical'     => "We're sorry it didn't work out this time — feel free to rebook when you're ready.",
+            'restaurant'  => "We're sorry it didn't work out this time — we'd love to see you for a future visit whenever you're ready.",
+            default       => "We're sorry it didn't work out this time — we'd love to host you on a future stay whenever you're ready.",
+        };
+    @endphp
     <div class="panel">
         <div class="panel-title">Refund details</div>
         <table role="presentation" class="row" cellpadding="0" cellspacing="0" border="0">
             <tr><td class="lbl">Reference</td><td class="val">{{ $bookingReference }}</td></tr>
-            <tr><td class="lbl">Room</td><td class="val">{{ $unitName }}</td></tr>
-            <tr><td class="lbl">Original check-in</td><td class="val">{{ $checkIn }}</td></tr>
-            <tr><td class="lbl">Original check-out</td><td class="val">{{ $checkOut }}</td></tr>
+            <tr><td class="lbl">{{ $resourceLabel }}</td><td class="val">{{ $unitName }}</td></tr>
+            <tr><td class="lbl">{{ $arrivalLabel }}</td><td class="val">{{ $checkIn }}</td></tr>
+            @if (!$isService)
+                <tr><td class="lbl">Original check-out</td><td class="val">{{ $checkOut }}</td></tr>
+            @endif
             <tr><td class="lbl">Refund amount</td><td class="val"><strong>{{ strtoupper($currency) }} {{ number_format($refundAmount, 2) }}</strong></td></tr>
             <tr><td class="lbl">Type</td><td class="val">{{ $isFull ? 'Full refund' : 'Partial refund' }}</td></tr>
         </table>
@@ -40,7 +61,7 @@
 
     @if ($isFull)
         <p>
-            Your reservation has been cancelled. We're sorry it didn't work out this time — we'd love to host you on a future stay whenever you're ready.
+            Your reservation has been cancelled. {{ $closeLine }}
         </p>
     @endif
 

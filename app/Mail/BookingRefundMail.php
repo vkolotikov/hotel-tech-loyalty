@@ -4,6 +4,8 @@ namespace App\Mail;
 
 use App\Models\BookingMirror;
 use App\Models\HotelSetting;
+use App\Models\Organization;
+use App\Services\IndustryPrompts\IndustryPromptService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -32,6 +34,8 @@ class BookingRefundMail extends Mailable
     public bool $isFull;
     public string $currency;
     public string $supportEmail;
+    /** Phase 8.x — canonical industry id resolved from the mirror's org. */
+    public string $industry;
 
     public function __construct(BookingMirror $mirror, float $refundAmount, bool $isFull)
     {
@@ -49,10 +53,18 @@ class BookingRefundMail extends Mailable
         $this->currency         = HotelSetting::getValue('booking_currency', 'EUR');
         $this->hotelName        = HotelSetting::getValue('company_name', 'the hotel');
         $this->supportEmail     = HotelSetting::getValue('mail_from_address', 'support@hotel-tech.ai');
+        // Phase 8.x — resolve org industry once via the mirror's FK so
+        // the subject + Blade can flex vocab. Hotel default for legacy
+        // call sites + null safety.
+        $this->industry         = Organization::withoutGlobalScopes()
+            ->find($mirror->organization_id)?->resolved_industry
+            ?? Organization::DEFAULT_INDUSTRY;
     }
 
     public function envelope(): Envelope
     {
+        // Phase 8.x — subject reflects industry vocabulary. "Refund"
+        // stays universal; the noun in the workspace context flexes.
         $type = $this->isFull ? 'Refund' : 'Partial refund';
         return new Envelope(
             subject: "{$type} confirmed — {$this->hotelName} · {$this->bookingReference}",
@@ -61,6 +73,13 @@ class BookingRefundMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.booking-refund');
+        $profile = app(IndustryPromptService::class)->for($this->industry);
+        return new Content(
+            view: 'emails.booking-refund',
+            with: [
+                'industry' => $this->industry,
+                'profile'  => $profile,
+            ],
+        );
     }
 }
