@@ -49,6 +49,20 @@ final class IndustryPromptProfile
          * industries that don't need an admin/customer split).
          */
         public readonly string $adminGuardrails = '',
+        /**
+         * Phase 8 — wallet pass headline (Apple `description` /
+         * `logoText`, Google `accountName`). "Loyalty Card" for
+         * hotel; "Client Card" / "Regular Card" / etc. for the others.
+         * Medical is never reached (hasLoyalty=false gates wallet
+         * endpoints) so its passLabel is just a defensive default.
+         */
+        public readonly string $passLabel = 'Loyalty Card',
+        /**
+         * Phase 8 — wallet pass long-form description (Apple pass
+         * `description`). One short sentence the customer sees in
+         * Apple Wallet's pass details view.
+         */
+        public readonly string $passDescription = 'Loyalty membership card',
     ) {}
 
     /**

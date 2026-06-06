@@ -2075,6 +2075,12 @@ class BookingEngineService
                 brandPrimaryColor: $brandPrimaryColor,
                 contactPhone: $contactPhone,
                 hotelAddress: $hotelAddress,
+                // Phase 8 — pass the org's industry so the email's
+                // subject + body flex to industry-appropriate
+                // vocabulary. Null falls through to hotel framing.
+                industry: $orgId
+                    ? \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
+                    : null,
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Booking confirmation email failed', [

@@ -4,7 +4,70 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Welcome to Hotel Tech</title>
+    {{-- Phase 8 — title + brand flex per industry. Hotel orgs see
+         "Welcome to HotelTechAI" (was "Hotel Tech" pre-Phase-8;
+         the sub-brand name is the customer-facing one). $brand /
+         $profile / $industry are passed by WelcomeTrialMail::content.
+         Fallbacks make the Blade safe to render in isolation
+         (preview tools etc.). --}}
+    @php
+        $brand = $brand ?? 'HotelTechAI';
+        $workspaceLabel = $profile?->workspaceLabel ?? 'hotel';
+        $industry = $industry ?? 'hotel';
+        // Phase 8 reviewer fix — every match() arm now branches on
+        // all 8 industries (4 GTM + 4 settings-only) rather than
+        // falling settings-only orgs through the hotel default arm,
+        // which previously emitted "Connect Your PMS — Link Smoobu"
+        // copy to a legal firm.
+        $tagline = match ($industry) {
+            'beauty'      => 'Your all-in-one salon & client platform is ready',
+            'medical'     => 'Your all-in-one clinic & patient platform is ready',
+            'restaurant'  => 'Your all-in-one restaurant & guest platform is ready',
+            'legal'       => 'Your all-in-one firm & client platform is ready',
+            'real_estate' => 'Your all-in-one agency & client platform is ready',
+            'education'   => 'Your all-in-one school & student platform is ready',
+            'fitness'     => 'Your all-in-one studio & member platform is ready',
+            default       => 'Your all-in-one hospitality platform is ready',
+        };
+        // Reviewer fix (false-promise copy): pre-fix beauty said
+        // "Sync with Google / iCloud / Outlook for treatment booking
+        // visibility" and medical said "Optional EHR / calendar
+        // sync" — neither integration is shipped (the product has
+        // ServiceEngine for services + Smoobu for hotel PMS only,
+        // no calendar / EHR connectors). Step 2 now references
+        // features that actually exist.
+        $hostingIntegrationStep = match ($industry) {
+            'beauty'      => ['title' => 'Set Up Your Services',     'desc' => 'Configure treatments, durations, and prices for online booking'],
+            'medical'     => ['title' => 'Set Up Your Services',     'desc' => 'Configure appointment types, durations, and prep instructions'],
+            'restaurant'  => ['title' => 'Set Up Reservations',      'desc' => 'Configure table inventory and sittings for online reservations'],
+            'legal'       => ['title' => 'Set Up Consultations',     'desc' => 'Configure consultation types, durations, and intake questions'],
+            'real_estate' => ['title' => 'Set Up Viewings',          'desc' => 'Configure viewing slots, agent assignments, and listing details'],
+            'education'   => ['title' => 'Set Up Your Courses',      'desc' => 'Configure classes, schedules, and enrolment details'],
+            'fitness'     => ['title' => 'Set Up Your Classes',      'desc' => 'Configure classes, schedules, and capacity'],
+            default       => ['title' => 'Connect Your PMS',         'desc' => 'Link Smoobu or your preferred property management system'],
+        };
+        $importStep = match ($industry) {
+            'beauty'      => ['title' => 'Import Your Clients',   'desc' => 'Build your client database and launch your loyalty program'],
+            'medical'     => ['title' => 'Import Your Patients',  'desc' => 'Build your patient database and set up appointment reminders'],
+            'restaurant'  => ['title' => 'Import Your Diners',    'desc' => 'Build your diner database and launch your loyalty program'],
+            'legal'       => ['title' => 'Import Your Clients',   'desc' => 'Build your client database and matter pipeline'],
+            'real_estate' => ['title' => 'Import Your Clients',   'desc' => 'Build your client database and listing pipeline'],
+            'education'   => ['title' => 'Import Your Students',  'desc' => 'Build your student database and launch your loyalty program'],
+            'fitness'     => ['title' => 'Import Your Members',   'desc' => 'Build your member database and launch your loyalty program'],
+            default       => ['title' => 'Import Your Guests',    'desc' => 'Build your guest database and launch your loyalty program'],
+        };
+        $engagementWord = match ($industry) {
+            'beauty'      => 'client engagement',
+            'medical'     => 'patient engagement',
+            'restaurant'  => 'diner engagement',
+            'legal'       => 'client engagement',
+            'real_estate' => 'client engagement',
+            'education'   => 'student engagement',
+            'fitness'     => 'member engagement',
+            default       => 'guest engagement',
+        };
+    @endphp
+    <title>Welcome to {{ $brand }}</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -245,8 +308,8 @@
             <!-- Header -->
             <div class="header">
                 <div class="logo-mark">H</div>
-                <h1>Welcome to Hotel Tech</h1>
-                <p class="tagline">Your all-in-one hospitality platform is ready</p>
+                <h1>Welcome to {{ $brand }}</h1>
+                <p class="tagline">{{ $tagline }}</p>
             </div>
 
             <!-- Body -->
@@ -254,9 +317,9 @@
                 <p>Hi <span class="gold">{{ $userName }}</span>,</p>
 
                 <p>
-                    Thank you for choosing Hotel Tech for <strong style="color:#e5e5e5">{{ $hotelName }}</strong>.
+                    Thank you for choosing {{ $brand }} for <strong style="color:#e5e5e5">{{ $hotelName }}</strong>.
                     Your account has been created and your trial is now active. Everything you need to
-                    elevate your guest experience is at your fingertips.
+                    elevate your {{ str_replace(' engagement', ' experience', $engagementWord) }} is at your fingertips.
                 </p>
 
                 <!-- Trial Badge -->
@@ -271,28 +334,28 @@
                         <div class="step-num">1</div>
                         <div class="step-content">
                             <p class="step-title">Complete Setup Wizard</p>
-                            <p class="step-desc">Configure your property, branding colors, and core settings</p>
+                            <p class="step-desc">Configure your {{ $workspaceLabel }}, branding colors, and core settings</p>
                         </div>
                     </div>
                     <div class="step">
                         <div class="step-num">2</div>
                         <div class="step-content">
-                            <p class="step-title">Connect Your PMS</p>
-                            <p class="step-desc">Link Smoobu, Cloudbeds, or your preferred property management system</p>
+                            <p class="step-title">{{ $hostingIntegrationStep['title'] }}</p>
+                            <p class="step-desc">{{ $hostingIntegrationStep['desc'] }}</p>
                         </div>
                     </div>
                     <div class="step">
                         <div class="step-num">3</div>
                         <div class="step-content">
-                            <p class="step-title">Import Your Guests</p>
-                            <p class="step-desc">Build your guest database and launch your loyalty program</p>
+                            <p class="step-title">{{ $importStep['title'] }}</p>
+                            <p class="step-desc">{{ $importStep['desc'] }}</p>
                         </div>
                     </div>
                     <div class="step">
                         <div class="step-num">4</div>
                         <div class="step-content">
                             <p class="step-title">Deploy AI Chat Widget</p>
-                            <p class="step-desc">Embed the AI chatbot on your website for 24/7 guest engagement</p>
+                            <p class="step-desc">Embed the AI chatbot on your website for 24/7 {{ $engagementWord }}</p>
                         </div>
                     </div>
                 </div>
@@ -345,7 +408,7 @@
             <!-- Footer -->
             <div class="footer">
                 <p><a href="https://hotel-tech.ai">hotel-tech.ai</a></p>
-                <p>&copy; {{ date('Y') }} Hotel Tech. All rights reserved.</p>
+                <p>&copy; {{ date('Y') }} {{ $brand }}. All rights reserved.</p>
             </div>
         </div>
     </div>

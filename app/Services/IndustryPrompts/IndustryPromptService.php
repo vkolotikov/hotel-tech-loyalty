@@ -108,6 +108,11 @@ class IndustryPromptService
             guardrails: '',
             workspaceLabel: 'hotel',
             hasLoyalty: true,
+            // Hotel verbatim back-compat — pre-Phase-8 wallet pass
+            // strings ("Loyalty Card" / "Loyalty membership card")
+            // map to the profile defaults exactly.
+            passLabel: 'Loyalty Card',
+            passDescription: 'Loyalty membership card',
         );
     }
 
@@ -147,6 +152,8 @@ class IndustryPromptService
 GUARD,
             workspaceLabel: 'salon',
             hasLoyalty: true,
+            passLabel: 'Client Card',
+            passDescription: 'Salon membership card',
         );
     }
 
@@ -298,6 +305,8 @@ GUARD,
 GUARD,
             workspaceLabel: 'restaurant',
             hasLoyalty: true,
+            passLabel: 'Regular Card',
+            passDescription: 'Restaurant membership card',
         );
     }
 

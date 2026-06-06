@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Services\IndustryPrompts\IndustryPromptService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -15,6 +16,12 @@ use Illuminate\Queue\SerializesModels;
  * original version is nullable with a sensible default so legacy
  * call sites (orphan recovery, retry crons) keep working without
  * supplying the new payment / unit-detail fields.
+ *
+ * Phase 8 — accepts an optional `$industry` so the subject + Blade
+ * flex to industry-correct vocabulary ("Booking Confirmed" stays
+ * for hotel; "Appointment Confirmed" for beauty/medical; etc.).
+ * Null industry falls through to the hotel template — zero
+ * behaviour change for pre-Phase-8 call sites.
  */
 class BookingConfirmationMail extends Mailable
 {
@@ -59,17 +66,38 @@ class BookingConfirmationMail extends Mailable
         public ?string $brandPrimaryColor = null,  // CSS color (defaults to gold)
         public ?string $contactPhone = null,
         public ?string $hotelAddress = null,
+        // Phase 8 — canonical industry id (hotel / beauty / medical /
+        // restaurant / etc.). Null = legacy call site → falls through
+        // to hotel framing.
+        public ?string $industry = null,
     ) {}
 
     public function envelope(): Envelope
     {
+        // Phase 8 — subject reflects industry vocabulary.
+        // "Booking Confirmed" stays for hotel + restaurant (table
+        // bookings still read as "bookings"); "Appointment
+        // Confirmed" for beauty / medical (treatment / consultation
+        // appointments). Hotel default verbatim back-compat.
+        $confirmedNoun = match ($this->industry) {
+            'beauty', 'medical' => 'Appointment Confirmed',
+            default             => 'Booking Confirmed',
+        };
         return new Envelope(
-            subject: "Booking Confirmed — {$this->hotelName} ({$this->checkIn})",
+            subject: "{$confirmedNoun} — {$this->hotelName} ({$this->checkIn})",
         );
     }
 
     public function content(): Content
     {
-        return new Content(view: 'emails.booking-confirmation');
+        $industry = $this->industry ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile  = app(IndustryPromptService::class)->for($industry);
+        return new Content(
+            view: 'emails.booking-confirmation',
+            with: [
+                'industry' => $industry,
+                'profile'  => $profile,
+            ],
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Services\IndustryPrompts\IndustryPromptService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -10,6 +11,12 @@ use Illuminate\Queue\SerializesModels;
 
 class WelcomeTrialMail extends Mailable
 {
+    // Note: HasIndustryVocab trait was initially included here but its
+    // industryVocabFor() method takes an Organization model; this
+    // Mailable only has a string $industry (no Org on the constructor
+    // — the SaaS signup flow doesn't know the local Organization id
+    // yet when the welcome email is queued). The trait stays available
+    // for Mailables that DO carry an Organization (Phase 8 follow-up).
     use Queueable, SerializesModels;
 
     /**
@@ -24,6 +31,17 @@ class WelcomeTrialMail extends Mailable
         'beauty'     => 'BeautyTech.uk',
         'medical'    => 'MedTechAI',
         'restaurant' => 'HospitalityTech',
+        // Phase 8 reviewer fix — the 4 settings-only industries had
+        // no sub-brand mapping; they were falling back to
+        // 'HotelTechAI' (via the array default lookup at envelope()),
+        // so a legal firm received "Welcome to HotelTechAI" which
+        // misled them about which sub-brand they signed up under.
+        // Until those industries get dedicated GTM sub-brands, route
+        // through the umbrella parent brand "HexaTech".
+        'legal'       => 'HexaTech',
+        'real_estate' => 'HexaTech',
+        'education'   => 'HexaTech',
+        'fitness'     => 'HexaTech',
     ];
 
     public function __construct(
@@ -48,6 +66,23 @@ class WelcomeTrialMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.welcome-trial');
+        // Industry Platform Plan Phase 8 — pass industry vocab into
+        // the Blade so headings + body copy flex per industry.
+        // Hotel orgs see verbatim back-compat because the hotel
+        // profile carries an empty noun map (every $nouns['x'] key
+        // returns 'x' unchanged) and INDUSTRY_BRAND['hotel'] is
+        // "HotelTechAI" — same as before this method existed.
+        $industry = $this->industry ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile  = app(IndustryPromptService::class)->for($industry);
+        $brand    = self::INDUSTRY_BRAND[$industry] ?? self::INDUSTRY_BRAND['hotel'];
+
+        return new Content(
+            view: 'emails.welcome-trial',
+            with: [
+                'industry' => $industry,
+                'profile'  => $profile,
+                'brand'    => $brand,
+            ],
+        );
     }
 }

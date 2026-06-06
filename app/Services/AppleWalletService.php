@@ -35,7 +35,11 @@ class AppleWalletService
             throw new \RuntimeException('Apple Wallet not configured for this organization.');
         }
 
-        $member->loadMissing(['user', 'tier']);
+        // Phase 8 reviewer fix — added `organization` to the
+        // eager-load list. buildPassPayload reads the org's industry
+        // to flex pass copy; without this, the lazy BelongsTo
+        // triggers one extra query per pass generation.
+        $member->loadMissing(['user', 'tier', 'organization']);
 
         // 1. Build pass.json
         $passJson = json_encode($this->buildPassPayload($member, $config), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -94,21 +98,42 @@ class AppleWalletService
         $memberNumber = $member->member_number ?: (string) $member->id;
         $qrToken = $member->qr_code_token ?: $memberNumber;
 
+        // Industry Platform Plan Phase 8 — resolve org industry so
+        // pass copy reads in the org's industry's vocabulary. Beauty
+        // profile uses "Client Card"; restaurant uses "Regular Card".
+        // Medical (hasLoyalty=false) never reaches this code path —
+        // WalletPassController gates it at the route layer with 404.
+        //
+        // **Hotel behaviour change**: pre-Phase-5 hotel pass description
+        // was "Hotel loyalty membership card"; Phase 5 changed it to
+        // "{Org Name} membership card"; Phase 8 evolves to
+        // "{Org Name} — Loyalty membership card" (em-dash + capitalised
+        // "Loyalty" headline). This applies to any newly-issued or
+        // refreshed pass — existing wallet passes are unaffected
+        // until the user re-adds the pass or the device pings the
+        // web service for an update.
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile = app(\App\Services\IndustryPrompts\IndustryPromptService::class)->for($industry);
+        $orgName = $member->organization?->name;
+        $brandFallback = $config->apple_organization_name ?: ($orgName ?: $profile->passLabel);
+
         return [
             'formatVersion'        => 1,
             'passTypeIdentifier'   => $config->apple_pass_type_id,
             'teamIdentifier'       => $config->apple_team_id,
-            // Industry Platform Plan Phase 5 — fallbacks neutralised
-            // from "Hotel Loyalty" to the org's own name (industry-
-            // neutral) so a beauty / medical / restaurant member's
-            // wallet pass doesn't read as hotel-flavoured when the
-            // admin hasn't customised wallet_configs.apple_organization_name.
-            // Phase 9 will customise per industry (visits / appointments
-            // / etc.) — this is the pre-Phase-9 placeholder.
-            'organizationName'     => $config->apple_organization_name ?: ($member->organization?->name ?: 'Membership card'),
+            // Phase 8 — `organizationName` shows in iOS Wallet's
+            // notification + lock-screen pass entry. Prefer the
+            // admin's `apple_organization_name` override, then the
+            // org's display name, then a sensible industry-aware
+            // fallback ("Loyalty Card" / "Client Card" / etc.).
+            'organizationName'     => $brandFallback,
             'serialNumber'         => 'm' . $member->id . '_' . $memberNumber,
-            'description'          => trim(($member->organization?->name ? $member->organization->name . ' ' : '') . 'membership card'),
-            'logoText'             => $config->apple_organization_name ?: ($member->organization?->name ?: 'Membership card'),
+            // Phase 8 — description appears in iOS Wallet's pass
+            // details view. Industry-aware ("Loyalty membership card"
+            // / "Salon membership card" / "Restaurant membership card").
+            'description'          => trim(($orgName ? $orgName . ' — ' : '') . $profile->passDescription),
+            'logoText'             => $brandFallback,
             'backgroundColor'      => $config->apple_pass_background_color,
             'foregroundColor'      => $config->apple_pass_foreground_color,
             'labelColor'           => $config->apple_pass_label_color,

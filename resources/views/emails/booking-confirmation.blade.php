@@ -57,22 +57,63 @@
 @endsection
 
 @section('main')
+    @php
+        // Industry Platform Plan Phase 8 — vocabulary swap based on
+        // the org's industry. $industry + $profile are passed by
+        // BookingConfirmationMail::content(). Falls back to hotel
+        // defaults when called from a legacy code path that didn't
+        // populate them — verbatim back-compat for hotel orgs.
+        $industry = $industry ?? 'hotel';
+        $isService = in_array($industry, ['beauty', 'medical'], true);
+        $bookingNoun     = $isService ? 'appointment' : 'reservation';
+        $bookingNounUcf  = ucfirst($bookingNoun);
+        $stayNoun        = $isService ? 'visit'       : 'stay';
+        $resourceLabel   = match ($industry) {
+            'beauty'      => 'Your treatment',
+            'medical'     => 'Your appointment',
+            'restaurant'  => 'Your table',
+            default       => 'Your room',
+        };
+        $arrivalLabel    = $isService ? 'Start'  : 'Check-in';
+        $departureLabel  = $isService ? 'End'    : 'Check-out';
+        $durationLabel   = match ($industry) {
+            'beauty', 'medical' => 'Duration',
+            'restaurant'        => 'Party size',
+            default             => 'Nights',
+        };
+        $partyLabel = match ($industry) {
+            'beauty', 'medical' => 'Patients / clients',
+            'restaurant'        => 'Diners',
+            default             => 'Guests',
+        };
+    @endphp
     <p>
-        Dear {{ $guestName }}, your reservation is confirmed. We're looking forward to
+        Dear {{ $guestName }}, your {{ $bookingNoun }} is confirmed. We're looking forward to
         welcoming you{{ $checkIn ? ' on ' . Carbon::parse($checkIn)->format('l, F j') : '' }}.
-        Below is the full breakdown of your stay — please keep this email for your records.
+        Below is the full breakdown of your {{ $stayNoun }} — please keep this email for your records.
     </p>
 
-    {{-- Reservation summary --}}
+    {{-- Reservation / appointment summary --}}
     <div class="panel">
-        <div class="panel-title">Reservation</div>
+        <div class="panel-title">{{ $bookingNounUcf }}</div>
         <table role="presentation" class="row" cellpadding="0" cellspacing="0" border="0">
             <tr><td class="lbl">Confirmation #</td><td class="val">{{ $bookingReference }}</td></tr>
-            <tr><td class="lbl">Check-in</td><td class="val">{{ Carbon::parse($checkIn)->format('D, M j Y') }}</td></tr>
-            <tr><td class="lbl">Check-out</td><td class="val">{{ Carbon::parse($checkOut)->format('D, M j Y') }}</td></tr>
-            <tr><td class="lbl">Nights</td><td class="val">{{ $nights }}</td></tr>
+            <tr><td class="lbl">{{ $arrivalLabel }}</td><td class="val">{{ Carbon::parse($checkIn)->format('D, M j Y') }}</td></tr>
+            {{-- Phase 8 reviewer fix: previously hid End + Duration rows entirely
+                 for beauty/medical, which left a 2-hour facial appointment
+                 showing only the start date with no end information at all.
+                 Now: show End only when it's a different day (multi-day
+                 service rare but possible — clinic in-patient stay etc.);
+                 surface duration in hours for service appointments where
+                 $nights is the day count but service end date == start date. --}}
+            @if(!$isService)
+                <tr><td class="lbl">{{ $departureLabel }}</td><td class="val">{{ Carbon::parse($checkOut)->format('D, M j Y') }}</td></tr>
+                <tr><td class="lbl">{{ $durationLabel }}</td><td class="val">{{ $nights }}</td></tr>
+            @elseif($checkOut && $checkOut !== $checkIn)
+                <tr><td class="lbl">{{ $departureLabel }}</td><td class="val">{{ Carbon::parse($checkOut)->format('D, M j Y') }}</td></tr>
+            @endif
             <tr>
-                <td class="lbl">Guests</td>
+                <td class="lbl">{{ $partyLabel }}</td>
                 <td class="val">
                     {{ $adults }} {{ $adults === 1 ? 'adult' : 'adults' }}@if($children > 0), {{ $children }} {{ $children === 1 ? 'child' : 'children' }}@endif
                 </td>
@@ -85,7 +126,7 @@
 
     {{-- Unit / room card --}}
     <div class="panel">
-        <div class="panel-title">Your room</div>
+        <div class="panel-title">{{ $resourceLabel }}</div>
         @if(!empty($unitImageUrl))
             <div style="margin:0 0 14px;border-radius:10px;overflow:hidden;">
                 <img src="{{ $unitImageUrl }}" alt="{{ $unitName }}" width="540" style="display:block;width:100%;max-width:540px;height:auto;border:0;border-radius:10px;">
@@ -197,12 +238,12 @@
         <div class="panel-title">What's next</div>
         @if(!empty($policies['check_in_time']))
             <table role="presentation" class="row" cellpadding="0" cellspacing="0" border="0">
-                <tr><td class="lbl">Check-in from</td><td class="val">{{ $policies['check_in_time'] }}</td></tr>
+                <tr><td class="lbl">{{ $arrivalLabel }} from</td><td class="val">{{ $policies['check_in_time'] }}</td></tr>
             </table>
         @endif
-        @if(!empty($policies['check_out_time']))
+        @if(!empty($policies['check_out_time']) && !$isService)
             <table role="presentation" class="row" cellpadding="0" cellspacing="0" border="0">
-                <tr><td class="lbl">Check-out by</td><td class="val">{{ $policies['check_out_time'] }}</td></tr>
+                <tr><td class="lbl">{{ $departureLabel }} by</td><td class="val">{{ $policies['check_out_time'] }}</td></tr>
             </table>
         @endif
         @if($contactPhone)

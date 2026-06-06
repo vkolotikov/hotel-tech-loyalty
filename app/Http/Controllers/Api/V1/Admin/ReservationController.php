@@ -179,6 +179,15 @@ class ReservationController extends Controller
                 extras: [],
                 policies: $policies,
                 supportEmail: $supportEmail,
+                // Phase 8 reviewer fix — admin-initiated reservation
+                // emails now flex per industry too (subject + body
+                // vocabulary). Resolves from the tenant-bound org id,
+                // which is always present here because this controller
+                // sits behind admin auth + TenantMiddleware.
+                industry: app()->bound('current_organization_id')
+                    ? \App\Models\Organization::withoutGlobalScopes()
+                        ->find(app('current_organization_id'))?->resolved_industry
+                    : null,
             ));
         } catch (\Throwable $e) {
             Log::warning('Reservation confirmation email failed', [

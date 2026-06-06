@@ -25,6 +25,26 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class WalletPassController extends Controller
 {
+    /**
+     * Industry Platform Plan Phase 8 — gate wallet pass endpoints
+     * on the org's industry having a loyalty program. Medical orgs
+     * (decision #5: no patient loyalty) get a 404 with a clear
+     * message — the mobile app then hides the "Add to Wallet"
+     * button entirely. Hotel / beauty / restaurant / settings-only
+     * industries all have hasLoyalty=true so they fall through.
+     */
+    private function requireLoyalty(\App\Models\LoyaltyMember $member): ?JsonResponse
+    {
+        $industry = $member->organization?->resolved_industry
+            ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+        $profile = app(\App\Services\IndustryPrompts\IndustryPromptService::class)->for($industry);
+        if ($profile->hasLoyalty) return null;
+        return response()->json([
+            'message' => 'Wallet passes are not available for this industry.',
+            'reason'  => 'no_loyalty_program',
+        ], 404);
+    }
+
     public function apple(Request $request, AppleWalletService $apple): Response
     {
         // Manual auth — this route is public so it can be reached via
@@ -48,10 +68,14 @@ class WalletPassController extends Controller
             app()->instance('current_organization_id', $member->organization_id);
         }
 
+        // Phase 8 — medical orgs (hasLoyalty=false) get a 404 with
+        // explicit reason so the mobile app can hide the button.
+        if ($gate = $this->requireLoyalty($member)) return $gate;
+
         $config = WalletConfig::where('organization_id', $member->organization_id)->first();
         if (!$config || !$config->appleReady()) {
             return response()->json([
-                'message' => 'Apple Wallet is not enabled for this hotel yet.',
+                'message' => 'Apple Wallet is not enabled for this workspace yet.',
             ], 503);
         }
 
@@ -77,10 +101,13 @@ class WalletPassController extends Controller
         $member = $request->user()->loyaltyMember;
         if (!$member) abort(404, 'No loyalty membership on this account.');
 
+        // Phase 8 — same hasLoyalty gate as Apple.
+        if ($gate = $this->requireLoyalty($member)) return $gate;
+
         $config = WalletConfig::where('organization_id', $member->organization_id)->first();
         if (!$config || !$config->googleReady()) {
             return response()->json([
-                'message' => 'Google Wallet is not enabled for this hotel yet.',
+                'message' => 'Google Wallet is not enabled for this workspace yet.',
             ], 503);
         }
 
