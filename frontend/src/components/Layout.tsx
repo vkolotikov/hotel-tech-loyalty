@@ -34,6 +34,8 @@ import { BrandSwitcher } from './BrandSwitcher'
 import { LangSwitcher } from './LangSwitcher'
 import { useTranslation } from 'react-i18next'
 import { useVocabulary } from '../lib/vocabulary'
+import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industryGating'
+import { IndustryMismatchBanner } from './IndustryMismatchBanner'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -193,6 +195,18 @@ export function Layout({ children }: { children: ReactNode }) {
   // canonical. Whitelists never silently change meaning on industry
   // switch.
   const vocab = useVocabulary()
+  // Industry Platform Plan Phase 4 — per-industry sidebar gating.
+  // Medical hides 'Members & Loyalty' entirely (decision #5 — no
+  // patient loyalty). Beauty + medical hide 'Deals' (B2B sales
+  // pipeline irrelevant to walk-in / clinical practices). Medical +
+  // restaurant hide 'Scan' (no NFC member card scanner). Hides are
+  // UNIONED with the existing org-wide `hidden_nav_groups` (Settings
+  // → Sidebar Menu) and per-staff `allowed_nav_groups` (Settings →
+  // Team). Industry rules ADD to what's hidden — they never undo a
+  // customised hide. Hotel orgs see zero changes (industry hide list
+  // is empty).
+  const industryHiddenGroups = useIndustryHiddenGroups()
+  const industryHiddenItems = useIndustryHiddenItems()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   // Persist per-group expand/collapse state. Groups default to OPEN
   // (missing key = open) — only an explicit `false` means the user
@@ -423,6 +437,13 @@ export function Layout({ children }: { children: ReactNode }) {
   //   2. Org-wide hidden list (Settings → Menu) — applied next.
   //   3. Per-item role + product + feature gates.
   const ALWAYS_VISIBLE = new Set(['Overview', 'System'])
+  // Phase 4 — item-level always-visible guard. Mirrors the group-level
+  // ALWAYS_VISIBLE protection one layer down: even if a future
+  // INDUSTRY_HIDDEN_ITEMS map accidentally lists 'Dashboard' or
+  // 'Settings', they MUST render. Dashboard is the landing page;
+  // Settings is the way out. Hiding either would lock the admin out of
+  // their workspace.
+  const ALWAYS_VISIBLE_ITEMS = new Set(['Dashboard', 'Settings'])
   const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
   const userAllowed = Array.isArray(staff?.allowed_nav_groups) ? staff!.allowed_nav_groups! : null
   const hasPerUserWhitelist = !isAdmin && userAllowed && userAllowed.length > 0
@@ -431,10 +452,14 @@ export function Layout({ children }: { children: ReactNode }) {
     .filter(group => {
       // Identity stays in English (`defaultLabel`) so the saved
       // whitelist + hidden-list keys are language-stable. Only the
-      // displayed text comes from i18n.
+      // displayed text comes from i18n / vocabulary.
       if (ALWAYS_VISIBLE.has(group.defaultLabel)) return true
       if (hasPerUserWhitelist && !userAllowed!.includes(group.defaultLabel)) return false
       if (hiddenNavGroups.includes(group.defaultLabel)) return false
+      // Phase 4 — industry hide. Unioned with the org-wide list
+      // above so admin customisations stay in effect; never undone
+      // by industry. Empty array for hotel = no change.
+      if (industryHiddenGroups.includes(group.defaultLabel)) return false
       return true
     })
     .map(group => ({
@@ -443,6 +468,13 @@ export function Layout({ children }: { children: ReactNode }) {
         if (!canAccess(item.gate, staff)) return false
         if (item.product && !hasProduct(item.product)) return false
         if (item.feature && !hasFeature(item.feature)) return false
+        // Phase 4 — per-industry item hide (Deals for beauty/medical,
+        // Scan for medical/restaurant). Matches canonical English
+        // defaultLabel; vocabulary relabel happens AFTER this filter.
+        // Guard: never let an industry hide rule strip a load-bearing
+        // item (Dashboard, Settings) — same defensive pattern as
+        // ALWAYS_VISIBLE at the group level above.
+        if (!ALWAYS_VISIBLE_ITEMS.has(item.defaultLabel) && industryHiddenItems.includes(item.defaultLabel)) return false
         return true
       }),
     }))
@@ -718,6 +750,15 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Paid-plan card-failed grace-period banner. Shown when
             Stripe says the most recent payment failed and we're
             inside the 3-day grace window before lockout. */}
+        {/* Phase 4 — sub-domain mismatch banner. Self-suppresses
+            when the host doesn't map to an industry (umbrella host
+            or unmapped staging), when the org has never explicitly
+            picked an industry (silent backfills don't get prompted),
+            and when the user dismissed it earlier in the session.
+            Mounted INSIDE the Layout so it only shows on
+            authenticated routes — the login / register / reset views
+            don't have access to user.industry yet anyway. */}
+        <IndustryMismatchBanner />
         <PastDueGraceBanner />
 
         {/* Page content. Skipped entirely when the wall is showing so

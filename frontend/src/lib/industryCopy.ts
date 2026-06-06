@@ -44,8 +44,14 @@ export interface IndustryCopy {
 /**
  * Source of truth for all per-industry registration copy. Hotel is the
  * baseline / fallback. Beauty / Medical / Restaurant are the four GTM
- * sub-brands. Legal / Real Estate / Education / Fitness inherit from
- * hotel until they get dedicated sub-brand landings.
+ * sub-brands with full marketing-quality copy.
+ *
+ * Legal / Real Estate / Education / Fitness carry MINIMAL entries
+ * (brand + workspace noun) — enough for the Phase 4 mismatch banner to
+ * identify them honestly ("Switch workspace to Legal Workspace?")
+ * without the hotel fallback misleadingly labelling them as
+ * "HotelTechAI". They reuse the hotel hero copy elsewhere since they
+ * have no dedicated marketing landing yet (decision #7).
  */
 export const INDUSTRY_COPY: Partial<Record<IndustryId, IndustryCopy>> = {
   hotel: {
@@ -107,6 +113,72 @@ export const INDUSTRY_COPY: Partial<Record<IndustryId, IndustryCopy>> = {
     orgPlaceholder: 'e.g. The Tasting Room',
     planTagline: 'For growing restaurants + venues',
     workspaceNoun: 'venue workspace',
+  },
+  // Minimal entries for the 4 settings-only industries. The mismatch
+  // banner reads `brand` + `workspaceNoun`; without these, the hotel
+  // fallback would mislabel a legal-configured org as "HotelTechAI" in
+  // the cross-domain switch prompt. Hero / form / tabTitle reuse the
+  // hotel copy because these industries have no dedicated marketing
+  // landing yet (decision #7) — a future ship can expand them.
+  legal: {
+    brand: 'Legal Workspace',
+    hero: 'One platform. More matters. Stronger client follow-up.',
+    heroSub: 'For law firms managing consultations, client communication and matter pipelines in one workspace.',
+    heroBullets: [
+      'AI assistant qualifies enquiries + schedules consultations',
+      'Consultation booking + Stripe payments',
+      'Client CRM with matter history and follow-ups',
+    ],
+    tabTitle: 'Legal Workspace — Sign in',
+    orgLabel: 'Firm name',
+    orgPlaceholder: 'e.g. Hartman & Reed',
+    planTagline: 'For growing firms',
+    workspaceNoun: 'firm workspace',
+  },
+  real_estate: {
+    brand: 'Real Estate Workspace',
+    hero: 'One platform. More viewings. Closer client follow-up.',
+    heroSub: 'For agencies managing listings, viewings and client relationships in one workspace.',
+    heroBullets: [
+      'AI assistant qualifies leads + schedules viewings',
+      'Viewing scheduler + deposit collection',
+      'Client CRM with listing history and follow-ups',
+    ],
+    tabTitle: 'Real Estate Workspace — Sign in',
+    orgLabel: 'Agency name',
+    orgPlaceholder: 'e.g. Harbor & Hill Realty',
+    planTagline: 'For growing agencies',
+    workspaceNoun: 'agency workspace',
+  },
+  education: {
+    brand: 'Education Workspace',
+    hero: 'One platform. More enrolments. Stronger student journeys.',
+    heroSub: 'For schools and tutors managing lessons, student communication and recurring sessions in one workspace.',
+    heroBullets: [
+      'AI assistant answers enrolment questions + schedules lessons',
+      'Lesson booking + Stripe payments',
+      'Student CRM with attendance and progress notes',
+    ],
+    tabTitle: 'Education Workspace — Sign in',
+    orgLabel: 'School / tutor name',
+    orgPlaceholder: 'e.g. North Bay Academy',
+    planTagline: 'For growing schools + tutors',
+    workspaceNoun: 'school workspace',
+  },
+  fitness: {
+    brand: 'Fitness Workspace',
+    hero: 'One platform. More classes. Stronger member engagement.',
+    heroSub: 'For studios and gyms managing classes, memberships and recurring sessions in one workspace.',
+    heroBullets: [
+      'AI assistant answers class questions + books trial sessions',
+      'Class booking + Stripe payments',
+      'Member CRM with attendance and loyalty',
+    ],
+    tabTitle: 'Fitness Workspace — Sign in',
+    orgLabel: 'Studio / gym name',
+    orgPlaceholder: 'e.g. Iron + Steel Gym',
+    planTagline: 'For growing studios + gyms',
+    workspaceNoun: 'studio workspace',
   },
 }
 

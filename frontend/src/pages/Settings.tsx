@@ -5,6 +5,7 @@ import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset } from '../hooks/useTheme'
 import { useVocabulary } from '../lib/vocabulary'
+import { useIndustryHiddenSettingsTabs } from '../lib/industryGating'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -276,6 +277,13 @@ export function Settings() {
   // restaurant. Tab `id` stays canonical — `?tab=general` deep-links
   // keep working on every industry.
   const vocab = useVocabulary()
+  // Phase 4 — per-industry Settings tab gating. Medical hides
+  // 'loyalty' + 'mobile_app' + 'booking'. Beauty + restaurant hide
+  // 'booking' (Phase 7 ships the Appointment Engine settings parity).
+  // Hotel gets an empty list. Keyed on tab `id` (not label) so the
+  // Phase 3 vocabulary relabel can't accidentally drift this list out
+  // of sync.
+  const industryHiddenTabs = useIndustryHiddenSettingsTabs()
   // Active tab persists to the URL via ?tab= so refreshes + deep links
   // land on the same place. 'home' = the grid index (default).
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1965,6 +1973,10 @@ export function Settings() {
           if (t.superAdminOnly && !isSuperAdmin) return false
           if (t.feature && !hasFeature(t.feature)) return false
           if (t.product && !hasProduct(t.product)) return false
+          // Phase 4 — industry hides. Falls through to home grid when a
+          // stale `?tab=` URL points at a now-hidden tab (line below at
+          // `onHome = ... || !tabIsVisible(tab)`), so no blanks.
+          if (industryHiddenTabs.includes(t.id)) return false
           return true
         }
         const tab = TABS.find(t => t.id === activeTab)
