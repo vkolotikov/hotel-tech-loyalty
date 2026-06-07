@@ -386,7 +386,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('dashboard/points-chart',   [DashboardController::class, 'pointsChart']);
             Route::get('dashboard/member-growth',  [DashboardController::class, 'memberGrowth']);
             Route::get('dashboard/top-members',    [DashboardController::class, 'topMembers']);
-            Route::get('dashboard/ai-insights',      [DashboardController::class, 'aiInsights']);
+            // ai_insights — sidebar Layout.tsx already hides /ai when
+            // the org lacks this feature. Endpoint-level middleware
+            // closes the direct-URL / tab-from-notification bypass
+            // and stops unrestricted OpenAI calls billing the
+            // platform key for non-entitled orgs.
+            Route::get('dashboard/ai-insights',      [DashboardController::class, 'aiInsights'])
+                ->middleware('feature:ai_insights');
             Route::get('dashboard/week-comparison',  [DashboardController::class, 'weekComparison']);
             Route::get('dashboard/booking-trends',   [DashboardController::class, 'bookingTrends']);
             Route::get('dashboard/arrivals-today',   [DashboardController::class, 'arrivalsToday']);
@@ -470,7 +476,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('members',                [MemberAdminController::class, 'store']);
             Route::get('members/{id}',            [MemberAdminController::class, 'show']);
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);
-            Route::get('members/{id}/ai-insights',[MemberAdminController::class, 'aiInsights']);
+            Route::get('members/{id}/ai-insights',[MemberAdminController::class, 'aiInsights'])
+                ->middleware('feature:ai_insights');
             Route::post('members/{id}/resend-welcome', [MemberAdminController::class, 'resendWelcomeEmail']);
             Route::patch('members/{id}/deactivate', [MemberAdminController::class, 'deactivate']);
             Route::delete('members/{id}',        [MemberAdminController::class, 'destroy']);

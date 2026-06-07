@@ -282,7 +282,7 @@ export default function App() {
           <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin"><ReviewDetail /></LazyRoute>} />
           {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
-          <Route path="/brands" element={<LazyRoute gate="admin"><Brands /></LazyRoute>} />
+          <Route path="/brands" element={<LazyRoute gate="admin" feature="brands"><Brands /></LazyRoute>} />
 
           {/* Customer detail — leaf route, not a hub member. */}
           <Route path="/guests/:id" element={<LazyRoute><GuestDetail /></LazyRoute>} />
@@ -323,7 +323,7 @@ export default function App() {
               bookmarks + the "Pipeline deep-dive" link patterns. */}
           <Route path="/reports" element={<Navigate to="/analytics?tab=leads" replace />} />
           <Route path="/reservations" element={<Navigate to="/bookings" replace />} />
-          <Route path="/planner" element={<LazyRoute><Planner /></LazyRoute>} />
+          <Route path="/planner" element={<LazyRoute feature="time_management"><Planner /></LazyRoute>} />
           <Route path="/venues" element={<LazyRoute gate="admin"><Venues /></LazyRoute>} />
           <Route path="/bookings" element={<LazyRoute product="booking"><Bookings /></LazyRoute>} />
           <Route path="/booking-rooms" element={<LazyRoute gate="admin" product="booking"><BookingRooms /></LazyRoute>} />

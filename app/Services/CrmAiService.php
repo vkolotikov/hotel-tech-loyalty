@@ -508,23 +508,25 @@ class CrmAiService
         $org = app()->bound('current_organization_id')
             ? \App\Models\Organization::find((int) app('current_organization_id'))
             : null;
-        // Feature gate: staff AI copilot is Enterprise-only on the
-        // current pricing surface. Defense-in-depth alongside the
-        // `feature:admin_ai` route middleware — covers any background
-        // / internal caller that bypasses the HTTP router.
+        // NO service-level `admin_ai` gate here — was a mistake.
+        // CrmAiService is reused by the PUBLIC website-chatbot's
+        // lead-extraction path (WidgetChatController::aiExtractChatLead
+        // → extractLeadFromChat → here), and that flow runs on every
+        // visitor message regardless of plan. A blanket service-level
+        // gate broke lead capture for every Starter/Growth org's
+        // public chat widget while spamming Nightwatch with one
+        // FeatureNotEntitled warning per visitor message.
         //
-        // CRON / QUEUE CALLERS: this only fires when `$org` resolves.
-        // If a future scheduled command calls CrmAiService without
-        // first binding `current_organization_id` to the container,
-        // `$org` is null here and the gate silently lets the call
-        // through. Background commands MUST bind tenant context before
-        // calling this service (see ReapStaleChatConversations for the
-        // canonical "explicit organization_id" pattern). The gate then
-        // works for every caller.
-        if ($org && !$org->hasFeature('admin_ai')) {
-            throw new \App\Exceptions\FeatureNotEntitled('admin_ai', $org->plan_slug,
-                'The Staff AI copilot requires the Enterprise plan.');
-        }
+        // The gate where it belongs is the route middleware
+        // `feature:admin_ai` on /v1/admin/crm-ai/* — staff-facing
+        // endpoints only. Public widget extraction is a separate
+        // surface and is NOT Enterprise-gated.
+        //
+        // FUTURE non-HTTP callers (cron, queue jobs) that need a
+        // feature gate must decide which gate applies to THEIR use
+        // case (admin_ai for staff copilot work, chatbot/lead capture
+        // for widget work, etc.) and add it at THEIR call site, not
+        // here. This service is multi-purpose by design.
         if ($org && !app(\App\Services\AiUsageService::class)->isModelAllowed($org, $this->model)) {
             $allowed = (array) ($org->featureValue('ai_allowed_models') ?? []);
             throw new \App\Exceptions\AiModelNotAllowed($this->model, $allowed);

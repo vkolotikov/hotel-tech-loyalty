@@ -1373,9 +1373,19 @@ class AuthController extends Controller
 
             // Use change-plan if already subscribed, otherwise subscribe
             $endpoint = $hasActive ? "{$saasApi}/billing/change-plan" : "{$saasApi}/billing/subscribe";
+            // Always pass return URLs — matches the activate flow at
+            // doBillingActivate. Without them, SaaS falls back to its
+            // own dashboard URL on Stripe Checkout completion and the
+            // user never hits loyalty's /billing?success=1 handler
+            // that fires /v1/auth/billing/refresh to bust the
+            // entitlement cache. Net effect: a fresh upgrade stays
+            // locked behind the 5-min sync window for no reason.
+            $loyaltyUrl = $this->resolveLoyaltyUrl();
             $response = Http::withToken($saasToken)->timeout(10)->post($endpoint, [
-                'planId'   => $planId,
-                'interval' => $request->input('interval', 'MONTHLY'),
+                'planId'     => $planId,
+                'interval'   => $request->input('interval', 'MONTHLY'),
+                'successUrl' => "{$loyaltyUrl}/billing?success=1",
+                'cancelUrl'  => "{$loyaltyUrl}/billing?canceled=1",
             ]);
 
             if (!$response->successful()) {

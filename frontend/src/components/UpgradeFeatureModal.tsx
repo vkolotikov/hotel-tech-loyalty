@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Lock, Sparkles, X } from 'lucide-react'
-import { ALL_FEATURES, PLAN_FEATURES } from '../lib/planFeatures'
+import { ALL_FEATURES, PLAN_DISPLAY_ORDER, PLAN_FEATURES } from '../lib/planFeatures'
 
 /**
  * Listens for `feature:locked` events from the api.ts axios interceptor
- * (fired on every 402 + `code: 'feature_locked'` response) and renders a
- * conversion-friendly upgrade modal in place of a transient error toast.
+ * (fired on every 402 + `code: 'feature_locked'` response) AND from the
+ * Layout sidebar locked-item click handler. One render path covers both.
  *
  * Shape: locked feature pulled from event detail → friendly label and
  * blurb resolved against the shared `planFeatures.ts` taxonomy → primary
@@ -14,16 +14,13 @@ import { ALL_FEATURES, PLAN_FEATURES } from '../lib/planFeatures'
  * stays inside the loyalty admin and the existing Billing.tsx Checkout
  * flow handles plan-change.
  *
- * Two trigger paths converge here:
- *   1. Server-side 402 from a feature-gated route (Planner/Brands/Admin
- *      AI). The interceptor dispatches with `{feature, plan, upgradeUrl,
- *      message}`.
- *   2. Client-side dispatch from `Layout.tsx` when a user clicks a
- *      visibly-locked sidebar item (greyed, lock icon). Same event shape
- *      so the modal doesn't care about origin.
- *
  * 1.5s same-feature throttle de-dupes when a page fans out parallel
- * requests that all 402. Without it the modal would re-open repeatedly.
+ * requests that all 402. While the modal is OPEN, ALL subsequent
+ * events are suppressed (any feature) — otherwise a second-locked
+ * feature would swap the visible content mid-interaction.
+ *
+ * Accessibility: Esc closes, focus moves into the modal on open,
+ * focus returns to the previously-focused element on close.
  */
 
 const FRIENDLY_LABELS: Record<string, { title: string; blurb: string }> = {
@@ -39,6 +36,51 @@ const FRIENDLY_LABELS: Record<string, { title: string; blurb: string }> = {
     title: 'Multi-Brand Portfolios',
     blurb: 'Run multiple brands inside one organization, each with its own chatbot, knowledge base, booking engine and theme.',
   },
+  // Legacy / surrounding features that may also dispatch feature:locked
+  // events through this same modal (e.g. AI Insights item still gates
+  // on the legacy `ai_insights` key). Curated friendly copy keeps these
+  // upgrade prompts informative instead of falling through to a generic
+  // "Premium Feature" placeholder.
+  ai_insights: {
+    title: 'AI Insights & Analytics',
+    blurb: 'AI-generated weekly reports, churn predictions, upsell suggestions and sentiment analysis across your CRM data.',
+  },
+  analytics: {
+    title: 'Analytics & AI insights',
+    blurb: 'Revenue, bookings, repeat-customer charts and AI-generated weekly insight reports.',
+  },
+  chatbot: {
+    title: 'Website chatbot (AI)',
+    blurb: 'Embed an AI chatbot on your website that answers questions, qualifies leads and captures bookings 24/7.',
+  },
+  engagement: {
+    title: 'Live chat inbox & lead tracking',
+    blurb: 'Unified live-chat inbox, hot-lead detection, daily summary email and a fullscreen monitor view.',
+  },
+  campaigns: {
+    title: 'Email campaigns',
+    blurb: 'Block-builder email campaigns with variable substitution, send history and per-campaign analytics.',
+  },
+  reviews: {
+    title: 'Reviews & feedback',
+    blurb: 'Post-stay review forms, submission tracking and an aggregated feedback dashboard.',
+  },
+  wallet: {
+    title: 'Digital wallet cards',
+    blurb: 'Apple Wallet (.pkpass) + Google Wallet member loyalty cards with auto-regenerated tier and points updates.',
+  },
+  mobile: {
+    title: 'Member mobile app + push',
+    blurb: 'iOS and Android member apps with push notifications, points balance, offers and a digital loyalty card.',
+  },
+  api: {
+    title: 'API access & integrations',
+    blurb: 'Personal access tokens for the lead-intake API, webhooks and 3rd-party integrations (Zapier-style).',
+  },
+  sla: {
+    title: 'Uptime SLA',
+    blurb: '99.9% uptime SLA with priority support and proactive incident notification.',
+  },
 }
 
 interface LockedDetail {
@@ -50,21 +92,37 @@ interface LockedDetail {
 
 export default function UpgradeFeatureModal() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
   const [detail, setDetail] = useState<LockedDetail | null>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const upgradeBtnRef = useRef<HTMLButtonElement | null>(null)
+  // Ref-backed throttle state so the open/close handlers can read it
+  // without forcing a re-render and without stale-closure traps.
+  const throttleRef = useRef<{ lastFeature: string; lastAt: number; openNow: boolean }>({
+    lastFeature: '',
+    lastAt: 0,
+    openNow: false,
+  })
 
   useEffect(() => {
-    let lastFeature = ''
-    let lastAt = 0
     const handler = (e: Event) => {
       const d = (e as CustomEvent).detail as LockedDetail | undefined
       if (!d) return
+      // If the modal is already open, ignore further events. A second
+      // feature firing mid-interaction would otherwise swap visible
+      // content with no transition, confusing the user about which
+      // feature triggered the prompt.
+      if (throttleRef.current.openNow) return
       const now = Date.now()
-      // Same-feature throttle. Different features (rare but possible
-      // during a page fan-out) get their own modal opens.
-      if (d.feature && d.feature === lastFeature && now - lastAt < 1500) return
-      lastFeature = d.feature ?? ''
-      lastAt = now
+      // Same-feature throttle: a page fan-out that produces parallel
+      // 402s for the same key shouldn't reopen the modal in a loop.
+      if (d.feature && d.feature === throttleRef.current.lastFeature && now - throttleRef.current.lastAt < 1500) return
+      throttleRef.current.lastFeature = d.feature ?? ''
+      throttleRef.current.lastAt = now
+      throttleRef.current.openNow = true
+      // Capture trigger element so focus can return on close.
+      previouslyFocusedRef.current = (document.activeElement as HTMLElement) ?? null
       setDetail(d)
       setOpen(true)
     }
@@ -72,40 +130,87 @@ export default function UpgradeFeatureModal() {
     return () => window.removeEventListener('feature:locked', handler)
   }, [])
 
+  // Move focus into the modal on open + handle Esc dismissal.
+  useEffect(() => {
+    if (!open) return
+    // Move focus to the primary action so keyboard users can Enter
+    // straight to upgrade or Shift+Tab to the dismiss buttons.
+    const focusTimer = window.setTimeout(() => upgradeBtnRef.current?.focus(), 0)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        handleDismiss()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.clearTimeout(focusTimer)
+      window.removeEventListener('keydown', onKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   if (!open || !detail) return null
 
   const key = detail.feature ?? ''
   const friendly = FRIENDLY_LABELS[key]
-  // Fall back to the canonical label from planFeatures.ts if we don't
-  // have a curated friendly entry (e.g. ai_insights, custom_branding —
-  // future expansion).
+  // Fall back to the canonical label from planFeatures.ts when we
+  // don't have a curated friendly entry (future expansion).
   const surfaceLabel = ALL_FEATURES.find(f => f.key === key)?.label
   const title = friendly?.title ?? surfaceLabel ?? 'Premium Feature'
   const blurb = friendly?.blurb ?? detail.message
-  // Available on which plan? Find the cheapest plan that includes it.
-  // PLAN_FEATURES values are `string | boolean`; truthy ones (any
-  // non-empty string OR boolean true) count as included.
+  // Iterate the FULL plan order from cheapest → most expensive and
+  // pick the first plan that includes the feature. This handles
+  // future features that may be Starter-included or Growth-included
+  // instead of always assuming Enterprise.
   const includedOn = (() => {
     if (!key) return null
-    for (const slug of ['growth', 'enterprise'] as const) {
+    for (const slug of PLAN_DISPLAY_ORDER) {
       const v = PLAN_FEATURES[slug]?.[key]
-      if (v && v !== '' && v !== 'false') return slug
+      // Truthy boolean OR non-empty string === included. The shape
+      // is `string | boolean` per planFeatures.ts.
+      if (v === true) return slug
+      if (typeof v === 'string' && v.length > 0) return slug
     }
     return null
   })()
-  const includedLabel = includedOn ? includedOn.charAt(0).toUpperCase() + includedOn.slice(1) : 'Enterprise'
+  // When the feature is missing from every plan map (defensive — a
+  // typo or a legacy key not yet migrated), surface a neutral
+  // fallback instead of mislabelling as Enterprise.
+  const includedLabel = includedOn
+    ? includedOn.charAt(0).toUpperCase() + includedOn.slice(1)
+    : 'a higher plan'
+
+  const handleDismiss = () => {
+    setOpen(false)
+    throttleRef.current.openNow = false
+    // Return focus to whatever triggered the modal — the locked
+    // sidebar button or the form control that produced the 402.
+    window.setTimeout(() => previouslyFocusedRef.current?.focus?.(), 0)
+  }
 
   const handleUpgrade = () => {
     setOpen(false)
-    // Prefer in-SPA navigation to the admin's own Billing page. The
-    // server-supplied `upgrade_url` points at the SaaS dashboard which
-    // makes the user leave the loyalty admin — bad conversion path.
-    // Billing.tsx already handles the SaaS Stripe Checkout return-trip
-    // via /v1/auth/billing/refresh on `?success=1`.
+    throttleRef.current.openNow = false
+    // If the user is already on /billing — clicked a locked feature
+    // from there or arrived via a previous Upgrade click — react-
+    // router's navigate('/billing') is a no-op and the modal
+    // dismissal appears to do nothing. Scroll to the plans area
+    // instead so the user sees the comparison.
+    if (location.pathname === '/billing') {
+      window.setTimeout(() => {
+        const target = document.getElementById('plan-comparison')
+          ?? document.querySelector('[data-billing-plans]')
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      }, 0)
+      return
+    }
     navigate('/billing')
   }
-
-  const handleDismiss = () => setOpen(false)
 
   return (
     <div
@@ -114,36 +219,40 @@ export default function UpgradeFeatureModal() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="upgrade-modal-title"
+      aria-describedby="upgrade-modal-blurb"
     >
       <div
         className="relative w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Gold accent bar at the top */}
-        <div className="h-1 bg-gradient-to-r from-primary-gold/60 via-primary-gold to-primary-gold/60" />
+        <div className="h-1 bg-gradient-to-r from-primary-gold/60 via-primary-gold to-primary-gold/60" aria-hidden="true" />
 
         <button
           onClick={handleDismiss}
-          aria-label="Close"
+          aria-label="Close upgrade prompt"
+          type="button"
           className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/[0.06] transition-colors"
         >
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
 
-        <div className="p-7">
+        <div className="p-5 sm:p-7 pr-10 sm:pr-12">
           {/* Header — lock icon + plan badge */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-primary-gold/15 border border-primary-gold/30 flex items-center justify-center">
-              <Lock size={22} className="text-primary-gold" />
+            <div className="w-12 h-12 rounded-xl bg-primary-gold/15 border border-primary-gold/30 flex items-center justify-center flex-shrink-0">
+              <Lock size={22} className="text-primary-gold" aria-hidden="true" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-gold/15 border border-primary-gold/30 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] text-primary-gold w-fit">
-                <Sparkles size={10} />
+                <Sparkles size={10} aria-hidden="true" />
                 Available on {includedLabel}
               </div>
-              <span className="text-[11px] text-t-secondary mt-1">
-                Your plan: <span className="text-t-primary font-medium">{detail.plan ?? 'Current'}</span>
-              </span>
+              {detail.plan && (
+                <span className="text-[11px] text-t-secondary mt-1 truncate">
+                  Your plan: <span className="text-t-primary font-medium">{detail.plan}</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -153,23 +262,26 @@ export default function UpgradeFeatureModal() {
           </h2>
 
           {/* Blurb */}
-          <p className="text-[13.5px] text-t-secondary leading-relaxed mb-6">
+          <p id="upgrade-modal-blurb" className="text-[13.5px] text-t-secondary leading-relaxed mb-6">
             {blurb}
           </p>
 
-          {/* CTA row */}
-          <div className="flex items-center gap-2.5">
+          {/* CTA row — stacks on mobile so neither button gets crushed */}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5">
             <button
+              onClick={handleDismiss}
+              type="button"
+              className="px-4 py-2.5 text-t-secondary hover:text-white text-sm font-medium transition-colors sm:flex-shrink-0"
+            >
+              Not now
+            </button>
+            <button
+              ref={upgradeBtnRef}
               onClick={handleUpgrade}
+              type="button"
               className="flex-1 bg-primary-gold hover:bg-primary-gold/90 text-black font-bold py-2.5 rounded-lg transition-colors text-sm shadow-lg shadow-primary-gold/20"
             >
               Upgrade plan
-            </button>
-            <button
-              onClick={handleDismiss}
-              className="px-4 py-2.5 text-t-secondary hover:text-white text-sm font-medium transition-colors"
-            >
-              Not now
             </button>
           </div>
         </div>

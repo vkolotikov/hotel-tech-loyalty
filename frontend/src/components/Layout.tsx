@@ -227,7 +227,12 @@ export function Layout({ children }: { children: ReactNode }) {
   )
   const location = useLocation()
   const { user, staff, logout } = useAuthStore()
-  const { hasFeature, hasProduct, status: subStatus } = useSubscription()
+  const { hasFeature, hasProduct, status: subStatus, data: subData } = useSubscription()
+  const currentPlanLabel = (() => {
+    const slug = subData?.plan?.slug
+    const name = subData?.plan?.name
+    return name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : null)
+  })()
   const settings = useSettings()
   /**
    * Admin-configured per-org sidebar visibility (Settings → Menu).
@@ -619,36 +624,47 @@ export function Layout({ children }: { children: ReactNode }) {
                   // interceptor uses for server-side 402s — the
                   // UpgradeFeatureModal listens to both paths.
                   if (locked) {
+                    // Build an accessible name so screen readers
+                    // announce the lock state — `title` alone is
+                    // inaccessible (many screen readers + mobile
+                    // assistive tech ignore it).
+                    const ariaLabel = `${itemLabel} — locked, upgrade to unlock`
                     return (
                       <button
                         key={path}
                         type="button"
-                        title={displayCollapsed ? `${itemLabel} — Enterprise plan` : 'Available on Enterprise plan'}
+                        title={displayCollapsed ? `${itemLabel} — upgrade to unlock` : 'Upgrade to unlock this feature'}
+                        aria-label={ariaLabel}
                         onClick={() => {
+                          // Pass current plan + a feature-specific
+                          // message so the modal can render the
+                          // "Your plan: …" line correctly and the
+                          // throttle's same-feature key dedupes
+                          // server-side 402s arriving moments later.
                           window.dispatchEvent(new CustomEvent('feature:locked', {
                             detail: {
                               feature: lockedFeature,
-                              plan: null,
+                              plan: currentPlanLabel,
                               upgradeUrl: null,
-                              message: 'This feature is not included in your current plan.',
+                              message: `${itemLabel} is not included in your current plan.`,
                             },
                           }))
                         }}
                         className={clsx(
                           'w-[calc(100%-12px)] flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                           displayCollapsed ? 'justify-center px-0' : 'px-3',
-                          'text-t-secondary/50 hover:text-t-secondary hover:bg-white/[0.02]',
+                          'text-t-secondary/70 hover:text-white hover:bg-white/[0.04]',
                         )}
                       >
-                        <Icon size={17} className="flex-shrink-0 opacity-60" />
+                        <Icon size={17} className="flex-shrink-0 opacity-70" aria-hidden="true" />
                         {!displayCollapsed && (
                           <>
                             <span className="truncate flex-1 text-left">{itemLabel}</span>
-                            <Lock size={11} className="flex-shrink-0 text-primary-gold/70" />
+                            <Lock size={11} className="flex-shrink-0 text-primary-gold/80" aria-hidden="true" />
                           </>
                         )}
                         {displayCollapsed && (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/70" />
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/80" aria-hidden="true" />
                         )}
                       </button>
                     )

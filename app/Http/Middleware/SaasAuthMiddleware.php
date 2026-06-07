@@ -129,12 +129,50 @@ class SaasAuthMiddleware
             $data = $resp->json();
             $sub = $data['subscription'] ?? null;
 
-            $org->plan_slug             = $sub['plan']['slug'] ?? null;
-            $org->subscription_status   = $sub['status'] ?? null;
-            $org->trial_end             = $sub['trialEnd'] ?? null;
-            $org->period_end            = $sub['currentPeriodEnd'] ?? null;
-            $org->entitled_products     = $data['entitled_product_slugs'] ?? [];
-            $org->plan_features         = (array) ($data['features'] ?? []);
+            // Only write subscription state when SaaS actually returned
+            // a subscription object. A bootstrap response that omits
+            // `subscription` shouldn't null out a paying customer's
+            // plan_slug + status — the brief gap between Stripe
+            // Checkout success and webhook processing legitimately
+            // returns no subscription; treat it as "no change" rather
+            // than "downgrade to NO_PLAN".
+            if ($sub) {
+                $org->plan_slug             = $sub['plan']['slug'] ?? null;
+                $org->subscription_status   = $sub['status'] ?? null;
+                $org->trial_end             = $sub['trialEnd'] ?? null;
+                $org->period_end            = $sub['currentPeriodEnd'] ?? null;
+            }
+
+            // Entitlements: defensive preservation. The audit found a
+            // failure mode where SaaS returns 200 with `features: {}`
+            // (catalog mid-migration, partial DB outage) and the old
+            // code blindly wiped every Enterprise customer's cached
+            // features for the full 5-min sync window. Now: preserve
+            // the prior cache when the response has no features AND
+            // the subscription is still ACTIVE/TRIALING — i.e. the
+            // customer is still paying, so an empty features payload
+            // is more likely a SaaS bug than a real downgrade.
+            // Legitimate cancellations (sub=null OR status in
+            // CANCELED/UNPAID/EXPIRED) DO clear features as expected.
+            $features = $data['features'] ?? null;
+            $featuresArray = is_array($features) ? $features : ((array) $features);
+            $entitledProducts = $data['entitled_product_slugs'] ?? null;
+            $entitledArray = is_array($entitledProducts) ? $entitledProducts : [];
+
+            $subActive = $sub && in_array(($sub['status'] ?? ''), ['ACTIVE', 'TRIALING'], true);
+            if (!$subActive || !empty($featuresArray)) {
+                $org->plan_features = $featuresArray;
+            } else {
+                \Log::warning('SaasAuthMiddleware: empty features for active subscription — preserving cached entitlements', [
+                    'org_id'     => $org->id,
+                    'plan_slug'  => $sub['plan']['slug'] ?? null,
+                    'sub_status' => $sub['status'] ?? null,
+                ]);
+            }
+            if (!$subActive || !empty($entitledArray)) {
+                $org->entitled_products = $entitledArray;
+            }
+
             $org->entitlements_synced_at = now();
             $org->save();
         } catch (\Throwable $e) {

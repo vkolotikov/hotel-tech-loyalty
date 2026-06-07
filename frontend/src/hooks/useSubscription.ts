@@ -78,9 +78,15 @@ export function useSubscription() {
   const status = isClientExpired ? 'EXPIRED' : rawStatus
 
   const hasFeature = (key: string): boolean => {
-    // While loading, assume features are available to prevent flash of locked UI
-    if (isLoading) return true
+    // Loading: return false. Audit found the previous "assume true
+    // while loading" produced a worse UX — a Starter/Growth user would
+    // see Planner / Brands / AiChat render as unlocked for ~200ms then
+    // snap to locked. Showing locked state immediately is honest; the
+    // user sees the lock badge from first paint and there's no
+    // teasing-then-revoking flash. LOCAL-mode keeps the "everything
+    // true" shortcut (the entire LOCAL branch is unconditional).
     if (isLocal) return true
+    if (isLoading) return false
     const v = features[key]
     if (!v) return false
     if (v === 'true' || v === 'unlimited') return true
