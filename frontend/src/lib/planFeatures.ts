@@ -93,8 +93,8 @@ export type FeatureKey = (typeof ALL_FEATURES)[number]['key']
 
 export const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
   starter: {
-    crm:             'Up to 500 profiles',
-    loyalty:         'Basic — 1 tier',
+    crm:             'Unlimited profiles',
+    loyalty:         'Basic tiers and benefits',
     booking:         false,
     chatbot:         false,
     engagement:      false,
@@ -113,7 +113,7 @@ export const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
   },
   growth: {
     crm:             'Unlimited profiles',
-    loyalty:         'Up to 5 tiers',
+    loyalty:         'Standard tiers and benefits',
     booking:         'With online payments',
     chatbot:         true,
     engagement:      true,

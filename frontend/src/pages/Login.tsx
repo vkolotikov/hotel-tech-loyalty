@@ -270,7 +270,7 @@ interface PlanData {
 const FALLBACK_PLANS: PlanData[] = [
   {
     id: 'starter', name: 'Starter', slug: 'starter',
-    description: 'For single-location service businesses getting started with customer data and basic loyalty.',
+    description: 'For single-location service businesses getting started with customer data, basic loyalty and the member mobile app.',
     monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7,
   },
   {

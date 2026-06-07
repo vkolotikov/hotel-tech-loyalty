@@ -1649,8 +1649,13 @@ class AuthController extends Controller
                 'ai_avatars'           => 'false',
                 'custom_branding'      => 'false',
                 'api_access'           => 'false',
-                'push_notifications'   => 'false',
-                'mobile_app'           => 'false',
+                // 2026-06-08: member mobile app + push are now included
+                // on Starter (was 'false' both). The pricing surface
+                // (planFeatures.ts row `mobile: true` + the Billing
+                // FALLBACK Starter description "and the member mobile
+                // app") was the source of truth — backend caught up.
+                'push_notifications'   => 'true',
+                'mobile_app'           => 'true',
                 'nfc_cards'            => 'false',
                 'priority_support'     => 'email',
                 // Pricing v2 (2026-06-07): Enterprise-only gates.
