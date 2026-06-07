@@ -1171,6 +1171,10 @@ class AuthController extends Controller
                     'custom_branding' => 'true', 'api_access' => 'true',
                     'push_notifications' => 'true', 'mobile_app' => 'true',
                     'nfc_cards' => 'true', 'priority_support' => 'dedicated',
+                    // Pricing v2 (2026-06-07): without these, a platform
+                    // admin hitting any of the new Enterprise-only routes
+                    // gets 402'd even though they're meant to bypass.
+                    'time_management' => 'true', 'admin_ai' => 'true', 'brands' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
@@ -1296,6 +1300,10 @@ class AuthController extends Controller
                     'custom_branding' => 'true', 'api_access' => 'true',
                     'push_notifications' => 'true', 'mobile_app' => 'true',
                     'nfc_cards' => 'true', 'priority_support' => 'dedicated',
+                    // Pricing v2 (2026-06-07): without these, a platform
+                    // admin hitting any of the new Enterprise-only routes
+                    // gets 402'd even though they're meant to bypass.
+                    'time_management' => 'true', 'admin_ai' => 'true', 'brands' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
