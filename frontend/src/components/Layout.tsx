@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
 import UpgradeFeatureModal from './UpgradeFeatureModal'
+import GraceWindowBanner from './GraceWindowBanner'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
@@ -854,8 +855,14 @@ export function Layout({ children }: { children: ReactNode }) {
             React Query hooks kept polling endpoints that all return
             403, generating log spam and a flicker of broken UI behind
             the wall. */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 mobile-safe-bottom">
-          {blockForSub ? null : children}
+        <main className="flex-1 overflow-y-auto mobile-safe-bottom">
+          {/* Pricing v3 grace-window notice — auto-hides after the
+              2026-06-22 sunset, dismissable, only renders for
+              Starter customers. */}
+          {!blockForSub && <GraceWindowBanner />}
+          <div className="p-4 lg:p-6">
+            {blockForSub ? null : children}
+          </div>
         </main>
       </div>
 

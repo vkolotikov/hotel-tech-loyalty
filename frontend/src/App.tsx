@@ -242,7 +242,7 @@ export default function App() {
 
           {/* Wallet config — kept routable, removed from sidebar. Reached
               from a link in Settings (one-time setup, not daily-use). */}
-          <Route path="/wallet-config" element={<LazyRoute gate="admin" product="loyalty"><WalletConfig /></LazyRoute>} />
+          <Route path="/wallet-config" element={<LazyRoute gate="admin" product="loyalty" feature="wallet"><WalletConfig /></LazyRoute>} />
           {/* Analytics is plain charts/KPIs (no LLM) so we gate on the
               staff `can_view_analytics` flag only. Previously this route
               also required the `ai_insights` plan feature, which made
@@ -278,8 +278,8 @@ export default function App() {
               kept as standalone leaves so links from emails / external
               tools still render the detail view directly. */}
           <Route path="/notifications/:id" element={<LazyRoute gate="admin" feature="push_notifications"><CampaignDetail /></LazyRoute>} />
-          <Route path="/reviews/forms/:id" element={<LazyRoute gate="admin"><ReviewFormBuilder /></LazyRoute>} />
-          <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin"><ReviewDetail /></LazyRoute>} />
+          <Route path="/reviews/forms/:id" element={<LazyRoute gate="admin" feature="reviews"><ReviewFormBuilder /></LazyRoute>} />
+          <Route path="/reviews/submissions/:id" element={<LazyRoute gate="admin" feature="reviews"><ReviewDetail /></LazyRoute>} />
           {/* /tiers, /benefits redirects live higher up (Members & Loyalty hubs) */}
           <Route path="/properties" element={<LazyRoute gate="admin"><Properties /></LazyRoute>} />
           <Route path="/brands" element={<LazyRoute gate="admin" feature="brands"><Brands /></LazyRoute>} />
