@@ -16,12 +16,19 @@ export interface SubscriptionData {
   billingAvailable?: boolean
 }
 
+// LOCAL-mode escape hatch — every feature true so a no-SaaS dev
+// environment never sees a gated UI. Must include every key the
+// SaaS plan_features catalog can return; missing keys here cause
+// local devs to see the locked state for new gates. Keep in sync
+// with the SaaS DatabaseSeeder feature list.
 const ALL_FEATURES: SubscriptionData['features'] = {
   max_team_members: 'unlimited', max_guests: 'unlimited',
   max_properties: 'unlimited', max_loyalty_members: 'unlimited',
   ai_insights: 'true', ai_avatars: 'true', custom_branding: 'true',
   api_access: 'true', push_notifications: 'true', mobile_app: 'true',
   nfc_cards: 'true', priority_support: 'dedicated',
+  // Pricing v2 (2026-06-07) — Enterprise-only gates.
+  time_management: 'true', admin_ai: 'true', brands: 'true',
 }
 const ALL_PRODUCTS = ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking']
 

@@ -1643,6 +1643,10 @@ class AuthController extends Controller
                 'mobile_app'           => 'false',
                 'nfc_cards'            => 'false',
                 'priority_support'     => 'email',
+                // Pricing v2 (2026-06-07): Enterprise-only gates.
+                'time_management'      => 'false',
+                'admin_ai'             => 'false',
+                'brands'               => 'false',
             ],
             'growth' => [
                 'max_team_members'     => '25',
@@ -1657,6 +1661,9 @@ class AuthController extends Controller
                 'mobile_app'           => 'true',
                 'nfc_cards'            => 'true',
                 'priority_support'     => 'chat',
+                'time_management'      => 'false',
+                'admin_ai'             => 'false',
+                'brands'               => 'false',
             ],
             'enterprise' => [
                 'max_team_members'     => 'unlimited',
@@ -1671,6 +1678,12 @@ class AuthController extends Controller
                 'mobile_app'           => 'true',
                 'nfc_cards'            => 'true',
                 'priority_support'     => 'dedicated',
+                // Enterprise customers MUST get true here on the
+                // SaaS-unreachable fallback path — otherwise their own
+                // paid features stay locked until SaaS sync recovers.
+                'time_management'      => 'true',
+                'admin_ai'             => 'true',
+                'brands'               => 'true',
             ],
             default => [
                 'max_team_members'     => '5',
@@ -1681,6 +1694,9 @@ class AuthController extends Controller
                 'custom_branding'      => 'false',
                 'push_notifications'   => 'false',
                 'mobile_app'           => 'false',
+                'time_management'      => 'false',
+                'admin_ai'             => 'false',
+                'brands'               => 'false',
             ],
         };
     }

@@ -512,6 +512,15 @@ class CrmAiService
         // current pricing surface. Defense-in-depth alongside the
         // `feature:admin_ai` route middleware — covers any background
         // / internal caller that bypasses the HTTP router.
+        //
+        // CRON / QUEUE CALLERS: this only fires when `$org` resolves.
+        // If a future scheduled command calls CrmAiService without
+        // first binding `current_organization_id` to the container,
+        // `$org` is null here and the gate silently lets the call
+        // through. Background commands MUST bind tenant context before
+        // calling this service (see ReapStaleChatConversations for the
+        // canonical "explicit organization_id" pattern). The gate then
+        // works for every caller.
         if ($org && !$org->hasFeature('admin_ai')) {
             throw new \App\Exceptions\FeatureNotEntitled('admin_ai', $org->plan_slug,
                 'The Staff AI copilot requires the Enterprise plan.');
