@@ -627,13 +627,19 @@ export function Layout({ children }: { children: ReactNode }) {
                     // Build an accessible name so screen readers
                     // announce the lock state — `title` alone is
                     // inaccessible (many screen readers + mobile
-                    // assistive tech ignore it).
-                    const ariaLabel = `${itemLabel} — locked, upgrade to unlock`
+                    // assistive tech ignore it). All three strings
+                    // (tooltip, aria-label, dispatch message) flow
+                    // through i18n with English defaults so untranslated
+                    // locales fall back gracefully.
+                    const ariaLabel = t('nav_locked.aria_label', '{{label}} — locked, upgrade to unlock', { label: itemLabel })
+                    const tooltipCollapsed = t('nav_locked.tooltip_collapsed', '{{label}} — upgrade to unlock', { label: itemLabel })
+                    const tooltipExpanded = t('nav_locked.tooltip_expanded', 'Upgrade to unlock this feature')
+                    const dispatchMessage = t('nav_locked.dispatch_message', '{{label}} is not included in your current plan.', { label: itemLabel })
                     return (
                       <button
                         key={path}
                         type="button"
-                        title={displayCollapsed ? `${itemLabel} — upgrade to unlock` : 'Upgrade to unlock this feature'}
+                        title={displayCollapsed ? tooltipCollapsed : tooltipExpanded}
                         aria-label={ariaLabel}
                         onClick={() => {
                           // Pass current plan + a feature-specific
@@ -646,7 +652,7 @@ export function Layout({ children }: { children: ReactNode }) {
                               feature: lockedFeature,
                               plan: currentPlanLabel,
                               upgradeUrl: null,
-                              message: `${itemLabel} is not included in your current plan.`,
+                              message: dispatchMessage,
                             },
                           }))
                         }}

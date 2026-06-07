@@ -66,6 +66,34 @@ class DocumentationController extends Controller
     {
         return [
             [
+                'slug' => 'pricing',
+                'title' => 'Plans & Pricing',
+                'icon' => 'CreditCard',
+                'description' => 'HexaTech sells three plans (Starter, Growth, Enterprise). Each plan unlocks a specific set of features — this section explains what is included on each, why a feature appears greyed out, and how to upgrade.',
+                'articles' => [
+                    [
+                        'title' => 'The three plans at a glance',
+                        'content' => "HexaTech has three plans on the current pricing surface, in order of price:\n\n**Starter** — for single-location service businesses getting started with customer data, basic loyalty and the member mobile app. Customer CRM (up to 500 profiles), basic 1-tier loyalty program, single location, member mobile app + push notifications, email support.\n\n**Growth** — for growing businesses that need bookings, AI chat and member engagement. Includes everything in Starter, plus: unlimited customer profiles, up to 5 loyalty tiers, the Booking Engine with online payments, the Website Chatbot (AI), Live chat inbox & lead tracking (Engagement Hub), Email campaigns, Reviews & feedback, Digital Wallet cards (Apple + Google), Analytics & AI insights, up to 3 locations, and email + chat support.\n\n**Enterprise** — for multi-location and multi-brand operators. Includes everything in Growth, plus: unlimited locations, Multi-brand portfolios (one organization with many brands), the Time Management Platform (Planner module: staff scheduling, backlog, recurring tasks, auto-plan, team kanban), API access & integrations, the Staff AI Copilot (Anthropic Claude with 35+ CRM tools), dedicated support, and a 99.9% uptime SLA.\n\nThe full feature comparison table is at Settings → Billing & Subscription. The same comparison renders on the public sign-up page.",
+                    ],
+                    [
+                        'title' => 'Enterprise-only features',
+                        'content' => "Three features are gated to the Enterprise plan only:\n\n**Time Management Platform** — the Planner module (`/planner`). Drag-drop staff scheduling, backlog + recurring tasks, auto-plan, team kanban, day timeline. On Starter/Growth, the Planner sidebar item shows greyed with a gold lock badge and tries to open the upgrade modal on click.\n\n**Multi-brand portfolios** — adding more than one Brand to an organization. Every org automatically gets one default brand on creation; the gate enforces the second + subsequent brands. On Starter/Growth, Settings → Brands shows the existing default brand but the \"+ Add brand\" button returns 402 with a clear upgrade message.\n\n**Staff AI Copilot** — the floating Admin AI Chat button (bottom-right of the admin console), powered by Anthropic Claude with 35+ CRM tools that can answer staff questions, navigate the data, and act on the staff member's behalf. On Starter/Growth, the floating launcher button is hidden entirely.",
+                    ],
+                    [
+                        'title' => 'Why is X greyed out in the sidebar?',
+                        'content' => "When a sidebar item appears greyed with a small gold lock badge, the organization's current plan does not include that feature. The most common cases:\n\n**Planner (greyed)** — Time Management Platform requires the Enterprise plan. Click the greyed item to open the upgrade modal with a one-click Upgrade button.\n\n**Brands (greyed)** — Multi-brand portfolios requires the Enterprise plan. The default brand still exists and is editable; only adding additional brands is blocked.\n\n**AI Insights (greyed on Starter)** — requires the AI Insights feature flag, included on Growth + Enterprise.\n\n**Staff AI Copilot — floating button missing** — the bottom-right floating AI chat launcher is hidden on Starter/Growth orgs entirely (no greyed state because a floating action button reads as broken UI when greyed). The capability returns once the org upgrades to Enterprise.\n\nNote: the gates are advertised on the Login/Register pricing card and on Settings → Billing & Subscription. The plan + the gated feature flow through to the upgrade modal so staff understand exactly which plan unlocks the feature they were trying to use.",
+                    ],
+                    [
+                        'title' => 'How do I upgrade?',
+                        'content' => "Open **Settings → Billing & Subscription** in the admin web app. The page shows the three plans side-by-side with a feature comparison table; click \"Upgrade\" on the desired plan. Stripe Checkout opens for payment. On successful purchase the user returns to /billing?success=1 and the entitlement cache busts automatically — the new plan's features unlock on the very next request (no waiting).\n\nDowngrades happen via the Stripe Customer Portal (Settings → Billing → Manage subscription). The downgrade also triggers an entitlement cache bust via Stripe webhook, so the SPA's sidebar lock badges appear on the next request after the downgrade processes.",
+                    ],
+                    [
+                        'title' => 'Plan downgrade behavior',
+                        'content' => "When an organization downgrades from Enterprise to Growth (or Growth to Starter), the lost features are gated server-side immediately on the next request after the Stripe webhook processes. The sidebar items flip from accessible to visible-locked (with the gold lock badge). Data in those features is NOT deleted — for example, a downgraded org's existing Planner tasks remain in the database, just inaccessible via the UI. Upgrading again restores immediate access.\n\nMulti-brand portfolios: downgrading from Enterprise with multiple brands keeps all existing brands viewable + editable, but the \"+ Add brand\" button starts returning 402. Soft-deleted brands remain inaccessible.\n\nAdmin AI Copilot: any in-progress AI session is interrupted; the floating button disappears immediately and the staff member is dropped back to the manual admin workflows.",
+                    ],
+                ],
+            ],
+            [
                 'slug' => 'overview',
                 'title' => 'Platform Overview',
                 'icon' => 'Globe',
@@ -671,6 +699,26 @@ class DocumentationController extends Controller
     public static function getFaq(): array
     {
         return [
+            [
+                'category' => 'Plans & Pricing',
+                'question' => 'Why is the Planner item greyed out in my sidebar?',
+                'answer' => 'The Planner (Time Management Platform) is included on the Enterprise plan only. Your current plan is Starter or Growth — the sidebar item shows greyed with a gold lock badge. Click it to open the upgrade modal, or open Settings → Billing & Subscription to compare plans.',
+            ],
+            [
+                'category' => 'Plans & Pricing',
+                'question' => 'Why can\'t I add a second brand?',
+                'answer' => 'Multi-brand portfolios are included on the Enterprise plan only. Every organization automatically gets one default brand on creation; adding a second brand requires Enterprise. The default brand stays fully editable on any plan.',
+            ],
+            [
+                'category' => 'Plans & Pricing',
+                'question' => 'Why is the floating AI chat button missing?',
+                'answer' => 'The Staff AI Copilot (Anthropic Claude with 35+ CRM tools) is included on the Enterprise plan only. On Starter and Growth the floating launcher button is hidden entirely. The website chatbot for guest conversations is a separate feature included on Growth + Enterprise.',
+            ],
+            [
+                'category' => 'Plans & Pricing',
+                'question' => 'How do I upgrade my plan?',
+                'answer' => 'Open Settings → Billing & Subscription, pick the desired plan and click Upgrade. Stripe Checkout opens for payment. After successful purchase you return to the admin and the new plan\'s features unlock on the very next page request — no waiting for a cache to refresh.',
+            ],
             [
                 'category' => 'General',
                 'question' => 'How do I change my hotel\'s branding colors?',

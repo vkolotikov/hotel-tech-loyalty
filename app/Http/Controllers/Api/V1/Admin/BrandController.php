@@ -106,18 +106,7 @@ class BrandController extends Controller
     public function store(Request $request): JsonResponse
     {
         $orgId = app('current_organization_id');
-
-        // Plan gate: every org gets one default brand auto-created at
-        // signup. Adding a SECOND brand requires the `brands` feature
-        // (Enterprise on the current pricing surface). Count check
-        // grandfathers the default brand and any single-brand orgs that
-        // existed before this gate shipped.
-        $org = $request->user()?->organization;
-        if ($org && Brand::where('organization_id', $orgId)->count() >= 1
-            && !$org->hasFeature('brands')) {
-            throw new \App\Exceptions\FeatureNotEntitled('brands', $org->plan_slug,
-                'Multi-brand portfolios require the Enterprise plan. Your current plan supports one brand.');
-        }
+        $org   = $request->user()?->organization;
 
         $data = $request->validate([
             'name'          => 'required|string|max:120',
@@ -141,10 +130,32 @@ class BrandController extends Controller
             $data['slug'] = $this->uniqueSlugWithinOrg($orgId, $data['name']);
         }
 
-        $brand = new Brand($data);
-        $brand->organization_id = $orgId;
-        $brand->is_default = false; // never auto-promote a freshly created brand
-        $brand->save();
+        // Plan gate + brand create wrapped in a single transaction so
+        // the advisory lock holds across the gate check AND the row
+        // insert. Without the unified tx, concurrent admin tabs could
+        // both pass the gate (count<1) then both insert (count→2 for
+        // a Starter org). The lock keys on (crc32('brand_store'),
+        // orgId) so distinct feature gates coexist in their own
+        // namespaces. SoftDeletes count via withTrashed() blocks the
+        // resurrect-deleted-brand bypass.
+        $brand = DB::transaction(function () use ($orgId, $org, $data) {
+            if ($org && !$org->hasFeature('brands')) {
+                DB::statement('SELECT pg_advisory_xact_lock(?, ?)', [crc32('brand_store'), $orgId]);
+                $count = Brand::withTrashed()
+                    ->where('organization_id', $orgId)
+                    ->count();
+                if ($count >= 1) {
+                    throw new \App\Exceptions\FeatureNotEntitled('brands', $org->plan_slug,
+                        'Multi-brand portfolios require the Enterprise plan. Your current plan supports one brand.');
+                }
+            }
+
+            $brand = new Brand($data);
+            $brand->organization_id = $orgId;
+            $brand->is_default = false; // never auto-promote a freshly created brand
+            $brand->save();
+            return $brand;
+        });
 
         if ($request->hasFile('logo')) {
             $brand->logo_url = MediaService::upload($request->file('logo'), 'brand-logos');

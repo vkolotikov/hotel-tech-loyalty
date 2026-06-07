@@ -2757,5 +2757,76 @@
     "created": "Created",
     "copied": "Copied to clipboard",
     "error": "Something went wrong"
+  },
+
+  "upgrade_modal": {
+    "available_on": "Available on {{plan}}",
+    "your_plan": "Your plan",
+    "upgrade_cta": "Upgrade plan",
+    "dismiss": "Not now",
+    "close_aria": "Close upgrade prompt",
+    "fallback_title": "Premium Feature",
+    "fallback_plan": "a higher plan",
+    "features": {
+      "time_management": {
+        "title": "Time Management Platform",
+        "blurb": "Drag-drop staff scheduling, backlog + recurring tasks, auto-plan, team kanban, and full Planner toolkit."
+      },
+      "admin_ai": {
+        "title": "Staff AI Copilot",
+        "blurb": "Anthropic Claude with 35+ CRM tools — answers, navigates and acts on your behalf inside the admin console."
+      },
+      "brands": {
+        "title": "Multi-Brand Portfolios",
+        "blurb": "Run multiple brands inside one organization, each with its own chatbot, knowledge base, booking engine and theme."
+      },
+      "ai_insights": {
+        "title": "AI Insights & Analytics",
+        "blurb": "AI-generated weekly reports, churn predictions, upsell suggestions and sentiment analysis across your CRM data."
+      },
+      "analytics": {
+        "title": "Analytics & AI insights",
+        "blurb": "Revenue, bookings, repeat-customer charts and AI-generated weekly insight reports."
+      },
+      "chatbot": {
+        "title": "Website chatbot (AI)",
+        "blurb": "Embed an AI chatbot on your website that answers questions, qualifies leads and captures bookings 24/7."
+      },
+      "engagement": {
+        "title": "Live chat inbox & lead tracking",
+        "blurb": "Unified live-chat inbox, hot-lead detection, daily summary email and a fullscreen monitor view."
+      },
+      "campaigns": {
+        "title": "Email campaigns",
+        "blurb": "Block-builder email campaigns with variable substitution, send history and per-campaign analytics."
+      },
+      "reviews": {
+        "title": "Reviews & feedback",
+        "blurb": "Post-stay review forms, submission tracking and an aggregated feedback dashboard."
+      },
+      "wallet": {
+        "title": "Digital wallet cards",
+        "blurb": "Apple Wallet (.pkpass) + Google Wallet member loyalty cards with auto-regenerated tier and points updates."
+      },
+      "mobile": {
+        "title": "Member mobile app + push",
+        "blurb": "iOS and Android member apps with push notifications, points balance, offers and a digital loyalty card."
+      },
+      "api": {
+        "title": "API access & integrations",
+        "blurb": "Personal access tokens for the lead-intake API, webhooks and 3rd-party integrations."
+      },
+      "sla": {
+        "title": "Uptime SLA",
+        "blurb": "99.9% uptime SLA with priority support and proactive incident notification."
+      }
+    }
+  },
+
+  "nav_locked": {
+    "tooltip_collapsed": "{{label}} — upgrade to unlock",
+    "tooltip_expanded": "Upgrade to unlock this feature",
+    "aria_label": "{{label}} — locked, upgrade to unlock",
+    "dispatch_message": "{{label}} is not included in your current plan."
   }
 }

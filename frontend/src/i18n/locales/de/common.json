@@ -2757,5 +2757,36 @@
     "created": "Erstellt",
     "copied": "In Zwischenablage kopiert",
     "error": "Etwas ist schiefgelaufen"
+  },
+
+  "upgrade_modal": {
+    "available_on": "Verfügbar im Tarif {{plan}}",
+    "your_plan": "Ihr Tarif",
+    "upgrade_cta": "Tarif upgraden",
+    "dismiss": "Später",
+    "close_aria": "Upgrade-Dialog schließen",
+    "fallback_title": "Premium-Funktion",
+    "fallback_plan": "höheren Tarif",
+    "features": {
+      "time_management": {
+        "title": "Time Management Platform",
+        "blurb": "Drag-and-Drop Personalplanung, Backlog + wiederkehrende Aufgaben, Auto-Plan, Team-Kanban und vollständiges Planner-Toolkit."
+      },
+      "admin_ai": {
+        "title": "AI-Assistent für Mitarbeiter",
+        "blurb": "Anthropic Claude mit 35+ CRM-Tools — beantwortet Fragen, navigiert und handelt in Ihrem Namen in der Admin-Konsole."
+      },
+      "brands": {
+        "title": "Multi-Brand-Portfolios",
+        "blurb": "Mehrere Marken in einer Organisation, jeweils mit eigenem Chatbot, Wissensdatenbank, Buchungs-Engine und Theme."
+      }
+    }
+  },
+
+  "nav_locked": {
+    "tooltip_collapsed": "{{label}} — Upgrade erforderlich",
+    "tooltip_expanded": "Upgrade erforderlich, um diese Funktion zu nutzen",
+    "aria_label": "{{label}} — gesperrt, Tarif upgraden",
+    "dispatch_message": "{{label}} ist in Ihrem aktuellen Tarif nicht enthalten."
   }
 }

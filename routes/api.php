@@ -80,6 +80,15 @@ Route::prefix('internal/ai-usage')->group(function () {
     Route::post('series',       [\App\Http\Controllers\Api\Internal\InternalAiUsageController::class, 'series']);
 });
 
+// Used by the SaaS Stripe webhook handler to push entitlement-cache
+// busts on plan change (upgrade / downgrade / cancel) so the
+// 5-minute SaasAuthMiddleware sync window collapses to "next
+// request after webhook lands". See InternalEntitlementController
+// for the auth/payload spec.
+Route::prefix('internal/entitlements')->group(function () {
+    Route::post('bust', [\App\Http\Controllers\Api\Internal\InternalEntitlementController::class, 'bust']);
+});
+
 Route::prefix('v1')->group(function () {
 
     // ─── Public ──────────────────────────────────────────────────────────────────

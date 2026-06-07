@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Lock, Sparkles, X } from 'lucide-react'
 import { ALL_FEATURES, PLAN_DISPLAY_ORDER, PLAN_FEATURES } from '../lib/planFeatures'
 
@@ -93,6 +94,7 @@ interface LockedDetail {
 export default function UpgradeFeatureModal() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [detail, setDetail] = useState<LockedDetail | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
@@ -155,10 +157,23 @@ export default function UpgradeFeatureModal() {
   const key = detail.feature ?? ''
   const friendly = FRIENDLY_LABELS[key]
   // Fall back to the canonical label from planFeatures.ts when we
-  // don't have a curated friendly entry (future expansion).
+  // don't have a curated friendly entry (future expansion). i18n:
+  // try the upgrade_modal.features.<key>.title key first; fall
+  // through to the English friendly map, then the row label, then
+  // a localized "Premium Feature" placeholder. Same pattern for
+  // the blurb. `defaultValue` ensures missing locale keys (the de/
+  // fr/es files only translate the 3 enterprise-only features for
+  // now — other features fall through to English) render
+  // gracefully.
   const surfaceLabel = ALL_FEATURES.find(f => f.key === key)?.label
-  const title = friendly?.title ?? surfaceLabel ?? 'Premium Feature'
-  const blurb = friendly?.blurb ?? detail.message
+  const i18nTitle = key
+    ? t(`upgrade_modal.features.${key}.title` as any, { defaultValue: '' })
+    : ''
+  const i18nBlurb = key
+    ? t(`upgrade_modal.features.${key}.blurb` as any, { defaultValue: '' })
+    : ''
+  const title = i18nTitle || friendly?.title || surfaceLabel || t('upgrade_modal.fallback_title', 'Premium Feature')
+  const blurb = i18nBlurb || friendly?.blurb || detail.message
   // Iterate the FULL plan order from cheapest → most expensive and
   // pick the first plan that includes the feature. This handles
   // future features that may be Starter-included or Growth-included
@@ -179,7 +194,7 @@ export default function UpgradeFeatureModal() {
   // fallback instead of mislabelling as Enterprise.
   const includedLabel = includedOn
     ? includedOn.charAt(0).toUpperCase() + includedOn.slice(1)
-    : 'a higher plan'
+    : t('upgrade_modal.fallback_plan', 'a higher plan')
 
   const handleDismiss = () => {
     setOpen(false)
@@ -230,7 +245,7 @@ export default function UpgradeFeatureModal() {
 
         <button
           onClick={handleDismiss}
-          aria-label="Close upgrade prompt"
+          aria-label={t('upgrade_modal.close_aria', 'Close upgrade prompt')}
           type="button"
           className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/[0.06] transition-colors"
         >
@@ -246,11 +261,11 @@ export default function UpgradeFeatureModal() {
             <div className="flex flex-col min-w-0">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-gold/15 border border-primary-gold/30 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] text-primary-gold w-fit">
                 <Sparkles size={10} aria-hidden="true" />
-                Available on {includedLabel}
+                {t('upgrade_modal.available_on', 'Available on {{plan}}', { plan: includedLabel })}
               </div>
               {detail.plan && (
                 <span className="text-[11px] text-t-secondary mt-1 truncate">
-                  Your plan: <span className="text-t-primary font-medium">{detail.plan}</span>
+                  {t('upgrade_modal.your_plan', 'Your plan')}: <span className="text-t-primary font-medium">{detail.plan}</span>
                 </span>
               )}
             </div>
@@ -273,7 +288,7 @@ export default function UpgradeFeatureModal() {
               type="button"
               className="px-4 py-2.5 text-t-secondary hover:text-white text-sm font-medium transition-colors sm:flex-shrink-0"
             >
-              Not now
+              {t('upgrade_modal.dismiss', 'Not now')}
             </button>
             <button
               ref={upgradeBtnRef}
@@ -281,7 +296,7 @@ export default function UpgradeFeatureModal() {
               type="button"
               className="flex-1 bg-primary-gold hover:bg-primary-gold/90 text-black font-bold py-2.5 rounded-lg transition-colors text-sm shadow-lg shadow-primary-gold/20"
             >
-              Upgrade plan
+              {t('upgrade_modal.upgrade_cta', 'Upgrade plan')}
             </button>
           </div>
         </div>

@@ -71,6 +71,60 @@ class Organization extends Model
                 $org->widget_token = \Illuminate\Support\Str::random(32);
             }
         });
+
+        // Auto-create the org's default Brand on every new-org
+        // creation. The 2026_05_10_100000_create_brands_table.php
+        // migration backfilled brands for orgs that existed AT that
+        // time, but the audit found NO downstream code path creating
+        // a default brand for orgs created AFTER the migration ship.
+        // Effect on a brand-new org: BrandSwitcher's "hide when
+        // brands.length <= 1" silently held; `Brand::currentOrDefaultIdForOrg`
+        // returned null; brand-scoped writes landed with `brand_id =
+        // NULL`; widget URLs resolving by org token + legacy fallback
+        // returned 404 because the default-brand row was absent.
+        //
+        // This hook puts the default brand back in lockstep with the
+        // org. Multi-brand portfolios (Enterprise gate) still requires
+        // BrandController::store for the 2nd+ brand; this just
+        // guarantees the foundational #1 brand exists.
+        static::created(function ($org) {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('brands')) return;
+
+            // Skip when a default brand already exists for this org
+            // (test fixtures, manual seeds, or a parallel-write race
+            // that won the row first). SoftDeletes scope on Brand
+            // EXCLUDES trashed rows, which matches the partial unique
+            // `brands_org_default_unique` semantics (where
+            // deleted_at IS NULL).
+            $hasDefault = \App\Models\Brand::where('organization_id', $org->id)
+                ->where('is_default', true)
+                ->exists();
+            if ($hasDefault) return;
+
+            try {
+                $baseSlug = \Illuminate\Support\Str::slug($org->name ?? '') ?: ('default-' . $org->id);
+                \App\Models\Brand::create([
+                    'organization_id' => $org->id,
+                    'name'            => $org->name ?: 'Default',
+                    'slug'            => substr($baseSlug, 0, 100),
+                    'logo_url'        => $org->logo_url ?? null,
+                    'widget_token'    => $org->widget_token ?: \Illuminate\Support\Str::random(32),
+                    'is_default'      => true,
+                    'sort_order'      => 0,
+                ]);
+            } catch (\Throwable $e) {
+                // Defensive: race between two org-create paths (rare
+                // — orgs are SaaS-side primary keys — but possible
+                // during SSO bootstrap from concurrent admin tabs).
+                // The partial unique catches it; surviving caller's
+                // default brand stays. Log so the rare case is
+                // visible in Nightwatch.
+                \Log::warning('Organization::booted — default brand creation failed', [
+                    'org_id' => $org->id,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+        });
     }
 
     protected $casts = [

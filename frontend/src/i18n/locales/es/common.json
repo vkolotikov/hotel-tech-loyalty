@@ -2757,5 +2757,36 @@
     "created": "Creado",
     "copied": "Copiado al portapapeles",
     "error": "Algo salió mal"
+  },
+
+  "upgrade_modal": {
+    "available_on": "Disponible en el plan {{plan}}",
+    "your_plan": "Tu plan",
+    "upgrade_cta": "Mejorar plan",
+    "dismiss": "Ahora no",
+    "close_aria": "Cerrar el aviso de mejora",
+    "fallback_title": "Función premium",
+    "fallback_plan": "un plan superior",
+    "features": {
+      "time_management": {
+        "title": "Time Management Platform",
+        "blurb": "Programación del personal por arrastrar y soltar, backlog + tareas recurrentes, auto-plan, kanban de equipo y todo el conjunto Planner."
+      },
+      "admin_ai": {
+        "title": "Copiloto de IA para personal",
+        "blurb": "Anthropic Claude con más de 35 herramientas CRM: responde, navega y actúa en tu nombre dentro de la consola de administración."
+      },
+      "brands": {
+        "title": "Portafolios multi-marca",
+        "blurb": "Varias marcas dentro de una sola organización, cada una con su chatbot, base de conocimiento, motor de reservas y tema."
+      }
+    }
+  },
+
+  "nav_locked": {
+    "tooltip_collapsed": "{{label}} — mejora requerida",
+    "tooltip_expanded": "Mejora tu plan para desbloquear esta función",
+    "aria_label": "{{label}} — bloqueado, mejorar plan",
+    "dispatch_message": "{{label}} no está incluido en tu plan actual."
   }
 }
