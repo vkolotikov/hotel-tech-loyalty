@@ -352,14 +352,21 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // and /v1/admin/conversations endpoints stay live — they power the
             // detail drawer and any deep conversation actions. See
             // apps/loyalty/ENGAGEMENT_HUB_PLAN.md.
-            Route::get('engagement/feed',           [EngagementController::class, 'feed']);
-            Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
-            Route::get('engagement/filter-counts',  [EngagementController::class, 'filterCounts']);
-            Route::get('engagement/conversations/{id}/brief', [EngagementController::class, 'brief']);
-            // Per-message translation (en/ru/de/fr/es/lv) — used by the
-            // EngagementDrawer translate button so agents can read foreign-
-            // language chats without leaving the inbox.
-            Route::post('engagement/translate',     [EngagementController::class, 'translate']);
+            //
+            // Pricing v3 gate: Growth+/Enterprise. Visitors + chat-inbox
+            // detail endpoints (which power the drawer) intentionally
+            // stay open so a downgraded org's existing data remains
+            // readable — only the unified hub is gated.
+            Route::middleware('feature:engagement')->group(function () {
+                Route::get('engagement/feed',           [EngagementController::class, 'feed']);
+                Route::get('engagement/kpis',           [EngagementController::class, 'kpis']);
+                Route::get('engagement/filter-counts',  [EngagementController::class, 'filterCounts']);
+                Route::get('engagement/conversations/{id}/brief', [EngagementController::class, 'brief']);
+                // Per-message translation (en/ru/de/fr/es/lv) — used by the
+                // EngagementDrawer translate button so agents can read foreign-
+                // language chats without leaving the inbox.
+                Route::post('engagement/translate',     [EngagementController::class, 'translate']);
+            });
 
             // ─── Per-user preferences (Engagement daily summary opt-in, etc.) ──
             Route::get('me/preferences',            [MeController::class, 'preferences']);
@@ -434,23 +441,33 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('tiers/preview',          [TierController::class, 'preview']);
             Route::put('tiers/{id}',              [TierController::class, 'update']);
 
-            // Wallet pass configuration (Apple + Google)
-            Route::get('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'show']);
-            Route::put('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'update']);
-            Route::post('wallet-config/apple-cert',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleCert']);
-            Route::post('wallet-config/apple-wwdr',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleWwdr']);
-            Route::post('wallet-config/google-service-account', [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadGoogleServiceAccount']);
+            // Wallet pass configuration (Apple + Google) — admin-only.
+            // Pricing v3 gate: feature:wallet (Growth+/Enterprise). The
+            // member-facing pass-generation endpoint at /v1/member/
+            // intentionally stays open so existing members can keep
+            // adding their loyalty card to wallet even on a downgraded
+            // org — the org just can't configure new certs.
+            Route::middleware('feature:wallet')->group(function () {
+                Route::get('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'show']);
+                Route::put('wallet-config',            [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'update']);
+                Route::post('wallet-config/apple-cert',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleCert']);
+                Route::post('wallet-config/apple-wwdr',[\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadAppleWwdr']);
+                Route::post('wallet-config/google-service-account', [\App\Http\Controllers\Api\V1\Admin\WalletConfigController::class, 'uploadGoogleServiceAccount']);
+            });
 
-            // Email broadcast campaigns
-            Route::get('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);
-            Route::get('email-campaigns/stats',            [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'stats']);
-            Route::post('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'store']);
-            Route::get('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'show']);
-            Route::put('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'update']);
-            Route::delete('email-campaigns/{id}',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
-            Route::post('email-campaigns/{id}/send',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
-            Route::post('email-campaigns/{id}/duplicate',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'duplicate']);
-            Route::post('email-campaigns/{id}/test',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'test']);
+            // Email broadcast campaigns. Pricing v3 gate: feature:campaigns
+            // (Growth+/Enterprise).
+            Route::middleware('feature:campaigns')->group(function () {
+                Route::get('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'index']);
+                Route::get('email-campaigns/stats',            [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'stats']);
+                Route::post('email-campaigns',                 [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'store']);
+                Route::get('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'show']);
+                Route::put('email-campaigns/{id}',             [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'update']);
+                Route::delete('email-campaigns/{id}',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
+                Route::post('email-campaigns/{id}/send',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
+                Route::post('email-campaigns/{id}/duplicate',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'duplicate']);
+                Route::post('email-campaigns/{id}/test',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'test']);
+            });
 
             // Member segments — saved criteria sets + campaign send
             Route::get('segments',                [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'index']);
@@ -571,26 +588,32 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('notifications/campaign',         [AdminNotificationController::class, 'createCampaign']);
 
             // ─── Reviews ─────────────────────────────────────────────────
-            Route::get('reviews/forms',                      [AdminReviewController::class, 'listForms']);
-            Route::post('reviews/forms',                     [AdminReviewController::class, 'createForm']);
-            Route::get('reviews/forms/{id}',                 [AdminReviewController::class, 'showForm']);
-            Route::put('reviews/forms/{id}',                 [AdminReviewController::class, 'updateForm']);
-            Route::delete('reviews/forms/{id}',              [AdminReviewController::class, 'deleteForm']);
-            Route::post('reviews/forms/{id}/rotate-key',     [AdminReviewController::class, 'rotateEmbedKey']);
-            Route::put('reviews/forms/{id}/questions',       [AdminReviewController::class, 'replaceQuestions']);
+            // Pricing v3 gate: feature:reviews (Growth+/Enterprise).
+            // Public form submission at /v1/public/reviews/* stays
+            // open — existing forms keep accepting submissions even
+            // when the admin can't manage them anymore.
+            Route::middleware('feature:reviews')->group(function () {
+                Route::get('reviews/forms',                      [AdminReviewController::class, 'listForms']);
+                Route::post('reviews/forms',                     [AdminReviewController::class, 'createForm']);
+                Route::get('reviews/forms/{id}',                 [AdminReviewController::class, 'showForm']);
+                Route::put('reviews/forms/{id}',                 [AdminReviewController::class, 'updateForm']);
+                Route::delete('reviews/forms/{id}',              [AdminReviewController::class, 'deleteForm']);
+                Route::post('reviews/forms/{id}/rotate-key',     [AdminReviewController::class, 'rotateEmbedKey']);
+                Route::put('reviews/forms/{id}/questions',       [AdminReviewController::class, 'replaceQuestions']);
 
-            Route::get('reviews/integrations',               [AdminReviewController::class, 'listIntegrations']);
-            Route::post('reviews/integrations',              [AdminReviewController::class, 'upsertIntegration']);
-            Route::delete('reviews/integrations/{id}',       [AdminReviewController::class, 'deleteIntegration']);
+                Route::get('reviews/integrations',               [AdminReviewController::class, 'listIntegrations']);
+                Route::post('reviews/integrations',              [AdminReviewController::class, 'upsertIntegration']);
+                Route::delete('reviews/integrations/{id}',       [AdminReviewController::class, 'deleteIntegration']);
 
-            Route::get('reviews/submissions',                [AdminReviewController::class, 'listSubmissions']);
-            Route::get('reviews/submissions/export',         [AdminReviewController::class, 'exportSubmissions']);
-            Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
-            Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
+                Route::get('reviews/submissions',                [AdminReviewController::class, 'listSubmissions']);
+                Route::get('reviews/submissions/export',         [AdminReviewController::class, 'exportSubmissions']);
+                Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
+                Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
 
-            Route::get('reviews/invitations',                [AdminReviewController::class, 'listInvitations']);
-            Route::get('reviews/invitations/funnel',         [AdminReviewController::class, 'invitationFunnel']);
-            Route::post('reviews/invitations',               [AdminReviewController::class, 'sendInvitation']);
+                Route::get('reviews/invitations',                [AdminReviewController::class, 'listInvitations']);
+                Route::get('reviews/invitations/funnel',         [AdminReviewController::class, 'invitationFunnel']);
+                Route::post('reviews/invitations',               [AdminReviewController::class, 'sendInvitation']);
+            });
 
             // ─── Email Templates ─────────────────────────────────────────────
             Route::get('email-templates',                  [EmailTemplateController::class, 'index']);
@@ -616,13 +639,21 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('chatbot/analytics',                   [\App\Http\Controllers\Api\V1\Admin\ChatbotAnalyticsController::class, 'index']);
 
             // ─── Chatbot Configuration ───────────────────────────────────────
-            Route::get('chatbot-config/behavior',             [ChatbotConfigController::class, 'getBehavior']);
-            Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);
-            Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
-            Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
-            Route::post('chatbot-config/test-chat',           [ChatbotConfigController::class, 'testChat']);
-            Route::post('chatbot-config/probe-model',         [ChatbotConfigController::class, 'probeModel']);
-            Route::post('chatbot-config/suggest-keywords',    [ChatbotConfigController::class, 'suggestKeywords']);
+            // Pricing v3 gate: feature:chatbot (Growth+/Enterprise).
+            // The public widget at /v1/widget/* keeps serving from the
+            // last-saved config so a downgraded org's chatbot keeps
+            // running on their site — only the admin loses the ability
+            // to RECONFIGURE it. Same goes for the knowledge base and
+            // popup rules below.
+            Route::middleware('feature:chatbot')->group(function () {
+                Route::get('chatbot-config/behavior',             [ChatbotConfigController::class, 'getBehavior']);
+                Route::put('chatbot-config/behavior',             [ChatbotConfigController::class, 'updateBehavior']);
+                Route::get('chatbot-config/model',                [ChatbotConfigController::class, 'getModelConfig']);
+                Route::put('chatbot-config/model',                [ChatbotConfigController::class, 'updateModelConfig']);
+                Route::post('chatbot-config/test-chat',           [ChatbotConfigController::class, 'testChat']);
+                Route::post('chatbot-config/probe-model',         [ChatbotConfigController::class, 'probeModel']);
+                Route::post('chatbot-config/suggest-keywords',    [ChatbotConfigController::class, 'suggestKeywords']);
+            });
 
             // ─── Chat Widget Configuration ───────────────────────────────────
             Route::get('widget-config',                       [ChatWidgetConfigController::class, 'show']);
@@ -658,10 +689,15 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::delete('visitors/{id}',           [\App\Http\Controllers\Api\V1\Admin\VisitorController::class, 'destroy']);
 
             // ─── Popup Automation Rules ──────────────────────────────────────
-            Route::get('popup-rules',                         [PopupRuleController::class, 'index']);
-            Route::post('popup-rules',                        [PopupRuleController::class, 'store']);
-            Route::put('popup-rules/{id}',                    [PopupRuleController::class, 'update']);
-            Route::delete('popup-rules/{id}',                 [PopupRuleController::class, 'destroy']);
+            // Same gate as chatbot-config — admin can't author new
+            // popup rules without the feature, but the existing rules
+            // keep firing on the customer's site via the public widget.
+            Route::middleware('feature:chatbot')->group(function () {
+                Route::get('popup-rules',                         [PopupRuleController::class, 'index']);
+                Route::post('popup-rules',                        [PopupRuleController::class, 'store']);
+                Route::put('popup-rules/{id}',                    [PopupRuleController::class, 'update']);
+                Route::delete('popup-rules/{id}',                 [PopupRuleController::class, 'destroy']);
+            });
 
             // ─── AI Training / Fine-tuning ───────────────────────────────────
             Route::get('training/jobs',                       [TrainingController::class, 'index']);
@@ -672,20 +708,27 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('training/export-data',               [TrainingController::class, 'exportData']);
 
             // ─── Knowledge Base ──────────────────────────────────────────────
-            Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);
-            Route::post('knowledge/categories',               [KnowledgeBaseController::class, 'storeCategory']);
-            Route::put('knowledge/categories/{id}',           [KnowledgeBaseController::class, 'updateCategory']);
-            Route::delete('knowledge/categories/{id}',        [KnowledgeBaseController::class, 'destroyCategory']);
-            Route::get('knowledge/items',                     [KnowledgeBaseController::class, 'indexItems']);
-            Route::post('knowledge/items',                    [KnowledgeBaseController::class, 'storeItem']);
-            Route::put('knowledge/items/{id}',                [KnowledgeBaseController::class, 'updateItem']);
-            Route::delete('knowledge/items/{id}',             [KnowledgeBaseController::class, 'destroyItem']);
-            Route::get('knowledge/documents',                 [KnowledgeBaseController::class, 'indexDocuments']);
-            Route::post('knowledge/documents',                [KnowledgeBaseController::class, 'uploadDocument']);
-            Route::delete('knowledge/documents/{id}',         [KnowledgeBaseController::class, 'destroyDocument']);
-            Route::post('knowledge/documents/{id}/reprocess', [KnowledgeBaseController::class, 'reprocessDocument']);
-            Route::post('knowledge/extract-faqs',             [KnowledgeBaseController::class, 'extractFaqs']);
-            Route::post('knowledge/bulk-import-faqs',         [KnowledgeBaseController::class, 'bulkImportFaqs']);
+            // Same gate as chatbot-config — the knowledge base feeds
+            // the website chatbot's grounding context. Existing
+            // knowledge items keep serving the widget on the
+            // customer's site post-downgrade; admin just can't add
+            // or edit more.
+            Route::middleware('feature:chatbot')->group(function () {
+                Route::get('knowledge/categories',                [KnowledgeBaseController::class, 'indexCategories']);
+                Route::post('knowledge/categories',               [KnowledgeBaseController::class, 'storeCategory']);
+                Route::put('knowledge/categories/{id}',           [KnowledgeBaseController::class, 'updateCategory']);
+                Route::delete('knowledge/categories/{id}',        [KnowledgeBaseController::class, 'destroyCategory']);
+                Route::get('knowledge/items',                     [KnowledgeBaseController::class, 'indexItems']);
+                Route::post('knowledge/items',                    [KnowledgeBaseController::class, 'storeItem']);
+                Route::put('knowledge/items/{id}',                [KnowledgeBaseController::class, 'updateItem']);
+                Route::delete('knowledge/items/{id}',             [KnowledgeBaseController::class, 'destroyItem']);
+                Route::get('knowledge/documents',                 [KnowledgeBaseController::class, 'indexDocuments']);
+                Route::post('knowledge/documents',                [KnowledgeBaseController::class, 'uploadDocument']);
+                Route::delete('knowledge/documents/{id}',         [KnowledgeBaseController::class, 'destroyDocument']);
+                Route::post('knowledge/documents/{id}/reprocess', [KnowledgeBaseController::class, 'reprocessDocument']);
+                Route::post('knowledge/extract-faqs',             [KnowledgeBaseController::class, 'extractFaqs']);
+                Route::post('knowledge/bulk-import-faqs',         [KnowledgeBaseController::class, 'bulkImportFaqs']);
+            });
 
             // ─── Voice Agent ─────────────────────────────────────────────────
             Route::get('voice-agent/config',                    [VoiceAgentController::class, 'show']);

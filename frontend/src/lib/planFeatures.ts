@@ -37,21 +37,41 @@
  *     "onboarding" from the support cell — they were noise next to the
  *     channel-based phrasing the user wants.
  *
- * **Backend gates shipped 2026-06-07.** Three Enterprise-only rows now
- * carry matching runtime enforcement on the loyalty backend:
+ * **Backend gates shipped 2026-06-07 (v2).** Three Enterprise-only rows
+ * now carry matching runtime enforcement on the loyalty backend:
  *   - `brands` — `BrandController::store` rejects the second + subsequent
  *     brand creation with 402 when `!hasFeature('brands')`. The auto-
  *     created default brand on every org is exempt.
  *   - `admin_ai` — every /v1/admin/crm-ai/* route is wrapped in
- *     `feature:admin_ai` middleware, plus `CrmAiService::call()` carries
- *     a defense-in-depth check for non-HTTP callers.
+ *     `feature:admin_ai` middleware. (The earlier service-level gate in
+ *     CrmAiService was removed in audit follow-up: it broke the public
+ *     widget's lead-extraction path which legitimately uses Claude.)
  *   - `time_management` — every /v1/admin/planner/* route is wrapped in
  *     `feature:time_management` middleware. PlannerPresetController stays
  *     ungated so an org can pre-stage a preset before upgrading.
- *   All three keys ship in the SaaS plan_features catalog via
- *   `2026_06_07_120000_add_v2_pricing_features.php`. The loyalty backend
- *   reads `$org->hasFeature('key')` from cached entitlements (refreshed
- *   every 5 min by SaasAuthMiddleware).
+ *
+ * **Backend gates shipped 2026-06-08 (v3).** Five Growth+/Enterprise
+ * rows now also carry matching enforcement, closing the
+ * marketing-vs-reality gap the audit flagged:
+ *   - `campaigns` — /v1/admin/email-campaigns/* (CRUD + send + test).
+ *   - `reviews`   — /v1/admin/reviews/* (forms, submissions, integrations,
+ *     invitations). Public submit at /v1/public/reviews/* stays open.
+ *   - `engagement`— /v1/admin/engagement/* (unified hub feed + KPIs +
+ *     brief). Legacy /v1/admin/chat-inbox/* + /v1/admin/visitors/* stay
+ *     open as detail-level endpoints for the drawer.
+ *   - `wallet`    — /v1/admin/wallet-config/*. Member-facing pass
+ *     generation at /v1/member/* stays open so existing members can
+ *     keep adding their loyalty card.
+ *   - `chatbot`   — /v1/admin/chatbot-config/*, /v1/admin/popup-rules/*,
+ *     /v1/admin/knowledge/*. Public widget at /v1/widget/* stays open
+ *     so a downgraded org's chatbot keeps running on their site.
+ *
+ *   All 8 keys ship in the SaaS plan_features catalog via
+ *   `2026_06_07_120000_add_v2_pricing_features.php` (3 v2 keys) and
+ *   `2026_06_08_130000_add_v3_pricing_features.php` (5 v3 keys). The
+ *   loyalty backend reads `$org->hasFeature('key')` from cached
+ *   entitlements (refreshed every 5 min by SaasAuthMiddleware, faster
+ *   via the Stripe-webhook cache-bust path on plan change).
  *
  * Plan slugs (`starter`, `growth`, `enterprise`) are intentionally
  * unchanged — they're hardcoded in 4 backend sites (AuthController trial

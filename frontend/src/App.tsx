@@ -228,7 +228,7 @@ export default function App() {
           <Route path="/members/:id" element={<LazyRoute><MemberDetail /></LazyRoute>} />
           <Route path="/program" element={<LazyRoute><ProgramHub /></LazyRoute>} />
           <Route path="/rewards" element={<LazyRoute><RewardsHub /></LazyRoute>} />
-          <Route path="/campaigns" element={<LazyRoute><CampaignsHub /></LazyRoute>} />
+          <Route path="/campaigns" element={<LazyRoute feature="campaigns"><CampaignsHub /></LazyRoute>} />
 
           {/* Legacy redirects — preserve deep links to the now-tab pages */}
           <Route path="/members/duplicates" element={<Navigate to="/members?tab=duplicates" replace />} />
@@ -252,7 +252,7 @@ export default function App() {
               that page actually calls the LLM. */}
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><AiInsights /></LazyRoute>} />
-          <Route path="/chatbot-setup" element={<LazyRoute gate="admin" product="chat"><ChatbotSetup /></LazyRoute>} />
+          <Route path="/chatbot-setup" element={<LazyRoute gate="admin" product="chat" feature="chatbot"><ChatbotSetup /></LazyRoute>} />
           {/* Legacy chatbot routes — folded into the unified Chatbot Setup tabs. */}
           <Route path="/chatbot-config" element={<Navigate to="/chatbot-setup" replace />} />
           <Route path="/knowledge-base" element={<Navigate to="/chatbot-setup" replace />} />
@@ -264,10 +264,10 @@ export default function App() {
           {/* Engagement Hub — unified replacement for Inbox + Visitors. The
               old /chat-inbox and /visitors routes stay live so bookmarks
               keep working (decision #8 in ENGAGEMENT_HUB_PLAN.md). */}
-          <Route path="/engagement" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
+          <Route path="/engagement" element={<LazyRoute gate="all" product="chat" feature="engagement"><Engagement /></LazyRoute>} />
           {/* Live wall renders fullscreen for back-office monitors — skips
               the Layout chrome via FullscreenRoute. */}
-          <Route path="/engagement/live" element={<FullscreenRoute gate="all" product="chat"><EngagementLive /></FullscreenRoute>} />
+          <Route path="/engagement/live" element={<FullscreenRoute gate="all" product="chat" feature="engagement"><EngagementLive /></FullscreenRoute>} />
           <Route path="/inbox" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
           <Route path="/visitors" element={<LazyRoute gate="all" product="chat"><Engagement /></LazyRoute>} />
           {/* Legacy detail-page kept under explicit paths so links from old

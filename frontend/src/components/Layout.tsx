@@ -90,9 +90,9 @@ const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.ai_chat', defaultLabel: 'AI Chat',
     accent: '#a78bfa', // violet
     items: [
-      { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat',
+      { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat', feature: 'engagement',
         altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
-      { path: '/chatbot-setup',  labelKey: 'nav.items.chatbot_setup',  defaultLabel: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat' },
+      { path: '/chatbot-setup',  labelKey: 'nav.items.chatbot_setup',  defaultLabel: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat', feature: 'chatbot' },
     ],
   },
   {
@@ -106,7 +106,7 @@ const navGroups: NavGroup[] = [
       { path: '/members',   labelKey: 'nav.items.members',   defaultLabel: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
       { path: '/program',   labelKey: 'nav.items.program',   defaultLabel: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
       { path: '/rewards',   labelKey: 'nav.items.rewards',   defaultLabel: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },
-      { path: '/campaigns', labelKey: 'nav.items.campaigns', defaultLabel: 'Campaigns', icon: Mail,   gate: 'admin', product: 'loyalty', altPaths: ['/email-campaigns'] },
+      { path: '/campaigns', labelKey: 'nav.items.campaigns', defaultLabel: 'Campaigns', icon: Mail,   gate: 'admin', product: 'loyalty', feature: 'campaigns', altPaths: ['/email-campaigns'] },
     ],
   },
   {

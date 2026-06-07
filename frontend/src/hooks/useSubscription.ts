@@ -29,6 +29,9 @@ const ALL_FEATURES: SubscriptionData['features'] = {
   nfc_cards: 'true', priority_support: 'dedicated',
   // Pricing v2 (2026-06-07) — Enterprise-only gates.
   time_management: 'true', admin_ai: 'true', brands: 'true',
+  // Pricing v3 (2026-06-08) — Growth+/Enterprise gates.
+  campaigns: 'true', reviews: 'true', engagement: 'true',
+  wallet: 'true', chatbot: 'true',
 }
 const ALL_PRODUCTS = ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking']
 

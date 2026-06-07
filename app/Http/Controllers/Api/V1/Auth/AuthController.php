@@ -1175,6 +1175,11 @@ class AuthController extends Controller
                     // admin hitting any of the new Enterprise-only routes
                     // gets 402'd even though they're meant to bypass.
                     'time_management' => 'true', 'admin_ai' => 'true', 'brands' => 'true',
+                    // Pricing v3 (2026-06-08): same reason — platform
+                    // admins inspecting Growth+/Enterprise features
+                    // would 402 on the new Growth+ gates without these.
+                    'campaigns' => 'true', 'reviews' => 'true',
+                    'engagement' => 'true', 'wallet' => 'true', 'chatbot' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
@@ -1304,6 +1309,11 @@ class AuthController extends Controller
                     // admin hitting any of the new Enterprise-only routes
                     // gets 402'd even though they're meant to bypass.
                     'time_management' => 'true', 'admin_ai' => 'true', 'brands' => 'true',
+                    // Pricing v3 (2026-06-08): same reason — platform
+                    // admins inspecting Growth+/Enterprise features
+                    // would 402 on the new Growth+ gates without these.
+                    'campaigns' => 'true', 'reviews' => 'true',
+                    'engagement' => 'true', 'wallet' => 'true', 'chatbot' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
@@ -1670,6 +1680,12 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                // Pricing v3 (2026-06-08): Growth+/Enterprise gates.
+                'campaigns'            => 'false',
+                'reviews'              => 'false',
+                'engagement'           => 'false',
+                'wallet'               => 'false',
+                'chatbot'              => 'false',
             ],
             'growth' => [
                 'max_team_members'     => '25',
@@ -1687,6 +1703,12 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                // Pricing v3 (2026-06-08): Growth+/Enterprise gates.
+                'campaigns'            => 'true',
+                'reviews'              => 'true',
+                'engagement'           => 'true',
+                'wallet'               => 'true',
+                'chatbot'              => 'true',
             ],
             'enterprise' => [
                 'max_team_members'     => 'unlimited',
@@ -1707,6 +1729,11 @@ class AuthController extends Controller
                 'time_management'      => 'true',
                 'admin_ai'             => 'true',
                 'brands'               => 'true',
+                'campaigns'            => 'true',
+                'reviews'              => 'true',
+                'engagement'           => 'true',
+                'wallet'               => 'true',
+                'chatbot'              => 'true',
             ],
             default => [
                 'max_team_members'     => '5',
@@ -1720,6 +1747,11 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                'campaigns'            => 'false',
+                'reviews'              => 'false',
+                'engagement'           => 'false',
+                'wallet'               => 'false',
+                'chatbot'              => 'false',
             ],
         };
     }
