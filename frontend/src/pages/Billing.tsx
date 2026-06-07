@@ -24,8 +24,8 @@ import { ALL_FEATURES, PLAN_FEATURES } from '../lib/planFeatures'
 // feature inclusion lives in lib/planFeatures.ts and renders below.
 const FALLBACK_PLANS: PlanData[] = [
   { id: 'starter', name: 'Starter', slug: 'starter', description: 'For single-location service businesses getting started with customer data, basic loyalty and the member mobile app.', monthlyAmount: 14900, yearlyAmount: 149000, currency: 'usd', trialDays: 7 },
-  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing businesses that need bookings, AI chat and member engagement. Adds the booking engine, website chatbot, live chat inbox, Wallet/NFC cards, analytics and member push.', monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7 },
-  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'For multi-location and multi-brand operators. Adds unlimited locations, brand portfolios, API access, the staff AI copilot and dedicated support with a 99.9% uptime SLA.', monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7 },
+  { id: 'growth', name: 'Growth', slug: 'growth', description: 'For growing businesses that need bookings, AI chat and member engagement. Adds the booking engine, website chatbot, live chat inbox, email campaigns, reviews, Wallet passes, analytics and member push.', monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7 },
+  { id: 'enterprise', name: 'Enterprise', slug: 'enterprise', description: 'For multi-location and multi-brand operators. Adds unlimited locations, brand portfolios, the Time Management Platform for staff scheduling, API access, the staff AI copilot and a 99.9% uptime SLA.', monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7 },
 ]
 
 type BillingInterval = 'monthly' | 'yearly'

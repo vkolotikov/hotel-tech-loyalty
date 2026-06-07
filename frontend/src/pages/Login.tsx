@@ -275,12 +275,12 @@ const FALLBACK_PLANS: PlanData[] = [
   },
   {
     id: 'growth', name: 'Growth', slug: 'growth',
-    description: 'For growing businesses that need bookings, AI chat and member engagement.',
+    description: 'For growing businesses that need bookings, AI chat, campaigns, reviews and member engagement.',
     monthlyAmount: 26900, yearlyAmount: 269000, currency: 'usd', trialDays: 7,
   },
   {
     id: 'enterprise', name: 'Enterprise', slug: 'enterprise',
-    description: 'For multi-location and multi-brand operators — adds the staff AI copilot, API access and dedicated support.',
+    description: 'For multi-location and multi-brand operators — adds the Time Management Platform, staff AI copilot, API access and a 99.9% uptime SLA.',
     monthlyAmount: 35900, yearlyAmount: 359000, currency: 'usd', trialDays: 7,
   },
 ]
