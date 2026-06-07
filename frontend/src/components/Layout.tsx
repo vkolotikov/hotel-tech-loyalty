@@ -12,10 +12,11 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors,
-  Menu, X, MoreHorizontal,
+  Menu, X, MoreHorizontal, Lock,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
+import UpgradeFeatureModal from './UpgradeFeatureModal'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
@@ -148,8 +149,8 @@ const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.operations', defaultLabel: 'Operations',
     accent: '#22d3ee', // cyan
     items: [
-      { path: '/planner',    labelKey: 'nav.items.planner',    defaultLabel: 'Planner',    icon: ClipboardList, gate: 'all' },
-      { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Briefcase,     gate: 'admin' },
+      { path: '/planner',    labelKey: 'nav.items.planner',    defaultLabel: 'Planner',    icon: ClipboardList, gate: 'all',   feature: 'time_management' },
+      { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Briefcase,     gate: 'admin', feature: 'brands' },
       { path: '/properties', labelKey: 'nav.items.properties', defaultLabel: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
       { path: '/scan',       labelKey: 'nav.items.scan',       defaultLabel: 'Scan',       icon: Scan,          gate: 'all' },
     ],
@@ -410,34 +411,12 @@ export function Layout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('subscription:expired', handler)
   }, [qc])
 
-  // Listen for 402 feature:locked events from API interceptor — surface a
-  // friendly toast so the user understands the action was blocked by their
-  // plan, not by a generic server error. The full upgrade UX (modal +
-  // CTA) is a follow-up; this is the minimal-viable message so customers
-  // on Starter/Growth see "Time Management requires Enterprise" instead
-  // of an opaque "Server error" red bubble.
-  useEffect(() => {
-    let lastToastAt = 0
-    const FRIENDLY: Record<string, string> = {
-      time_management: 'Time Management Platform requires the Enterprise plan.',
-      admin_ai: 'Staff AI copilot requires the Enterprise plan.',
-      brands: 'Multi-brand portfolios require the Enterprise plan.',
-    }
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      // Throttle: a page that fans out N parallel calls would otherwise
-      // stack N identical toasts.
-      const now = Date.now()
-      if (now - lastToastAt < 1500) return
-      lastToastAt = now
-      const msg = (detail.feature && FRIENDLY[detail.feature]) || detail.message || 'This feature is not included in your current plan.'
-      import('react-hot-toast').then(({ default: toast }) => {
-        toast.error(msg, { duration: 6000 })
-      }).catch(() => {})
-    }
-    window.addEventListener('feature:locked', handler)
-    return () => window.removeEventListener('feature:locked', handler)
-  }, [])
+  // 402 feature:locked events are now handled by <UpgradeFeatureModal />
+  // (mounted at the end of this component's return tree). It listens to
+  // the same window event the api.ts interceptor dispatches AND the
+  // sidebar-locked-item click handler dispatches, so a single component
+  // renders the upgrade UX regardless of trigger origin. The earlier
+  // toast-only handler was replaced because a modal converts better.
 
   const logoUrl = (() => {
     const groups = settingsData?.settings
@@ -493,19 +472,31 @@ export function Layout({ children }: { children: ReactNode }) {
     })
     .map(group => ({
       ...group,
-      items: group.items.filter(item => {
-        if (!canAccess(item.gate, staff)) return false
-        if (item.product && !hasProduct(item.product)) return false
-        if (item.feature && !hasFeature(item.feature)) return false
-        // Phase 4 — per-industry item hide (Deals for beauty/medical,
-        // Scan for medical/restaurant). Matches canonical English
-        // defaultLabel; vocabulary relabel happens AFTER this filter.
-        // Guard: never let an industry hide rule strip a load-bearing
-        // item (Dashboard, Settings) — same defensive pattern as
-        // ALWAYS_VISIBLE at the group level above.
-        if (!ALWAYS_VISIBLE_ITEMS.has(item.defaultLabel) && industryHiddenItems.includes(item.defaultLabel)) return false
-        return true
-      }),
+      items: group.items
+        .filter(item => {
+          if (!canAccess(item.gate, staff)) return false
+          if (item.product && !hasProduct(item.product)) return false
+          // Phase 4 — per-industry item hide (Deals for beauty/medical,
+          // Scan for medical/restaurant). Matches canonical English
+          // defaultLabel; vocabulary relabel happens AFTER this filter.
+          // Guard: never let an industry hide rule strip a load-bearing
+          // item (Dashboard, Settings) — same defensive pattern as
+          // ALWAYS_VISIBLE at the group level above.
+          if (!ALWAYS_VISIBLE_ITEMS.has(item.defaultLabel) && industryHiddenItems.includes(item.defaultLabel)) return false
+          return true
+        })
+        // Feature gate: don't drop the item — render it as `_locked` so
+        // the user sees it exists and can be unlocked by upgrading. The
+        // sidebar renderer greys it, adds a lock badge, and routes the
+        // click into the UpgradeFeatureModal via the feature:locked
+        // event. Hiding entirely killed discoverability and felt like
+        // bugs ("where did Planner go?"); the visible-locked pattern is
+        // standard SaaS conversion UX.
+        .map(item => (
+          item.feature && !hasFeature(item.feature)
+            ? { ...item, _locked: true as const, _lockedFeature: item.feature }
+            : item
+        )),
     }))
     .filter(group => group.items.length > 0)
 
@@ -612,12 +603,57 @@ export function Layout({ children }: { children: ReactNode }) {
                 )}
 
                 {/* Group items */}
-                {isOpen && items.map(({ path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths }) => {
+                {isOpen && items.map((it) => {
+                  const { path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths } = it
                   const itemLabel = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
-                  const active = path === '/'
+                  const locked = '_locked' in it && it._locked === true
+                  const lockedFeature = ('_lockedFeature' in it ? it._lockedFeature : null) as string | null
+                  const active = !locked && (path === '/'
                     ? location.pathname === '/'
-                    : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p)))
-                  const badge = path === '/engagement' && chatUnread > 0 ? chatUnread : 0
+                    : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))))
+                  const badge = !locked && path === '/engagement' && chatUnread > 0 ? chatUnread : 0
+
+                  // Locked items render as a button (no Link) so React
+                  // Router doesn't navigate to a 402-only route. Click
+                  // fires the same `feature:locked` event the api.ts
+                  // interceptor uses for server-side 402s — the
+                  // UpgradeFeatureModal listens to both paths.
+                  if (locked) {
+                    return (
+                      <button
+                        key={path}
+                        type="button"
+                        title={displayCollapsed ? `${itemLabel} — Enterprise plan` : 'Available on Enterprise plan'}
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('feature:locked', {
+                            detail: {
+                              feature: lockedFeature,
+                              plan: null,
+                              upgradeUrl: null,
+                              message: 'This feature is not included in your current plan.',
+                            },
+                          }))
+                        }}
+                        className={clsx(
+                          'w-[calc(100%-12px)] flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
+                          displayCollapsed ? 'justify-center px-0' : 'px-3',
+                          'text-t-secondary/50 hover:text-t-secondary hover:bg-white/[0.02]',
+                        )}
+                      >
+                        <Icon size={17} className="flex-shrink-0 opacity-60" />
+                        {!displayCollapsed && (
+                          <>
+                            <span className="truncate flex-1 text-left">{itemLabel}</span>
+                            <Lock size={11} className="flex-shrink-0 text-primary-gold/70" />
+                          </>
+                        )}
+                        {displayCollapsed && (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/70" />
+                        )}
+                      </button>
+                    )
+                  }
+
                   return (
                     <Link
                       key={path}
@@ -811,6 +847,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Cmd+K global search — mounted once, listens for the shortcut. */}
       <GlobalSearch />
+
+      {/* Plan-gate upgrade prompt — listens to `feature:locked` events
+          (api.ts interceptor + sidebar lock click) and renders a
+          conversion-friendly modal in lieu of a transient toast. */}
+      <UpgradeFeatureModal />
     </div>
   )
 }

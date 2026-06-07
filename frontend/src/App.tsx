@@ -109,7 +109,16 @@ function ThemeLoader() {
  */
 function AuthedFloatingAiChat() {
   const { token } = useAuthStore()
+  const { hasFeature } = useSubscription()
   if (!token) return null
+  // Plan gate: the admin AI is the Anthropic Claude / 35+ CRM tools
+  // copilot — Enterprise-only on the pricing v2 surface. Hiding the
+  // floating launcher entirely on Starter/Growth is cleaner than
+  // greying it out (greying a floating action button reads as
+  // "broken UI" not "upgrade opportunity"). The sidebar handles the
+  // discoverability + upgrade-prompt path for the other two gated
+  // features (Planner / Brands).
+  if (!hasFeature('admin_ai')) return null
   return (
     <div className="hidden md:block">
       <Suspense fallback={null}><AiChat /></Suspense>
