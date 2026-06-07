@@ -80,6 +80,23 @@ api.interceptors.response.use(
         error.response?.data?.error === 'subscription_required') {
       window.dispatchEvent(new CustomEvent('subscription:expired'))
     }
+    // 402 Payment Required with structured `feature_locked` body —
+    // backend gate said "this plan doesn't include this feature".
+    // Emit an app-wide event so a single listener can render the
+    // upgrade-prompt UX consistently. The `Layout` toast listener (and
+    // any per-page handler that wants to swap in a richer modal)
+    // reads the detail payload.
+    if (error.response?.status === 402 &&
+        error.response?.data?.code === 'feature_locked') {
+      window.dispatchEvent(new CustomEvent('feature:locked', {
+        detail: {
+          feature: error.response.data.feature ?? null,
+          plan: error.response.data.plan ?? null,
+          upgradeUrl: error.response.data.upgrade_url ?? null,
+          message: error.response.data.error ?? 'This feature is not included in your current plan.',
+        },
+      }))
+    }
     return Promise.reject(error)
   }
 )

@@ -508,6 +508,14 @@ class CrmAiService
         $org = app()->bound('current_organization_id')
             ? \App\Models\Organization::find((int) app('current_organization_id'))
             : null;
+        // Feature gate: staff AI copilot is Enterprise-only on the
+        // current pricing surface. Defense-in-depth alongside the
+        // `feature:admin_ai` route middleware — covers any background
+        // / internal caller that bypasses the HTTP router.
+        if ($org && !$org->hasFeature('admin_ai')) {
+            throw new \App\Exceptions\FeatureNotEntitled('admin_ai', $org->plan_slug,
+                'The Staff AI copilot requires the Enterprise plan.');
+        }
         if ($org && !app(\App\Services\AiUsageService::class)->isModelAllowed($org, $this->model)) {
             $allowed = (array) ($org->featureValue('ai_allowed_models') ?? []);
             throw new \App\Exceptions\AiModelNotAllowed($this->model, $allowed);

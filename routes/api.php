@@ -851,45 +851,52 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::delete('corporate-accounts/{corporateAccount}',    [CorporateAccountController::class, 'destroy']);
 
             // ─── CRM: Planner ─────────────────────────────────────────────────
-            Route::get('planner/tasks',                   [PlannerController::class, 'tasks']);
-            Route::post('planner/tasks',                  [PlannerController::class, 'storeTask']);
-            Route::post('planner/tasks/bulk',             [PlannerController::class, 'bulk']);
-            Route::put('planner/tasks/{task}',            [PlannerController::class, 'updateTask']);
-            Route::delete('planner/tasks/{task}',         [PlannerController::class, 'destroyTask']);
-            Route::patch('planner/tasks/{task}/move',     [PlannerController::class, 'moveTask']);
-            Route::post('planner/tasks/{task}/copy',      [PlannerController::class, 'copyTask']);
-            Route::patch('planner/tasks/{task}/complete', [PlannerController::class, 'toggleComplete']);
-            Route::patch('planner/tasks/{task}/status',   [PlannerController::class, 'quickStatus']);
-            Route::post('planner/tasks/{task}/subtasks',  [PlannerController::class, 'storeSubtask']);
-            Route::patch('planner/subtasks/{subtask}/toggle', [PlannerController::class, 'toggleSubtask']);
-            Route::delete('planner/subtasks/{subtask}',   [PlannerController::class, 'destroySubtask']);
-            Route::get('planner/day-note',                [PlannerController::class, 'dayNote']);
-            Route::post('planner/day-note',               [PlannerController::class, 'upsertDayNote']);
-            Route::get('planner/stats',                   [PlannerController::class, 'stats']);
-            // Auto-plan — fits today's unscheduled tasks into the
-            // working-hour window in priority order, skipping busy
-            // slots. Returns a proposal array; nothing is mutated
-            // until the frontend POSTs to /apply.
-            Route::post('planner/auto-plan',              [PlannerController::class, 'autoPlanDay']);
-            Route::post('planner/auto-plan/apply',        [PlannerController::class, 'autoPlanApply']);
-            // Ship 5 — voice-agent day-planning surface
-            Route::get('planner/free-slots',              [PlannerController::class, 'freeSlots']);
-            Route::post('planner/suggest-staff',          [PlannerController::class, 'suggestStaff']);
-            Route::get('planner/workload-week',           [PlannerController::class, 'workloadWeek']);
+            // The Time Management Platform (public name; "Planner" internally)
+            // is Enterprise-only on the current pricing surface. The
+            // `feature:time_management` middleware returns 402 with a
+            // structured `feature_locked` body when the caller's plan
+            // doesn't include it.
+            Route::middleware('feature:time_management')->group(function () {
+                Route::get('planner/tasks',                   [PlannerController::class, 'tasks']);
+                Route::post('planner/tasks',                  [PlannerController::class, 'storeTask']);
+                Route::post('planner/tasks/bulk',             [PlannerController::class, 'bulk']);
+                Route::put('planner/tasks/{task}',            [PlannerController::class, 'updateTask']);
+                Route::delete('planner/tasks/{task}',         [PlannerController::class, 'destroyTask']);
+                Route::patch('planner/tasks/{task}/move',     [PlannerController::class, 'moveTask']);
+                Route::post('planner/tasks/{task}/copy',      [PlannerController::class, 'copyTask']);
+                Route::patch('planner/tasks/{task}/complete', [PlannerController::class, 'toggleComplete']);
+                Route::patch('planner/tasks/{task}/status',   [PlannerController::class, 'quickStatus']);
+                Route::post('planner/tasks/{task}/subtasks',  [PlannerController::class, 'storeSubtask']);
+                Route::patch('planner/subtasks/{subtask}/toggle', [PlannerController::class, 'toggleSubtask']);
+                Route::delete('planner/subtasks/{subtask}',   [PlannerController::class, 'destroySubtask']);
+                Route::get('planner/day-note',                [PlannerController::class, 'dayNote']);
+                Route::post('planner/day-note',               [PlannerController::class, 'upsertDayNote']);
+                Route::get('planner/stats',                   [PlannerController::class, 'stats']);
+                // Auto-plan — fits today's unscheduled tasks into the
+                // working-hour window in priority order, skipping busy
+                // slots. Returns a proposal array; nothing is mutated
+                // until the frontend POSTs to /apply.
+                Route::post('planner/auto-plan',              [PlannerController::class, 'autoPlanDay']);
+                Route::post('planner/auto-plan/apply',        [PlannerController::class, 'autoPlanApply']);
+                // Ship 5 — voice-agent day-planning surface
+                Route::get('planner/free-slots',              [PlannerController::class, 'freeSlots']);
+                Route::post('planner/suggest-staff',          [PlannerController::class, 'suggestStaff']);
+                Route::get('planner/workload-week',           [PlannerController::class, 'workloadWeek']);
 
-            // Backlog drawer: unscheduled tasks (task_date IS NULL).
-            // scope=mine (default) returns the current user's bucket,
-            // scope=pool returns the company-wide open pool that anyone
-            // can claim.
-            Route::get('planner/backlog',                 [PlannerController::class, 'backlog']);
-            Route::post('planner/tasks/{task}/claim',     [PlannerController::class, 'claimTask']);
-            Route::post('planner/tasks/{task}/release',   [PlannerController::class, 'releaseTask']);
+                // Backlog drawer: unscheduled tasks (task_date IS NULL).
+                // scope=mine (default) returns the current user's bucket,
+                // scope=pool returns the company-wide open pool that anyone
+                // can claim.
+                Route::get('planner/backlog',                 [PlannerController::class, 'backlog']);
+                Route::post('planner/tasks/{task}/claim',     [PlannerController::class, 'claimTask']);
+                Route::post('planner/tasks/{task}/release',   [PlannerController::class, 'releaseTask']);
 
-            // ─── Planner v2: org-wide task templates ──────────────────────
-            Route::get('planner/templates',                [PlannerController::class, 'templates']);
-            Route::post('planner/templates',               [PlannerController::class, 'storeTemplate']);
-            Route::put('planner/templates/{template}',     [PlannerController::class, 'updateTemplate']);
-            Route::delete('planner/templates/{template}',  [PlannerController::class, 'destroyTemplate']);
+                // ─── Planner v2: org-wide task templates ──────────────────────
+                Route::get('planner/templates',                [PlannerController::class, 'templates']);
+                Route::post('planner/templates',               [PlannerController::class, 'storeTemplate']);
+                Route::put('planner/templates/{template}',     [PlannerController::class, 'updateTemplate']);
+                Route::delete('planner/templates/{template}',  [PlannerController::class, 'destroyTemplate']);
+            });
 
             // ─── CRM: Venues & Event Bookings ─────────────────────────────────
             Route::get('venues',                          [VenueController::class, 'indexVenues']);
@@ -966,18 +973,25 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::put('crm-settings/{key}',              [CrmSettingsController::class, 'update']);
 
             // ─── CRM: AI Assistant ────────────────────────────────────────────
-            Route::get('crm-ai/diagnose',                 [CrmAiController::class, 'diagnose']);
-            Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
-            Route::post('crm-ai/realtime-session',        [CrmAiController::class, 'createRealtimeSession']);
-            // Voice-agent tool execution endpoint — see CrmVoiceToolset.
-            // Frontend forwards every realtime function_call event here.
-            Route::post('crm-ai/voice-tool',              [CrmAiController::class, 'executeVoiceTool']);
-            // Ship 9 — voice usage billing.
-            Route::post('crm-ai/voice-usage',             [CrmAiController::class, 'recordVoiceUsage']);
-            Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
-            Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
-            Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
-            Route::post('crm-ai/capture-guest',           [CrmAiController::class, 'captureGuest']);
+            // Staff AI copilot is Enterprise-only on the current pricing
+            // surface. The `feature:admin_ai` middleware returns 402 with
+            // a structured `feature_locked` body when the caller's plan
+            // doesn't include it; CrmAiService::call() carries the same
+            // gate as defense-in-depth for any internal/non-HTTP caller.
+            Route::middleware('feature:admin_ai')->group(function () {
+                Route::get('crm-ai/diagnose',                 [CrmAiController::class, 'diagnose']);
+                Route::post('crm-ai/chat',                    [CrmAiController::class, 'chat']);
+                Route::post('crm-ai/realtime-session',        [CrmAiController::class, 'createRealtimeSession']);
+                // Voice-agent tool execution endpoint — see CrmVoiceToolset.
+                // Frontend forwards every realtime function_call event here.
+                Route::post('crm-ai/voice-tool',              [CrmAiController::class, 'executeVoiceTool']);
+                // Ship 9 — voice usage billing.
+                Route::post('crm-ai/voice-usage',             [CrmAiController::class, 'recordVoiceUsage']);
+                Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
+                Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
+                Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
+                Route::post('crm-ai/capture-guest',           [CrmAiController::class, 'captureGuest']);
+            });
 
             // ─── Documentation ───────────────────────────────────────────────
             Route::get('documentation',                   [\App\Http\Controllers\Api\V1\Admin\DocumentationController::class, 'index']);

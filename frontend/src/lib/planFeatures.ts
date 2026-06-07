@@ -37,16 +37,21 @@
  *     "onboarding" from the support cell — they were noise next to the
  *     channel-based phrasing the user wants.
  *
- * **Marketing-vs-reality gap (still documented for follow-up):**
- *   - `brands` row is Enterprise-only here, but `BrandController::store`
- *     does NOT cap brand count by feature flag today.
- *   - `admin_ai` row is Enterprise-only here, but `CrmAiService::call()`
- *     has no feature-flag check today.
- *   - `time_management` row is Enterprise-only here, but PlannerController
- *     endpoints have no feature-flag gate today either.
- *   All three are marketing-only positioning until the backend gates
- *   ship — surface is honest about Enterprise's intended differentiation,
- *   but support needs to know not to deny use to lower tiers yet.
+ * **Backend gates shipped 2026-06-07.** Three Enterprise-only rows now
+ * carry matching runtime enforcement on the loyalty backend:
+ *   - `brands` — `BrandController::store` rejects the second + subsequent
+ *     brand creation with 402 when `!hasFeature('brands')`. The auto-
+ *     created default brand on every org is exempt.
+ *   - `admin_ai` — every /v1/admin/crm-ai/* route is wrapped in
+ *     `feature:admin_ai` middleware, plus `CrmAiService::call()` carries
+ *     a defense-in-depth check for non-HTTP callers.
+ *   - `time_management` — every /v1/admin/planner/* route is wrapped in
+ *     `feature:time_management` middleware. PlannerPresetController stays
+ *     ungated so an org can pre-stage a preset before upgrading.
+ *   All three keys ship in the SaaS plan_features catalog via
+ *   `2026_06_07_120000_add_v2_pricing_features.php`. The loyalty backend
+ *   reads `$org->hasFeature('key')` from cached entitlements (refreshed
+ *   every 5 min by SaasAuthMiddleware).
  *
  * Plan slugs (`starter`, `growth`, `enterprise`) are intentionally
  * unchanged — they're hardcoded in 4 backend sites (AuthController trial

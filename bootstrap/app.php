@@ -49,6 +49,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
                     return response()->json(['error' => 'Forbidden', 'message' => $e->getMessage() ?: 'Forbidden.'], 403);
                 }
+                // Feature gate (service-level). Shape mirrors what RequireFeature
+                // middleware returns at the route level so the SPA's
+                // feature-locked / upgrade UX is identical regardless of which
+                // layer caught the call.
+                if ($e instanceof \App\Exceptions\FeatureNotEntitled) {
+                    return response()->json([
+                        'error'       => $e->getMessage(),
+                        'code'        => 'feature_locked',
+                        'feature'     => $e->feature,
+                        'plan'        => $e->planSlug,
+                        'upgrade_url' => 'https://saas.hotel-tech.ai/admin/subscription',
+                    ], 402);
+                }
                 if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                     // Use the actual exception message as `error` so clients
                     // (e.g. the chat widget) which only display `d.error` see

@@ -107,6 +107,18 @@ class BrandController extends Controller
     {
         $orgId = app('current_organization_id');
 
+        // Plan gate: every org gets one default brand auto-created at
+        // signup. Adding a SECOND brand requires the `brands` feature
+        // (Enterprise on the current pricing surface). Count check
+        // grandfathers the default brand and any single-brand orgs that
+        // existed before this gate shipped.
+        $org = $request->user()?->organization;
+        if ($org && Brand::where('organization_id', $orgId)->count() >= 1
+            && !$org->hasFeature('brands')) {
+            throw new \App\Exceptions\FeatureNotEntitled('brands', $org->plan_slug,
+                'Multi-brand portfolios require the Enterprise plan. Your current plan supports one brand.');
+        }
+
         $data = $request->validate([
             'name'          => 'required|string|max:120',
             'slug'          => [

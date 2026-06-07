@@ -410,6 +410,35 @@ export function Layout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('subscription:expired', handler)
   }, [qc])
 
+  // Listen for 402 feature:locked events from API interceptor — surface a
+  // friendly toast so the user understands the action was blocked by their
+  // plan, not by a generic server error. The full upgrade UX (modal +
+  // CTA) is a follow-up; this is the minimal-viable message so customers
+  // on Starter/Growth see "Time Management requires Enterprise" instead
+  // of an opaque "Server error" red bubble.
+  useEffect(() => {
+    let lastToastAt = 0
+    const FRIENDLY: Record<string, string> = {
+      time_management: 'Time Management Platform requires the Enterprise plan.',
+      admin_ai: 'Staff AI copilot requires the Enterprise plan.',
+      brands: 'Multi-brand portfolios require the Enterprise plan.',
+    }
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      // Throttle: a page that fans out N parallel calls would otherwise
+      // stack N identical toasts.
+      const now = Date.now()
+      if (now - lastToastAt < 1500) return
+      lastToastAt = now
+      const msg = (detail.feature && FRIENDLY[detail.feature]) || detail.message || 'This feature is not included in your current plan.'
+      import('react-hot-toast').then(({ default: toast }) => {
+        toast.error(msg, { duration: 6000 })
+      }).catch(() => {})
+    }
+    window.addEventListener('feature:locked', handler)
+    return () => window.removeEventListener('feature:locked', handler)
+  }, [])
+
   const logoUrl = (() => {
     const groups = settingsData?.settings
     if (!groups || typeof groups !== 'object') return null
