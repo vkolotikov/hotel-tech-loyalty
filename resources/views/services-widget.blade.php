@@ -357,14 +357,20 @@ img{max-width:100%;display:block}
      view. Hotel orgs see the existing universal copy verbatim
      (back-compat); beauty / medical / restaurant get bespoke labels
      on the service / provider / details steps. */
-  var VOCAB = @json($vocab ?? [
+  {{-- @json() cannot take an inline array literal: its explode(',') options
+       parsing truncates the array at compile time ("Unclosed '[' does not
+       match ')'"). Build the default in a PHP variable first, then @json it. --}}
+  @php
+  $vocabDefault = [
     'svc_service_title'  => 'Select a service',
     'svc_service_sub'    => "Choose the treatment or appointment you'd like to book.",
     'svc_provider_title' => 'Choose your provider',
     'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
     'svc_details_title'  => 'Your details',
     'svc_details_sub'    => "We'll send confirmation to the email you provide.",
-  ]);
+  ];
+  @endphp
+  var VOCAB = @json($vocab ?? $vocabDefault);
 
   // ─── State ────────────────────────────────────────────────────────
   var state = {

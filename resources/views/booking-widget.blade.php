@@ -401,7 +401,14 @@ var SOURCE_TAG    = @json(request('source', ''));
    receive the legacy English strings verbatim (back-compat). Beauty
    / medical / restaurant get their own labels. The renderer below
    references VOCAB.* instead of hardcoded literals. */
-var VOCAB = @json($vocab ?? [
+{{-- Build the default vocab in a PHP variable, then pass the VARIABLE to
+     @json. Do NOT pass an inline array literal straight to @json(...): Blade's
+     @json directive runs explode(',') on its argument to read the optional
+     options/depth params, so the commas inside the array get consumed as those
+     params and the array is truncated at compile time — producing
+     "Unclosed '[' does not match ')'" and a 500 on every widget render. --}}
+@php
+$vocabDefault = [
   'steps_no_pay'     => ['Dates & Guests', 'Rooms & Rates', 'Extras', 'Details & Confirm'],
   'steps_pay'        => ['Dates & Guests', 'Rooms & Rates', 'Extras', 'Guest Details', 'Payment'],
   'search_title'     => 'Find Your Perfect Stay',
@@ -417,7 +424,9 @@ var VOCAB = @json($vocab ?? [
   'searching'        => 'Searching…',
   'continue'         => 'Continue',
   'continue_payment' => 'Continue to Payment',
-]);
+];
+@endphp
+var VOCAB = @json($vocab ?? $vocabDefault);
 var INDUSTRY = @json($industry ?? 'hotel');
 
 /* --- State --- */
