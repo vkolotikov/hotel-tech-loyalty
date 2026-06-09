@@ -253,11 +253,24 @@ export function Layout({ children }: { children: ReactNode }) {
   const blockForSub = (subStatus === 'EXPIRED' || subStatus === 'NO_PLAN')
     && location.pathname !== '/billing'
     && staff?.role !== 'super_admin'
+  // Known-good gate: only mount feature pages + fire background polls
+  // when we can prove the subscription is good. Previously the LOADING
+  // window (between SPA boot and /v1/auth/subscription resolving) had
+  // blockForSub=false because status hadn't yet become 'EXPIRED' —
+  // children rendered, Dashboard fired 10+ admin queries, all 403'd,
+  // flooding the console. Treat anything other than ACTIVE/TRIALING/
+  // LOCAL as "wait" and don't render children. Skip the gate on
+  // /billing (own subscription-aware UI) and for super_admin.
+  const subKnownGood = subStatus === 'ACTIVE' || subStatus === 'TRIALING' || subStatus === 'LOCAL'
+  const allowRender = subKnownGood
+    || staff?.role === 'super_admin'
+    || location.pathname.startsWith('/billing')
+    || location.pathname.startsWith('/login')
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
   // useRealtimeEvents polls /v1/admin/realtime/poll every 5 s. Gate
-  // it on blockForSub so an EXPIRED-trial user doesn't flood the
+  // it on subKnownGood so an EXPIRED-trial user doesn't flood the
   // console + server logs with 403s while staring at the wall.
-  const { connected, events } = useRealtimeEvents(!blockForSub)
+  const { connected, events } = useRealtimeEvents(allowRender)
   // CRM Phase 6: poll the tasks list every minute and fire a browser
   // notification when a task is 5 min from due / due now. Disabled
   // during the subscription wall so we don't hit the API for blocked
@@ -279,8 +292,10 @@ export function Layout({ children }: { children: ReactNode }) {
   useQuery({
     queryKey: ['brands'],
     queryFn: () => api.get<{ data: BrandSummary[] }>('/v1/admin/brands').then(r => r.data),
-    // Gated on !blockForSub so an EXPIRED-trial user doesn't 403.
-    enabled: !!staff && !blockForSub,
+    // Gated on allowRender so we don't fire during LOADING (would 403)
+    // or after EXPIRED. Same gate as children rendering — single source
+    // of truth for "can this org talk to admin endpoints?".
+    enabled: !!staff && allowRender,
     staleTime: 60_000,
     select: (d) => {
       setBrands(d.data ?? [])
@@ -370,17 +385,21 @@ export function Layout({ children }: { children: ReactNode }) {
     queryKey: ['settings-logo'],
     queryFn: () => api.get('/v1/admin/settings').then(r => r.data),
     staleTime: 5 * 60 * 1000,
+    // Gated on allowRender — without this, an EXPIRED-trial user 403s
+    // every initial page load fetching the navbar logo.
+    enabled: allowRender,
   })
 
   // Sidebar unread badge for chat inbox: total unread visitor messages across
-  // all open conversations. Polled every 15s. Gated on `!blockForSub` so an
-  // EXPIRED-trial user doesn't flood console + server logs with 403s.
+  // all open conversations. Polled every 15s. Gated on allowRender so it
+  // doesn't fire during LOADING (would 403 for EXPIRED-trial users before
+  // useSubscription resolved) or after the wall goes up.
   const { data: chatStats } = useQuery({
     queryKey: ['chat-inbox-stats-sidebar'],
     queryFn: () => api.get('/v1/admin/chat-inbox/stats').then(r => r.data),
     refetchInterval: 15000,
     staleTime: 10000,
-    enabled: !blockForSub,
+    enabled: allowRender,
   })
   const chatUnread: number = chatStats?.unread_messages || 0
 
@@ -415,10 +434,20 @@ export function Layout({ children }: { children: ReactNode }) {
     img.src = orig
   }, [chatUnread])
 
-  // Listen for 403 subscription:expired events from API interceptor — refresh subscription status
+  // Listen for 403 subscription:expired events from API interceptor.
+  // Two things happen on receipt:
+  //   1. Cancel ALL in-flight queries — kills stragglers that beat the
+  //      allowRender gate on initial load. Without this, queries that
+  //      fired in the LOADING window keep resolving into the console
+  //      with 403 errors even after the wall comes up.
+  //   2. Invalidate subscription-status so useSubscription re-fetches
+  //      and flips the status to EXPIRED, raising the wall.
   const qc = useQueryClient()
   useEffect(() => {
-    const handler = () => qc.invalidateQueries({ queryKey: ['subscription-status'] })
+    const handler = () => {
+      qc.cancelQueries()
+      qc.invalidateQueries({ queryKey: ['subscription-status'] })
+    }
     window.addEventListener('subscription:expired', handler)
     return () => window.removeEventListener('subscription:expired', handler)
   }, [qc])
@@ -867,15 +896,16 @@ export function Layout({ children }: { children: ReactNode }) {
               Starter customers. */}
           {!blockForSub && <GraceWindowBanner />}
           <div className="p-4 lg:p-6">
-            {/* Critical fix (2026-06-09): /billing must render
-                even when blockForSub is true — otherwise the
-                "Go to Billing" CTA on the SubscriptionWall
-                navigates to a blank page (the wall hides itself
-                on /billing per its own check, but if Layout also
-                blocks children, the user sees nothing). Same
-                exemption for /login fallback in case a stale
-                token leaves a user logged-in but bounced. */}
-            {blockForSub && !location.pathname.startsWith('/billing') ? null : children}
+            {/* Render gate flipped from "block when known bad" to "allow
+                when known good". The old logic let children mount during
+                the LOADING window before useSubscription resolved — every
+                page fired its admin queries, all 403'd for expired-trial
+                users, console flooded. allowRender requires us to KNOW the
+                sub is good (or be on /billing / /login / super_admin)
+                before mounting children. Brief blank-screen during initial
+                /v1/auth/subscription fetch (one round-trip, ~50ms after
+                first warm cache) but no 403 storm. */}
+            {allowRender ? children : null}
           </div>
         </main>
       </div>
