@@ -76,7 +76,13 @@ function saveLastId(id: number) {
   }
 }
 
-export function useRealtimeEvents() {
+/**
+ * @param enabled — when false, the hook becomes inert (no polling,
+ *   no listeners). Useful when the subscription wall is up so an
+ *   EXPIRED-trial user doesn't burn server logs + console with 403s.
+ *   Defaults to true so existing callsites keep working.
+ */
+export function useRealtimeEvents(enabled: boolean = true) {
   const { token } = useAuthStore()
   const qc = useQueryClient()
   const lastIdRef = useRef<number | null>(loadLastId())
@@ -226,7 +232,7 @@ export function useRealtimeEvents() {
   }, [qc])
 
   const poll = useCallback(async () => {
-    if (!token) return
+    if (!token || !enabled) return
     try {
       // First time ever (or storage cleared) — seed with current max id, no replay.
       if (lastIdRef.current === null && !seededRef.current) {
@@ -256,10 +262,13 @@ export function useRealtimeEvents() {
     } catch {
       setConnected(false)
     }
-  }, [token, handleEvent])
+  }, [token, enabled, handleEvent])
 
   useEffect(() => {
-    if (!token) return
+    if (!token || !enabled) {
+      setConnected(false)
+      return
+    }
 
     // Initial poll immediately
     poll()
@@ -272,7 +281,7 @@ export function useRealtimeEvents() {
         intervalRef.current = null
       }
     }
-  }, [token, poll])
+  }, [token, enabled, poll])
 
   return { connected, events }
 }

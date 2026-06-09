@@ -254,7 +254,10 @@ export function Layout({ children }: { children: ReactNode }) {
     && location.pathname !== '/billing'
     && staff?.role !== 'super_admin'
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
-  const { connected, events } = useRealtimeEvents()
+  // useRealtimeEvents polls /v1/admin/realtime/poll every 5 s. Gate
+  // it on blockForSub so an EXPIRED-trial user doesn't flood the
+  // console + server logs with 403s while staring at the wall.
+  const { connected, events } = useRealtimeEvents(!blockForSub)
   // CRM Phase 6: poll the tasks list every minute and fire a browser
   // notification when a task is 5 min from due / due now. Disabled
   // during the subscription wall so we don't hit the API for blocked
@@ -276,7 +279,8 @@ export function Layout({ children }: { children: ReactNode }) {
   useQuery({
     queryKey: ['brands'],
     queryFn: () => api.get<{ data: BrandSummary[] }>('/v1/admin/brands').then(r => r.data),
-    enabled: !!staff,
+    // Gated on !blockForSub so an EXPIRED-trial user doesn't 403.
+    enabled: !!staff && !blockForSub,
     staleTime: 60_000,
     select: (d) => {
       setBrands(d.data ?? [])
@@ -369,12 +373,14 @@ export function Layout({ children }: { children: ReactNode }) {
   })
 
   // Sidebar unread badge for chat inbox: total unread visitor messages across
-  // all open conversations. Polled every 15s.
+  // all open conversations. Polled every 15s. Gated on `!blockForSub` so an
+  // EXPIRED-trial user doesn't flood console + server logs with 403s.
   const { data: chatStats } = useQuery({
     queryKey: ['chat-inbox-stats-sidebar'],
     queryFn: () => api.get('/v1/admin/chat-inbox/stats').then(r => r.data),
     refetchInterval: 15000,
     staleTime: 10000,
+    enabled: !blockForSub,
   })
   const chatUnread: number = chatStats?.unread_messages || 0
 
@@ -861,7 +867,15 @@ export function Layout({ children }: { children: ReactNode }) {
               Starter customers. */}
           {!blockForSub && <GraceWindowBanner />}
           <div className="p-4 lg:p-6">
-            {blockForSub ? null : children}
+            {/* Critical fix (2026-06-09): /billing must render
+                even when blockForSub is true — otherwise the
+                "Go to Billing" CTA on the SubscriptionWall
+                navigates to a blank page (the wall hides itself
+                on /billing per its own check, but if Layout also
+                blocks children, the user sees nothing). Same
+                exemption for /login fallback in case a stale
+                token leaves a user logged-in but bounced. */}
+            {blockForSub && !location.pathname.startsWith('/billing') ? null : children}
           </div>
         </main>
       </div>
