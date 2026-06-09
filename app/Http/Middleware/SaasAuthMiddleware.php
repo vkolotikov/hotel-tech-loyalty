@@ -415,6 +415,62 @@ class SaasAuthMiddleware
                 ]);
             }
         }
+
+        // Reconcile Staff record on EVERY login, not just first-time user
+        // creation. Two real failure modes this catches:
+        //   1. First-time Staff::create() silently failed (best-effort try
+        //      block above) — user has no Staff row and is treated as
+        //      receptionist on every subsequent admin call. Trial owners
+        //      hit the SubscriptionWall non-admin variant after expiry.
+        //   2. User's SaaS role changed (e.g. promoted from STAFF→OWNER)
+        //      but loyalty Staff.role was set at first login and never
+        //      reconciled. They keep the old (lower) role forever.
+        // Both surface as: workspace owner sees "contact your admin" on
+        // an expired-trial wall with no other admin in the org. Dead-end.
+        $saasRoleNow = $request->attributes->get('saas_role', 'STAFF');
+        $expectedLocalRole = match (strtoupper($saasRoleNow)) {
+            'OWNER' => 'super_admin',
+            'ADMIN' => 'manager',
+            default => 'receptionist',
+        };
+        try {
+            $existingStaff = Staff::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $org?->id)
+                ->first();
+            if (!$existingStaff) {
+                // Missing-row recovery — first-time seed must have failed.
+                Staff::withoutGlobalScopes()->create([
+                    'user_id'           => $user->id,
+                    'organization_id'   => $org?->id,
+                    'role'              => $expectedLocalRole,
+                    'hotel_name'        => $org?->name ?? 'Hotel',
+                    'can_award_points'  => in_array($expectedLocalRole, ['super_admin', 'manager']),
+                    'can_redeem_points' => true,
+                    'can_manage_offers' => in_array($expectedLocalRole, ['super_admin', 'manager']),
+                    'can_view_analytics'=> in_array($expectedLocalRole, ['super_admin', 'manager']),
+                    'is_active'         => true,
+                ]);
+            } elseif ($existingStaff->role !== $expectedLocalRole) {
+                // Role promotion (or demotion) — sync from SaaS.
+                $existingStaff->forceFill([
+                    'role'              => $expectedLocalRole,
+                    'can_award_points'  => in_array($expectedLocalRole, ['super_admin', 'manager']),
+                    'can_manage_offers' => in_array($expectedLocalRole, ['super_admin', 'manager']),
+                    'can_view_analytics'=> in_array($expectedLocalRole, ['super_admin', 'manager']),
+                ])->save();
+                \Log::info('Staff role reconciled from SaaS', [
+                    'user_id'  => $user->id,
+                    'org_id'   => $org?->id,
+                    'old_role' => $existingStaff->getOriginal('role'),
+                    'new_role' => $expectedLocalRole,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Staff reconcile failed during SSO — continuing', [
+                'user_id' => $user->id, 'org_id' => $org?->id, 'error' => $e->getMessage(),
+            ]);
+        }
         // Note: the old "repoint user organization_id" branch was removed.
         // It existed because the lookup above was `WHERE email = ?` only,
         // which could resolve to a user in a DIFFERENT org and then

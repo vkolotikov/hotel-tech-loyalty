@@ -1117,7 +1117,11 @@ function SubscriptionWall() {
   // Show wall for EXPIRED or NO_PLAN
   const isExpired = status === 'EXPIRED'
   const trialAlreadyUsed = !!data?.trialAlreadyUsed
-  const isAdmin = staff?.role === 'super_admin' || staff?.role === 'manager'
+  // Strict admin = super_admin (already returned above) or manager.
+  // Used to decide whether to surface the "you might not have
+  // permission" helper text below the CTA. We always show the CTA
+  // regardless — see the JSX below for why.
+  const isAdmin = staff?.role === 'manager'
 
   return (
     <div className="fixed inset-0 bg-dark-bg/95 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-4">
@@ -1143,32 +1147,32 @@ function SubscriptionWall() {
           </p>
         </div>
 
-        {/* Admins get the canonical CTA; non-admins get a clear dead-end
-            (previously the "Go to Billing" link was outside this ternary,
-            so non-admin staff saw both the "contact admin" message AND a
-            primary CTA they couldn't action). Also dropped the hardcoded
-            plan cards — $149 / $269 / "For growing hotels" copy contradicts
-            the v2/v3 industry-neutral HexaTech positioning (beauty / medical
-            / legal / restaurant tenants don't run hotels). /billing is the
-            single source of truth for plan + price display, sourced from
-            lib/planFeatures.ts. */}
+        {/* CTA is always shown. The SaaS→loyalty role mapping
+            (OWNER→super_admin, ADMIN→manager, else→receptionist) can
+            mis-classify trial creators whose JWT doesn't tag them as
+            OWNER, stranding the actual workspace owner on a "contact
+            admin" dead-end where there IS no other admin. /billing
+            does its own permission check, so this is a safe escape
+            hatch for everyone:
+              - Real admin → goes to /billing, completes Checkout
+              - Real staff → goes to /billing, sees a read-only view
+                with the "ask your admin" message
+            Non-admin roles also see the soft hint here so they're not
+            surprised when /billing shows them limited controls. */}
+        <Link
+          to="/billing"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
+        >
+          <CreditCard size={16} />
+          Go to Billing
+          <ChevronRight size={16} />
+        </Link>
         {isAdmin ? (
-          <>
-            <Link
-              to="/billing"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
-            >
-              <CreditCard size={16} />
-              Go to Billing
-              <ChevronRight size={16} />
-            </Link>
-            <p className="text-xs text-gray-500">Choose a plan and reactivate your workspace in under a minute.</p>
-          </>
+          <p className="text-xs text-gray-500">Choose a plan and reactivate your workspace in under a minute.</p>
         ) : (
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 max-w-md w-full text-center space-y-3">
-            <p className="text-gray-300">Your workspace administrator needs to renew the subscription before you can sign in.</p>
-            <p className="text-xs text-gray-500">You don't have permission to manage billing. Please reach out to the person who invited you.</p>
-          </div>
+          <p className="text-xs text-gray-500 max-w-md">
+            If you're the workspace owner, you can renew above. Otherwise the person who set up this workspace will need to manage the subscription.
+          </p>
         )}
 
         {/* Logout button */}
