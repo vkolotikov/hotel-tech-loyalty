@@ -1143,43 +1143,33 @@ function SubscriptionWall() {
           </p>
         </div>
 
-        {/* Plan Cards for Admins */}
+        {/* Admins get the canonical CTA; non-admins get a clear dead-end
+            (previously the "Go to Billing" link was outside this ternary,
+            so non-admin staff saw both the "contact admin" message AND a
+            primary CTA they couldn't action). Also dropped the hardcoded
+            plan cards — $149 / $269 / "For growing hotels" copy contradicts
+            the v2/v3 industry-neutral HexaTech positioning (beauty / medical
+            / legal / restaurant tenants don't run hotels). /billing is the
+            single source of truth for plan + price display, sourced from
+            lib/planFeatures.ts. */}
         {isAdmin ? (
-          <div className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              {[
-                { name: 'Starter', price: '$149', desc: 'For small teams' },
-                { name: 'Growth', price: '$269', desc: 'For growing hotels' },
-                { name: 'Enterprise', price: 'Custom', desc: 'For large chains' },
-              ].map((plan) => (
-                <Link
-                  key={plan.name}
-                  to="/billing"
-                  className="border border-dark-border rounded-xl p-5 bg-dark-surface hover:bg-dark-surface2 hover:border-primary-500/50 transition-all group"
-                >
-                  <h3 className="font-semibold text-white mb-1 group-hover:text-primary-300 transition-colors">{plan.name}</h3>
-                  <p className="text-sm text-gray-400 mb-3">{plan.desc}</p>
-                  <p className="text-xl font-bold text-primary-400">{plan.price}</p>
-                  <p className="text-xs text-gray-600 mt-3">/month</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <>
+            <Link
+              to="/billing"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
+            >
+              <CreditCard size={16} />
+              Go to Billing
+              <ChevronRight size={16} />
+            </Link>
+            <p className="text-xs text-gray-500">Choose a plan and reactivate your workspace in under a minute.</p>
+          </>
         ) : (
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 max-w-md w-full text-center">
-            <p className="text-gray-300">Contact your workspace administrator to renew the subscription and restore access.</p>
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 max-w-md w-full text-center space-y-3">
+            <p className="text-gray-300">Your workspace administrator needs to renew the subscription before you can sign in.</p>
+            <p className="text-xs text-gray-500">You don't have permission to manage billing. Please reach out to the person who invited you.</p>
           </div>
         )}
-
-        {/* CTA Button */}
-        <Link
-          to="/billing"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
-        >
-          <CreditCard size={16} />
-          Go to Billing
-          <ChevronRight size={16} />
-        </Link>
 
         {/* Logout button */}
         <button
