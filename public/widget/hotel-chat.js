@@ -104,7 +104,7 @@
     #htchat-launcher:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.35); }\
     #htchat-launcher svg { width: 24px; height: 24px; fill: white; }\
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
-    #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
+    #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
     #htchat-panel.hidden { opacity: 0; transform: translateY(20px) scale(0.95); pointer-events: none; }\
     #htchat-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 64px; box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 4px 12px -6px rgba(0,0,0,0.2); position: relative; z-index: 2; }\
     #htchat-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }\
