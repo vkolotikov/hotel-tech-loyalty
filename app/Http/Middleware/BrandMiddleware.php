@@ -49,10 +49,35 @@ class BrandMiddleware
             // Verify the brand belongs to the current org — TenantScope
             // applies because Brand uses BelongsToOrganization.
             $brand = Brand::find((int) $param);
-            return $brand?->id;
+            if (!$brand) {
+                // Unknown / cross-tenant brand_id — fall through to step 2-4
+                // resolution instead of silently no-op'ing the scope.
+                // Previously returned null here, which let an attacker
+                // (or just a stale localStorage entry from another org)
+                // bypass brand filtering entirely with brand_id=99999.
+                return $this->pivotConstrainedFallback($request);
+            }
+            // Pivot gate — staff explicitly restricted to a subset of
+            // brands cannot escape via ?brand_id=. Platform admin (e.g.
+            // info@hotel-tech.ai) and unrestricted staff (no pivot rows)
+            // pass through.
+            $user = $request->user();
+            if ($user && $user->user_type === 'staff' &&
+                !(method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin())) {
+                $assignedIds = $user->brands()->pluck('brands.id')->all();
+                if (!empty($assignedIds) && !in_array($brand->id, $assignedIds, true)) {
+                    abort(403, 'You do not have access to this brand.');
+                }
+            }
+            return $brand->id;
         }
         if ($param === 'all') {
-            return null; // explicit "all brands"
+            // For pivot-restricted staff, "all brands" should still respect
+            // the restriction. Without the helper below, a restricted staff
+            // who picks "All brands" in the switcher sees every brand's
+            // data (BrandScope no-ops). For now, fall through to step 3 so
+            // single-brand-pivot staff get pinned to their one brand.
+            return $this->pivotConstrainedFallback($request);
         }
 
         // 2. Widget token routes (Phase 2 wiring) — `/widget/{brand_token}`.
@@ -86,6 +111,24 @@ class BrandMiddleware
         //    BrandScope no-ops. That is the correct behaviour for org-level
         //    pages (Members, Guests, etc.) and for endpoints that don't
         //    care about brand. Brand-scoped pages always pass ?brand_id.
+        return null;
+    }
+
+    /**
+     * Pivot-restricted staff with a single-brand pivot get pinned to that
+     * brand. Used when the query param resolution falls through (invalid
+     * brand_id, or "all" mode for a restricted user).
+     */
+    private function pivotConstrainedFallback(Request $request): ?int
+    {
+        $user = $request->user();
+        if ($user && $user->user_type === 'staff' &&
+            !(method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin())) {
+            $assignedIds = $user->brands()->pluck('brands.id')->all();
+            if (count($assignedIds) === 1) {
+                return $assignedIds[0];
+            }
+        }
         return null;
     }
 }

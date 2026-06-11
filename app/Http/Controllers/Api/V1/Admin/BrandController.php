@@ -154,6 +154,18 @@ class BrandController extends Controller
             $brand->organization_id = $orgId;
             $brand->is_default = false; // never auto-promote a freshly created brand
             $brand->save();
+
+            // Seed brand-scoped config rows so the new brand is usable
+            // immediately. Without this, an admin who switches to the
+            // new brand in the BrandSwitcher hits empty/404 on:
+            //   - Chat widget (no ChatWidgetConfig → embed code 404)
+            //   - Chatbot Setup (no ChatbotBehaviorConfig / ModelConfig)
+            //   - Knowledge Base (no KnowledgeCategory)
+            // Each clone is best-effort — a missing source row just means
+            // the new brand starts blank for that surface (still better
+            // than 404). Errors are logged but don't roll back the brand.
+            $this->seedBrandDefaults($brand, $orgId);
+
             return $brand;
         });
 
@@ -163,6 +175,63 @@ class BrandController extends Controller
         }
 
         return response()->json($brand, 201);
+    }
+
+    /**
+     * Best-effort seed of brand-scoped config rows on new brand creation.
+     * Replicates each row from the org's default brand into the new brand.
+     */
+    private function seedBrandDefaults(Brand $newBrand, int $orgId): void
+    {
+        $defaultBrandId = \App\Models\Brand::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('is_default', true)
+            ->whereNull('deleted_at')
+            ->value('id');
+        if (!$defaultBrandId) return;
+
+        // ChatWidgetConfig — clone with a fresh widget_key so each brand
+        // has its own embed token (multi-brand orgs paste different embed
+        // codes per site).
+        try {
+            $widget = \App\Models\ChatWidgetConfig::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('brand_id', $defaultBrandId)
+                ->first();
+            if ($widget) {
+                $clone = $widget->replicate(['widget_key', 'created_at', 'updated_at']);
+                $clone->brand_id = $newBrand->id;
+                $clone->widget_key = \Illuminate\Support\Str::random(40);
+                $clone->save();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('BrandController::seedBrandDefaults — chat widget clone failed', [
+                'org_id' => $orgId, 'brand_id' => $newBrand->id, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // ChatbotBehaviorConfig + ChatbotModelConfig — clone behaviour /
+        // model settings so the new brand's chatbot test page works.
+        foreach (['ChatbotBehaviorConfig', 'ChatbotModelConfig'] as $model) {
+            $class = "App\\Models\\{$model}";
+            if (!class_exists($class)) continue;
+            try {
+                $row = $class::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->where('brand_id', $defaultBrandId)
+                    ->first();
+                if ($row) {
+                    $clone = $row->replicate(['created_at', 'updated_at']);
+                    $clone->brand_id = $newBrand->id;
+                    $clone->save();
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('BrandController::seedBrandDefaults — clone failed', [
+                    'model' => $model, 'org_id' => $orgId, 'brand_id' => $newBrand->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     public function update(int $id, Request $request): JsonResponse

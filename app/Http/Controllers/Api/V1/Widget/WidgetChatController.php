@@ -179,6 +179,23 @@ class WidgetChatController extends Controller
 
         if ($config) {
             app()->instance('current_organization_id', $config->organization_id);
+            // Critical for multi-brand orgs: bind the widget's brand_id so
+            // every Visitor / ChatConversation / ChatMessage created in
+            // this request gets stamped with the brand the visitor actually
+            // came from (not the org's default brand via the trait's
+            // fallback). Without this, every widget chat lands on the
+            // default brand, the inbox for any other brand stays empty,
+            // and the BrandSwitcher silently filters new chats away.
+            // Falls back to the org's default brand only when widget
+            // config predates the Phase 2 brand_id column (NULL).
+            if ($config->brand_id) {
+                app()->instance('current_brand_id', $config->brand_id);
+            } else {
+                $defaultBrandId = \App\Models\Brand::currentOrDefaultIdForOrg($config->organization_id);
+                if ($defaultBrandId) {
+                    app()->instance('current_brand_id', $defaultBrandId);
+                }
+            }
         }
 
         return $config;
@@ -431,6 +448,16 @@ class WidgetChatController extends Controller
             $userAgent = substr((string) $request->header('User-Agent'), 0, 500);
             $pageUrl   = $request->input('page_url') ?: $request->header('Referer');
 
+            // Include brand_id explicitly in the values payload so an UPDATE
+            // path (resuming an existing session via cookie or session_id)
+            // also re-stamps brand_id from the current widget config. The
+            // BelongsToBrand `creating` event only fires on INSERT — without
+            // this explicit value, a visitor who used Brand A's widget
+            // yesterday and Brand B's today keeps the old Brand A stamp
+            // forever and the conversation surfaces in the wrong inbox.
+            $brandId = $config->brand_id
+                ?: \App\Models\Brand::currentOrDefaultIdForOrg($config->organization_id);
+
             AiConversation::updateOrCreate(
                 ['session_id' => $sessionId],
                 [
@@ -446,6 +473,7 @@ class WidgetChatController extends Controller
                 ['session_id' => $sessionId],
                 [
                     'organization_id'    => $config->organization_id,
+                    'brand_id'           => $brandId,
                     'visitor_id'         => $visitor->id,
                     'visitor_name'       => $visitorName ?: $visitor->display_name,
                     'visitor_email'      => $visitor->email,
