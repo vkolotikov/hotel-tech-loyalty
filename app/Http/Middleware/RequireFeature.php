@@ -23,6 +23,14 @@ class RequireFeature
         $user = Auth::user();
         $org  = $user?->organization;
 
+        // Platform admin bypass — hotel-tech.ai operator(s) get full
+        // access regardless of plan or subscription state. Mirrors the
+        // synthetic-features path in AuthController::subscription so the
+        // SPA's hasFeature() and actual route enforcement agree.
+        if ($user && method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin()) {
+            return $next($request);
+        }
+
         if (!$org) {
             return response()->json([
                 'error' => 'No organization context',

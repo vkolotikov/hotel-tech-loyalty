@@ -75,6 +75,28 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /**
+     * Platform admin — the hotel-tech.ai operator(s) who own the platform
+     * itself, not customers. Read from PLATFORM_ADMIN_EMAILS env (CSV).
+     * Default ships with `info@hotel-tech.ai`.
+     *
+     * Used to bypass:
+     *  - SubscriptionWall (no plan needed)
+     *  - CheckSubscription middleware (no `subscription_required` 403)
+     *  - RequireFeature middleware (every `feature:*` gate)
+     *  - AuthController::subscription synthetic-features response
+     *
+     * NOT the same as staff.role='super_admin' — every org owner has
+     * that role. Platform admin is a tiny allowlist of internal staff.
+     */
+    public function isPlatformAdmin(): bool
+    {
+        if (!$this->email) return false;
+        $raw = config('services.saas.platform_admin_emails', '');
+        $list = array_filter(array_map('trim', explode(',', (string) $raw)));
+        return in_array(strtolower($this->email), array_map('strtolower', $list), true);
+    }
+
     public function isStaff(): bool
     {
         return $this->user_type === 'staff';
