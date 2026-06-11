@@ -7,7 +7,7 @@ import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw,
   Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
-  SlidersHorizontal,
+  SlidersHorizontal, Archive, UserX,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -29,7 +29,7 @@ import { useHotLeadAlert, useNotificationPermission, type HotLeadInfo } from '..
 // row (low signal — intent tagging is shown on each row already) were
 // dropped. Backend still accepts the old filter values for API
 // compatibility; the UI just no longer exposes them.
-type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat'
+type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat' | 'resolved' | 'anonymous'
 
 interface EngagementRow {
   id: number
@@ -79,6 +79,13 @@ const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
   { key: 'online',      label: 'Online',       icon: Wifi,  tone: 'green'     },
   { key: 'has_contact', label: 'Has contact',  icon: Mail                     },
   { key: 'active_chat', label: 'Active chat',  icon: MessageSquare            },
+  // History view — backend has supported `resolved` and `anonymous` filter
+  // values forever; they were dropped from the UI in a 2026-05 polish pass
+  // and that left admins with no way to browse closed conversations from
+  // this page (the Priority default hides everything resolved). User-
+  // reported: "I have 840 conversations but the inbox shows 1".
+  { key: 'resolved',    label: 'Resolved',     icon: Archive                  },
+  { key: 'anonymous',   label: 'Anonymous',    icon: UserX                    },
 ]
 
 /** Maps a FilterKey to its i18n key under `engagement.filters.*`. */
@@ -692,6 +699,8 @@ function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFil
     online:          { title: 'No one is online',             sub: 'Visitors will appear here in real time when they hit the chat widget.' },
     has_contact:     { title: 'No leads captured yet',        sub: 'Anyone who leaves an email or phone number lands here.' },
     active_chat:     { title: 'No active chats',              sub: 'Open conversations will appear here.' },
+    resolved:        { title: 'No resolved conversations',    sub: 'Closed chats land here so you can review history.' },
+    anonymous:       { title: 'No anonymous visitors',        sub: 'Pure-browse visitors with no captured contact appear here.' },
   }
   const fb = fallbacks[filter]
   const title = t(`engagement.empty.${filter}.title`, fb.title)
