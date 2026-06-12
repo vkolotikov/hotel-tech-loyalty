@@ -278,15 +278,32 @@ function PresetCard({
 }) {
   const c = preset.colors
   const isFeatured = !!preset.featured
+  const mood = preset.mood ?? 'modern'
+
+  // Per-mood card shape. Luxury/editorial get near-square corners (refined),
+  // energetic/natural get heavily rounded (playful), minimal stays close to
+  // a hairline. This is what makes the GRID feel like a curated mix of
+  // design systems instead of 14 same-shape tiles in different colors.
+  const radiusClass: Record<string, string> = {
+    luxury: 'rounded-md',
+    corporate: 'rounded-lg',
+    wellness: 'rounded-2xl',
+    boutique: 'rounded-3xl',
+    modern: 'rounded-xl',
+    creative: 'rounded-sm',
+    energetic: 'rounded-[28px]',
+    natural: 'rounded-[28px]',
+    minimal: 'rounded-md',
+    editorial: 'rounded-none',
+  }
+
   return (
     <button
       onClick={onClick}
-      className={`relative text-left rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl group ${
-        isFeatured ? 'lg:col-span-2' : ''
-      } ${
-        isActive
-          ? 'border-transparent'
-          : 'border-white/[0.06] hover:border-white/20'
+      className={`relative text-left overflow-hidden border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl group ${
+        radiusClass[mood] ?? 'rounded-xl'
+      } ${isFeatured ? 'lg:col-span-2' : ''} ${
+        isActive ? 'border-transparent' : 'border-white/[0.06] hover:border-white/20'
       }`}
       style={{
         background: c.surface_color,
@@ -295,60 +312,22 @@ function PresetCard({
           : undefined,
       }}
     >
-      {/* Header band — gradient from primary to accent. Featured cards get
-          a taller header so they read as "headliners" in the grid. */}
-      <div
-        className={`relative w-full ${isFeatured ? 'h-24' : 'h-16'}`}
-        style={{
-          background: `linear-gradient(135deg, ${c.primary_color} 0%, ${c.primary_color} 40%, ${c.accent_color} 100%)`,
-        }}
-      >
-        {/* Decorative orbs — subtle, scale with featured size. */}
-        <div
-          className="absolute top-2 right-3 rounded-full opacity-30"
-          style={{
-            width: isFeatured ? 56 : 32,
-            height: isFeatured ? 56 : 32,
-            background: c.info_color,
-            filter: 'blur(8px)',
-          }}
-        />
-        <div
-          className="absolute bottom-1 left-4 rounded-full opacity-40"
-          style={{
-            width: isFeatured ? 24 : 16,
-            height: isFeatured ? 24 : 16,
-            background: c.warning_color,
-            filter: 'blur(4px)',
-          }}
-        />
-        {/* Active corner check */}
-        {isActive && (
-          <div
-            className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ background: c.surface_color, color: c.primary_color }}
-          >
-            <CheckCircle size={14} />
-          </div>
-        )}
-      </div>
+      {/* HEADER BAND — each mood gets its own treatment so even the top
+          16-24px of the card signals what design language it's in. */}
+      <MoodHeader mood={mood} colors={c} isFeatured={isFeatured} isActive={isActive} />
 
-      {/* Body — sits over background_color (real admin bg) so the contrast
-          is the SAME as what you'll see across the actual app. */}
+      {/* BODY — split into a NAME row (consistent across cards so the grid
+          stays scannable) and a MOOD-SPECIFIC PREVIEW (mini app mockup
+          rendered in that mood's design vocabulary). */}
       <div
         className={`${isFeatured ? 'p-5' : 'p-4'} flex flex-col gap-3`}
         style={{ background: c.background_color }}
       >
-        {/* Preset name in its own font + size. Featured cards get the bigger
-            display size; non-featured stay readable but compact. */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div
               className={`${isFeatured ? 'text-xl' : 'text-base'} font-bold leading-tight tracking-tight truncate`}
-              style={{
-                color: c.text_color,
-                fontFamily: preset.fontFamily,
-              }}
+              style={{ color: c.text_color, fontFamily: preset.fontFamily }}
             >
               {name}
             </div>
@@ -361,45 +340,11 @@ function PresetCard({
           </div>
         </div>
 
-        {/* Mini UI mockup — shows actual rendered UI in this theme so the
-            user can judge legibility before committing. A button uses
-            primary, a pill uses accent, a sample row uses surface+border. */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className={`${isFeatured ? 'text-[11px] px-2.5 py-1' : 'text-[10px] px-2 py-0.5'} font-semibold rounded-md`}
-            style={{
-              background: c.primary_color,
-              color: c.background_color,
-              fontFamily: preset.fontFamily,
-            }}
-          >
-            Reservations
-          </span>
-          <span
-            className={`${isFeatured ? 'text-[11px] px-2.5 py-1' : 'text-[10px] px-2 py-0.5'} font-semibold rounded-full`}
-            style={{
-              background: `${c.accent_color}22`,
-              color: c.accent_color,
-              border: `1px solid ${c.accent_color}44`,
-            }}
-          >
-            Active
-          </span>
-          {isFeatured && (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{
-                background: `${c.info_color}18`,
-                color: c.info_color,
-                border: `1px solid ${c.info_color}33`,
-              }}
-            >
-              Trial
-            </span>
-          )}
-        </div>
+        {/* Mood-specific mini mockup — actual mini-UI rendered in this
+            mood's voice. NOT just a button + pill across the board. */}
+        <MoodPreview mood={mood} colors={c} fontFamily={preset.fontFamily} isFeatured={isFeatured} />
 
-        {/* Color dot legend — quick reference for the underlying palette. */}
+        {/* Color dot legend + mood label — same across all cards. */}
         <div className="flex items-center gap-1.5 mt-auto pt-1">
           {[c.primary_color, c.accent_color, c.info_color, c.warning_color, c.error_color].map((col, i) => (
             <div
@@ -412,12 +357,454 @@ function PresetCard({
             className="ml-auto text-[9px] uppercase tracking-widest"
             style={{ color: c.text_secondary_color }}
           >
-            {preset.mood}
+            {mood}
           </span>
         </div>
       </div>
     </button>
   )
+}
+
+/* ─── Per-mood header treatments ──────────────────────────────────────── */
+function MoodHeader({
+  mood,
+  colors: c,
+  isFeatured,
+  isActive,
+}: {
+  mood: string
+  colors: Record<string, string>
+  isFeatured: boolean
+  isActive: boolean
+}) {
+  const h = isFeatured ? 'h-24' : 'h-16'
+  const corner = isActive && (
+    <div
+      className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center z-10"
+      style={{ background: c.surface_color, color: c.primary_color }}
+    >
+      <CheckCircle size={14} />
+    </div>
+  )
+
+  switch (mood) {
+    case 'luxury':
+      // Solid primary + thin gold hairline at the bottom — refined, no orbs.
+      return (
+        <div className={`relative w-full ${h}`} style={{ background: c.primary_color }}>
+          {corner}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-px"
+            style={{ background: c.accent_color, boxShadow: `0 -1px 0 ${c.text_color}22` }}
+          />
+        </div>
+      )
+    case 'corporate':
+      // Three vertical bars — primary / accent / info — read like a brand strip.
+      return (
+        <div className={`relative w-full ${h} flex`}>
+          {corner}
+          <div className="flex-[2]" style={{ background: c.primary_color }} />
+          <div className="flex-1" style={{ background: c.accent_color }} />
+          <div className="flex-1" style={{ background: c.info_color }} />
+        </div>
+      )
+    case 'creative':
+      // Diagonal gradient slash — moody, off-axis.
+      return (
+        <div
+          className={`relative w-full ${h}`}
+          style={{
+            background: `linear-gradient(115deg, ${c.primary_color} 0%, ${c.primary_color} 55%, ${c.accent_color} 55%, ${c.accent_color} 100%)`,
+          }}
+        >
+          {corner}
+        </div>
+      )
+    case 'energetic':
+      // Radial sunburst from one corner — bursting, warm.
+      return (
+        <div
+          className={`relative w-full ${h}`}
+          style={{
+            background: `radial-gradient(circle at 80% 20%, ${c.warning_color} 0%, ${c.primary_color} 35%, ${c.primary_color} 100%)`,
+          }}
+        >
+          {corner}
+        </div>
+      )
+    case 'natural':
+      // Soft top-down wash that fades, no hard edge.
+      return (
+        <div
+          className={`relative w-full ${h}`}
+          style={{
+            background: `linear-gradient(180deg, ${c.primary_color} 0%, ${c.primary_color}cc 60%, ${c.surface_color} 100%)`,
+          }}
+        >
+          {corner}
+        </div>
+      )
+    case 'minimal':
+      // Mostly surface — just a 2px primary stripe at the bottom.
+      return (
+        <div className={`relative w-full ${h}`} style={{ background: c.surface_color }}>
+          {corner}
+          <div className="absolute bottom-0 left-0 h-[2px]" style={{ background: c.primary_color, width: '40%' }} />
+        </div>
+      )
+    case 'editorial':
+      // Solid + decorative caret strip — magazine masthead vibe.
+      return (
+        <div className={`relative w-full ${h}`} style={{ background: c.primary_color }}>
+          {corner}
+          <div
+            className="absolute bottom-2 right-3 px-1.5 py-0.5 text-[8px] font-semibold tracking-widest uppercase"
+            style={{ background: c.accent_color, color: c.background_color }}
+          >
+            Issue 01
+          </div>
+        </div>
+      )
+    case 'wellness':
+      // Soft sage wash with a faint sun in the corner.
+      return (
+        <div className={`relative w-full ${h}`} style={{ background: `linear-gradient(160deg, ${c.primary_color} 0%, ${c.accent_color}cc 100%)` }}>
+          {corner}
+          <div
+            className="absolute top-3 right-4 rounded-full opacity-50"
+            style={{ width: 28, height: 28, background: c.warning_color, filter: 'blur(6px)' }}
+          />
+        </div>
+      )
+    case 'boutique':
+      // Soft gradient with offset rose circle — boutique-window feel.
+      return (
+        <div className={`relative w-full ${h}`} style={{ background: `linear-gradient(135deg, ${c.primary_color} 0%, ${c.accent_color} 100%)` }}>
+          {corner}
+          <div
+            className="absolute -bottom-3 right-4 rounded-full"
+            style={{ width: 36, height: 36, background: c.accent_color, opacity: 0.5, filter: 'blur(8px)' }}
+          />
+        </div>
+      )
+    default:
+      // 'modern' (and fallback) — current gradient + orbs treatment.
+      return (
+        <div
+          className={`relative w-full ${h}`}
+          style={{ background: `linear-gradient(135deg, ${c.primary_color} 0%, ${c.primary_color} 40%, ${c.accent_color} 100%)` }}
+        >
+          {corner}
+          <div
+            className="absolute top-2 right-3 rounded-full opacity-30"
+            style={{ width: isFeatured ? 56 : 32, height: isFeatured ? 56 : 32, background: c.info_color, filter: 'blur(8px)' }}
+          />
+          <div
+            className="absolute bottom-1 left-4 rounded-full opacity-40"
+            style={{ width: isFeatured ? 24 : 16, height: isFeatured ? 24 : 16, background: c.warning_color, filter: 'blur(4px)' }}
+          />
+        </div>
+      )
+  }
+}
+
+/* ─── Per-mood mini UI mockups ──────────────────────────────────────────
+   Each preset renders a DIFFERENT mockup snippet inside its card — an
+   invoice line for luxury, a KPI tile for corporate, a code-style tag
+   for creative, etc. This is what makes 14 presets read as 14 different
+   design systems instead of 14 color-swatch variations of one template. */
+function MoodPreview({
+  mood,
+  colors: c,
+  fontFamily,
+  isFeatured,
+}: {
+  mood: string
+  colors: Record<string, string>
+  fontFamily?: string
+  isFeatured: boolean
+}) {
+  const baseSize = isFeatured ? 'text-xs' : 'text-[10px]'
+
+  switch (mood) {
+    case 'luxury':
+      // Invoice-line: big serif amount + small "Suite Revenue" caption.
+      return (
+        <div
+          className="px-3 py-2.5 border-t border-b"
+          style={{ borderColor: `${c.accent_color}55`, background: `${c.primary_color}08` }}
+        >
+          <div className="flex items-baseline justify-between">
+            <span className="text-[9px] uppercase tracking-[0.2em]" style={{ color: c.text_secondary_color }}>
+              Suite Revenue
+            </span>
+            <span className="text-[9px] tabular-nums" style={{ color: c.accent_color }}>
+              +12%
+            </span>
+          </div>
+          <div
+            className={`${isFeatured ? 'text-2xl' : 'text-lg'} font-bold tabular-nums mt-0.5`}
+            style={{ color: c.text_color, fontFamily }}
+          >
+            €2,450
+          </div>
+        </div>
+      )
+
+    case 'corporate':
+      // 2x2 KPI grid — exactly what a dashboard looks like.
+      return (
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { label: 'Revenue', value: '$142K', tone: c.primary_color },
+            { label: 'Bookings', value: '87',   tone: c.accent_color },
+            { label: 'Occupancy', value: '76%', tone: c.info_color },
+            { label: 'Rate', value: '$480',     tone: c.warning_color },
+          ].map((k, i) => (
+            <div
+              key={i}
+              className="px-2 py-1 rounded border"
+              style={{ borderColor: c.border_color, background: c.surface_color }}
+            >
+              <div className="text-[8px] uppercase tracking-wider" style={{ color: c.text_secondary_color }}>
+                {k.label}
+              </div>
+              <div className={`${baseSize} font-bold tabular-nums`} style={{ color: k.tone }}>
+                {k.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+
+    case 'boutique':
+      // Soft welcome card with italic name + VIP gold pill.
+      return (
+        <div
+          className="px-3 py-2.5 rounded-2xl"
+          style={{ background: `${c.primary_color}10`, border: `1px solid ${c.primary_color}33` }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[8px] uppercase tracking-[0.18em]" style={{ color: c.text_secondary_color }}>
+                Welcome back
+              </div>
+              <div
+                className={`${isFeatured ? 'text-base' : 'text-sm'} italic font-semibold truncate`}
+                style={{ color: c.text_color, fontFamily }}
+              >
+                Sarah Mitchell
+              </div>
+            </div>
+            <span
+              className="text-[9px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+              style={{ background: c.accent_color, color: c.background_color, fontFamily }}
+            >
+              VIP
+            </span>
+          </div>
+        </div>
+      )
+
+    case 'creative':
+      // Code-style tag with bracket characters — devtool / studio vibe.
+      return (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span
+            className={`${baseSize} font-mono px-2 py-1 rounded-sm`}
+            style={{
+              background: c.background_color,
+              color: c.accent_color,
+              border: `1px solid ${c.accent_color}55`,
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            }}
+          >
+            &lt;Component /&gt;
+          </span>
+          <span
+            className={`${baseSize} font-bold uppercase tracking-widest`}
+            style={{
+              background: c.primary_color,
+              color: c.background_color,
+              padding: '4px 10px',
+              clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+            }}
+          >
+            BETA
+          </span>
+        </div>
+      )
+
+    case 'energetic':
+      // Progress bar + 'Save 30%' bouncy pill.
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className={baseSize} style={{ color: c.text_secondary_color }}>
+              Booked tonight
+            </span>
+            <span className={`${baseSize} font-bold`} style={{ color: c.primary_color }}>
+              67%
+            </span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: `${c.primary_color}22` }}>
+            <div
+              className="h-full rounded-full"
+              style={{ width: '67%', background: `linear-gradient(90deg, ${c.primary_color}, ${c.warning_color})` }}
+            />
+          </div>
+          <span
+            className={`${baseSize} font-bold inline-block px-2.5 py-0.5 rounded-full mt-1`}
+            style={{ background: c.accent_color, color: c.background_color }}
+          >
+            Save 30%
+          </span>
+        </div>
+      )
+
+    case 'natural':
+      // Round soft bubble badges + a serif tagline — earthy.
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {['Eco', 'Outdoor', 'Local'].map((tag, i) => (
+              <span
+                key={tag}
+                className="text-[9px] font-semibold px-2.5 py-1 rounded-full"
+                style={{
+                  background: i === 0 ? c.primary_color : c.surface_color,
+                  color: i === 0 ? c.background_color : c.text_color,
+                  border: i === 0 ? 'none' : `1px solid ${c.border_color}`,
+                  fontFamily,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div className={`${baseSize} italic`} style={{ color: c.text_secondary_color, fontFamily }}>
+            Rooted in nature, refined by season.
+          </div>
+        </div>
+      )
+
+    case 'wellness':
+      // Mini stat with leaf-style accent.
+      return (
+        <div className="flex items-center gap-3">
+          <div
+            className="rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{
+              width: isFeatured ? 56 : 40,
+              height: isFeatured ? 56 : 40,
+              background: `${c.primary_color}22`,
+              border: `1px solid ${c.primary_color}44`,
+            }}
+          >
+            <span className={`${isFeatured ? 'text-2xl' : 'text-lg'}`} style={{ color: c.primary_color }}>
+              ✿
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[8px] uppercase tracking-widest" style={{ color: c.text_secondary_color }}>
+              Sessions
+            </div>
+            <div className={`${isFeatured ? 'text-xl' : 'text-base'} font-bold tabular-nums`} style={{ color: c.primary_color, fontFamily }}>
+              48 this week
+            </div>
+          </div>
+        </div>
+      )
+
+    case 'minimal':
+      // Big A→B typography sample, no chrome.
+      return (
+        <div className="flex items-baseline gap-3">
+          <span
+            className={`${isFeatured ? 'text-4xl' : 'text-3xl'} font-light`}
+            style={{ color: c.text_color, fontFamily }}
+          >
+            Aa
+          </span>
+          <div className="space-y-0.5">
+            <div className="text-[8px] uppercase tracking-[0.25em]" style={{ color: c.text_secondary_color }}>
+              Primary
+            </div>
+            <div className={`${baseSize} font-mono`} style={{ color: c.primary_color }}>
+              {c.primary_color}
+            </div>
+          </div>
+        </div>
+      )
+
+    case 'editorial':
+      // Small-caps headline + 2 lines of justified paragraph — magazine column.
+      return (
+        <div className="border-l-2 pl-3" style={{ borderColor: c.accent_color }}>
+          <div
+            className="text-[9px] uppercase tracking-[0.3em] font-bold mb-0.5"
+            style={{ color: c.accent_color }}
+          >
+            Volume V
+          </div>
+          <div
+            className={`${isFeatured ? 'text-base' : 'text-sm'} font-bold leading-tight`}
+            style={{ color: c.text_color, fontFamily }}
+          >
+            The Art of Hosting
+          </div>
+          <p
+            className={`${baseSize} leading-snug mt-1 text-justify`}
+            style={{ color: c.text_secondary_color, fontFamily, hyphens: 'auto' }}
+          >
+            A curated selection of refined stays — from coastal retreats to alpine sanctuaries.
+          </p>
+        </div>
+      )
+
+    case 'modern':
+    default:
+      // Default: refined version of the old button + pill combo with
+      // a sample "row" so it reads as a list item from an admin page.
+      return (
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`${baseSize} font-semibold px-2 py-0.5 rounded-md`}
+              style={{ background: c.primary_color, color: c.background_color, fontFamily }}
+            >
+              Reservations
+            </span>
+            <span
+              className={`${baseSize} font-semibold px-2 py-0.5 rounded-full`}
+              style={{ background: `${c.accent_color}22`, color: c.accent_color, border: `1px solid ${c.accent_color}44` }}
+            >
+              Active
+            </span>
+            {isFeatured && (
+              <span
+                className={`${baseSize} px-2 py-0.5 rounded-full`}
+                style={{ background: `${c.info_color}18`, color: c.info_color, border: `1px solid ${c.info_color}33` }}
+              >
+                Trial
+              </span>
+            )}
+          </div>
+          <div
+            className="px-2 py-1.5 rounded-md flex items-center justify-between"
+            style={{ background: c.surface_color, border: `1px solid ${c.border_color}` }}
+          >
+            <span className={`${baseSize} font-medium`} style={{ color: c.text_color }}>
+              Suite 304
+            </span>
+            <span className={`${baseSize} tabular-nums`} style={{ color: c.text_secondary_color }}>
+              3 nights
+            </span>
+          </div>
+        </div>
+      )
+  }
 }
 
 /* ─── Tab Config ────────────────────────────────────────────────────────── */
