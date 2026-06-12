@@ -145,65 +145,124 @@ class SettingsController extends Controller
     public function theme(): JsonResponse
     {
         // Public endpoint — bypass tenant scope but only return appearance settings.
-        // Resolve org from: tenant context → authenticated user → query param
-        $orgId = null;
+        // Resolve org from: tenant context → authenticated user → query param.
+        // CRITICAL: if NO org can be resolved, return DEFAULTS — not the
+        // pluck of all-tenant rows. Without this, an unauthed call would
+        // silently merge appearance settings across every customer's org,
+        // and the FIRST writer's color for each key would win (last-pluck
+        // wins). That was likely the root of the customer-reported
+        // 'I picked Rose Boutique but after refresh it reverted' bug, even
+        // when the save succeeded — /v1/theme returned the WRONG colors,
+        // useTheme's useEffect then persisted them to localStorage, and
+        // the next reload painted those wrong colors instead of the real
+        // saved ones.
+        $orgId = $this->resolveOrgForPublicTheme();
 
-        if (app()->bound('current_organization_id') && app('current_organization_id')) {
-            $orgId = app('current_organization_id');
+        // No org resolvable → return empty (NOT cross-tenant data).
+        // The client will fall through to its hardcoded defaults instead
+        // of painting another customer's branding.
+        if (!$orgId) {
+            return $this->themeResponse([], []);
         }
+
+        $theme = HotelSetting::withoutGlobalScopes()
+            ->where('group', 'appearance')
+            ->where('organization_id', $orgId)
+            ->pluck('value', 'key');
+
+        $mobileTheme = HotelSetting::withoutGlobalScopes()
+            ->where('group', 'mobile_app')
+            ->where('organization_id', $orgId)
+            ->pluck('value', 'key');
+
+        return $this->themeResponse($theme->toArray(), $mobileTheme->toArray());
+    }
+
+    /**
+     * Authenticated counterpart to `theme()`. Same payload shape, but routed
+     * through saas.auth + tenant middleware so the org binding is
+     * guaranteed. The admin SPA's useTheme hook calls this endpoint
+     * whenever a token is in localStorage; /v1/theme stays for public
+     * widgets that pass ?org_id.
+     */
+    public function adminTheme(Request $request): JsonResponse
+    {
+        $orgId = $request->user()?->organization_id
+            ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
 
         if (!$orgId) {
-            // Try to resolve from authenticated user (Sanctum token)
-            $user = auth('sanctum')->user();
-            if ($user) {
-                $staff = \App\Models\Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
-                $orgId = $staff?->organization_id ?? $user->organization_id ?? null;
-            }
+            return $this->themeResponse([], []);
         }
 
-        if (!$orgId) {
-            // Try SaaS JWT — tenant users authenticate via SaaS-issued JWT which
-            // Sanctum can't resolve. Verify the JWT and look up the local org.
-            $authHeader = request()->header('Authorization', '');
-            if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
-                $token = trim(substr($authHeader, 7));
-                if ($token && !str_contains($token, '|')) {
-                    $orgId = $this->resolveOrgFromSaasJwt($token);
-                }
-            }
-        }
+        $theme = HotelSetting::withoutGlobalScopes()
+            ->where('group', 'appearance')
+            ->where('organization_id', $orgId)
+            ->pluck('value', 'key');
 
-        if (!$orgId) {
-            // Fallback: query param for public widgets
-            $orgId = request()->input('org_id');
-        }
+        $mobileTheme = HotelSetting::withoutGlobalScopes()
+            ->where('group', 'mobile_app')
+            ->where('organization_id', $orgId)
+            ->pluck('value', 'key');
 
-        $query = HotelSetting::withoutGlobalScopes()->where('group', 'appearance');
-        if ($orgId) {
-            $query->where('organization_id', $orgId);
-        }
-        $theme = $query->pluck('value', 'key');
+        return $this->themeResponse($theme->toArray(), $mobileTheme->toArray());
+    }
 
-        // Mobile apps consume keys from a separate group so they can be themed
-        // independently of the web admin SPA. Both groups are returned here so
-        // the same /v1/theme endpoint serves web + mobile.
-        $mobileQuery = HotelSetting::withoutGlobalScopes()->where('group', 'mobile_app');
-        if ($orgId) {
-            $mobileQuery->where('organization_id', $orgId);
-        }
-        $mobileTheme = $mobileQuery->pluck('value', 'key');
-
-        // No-store cache headers — without these, browsers/proxies can hold
-        // a stale theme response across reloads, causing the user-reported
-        // 'I picked a preset but after refresh it reverted' bug. The
-        // response body is tiny so there's no perf cost to forcing fresh
-        // fetches on every page load.
+    /** Shared response builder so theme() + adminTheme() can't drift. */
+    private function themeResponse(array $theme, array $mobileTheme): JsonResponse
+    {
         return response()->json([
-            'theme'        => $theme,
-            'mobile_theme' => $mobileTheme,
+            'theme'        => (object) $theme, // cast to object so empty {} not []
+            'mobile_theme' => (object) $mobileTheme,
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
           ->header('Pragma', 'no-cache')
           ->header('Expires', '0');
+    }
+
+    /** Walk the public-route auth chain to pull an org id. */
+    private function resolveOrgForPublicTheme(): ?int
+    {
+        if (app()->bound('current_organization_id') && app('current_organization_id')) {
+            return (int) app('current_organization_id');
+        }
+
+        // Sanctum personal access token (the admin SPA's auth_token).
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $staff = \App\Models\Staff::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->first();
+            $orgId = $staff?->organization_id ?? $user->organization_id ?? null;
+            if ($orgId) return (int) $orgId;
+        }
+
+        // Belt-and-braces: read the bearer token directly and walk
+        // personal_access_tokens. Auth guard occasionally fails to resolve
+        // on routes where Sanctum's request lifecycle wasn't initialized
+        // (e.g. truly public routes with no auth middleware at all).
+        $authHeader = request()->header('Authorization', '');
+        if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
+            $token = trim(substr($authHeader, 7));
+            if ($token && str_contains($token, '|')) {
+                $pat = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+                if ($pat && $pat->tokenable) {
+                    $tokenable = $pat->tokenable;
+                    $staff = \App\Models\Staff::withoutGlobalScopes()
+                        ->where('user_id', $tokenable->id)
+                        ->first();
+                    $orgId = $staff?->organization_id ?? $tokenable->organization_id ?? null;
+                    if ($orgId) return (int) $orgId;
+                }
+            }
+            // SaaS JWT (different format — no `|` separator).
+            if ($token && !str_contains($token, '|')) {
+                $orgId = $this->resolveOrgFromSaasJwt($token);
+                if ($orgId) return (int) $orgId;
+            }
+        }
+
+        // Query param fallback for public widgets.
+        $param = request()->input('org_id');
+        return $param ? (int) $param : null;
     }
 
     public function update(Request $request): JsonResponse

@@ -194,7 +194,17 @@ if (_earlySnapshot?.colors) {
 export function useTheme() {
   const { data } = useQuery<ThemeColors>({
     queryKey: ['admin-theme'],
-    queryFn: () => api.get('/v1/theme').then(r => r.data.theme),
+    // Prefer the authenticated endpoint when the SPA has a token —
+    // org binding is GUARANTEED there. The public /v1/theme has manual
+    // auth resolution that can silently fail (returning cross-tenant
+    // colors or empties) and was the root cause of the customer-reported
+    // 'I picked a preset but after refresh it reverted' bug.
+    queryFn: async () => {
+      const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('auth_token')
+      const endpoint = hasToken ? '/v1/admin/branding/theme' : '/v1/theme'
+      const r = await api.get(endpoint)
+      return r.data.theme as ThemeColors
+    },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     // Hydrate from the localStorage snapshot so React's initial render
@@ -211,10 +221,23 @@ export function useTheme() {
   useEffect(() => {
     applyThemeToDom(theme)
     // Persist whenever the server hands us a fresh theme so the next
-    // load can use it as the placeholder. We only persist when `data`
-    // is truthy -- the placeholder-only render shouldn't overwrite a
-    // real saved snapshot with itself.
-    if (data) {
+    // load can use it as the placeholder. CRITICAL: only persist when
+    // the server returned a real theme (at least primary_color +
+    // background_color). Without this guard, a /v1/theme call that
+    // silently fails its org-id resolution (e.g. Sanctum guard returns
+    // null on a public route, no fallback matches) returns empty colors,
+    // which we'd then write to localStorage — overwriting the user's
+    // just-saved Rose Boutique with defaults. Next refresh paints
+    // defaults: 'I picked Rose Boutique but after refresh it reverted.'
+    // This is exactly the customer-reported bug as of 2026-06-13.
+    const looksValid =
+      data &&
+      typeof data === 'object' &&
+      typeof (data as any).primary_color === 'string' &&
+      (data as any).primary_color.startsWith('#') &&
+      typeof (data as any).background_color === 'string' &&
+      (data as any).background_color.startsWith('#')
+    if (looksValid) {
       persistThemeSnapshot(data, readCachedPreset())
     }
   }, [

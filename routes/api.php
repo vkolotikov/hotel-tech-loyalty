@@ -760,6 +760,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             // Inquiry attachments (proposals, BEOs, contracts, etc.)
             Route::get('inquiries/{inquiry}/attachments',                [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'index']);
+            // Authenticated theme endpoint — preferred over public /v1/theme
+            // for admin users because the org binding is guaranteed by the
+            // surrounding saas.auth + tenant middleware stack. Public widget
+            // routes still call /v1/theme with ?org_id.
+            Route::get('branding/theme',                                 [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'adminTheme']);
             // Chat conversations linked to this inquiry's guest (2026-06-12).
             Route::get('inquiries/{id}/chat-history',                    [InquiryController::class, 'chatHistory']);
             Route::post('inquiries/{inquiry}/attachments',               [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'store']);
