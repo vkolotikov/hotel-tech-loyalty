@@ -193,10 +193,17 @@ class SettingsController extends Controller
         }
         $mobileTheme = $mobileQuery->pluck('value', 'key');
 
+        // No-store cache headers — without these, browsers/proxies can hold
+        // a stale theme response across reloads, causing the user-reported
+        // 'I picked a preset but after refresh it reverted' bug. The
+        // response body is tiny so there's no perf cost to forcing fresh
+        // fetches on every page load.
         return response()->json([
             'theme'        => $theme,
             'mobile_theme' => $mobileTheme,
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+          ->header('Pragma', 'no-cache')
+          ->header('Expires', '0');
     }
 
     public function update(Request $request): JsonResponse
@@ -299,11 +306,24 @@ class SettingsController extends Controller
             );
         }
 
+        // Echo back the actually-persisted values so the client can verify
+        // its optimistic state matches what landed in the DB. Pre-fix the
+        // client trusted the 200 response unconditionally — but `skipped`
+        // could quietly hide cases where a non-superadmin tried to save a
+        // system-scoped key (e.g. a confused write to an integration key).
+        // Now the client can diff what it asked for vs what stored.
+        $persistedKeys = collect($validated['settings'])->pluck('key')->all();
+        $persisted = HotelSetting::whereIn('key', $persistedKeys)
+            ->get(['key', 'value'])
+            ->mapWithKeys(fn ($r) => [$r->key => in_array($r->key, self::SECRET_KEYS) ? '***' : $r->value])
+            ->all();
+
         return response()->json([
-            'message' => 'Settings updated',
-            'written' => $written,
-            'skipped' => $skipped,
-        ]);
+            'message'   => 'Settings updated',
+            'written'   => $written,
+            'skipped'   => $skipped,
+            'persisted' => $persisted,
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     /**

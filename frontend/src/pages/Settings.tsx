@@ -67,11 +67,26 @@ const SECRET_KEYS = [
 interface ThemePreset {
   description: string
   colors: Record<string, string>
+  // Visual personality — drives the preset card's font + layout treatment.
+  // Each variant gives the preview card a distinct visual signature so a
+  // grid of 14 presets reads as 14 different brands, not 14 color swatches.
+  mood?: 'luxury' | 'corporate' | 'wellness' | 'boutique' | 'modern' | 'creative' | 'energetic' | 'natural' | 'minimal' | 'editorial'
+  // If true the card spans 2 columns on lg+ — used for the headline presets
+  // (Gold Luxury, Royal Blue, Midnight Purple) so the grid has visual rhythm
+  // instead of being a uniform tile wall.
+  featured?: boolean
+  // Typography preview — shown as a sample headline on the card. Each
+  // preset picks a font family that matches its mood so the cards FEEL
+  // different even when their primary colors are similar in value.
+  fontFamily?: string
 }
 
 const PRESETS: Record<string, ThemePreset> = {
   'Gold Luxury': {
     description: 'Warm gold on charcoal — premium, refined',
+    mood: 'luxury',
+    featured: true,
+    fontFamily: 'Georgia, "Times New Roman", serif',
     colors: {
       primary_color: '#c9a84c', secondary_color: '#1e1e1e', accent_color: '#32d74b',
       background_color: '#0d0d0d', surface_color: '#161616', text_color: '#ffffff',
@@ -81,6 +96,9 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Royal Blue': {
     description: 'Deep navy + crisp blue — corporate & trustworthy',
+    mood: 'corporate',
+    featured: true,
+    fontFamily: '"Inter", "Helvetica Neue", system-ui, sans-serif',
     colors: {
       primary_color: '#3b82f6', secondary_color: '#1e293b', accent_color: '#22c55e',
       background_color: '#0f172a', surface_color: '#1e293b', text_color: '#f8fafc',
@@ -90,6 +108,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Emerald': {
     description: 'Lush green & amber — wellness, eco, outdoor',
+    mood: 'wellness',
+    fontFamily: '"DM Serif Display", Georgia, serif',
     colors: {
       primary_color: '#10b981', secondary_color: '#1a2332', accent_color: '#f59e0b',
       background_color: '#0c1117', surface_color: '#141e29', text_color: '#f0fdf4',
@@ -99,6 +119,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Rose Boutique': {
     description: 'Warm rose & peach — boutique & lifestyle',
+    mood: 'boutique',
+    fontFamily: '"Playfair Display", Georgia, serif',
     colors: {
       primary_color: '#e11d48', secondary_color: '#1c1017', accent_color: '#fb923c',
       background_color: '#0f0708', surface_color: '#1c1017', text_color: '#fff1f2',
@@ -108,6 +130,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Ocean Breeze': {
     description: 'Cyan & violet — fresh, modern, calm',
+    mood: 'modern',
+    fontFamily: '"Manrope", "Inter", system-ui, sans-serif',
     colors: {
       primary_color: '#06b6d4', secondary_color: '#0f2937', accent_color: '#a78bfa',
       background_color: '#0a1a24', surface_color: '#0f2937', text_color: '#ecfeff',
@@ -117,6 +141,9 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Midnight Purple': {
     description: 'Violet & pink — bold, creative, after-dark',
+    mood: 'creative',
+    featured: true,
+    fontFamily: '"Space Grotesk", "Inter", sans-serif',
     colors: {
       primary_color: '#8b5cf6', secondary_color: '#1a1625', accent_color: '#f472b6',
       background_color: '#0e0b16', surface_color: '#1a1625', text_color: '#f5f3ff',
@@ -126,6 +153,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Sunset Coral': {
     description: 'Coral & amber — warm, energetic, hospitable',
+    mood: 'energetic',
+    fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
     colors: {
       primary_color: '#f97316', secondary_color: '#1f1410', accent_color: '#fbbf24',
       background_color: '#120906', surface_color: '#1f1410', text_color: '#fff7ed',
@@ -135,6 +164,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Forest': {
     description: 'Pine & sage — natural, grounded, calm',
+    mood: 'natural',
+    fontFamily: '"Lora", Georgia, serif',
     colors: {
       primary_color: '#16a34a', secondary_color: '#0f1a14', accent_color: '#84cc16',
       background_color: '#08120c', surface_color: '#0f1a14', text_color: '#f0fdf4',
@@ -144,6 +175,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Champagne': {
     description: 'Soft champagne & cream — refined and minimal',
+    mood: 'editorial',
+    fontFamily: '"Cormorant Garamond", "Times New Roman", serif',
     colors: {
       primary_color: '#d4af37', secondary_color: '#1c1814', accent_color: '#e5c494',
       background_color: '#100e0a', surface_color: '#1c1814', text_color: '#fdf6e3',
@@ -153,6 +186,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Slate Modern': {
     description: 'Cool slate & cyan — clean, professional, neutral',
+    mood: 'minimal',
+    fontFamily: '"IBM Plex Sans", "Inter", sans-serif',
     colors: {
       primary_color: '#64748b', secondary_color: '#0f172a', accent_color: '#06b6d4',
       background_color: '#020617', surface_color: '#0f172a', text_color: '#f1f5f9',
@@ -162,6 +197,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Tropical Mint': {
     description: 'Mint & teal — light, fresh, summer',
+    mood: 'energetic',
+    fontFamily: '"Quicksand", "Manrope", sans-serif',
     colors: {
       primary_color: '#14b8a6', secondary_color: '#0a1f1d', accent_color: '#fde047',
       background_color: '#04110f', surface_color: '#0a1f1d', text_color: '#f0fdfa',
@@ -171,6 +208,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Burgundy': {
     description: 'Rich burgundy & gold — premium, mature, classic',
+    mood: 'luxury',
+    fontFamily: '"EB Garamond", "Times New Roman", serif',
     colors: {
       primary_color: '#9f1239', secondary_color: '#1a0a0f', accent_color: '#d4af37',
       background_color: '#0e0608', surface_color: '#1a0a0f', text_color: '#fff1f2',
@@ -180,6 +219,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Sky Minimal': {
     description: 'Sky blue & soft gray — light, airy, modern',
+    mood: 'minimal',
+    fontFamily: '"Outfit", "Inter", sans-serif',
     colors: {
       primary_color: '#0ea5e9', secondary_color: '#0f1a23', accent_color: '#a78bfa',
       background_color: '#050b12', surface_color: '#0f1a23', text_color: '#f0f9ff',
@@ -189,6 +230,8 @@ const PRESETS: Record<string, ThemePreset> = {
   },
   'Obsidian': {
     description: 'Pure black & electric blue — bold and dramatic',
+    mood: 'creative',
+    fontFamily: '"JetBrains Mono", "Courier New", monospace',
     colors: {
       primary_color: '#3b82f6', secondary_color: '#0a0a0a', accent_color: '#22d3ee',
       background_color: '#000000', surface_color: '#0a0a0a', text_color: '#fafafa',
@@ -199,6 +242,183 @@ const PRESETS: Record<string, ThemePreset> = {
 }
 
 const DEFAULT_PRESET = 'Gold Luxury'
+
+/**
+ * PresetCard — a single theme-preset preview card.
+ *
+ * Pre-redesign these cards were uniform: tiny color strip + name + 5
+ * color dots. They all looked the same and didn't reveal what the theme
+ * would actually feel like in use. Customer feedback (2026-06-13):
+ * 'make also styles more modern and different one to another, maybe also
+ * add some layout or size styling or smth'.
+ *
+ * Each card now renders:
+ *  - A bold gradient header band using the preset's primary + accent + secondary
+ *  - A real mini-UI mockup inside the preview area: a sample 'Reservations'
+ *    badge in primary, an 'Active' pill in accent, a sample text line.
+ *  - The preset name rendered in the preset's own font-family — luxury
+ *    gets a serif, modern gets a clean sans, creative gets Space Grotesk,
+ *    Obsidian gets monospace. This is what makes the cards feel like 14
+ *    different brands instead of 14 swatches.
+ *  - 5 color dots stay as a quick legend.
+ *  - Featured cards (Gold Luxury / Royal Blue / Midnight Purple) span
+ *    2 columns on lg+ for visual rhythm.
+ *  - Active preset gets a glowing primary-coloured ring + corner check.
+ */
+function PresetCard({
+  name,
+  preset,
+  isActive,
+  onClick,
+}: {
+  name: string
+  preset: ThemePreset
+  isActive: boolean
+  onClick: () => void
+}) {
+  const c = preset.colors
+  const isFeatured = !!preset.featured
+  return (
+    <button
+      onClick={onClick}
+      className={`relative text-left rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl group ${
+        isFeatured ? 'lg:col-span-2' : ''
+      } ${
+        isActive
+          ? 'border-transparent'
+          : 'border-white/[0.06] hover:border-white/20'
+      }`}
+      style={{
+        background: c.surface_color,
+        boxShadow: isActive
+          ? `0 0 0 2px ${c.primary_color}, 0 12px 32px -8px ${c.primary_color}66`
+          : undefined,
+      }}
+    >
+      {/* Header band — gradient from primary to accent. Featured cards get
+          a taller header so they read as "headliners" in the grid. */}
+      <div
+        className={`relative w-full ${isFeatured ? 'h-24' : 'h-16'}`}
+        style={{
+          background: `linear-gradient(135deg, ${c.primary_color} 0%, ${c.primary_color} 40%, ${c.accent_color} 100%)`,
+        }}
+      >
+        {/* Decorative orbs — subtle, scale with featured size. */}
+        <div
+          className="absolute top-2 right-3 rounded-full opacity-30"
+          style={{
+            width: isFeatured ? 56 : 32,
+            height: isFeatured ? 56 : 32,
+            background: c.info_color,
+            filter: 'blur(8px)',
+          }}
+        />
+        <div
+          className="absolute bottom-1 left-4 rounded-full opacity-40"
+          style={{
+            width: isFeatured ? 24 : 16,
+            height: isFeatured ? 24 : 16,
+            background: c.warning_color,
+            filter: 'blur(4px)',
+          }}
+        />
+        {/* Active corner check */}
+        {isActive && (
+          <div
+            className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center"
+            style={{ background: c.surface_color, color: c.primary_color }}
+          >
+            <CheckCircle size={14} />
+          </div>
+        )}
+      </div>
+
+      {/* Body — sits over background_color (real admin bg) so the contrast
+          is the SAME as what you'll see across the actual app. */}
+      <div
+        className={`${isFeatured ? 'p-5' : 'p-4'} flex flex-col gap-3`}
+        style={{ background: c.background_color }}
+      >
+        {/* Preset name in its own font + size. Featured cards get the bigger
+            display size; non-featured stay readable but compact. */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div
+              className={`${isFeatured ? 'text-xl' : 'text-base'} font-bold leading-tight tracking-tight truncate`}
+              style={{
+                color: c.text_color,
+                fontFamily: preset.fontFamily,
+              }}
+            >
+              {name}
+            </div>
+            <p
+              className={`${isFeatured ? 'text-xs' : 'text-[10px]'} leading-snug mt-1 line-clamp-2`}
+              style={{ color: c.text_secondary_color }}
+            >
+              {preset.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Mini UI mockup — shows actual rendered UI in this theme so the
+            user can judge legibility before committing. A button uses
+            primary, a pill uses accent, a sample row uses surface+border. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span
+            className={`${isFeatured ? 'text-[11px] px-2.5 py-1' : 'text-[10px] px-2 py-0.5'} font-semibold rounded-md`}
+            style={{
+              background: c.primary_color,
+              color: c.background_color,
+              fontFamily: preset.fontFamily,
+            }}
+          >
+            Reservations
+          </span>
+          <span
+            className={`${isFeatured ? 'text-[11px] px-2.5 py-1' : 'text-[10px] px-2 py-0.5'} font-semibold rounded-full`}
+            style={{
+              background: `${c.accent_color}22`,
+              color: c.accent_color,
+              border: `1px solid ${c.accent_color}44`,
+            }}
+          >
+            Active
+          </span>
+          {isFeatured && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{
+                background: `${c.info_color}18`,
+                color: c.info_color,
+                border: `1px solid ${c.info_color}33`,
+              }}
+            >
+              Trial
+            </span>
+          )}
+        </div>
+
+        {/* Color dot legend — quick reference for the underlying palette. */}
+        <div className="flex items-center gap-1.5 mt-auto pt-1">
+          {[c.primary_color, c.accent_color, c.info_color, c.warning_color, c.error_color].map((col, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 rounded-full border"
+              style={{ backgroundColor: col, borderColor: c.border_color }}
+            />
+          ))}
+          <span
+            className="ml-auto text-[9px] uppercase tracking-widest"
+            style={{ color: c.text_secondary_color }}
+          >
+            {preset.mood}
+          </span>
+        </div>
+      </div>
+    </button>
+  )
+}
 
 /* ─── Tab Config ────────────────────────────────────────────────────────── */
 
@@ -351,13 +571,34 @@ export function Settings() {
   /* ── Mutations ───────────────────────────────────────────────────────── */
 
   const saveMutation = useMutation({
-    mutationFn: (settings: { key: string; value: any }[]) =>
-      api.put('/v1/admin/settings', { settings }),
-    onSuccess: () => {
+    // Pass the original payload through to onSuccess so we can verify it.
+    mutationFn: async (settings: { key: string; value: any }[]) => {
+      const res = await api.put('/v1/admin/settings', { settings })
+      return { res, sent: settings }
+    },
+    onSuccess: ({ res, sent }) => {
+      // Verify the server actually persisted what we sent. The endpoint now
+      // echoes back the stored values in `data.persisted`. If anything is
+      // missing (e.g. permissions/scope check silently skipped a key), the
+      // user gets a real warning instead of a misleading "Settings saved"
+      // toast followed by a confused reload that shows the old theme.
+      const persisted = (res.data as any)?.persisted ?? {}
+      const missing: string[] = []
+      for (const { key, value } of sent) {
+        const stored = persisted[key]
+        // Coerce to strings since the API casts everything to string on store.
+        if (stored == null || String(stored) !== String(value)) {
+          missing.push(key)
+        }
+      }
       qc.invalidateQueries({ queryKey: ['admin-settings'] })
       qc.invalidateQueries({ queryKey: ['admin-theme'] })
       setEditedSettings({})
-      toast.success('Settings saved')
+      if (missing.length > 0) {
+        toast.error(`Saved partial — ${missing.length} setting${missing.length === 1 ? '' : 's'} didn't persist (${missing.slice(0, 3).join(', ')}). Try again or contact support.`)
+      } else {
+        toast.success('Settings saved')
+      }
     },
     onError: () => toast.error('Failed to save settings'),
   })
@@ -842,43 +1083,22 @@ export function Settings() {
               </button>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mb-4">Pick a curated palette to match your brand mood — applies instantly across the whole admin.</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Object.entries(PRESETS).map(([name, preset]) => {
-              const isActive = activePreset === name
-              const c = preset.colors
-              return (
-                <button key={name} onClick={() => applyPreset(name)}
-                  className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px group ${
-                    isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
-                  }`}
-                  style={{ background: c.surface_color }}>
-                  {/* Color band preview */}
-                  <div className="h-12 flex">
-                    <div className="flex-1" style={{ backgroundColor: c.primary_color }} />
-                    <div className="flex-1" style={{ backgroundColor: c.accent_color }} />
-                    <div className="flex-1" style={{ backgroundColor: c.secondary_color }} />
-                    <div className="flex-1" style={{ backgroundColor: c.background_color }} />
-                    <div className="flex-1" style={{ backgroundColor: c.info_color }} />
-                  </div>
-                  {/* Sample content */}
-                  <div className="p-3" style={{ backgroundColor: c.background_color }}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold" style={{ color: c.text_color }}>{name}</span>
-                      {isActive && <CheckCircle size={12} style={{ color: c.primary_color }} />}
-                    </div>
-                    <p className="text-[10px] leading-snug line-clamp-2" style={{ color: c.text_secondary_color }}>
-                      {preset.description}
-                    </p>
-                    <div className="flex items-center gap-1 mt-2">
-                      {[c.primary_color, c.accent_color, c.error_color, c.warning_color, c.info_color].map((col, i) => (
-                        <div key={i} className="w-3 h-3 rounded-full border" style={{ backgroundColor: col, borderColor: c.border_color }} />
-                      ))}
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+          <p className="text-xs text-gray-500 mb-4">Pick a curated palette to match your brand mood — applies instantly across the whole admin. Each card previews real UI bits in that theme so you can judge legibility before committing.</p>
+          {/* Grid: featured presets span 2 columns so the row rhythm is
+              irregular and the eye finds focal points. Non-featured presets
+              stay at the standard 1-column width. The asymmetry is
+              intentional — a uniform tile wall reads as 'samples' but
+              varied sizes read as a curated showcase. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
+            {Object.entries(PRESETS).map(([name, preset]) => (
+              <PresetCard
+                key={name}
+                name={name}
+                preset={preset}
+                isActive={activePreset === name}
+                onClick={() => applyPreset(name)}
+              />
+            ))}
           </div>
         </div>
 
