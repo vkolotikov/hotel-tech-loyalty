@@ -1097,6 +1097,7 @@ export function Settings() {
     colors: Record<string, string>
     fromPresetName: string | null
     toPresetName: string
+    fromMood: string | null
     expiresAt: number
   } | null>(null)
 
@@ -1120,32 +1121,38 @@ export function Settings() {
     const previousColors: Record<string, string> = {}
     for (const k of COLOR_KEYS) previousColors[k] = getVal(k) || ''
     const previousPreset = detectActivePreset()
+    const previousMood = previousPreset && PRESETS[previousPreset]?.mood ? PRESETS[previousPreset].mood ?? null : null
     setUndoSnapshot({
       colors: previousColors,
       fromPresetName: previousPreset,
       toPresetName: name,
+      fromMood: previousMood,
       expiresAt: Date.now() + 15_000,
     })
 
     // Instant visual apply -- the user sees the theme flip the moment
-    // they click, instead of after ~500ms of network latency.
-    applyThemeToDom(p.colors as any)
+    // they click, instead of after ~500ms of network latency. The mood
+    // (luxury / editorial / minimal / creative / …) propagates via
+    // data-mood on <html> so the body font + heading font + corner
+    // radius scale also flip immediately. Without the mood arg the
+    // admin only changes color and looks the same shape/typography
+    // regardless of preset — the original 2026-06-13 complaint.
+    const mood = p.mood ?? null
+    applyThemeToDom(p.colors as any, mood)
 
     // Persist to localStorage immediately so a refresh during the in-
-    // flight save still paints the new theme. Without this, a user who
-    // clicks a preset and reloads the tab before the PUT resolves loses
-    // the change visually until the server catches up (or forever, if
-    // the save errored).
-    persistThemeSnapshot(p.colors, name)
+    // flight save still paints the new theme + mood.
+    persistThemeSnapshot(p.colors, name, mood)
 
     setEditedSettings(prev => ({ ...prev, ...p.colors }))
-    // Tag the saved settings with the preset name so the server-side
-    // theme stays self-describing — useful for cross-device consistency
-    // (any other admin browser fetching /v1/theme can see which preset
-    // is "officially" active without per-color reverse engineering).
+    // Tag the saved settings with the preset name + mood so the
+    // server-side theme stays self-describing — useful for cross-device
+    // consistency (any other admin browser fetching /v1/theme reads
+    // theme_mood and applies the same body/heading font cascade).
     const settings = [
       ...Object.entries(p.colors).map(([key, value]) => ({ key, value })),
       { key: 'theme_preset_name', value: name },
+      { key: 'theme_mood', value: mood ?? '' },
     ]
     saveMutation.mutate(settings)
   }
@@ -1156,16 +1163,17 @@ export function Settings() {
    */
   const undoPreset = () => {
     if (!undoSnapshot) return
-    const { colors, fromPresetName } = undoSnapshot
-    // Restore previous colors via DOM and queued save
-    applyThemeToDom(colors as any)
-    // Mirror the localStorage snapshot so refresh during the undo's
-    // in-flight save still paints the reverted theme.
-    persistThemeSnapshot(colors, fromPresetName)
+    const { colors, fromPresetName, fromMood } = undoSnapshot
+    // Restore previous colors AND mood — so the body font + heading
+    // font + corner radius scale revert with the palette, not just the
+    // 11 hex values.
+    applyThemeToDom(colors as any, fromMood)
+    persistThemeSnapshot(colors, fromPresetName, fromMood)
     setEditedSettings(prev => ({ ...prev, ...colors }))
     const settings = [
       ...Object.entries(colors).map(([key, value]) => ({ key, value })),
       { key: 'theme_preset_name', value: fromPresetName ?? '' },
+      { key: 'theme_mood', value: fromMood ?? '' },
     ]
     saveMutation.mutate(settings)
     setUndoSnapshot(null)

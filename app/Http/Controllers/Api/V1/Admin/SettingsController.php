@@ -551,6 +551,11 @@ class SettingsController extends Controller
         // same groups so the /v1/theme endpoint picks them up alongside
         // the per-color values.
         if ($k === 'theme_preset_name') return 'appearance';
+        // theme_mood (added 2026-06-13) drives the per-mood CSS-variable
+        // cascade in the admin SPA — body font, heading font, corner
+        // radius scale. Lives in the appearance group so the /v1/theme
+        // endpoint picks it up alongside the per-color values.
+        if ($k === 'theme_mood') return 'appearance';
         if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';
         if (str_starts_with($k, 'booking_')) return 'booking';
         if (str_starts_with($k, 'mail_')) return 'email';

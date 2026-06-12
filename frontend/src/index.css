@@ -26,11 +26,140 @@ input[type="week"] {
   color-scheme: dark;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   Per-mood typography + geometry propagation.
+
+   When a preset is picked in Settings → Branding, useTheme writes the
+   mood (luxury / editorial / minimal / creative / …) to data-mood on
+   <html>. The :root[data-mood="X"] rules below fork CSS variables for
+   the body font, heading font, letter-spacing, and corner radius scale.
+   The `body` + `h*` + `input` rules at the bottom read those vars so
+   EVERY surface in the admin shifts to the picked mood's vocabulary on
+   next paint — NOT just the 11 hex colors.
+
+   Customer feedback 2026-06-13: "cards are different, but after
+   selection, admin do not change style, only colour". Before this,
+   picking a preset only swapped colors and the admin's typography +
+   geometry stayed identical. Now picking Editorial makes the admin
+   read as Cormorant Garamond serif, Minimal as IBM Plex thin, Creative
+   as Space Grotesk technical, etc.
+
+   No data-mood = neutral default (Inter, standard radii) — same as
+   pre-2026-06-13 behaviour for orgs that haven't picked a preset.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --theme-font-body: 'Inter', system-ui, sans-serif;
+  --theme-font-display: 'Inter', system-ui, sans-serif;
+  --theme-letter-spacing: 0;
+  --theme-radius-tight: 4px;
+  --theme-radius-base: 8px;
+  --theme-radius-card: 12px;
+}
+
+:root[data-mood="luxury"] {
+  --theme-font-body: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --theme-font-display: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --theme-radius-tight: 2px;
+  --theme-radius-base: 4px;
+  --theme-radius-card: 6px;
+}
+
+:root[data-mood="editorial"] {
+  --theme-font-body: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --theme-font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --theme-radius-tight: 0;
+  --theme-radius-base: 0;
+  --theme-radius-card: 0;
+}
+
+:root[data-mood="boutique"] {
+  --theme-font-body: 'Inter', system-ui, sans-serif;
+  --theme-font-display: 'Playfair Display', Georgia, serif;
+  --theme-radius-tight: 10px;
+  --theme-radius-base: 16px;
+  --theme-radius-card: 24px;
+}
+
+:root[data-mood="creative"] {
+  --theme-font-body: 'Space Grotesk', 'Inter', sans-serif;
+  --theme-font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --theme-letter-spacing: -0.01em;
+  --theme-radius-tight: 2px;
+  --theme-radius-base: 4px;
+  --theme-radius-card: 6px;
+}
+
+:root[data-mood="energetic"] {
+  --theme-font-body: 'Bricolage Grotesque', 'Inter', sans-serif;
+  --theme-font-display: 'Bricolage Grotesque', 'Inter', sans-serif;
+  --theme-radius-tight: 10px;
+  --theme-radius-base: 16px;
+  --theme-radius-card: 24px;
+}
+
+:root[data-mood="natural"] {
+  --theme-font-body: 'Inter', system-ui, sans-serif;
+  --theme-font-display: 'Lora', Georgia, serif;
+  --theme-radius-tight: 8px;
+  --theme-radius-base: 14px;
+  --theme-radius-card: 22px;
+}
+
+:root[data-mood="wellness"] {
+  --theme-font-body: 'Inter', system-ui, sans-serif;
+  --theme-font-display: 'DM Serif Display', Georgia, serif;
+  --theme-radius-tight: 8px;
+  --theme-radius-base: 14px;
+  --theme-radius-card: 18px;
+}
+
+:root[data-mood="modern"] {
+  --theme-font-body: 'Manrope', 'Inter', sans-serif;
+  --theme-font-display: 'Manrope', 'Inter', sans-serif;
+  --theme-radius-tight: 6px;
+  --theme-radius-base: 10px;
+  --theme-radius-card: 14px;
+}
+
+:root[data-mood="minimal"] {
+  --theme-font-body: 'IBM Plex Sans', 'Inter', sans-serif;
+  --theme-font-display: 'IBM Plex Sans', 'Inter', sans-serif;
+  --theme-letter-spacing: -0.005em;
+  --theme-radius-tight: 3px;
+  --theme-radius-base: 6px;
+  --theme-radius-card: 8px;
+}
+
+:root[data-mood="corporate"] {
+  --theme-font-body: 'Inter', system-ui, sans-serif;
+  --theme-font-display: 'Inter', system-ui, sans-serif;
+  --theme-radius-tight: 4px;
+  --theme-radius-base: 8px;
+  --theme-radius-card: 10px;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--theme-font-body);
+  letter-spacing: var(--theme-letter-spacing);
   background-color: #0d0d0d;
   color: #ffffff;
+}
+
+/* Headings + the explicit `.font-display` class read the mood's display
+   font. Tailwind text utilities (text-xl, text-2xl, …) inherit
+   font-family so they ride along automatically. */
+h1, h2, h3, h4,
+.font-display {
+  font-family: var(--theme-font-display);
+}
+
+/* Form controls don't inherit font-family by default in some browsers
+   — force it so the mood's typeface reaches inputs + selects + buttons
+   too, otherwise the page reads as Cormorant/Space-Grotesk/IBM-Plex
+   but the form fields stay Inter and the inconsistency is obvious. */
+input, textarea, select, button {
+  font-family: inherit;
 }
 
 #root { width: 100%; min-height: 100vh; }

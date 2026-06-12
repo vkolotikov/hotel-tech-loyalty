@@ -16,6 +16,11 @@ interface ThemeColors {
   info_color: string
   logo_url: string
   dark_mode_enabled: string
+  // Persisted via hotel_settings.theme_mood. Drives the per-mood CSS
+  // variable cascade in index.css (body font, heading font, corner
+  // radius scale). Empty / missing = neutral default (Inter, standard
+  // radii).
+  theme_mood?: string
 }
 
 const DEFAULTS: ThemeColors = {
@@ -80,8 +85,17 @@ function surfaceShade(hex: string, amount: number): string {
  * (the moment the staff clicks a preset, before the network save
  * round-trips). Same logic in both places, so a preset's instant
  * preview matches the eventual saved state exactly.
+ *
+ * The optional `mood` argument writes a `data-mood` attribute on the
+ * <html> element so CSS rules in index.css can fork the body + heading
+ * fonts and corner-radius scale per mood. Without this, picking a
+ * preset only swapped 11 hex values and the admin's typography +
+ * geometry stayed identical regardless of preset. Customer feedback
+ * 2026-06-13: "cards are different, but after selection, admin do not
+ * change style, only colour". Empty/null mood removes the attribute so
+ * the default (Inter, neutral corners) renders.
  */
-export function applyThemeToDom(colors: Partial<ThemeColors>): void {
+export function applyThemeToDom(colors: Partial<ThemeColors>, mood?: string | null): void {
   const merged: ThemeColors = { ...DEFAULTS, ...colors } as ThemeColors
   const root = document.documentElement
 
@@ -115,6 +129,17 @@ export function applyThemeToDom(colors: Partial<ThemeColors>): void {
 
   document.body.style.backgroundColor = merged.background_color
   document.body.style.color = merged.text_color
+
+  // Mood propagation. CSS in index.css reads :root[data-mood="X"] and
+  // forks --theme-font-body / --theme-font-display / --theme-radius-*
+  // so EVERY surface in the admin (sidebars, tables, cards, buttons,
+  // headings, etc.) shifts to the picked mood's vocabulary on next
+  // paint. Without this the admin only changes color.
+  if (mood && typeof mood === 'string') {
+    root.setAttribute('data-mood', mood)
+  } else if (mood === null) {
+    root.removeAttribute('data-mood')
+  }
 }
 
 export type { ThemeColors }
@@ -136,6 +161,7 @@ const PRESET_CACHE_KEY = 'loyalty-admin-theme-preset-v1'
 interface CachedTheme {
   colors: Partial<ThemeColors>
   preset?: string | null
+  mood?: string | null
   savedAt: number
 }
 
@@ -160,9 +186,13 @@ function readCachedTheme(): CachedTheme | null {
  * next page load can paint it instantly. Best-effort -- private mode /
  * quota exceeded just skip silently.
  */
-export function persistThemeSnapshot(colors: Partial<ThemeColors>, preset: string | null = null): void {
+export function persistThemeSnapshot(
+  colors: Partial<ThemeColors>,
+  preset: string | null = null,
+  mood: string | null = null,
+): void {
   try {
-    const payload: CachedTheme = { colors, preset, savedAt: Date.now() }
+    const payload: CachedTheme = { colors, preset, mood, savedAt: Date.now() }
     localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(payload))
     if (preset) localStorage.setItem(PRESET_CACHE_KEY, preset)
   } catch {
@@ -185,10 +215,13 @@ export function readCachedPreset(): string | null {
 
 // Paint the cached theme to the DOM as early as possible -- this runs
 // at module-evaluation time, before React mounts. Eliminates the
-// default-palette flash on every reload.
+// default-palette flash on every reload. Also applies the cached
+// mood so the per-mood body/heading font cascade lands in the FIRST
+// paint, not after hydration (otherwise the user sees a flash of
+// Inter then a swap to Cormorant/Space Grotesk/IBM Plex/etc).
 const _earlySnapshot = typeof window !== 'undefined' ? readCachedTheme() : null
 if (_earlySnapshot?.colors) {
-  applyThemeToDom(_earlySnapshot.colors)
+  applyThemeToDom(_earlySnapshot.colors, _earlySnapshot.mood ?? null)
 }
 
 export function useTheme() {
@@ -245,8 +278,9 @@ export function useTheme() {
     // covers the page-load case. The DOM stays on the cached colors
     // until a valid server response replaces them.
     if (dataLooksValid) {
-      applyThemeToDom(theme)
-      persistThemeSnapshot(data, readCachedPreset())
+      const serverMood = typeof (data as any)?.theme_mood === 'string' ? (data as any).theme_mood : null
+      applyThemeToDom(theme, serverMood)
+      persistThemeSnapshot(data, readCachedPreset(), serverMood)
     }
   }, [
     theme.primary_color, theme.background_color, theme.surface_color,
