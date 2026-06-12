@@ -4,6 +4,13 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Display fonts used by Settings → Branding theme presets. Without these
+   the per-preset fontFamily fell back to system fonts (mostly Inter on
+   Windows) and all 14 preset cards rendered with the SAME typography —
+   defeating the whole point of having distinct moods. display=swap means
+   they don't block first paint; browser swaps once loaded. */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=EB+Garamond:wght@500;700&family=Playfair+Display:wght@600;700&family=Lora:wght@500;700&family=DM+Serif+Display:wght@400&family=Manrope:wght@400;600;700&family=Outfit:wght@300;500;700&family=Quicksand:wght@500;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@300;500;700&family=Bricolage+Grotesque:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
 * { box-sizing: border-box; }
 
 /* Force native form controls (select dropdowns, number spinners, date pickers) to
