@@ -894,10 +894,26 @@ class AnalyticsService
      *  into "referral" intentionally — admins want fewer buckets, not more.
      * ────────────────────────────────────────────────────────────────────── */
 
-    /** Categorise a single referrer URL (with possible UTM params) into a channel bucket. */
+    /**
+     * Categorise a single referrer URL (with possible UTM params) into a
+     * channel bucket. Be conservative: when we genuinely can't tell where
+     * a visitor came from, return 'unknown' instead of guessing 'direct'.
+     *
+     * Honest classification matters: modern browsers + privacy policies +
+     * Google's `referrerpolicy="no-referrer"` on ad links strip the Referer
+     * header on a large share of paid traffic. Without the gclid query
+     * param (which Google's auto-tagging adds when enabled), that paid
+     * traffic arrives with NO referrer at all. The v2 categoriser bucketed
+     * those as "direct", causing customers with mostly Google Ads spend to
+     * see 80% of their traffic mis-labelled. v3 returns 'unknown' for
+     * NULL referrers so the legend honestly reflects what we know.
+     */
     public static function categorizeChannel(?string $referrer, ?string $hostHint = null): string
     {
-        if (!$referrer) return 'direct';
+        // No referrer at all — could be bookmark, typed URL, app-to-browser,
+        // OR (most commonly for paid traffic) the referrer was stripped by
+        // the browser / source's privacy policy. Don't pretend it's "direct".
+        if (!$referrer) return 'unknown';
 
         // Try to parse — referrer might be raw URL OR a UTM-only fragment.
         $url = parse_url($referrer);
@@ -911,7 +927,9 @@ class AnalyticsService
         $fbclid     = isset($params['fbclid']);
         $ttclid     = isset($params['ttclid']);
 
-        // Same-host = direct (returning visitor from the customer's own site).
+        // Same-host = direct (verified intra-site navigation from the
+        // customer's own domain). Rare on a landing referrer (which gets
+        // set once and never updated) — usually means cross-subdomain.
         if ($hostHint && $host && str_contains($host, strtolower($hostHint))) {
             return 'direct';
         }
@@ -947,8 +965,10 @@ class AnalyticsService
             return 'google_search';
         }
 
-        // Anything else with a real host = referral. No host = direct (rare).
-        return $host ? 'referral' : 'direct';
+        // Real referrer host that didn't match any known pattern.
+        // Empty host (shouldn't happen — we already returned 'unknown' for
+        // null/empty refs) falls back to 'unknown' as a safety net.
+        return $host ? 'referral' : 'unknown';
     }
 
     /**
@@ -964,7 +984,7 @@ class AnalyticsService
         // :v2 cache key invalidates the v1 cache that bucketed same-host nav
         // as "referral". Brand-aware: if a brand is bound, scope to that brand.
         $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
-        $cacheKey = "analytics:marketing_channels:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        $cacheKey = "analytics:marketing_channels:{$days}:v3" . ($brandId ? ":brand:{$brandId}" : '');
         return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');
@@ -992,6 +1012,7 @@ class AnalyticsService
                 'email'         => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
                 'direct'        => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
                 'referral'      => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'unknown'       => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
             ];
 
             foreach ($visitors as $v) {
@@ -1082,7 +1103,7 @@ class AnalyticsService
     public function getChatChannelInsights(int $days = 30): array
     {
         $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
-        $cacheKey = "analytics:chat_channel_insights:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        $cacheKey = "analytics:chat_channel_insights:{$days}:v3" . ($brandId ? ":brand:{$brandId}" : '');
         return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');
@@ -1150,7 +1171,7 @@ class AnalyticsService
             $referrerBuckets = [
                 'google_search' => 0, 'google_ads' => 0, 'facebook'  => 0,
                 'instagram'     => 0, 'tiktok'     => 0, 'email'     => 0,
-                'direct'        => 0, 'referral'   => 0,
+                'direct'        => 0, 'referral'   => 0, 'unknown'   => 0,
             ];
             foreach ($chatVisitors as $cv) {
                 $currentHost = $cv->current_page ? (parse_url($cv->current_page, PHP_URL_HOST) ?: '') : '';
@@ -1187,7 +1208,7 @@ class AnalyticsService
     public function getBookingSourcePerformance(int $days = 90): array
     {
         $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
-        $cacheKey = "analytics:booking_source_perf:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        $cacheKey = "analytics:booking_source_perf:{$days}:v3" . ($brandId ? ":brand:{$brandId}" : '');
         return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');

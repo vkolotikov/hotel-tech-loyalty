@@ -71,6 +71,10 @@ const CRM_PERIOD_OPTIONS = [
 type ActiveTab = 'overview' | 'marketing' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
 
 // Shared channel meta — keep in sync with AnalyticsService::categorizeChannel.
+// 'Unknown' is the honest bucket for visitors whose Referer header was
+// stripped (Google paid traffic without auto-tagging enabled, browsers with
+// strict privacy policies, app-to-browser, bookmarks, typed URLs). Pre-fix
+// these were silently labeled "Direct" — misleading.
 const CHANNEL_META: Record<string, { label: string; color: string }> = {
   google_search: { label: 'Google Search', color: '#4285F4' },
   google_ads:    { label: 'Google Ads',    color: '#34A853' },
@@ -78,8 +82,9 @@ const CHANNEL_META: Record<string, { label: string; color: string }> = {
   instagram:     { label: 'Instagram',     color: '#E1306C' },
   tiktok:        { label: 'TikTok',        color: '#69C9D0' },
   email:         { label: 'Email',         color: '#f59e0b' },
-  direct:        { label: 'Direct',        color: '#8e8e93' },
+  direct:        { label: 'Direct',        color: '#22d3ee' },
   referral:      { label: 'Referral',      color: '#a855f7' },
+  unknown:       { label: 'Unknown',       color: '#6b7280' },
 }
 const channelLabel = (key: string) => CHANNEL_META[key]?.label ?? key
 const channelColor = (key: string) => CHANNEL_META[key]?.color ?? '#636366'
@@ -694,6 +699,25 @@ export function Analytics() {
               ))
             })()}
           </div>
+
+          {/* Honest-attribution explainer — surfaces only when a meaningful
+              share of traffic is in the Unknown bucket, so customers know
+              the bucket exists + how to reduce it (Google auto-tagging). */}
+          {(() => {
+            const unknown = (marketingData?.channels ?? []).find((c: any) => c.channel === 'unknown')
+            const total = (marketingData?.channels ?? []).reduce((s: number, c: any) => s + (c.visitors || 0), 0)
+            const pct = total > 0 && unknown ? Math.round((unknown.visitors / total) * 100) : 0
+            if (pct < 20) return null
+            return (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-200/90 leading-relaxed">
+                  <div className="font-semibold text-amber-100 mb-1">{pct}% of your visitors land with no Referer header — bucketed as Unknown.</div>
+                  This usually means paid traffic where the ad platform strips the referer (most common: Google Ads without auto-tagging enabled). To attribute these correctly, enable <span className="text-amber-100 font-semibold">Auto-tagging in Google Ads</span> (Settings → Account settings) so every click adds <code className="font-mono bg-amber-500/20 px-1 rounded">?gclid=...</code>. After that, those visitors will land in the Google Ads bucket within minutes.
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Per-channel bar chart — visitors + leads side by side.
               Filter out empty channels so the chart doesn't waste horizontal
