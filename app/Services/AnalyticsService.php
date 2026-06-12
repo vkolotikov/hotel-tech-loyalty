@@ -1137,13 +1137,13 @@ class AnalyticsService
                 ->get()
                 ->toArray();
 
-            // AI-handled vs human-handled. assigned_user_id NULL = AI; populated = human took over.
+            // AI-handled vs human-handled. assigned_to NULL = AI; populated = human took over.
             $assignQ = DB::table('chat_conversations');
             $baseFilter($assignQ);
             $assignment = $assignQ
                 ->select(
-                    DB::raw('SUM(CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END) as ai_handled'),
-                    DB::raw('SUM(CASE WHEN assigned_user_id IS NOT NULL THEN 1 ELSE 0 END) as human_handled'),
+                    DB::raw('SUM(CASE WHEN assigned_to IS NULL THEN 1 ELSE 0 END) as ai_handled'),
+                    DB::raw('SUM(CASE WHEN assigned_to IS NOT NULL THEN 1 ELSE 0 END) as human_handled'),
                     DB::raw('COUNT(*) as total')
                 )
                 ->first();
@@ -1218,15 +1218,20 @@ class AnalyticsService
             // 2026-06-11 brand audit finding #8). For multi-brand orgs,
             // booking source numbers stay org-wide until that migration
             // ships. Skipping brand filter here is intentional.
+            //
+            // Column names: booking_mirror uses `price_total` (NOT
+            // total_amount) and `arrival_date` (NOT check_in). The
+            // 2026-06-13 Nightwatch error 'column "total_amount" does
+            // not exist' surfaced when this endpoint first hit prod.
             $rowsQ = DB::table('booking_mirror')
                 ->where('organization_id', $orgId)
-                ->where('check_in', '>=', $from);
+                ->where('arrival_date', '>=', $from);
             $rows = $rowsQ
                 ->select(
                     DB::raw("COALESCE(channel_name, 'Unknown') as channel"),
                     DB::raw('COUNT(*) as bookings'),
-                    DB::raw('SUM(total_amount) as revenue'),
-                    DB::raw('AVG(total_amount) as avg_value'),
+                    DB::raw('SUM(price_total) as revenue'),
+                    DB::raw('AVG(price_total) as avg_value'),
                     DB::raw("SUM(CASE WHEN payment_status = 'cancelled' OR payment_status = 'refunded' THEN 1 ELSE 0 END) as cancellations")
                 )
                 ->groupBy('channel_name')
@@ -1255,13 +1260,13 @@ class AnalyticsService
             $topUnitsQ = DB::table('booking_mirror')
                 ->where('organization_id', $orgId);
             $topUnits = $topUnitsQ
-                ->where('check_in', '>=', $from)
+                ->where('arrival_date', '>=', $from)
                 ->whereNotNull('apartment_name')
                 ->select(
                     'apartment_name',
                     DB::raw("COALESCE(channel_name, 'Unknown') as channel"),
                     DB::raw('COUNT(*) as bookings'),
-                    DB::raw('SUM(total_amount) as revenue')
+                    DB::raw('SUM(price_total) as revenue')
                 )
                 ->groupBy('apartment_name', 'channel_name')
                 ->orderByDesc('revenue')

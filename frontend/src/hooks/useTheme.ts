@@ -216,28 +216,36 @@ export function useTheme() {
     },
   })
 
+  // CRITICAL: only validate against `data` (server response). If it's
+  // empty/missing, we DO NOT want to fall back to DEFAULTS-spread theme
+  // — that's what was wiping the user's selection. The DOM is already
+  // painted with the cached snapshot from module-load + placeholderData;
+  // we only need to UPDATE the DOM when a real fresh theme arrives.
+  const dataLooksValid =
+    data &&
+    typeof data === 'object' &&
+    typeof (data as any).primary_color === 'string' &&
+    (data as any).primary_color.startsWith('#') &&
+    typeof (data as any).background_color === 'string' &&
+    (data as any).background_color.startsWith('#')
+
   const theme = { ...DEFAULTS, ...data }
 
   useEffect(() => {
-    applyThemeToDom(theme)
-    // Persist whenever the server hands us a fresh theme so the next
-    // load can use it as the placeholder. CRITICAL: only persist when
-    // the server returned a real theme (at least primary_color +
-    // background_color). Without this guard, a /v1/theme call that
-    // silently fails its org-id resolution (e.g. Sanctum guard returns
-    // null on a public route, no fallback matches) returns empty colors,
-    // which we'd then write to localStorage — overwriting the user's
-    // just-saved Rose Boutique with defaults. Next refresh paints
-    // defaults: 'I picked Rose Boutique but after refresh it reverted.'
-    // This is exactly the customer-reported bug as of 2026-06-13.
-    const looksValid =
-      data &&
-      typeof data === 'object' &&
-      typeof (data as any).primary_color === 'string' &&
-      (data as any).primary_color.startsWith('#') &&
-      typeof (data as any).background_color === 'string' &&
-      (data as any).background_color.startsWith('#')
-    if (looksValid) {
+    // ROOT-CAUSE FIX (2026-06-13): previously this effect ran
+    // applyThemeToDom(theme) on EVERY render — including when `data`
+    // came back as an empty object. With theme spread over DEFAULTS, an
+    // empty `data` resolves to the gold-luxury defaults, and the DOM
+    // got REPAINTED to defaults on every fetch. Customer-visible
+    // symptom: 'refresh shows the new theme for a second then reverts'.
+    //
+    // Now we only touch the DOM (and localStorage) when the server gave
+    // us a real, parseable theme. The initial paint from the
+    // module-load `_earlySnapshot` + the useQuery placeholderData
+    // covers the page-load case. The DOM stays on the cached colors
+    // until a valid server response replaces them.
+    if (dataLooksValid) {
+      applyThemeToDom(theme)
       persistThemeSnapshot(data, readCachedPreset())
     }
   }, [
@@ -245,6 +253,7 @@ export function useTheme() {
     theme.border_color, theme.text_color, theme.text_secondary_color,
     theme.accent_color, theme.error_color, theme.warning_color, theme.info_color,
     data,
+    dataLooksValid,
   ])
 
   return theme
