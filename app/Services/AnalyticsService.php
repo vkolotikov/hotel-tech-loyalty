@@ -961,15 +961,26 @@ class AnalyticsService
      */
     public function getMarketingChannels(int $days = 30): array
     {
-        return Cache::remember(self::orgKey("analytics:marketing_channels:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+        // :v2 cache key invalidates the v1 cache that bucketed same-host nav
+        // as "referral". Brand-aware: if a brand is bound, scope to that brand.
+        $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $cacheKey = "analytics:marketing_channels:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');
 
             // 1. Visitor channel distribution (chat-widget arrivals).
-            $visitors = DB::table('visitors')
+            // Pull current_page too so we can detect intra-site navigation —
+            // a visitor moving from /rooms to /book has the previous page URL
+            // as their referer, which (with the v1 categoriser) ended up in
+            // the "referral" bucket instead of "direct" — the cause of the
+            // 6700+ false referrals in the 2026-06-12 customer report.
+            $visitorsQ = DB::table('visitors')
                 ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
-                ->select('referrer', 'is_lead', 'created_at')
+                ->where('created_at', '>=', $from);
+            if ($brandId) $visitorsQ->where('brand_id', $brandId);
+            $visitors = $visitorsQ
+                ->select('referrer', 'current_page', 'is_lead', 'created_at')
                 ->get();
 
             $buckets = [
@@ -984,7 +995,10 @@ class AnalyticsService
             ];
 
             foreach ($visitors as $v) {
-                $bucket = self::categorizeChannel($v->referrer);
+                // Pass the visitor's own current_page host so categoriseChannel
+                // can detect intra-site navigation and bucket it as 'direct'.
+                $currentHost = $v->current_page ? (parse_url($v->current_page, PHP_URL_HOST) ?: '') : '';
+                $bucket = self::categorizeChannel($v->referrer, $currentHost);
                 $buckets[$bucket]['visitors']++;
                 if ($v->is_lead) {
                     $buckets[$bucket]['leads']++;
@@ -994,11 +1008,11 @@ class AnalyticsService
             // 2. Inquiry source rollup — both explicit `source` and `external_source`.
             //    Map onto our 8 buckets via the same categorize helper (treating
             //    the source string as a pseudo-utm_source).
-            $inquiries = DB::table('inquiries')
+            $inquiriesQ = DB::table('inquiries')
                 ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
-                ->select('source', 'external_source')
-                ->get();
+                ->where('created_at', '>=', $from);
+            if ($brandId) $inquiriesQ->where('brand_id', $brandId);
+            $inquiries = $inquiriesQ->select('source', 'external_source')->get();
 
             $explicit = [];   // explicit-source raw rollup (preserved for the table view)
             foreach ($inquiries as $row) {
@@ -1014,10 +1028,12 @@ class AnalyticsService
             }
 
             // 3. Top landing pages (chat-widget entry pages).
-            $topPages = DB::table('visitors')
+            $topPagesQ = DB::table('visitors')
                 ->where('organization_id', $orgId)
                 ->where('created_at', '>=', $from)
-                ->whereNotNull('current_page')
+                ->whereNotNull('current_page');
+            if ($brandId) $topPagesQ->where('brand_id', $brandId);
+            $topPages = $topPagesQ
                 ->select('current_page', DB::raw('COUNT(*) as visits'), DB::raw('SUM(CASE WHEN is_lead THEN 1 ELSE 0 END) as leads'))
                 ->groupBy('current_page')
                 ->orderByDesc('visits')
@@ -1038,8 +1054,10 @@ class AnalyticsService
                     'conversion_rate' => $rate,
                 ];
             }
-            // Sort descending by leads (the metric most admins care about).
-            usort($channelRows, fn ($a, $b) => $b['leads'] <=> $a['leads']);
+            // Sort descending by visitors so the bar chart's top bar is
+            // always the actual top-traffic channel; leads is the secondary
+            // sort key (admins still want lead-heavy channels near the top).
+            usort($channelRows, fn ($a, $b) => ($b['visitors'] <=> $a['visitors']) ?: ($b['leads'] <=> $a['leads']));
 
             arsort($explicit);
             $explicitRows = [];
@@ -1063,14 +1081,22 @@ class AnalyticsService
      */
     public function getChatChannelInsights(int $days = 30): array
     {
-        return Cache::remember(self::orgKey("analytics:chat_channel_insights:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+        $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $cacheKey = "analytics:chat_channel_insights:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');
 
+            $baseFilter = function ($q) use ($orgId, $from, $brandId) {
+                $q->where('organization_id', $orgId)->where('created_at', '>=', $from);
+                if ($brandId) $q->where('brand_id', $brandId);
+                return $q;
+            };
+
             // Channel distribution (widget / messenger / etc.).
-            $channels = DB::table('chat_conversations')
-                ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
+            $channelQ = DB::table('chat_conversations');
+            $baseFilter($channelQ);
+            $channels = $channelQ
                 ->select('channel', DB::raw('COUNT(*) as conversations'))
                 ->groupBy('channel')
                 ->orderByDesc('conversations')
@@ -1081,9 +1107,9 @@ class AnalyticsService
             // intent_tag is set lazily by EngagementAiService — many rows
             // will be NULL. We surface that as "untagged" so the legend
             // honestly represents the slice that DOESN'T have AI tagging.
-            $intents = DB::table('chat_conversations')
-                ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
+            $intentQ = DB::table('chat_conversations');
+            $baseFilter($intentQ);
+            $intents = $intentQ
                 ->select(DB::raw("COALESCE(intent_tag, 'untagged') as intent"), DB::raw('COUNT(*) as conversations'))
                 ->groupBy('intent')
                 ->orderByDesc('conversations')
@@ -1091,9 +1117,9 @@ class AnalyticsService
                 ->toArray();
 
             // AI-handled vs human-handled. assigned_user_id NULL = AI; populated = human took over.
-            $assignment = DB::table('chat_conversations')
-                ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
+            $assignQ = DB::table('chat_conversations');
+            $baseFilter($assignQ);
+            $assignment = $assignQ
                 ->select(
                     DB::raw('SUM(CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END) as ai_handled'),
                     DB::raw('SUM(CASE WHEN assigned_user_id IS NOT NULL THEN 1 ELSE 0 END) as human_handled'),
@@ -1102,9 +1128,9 @@ class AnalyticsService
                 ->first();
 
             // Top entry pages (where conversations started).
-            $entryPages = DB::table('chat_conversations')
-                ->where('organization_id', $orgId)
-                ->where('created_at', '>=', $from)
+            $entryPagesQ = DB::table('chat_conversations');
+            $baseFilter($entryPagesQ);
+            $entryPages = $entryPagesQ
                 ->whereNotNull('page_url')
                 ->select('page_url', DB::raw('COUNT(*) as conversations'))
                 ->groupBy('page_url')
@@ -1114,12 +1140,12 @@ class AnalyticsService
                 ->toArray();
 
             // Referrer breakdown for visitors who chatted (via visitor_id JOIN).
-            $chatVisitors = DB::table('chat_conversations as c')
+            $chatVisitorsQ = DB::table('chat_conversations as c')
                 ->join('visitors as v', 'c.visitor_id', '=', 'v.id')
                 ->where('c.organization_id', $orgId)
-                ->where('c.created_at', '>=', $from)
-                ->select('v.referrer')
-                ->get();
+                ->where('c.created_at', '>=', $from);
+            if ($brandId) $chatVisitorsQ->where('c.brand_id', $brandId);
+            $chatVisitors = $chatVisitorsQ->select('v.referrer', 'v.current_page')->get();
 
             $referrerBuckets = [
                 'google_search' => 0, 'google_ads' => 0, 'facebook'  => 0,
@@ -1127,7 +1153,8 @@ class AnalyticsService
                 'direct'        => 0, 'referral'   => 0,
             ];
             foreach ($chatVisitors as $cv) {
-                $bucket = self::categorizeChannel($cv->referrer);
+                $currentHost = $cv->current_page ? (parse_url($cv->current_page, PHP_URL_HOST) ?: '') : '';
+                $bucket = self::categorizeChannel($cv->referrer, $currentHost);
                 if (isset($referrerBuckets[$bucket])) {
                     $referrerBuckets[$bucket]++;
                 }
@@ -1159,14 +1186,21 @@ class AnalyticsService
      */
     public function getBookingSourcePerformance(int $days = 90): array
     {
-        return Cache::remember(self::orgKey("analytics:booking_source_perf:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+        $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $cacheKey = "analytics:booking_source_perf:{$days}:v2" . ($brandId ? ":brand:{$brandId}" : '');
+        return Cache::remember(self::orgKey($cacheKey), self::TTL_MEDIUM, function () use ($days, $brandId) {
             $from = now()->subDays($days);
             $orgId = app('current_organization_id');
 
             // Per-channel revenue + booking count + avg value.
-            $rows = DB::table('booking_mirror')
+            // booking_mirror has no brand_id column (known gap per the
+            // 2026-06-11 brand audit finding #8). For multi-brand orgs,
+            // booking source numbers stay org-wide until that migration
+            // ships. Skipping brand filter here is intentional.
+            $rowsQ = DB::table('booking_mirror')
                 ->where('organization_id', $orgId)
-                ->where('check_in', '>=', $from)
+                ->where('check_in', '>=', $from);
+            $rows = $rowsQ
                 ->select(
                     DB::raw("COALESCE(channel_name, 'Unknown') as channel"),
                     DB::raw('COUNT(*) as bookings'),
@@ -1196,8 +1230,10 @@ class AnalyticsService
             }
 
             // Top-performing apartments per channel (top 5 by revenue).
-            $topUnits = DB::table('booking_mirror')
-                ->where('organization_id', $orgId)
+            // Same brand_id gap — see comment above on $rowsQ.
+            $topUnitsQ = DB::table('booking_mirror')
+                ->where('organization_id', $orgId);
+            $topUnits = $topUnitsQ
                 ->where('check_in', '>=', $from)
                 ->whereNotNull('apartment_name')
                 ->select(

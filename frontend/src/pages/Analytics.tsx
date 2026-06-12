@@ -695,19 +695,31 @@ export function Analytics() {
             })()}
           </div>
 
-          {/* Per-channel bar chart — visitors + leads side by side. */}
+          {/* Per-channel bar chart — visitors + leads side by side.
+              Filter out empty channels so the chart doesn't waste horizontal
+              space on zero-bars. Pre-sorted by visitors desc server-side. */}
           <SectionCard title={t('analytics.marketing.by_channel', 'Visitors and leads by channel')} icon={<BarChart3 size={16} />}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={(marketingData?.channels ?? []).map((c: any) => ({ ...c, label: channelLabel(c.channel) }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="label" stroke="#8e8e93" tick={CHART_LABEL} />
-                <YAxis stroke="#8e8e93" tick={CHART_LABEL} />
-                <Tooltip contentStyle={CHART_TOOLTIP} />
-                <Legend wrapperStyle={{ color: '#fff' }} />
-                <Bar dataKey="visitors" fill="#3b82f6" name="Visitors" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="leads"    fill="#32d74b" name="Leads"    radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {(() => {
+              const data = (marketingData?.channels ?? [])
+                .filter((c: any) => (c.visitors || 0) > 0 || (c.leads || 0) > 0)
+                .map((c: any) => ({ ...c, label: channelLabel(c.channel) }))
+              if (data.length === 0) {
+                return <div className="text-center text-t-secondary py-12 text-sm">{t('analytics.marketing.no_channels', 'No visitor/lead data in this range yet.')}</div>
+              }
+              return (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={data} barCategoryGap="20%" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                    <XAxis dataKey="label" stroke="#8e8e93" tick={CHART_LABEL} interval={0} />
+                    <YAxis stroke="#8e8e93" tick={CHART_LABEL} />
+                    <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Bar dataKey="visitors" fill="#3b82f6" name="Visitors" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="leads"    fill="#32d74b" name="Leads"    radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )
+            })()}
           </SectionCard>
 
           {/* Two-column row: lead-share pie + explicit source rollup */}
@@ -1604,7 +1616,13 @@ export function Analytics() {
                 const ai = chatChannelData?.ai_handled ?? 0
                 const human = chatChannelData?.human_handled ?? 0
                 const total = ai + human
-                const aiPct = total > 0 ? Math.round((ai * 100) / total) : 0
+                if (total === 0) {
+                  return <div className="text-center text-t-secondary py-8 text-sm">
+                    {t('analytics.chat.no_conversations', 'No chat conversations in this range. If you expect data, try a wider range or check the brand filter.')}
+                  </div>
+                }
+                const aiPct = Math.round((ai * 100) / total)
+                const humanPct = 100 - aiPct
                 return (
                   <div className="space-y-3">
                     <div>
@@ -1619,10 +1637,10 @@ export function Analytics() {
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-emerald-400 flex items-center gap-1"><UserCheck size={13} /> Human</span>
-                        <span className="text-white font-bold tabular-nums">{human.toLocaleString()} ({100 - aiPct}%)</span>
+                        <span className="text-white font-bold tabular-nums">{human.toLocaleString()} ({humanPct}%)</span>
                       </div>
                       <div className="h-2 bg-dark-surface2 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${100 - aiPct}%` }} />
+                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${humanPct}%` }} />
                       </div>
                     </div>
                     <div className="text-[11px] text-t-secondary pt-2 border-t border-dark-border">
@@ -1635,60 +1653,86 @@ export function Analytics() {
 
             {/* By-channel pie */}
             <SectionCard title={t('analytics.chat.by_channel', 'By channel')} icon={<MessageCircle size={16} />}>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={(chatChannelData?.by_channel ?? []).map((c: any) => ({ name: c.channel || 'widget', value: c.conversations }))}
-                    dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
-                    label={(d: any) => d.name}
-                  >
-                    {(chatChannelData?.by_channel ?? []).map((_: any, i: number) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
-                </PieChart>
-              </ResponsiveContainer>
+              {(() => {
+                const channels = (chatChannelData?.by_channel ?? []).filter((c: any) => (c.conversations || 0) > 0)
+                if (channels.length === 0) {
+                  return <div className="text-center text-t-secondary py-12 text-sm">{t('analytics.chat.no_channels', 'No chat channels active in this range.')}</div>
+                }
+                return (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={channels.map((c: any) => ({ name: c.channel || 'widget', value: c.conversations }))}
+                        dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
+                        label={(d: any) => d.name}
+                      >
+                        {channels.map((_: any, i: number) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={CHART_TOOLTIP} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )
+              })()}
             </SectionCard>
 
             {/* Intent breakdown */}
             <SectionCard title={t('analytics.chat.by_intent', 'By intent')} icon={<Sparkles size={16} />}>
-              <div className="space-y-1.5">
-                {(chatChannelData?.by_intent ?? []).slice(0, 7).map((row: any, i: number) => {
-                  const total = (chatChannelData?.by_intent ?? []).reduce((sum: number, r: any) => sum + r.conversations, 0)
-                  const pct = total > 0 ? (row.conversations * 100) / total : 0
-                  return (
-                    <div key={i}>
-                      <div className="flex items-center justify-between text-xs mb-0.5">
-                        <span className="text-white capitalize">{row.intent.replace(/_/g, ' ')}</span>
-                        <span className="text-t-secondary tabular-nums">{row.conversations} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="h-1.5 bg-dark-surface2 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-500 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              {(() => {
+                const intents = (chatChannelData?.by_intent ?? []).filter((r: any) => (r.conversations || 0) > 0)
+                if (intents.length === 0) {
+                  return <div className="text-center text-t-secondary py-12 text-sm">{t('analytics.chat.no_intents', 'No conversations to classify yet. EngagementAi tags intent lazily — open a conversation to populate.')}</div>
+                }
+                const total = intents.reduce((sum: number, r: any) => sum + r.conversations, 0)
+                return (
+                  <div className="space-y-1.5">
+                    {intents.slice(0, 7).map((row: any, i: number) => {
+                      const pct = (row.conversations * 100) / total
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center justify-between text-xs mb-0.5">
+                            <span className="text-white capitalize">{(row.intent || 'untagged').replace(/_/g, ' ')}</span>
+                            <span className="text-t-secondary tabular-nums">{row.conversations} ({pct.toFixed(0)}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-dark-surface2 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary-500 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </SectionCard>
           </div>
 
           {/* Visitor referrers + top entry pages */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SectionCard title={t('analytics.chat.referrers', 'Where chat visitors come from')} icon={<Globe size={16} />}>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={(chatChannelData?.visitor_referrers ?? []).map((r: any) => ({ ...r, label: channelLabel(r.channel) }))} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis type="number" stroke="#8e8e93" tick={CHART_LABEL} />
-                  <YAxis dataKey="label" type="category" stroke="#8e8e93" tick={CHART_LABEL} width={90} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
-                  <Bar dataKey="conversations" name="Conversations" radius={[0, 4, 4, 0]}>
-                    {(chatChannelData?.visitor_referrers ?? []).map((r: any, i: number) => (
-                      <Cell key={i} fill={channelColor(r.channel)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {(() => {
+                const data = (chatChannelData?.visitor_referrers ?? [])
+                  .filter((r: any) => (r.conversations || 0) > 0)
+                  .map((r: any) => ({ ...r, label: channelLabel(r.channel) }))
+                if (data.length === 0) {
+                  return <div className="text-center text-t-secondary py-12 text-sm">{t('analytics.chat.no_referrers', 'No chat sessions linked to visitor referrers yet.')}</div>
+                }
+                return (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                      <XAxis type="number" stroke="#8e8e93" tick={CHART_LABEL} />
+                      <YAxis dataKey="label" type="category" stroke="#8e8e93" tick={CHART_LABEL} width={90} />
+                      <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar dataKey="conversations" name="Conversations" radius={[0, 4, 4, 0]}>
+                        {data.map((r: any, i: number) => (
+                          <Cell key={i} fill={channelColor(r.channel)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )
+              })()}
             </SectionCard>
 
             <SectionCard title={t('analytics.chat.top_pages', 'Top chat-entry pages')} icon={<Globe size={16} />}>
