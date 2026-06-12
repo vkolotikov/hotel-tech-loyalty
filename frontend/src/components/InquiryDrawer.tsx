@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import EditableField from './EditableField'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import { ChatHistoryPanel } from './ChatHistoryPanel'
 
 /**
  * InquiryDrawer — left-side slide panel showing a single lead's full detail
@@ -552,6 +553,18 @@ export function InquiryDrawer({
                     placeholder={t('inquiryDrawer.placeholders.notes', 'Anything the team should know about this lead…') as string}
                     label={t('inquiryDrawer.lead.notes', 'Notes')}
                   />
+                  {/* Discoverability nudge — chatbot-sourced leads have full
+                      chat history under the Activity tab. Without this hint,
+                      staff don't realise the conversation is one click away. */}
+                  {inq.source === 'chatbot' && (
+                    <button
+                      onClick={() => setTab('activity')}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold hover:bg-cyan-500/20 transition-colors"
+                    >
+                      <Sparkles size={13} />
+                      {t('inquiryDrawer.lead.view_chat', 'View full chatbot conversation →')}
+                    </button>
+                  )}
                 </Section>
 
                 {/* AI win probability — visual progress bar */}
@@ -709,16 +722,30 @@ export function InquiryDrawer({
             )}
 
             {inq && tab === 'activity' && (
-              <div className="bg-dark-bg/40 border border-dark-border/60 rounded-xl py-12 px-6 flex flex-col items-center justify-center text-center">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style={{ background: 'rgba(34, 211, 238, 0.12)', border: '1px solid rgba(34, 211, 238, 0.3)' }}>
-                  <Sparkles size={22} className="text-cyan-400" />
+              <div className="space-y-3">
+                {/* Linked chatbot conversations + messages — user-reported on
+                    2026-06-12 they couldn't see chat history without bouncing
+                    to the Engagement Hub. The ChatHistoryPanel handles its own
+                    fetch, empty state, and per-conversation expand/collapse.
+                    Wired here in addition to the full /inquiries/:id detail
+                    page so both surfaces stay in sync. */}
+                <ChatHistoryPanel inquiryId={inq.id} />
+
+                {/* Remaining activity types — calls, emails, stage changes,
+                    notes timeline — still to come. The placeholder is dropped
+                    INSIDE the tab so the chat panel above takes precedence
+                    for the most common workflow (reviewing a chatbot lead). */}
+                <div className="bg-dark-bg/40 border border-dark-border/60 rounded-xl py-6 px-6 flex flex-col items-center justify-center text-center">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: 'rgba(34, 211, 238, 0.10)', border: '1px solid rgba(34, 211, 238, 0.25)' }}>
+                    <Sparkles size={16} className="text-cyan-400" />
+                  </div>
+                  <p className="text-xs font-bold text-white mb-1">
+                    {t('inquiryDrawer.activity.more_coming', 'More activity coming soon')}
+                  </p>
+                  <span className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
+                    {t('inquiryDrawer.activity.hint', 'Calls, emails, notes and stage changes will show up here.')}
+                  </span>
                 </div>
-                <p className="text-sm font-bold text-white mb-1">
-                  {t('inquiryDrawer.activity.coming_soon', 'Activity timeline coming soon')}
-                </p>
-                <span className="text-xs text-gray-500 max-w-xs leading-relaxed">
-                  {t('inquiryDrawer.activity.hint', 'Calls, emails, notes and stage changes will show up here.')}
-                </span>
               </div>
             )}
           </div>
