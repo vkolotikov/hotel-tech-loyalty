@@ -760,6 +760,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             // Inquiry attachments (proposals, BEOs, contracts, etc.)
             Route::get('inquiries/{inquiry}/attachments',                [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'index']);
+            // Chat conversations linked to this inquiry's guest (2026-06-12).
+            Route::get('inquiries/{id}/chat-history',                    [InquiryController::class, 'chatHistory']);
             Route::post('inquiries/{inquiry}/attachments',               [\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'store']);
             Route::delete('inquiries/{inquiry}/attachments/{attachment}',[\App\Http\Controllers\Api\V1\Admin\InquiryAttachmentController::class, 'destroy']);
 

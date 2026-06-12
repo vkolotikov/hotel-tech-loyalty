@@ -158,6 +158,71 @@ class InquiryController extends Controller
         return response()->json($inquiry);
     }
 
+    /**
+     * GET /v1/admin/inquiries/{id}/chat-history
+     *
+     * Returns every chat conversation linked to this inquiry's guest, with
+     * messages inline, sorted most-recent-conversation first. Linkage path:
+     *   inquiry.guest_id -> guest -> visitors.guest_id -> chat_conversations.visitor_id
+     *
+     * Lets staff read the full prior conversation right inside the lead-
+     * detail page instead of bouncing to the Engagement Hub. User-reported:
+     * 'as we have a lot of customers in leads from AI chatbot, can we see
+     * chat communication directly in leads section' (2026-06-12).
+     */
+    public function chatHistory(int $id): JsonResponse
+    {
+        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+
+        // Org-scoped because TenantScope is fail-closed.
+        if (!$inquiry->guest_id) {
+            return response()->json(['conversations' => [], 'message' => 'Inquiry has no linked guest.']);
+        }
+
+        // Find every visitor row that has been merged into this guest.
+        // Most chatbot-captured leads have exactly one; a returning visitor
+        // who chatted on two different devices could have two.
+        $visitorIds = \App\Models\Visitor::withoutGlobalScopes()
+            ->where('organization_id', $inquiry->organization_id)
+            ->where('guest_id', $inquiry->guest_id)
+            ->pluck('id');
+
+        if ($visitorIds->isEmpty()) {
+            return response()->json(['conversations' => []]);
+        }
+
+        // Load every conversation belonging to those visitors, with a
+        // reasonable cap on messages so a 500-message ramble doesn't
+        // bloat the response. Order by most-recent activity desc so
+        // the latest conversation is at the top.
+        $conversations = \App\Models\ChatConversation::withoutGlobalScopes()
+            ->where('organization_id', $inquiry->organization_id)
+            ->whereIn('visitor_id', $visitorIds)
+            ->with([
+                'assignedAgent:id,name,email',
+                'visitor:id,country,city,visit_count,referrer,is_lead',
+            ])
+            ->orderByDesc('last_message_at')
+            ->limit(20)
+            ->get();
+
+        // Attach messages inline — newest 100 per conversation. Keeps the
+        // single round-trip lightweight; longer threads link out to the
+        // Engagement Hub for the full feed.
+        $conversationIds = $conversations->pluck('id');
+        $messagesByConv = \App\Models\ChatMessage::withoutGlobalScopes()
+            ->whereIn('conversation_id', $conversationIds)
+            ->orderBy('created_at')
+            ->get(['id', 'conversation_id', 'sender_type', 'sender_user_id', 'content', 'created_at'])
+            ->groupBy('conversation_id');
+
+        $conversations->each(function ($conv) use ($messagesByConv) {
+            $conv->setAttribute('messages', $messagesByConv->get($conv->id, collect()));
+        });
+
+        return response()->json(['conversations' => $conversations]);
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         // Explicit binding + BrandScope opt-out. Implicit binding has

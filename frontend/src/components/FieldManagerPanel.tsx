@@ -108,6 +108,7 @@ const TABS: TabDef[] = [
           { key: 'ai_smart_panel', label: 'AI Smart Panel', hint: 'AI brief + intent + win probability + suggested action.' },
           { key: 'open_tasks', label: 'Open tasks panel' },
           { key: 'attachments', label: 'Attachments panel' },
+          { key: 'chat_history', label: 'Chat history panel', hint: 'Linked chatbot conversations + messages for leads captured from chat.' },
         ],
       },
     ],

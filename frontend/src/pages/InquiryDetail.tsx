@@ -14,6 +14,7 @@ import { useSettings, type InquiryFieldConfig } from '../lib/crmSettings'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
 import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
+import { ChatHistoryPanel } from '../components/ChatHistoryPanel'
 import { SendTemplateModal } from '../components/SendTemplateModal'
 import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 
@@ -885,7 +886,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
 
   // If every right-column panel is hidden, suppress the column entirely
   // so the layout collapses cleanly instead of leaving an empty 300px gap.
-  if (!fieldCfg.ai_smart_panel && !fieldCfg.open_tasks && !fieldCfg.attachments) {
+  if (!fieldCfg.ai_smart_panel && !fieldCfg.open_tasks && !fieldCfg.attachments && !fieldCfg.chat_history) {
     return null
   }
 
@@ -918,6 +919,13 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
       )}
 
       {fieldCfg.attachments && <InquiryAttachmentsPanel inquiryId={inq.id} />}
+
+      {/* Chat history panel — lists linked chat conversations + messages.
+          User-reported on 2026-06-12: chatbot-captured leads need their
+          original conversation surfaced in the lead view instead of forcing
+          a trip back to the Engagement Hub. Backend looks up the chain
+          inquiry → guest → visitor → conversations in one round-trip. */}
+      {fieldCfg.chat_history && <ChatHistoryPanel inquiryId={inq.id} />}
 
       {adding && (
         <TaskDrawer

@@ -55,6 +55,7 @@ export interface InquiryFieldConfig {
     ai_smart_panel: boolean            // AI brief + intent + win prob + suggested action
     open_tasks: boolean                // tasks list in the right column
     attachments: boolean               // file attachments panel
+    chat_history: boolean              // linked chat-bot conversations panel (2026-06-12)
   }
 }
 
@@ -187,7 +188,7 @@ export const DEFAULT_INQUIRY_FIELDS: InquiryFieldConfig = {
     special_requests: true, pipeline_section: true,
     linked_reservation: true, custom_fields_section: true,
     guest_profile_link: true,
-    ai_smart_panel: true, open_tasks: true, attachments: true,
+    ai_smart_panel: true, open_tasks: true, attachments: true, chat_history: true,
   },
 }
 
