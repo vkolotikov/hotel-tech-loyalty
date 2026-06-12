@@ -388,15 +388,15 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     case 'luxury': {
       const accent = c.accent_color
       return (
-        <div className="flex flex-col" style={{ minHeight: isFeatured ? 360 : 340 }}>
-          <div className="relative h-14 flex items-center justify-center" style={{ background: c.primary_color }}>
+        <div className="flex flex-col" style={{ minHeight: isFeatured ? 240 : 220 }}>
+          <div className="relative h-10 flex items-center justify-center" style={{ background: c.primary_color }}>
             <span className="text-[10px] uppercase tracking-[0.5em] font-light" style={{ color: c.background_color, fontFamily: font }}>
               {name.split(' ')[0]} · Est. MMXXVI
             </span>
             <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: accent, boxShadow: `0 1px 0 ${hexA(c.text_color, 0.15)}` }} />
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-5 py-6 gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-3 gap-2">
             <div className={`${isFeatured ? 'text-3xl' : 'text-2xl'} font-bold leading-none tracking-tight`} style={{ color: c.text_color, fontFamily: font }}>
               {name}
             </div>
@@ -414,7 +414,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
                 <div className="text-[9px] uppercase tracking-[0.25em]" style={{ color: c.text_secondary_color }}>
                   Suite 304 · Ocean View
                 </div>
-                <div className={`${isFeatured ? 'text-4xl' : 'text-3xl'} font-bold tabular-nums my-1`} style={{ color: c.text_color, fontFamily: font }}>
+                <div className={`${isFeatured ? 'text-3xl' : 'text-3xl'} font-bold tabular-nums my-1`} style={{ color: c.text_color, fontFamily: font }}>
                   €2,450
                 </div>
                 <div className="text-[9px] uppercase tracking-[0.25em]" style={{ color: c.text_secondary_color }}>
@@ -443,14 +443,14 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
         { label: 'RevPAR', value: '$365',   tone: c.warning_color },
       ]
       return (
-        <div className="flex flex-col" style={{ minHeight: 320 }}>
+        <div className="flex flex-col" style={{ minHeight: 220 }}>
           <div className="h-3 flex">
             <div className="flex-[3]" style={{ background: c.primary_color }} />
             <div className="flex-[2]" style={{ background: c.accent_color }} />
             <div className="flex-[1]" style={{ background: c.info_color }} />
           </div>
 
-          <div className="flex-1 flex flex-col px-4 py-4 gap-3">
+          <div className="flex-1 flex flex-col px-3 py-2.5 gap-2">
             <div className="flex items-baseline justify-between gap-2">
               <div className="min-w-0">
                 <div className={`${isFeatured ? 'text-2xl' : 'text-xl'} font-bold tracking-tight leading-none`} style={{ color: c.text_color, fontFamily: font }}>
@@ -493,12 +493,12 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     /* ═════════ BOUTIQUE — soft rose mesh + italic welcome + flourish ═════════ */
     case 'boutique': {
       return (
-        <div className="flex flex-col" style={{ minHeight: 290 }}>
-          <div className="relative h-16 flex items-center justify-center">
+        <div className="flex flex-col" style={{ minHeight: 200 }}>
+          <div className="relative h-10 flex items-center justify-center">
             <span className="text-3xl" style={{ color: c.accent_color, fontFamily: font, opacity: 0.85 }}>❀</span>
           </div>
 
-          <div className="flex-1 flex flex-col px-5 pb-4 gap-3">
+          <div className="flex-1 flex flex-col px-4 pb-2.5 gap-2">
             <div className={`${isFeatured ? 'text-3xl' : 'text-2xl'} italic font-semibold leading-tight tracking-tight`} style={{ color: c.text_color, fontFamily: font }}>
               {name}
             </div>
@@ -530,8 +530,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
       const monoFont = 'JetBrains Mono, ui-monospace, monospace'
       const isMono = !!font?.includes('Mono')
       return (
-        <div className="flex flex-col" style={{ minHeight: 320 }}>
-          <div className="relative h-16" style={{ background: `linear-gradient(115deg, ${c.primary_color} 0%, ${c.primary_color} 60%, ${c.accent_color} 60%, ${c.accent_color} 100%)` }}>
+        <div className="flex flex-col" style={{ minHeight: 220 }}>
+          <div className="relative h-10" style={{ background: `linear-gradient(115deg, ${c.primary_color} 0%, ${c.primary_color} 60%, ${c.accent_color} 60%, ${c.accent_color} 100%)` }}>
             <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
               <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: c.background_color, fontFamily: monoFont }}>
                 {'</>'} build:active
@@ -540,7 +540,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col px-4 py-4 gap-3">
+          <div className="flex-1 flex flex-col px-3 py-2.5 gap-2">
             <div className="text-[10px] uppercase tracking-[0.3em]" style={{ color: c.accent_color, fontFamily: monoFont }}>
               {'//'} experimental release
             </div>
@@ -584,8 +584,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
       const offset = cf - (pct / 100) * cf
       const gradId = `grad-${name.replace(/\s+/g, '-')}`
       return (
-        <div className="flex flex-col" style={{ minHeight: 330 }}>
-          <div className="px-5 pt-5 pb-3">
+        <div className="flex flex-col" style={{ minHeight: 230 }}>
+          <div className="px-4 pt-3 pb-3">
             <div className="text-[10px] uppercase tracking-[0.2em]" style={{ color: c.accent_color, fontFamily: font }}>
               ★ Today's booking rate
             </div>
@@ -620,7 +620,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
             </div>
           </div>
 
-          <div className="px-5 pb-3 flex items-center justify-between gap-2">
+          <div className="px-4 pb-2 flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold px-3 py-1 inline-block" style={{ background: c.accent_color, color: c.background_color, borderRadius: 999, transform: 'rotate(-3deg)', fontFamily: font }}>
               SAVE 30%
             </span>
@@ -635,8 +635,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     /* ═════════ NATURAL — round bubble tags + italic tagline + leaf ═════════ */
     case 'natural': {
       return (
-        <div className="flex flex-col" style={{ minHeight: 300 }}>
-          <div className="px-5 pt-5 pb-3 flex items-start justify-between">
+        <div className="flex flex-col" style={{ minHeight: 200 }}>
+          <div className="px-4 pt-3 pb-3 flex items-start justify-between">
             <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-[0.25em]" style={{ color: c.accent_color, fontFamily: font }}>
                 Rooted in nature
@@ -648,7 +648,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
             <span className="text-3xl" style={{ color: c.primary_color, opacity: 0.7 }}>❋</span>
           </div>
 
-          <div className="flex-1 flex flex-col px-5 gap-3">
+          <div className="flex-1 flex flex-col px-4 gap-2">
             <p className="text-xs italic leading-snug" style={{ color: c.text_secondary_color, fontFamily: font }}>
               {preset.description}
             </p>
@@ -684,12 +684,12 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     /* ═════════ WELLNESS — soft gradient + mini-stat + DM Serif ═════════ */
     case 'wellness': {
       return (
-        <div className="flex flex-col" style={{ minHeight: 300 }}>
-          <div className="relative h-16" style={{ background: `linear-gradient(160deg, ${c.primary_color} 0%, ${hexA(c.accent_color, 0.7)} 100%)` }}>
+        <div className="flex flex-col" style={{ minHeight: 200 }}>
+          <div className="relative h-10" style={{ background: `linear-gradient(160deg, ${c.primary_color} 0%, ${hexA(c.accent_color, 0.7)} 100%)` }}>
             <span className="absolute top-3 right-4 text-2xl" style={{ color: c.background_color, opacity: 0.8 }}>✿</span>
           </div>
 
-          <div className="flex-1 flex flex-col px-5 py-4 gap-3">
+          <div className="flex-1 flex flex-col px-4 py-3 gap-2">
             <div className={`${isFeatured ? 'text-3xl' : 'text-2xl'} leading-tight tracking-tight`} style={{ color: c.text_color, fontFamily: font, fontWeight: 400 }}>
               {name}
             </div>
@@ -697,7 +697,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
               Mindful hospitality.
             </p>
 
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center justify-center flex-shrink-0" style={{ width: 52, height: 52, background: hexA(c.primary_color, 0.18), border: `1px solid ${hexA(c.primary_color, 0.35)}`, borderRadius: 18 }}>
                 <span className="text-2xl" style={{ color: c.primary_color }}>✿</span>
               </div>
@@ -717,10 +717,10 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     /* ═════════ MINIMAL — enormous Aa, hairlines only ═════════ */
     case 'minimal': {
       return (
-        <div className="flex flex-col" style={{ minHeight: 280 }}>
+        <div className="flex flex-col" style={{ minHeight: 190 }}>
           <div className="h-px" style={{ background: c.primary_color, width: '30%' }} />
 
-          <div className="flex-1 flex flex-col px-5 py-5 gap-4">
+          <div className="flex-1 flex flex-col px-4 py-3 gap-2.5">
             <div>
               <div className="text-[9px] uppercase tracking-[0.3em]" style={{ color: c.text_secondary_color }}>
                 Type sample
@@ -730,8 +730,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
               </div>
             </div>
 
-            <div className="flex items-baseline gap-4">
-              <span className={`${isFeatured ? 'text-7xl' : 'text-6xl'} leading-none`} style={{ color: c.text_color, fontFamily: font, fontWeight: 300, letterSpacing: -2 }}>
+            <div className="flex items-baseline gap-2.5">
+              <span className={`${isFeatured ? 'text-5xl' : 'text-6xl'} leading-none`} style={{ color: c.text_color, fontFamily: font, fontWeight: 300, letterSpacing: -2 }}>
                 Aa
               </span>
               <div className="flex-1 min-w-0 space-y-1">
@@ -752,23 +752,23 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     /* ═════════ EDITORIAL — newspaper masthead + drop cap + justified ═════════ */
     case 'editorial': {
       return (
-        <div className="flex flex-col" style={{ minHeight: 380 }}>
-          <div className="px-5 pt-5">
+        <div className="flex flex-col" style={{ minHeight: 260 }}>
+          <div className="px-4 pt-3">
             <div className="h-0.5" style={{ background: c.text_color }} />
             <div className="h-px mt-0.5" style={{ background: c.text_color, opacity: 0.4 }} />
           </div>
 
-          <div className="flex-1 flex flex-col px-5 py-4 gap-3">
+          <div className="flex-1 flex flex-col px-4 py-3 gap-2">
             <div className="text-[10px] uppercase tracking-[0.35em] font-bold" style={{ color: c.accent_color, fontFamily: font }}>
               Volume V · Issue 03
             </div>
 
-            <div className={`${isFeatured ? 'text-4xl' : 'text-3xl'} font-bold leading-[1.05]`} style={{ color: c.text_color, fontFamily: font }}>
+            <div className={`${isFeatured ? 'text-3xl' : 'text-3xl'} font-bold leading-[1.05]`} style={{ color: c.text_color, fontFamily: font }}>
               {name}
             </div>
 
             <p className="text-[11px] leading-relaxed text-justify" style={{ color: c.text_secondary_color, fontFamily: font, hyphens: 'auto' }}>
-              <span className={`${isFeatured ? 'text-5xl' : 'text-4xl'} float-left mr-2 font-bold leading-[0.85] -mt-1`} style={{ color: c.primary_color, fontFamily: font }}>
+              <span className={`${isFeatured ? 'text-5xl' : 'text-3xl'} float-left mr-2 font-bold leading-[0.85] -mt-1`} style={{ color: c.primary_color, fontFamily: font }}>
                 T
               </span>
               he art of hospitality lies in details — a curated selection of refined stays, from coastal retreats to alpine sanctuaries, each chosen for character.
@@ -791,8 +791,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
     case 'modern':
     default: {
       return (
-        <div className="flex flex-col" style={{ minHeight: 300 }}>
-          <div className="px-5 pt-5 pb-3">
+        <div className="flex flex-col" style={{ minHeight: 200 }}>
+          <div className="px-4 pt-3 pb-3">
             <div className="text-[10px] uppercase tracking-[0.2em] font-semibold" style={{ color: c.accent_color, fontFamily: font }}>
               ◐ Realtime
             </div>
@@ -804,8 +804,8 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
             </p>
           </div>
 
-          <div className="flex-1 px-5 pb-4">
-            <div className="p-3 flex items-start gap-3" style={{ background: c.surface_color, border: `1px solid ${c.border_color}`, borderRadius: 12, boxShadow: `0 4px 12px ${hexA(c.primary_color, 0.18)}` }}>
+          <div className="flex-1 px-4 pb-2.5">
+            <div className="p-3 flex items-start gap-2" style={{ background: c.surface_color, border: `1px solid ${c.border_color}`, borderRadius: 12, boxShadow: `0 4px 12px ${hexA(c.primary_color, 0.18)}` }}>
               <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center font-bold" style={{ background: `linear-gradient(135deg, ${c.primary_color}, ${c.accent_color})`, color: c.background_color, borderRadius: 999, fontFamily: font }}>
                 M
               </div>
@@ -832,23 +832,24 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
   }
 }
 
-// Shared color-dots + mood-label row at the bottom of every card. Kept
-// consistent across moods so the grid stays scannable as a palette
-// reference even when upper card content varies wildly.
+// Shared color-dots + mood-label row at the bottom of every card.
+// Kept minimal so it doesn't eat vertical space — small 10px dots,
+// tight padding, just enough to identify the palette + mood at a
+// glance.
 function ColorDotsRow({ c, mood }: { c: Record<string, string>; mood: string }) {
   return (
     <div
-      className="flex items-center gap-1.5 px-4 py-2.5"
+      className="flex items-center gap-1 px-3 py-1.5"
       style={{ borderTop: `1px solid ${hexA(c.text_color, 0.06)}`, background: hexA(c.text_color, 0.02) }}
     >
       {[c.primary_color, c.accent_color, c.info_color, c.warning_color, c.error_color].map((col, i) => (
         <div
           key={i}
-          className="w-3 h-3 rounded-full"
+          className="w-2.5 h-2.5 rounded-full"
           style={{ backgroundColor: col, border: `1px solid ${hexA(c.text_color, 0.1)}` }}
         />
       ))}
-      <span className="ml-auto text-[9px] uppercase tracking-[0.25em] font-semibold" style={{ color: c.text_secondary_color }}>
+      <span className="ml-auto text-[8px] uppercase tracking-[0.22em] font-semibold" style={{ color: c.text_secondary_color }}>
         {mood}
       </span>
     </div>

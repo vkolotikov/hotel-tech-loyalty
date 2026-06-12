@@ -252,3 +252,146 @@ input, textarea, select, button {
 .mobile-drawer {
   transition: transform 300ms ease;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Aggressive per-mood overrides (added 2026-06-13 after customer feedback
+   "ok, some now works, but no significant change"). The body + h1-h4
+   rules above only swap actual <h1>-<h4> tags. But most React pages use
+   <div className="text-2xl">, not semantic headings. Without these
+   overrides, swapping mood quietly changes the body font but every
+   "heading" (which is really a sized div) stays Inter — making the
+   change feel subtle for moods whose body font IS sans-serif
+   (creative / modern / minimal / corporate).
+
+   Now: any text-lg / text-xl / text-2xl / text-3xl / text-4xl / text-5xl
+   element under a mood picks up the display font + a per-mood letter-
+   spacing tweak. Moods with serif display (luxury / editorial /
+   boutique / natural / wellness) now have EVERY heading-sized element
+   in the admin reading as serif. Moods with distinctive sans
+   (creative / energetic / modern / minimal) get their letter-spacing
+   signature applied to everything.
+
+   The selector `:root[data-mood]` only matches when data-mood is set
+   (any value). Default behaviour (no preset picked) keeps Inter and
+   neutral letter-spacing — zero change for orgs that never touched
+   the theme. ═══════════════════════════════════════════════════════════ */
+
+:root[data-mood] .text-lg,
+:root[data-mood] .text-xl,
+:root[data-mood] .text-2xl,
+:root[data-mood] .text-3xl,
+:root[data-mood] .text-4xl,
+:root[data-mood] .text-5xl,
+:root[data-mood] .text-6xl,
+:root[data-mood] .text-7xl {
+  font-family: var(--theme-font-display);
+  letter-spacing: var(--theme-letter-spacing);
+}
+
+/* Per-mood letter-spacing + weight signatures. These are SECOND-ORDER
+   tweaks that distinguish moods whose fonts are visually similar at
+   small sizes — e.g. Inter vs Manrope vs Space Grotesk all look alike
+   at body size, but tight tracking + light weight (minimal) reads
+   completely differently from neutral (corporate) or bold tracking
+   (creative). */
+
+:root[data-mood="luxury"] .text-lg,
+:root[data-mood="luxury"] .text-xl,
+:root[data-mood="luxury"] .text-2xl,
+:root[data-mood="luxury"] .text-3xl,
+:root[data-mood="luxury"] .text-4xl,
+:root[data-mood="luxury"] .text-5xl {
+  letter-spacing: 0.005em;
+  font-weight: 600;
+}
+
+:root[data-mood="editorial"] .text-lg,
+:root[data-mood="editorial"] .text-xl,
+:root[data-mood="editorial"] .text-2xl,
+:root[data-mood="editorial"] .text-3xl,
+:root[data-mood="editorial"] .text-4xl,
+:root[data-mood="editorial"] .text-5xl {
+  letter-spacing: -0.015em;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+:root[data-mood="boutique"] .text-2xl,
+:root[data-mood="boutique"] .text-3xl,
+:root[data-mood="boutique"] .text-4xl,
+:root[data-mood="boutique"] .text-5xl {
+  font-style: italic;
+  letter-spacing: -0.005em;
+}
+
+:root[data-mood="creative"] .text-lg,
+:root[data-mood="creative"] .text-xl,
+:root[data-mood="creative"] .text-2xl,
+:root[data-mood="creative"] .text-3xl,
+:root[data-mood="creative"] .text-4xl,
+:root[data-mood="creative"] .text-5xl {
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+:root[data-mood="energetic"] .text-lg,
+:root[data-mood="energetic"] .text-xl,
+:root[data-mood="energetic"] .text-2xl,
+:root[data-mood="energetic"] .text-3xl,
+:root[data-mood="energetic"] .text-4xl,
+:root[data-mood="energetic"] .text-5xl {
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+
+:root[data-mood="minimal"] body { font-weight: 300; }
+:root[data-mood="minimal"] .text-lg,
+:root[data-mood="minimal"] .text-xl,
+:root[data-mood="minimal"] .text-2xl,
+:root[data-mood="minimal"] .text-3xl,
+:root[data-mood="minimal"] .text-4xl,
+:root[data-mood="minimal"] .text-5xl {
+  letter-spacing: -0.02em;
+  font-weight: 300;
+}
+
+:root[data-mood="modern"] .text-lg,
+:root[data-mood="modern"] .text-xl,
+:root[data-mood="modern"] .text-2xl,
+:root[data-mood="modern"] .text-3xl,
+:root[data-mood="modern"] .text-4xl,
+:root[data-mood="modern"] .text-5xl {
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+
+:root[data-mood="natural"] .text-2xl,
+:root[data-mood="natural"] .text-3xl,
+:root[data-mood="natural"] .text-4xl,
+:root[data-mood="natural"] .text-5xl {
+  font-style: italic;
+}
+
+:root[data-mood="wellness"] .text-2xl,
+:root[data-mood="wellness"] .text-3xl,
+:root[data-mood="wellness"] .text-4xl,
+:root[data-mood="wellness"] .text-5xl {
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+
+/* Per-mood form-control font-weight tweaks so input + buttons match
+   the picked mood's body weight (matters most for minimal which uses
+   300, defaults to 400 otherwise). */
+:root[data-mood="minimal"] input,
+:root[data-mood="minimal"] textarea,
+:root[data-mood="minimal"] select {
+  font-weight: 300;
+}
+
+/* Force mono font through under creative so monospace utility blocks
+   STILL get a mono — Space Grotesk would otherwise inherit. */
+.font-mono,
+[class*="font-mono"] {
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Menlo, Monaco, monospace !important;
+}
