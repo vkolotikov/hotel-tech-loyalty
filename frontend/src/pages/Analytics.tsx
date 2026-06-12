@@ -26,6 +26,7 @@ import {
   BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
   TrendingDown, MoveRight, ChevronRight, Mail, MessageCircle, Package,
   Sparkles, CreditCard, Settings2, PlayCircle, PackageCheck, CheckCircle2,
+  Eye, Bot,
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -67,7 +68,46 @@ const CRM_PERIOD_OPTIONS = [
 // Members + Points & Rewards merged into a single "Loyalty" tab (the
 // tab id stays 'members' to avoid breaking saved selections; only the
 // label changes).
-type ActiveTab = 'overview' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
+type ActiveTab = 'overview' | 'marketing' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
+
+// Shared channel meta — keep in sync with AnalyticsService::categorizeChannel.
+const CHANNEL_META: Record<string, { label: string; color: string }> = {
+  google_search: { label: 'Google Search', color: '#4285F4' },
+  google_ads:    { label: 'Google Ads',    color: '#34A853' },
+  facebook:      { label: 'Facebook',      color: '#1877F2' },
+  instagram:     { label: 'Instagram',     color: '#E1306C' },
+  tiktok:        { label: 'TikTok',        color: '#69C9D0' },
+  email:         { label: 'Email',         color: '#f59e0b' },
+  direct:        { label: 'Direct',        color: '#8e8e93' },
+  referral:      { label: 'Referral',      color: '#a855f7' },
+}
+const channelLabel = (key: string) => CHANNEL_META[key]?.label ?? key
+const channelColor = (key: string) => CHANNEL_META[key]?.color ?? '#636366'
+
+// Configurable date range — drives the 3 new channel-attribution panels.
+const CHANNEL_RANGES = [
+  { label: '7d', days: 7 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+  { label: '6m', days: 180 },
+  { label: '1y', days: 365 },
+] as const
+
+// Small inline wrapper for the channel-attribution panels. The shared Card
+// component doesn't accept title/icon (it's just a div), and the existing
+// in-page pattern repeats the same header markup inside each card. This
+// local helper centralises that so the new panels stay consistent.
+function SectionCard({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="inline-flex p-1.5 rounded-md bg-primary-500/15 text-primary-400">{icon}</div>
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+      </div>
+      {children}
+    </div>
+  )
+}
 
 export function Analytics() {
   const { t } = useTranslation()
@@ -78,6 +118,9 @@ export function Analytics() {
   const [crmPeriod, setCrmPeriod] = useState('months6')
   const [atRiskDays, setAtRiskDays] = useState(60)
   const [cohortMonths, setCohortMonths] = useState(6)
+  // Channel-attribution range — shared across Marketing tab + chat sub-panel
+  // + booking source sub-panel. Defaults to 30 days; configurable via chips.
+  const [channelDays, setChannelDays] = useState(30)
   const [tierMoveDays, setTierMoveDays] = useState(90)
 
   // Phase 6.x — gate the 10 hotel-only Analytics endpoints client-side
@@ -229,8 +272,9 @@ export function Analytics() {
   const tierDist = overview?.tier_distribution ?? []
 
   const tabs: { id: ActiveTab; label: string; icon: any }[] = [
-    { id: 'overview', label: t('analytics.tabs.overview', 'Overview'), icon: <BarChart3 size={15} /> },
-    { id: 'chat',     label: t('analytics.tabs.chat', 'Chat'),         icon: <MessageCircle size={15} /> },
+    { id: 'overview',  label: t('analytics.tabs.overview', 'Overview'),  icon: <BarChart3 size={15} /> },
+    { id: 'marketing', label: t('analytics.tabs.marketing', 'Marketing'), icon: <Target size={15} /> },
+    { id: 'chat',      label: t('analytics.tabs.chat', 'Chat'),           icon: <MessageCircle size={15} /> },
     { id: 'leads',    label: t('analytics.tabs.leads', 'Leads'),       icon: <Briefcase size={15} /> },
     { id: 'deals',    label: t('analytics.tabs.deals', 'Deals'),       icon: <Package size={15} /> },
     { id: 'members',  label: t('analytics.tabs.loyalty', 'Loyalty'),   icon: <Award size={15} /> },
@@ -278,6 +322,24 @@ export function Analytics() {
   })
   // AI cost trend query removed — the card was dropped from the Chat
   // tab. Same data still lives at Settings → AI Usage.
+
+  // Channel attribution queries (2026-06-12). All three reuse the same
+  // `channelDays` range chip so switching range refetches all of them.
+  const { data: marketingData } = useQuery<any>({
+    queryKey: ['analytics-marketing-channels', channelDays],
+    queryFn: () => api.get(`/v1/admin/analytics/marketing-channels?days=${channelDays}`).then(r => r.data),
+    enabled: activeTab === 'marketing',
+  })
+  const { data: chatChannelData } = useQuery<any>({
+    queryKey: ['analytics-chat-channel-insights', channelDays],
+    queryFn: () => api.get(`/v1/admin/analytics/chat-channel-insights?days=${channelDays}`).then(r => r.data),
+    enabled: activeTab === 'chat',
+  })
+  const { data: bookingSourceData } = useQuery<any>({
+    queryKey: ['analytics-booking-source-performance', channelDays],
+    queryFn: () => api.get(`/v1/admin/analytics/booking-source-performance?days=${channelDays}`).then(r => r.data),
+    enabled: activeTab === 'bookings',
+  })
 
   return (
     <div className="space-y-6">
@@ -559,6 +621,173 @@ export function Analytics() {
               </table>
             </div>
           </Card>
+        </>
+      )}
+
+      {/* ════════════════ MARKETING TAB ════════════════
+          Channel attribution view (2026-06-12). Surfaces:
+          1. KPI row — total visitors / leads / conversion rate / top channel
+          2. Per-channel visitors + leads + conversion bar chart
+          3. Lead-channel pie + explicit `inquiries.source` rollup table
+          4. Top 10 landing pages with visit/lead counts
+          All driven by the shared `channelDays` range chip below. */}
+      {activeTab === 'marketing' && (
+        <>
+          {/* Date range chips — single source of truth across the 3 new
+              channel-attribution tabs (Marketing here + Chat sub-panel +
+              Bookings sub-panel). State + onChange shared so switching
+              ranges refetches every related panel at once. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-t-secondary uppercase tracking-wider">
+              {t('analytics.range', 'Range')}
+            </span>
+            {CHANNEL_RANGES.map(r => (
+              <button
+                key={r.days}
+                onClick={() => setChannelDays(r.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  channelDays === r.days
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+            <div className="ml-auto">
+              <button
+                onClick={() => {
+                  const rows = marketingData?.channels ?? []
+                  const csv = ['channel,visitors,leads,conversion_rate', ...rows.map((r: any) => `${channelLabel(r.channel)},${r.visitors},${r.leads},${r.conversion_rate}`)].join('\n')
+                  const blob = new Blob([csv], { type: 'text/csv' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `marketing-channels-${channelDays}d.csv`; a.click()
+                  URL.revokeObjectURL(url)
+                }}
+                className="flex items-center gap-1.5 bg-dark-surface border border-dark-border text-t-secondary px-3 py-1.5 rounded-lg text-xs font-semibold hover:text-white hover:bg-dark-surface2 transition-colors"
+              >
+                <Download size={13} /> {t('analytics.export_csv', 'Export CSV')}
+              </button>
+            </div>
+          </div>
+
+          {/* KPIs */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {(() => {
+              const channels = marketingData?.channels ?? []
+              const totalVisitors = channels.reduce((sum: number, c: any) => sum + (c.visitors || 0), 0)
+              const totalLeads = channels.reduce((sum: number, c: any) => sum + (c.leads || 0), 0)
+              const overallRate = totalVisitors > 0 ? ((totalLeads * 100) / totalVisitors).toFixed(2) : '0.00'
+              const topChannel = channels[0]?.channel
+              return [
+                { label: t('analytics.marketing.kpi_visitors', 'Total Visitors'), value: totalVisitors.toLocaleString(), icon: <Eye size={18} />, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+                { label: t('analytics.marketing.kpi_leads', 'Total Leads'), value: totalLeads.toLocaleString(), icon: <UserCheck size={18} />, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+                { label: t('analytics.marketing.kpi_conv', 'Overall Conv. Rate'), value: `${overallRate}%`, icon: <Target size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15' },
+                { label: t('analytics.marketing.kpi_top', 'Top Channel'), value: topChannel ? channelLabel(topChannel) : '—', icon: <TrendingUp size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+              ].map((k, i) => (
+                <div key={i} className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                  <div className={`inline-flex p-2 rounded-lg ${k.bg} ${k.color} mb-3`}>{k.icon}</div>
+                  <div className="text-2xl font-bold tracking-tight text-white">{k.value}</div>
+                  <div className="text-[11px] text-t-secondary uppercase tracking-wider mt-1">{k.label}</div>
+                </div>
+              ))
+            })()}
+          </div>
+
+          {/* Per-channel bar chart — visitors + leads side by side. */}
+          <SectionCard title={t('analytics.marketing.by_channel', 'Visitors and leads by channel')} icon={<BarChart3 size={16} />}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={(marketingData?.channels ?? []).map((c: any) => ({ ...c, label: channelLabel(c.channel) }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                <XAxis dataKey="label" stroke="#8e8e93" tick={CHART_LABEL} />
+                <YAxis stroke="#8e8e93" tick={CHART_LABEL} />
+                <Tooltip contentStyle={CHART_TOOLTIP} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Bar dataKey="visitors" fill="#3b82f6" name="Visitors" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="leads"    fill="#32d74b" name="Leads"    radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </SectionCard>
+
+          {/* Two-column row: lead-share pie + explicit source rollup */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SectionCard title={t('analytics.marketing.leads_share', 'Lead share by channel')} icon={<PieIcon size={16} />}>
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={(marketingData?.channels ?? []).filter((c: any) => c.leads > 0).map((c: any) => ({ name: channelLabel(c.channel), value: c.leads, color: channelColor(c.channel) }))}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%" cy="50%"
+                    outerRadius={90}
+                    label={(d: any) => d.value > 0 ? d.name : ''}
+                  >
+                    {(marketingData?.channels ?? []).filter((c: any) => c.leads > 0).map((c: any, i: number) => (
+                      <Cell key={i} fill={channelColor(c.channel)} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                </PieChart>
+              </ResponsiveContainer>
+            </SectionCard>
+
+            <SectionCard title={t('analytics.marketing.explicit', 'Explicit lead sources')} icon={<Briefcase size={16} />}>
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-t-secondary text-[11px] uppercase tracking-wider">
+                      <th className="text-left py-2 px-2">{t('analytics.marketing.source', 'Source')}</th>
+                      <th className="text-right py-2 px-2">{t('analytics.marketing.leads_count', 'Leads')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dark-border/40">
+                    {(marketingData?.explicit_sources ?? []).length === 0 && (
+                      <tr><td colSpan={2} className="py-6 text-center text-t-secondary text-xs">{t('analytics.marketing.no_explicit', 'No leads have an explicit `source` tag. Capture it on inquiry creation for richer reports.')}</td></tr>
+                    )}
+                    {(marketingData?.explicit_sources ?? []).map((row: any, i: number) => (
+                      <tr key={i} className="hover:bg-dark-surface2/40">
+                        <td className="py-2 px-2 text-white">{row.source}</td>
+                        <td className="py-2 px-2 text-right text-emerald-400 font-bold tabular-nums">{row.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* Top landing pages — where chat-widget visitors first arrive. */}
+          <SectionCard title={t('analytics.marketing.top_landing', 'Top landing pages')} icon={<Globe size={16} />}>
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-t-secondary text-[11px] uppercase tracking-wider">
+                    <th className="text-left py-2 px-2">{t('analytics.marketing.page', 'Landing page')}</th>
+                    <th className="text-right py-2 px-2">{t('analytics.marketing.visits', 'Visits')}</th>
+                    <th className="text-right py-2 px-2">{t('analytics.marketing.leads_count', 'Leads')}</th>
+                    <th className="text-right py-2 px-2">{t('analytics.marketing.conv', 'Conv.')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-border/40">
+                  {(marketingData?.top_landing ?? []).length === 0 && (
+                    <tr><td colSpan={4} className="py-6 text-center text-t-secondary text-xs">{t('analytics.marketing.no_pages', 'No landing-page data in this range.')}</td></tr>
+                  )}
+                  {(marketingData?.top_landing ?? []).map((row: any, i: number) => {
+                    const rate = row.visits > 0 ? ((row.leads * 100) / row.visits).toFixed(1) : '0.0'
+                    return (
+                      <tr key={i} className="hover:bg-dark-surface2/40">
+                        <td className="py-2 px-2 text-white truncate max-w-xs" title={row.current_page}>{row.current_page}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{row.visits}</td>
+                        <td className="py-2 px-2 text-right text-emerald-400 font-bold tabular-nums">{row.leads}</td>
+                        <td className="py-2 px-2 text-right text-purple-400 tabular-nums">{rate}%</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
         </>
       )}
 
@@ -976,6 +1205,102 @@ export function Analytics() {
       {/* ════════════════ BOOKINGS TAB ════════════════ */}
       {activeTab === 'bookings' && (
         <>
+          {/* Booking Source Performance (2026-06-12) — per-channel revenue,
+              avg value, cancellation rate. Uses the shared channelDays range.
+              Renders BEFORE the hotel ops triad so GMs see channel mix first. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-t-secondary uppercase tracking-wider">{t('analytics.range', 'Range')}</span>
+            {CHANNEL_RANGES.map(r => (
+              <button
+                key={r.days}
+                onClick={() => setChannelDays(r.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  channelDays === r.days ? 'bg-primary-600 text-white' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+            <div className="ml-auto">
+              <button
+                onClick={() => {
+                  const rows = bookingSourceData?.by_channel ?? []
+                  const csv = ['channel,bookings,revenue,avg_value,cancellations,cancellation_rate', ...rows.map((r: any) => `${r.channel},${r.bookings},${r.revenue},${r.avg_value},${r.cancellations},${r.cancellation_rate}`)].join('\n')
+                  const blob = new Blob([csv], { type: 'text/csv' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `booking-sources-${channelDays}d.csv`; a.click()
+                  URL.revokeObjectURL(url)
+                }}
+                className="flex items-center gap-1.5 bg-dark-surface border border-dark-border text-t-secondary px-3 py-1.5 rounded-lg text-xs font-semibold hover:text-white hover:bg-dark-surface2 transition-colors"
+              >
+                <Download size={13} /> {t('analytics.export_csv', 'Export CSV')}
+              </button>
+            </div>
+          </div>
+
+          <SectionCard title={t('analytics.bookings.source_perf', 'Revenue and bookings by PMS channel')} icon={<TrendingUp size={16} />}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-t-secondary text-[11px] uppercase tracking-wider">
+                    <th className="text-left py-2 px-3">{t('analytics.bookings.channel', 'Channel')}</th>
+                    <th className="text-right py-2 px-3">{t('analytics.bookings.count', 'Bookings')}</th>
+                    <th className="text-right py-2 px-3">{t('analytics.bookings.revenue', 'Revenue')}</th>
+                    <th className="text-right py-2 px-3">{t('analytics.bookings.avg', 'Avg Value')}</th>
+                    <th className="text-right py-2 px-3">{t('analytics.bookings.cancel_rate', 'Cancel %')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-border/40">
+                  {(bookingSourceData?.by_channel ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="py-6 text-center text-t-secondary text-xs">{t('analytics.bookings.no_source', 'No bookings in this range. The Smoobu PMS sync populates channel_name on every booking.')}</td></tr>
+                  )}
+                  {(bookingSourceData?.by_channel ?? []).map((row: any, i: number) => (
+                    <tr key={i} className="hover:bg-dark-surface2/40">
+                      <td className="py-2 px-3 text-white">
+                        <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        {row.channel}
+                      </td>
+                      <td className="py-2 px-3 text-right tabular-nums">{row.bookings}</td>
+                      <td className="py-2 px-3 text-right text-emerald-400 font-bold tabular-nums">€{Math.round(row.revenue).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums">€{Math.round(row.avg_value).toLocaleString()}</td>
+                      <td className={`py-2 px-3 text-right tabular-nums ${row.cancellation_rate > 10 ? 'text-red-400 font-bold' : 'text-amber-400'}`}>
+                        {row.cancellation_rate}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+
+          {(bookingSourceData?.top_units ?? []).length > 0 && (
+            <SectionCard title={t('analytics.bookings.top_units', 'Top-performing units by channel')} icon={<Hotel size={16} />}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-t-secondary text-[11px] uppercase tracking-wider">
+                      <th className="text-left py-2 px-3">{t('analytics.bookings.unit', 'Unit')}</th>
+                      <th className="text-left py-2 px-3">{t('analytics.bookings.channel', 'Channel')}</th>
+                      <th className="text-right py-2 px-3">{t('analytics.bookings.count', 'Bookings')}</th>
+                      <th className="text-right py-2 px-3">{t('analytics.bookings.revenue', 'Revenue')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dark-border/40">
+                    {(bookingSourceData?.top_units ?? []).map((row: any, i: number) => (
+                      <tr key={i} className="hover:bg-dark-surface2/40">
+                        <td className="py-2 px-3 text-white">{row.apartment_name}</td>
+                        <td className="py-2 px-3 text-t-secondary">{row.channel}</td>
+                        <td className="py-2 px-3 text-right tabular-nums">{row.bookings}</td>
+                        <td className="py-2 px-3 text-right text-emerald-400 font-bold tabular-nums">€{Math.round(row.revenue).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          )}
+
           {/* Hotel ops triad — the standard hospitality revenue-management
               metrics. Pinned at the top of the bookings tab because these
               are what GMs and revenue managers open the dashboard for.
@@ -1253,6 +1578,143 @@ export function Analytics() {
           {/* AI Cost & Call Volume card removed per user request.
               The same series is still available on Settings → AI Usage
               for admins who need it. */}
+
+          {/* Channel insights (2026-06-12) — where chat visitors come from,
+              what intents they bring, AI-handled vs human-handled split,
+              top entry pages. Uses the shared channelDays range chip. */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-dark-border">
+            <span className="text-xs font-semibold text-t-secondary uppercase tracking-wider">{t('analytics.range', 'Range')}</span>
+            {CHANNEL_RANGES.map(r => (
+              <button
+                key={r.days}
+                onClick={() => setChannelDays(r.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  channelDays === r.days ? 'bg-primary-600 text-white' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* AI vs Human handled */}
+            <SectionCard title={t('analytics.chat.ai_vs_human', 'AI vs human handled')} icon={<Bot size={16} />}>
+              {(() => {
+                const ai = chatChannelData?.ai_handled ?? 0
+                const human = chatChannelData?.human_handled ?? 0
+                const total = ai + human
+                const aiPct = total > 0 ? Math.round((ai * 100) / total) : 0
+                return (
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-blue-400 flex items-center gap-1"><Bot size={13} /> AI</span>
+                        <span className="text-white font-bold tabular-nums">{ai.toLocaleString()} ({aiPct}%)</span>
+                      </div>
+                      <div className="h-2 bg-dark-surface2 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${aiPct}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-emerald-400 flex items-center gap-1"><UserCheck size={13} /> Human</span>
+                        <span className="text-white font-bold tabular-nums">{human.toLocaleString()} ({100 - aiPct}%)</span>
+                      </div>
+                      <div className="h-2 bg-dark-surface2 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${100 - aiPct}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-t-secondary pt-2 border-t border-dark-border">
+                      {t('analytics.chat.total', 'Total conversations')}: <span className="text-white font-semibold">{total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )
+              })()}
+            </SectionCard>
+
+            {/* By-channel pie */}
+            <SectionCard title={t('analytics.chat.by_channel', 'By channel')} icon={<MessageCircle size={16} />}>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={(chatChannelData?.by_channel ?? []).map((c: any) => ({ name: c.channel || 'widget', value: c.conversations }))}
+                    dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
+                    label={(d: any) => d.name}
+                  >
+                    {(chatChannelData?.by_channel ?? []).map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                </PieChart>
+              </ResponsiveContainer>
+            </SectionCard>
+
+            {/* Intent breakdown */}
+            <SectionCard title={t('analytics.chat.by_intent', 'By intent')} icon={<Sparkles size={16} />}>
+              <div className="space-y-1.5">
+                {(chatChannelData?.by_intent ?? []).slice(0, 7).map((row: any, i: number) => {
+                  const total = (chatChannelData?.by_intent ?? []).reduce((sum: number, r: any) => sum + r.conversations, 0)
+                  const pct = total > 0 ? (row.conversations * 100) / total : 0
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between text-xs mb-0.5">
+                        <span className="text-white capitalize">{row.intent.replace(/_/g, ' ')}</span>
+                        <span className="text-t-secondary tabular-nums">{row.conversations} ({pct.toFixed(0)}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-dark-surface2 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* Visitor referrers + top entry pages */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SectionCard title={t('analytics.chat.referrers', 'Where chat visitors come from')} icon={<Globe size={16} />}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={(chatChannelData?.visitor_referrers ?? []).map((r: any) => ({ ...r, label: channelLabel(r.channel) }))} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
+                  <XAxis type="number" stroke="#8e8e93" tick={CHART_LABEL} />
+                  <YAxis dataKey="label" type="category" stroke="#8e8e93" tick={CHART_LABEL} width={90} />
+                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Bar dataKey="conversations" name="Conversations" radius={[0, 4, 4, 0]}>
+                    {(chatChannelData?.visitor_referrers ?? []).map((r: any, i: number) => (
+                      <Cell key={i} fill={channelColor(r.channel)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+
+            <SectionCard title={t('analytics.chat.top_pages', 'Top chat-entry pages')} icon={<Globe size={16} />}>
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-t-secondary text-[11px] uppercase tracking-wider">
+                      <th className="text-left py-2 px-2">{t('analytics.chat.page', 'Page')}</th>
+                      <th className="text-right py-2 px-2">{t('analytics.chat.conversations', 'Conv.')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dark-border/40">
+                    {(chatChannelData?.top_entry_pages ?? []).length === 0 && (
+                      <tr><td colSpan={2} className="py-6 text-center text-t-secondary text-xs">{t('analytics.chat.no_pages', 'No chat sessions captured page_url in this range.')}</td></tr>
+                    )}
+                    {(chatChannelData?.top_entry_pages ?? []).map((row: any, i: number) => (
+                      <tr key={i} className="hover:bg-dark-surface2/40">
+                        <td className="py-2 px-2 text-white truncate max-w-xs" title={row.page_url}>{row.page_url}</td>
+                        <td className="py-2 px-2 text-right text-emerald-400 font-bold tabular-nums">{row.conversations}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
 
           {/* Deeper chatbot analytics — conversation volume, AI resolution
               rate, lead capture, intent breakdown, top pages, etc.

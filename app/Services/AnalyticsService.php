@@ -872,4 +872,351 @@ class AnalyticsService
             Cache::forget(self::orgKey($key));
         }
     }
+
+    /* ──────────────────────────────────────────────────────────────────────
+     *  Channel attribution (2026-06-12)
+     *
+     *  Three new surfaces feed the Analytics page's Marketing/Chat/Bookings
+     *  tabs. All read attribution columns that already exist:
+     *      - visitors.referrer + .current_page  (chat-widget arrivals)
+     *      - inquiries.source + .external_source + .lead_form_id  (leads)
+     *      - chat_conversations.channel + .intent_tag + .page_url
+     *      - booking_mirror.channel_name + .total_amount
+     *
+     *  Categorisation rules: parse the referrer URL (or UTM params encoded
+     *  inside it) into ONE of 8 standard buckets so the SPA can render a
+     *  consistent legend and stable colors across panels:
+     *      google_search / google_ads / facebook / instagram /
+     *      tiktok / email / direct / referral
+     *
+     *  The 8 buckets were chosen to cover ~95% of real-world traffic for
+     *  service businesses without bloating the legend. "Other" was folded
+     *  into "referral" intentionally — admins want fewer buckets, not more.
+     * ────────────────────────────────────────────────────────────────────── */
+
+    /** Categorise a single referrer URL (with possible UTM params) into a channel bucket. */
+    public static function categorizeChannel(?string $referrer, ?string $hostHint = null): string
+    {
+        if (!$referrer) return 'direct';
+
+        // Try to parse — referrer might be raw URL OR a UTM-only fragment.
+        $url = parse_url($referrer);
+        $host = strtolower($url['host'] ?? '');
+        $query = $url['query'] ?? '';
+        parse_str($query, $params);
+
+        $utmSource  = strtolower((string) ($params['utm_source']  ?? ''));
+        $utmMedium  = strtolower((string) ($params['utm_medium']  ?? ''));
+        $gclid      = isset($params['gclid']);
+        $fbclid     = isset($params['fbclid']);
+        $ttclid     = isset($params['ttclid']);
+
+        // Same-host = direct (returning visitor from the customer's own site).
+        if ($hostHint && $host && str_contains($host, strtolower($hostHint))) {
+            return 'direct';
+        }
+
+        // Google Ads — gclid present OR utm_medium=cpc/ppc/paidsearch.
+        if ($gclid || in_array($utmMedium, ['cpc', 'ppc', 'paidsearch', 'paid'], true)) {
+            return 'google_ads';
+        }
+
+        // Email — utm_medium=email OR known ESP utm_source.
+        if ($utmMedium === 'email' || in_array($utmSource, ['email', 'mailchimp', 'sendgrid', 'postmark', 'resend'], true)) {
+            return 'email';
+        }
+
+        // Facebook (organic + paid combined — hard to differentiate without per-org config).
+        if ($fbclid || str_contains($host, 'facebook.') || str_contains($host, 'fb.com') ||
+            $utmSource === 'facebook' || $utmSource === 'fb') {
+            return 'facebook';
+        }
+
+        // Instagram.
+        if (str_contains($host, 'instagram.') || $utmSource === 'instagram' || $utmSource === 'ig') {
+            return 'instagram';
+        }
+
+        // TikTok.
+        if ($ttclid || str_contains($host, 'tiktok.') || $utmSource === 'tiktok') {
+            return 'tiktok';
+        }
+
+        // Google organic.
+        if (str_contains($host, 'google.') || $utmSource === 'google') {
+            return 'google_search';
+        }
+
+        // Anything else with a real host = referral. No host = direct (rare).
+        return $host ? 'referral' : 'direct';
+    }
+
+    /**
+     * Marketing channel attribution — visitors + leads + lead-to-booking
+     * conversion sliced by the 8 standard channels. Powers the new Marketing
+     * tab in the Analytics SPA.
+     *
+     * Reads `visitors.referrer` (chat-widget landing) + `inquiries.source` +
+     * `inquiries.external_source` (API-integration leads via /v1/integrations/leads).
+     */
+    public function getMarketingChannels(int $days = 30): array
+    {
+        return Cache::remember(self::orgKey("analytics:marketing_channels:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+            $from = now()->subDays($days);
+            $orgId = app('current_organization_id');
+
+            // 1. Visitor channel distribution (chat-widget arrivals).
+            $visitors = DB::table('visitors')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->select('referrer', 'is_lead', 'created_at')
+                ->get();
+
+            $buckets = [
+                'google_search' => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'google_ads'    => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'facebook'      => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'instagram'     => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'tiktok'        => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'email'         => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'direct'        => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+                'referral'      => ['visitors' => 0, 'leads' => 0, 'bookings' => 0, 'revenue' => 0.0],
+            ];
+
+            foreach ($visitors as $v) {
+                $bucket = self::categorizeChannel($v->referrer);
+                $buckets[$bucket]['visitors']++;
+                if ($v->is_lead) {
+                    $buckets[$bucket]['leads']++;
+                }
+            }
+
+            // 2. Inquiry source rollup — both explicit `source` and `external_source`.
+            //    Map onto our 8 buckets via the same categorize helper (treating
+            //    the source string as a pseudo-utm_source).
+            $inquiries = DB::table('inquiries')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->select('source', 'external_source')
+                ->get();
+
+            $explicit = [];   // explicit-source raw rollup (preserved for the table view)
+            foreach ($inquiries as $row) {
+                $src = $row->source ?: $row->external_source;
+                if (!$src) continue;
+                $explicit[$src] = ($explicit[$src] ?? 0) + 1;
+
+                // Best-effort: map the raw source into one of our buckets via UTM-like categorisation.
+                $bucket = self::categorizeChannel('https://example.com/?utm_source=' . urlencode(strtolower($src)));
+                if (isset($buckets[$bucket])) {
+                    $buckets[$bucket]['leads']++;
+                }
+            }
+
+            // 3. Top landing pages (chat-widget entry pages).
+            $topPages = DB::table('visitors')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->whereNotNull('current_page')
+                ->select('current_page', DB::raw('COUNT(*) as visits'), DB::raw('SUM(CASE WHEN is_lead THEN 1 ELSE 0 END) as leads'))
+                ->groupBy('current_page')
+                ->orderByDesc('visits')
+                ->limit(10)
+                ->get()
+                ->toArray();
+
+            // Compute per-bucket conversion rate.
+            $channelRows = [];
+            foreach ($buckets as $key => $stats) {
+                $rate = $stats['visitors'] > 0
+                    ? round($stats['leads'] * 100 / $stats['visitors'], 2)
+                    : 0.0;
+                $channelRows[] = [
+                    'channel'         => $key,
+                    'visitors'        => $stats['visitors'],
+                    'leads'           => $stats['leads'],
+                    'conversion_rate' => $rate,
+                ];
+            }
+            // Sort descending by leads (the metric most admins care about).
+            usort($channelRows, fn ($a, $b) => $b['leads'] <=> $a['leads']);
+
+            arsort($explicit);
+            $explicitRows = [];
+            foreach (array_slice($explicit, 0, 20, true) as $src => $count) {
+                $explicitRows[] = ['source' => $src, 'count' => $count];
+            }
+
+            return [
+                'channels'         => $channelRows,
+                'explicit_sources' => $explicitRows,
+                'top_landing'      => $topPages,
+                'period_days'      => $days,
+            ];
+        });
+    }
+
+    /**
+     * Chat channel insights — chat_conversations.channel split, intent
+     * distribution, AI-handled vs human-handled, top entry pages,
+     * referrer breakdown of chatting visitors.
+     */
+    public function getChatChannelInsights(int $days = 30): array
+    {
+        return Cache::remember(self::orgKey("analytics:chat_channel_insights:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+            $from = now()->subDays($days);
+            $orgId = app('current_organization_id');
+
+            // Channel distribution (widget / messenger / etc.).
+            $channels = DB::table('chat_conversations')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->select('channel', DB::raw('COUNT(*) as conversations'))
+                ->groupBy('channel')
+                ->orderByDesc('conversations')
+                ->get()
+                ->toArray();
+
+            // Intent tag distribution (booking_inquiry / info_request / etc.).
+            // intent_tag is set lazily by EngagementAiService — many rows
+            // will be NULL. We surface that as "untagged" so the legend
+            // honestly represents the slice that DOESN'T have AI tagging.
+            $intents = DB::table('chat_conversations')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->select(DB::raw("COALESCE(intent_tag, 'untagged') as intent"), DB::raw('COUNT(*) as conversations'))
+                ->groupBy('intent')
+                ->orderByDesc('conversations')
+                ->get()
+                ->toArray();
+
+            // AI-handled vs human-handled. assigned_user_id NULL = AI; populated = human took over.
+            $assignment = DB::table('chat_conversations')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->select(
+                    DB::raw('SUM(CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END) as ai_handled'),
+                    DB::raw('SUM(CASE WHEN assigned_user_id IS NOT NULL THEN 1 ELSE 0 END) as human_handled'),
+                    DB::raw('COUNT(*) as total')
+                )
+                ->first();
+
+            // Top entry pages (where conversations started).
+            $entryPages = DB::table('chat_conversations')
+                ->where('organization_id', $orgId)
+                ->where('created_at', '>=', $from)
+                ->whereNotNull('page_url')
+                ->select('page_url', DB::raw('COUNT(*) as conversations'))
+                ->groupBy('page_url')
+                ->orderByDesc('conversations')
+                ->limit(10)
+                ->get()
+                ->toArray();
+
+            // Referrer breakdown for visitors who chatted (via visitor_id JOIN).
+            $chatVisitors = DB::table('chat_conversations as c')
+                ->join('visitors as v', 'c.visitor_id', '=', 'v.id')
+                ->where('c.organization_id', $orgId)
+                ->where('c.created_at', '>=', $from)
+                ->select('v.referrer')
+                ->get();
+
+            $referrerBuckets = [
+                'google_search' => 0, 'google_ads' => 0, 'facebook'  => 0,
+                'instagram'     => 0, 'tiktok'     => 0, 'email'     => 0,
+                'direct'        => 0, 'referral'   => 0,
+            ];
+            foreach ($chatVisitors as $cv) {
+                $bucket = self::categorizeChannel($cv->referrer);
+                if (isset($referrerBuckets[$bucket])) {
+                    $referrerBuckets[$bucket]++;
+                }
+            }
+            $referrerRows = [];
+            foreach ($referrerBuckets as $key => $count) {
+                $referrerRows[] = ['channel' => $key, 'conversations' => $count];
+            }
+            usort($referrerRows, fn ($a, $b) => $b['conversations'] <=> $a['conversations']);
+
+            return [
+                'by_channel'        => $channels,
+                'by_intent'         => $intents,
+                'ai_handled'        => (int) ($assignment->ai_handled ?? 0),
+                'human_handled'     => (int) ($assignment->human_handled ?? 0),
+                'total'             => (int) ($assignment->total ?? 0),
+                'top_entry_pages'   => $entryPages,
+                'visitor_referrers' => $referrerRows,
+                'period_days'       => $days,
+            ];
+        });
+    }
+
+    /**
+     * Booking source performance — revenue / count / ADR-equivalent split by
+     * PMS channel_name (Direct / Airbnb / Booking.com / Expedia / etc.).
+     * Reads booking_mirror.channel_name (set by Smoobu sync from the upstream
+     * channel id mapping).
+     */
+    public function getBookingSourcePerformance(int $days = 90): array
+    {
+        return Cache::remember(self::orgKey("analytics:booking_source_perf:{$days}"), self::TTL_MEDIUM, function () use ($days) {
+            $from = now()->subDays($days);
+            $orgId = app('current_organization_id');
+
+            // Per-channel revenue + booking count + avg value.
+            $rows = DB::table('booking_mirror')
+                ->where('organization_id', $orgId)
+                ->where('check_in', '>=', $from)
+                ->select(
+                    DB::raw("COALESCE(channel_name, 'Unknown') as channel"),
+                    DB::raw('COUNT(*) as bookings'),
+                    DB::raw('SUM(total_amount) as revenue'),
+                    DB::raw('AVG(total_amount) as avg_value'),
+                    DB::raw("SUM(CASE WHEN payment_status = 'cancelled' OR payment_status = 'refunded' THEN 1 ELSE 0 END) as cancellations")
+                )
+                ->groupBy('channel_name')
+                ->orderByDesc('revenue')
+                ->get()
+                ->toArray();
+
+            // Compute per-channel cancel rate.
+            $channelRows = [];
+            foreach ($rows as $r) {
+                $cancelRate = $r->bookings > 0
+                    ? round($r->cancellations * 100 / $r->bookings, 2)
+                    : 0.0;
+                $channelRows[] = [
+                    'channel'           => $r->channel,
+                    'bookings'          => (int) $r->bookings,
+                    'revenue'           => round((float) $r->revenue, 2),
+                    'avg_value'         => round((float) $r->avg_value, 2),
+                    'cancellations'     => (int) $r->cancellations,
+                    'cancellation_rate' => $cancelRate,
+                ];
+            }
+
+            // Top-performing apartments per channel (top 5 by revenue).
+            $topUnits = DB::table('booking_mirror')
+                ->where('organization_id', $orgId)
+                ->where('check_in', '>=', $from)
+                ->whereNotNull('apartment_name')
+                ->select(
+                    'apartment_name',
+                    DB::raw("COALESCE(channel_name, 'Unknown') as channel"),
+                    DB::raw('COUNT(*) as bookings'),
+                    DB::raw('SUM(total_amount) as revenue')
+                )
+                ->groupBy('apartment_name', 'channel_name')
+                ->orderByDesc('revenue')
+                ->limit(15)
+                ->get()
+                ->toArray();
+
+            return [
+                'by_channel'    => $channelRows,
+                'top_units'     => $topUnits,
+                'period_days'   => $days,
+            ];
+        });
+    }
 }

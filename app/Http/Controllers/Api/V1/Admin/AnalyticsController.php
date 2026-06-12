@@ -295,6 +295,34 @@ class AnalyticsController extends Controller
         return response()->json($data);
     }
 
+    /* ──────────────────────────────────────────────────────────────────────
+     *  Channel attribution endpoints (2026-06-12)
+     *  Three thin controller methods over the AnalyticsService helpers.
+     *  Each accepts a configurable `days` query param so the SPA's date-range
+     *  chips on each tab can drive the cache key + window.
+     * ────────────────────────────────────────────────────────────────────── */
+
+    /** GET /v1/admin/analytics/marketing-channels?days=30 */
+    public function marketingChannels(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        return response()->json($this->analytics->getMarketingChannels($days));
+    }
+
+    /** GET /v1/admin/analytics/chat-channel-insights?days=30 */
+    public function chatChannelInsights(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        return response()->json($this->analytics->getChatChannelInsights($days));
+    }
+
+    /** GET /v1/admin/analytics/booking-source-performance?days=90 */
+    public function bookingSourcePerformance(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 90)));
+        return response()->json($this->analytics->getBookingSourcePerformance($days));
+    }
+
     public function revenueComparison(): JsonResponse
     {
         // Phase 6 — Reservation table revenue MoM. Hotel-only.

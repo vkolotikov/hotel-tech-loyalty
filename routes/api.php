@@ -572,6 +572,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
             Route::get('analytics/inquiry-funnel',       [AnalyticsController::class, 'inquiryFunnel']);
             Route::get('analytics/booking-channels',     [AnalyticsController::class, 'bookingChannels']);
+            // Channel attribution (2026-06-12) — marketing + chat + booking source insights.
+            Route::get('analytics/marketing-channels',         [AnalyticsController::class, 'marketingChannels']);
+            Route::get('analytics/chat-channel-insights',      [AnalyticsController::class, 'chatChannelInsights']);
+            Route::get('analytics/booking-source-performance', [AnalyticsController::class, 'bookingSourcePerformance']);
             Route::get('analytics/revenue-comparison',   [AnalyticsController::class, 'revenueComparison']);
             Route::get('analytics/occupancy',            [AnalyticsController::class, 'occupancyTrend']);
             Route::get('analytics/vip-distribution',     [AnalyticsController::class, 'vipDistribution']);
