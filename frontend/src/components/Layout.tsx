@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { APP_BASE } from '../lib/api'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
@@ -20,6 +19,7 @@ import UpgradeFeatureModal from './UpgradeFeatureModal'
 import GraceWindowBanner from './GraceWindowBanner'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
+import { logoutAndRedirect } from '../lib/logout'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
@@ -227,7 +227,7 @@ export function Layout({ children }: { children: ReactNode }) {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
   )
   const location = useLocation()
-  const { user, staff, logout } = useAuthStore()
+  const { user, staff } = useAuthStore()
   const { hasFeature, hasProduct, status: subStatus, data: subData } = useSubscription()
   const currentPlanLabel = (() => {
     const slug = subData?.plan?.slug
@@ -471,9 +471,10 @@ export function Layout({ children }: { children: ReactNode }) {
   })()
 
   const handleLogout = async () => {
-    try { await api.delete('/v1/auth/logout') } catch {}
-    logout()
-    window.location.href = `${APP_BASE}/login`
+    // Unified logout path — see lib/logout.ts. Server PAT revoke +
+    // queryClient.clear + persisted-store clear + redirect, in that
+    // order, so cross-tenant cache + PII don't survive the navigation.
+    await logoutAndRedirect()
   }
 
   // Filter groups in 3 layers, in order:
@@ -1207,7 +1208,7 @@ function SubscriptionWall() {
 
         {/* Logout button */}
         <button
-          onClick={() => { localStorage.removeItem('auth_token'); window.location.href = '/login' }}
+          onClick={() => { void logoutAndRedirect() }}
           className="text-sm text-gray-400 hover:text-gray-200 transition-colors mt-2"
         >
           Or sign out

@@ -272,6 +272,32 @@ class RetryPmsSync extends Command
                             'subject_id'      => $mirror->id,
                             'description'     => "Booking #{$mirror->id} failed PMS sync after {$attempts} attempts. Manual intervention required.",
                         ]);
+
+                        // Push a realtime alert so admin SPA surfaces a
+                        // toast/badge without staff having to scroll the
+                        // audit log. Forrest-Glamp class of incident — the
+                        // guest has paid + has a confirmation email but
+                        // the room is NOT in Smoobu. See
+                        // AUDIT-2026-06-13-ADDENDUM.md observability finding.
+                        try {
+                            app(\App\Services\RealtimeEventService::class)->dispatch(
+                                'booking.pms_sync_failed',
+                                'Booking missing from PMS',
+                                "Booking #{$mirror->id} (guest: {$mirror->guest_name}) failed PMS sync after {$attempts} attempts. Manual review needed.",
+                                [
+                                    'mirror_id'   => $mirror->id,
+                                    'guest_email' => $mirror->guest_email,
+                                    'last_error'  => mb_substr((string) $mirror->pms_sync_last_error, 0, 200),
+                                    'action_url'  => "/bookings/{$mirror->id}",
+                                ],
+                                $mirror->organization_id,
+                            );
+                        } catch (\Throwable $alertErr) {
+                            Log::warning('PMS sync-failed realtime alert dispatch failed', [
+                                'mirror_id' => $mirror->id,
+                                'error'     => $alertErr->getMessage(),
+                            ]);
+                        }
                     } else {
                         $failCount++;
                     }

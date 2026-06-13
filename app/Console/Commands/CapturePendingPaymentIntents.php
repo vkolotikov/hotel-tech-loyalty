@@ -207,6 +207,38 @@ class CapturePendingPaymentIntents extends Command
                     'pi_id'     => $piId,
                     'error'     => $e->getMessage(),
                 ]);
+
+                // Capture refusals before the 6-day window were previously
+                // visible only in laravel.log. Now they also write an audit
+                // row + push a realtime alert so admin UI surfaces a badge
+                // that the booking needs manual review. See
+                // AUDIT-2026-06-13-ADDENDUM.md observability finding.
+                try {
+                    $this->auditOutcome($mirror->organization_id, 'booking.capture.failed', $piId, [
+                        'mirror_id' => $mirror->id,
+                        'error'     => mb_substr($e->getMessage(), 0, 500),
+                    ], "Capture failed for PI {$piId} — manual review needed");
+                } catch (\Throwable) { /* defensive */ }
+
+                try {
+                    app(\App\Services\RealtimeEventService::class)->dispatch(
+                        'booking.capture_failed',
+                        'Payment capture failed',
+                        "Booking #{$mirror->id} (guest: {$mirror->guest_name}) — Stripe refused capture. Manual review needed.",
+                        [
+                            'mirror_id'  => $mirror->id,
+                            'pi_id'      => $piId,
+                            'error'      => mb_substr($e->getMessage(), 0, 200),
+                            'action_url' => "/bookings/{$mirror->id}",
+                        ],
+                        $mirror->organization_id,
+                    );
+                } catch (\Throwable $alertErr) {
+                    Log::warning('Capture-failed realtime alert dispatch failed', [
+                        'mirror_id' => $mirror->id,
+                        'error'     => $alertErr->getMessage(),
+                    ]);
+                }
                 return 'failed';
             }
         }

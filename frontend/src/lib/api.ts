@@ -72,8 +72,10 @@ api.interceptors.response.use(
       const url = error.config?.url || ''
       const isBillingCall = url.includes('/billing/') || url.includes('/subscription')
       if (!isBillingCall) {
-        localStorage.removeItem('auth_token')
-        window.location.href = `${APP_BASE}/login`
+        // Dynamic import — avoids the api.ts ↔ logout.ts ↔ authStore.ts
+        // ↔ queryClient.ts circular-import chain at module-load time.
+        // The 401 path is rare and async, so a dynamic import is cheap.
+        import('./logout').then(({ logoutAndRedirect }) => { void logoutAndRedirect() })
       }
     }
     if (error.response?.status === 403 &&

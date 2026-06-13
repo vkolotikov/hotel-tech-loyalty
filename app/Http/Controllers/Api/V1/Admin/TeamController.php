@@ -336,7 +336,32 @@ class TeamController extends Controller
             }
         }
 
+        // Capture pre-update state so the audit row can record exactly what
+        // changed. Role escalation (staff → super_admin) is the highest-stakes
+        // write in the system; without the diff, a promotion reads identically
+        // to a department-field rename. See AUDIT-2026-06-13-ADDENDUM.md
+        // observability finding.
+        $auditableFields = ['role','department','is_active','can_award_points',
+            'can_redeem_points','can_manage_offers','can_view_analytics',
+            'allowed_nav_groups','planner_skills'];
+        $before = $staff->only($auditableFields);
+
         $staff->update($validated);
+
+        $after = $staff->fresh()->only($auditableFields);
+        $changed = [];
+        foreach ($auditableFields as $f) {
+            if (($before[$f] ?? null) !== ($after[$f] ?? null)) {
+                $changed[] = $f;
+            }
+        }
+
+        $description = 'Updated team member';
+        if (($before['role'] ?? null) !== ($after['role'] ?? null)) {
+            $description = "Role: {$before['role']} → {$after['role']}";
+        } elseif (!empty($changed)) {
+            $description = 'Updated ' . implode(', ', $changed);
+        }
 
         AuditLog::create([
             'organization_id' => app('current_organization_id'),
@@ -344,7 +369,9 @@ class TeamController extends Controller
             'action'          => 'team.update',
             'subject_type'    => 'staff',
             'subject_id'      => $staff->id,
-            'description'     => 'Updated team member',
+            'description'     => $description,
+            'old_values'      => $before,
+            'new_values'      => $after,
             'ip_address'      => $request->ip(),
         ]);
 
@@ -373,6 +400,12 @@ class TeamController extends Controller
             }
         }
 
+        // Capture role + permissions so a deactivation followed by a quick
+        // reactivation still leaves a record of what level of access the
+        // account had at deactivation time.
+        $before = $staff->only(['role','is_active','can_award_points',
+            'can_redeem_points','can_manage_offers','can_view_analytics']);
+
         $staff->update(['is_active' => false]);
 
         AuditLog::create([
@@ -381,7 +414,9 @@ class TeamController extends Controller
             'action'          => 'team.deactivate',
             'subject_type'    => 'staff',
             'subject_id'      => $staff->id,
-            'description'     => 'Deactivated team member',
+            'description'     => "Deactivated team member (was {$staff->role})",
+            'old_values'      => $before,
+            'new_values'      => ['is_active' => false],
             'ip_address'      => $request->ip(),
         ]);
 
