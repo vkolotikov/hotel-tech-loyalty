@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -13,10 +14,15 @@ use Illuminate\Queue\SerializesModels;
  * LoyaltyDigestService::buildSummary($orgId, $orgNow). Subject and
  * Blade template mirror the engagement digest so admins get a
  * consistent morning-email format.
+ *
+ * Queued — same reasoning as EngagementDailySummary.
  */
-class LoyaltyDigest extends Mailable
+class LoyaltyDigest extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+
+    public $tries = 2;
+    public $backoff = [120, 600];
 
     public function __construct(
         public array $summary,

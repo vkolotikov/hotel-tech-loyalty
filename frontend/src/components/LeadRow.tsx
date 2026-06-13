@@ -94,7 +94,14 @@ function maskPhone(phone?: string | null): string | null {
   return `${lead}····`
 }
 
-export default function LeadRow(props: LeadRowProps) {
+/**
+ * Internal — wrapped at the bottom in React.memo so the parent's 25-row
+ * table doesn't re-render every row on every keystroke / 120s background
+ * refetch. Without memoization Inquiries.tsx re-renders all 25 rows on
+ * every parent state change because the parent passes 8 inline lambda
+ * callbacks per row. See AUDIT-2026-06-13.md performance finding.
+ */
+function LeadRowImpl(props: LeadRowProps) {
   const {
     inquiry: inq, fieldCfg, listColumns, renderCustomListValue,
     sourceBadges, statusColors, currencySymbol,
@@ -475,3 +482,25 @@ export default function LeadRow(props: LeadRowProps) {
     </tr>
   )
 }
+
+/**
+ * Custom equality — most callback props are inline lambdas that change
+ * every parent render, so the default shallow compare invalidates the
+ * memo every time. We skip those (the row only re-renders when its own
+ * data + selection state actually change). t() is also re-created per
+ * render by react-i18next, so the same skip applies.
+ */
+const areLeadRowPropsEqual = (a: LeadRowProps, b: LeadRowProps): boolean => {
+  if (a.inquiry !== b.inquiry) return false
+  if (a.isSelected !== b.isSelected) return false
+  if (a.anySelected !== b.anySelected) return false
+  if (a.isExpanded !== b.isExpanded) return false
+  if (a.fieldCfg !== b.fieldCfg) return false
+  if (a.listColumns !== b.listColumns) return false
+  if (a.currencySymbol !== b.currencySymbol) return false
+  if (a.sourceBadges !== b.sourceBadges) return false
+  if (a.statusColors !== b.statusColors) return false
+  return true
+}
+
+export default React.memo(LeadRowImpl, areLeadRowPropsEqual)

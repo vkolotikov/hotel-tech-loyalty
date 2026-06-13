@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,9 +16,15 @@ use Illuminate\Queue\SerializesModels;
  * $orgNow) which returns the full payload. The Blade template renders
  * the same numbers an admin would see on /engagement, scoped to
  * yesterday's window so a GM gets a single morning pulse.
+ *
+ * Queued because the digest cron iterates every opted-in user and a
+ * sync SMTP failure on one user must not abort the remaining sends.
  */
-class EngagementDailySummary extends Mailable
+class EngagementDailySummary extends Mailable implements ShouldQueue
 {
+    public $tries = 2;
+    public $backoff = [120, 600];
+
     use Queueable, SerializesModels;
 
     public function __construct(

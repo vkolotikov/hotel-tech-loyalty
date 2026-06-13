@@ -7,6 +7,7 @@ use App\Models\HotelSetting;
 use App\Models\Organization;
 use App\Services\IndustryPrompts\IndustryPromptService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -16,13 +17,21 @@ use Illuminate\Queue\SerializesModels;
  * Refund confirmation email — sent by BookingRefundService after a
  * Stripe refund completes (either admin-initiated or webhook async).
  *
+ * Implements ShouldQueue: refunds are async by nature (the guest is
+ * not on a synchronous request path), and the email is more important
+ * than its dispatch timing — failed_jobs + retries are the right
+ * envelope. See AUDIT-2026-06-13-ADDENDUM.md observability finding.
+ *
  * Keeps the tone matter-of-fact, focuses on three things the guest
  * cares about: how much, when it'll land in their account, who to
  * contact if anything's wrong.
  */
-class BookingRefundMail extends Mailable
+class BookingRefundMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+
+    public $tries = 3;
+    public $backoff = [60, 300, 900];
 
     public string $guestName;
     public string $hotelName;

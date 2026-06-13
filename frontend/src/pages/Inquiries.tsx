@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -410,16 +410,44 @@ export function Inquiries() {
     deals:  ['Site Visit', 'Proposal Sent', 'Negotiating', 'Tentative'],
     closed: ['Confirmed', 'Lost'],
   }
-  const inquiries = stageGroup === 'all'
-    ? allInquiries
-    : allInquiries.filter((i: any) => (STAGE_GROUPS[stageGroup] || []).includes(i.status))
 
-  const stageCounts = {
-    all:    allInquiries.length,
-    leads:  allInquiries.filter((i: any) => STAGE_GROUPS.leads.includes(i.status)).length,
-    deals:  allInquiries.filter((i: any) => STAGE_GROUPS.deals.includes(i.status)).length,
-    closed: allInquiries.filter((i: any) => STAGE_GROUPS.closed.includes(i.status)).length,
-  }
+  // Pre-group once per allInquiries change instead of walking the array
+  // 4× per render. Pre-fix every keystroke in the search box + every 120s
+  // background refetch re-ran 4 .filter() passes over the full list,
+  // PLUS a per-status filter inside the kanban-view column loop. See
+  // AUDIT-2026-06-13.md performance finding.
+  const { inquiries, stageCounts, byStatus } = useMemo(() => {
+    const filtered = stageGroup === 'all'
+      ? allInquiries
+      : allInquiries.filter((i: any) => (STAGE_GROUPS[stageGroup] || []).includes(i.status))
+
+    // stageCounts derives from the unfiltered list so the pill counts
+    // stay stable as the user changes stageGroup (the pills SHOW the
+    // global counts, even when one group is selected).
+    const counts = {
+      all:    allInquiries.length,
+      leads:  0,
+      deals:  0,
+      closed: 0,
+    }
+    for (const inq of allInquiries) {
+      if (STAGE_GROUPS.leads.includes(inq.status)) counts.leads++
+      else if (STAGE_GROUPS.deals.includes(inq.status)) counts.deals++
+      else if (STAGE_GROUPS.closed.includes(inq.status)) counts.closed++
+    }
+
+    // byStatus is keyed off the FILTERED list so the kanban view's
+    // per-column lookup matches the previous `inquiries.filter(...)`
+    // semantics exactly.
+    const grouped: Record<string, any[]> = {}
+    for (const inq of filtered) {
+      const key = inq.status ?? 'Unknown'
+      ;(grouped[key] ||= []).push(inq)
+    }
+
+    return { inquiries: filtered, stageCounts: counts, byStatus: grouped }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allInquiries, stageGroup])
 
   const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly
 
@@ -1169,7 +1197,9 @@ export function Inquiries() {
             ? settings.inquiry_statuses
             : settings.inquiry_statuses.filter(s => (STAGE_GROUPS[stageGroup] || []).includes(s))
           ).map((col: string) => {
-            const cards = inquiries.filter((i: any) => i.status === col)
+            // Constant-time lookup against the pre-grouped map. Pre-fix
+            // every kanban render did N×M scans of the inquiries array.
+            const cards = byStatus[col] ?? []
             // Borrow the column tint from the first card's
             // pipeline_stage.color when one is set — gives custom
             // pipelines (renamed stages, recolored stages) a column

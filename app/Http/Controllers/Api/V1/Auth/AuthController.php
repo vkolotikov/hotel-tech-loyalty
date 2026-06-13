@@ -711,7 +711,11 @@ class AuthController extends Controller
         ]);
 
         try {
-            Mail::to($validated['email'])->send(new VerificationCodeMail($code, $validated['name'] ?? ''));
+            // queue() instead of send() — VerificationCodeMail now
+            // implements ShouldQueue. A transient SMTP outage no longer
+            // 500s the request or reveals account existence via the
+            // error side channel.
+            Mail::to($validated['email'])->queue(new VerificationCodeMail($code, $validated['name'] ?? ''));
         } catch (\Exception $e) {
             report($e);
             return response()->json(['error' => 'Could not send verification email. Please try again.'], 502);
@@ -2150,7 +2154,10 @@ class AuthController extends Controller
             'expires_at' => now()->addMinutes(15),
         ]);
 
-        Mail::to($validated['email'])->send(new \App\Mail\PasswordResetCodeMail($code));
+        // queue() instead of send() — PasswordResetCodeMail now
+        // implements ShouldQueue. failed_jobs catches a transient SMTP
+        // outage instead of the request thread.
+        Mail::to($validated['email'])->queue(new \App\Mail\PasswordResetCodeMail($code));
 
         return response()->json(['message' => 'If an account exists with that email, a reset code has been sent.']);
     }

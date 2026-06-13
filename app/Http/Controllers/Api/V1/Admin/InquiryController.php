@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
+use App\Models\AuditLog;
 use App\Models\Inquiry;
 use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
@@ -621,6 +622,25 @@ class InquiryController extends Controller
                 }
             });
 
+            // Compliance: bulk inquiry deletes leave a forensic trail.
+            // The sister GuestController bulkDelete already writes an
+            // audit row; without this one a mass-delete of 500 leads is
+            // invisible. See AUDIT-2026-06-13-ADDENDUM.md observability
+            // finding.
+            AuditLog::create([
+                'organization_id' => $request->user()?->organization_id,
+                'user_id'         => $request->user()?->id,
+                'action'          => 'inquiry.bulk_delete',
+                'subject_type'    => 'inquiry',
+                'subject_id'      => null,
+                'new_values'      => [
+                    'ids'     => $validated['ids'],
+                    'deleted' => $deleted,
+                ],
+                'ip_address'      => $request->ip(),
+                'description'     => "Bulk-deleted {$deleted} inquiry/inquiries",
+            ]);
+
             return response()->json(['deleted' => $deleted]);
         }
 
@@ -693,6 +713,26 @@ class InquiryController extends Controller
         if ($updated === 0) {
             return response()->json(['updated' => 0, 'message' => 'No matching inquiries.']);
         }
+
+        // Forensic record of bulk updates — closes the parity gap with
+        // the bulk_delete path above and matches the GuestController
+        // bulkUpdate audit already in place.
+        AuditLog::create([
+            'organization_id' => $request->user()?->organization_id,
+            'user_id'         => $request->user()?->id,
+            'action'          => 'inquiry.bulk_' . $validated['action'],
+            'subject_type'    => 'inquiry',
+            'subject_id'      => null,
+            'new_values'      => [
+                'ids'     => $validated['ids'],
+                'action'  => $validated['action'],
+                'value'   => $validated['value'] ?? null,
+                'updated' => $updated,
+            ],
+            'ip_address'      => $request->ip(),
+            'description'     => "Bulk {$validated['action']} on {$updated} inquir"
+                . ($updated === 1 ? 'y' : 'ies'),
+        ]);
 
         $message = match ($validated['action']) {
             'mark_for_reengagement' => "{$updated} re-engagement task" . ($updated === 1 ? '' : 's') . ' queued for tomorrow 9am.',

@@ -85,8 +85,9 @@ class SendLoyaltyDigest extends Command
                     app()->instance('current_organization_id', $org->id);
 
                     $payload = $service->buildSummary($org->id, $orgNow);
+                    // queue() — LoyaltyDigest implements ShouldQueue.
                     Mail::to($user->email, $user->name ?? null)
-                        ->send(new LoyaltyDigest($payload, $user->name ?? ''));
+                        ->queue(new LoyaltyDigest($payload, $user->name ?? ''));
 
                     $user->forceFill(['loyalty_digest_last_sent_at' => now()])->save();
                     $sent++;

@@ -21,8 +21,20 @@
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <env name="CACHE_STORE" value="array"/>
+        <!--
+            Tests run against an in-memory sqlite database — no Postgres
+            connection needed for unit + most Feature tests. Anything that
+            relies on Postgres-specific features (ILIKE, jsonb operators,
+            partial unique indexes) must opt-out via a Postgres-only
+            connection name and a `@requires extension pgsql` doc-attr.
+            Uncommented 2026-06-13 per AUDIT-2026-06-13.md testing finding;
+            this was historically commented out and caused tests to either
+            crash on a missing test DB or, worse, run against the dev
+            Postgres.
+        -->
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

@@ -90,8 +90,11 @@ class SendEngagementDailySummary extends Command
                     app()->instance('current_organization_id', $org->id);
 
                     $payload = $service->buildSummary($org->id, $orgNow);
+                    // queue() — EngagementDailySummary implements
+                    // ShouldQueue so one user's SMTP failure can't kill
+                    // the cron mid-iteration.
                     Mail::to($user->email, $user->name ?? null)
-                        ->send(new EngagementDailySummary($payload, $user->name ?? ''));
+                        ->queue(new EngagementDailySummary($payload, $user->name ?? ''));
 
                     $user->forceFill(['daily_summary_last_sent_at' => now()])->save();
                     $sent++;

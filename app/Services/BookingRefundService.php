@@ -424,7 +424,10 @@ class BookingRefundService
         if (!$email) return false;
 
         try {
-            Mail::to($email)->send(new BookingRefundMail($mirror, $amount, $isFull));
+            // queue() — BookingRefundMail implements ShouldQueue. The
+            // refund itself is already complete; the email is a
+            // notification that can ride the queue with retries.
+            Mail::to($email)->queue(new BookingRefundMail($mirror, $amount, $isFull));
             return true;
         } catch (\Throwable $e) {
             Log::warning('Refund confirmation email failed', [
