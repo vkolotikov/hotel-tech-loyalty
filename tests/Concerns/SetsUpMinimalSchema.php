@@ -149,6 +149,11 @@ trait SetsUpMinimalSchema
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('organization_id')->nullable();
                 $table->unsignedBigInteger('user_id')->nullable();
+                // Polymorphic causer columns — AuditLog::record stamps
+                // these via the morph helper. Distinct from user_id
+                // which only fires for staff-initiated writes.
+                $table->string('causer_type')->nullable();
+                $table->unsignedBigInteger('causer_id')->nullable();
                 $table->string('action')->nullable();
                 $table->string('subject_type')->nullable();
                 $table->unsignedBigInteger('subject_id')->nullable();
@@ -175,6 +180,123 @@ trait SetsUpMinimalSchema
                 $table->text('description')->nullable();
                 $table->timestamps();
                 $table->index(['reference_type', 'reference_id']);
+            });
+        }
+    }
+
+    /**
+     * Loyalty schema — opt-in extension for tests that exercise
+     * LoyaltyService (award/redeem/reverse) and the tier ladder.
+     * Includes a richer points_transactions schema covering every
+     * column the reverseTransaction code path writes, plus the
+     * loyalty_members + loyalty_tiers tables needed for the inline
+     * assessTier() call on reversal.
+     */
+    protected function setUpLoyaltySchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+
+        // The base points_transactions table from setUpBookingRefundSchema
+        // is sufficient for the BookingRefundService pre-flight tests
+        // (they short-circuit before any row writes). LoyaltyService's
+        // reverseTransaction body writes ~10 more columns; add them
+        // here so the real code path doesn't blow up on "no such column".
+        $missingPtxCols = [
+            ['property_id',     'unsignedBigInteger', true],
+            ['qualifying_points', 'integer',          true],
+            ['balance_after',   'integer',            true],
+            ['source_type',     'string',             true],
+            ['source_id',       'unsignedBigInteger', true],
+            ['staff_id',        'unsignedBigInteger', true],
+            ['amount_spent',    'decimal',            true],
+            ['earn_rate',       'decimal',            true],
+            ['reversal_of_id',  'unsignedBigInteger', true],
+            ['reason_code',     'string',             true],
+            ['approval_status', 'string',             true],
+            ['approved_by',     'unsignedBigInteger', true],
+            ['approved_at',     'timestamp',          true],
+            ['expiry_bucket_id','unsignedBigInteger', true],
+            ['expires_at',      'timestamp',          true],
+            ['brand_id',        'unsignedBigInteger', true],
+            ['outlet_id',       'unsignedBigInteger', true],
+        ];
+        Schema::table('points_transactions', function ($table) use ($missingPtxCols) {
+            foreach ($missingPtxCols as [$col, $type, $nullable]) {
+                if (Schema::hasColumn('points_transactions', $col)) continue;
+                $colDef = match ($type) {
+                    'decimal'   => $table->decimal($col, 12, 2),
+                    default     => $table->{$type}($col),
+                };
+                if ($nullable) $colDef->nullable();
+            }
+        });
+
+        if (!Schema::hasTable('loyalty_tiers')) {
+            Schema::create('loyalty_tiers', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->integer('min_points')->default(0);
+                $table->decimal('earn_rate', 6, 2)->default(1.0);
+                $table->integer('sort_order')->default(0);
+                $table->string('color_hex', 8)->nullable();
+                $table->string('qualification_model', 32)->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        // BelongsToBrand's creating hook queries `brands` for the default
+        // brand on every PointsTransaction create. The trait is "softer"
+        // than TenantScope (no-ops when no brand bound) but still hits
+        // the table during default-resolution — needs to exist in sqlite
+        // or PointsTransaction::create blows up. Soft-delete column +
+        // is_default flag match the production schema.
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('loyalty_members')) {
+            Schema::create('loyalty_members', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->unsignedBigInteger('tier_id')->nullable();
+                $table->string('member_number', 32)->nullable();
+                $table->integer('lifetime_points')->default(0);
+                $table->integer('current_points')->default(0);
+                $table->integer('qualifying_points')->default(0);
+                $table->date('tier_review_date')->nullable();
+                $table->date('tier_effective_from')->nullable();
+                $table->date('tier_effective_until')->nullable();
+                $table->string('tier_qualification_model', 32)->nullable();
+                $table->integer('qualifying_nights')->default(0);
+                $table->integer('qualifying_stays')->default(0);
+                $table->decimal('qualifying_spend', 12, 2)->default(0);
+                $table->boolean('tier_locked')->default(false);
+                $table->timestamp('tier_override_until')->nullable();
+                $table->unsignedBigInteger('property_id')->nullable();
+                $table->date('points_expiry_date')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->boolean('marketing_consent')->default(false);
+                $table->boolean('email_notifications')->default(true);
+                $table->boolean('push_notifications')->default(true);
+                $table->timestamp('joined_at')->nullable();
+                $table->timestamp('last_activity_at')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+                $table->index('tier_id');
+                $table->index('user_id');
             });
         }
     }
