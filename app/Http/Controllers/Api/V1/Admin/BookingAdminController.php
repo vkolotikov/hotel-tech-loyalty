@@ -469,7 +469,7 @@ class BookingAdminController extends Controller
         // illegal transitions that strand bookings in inconsistent state.
         if (array_key_exists('payment_status', $validated) && $validated['payment_status'] !== null) {
             $existing = BookingMirror::findOrFail($id);
-            $current = $existing->payment_status ?: 'open';
+            $current = $existing->payment_status ?: PaymentStatus::Open->value;
             $next    = $validated['payment_status'];
 
             if ($current !== $next) {
@@ -488,9 +488,9 @@ class BookingAdminController extends Controller
                     return response()->json([
                         'error'   => "Cannot move payment_status from '{$current}' to '{$next}'.",
                         'allowed' => $allowed,
-                        'hint'    => $current === 'refunded'
+                        'hint'    => $current === PaymentStatus::Refunded->value
                             ? 'Refunded is terminal — issue a new charge if you need to restore.'
-                            : ($current === 'paid' && $next === 'pending'
+                            : ($current === PaymentStatus::Paid->value && $next === PaymentStatus::Pending->value
                                 ? 'A paid booking cannot become pending. Use the Refund button to reverse the charge.'
                                 : null),
                     ], 422);
