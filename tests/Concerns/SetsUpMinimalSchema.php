@@ -182,6 +182,28 @@ trait SetsUpMinimalSchema
                 $table->index(['reference_type', 'reference_id']);
             });
         }
+
+        // hotel_settings — BookingRefundMail's constructor reads from
+        // here for booking_currency / company_name / mail_from_address.
+        // Without the table, the Mail::queue() call inside
+        // sendRefundEmail() throws → swallowed by the try/catch →
+        // email_sent stays false (silently). Including it here keeps
+        // every Mail-touching code path testable.
+        if (!Schema::hasTable('hotel_settings')) {
+            Schema::create('hotel_settings', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('key', 100);
+                $table->text('value')->nullable();
+                $table->string('type', 32)->nullable();
+                $table->string('group', 32)->nullable();
+                $table->string('label')->nullable();
+                $table->text('description')->nullable();
+                $table->string('scope', 16)->default('company');
+                $table->timestamps();
+                $table->index(['organization_id', 'key']);
+            });
+        }
     }
 
     /**

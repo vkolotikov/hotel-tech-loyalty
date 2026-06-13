@@ -258,12 +258,19 @@ class BookingRefundService
             // only emitted Log::error which nobody read.
             if (!empty($pmsCancelFailures)) {
                 try {
+                    // 4th arg ($oldValues) MUST be an array — passing
+                    // null TypeErrors on PHP 8+ and the outer catch then
+                    // silently ate the audit row, leaving zero forensic
+                    // signal for the orphaned Smoobu reservation that
+                    // staff needed to clean up manually. Surfaced by
+                    // BookingRefundServiceTest's smoobu-cancel-failure
+                    // test (2026-06-14).
                     AuditLog::record('booking.refund.pms_cancel_failed', $mirror,
                         [
                             'failed_smoobu_ids' => $pmsCancelFailures,
                             'booking_group_id'  => $mirror->booking_group_id,
                         ],
-                        null,
+                        [],
                         $staff,
                         'Refund succeeded but ' . count($pmsCancelFailures)
                             . ' Smoobu reservation(s) could not be cancelled — '
