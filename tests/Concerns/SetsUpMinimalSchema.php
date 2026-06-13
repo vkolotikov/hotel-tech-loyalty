@@ -77,4 +77,98 @@ trait SetsUpMinimalSchema
             });
         }
     }
+
+    /**
+     * Booking-side schema — opt-in extension for tests that touch
+     * BookingMirror, RefundAttempt, AuditLog, or PointsTransaction.
+     *
+     * Kept separate from setUpMinimalSchema() so tenant-scope tests
+     * don't pay the cost of provisioning tables they don't read.
+     * Note: BookingMirror table is SINGULAR (`booking_mirror`) —
+     * CLAUDE.md flags this as a footgun and every migration on this
+     * table must use the singular form.
+     */
+    protected function setUpBookingRefundSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('booking_mirror')) {
+            Schema::create('booking_mirror', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('booking_group_id', 36)->nullable();
+                $table->string('reservation_id')->nullable();
+                $table->string('booking_reference')->nullable();
+                $table->string('booking_state', 32)->nullable();
+                $table->unsignedBigInteger('apartment_id')->nullable();
+                $table->string('apartment_name')->nullable();
+                $table->string('guest_name')->nullable();
+                $table->string('guest_email')->nullable();
+                $table->string('guest_phone')->nullable();
+                $table->date('arrival_date')->nullable();
+                $table->date('departure_date')->nullable();
+                $table->decimal('price_total', 12, 2)->default(0);
+                $table->decimal('price_paid', 12, 2)->nullable();
+                $table->decimal('refunded_amount', 12, 2)->nullable();
+                $table->timestamp('refunded_at')->nullable();
+                $table->string('last_refund_id')->nullable();
+                $table->string('payment_method', 32)->nullable();
+                $table->string('payment_status', 32)->nullable();
+                $table->string('stripe_payment_intent_id')->nullable();
+                $table->string('internal_status', 32)->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+                $table->index(['organization_id', 'stripe_payment_intent_id']);
+            });
+        }
+
+        if (!Schema::hasTable('refund_attempts')) {
+            Schema::create('refund_attempts', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('mirror_id');
+                $table->string('payment_intent_id');
+                $table->string('refund_id')->nullable();
+                $table->timestamp('requested_at')->nullable();
+                $table->timestamp('completed_at')->nullable();
+                $table->text('error')->nullable();
+                $table->timestamps();
+                $table->index(['mirror_id', 'requested_at']);
+            });
+        }
+
+        if (!Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('action')->nullable();
+                $table->string('subject_type')->nullable();
+                $table->unsignedBigInteger('subject_id')->nullable();
+                $table->text('description')->nullable();
+                $table->text('old_values')->nullable();
+                $table->text('new_values')->nullable();
+                $table->string('ip_address')->nullable();
+                $table->string('user_agent')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (!Schema::hasTable('points_transactions')) {
+            Schema::create('points_transactions', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('member_id')->nullable();
+                $table->integer('points')->default(0);
+                $table->string('type', 32)->nullable();
+                $table->string('reference_type', 64)->nullable();
+                $table->unsignedBigInteger('reference_id')->nullable();
+                $table->boolean('is_reversed')->default(false);
+                $table->string('idempotency_key')->nullable();
+                $table->text('description')->nullable();
+                $table->timestamps();
+                $table->index(['reference_type', 'reference_id']);
+            });
+        }
+    }
 }
