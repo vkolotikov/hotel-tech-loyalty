@@ -32,6 +32,15 @@ class InquiryAiService
     private const CACHE_TTL_MINUTES = 15;
     private const MODEL             = 'gpt-4o-mini';
 
+    /**
+     * CRM lead categories. NOT conversation intents (those live in
+     * App\Enums\ConversationIntent and EngagementAiService). The two
+     * lists used to share the `INTENTS` constant name and the
+     * different values silently mis-classified leads — see
+     * AUDIT-2026-06-13-ADDENDUM.md maintainability finding.
+     *
+     * Backed by App\Enums\InquiryCategory.
+     */
     private const INTENTS = [
         'booking_inquiry', 'group', 'event',
         'info_request', 'complaint', 'other',

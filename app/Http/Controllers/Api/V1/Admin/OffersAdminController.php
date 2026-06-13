@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Http\Concerns\IndexesResource;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
 use App\Models\MemberOffer;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class OffersAdminController extends Controller
 {
+    use IndexesResource;
+
     public function __construct(
         protected OpenAiService $openAi,
         protected NotificationService $notificationService,
@@ -20,10 +23,19 @@ class OffersAdminController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        // Migrated to the shared IndexesResource trait — see
+        // AUDIT-2026-06-13-ADDENDUM.md maintainability finding. Pre-fix
+        // this hardcoded per_page=20 (the smallest of 24 controllers'
+        // inconsistent defaults) and had no `sort` allowlist. Default
+        // sort + direction preserved (created_at desc).
         return response()->json(
-            SpecialOffer::with('createdBy:id,name')
-                ->orderByDesc('created_at')
-                ->paginate(20)
+            $this->applyIndex(
+                SpecialOffer::with('createdBy:id,name'),
+                $request,
+                sortable: ['created_at','title','start_date','end_date','is_featured','type'],
+                defaultSort: 'created_at',
+                searchable: ['title','description'],
+            )
         );
     }
 

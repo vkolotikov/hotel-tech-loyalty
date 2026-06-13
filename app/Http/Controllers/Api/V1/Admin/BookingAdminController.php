@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Enums\PaymentStatus;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\BookingNote;
@@ -435,15 +436,23 @@ class BookingAdminController extends Controller
      * `invoice_waiting` and `channel_managed` keep flexibility for staff
      * workflows that bypass the digital payment path.
      */
+    /**
+     * @deprecated Use PaymentStatus::tryFrom(...)->allowedTransitions().
+     * Kept as a class const so any external code that read it directly
+     * keeps compiling, but the enum is now the source of truth.
+     */
     private const PAYMENT_STATUS_TRANSITIONS = [
-        'open'                => ['pending', 'paid', 'invoice_waiting', 'channel_managed'],
-        'pending'             => ['paid', 'open', 'invoice_waiting', 'channel_managed'],
+        'open'                => ['pending', 'authorized', 'paid', 'invoice_waiting', 'channel_managed'],
+        'pending'             => ['authorized', 'paid', 'open', 'invoice_waiting', 'channel_managed', 'cancelled'],
+        'authorized'          => ['paid', 'cancelled', 'capture_expired'],
         'paid'                => ['partially_refunded', 'refunded', 'disputed'],
         'partially_refunded'  => ['refunded', 'paid', 'disputed'],
-        'refunded'            => [],  // terminal — only restored via webhook on dispute-won
+        'refunded'            => [],
         'disputed'            => ['paid', 'refunded', 'partially_refunded'],
         'invoice_waiting'     => ['paid', 'open', 'channel_managed'],
         'channel_managed'     => ['paid', 'open', 'pending'],
+        'capture_expired'     => [],
+        'cancelled'           => [],
     ];
 
     public function updateStatus(Request $request, int $id): JsonResponse
@@ -464,7 +473,12 @@ class BookingAdminController extends Controller
             $next    = $validated['payment_status'];
 
             if ($current !== $next) {
-                $allowed = self::PAYMENT_STATUS_TRANSITIONS[$current] ?? null;
+                // Authoritative transition table comes from the enum so the
+                // single source of truth survives drift across files.
+                $currentEnum = PaymentStatus::tryFromValue($current);
+                $allowed = $currentEnum?->allowedTransitions()
+                    ?? self::PAYMENT_STATUS_TRANSITIONS[$current]
+                    ?? null;
                 if ($allowed === null) {
                     return response()->json([
                         'error' => "Unknown current payment_status '{$current}'. Cannot transition.",

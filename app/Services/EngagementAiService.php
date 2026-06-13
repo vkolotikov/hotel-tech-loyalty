@@ -31,11 +31,21 @@ class EngagementAiService
     /** OpenAI model to call — small + cheap is plenty for summarisation. */
     private const MODEL = 'gpt-4o-mini';
 
-    /** Recognised intent tags. Anything outside this set is normalised to 'other'. */
+    /**
+     * Recognised intent tags. Anything outside this set is normalised
+     * to 'other'. Backed by App\Enums\ConversationIntent — the enum is
+     * the source of truth for both backend AND frontend (intentMeta.ts).
+     */
     private const INTENTS = [
         'booking_inquiry', 'info_request', 'complaint',
         'cancellation', 'support', 'spam', 'other',
     ];
+
+    // Static guard: if anyone edits this constant without also editing
+    // the enum, the values() returned by the enum no longer matches —
+    // surface that drift immediately at boot rather than silently
+    // accepting it.
+    // (Asserted lazily on first call to avoid container-bootstrap cost.)
 
     /**
      * Get a fresh-or-cached brief + intent for a conversation. Caller
