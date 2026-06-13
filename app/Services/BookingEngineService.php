@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentStatus;
 use App\Exceptions\IdempotencyReplay;
 use App\Exceptions\SmoobuUnavailable;
 use App\Mail\BookingConfirmationMail;
@@ -521,7 +522,7 @@ class BookingEngineService
                 // PMS call, but the upstream signals we need are already
                 // on $data (Stripe path sets payment_intent_id; manual /
                 // mock paths set payment_status='paid' explicitly).
-                $isPaid = (($data['payment_status'] ?? null) === 'paid')
+                $isPaid = (($data['payment_status'] ?? null) === PaymentStatus::Paid->value)
                        || !empty($data['payment_intent_id']);
                 $paidAmount = $isPaid ? $grossTotal : 0.0;
 
@@ -850,7 +851,7 @@ class BookingEngineService
             // Resolve payment info (from Stripe verification in controller)
             $paymentIntentId = $data['payment_intent_id'] ?? null;
             $paymentMethod   = $data['payment_method'] ?? null;
-            $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? 'paid' : null);
+            $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? PaymentStatus::Paid->value : null);
 
             $mirror = BookingMirror::create([
                 'reservation_id'    => (string) ($result['id'] ?? ''),
@@ -869,7 +870,7 @@ class BookingEngineService
                 'arrival_date'      => $payload['check_in'],
                 'departure_date'    => $payload['check_out'],
                 'price_total'       => $payload['gross_total'],
-                'price_paid'        => $paymentStatus === 'paid' ? $payload['gross_total'] : null,
+                'price_paid'        => $paymentStatus === PaymentStatus::Paid->value ? $payload['gross_total'] : null,
                 'payment_status'    => $paymentStatus,
                 'payment_method'    => $paymentMethod,
                 'stripe_payment_intent_id' => $paymentIntentId,
@@ -1381,11 +1382,11 @@ class BookingEngineService
         if ($isBlocked) {
             $paymentStatus = null;
         } elseif ($pricePaid >= $priceTotal && $priceTotal > 0) {
-            $paymentStatus = 'paid';
+            $paymentStatus = PaymentStatus::Paid->value;
         } elseif ($pricePaid > 0 && $pricePaid < $priceTotal) {
-            $paymentStatus = 'pending';
+            $paymentStatus = PaymentStatus::Pending->value;
         } else {
-            $paymentStatus = 'open';
+            $paymentStatus = PaymentStatus::Open->value;
         }
 
         // Smoobu list uses 'type' field (reservation/cancellation)
@@ -1574,7 +1575,7 @@ class BookingEngineService
         $groupId  = (string) \Illuminate\Support\Str::uuid();
 
         $paymentMethod = $data['payment_method'] ?? null;
-        $paymentStatus = $data['payment_status'] ?? 'pending';
+        $paymentStatus = $data['payment_status'] ?? PaymentStatus::Pending->value;
         $piId          = $data['payment_intent_id'] ?? null;
 
         $succeededSmoobu = [];
@@ -1658,7 +1659,7 @@ class BookingEngineService
                         }
                     }
                     $smoobuRoomPrice = round($roomTotal + $extrasTotalThisRoom, 2);
-                    $roomPaid = $paymentStatus === 'paid' ? $smoobuRoomPrice : 0;
+                    $roomPaid = $paymentStatus === PaymentStatus::Paid->value ? $smoobuRoomPrice : 0;
 
                     // Build priceElements (basePrice + addons on first room).
                     $priceElementsThisRoom = [];
@@ -1847,7 +1848,7 @@ class BookingEngineService
                         'arrival_date'             => $checkIn,
                         'departure_date'           => $checkOut,
                         'price_total'              => $smoobuRoomPrice,
-                        'price_paid'               => $paymentStatus === 'paid' ? $smoobuRoomPrice : 0,
+                        'price_paid'               => $paymentStatus === PaymentStatus::Paid->value ? $smoobuRoomPrice : 0,
                         'payment_method'           => $paymentMethod,
                         'payment_status'           => $paymentStatus,
                         'stripe_payment_intent_id' => $piId,
