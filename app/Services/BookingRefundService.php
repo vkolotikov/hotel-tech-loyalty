@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentStatus;
 use App\Mail\BookingRefundMail;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
@@ -88,14 +89,14 @@ class BookingRefundService
             // Audit 2026-06-01 finding C3: writing the RefundAttempt
             // before these throws left orphan rows that then false-
             // positive the 60s webhook freshness gate.
-            if ($mirror->payment_status === 'refunded') {
+            if ($mirror->payment_status === PaymentStatus::Refunded->value) {
                 throw new \RuntimeException('Booking is already fully refunded.');
             }
             // Audit 2026-06-01 finding D-disputed: refunding a disputed
             // charge always 400s on Stripe ("charge_disputed"). Guide
             // staff to the dispute resolution flow instead of letting
             // them eat a cryptic Stripe error.
-            if ($mirror->payment_status === 'disputed') {
+            if ($mirror->payment_status === PaymentStatus::Disputed->value) {
                 throw new \RuntimeException(
                     'This booking has an open Stripe dispute. Respond via the Stripe Dashboard dispute flow at '
                     . 'https://dashboard.stripe.com/disputes — do not issue a separate refund.'
@@ -190,7 +191,7 @@ class BookingRefundService
                 $siblings = BookingMirror::withoutGlobalScopes()
                     ->where('organization_id', $mirror->organization_id)
                     ->where('booking_group_id', $mirror->booking_group_id)
-                    ->whereNotIn('payment_status', ['refunded', 'cancelled'])
+                    ->whereNotIn('payment_status', [PaymentStatus::Refunded->value, PaymentStatus::Cancelled->value])
                     ->get();
                 if ($siblings->isEmpty()) $siblings = collect([$mirror]);
             }
@@ -209,7 +210,7 @@ class BookingRefundService
                     ? $cumulative
                     : (float) ($sibling->refunded_amount ?? 0) + (float) ($sibling->price_total ?? 0);
                 $sibling->update([
-                    'payment_status'  => $isFull ? 'refunded' : 'partially_refunded',
+                    'payment_status'  => $isFull ? PaymentStatus::Refunded->value : PaymentStatus::PartiallyRefunded->value,
                     'refunded_amount' => $sibling->id === $mirror->id ? $cumulative : $sibling->price_total,
                     'refunded_at'     => $isFull ? now() : $sibling->refunded_at,
                     'last_refund_id'  => $stripeRefundId,
@@ -337,11 +338,11 @@ class BookingRefundService
     {
         app()->instance('current_organization_id', (int) $mirror->organization_id);
 
-        $mirror->update(['payment_status' => 'disputed']);
+        $mirror->update(['payment_status' => PaymentStatus::Disputed->value]);
 
         AuditLog::record('booking_disputed', $mirror,
             ['dispute_reason' => $disputeReason],
-            ['payment_status' => 'disputed'],
+            ['payment_status' => PaymentStatus::Disputed->value],
             null,
             "Stripe dispute opened on booking #{$mirror->id}" . ($disputeReason ? " · reason: {$disputeReason}" : ''),
         );
