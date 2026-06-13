@@ -36,6 +36,13 @@ trait SetsUpMinimalSchema
                 $table->string('widget_token', 64)->nullable();
                 $table->string('industry', 32)->nullable();
                 $table->boolean('is_active')->default(true);
+                // plan_features holds the cached entitlement map from
+                // SaasAuthMiddleware. Stored as TEXT here (cast to array
+                // by the Organization model) instead of jsonb because
+                // sqlite has no jsonb. featureValue() works identically
+                // since it just reads keys off the cast array.
+                $table->text('plan_features')->nullable();
+                $table->string('subscription_status', 16)->nullable();
                 $table->timestamps();
             });
         }
@@ -168,6 +175,37 @@ trait SetsUpMinimalSchema
                 $table->text('description')->nullable();
                 $table->timestamps();
                 $table->index(['reference_type', 'reference_id']);
+            });
+        }
+    }
+
+    /**
+     * AI usage ledger schema — opt-in extension for tests that exercise
+     * AiUsageService. AiUsageLog has `$timestamps = false` and is
+     * append-only — recordUsage() writes the row without setting
+     * created_at, so the column needs `useCurrent()` for the default
+     * to fire in sqlite (matches Postgres `DEFAULT CURRENT_TIMESTAMP`).
+     */
+    protected function setUpAiUsageSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('ai_usage_logs')) {
+            Schema::create('ai_usage_logs', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('model', 100)->nullable();
+                $table->string('kind', 32)->default('chat');
+                $table->string('feature', 60)->nullable();
+                $table->integer('input_tokens')->default(0);
+                $table->integer('output_tokens')->default(0);
+                $table->integer('cost_cents')->default(0);
+                $table->timestamp('created_at')->useCurrent();
+                $table->index(['organization_id', 'created_at']);
+                $table->index(['organization_id', 'model']);
+                $table->index(['organization_id', 'feature']);
             });
         }
     }

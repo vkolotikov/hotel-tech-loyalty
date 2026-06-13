@@ -40,4 +40,27 @@ class OrganizationFactory extends Factory
     {
         return $this->state(['is_active' => false]);
     }
+
+    /**
+     * Attach a plan_features map (the same shape SaasAuthMiddleware
+     * caches from the SaaS bootstrap response). Used by tests that
+     * exercise feature-gated flows — AiUsageService cap + allowlist,
+     * the upgrade modal, etc.
+     */
+    public function withFeatures(array $features): static
+    {
+        return $this->state(['plan_features' => $features]);
+    }
+
+    /** Convenience: org with a monthly AI cost cap (in cents). */
+    public function withAiCostCap(int $cents): static
+    {
+        return $this->withFeatures(['ai_monthly_cost_cents' => $cents]);
+    }
+
+    /** Convenience: org with an AI model allowlist. */
+    public function withAiAllowedModels(array $models): static
+    {
+        return $this->withFeatures(['ai_allowed_models' => $models]);
+    }
 }
