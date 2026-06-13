@@ -324,6 +324,76 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Booking-confirm schema — opt-in extension for tests that exercise
+     * BookingEngineService::confirm()'s pre-flight branches (orphan
+     * recovery, idempotency replay, hold validation).
+     *
+     * Adds `booking_holds` + `booking_idempotency_keys` on top of the
+     * BookingRefundSchema's `booking_mirror`. None of these tables
+     * need Postgres-specific features for the pre-flight branches —
+     * sqlite-compatible columns only.
+     *
+     * The downstream `confirm()` body (Smoobu createReservation,
+     * advisory lock, price-element persistence) is OUT OF SCOPE here
+     * — tests using this schema must mock the SmoobuClient surface
+     * and short-circuit before the transaction body executes.
+     */
+    protected function setUpBookingConfirmSchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+
+        // Organization::booted()'s `created` hook auto-creates a
+        // default Brand on every new org. Without the brands table
+        // the hook hits "no such table: brands" because the
+        // Schema::hasTable() short-circuit at the top of the hook
+        // returns TRUE once any prior test cached the schema. Match
+        // the production schema's columns + the soft-delete column
+        // the hook's Brand::where() depends on.
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('booking_holds')) {
+            Schema::create('booking_holds', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('hold_token', 64);
+                $table->string('status', 16)->default('active');
+                $table->timestamp('expires_at')->nullable();
+                $table->text('payload_json')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'hold_token']);
+            });
+        }
+
+        if (!Schema::hasTable('booking_idempotency_keys')) {
+            Schema::create('booking_idempotency_keys', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('idempotency_key', 128);
+                $table->string('request_hash', 64)->nullable();
+                $table->text('response_json')->nullable();
+                $table->integer('status_code')->nullable();
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'idempotency_key']);
+            });
+        }
+    }
+
+    /**
      * AI usage ledger schema — opt-in extension for tests that exercise
      * AiUsageService. AiUsageLog has `$timestamps = false` and is
      * append-only — recordUsage() writes the row without setting
