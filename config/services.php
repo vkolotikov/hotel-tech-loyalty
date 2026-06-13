@@ -28,7 +28,12 @@ return [
 
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
-        'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
+        // Default must be a real Anthropic model id. The previous
+        // `claude-sonnet-4-6` was a typo that shipped through
+        // config:cache to prod whenever .env's ANTHROPIC_MODEL was
+        // absent — every admin AI call would 400 on an unknown model.
+        // See AUDIT-2026-06-13.md configuration finding.
+        'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
     ],
 
     'saas' => [

@@ -13,6 +13,7 @@ use App\Models\KnowledgeItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ChatInboxController extends Controller
 {
@@ -311,24 +312,34 @@ class ChatInboxController extends Controller
      */
     public function assign(Request $request, int $id): JsonResponse
     {
-        $request->validate(['user_id' => 'required|exists:users,id']);
+        // CRITICAL: pin user_id to the caller's tenant. Plain `exists:users,id`
+        // queries the underlying table without TenantScope so an admin in org A
+        // could assign a chat to org B's user — leaking that foreign user's
+        // name via the system message below. See AUDIT-2026-06-13.md high
+        // security finding.
+        $orgId = $request->user()->organization_id;
+        $request->validate([
+            'user_id' => ['required', Rule::exists('users', 'id')->where('organization_id', $orgId)],
+        ]);
 
-        $conversation = ChatConversation::where('organization_id', $request->user()->organization_id)
-            ->findOrFail($id);
+        $conversation = ChatConversation::where('organization_id', $orgId)->findOrFail($id);
+
+        // Tenant-scoped lookup of the assignee (User uses BelongsToOrganization)
+        // — never re-find by request-supplied id without going through the scope.
+        $assignee = \App\Models\User::where('organization_id', $orgId)->find($request->user_id);
 
         $conversation->update([
             'assigned_to' => $request->user_id,
             'status' => $conversation->status === 'waiting' ? 'active' : $conversation->status,
         ]);
 
-        // Add system message
         ChatMessage::create([
             'conversation_id' => $id,
-            'sender_type' => 'system',
+            'sender_type'    => 'system',
             'sender_user_id' => $request->user()->id,
-            'direction' => ChatMessage::DIRECTION_OUTBOUND,
-            'content' => "Conversation assigned to " . \App\Models\User::find($request->user_id)?->name,
-            'created_at' => now(),
+            'direction'      => ChatMessage::DIRECTION_OUTBOUND,
+            'content'        => 'Conversation assigned to ' . ($assignee?->name ?? 'agent'),
+            'created_at'     => now(),
         ]);
 
         return response()->json($conversation->fresh('assignedAgent:id,name,email'));

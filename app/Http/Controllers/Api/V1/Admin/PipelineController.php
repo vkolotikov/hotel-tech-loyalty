@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Inquiry;
 use App\Models\InquiryLostReason;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
@@ -208,8 +209,14 @@ class PipelineController extends Controller
 
         DB::transaction(function () use ($stage, $fallback) {
             if ($fallback) {
-                DB::table('inquiries')
-                    ->where('pipeline_stage_id', $stage->id)
+                // Tenant-scoped via Inquiry's BelongsToOrganization. The
+                // previous DB::table() bypassed TenantScope — today's safe
+                // because pipeline_stages.id is a global auto-increment, but
+                // the moment any future migration copies stage ids between
+                // orgs (UUID switch, fixture seed collision) this becomes a
+                // cross-tenant bulk-mutate critical. See AUDIT-2026-06-13.md
+                // critical #3.
+                Inquiry::where('pipeline_stage_id', $stage->id)
                     ->update([
                         'pipeline_stage_id' => $fallback->id,
                         'status'            => $fallback->name,

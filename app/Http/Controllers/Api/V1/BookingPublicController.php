@@ -847,8 +847,13 @@ class BookingPublicController extends Controller
             // a terminal state. If that also fails, audit-log so ops
             // know there's a possibly-stranded auth at Stripe.
             try {
-                $client = new \Stripe\StripeClient((string) $this->extractSecretKey($orgId));
-                $client->paymentIntents->cancel($intentId);
+                // Route through StripeService so credential loading +
+                // restricted-key detection stay in one place. Previously
+                // this instantiated StripeClient locally and called
+                // extractSecretKey() — a parallel reader of the encrypted
+                // stripe_secret_key. See AUDIT-2026-06-13.md architecture
+                // finding.
+                $stripe->cancelPaymentIntent($intentId);
                 $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
                     'note' => 'cancel issued without status check (retrieve failed)',
                 ]);
@@ -878,8 +883,8 @@ class BookingPublicController extends Controller
             'processing',
         ], true)) {
             try {
-                $client = new \Stripe\StripeClient((string) $this->extractSecretKey($orgId));
-                $client->paymentIntents->cancel($intentId);
+                // Same path-through-StripeService as above.
+                $stripe->cancelPaymentIntent($intentId);
                 $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
                     'pre_cancel_status' => $status,
                 ]);

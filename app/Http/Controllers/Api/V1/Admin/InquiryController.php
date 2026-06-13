@@ -70,8 +70,11 @@ class InquiryController extends Controller
             };
         }
 
-        $sort = $request->get('sort', 'created_at');
-        $dir  = $request->get('dir', 'desc');
+        // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
+        // the column name. See AUDIT-2026-06-13.md high security finding.
+        $allowedSorts = ['created_at','updated_at','guest_name','check_in','check_out','status','priority','value_estimated','win_probability','next_task_due','assigned_to'];
+        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
+        $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sort, $dir);
 
         return response()->json($query->paginate($request->get('per_page', 25)));

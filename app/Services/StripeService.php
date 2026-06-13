@@ -165,6 +165,32 @@ class StripeService
     }
 
     /**
+     * Cancel a held PaymentIntent — used by the /confirm rescue path
+     * when a booking fails after the auth was reserved but before we
+     * captured. Routes credential loading through this service so the
+     * BookingPublicController no longer needs to instantiate StripeClient
+     * directly (see AUDIT-2026-06-13.md architecture finding).
+     *
+     * `$cancellationReason` is optional and one of Stripe's documented
+     * values (`duplicate`, `fraudulent`, `requested_by_customer`,
+     * `abandoned`). Default `abandoned` for our auto-cancel rescues.
+     */
+    public function cancelPaymentIntent(string $paymentIntentId, string $cancellationReason = 'abandoned'): \Stripe\PaymentIntent
+    {
+        $this->boot();
+
+        if (!$this->client) {
+            throw new \RuntimeException('Stripe is not configured for this organization.');
+        }
+
+        return $this->client->paymentIntents->cancel(
+            $paymentIntentId,
+            ['cancellation_reason' => $cancellationReason],
+            ['idempotency_key' => 'pi_cancel:' . $paymentIntentId]
+        );
+    }
+
+    /**
      * Verify a Stripe webhook signature.
      */
     public function constructWebhookEvent(string $payload, string $sigHeader): \Stripe\Event

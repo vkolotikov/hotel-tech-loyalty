@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Guest;
 use App\Models\GuestActivity;
 use App\Models\GuestImportRun;
@@ -25,8 +26,14 @@ class GuestController extends Controller
         $query = Guest::query();
         $this->applyFilters($query, $request);
 
-        $sort = $request->get('sort', 'created_at');
-        $dir  = $request->get('dir', 'desc');
+        // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
+        // the column name. Without an allowlist, attacker can sort by columns
+        // the UI never exposes (passport_no, id_number, custom_data) and use
+        // ordering side-channels to oracle-leak schema or row data. See
+        // AUDIT-2026-06-13.md high security finding.
+        $allowedSorts = ['created_at','updated_at','first_name','last_name','email','phone','country','lifecycle_status','importance','stays_count','last_check_in','loyalty_tier','owner_name'];
+        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
+        $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sort, $dir);
 
         return response()->json($query->paginate($request->get('per_page', 25)));
@@ -430,6 +437,28 @@ class GuestController extends Controller
         }
 
         Guest::whereIn('id', $v['ids'])->update($safeFields);
+
+        // Compliance: every bulk PII rewrite leaves a forensic trail.
+        // GDPR Art. 30 requires a record of processing — without this
+        // a malicious or compromised admin can mass-edit notes / owner_name
+        // / lifecycle_status on hundreds of customers and the only signal
+        // is downstream confusion. See AUDIT-2026-06-13.md observability
+        // finding (bulk-delete/bulk-update no audit log).
+        AuditLog::create([
+            'organization_id' => $request->user()?->organization_id,
+            'user_id'         => $request->user()?->id,
+            'action'          => 'guest.bulk_update',
+            'subject_type'    => 'guest',
+            'subject_id'      => null,
+            'new_values'      => [
+                'ids'    => $v['ids'],
+                'count'  => count($v['ids']),
+                'fields' => array_keys($safeFields),
+            ],
+            'ip_address'      => $request->ip(),
+            'description'     => 'Bulk-updated ' . count($v['ids']) . ' guest(s)',
+        ]);
+
         return response()->json(['updated' => count($v['ids'])]);
     }
 
@@ -449,6 +478,25 @@ class GuestController extends Controller
         ]);
 
         $deleted = Guest::whereIn('id', $v['ids'])->delete();
+
+        // GDPR Art. 17 + Art. 30 — record-of-erasure obligation. Without
+        // this row, a hard-delete of hundreds of customer records leaves
+        // zero forensic trail. See AUDIT-2026-06-13.md observability
+        // finding (bulk-delete no audit log).
+        AuditLog::create([
+            'organization_id' => $request->user()?->organization_id,
+            'user_id'         => $request->user()?->id,
+            'action'          => 'guest.bulk_delete',
+            'subject_type'    => 'guest',
+            'subject_id'      => null,
+            'new_values'      => [
+                'ids'     => $v['ids'],
+                'deleted' => $deleted,
+            ],
+            'ip_address'      => $request->ip(),
+            'description'     => "Bulk-deleted {$deleted} guest(s)",
+        ]);
+
         return response()->json(['deleted' => $deleted]);
     }
 

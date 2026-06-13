@@ -26,8 +26,16 @@ class CorporateAccountController extends Controller
         if ($status = $request->get('status')) $query->where('status', $status);
         if ($manager = $request->get('account_manager')) $query->where('account_manager', $manager);
 
+        // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
+        // the column name, so a raw $request->get('sort') would allow column
+        // enumeration / oracling against any column on corporate_accounts.
+        // See AUDIT-2026-06-13.md high security finding.
+        $allowedSorts = ['created_at','company_name','contact_person','industry','status','account_manager','contract_end'];
+        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'company_name';
+        $dir  = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+
         return response()->json(
-            $query->orderBy($request->get('sort', 'company_name'), $request->get('dir', 'asc'))
+            $query->orderBy($sort, $dir)
                   ->paginate($request->get('per_page', 25))
         );
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Mail\VerificationCodeMail;
 use App\Mail\WelcomeTrialMail;
+use App\Models\AuditLog;
 use App\Models\EmailVerificationCode;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
@@ -2183,6 +2184,20 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($validated['password'])]);
         $record->update(['verified_at' => now()]);
 
+        // Compliance: account-takeover forensics. Without this row, a
+        // credential-stuffing attacker who succeeds with a stolen
+        // verification code leaves zero trace. See AUDIT-2026-06-13.md
+        // observability finding (password reset no audit log).
+        AuditLog::create([
+            'organization_id' => $user->organization_id,
+            'user_id'         => $user->id,
+            'action'          => 'auth.password_reset',
+            'subject_type'    => 'user',
+            'subject_id'      => $user->id,
+            'ip_address'      => $request->ip(),
+            'description'     => 'Password reset via verification code',
+        ]);
+
         return response()->json(['message' => 'Password has been reset successfully.']);
     }
 
@@ -2226,6 +2241,17 @@ class AuthController extends Controller
         if ($user->organization_id) {
             app()->instance('current_organization_id', $user->organization_id);
         }
+
+        // Account-claim forensics — same justification as password reset.
+        AuditLog::create([
+            'organization_id' => $user->organization_id,
+            'user_id'         => $user->id,
+            'action'          => 'auth.account_claimed',
+            'subject_type'    => 'user',
+            'subject_id'      => $user->id,
+            'ip_address'      => $request->ip(),
+            'description'     => 'Account claimed via invitation code',
+        ]);
 
         $member = LoyaltyMember::withoutGlobalScopes()
             ->where('user_id', $user->id)->with('tier')->first();

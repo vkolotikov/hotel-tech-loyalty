@@ -250,8 +250,29 @@ export function ChatInbox() {
     onError: () => toast.error(t('chat_inbox.toasts.upload_failed', 'Upload failed (max 8MB)')),
   })
 
-  const downloadTranscript = (format: 'text' | 'html') => {
-    window.open(`${API_URL}/api/v1/admin/chat-inbox/${selectedId}/transcript?format=${format}&token=${localStorage.getItem('auth_token')}`, '_blank')
+  const downloadTranscript = async (format: 'text' | 'html') => {
+    // Fetch-then-blob download so the auth_token travels in the
+    // Authorization header (not the URL query string). The previous
+    // ?token=… leaked the Sanctum personal access token to browser
+    // history, server access logs, and the Referer header on any
+    // subresource the transcript HTML response loaded. See
+    // AUDIT-2026-06-13.md frontend high.
+    try {
+      const res = await api.get(`/v1/admin/chat-inbox/${selectedId}/transcript`, {
+        params: { format },
+        responseType: 'blob',
+      })
+      const url = URL.createObjectURL(res.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `transcript-${selectedId}.${format === 'html' ? 'html' : 'txt'}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Download failed')
+    }
   }
 
   const updateStatus = useMutation({

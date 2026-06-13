@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { applyServerLanguage } from '../i18n'
+import { queryClient } from '../lib/queryClient'
 import type { IndustryId } from '../lib/industryHosts'
 
 interface User {
@@ -77,15 +78,30 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       staff: null,
       setAuth: (token, user, staff) => {
+        // Drop ALL React Query cache when a new identity binds — staff B
+        // logging in after staff A signed out must not see any of A's
+        // cached members / customers / chat transcripts / AI brief
+        // summaries flash on screen during the staleTime window. See
+        // AUDIT-2026-06-13.md frontend high finding (cross-tenant cache
+        // leakage). Skipped on no-op same-token bind so normal refetches
+        // don't blow away in-flight queries.
+        const prevToken = get().token
+        if (prevToken !== token) {
+          try { queryClient.clear() } catch { /* defensive */ }
+        }
         localStorage.setItem('auth_token', token)
         set({ token, user, staff })
-        // Sync the user's saved language preference to i18n so the same
-        // staff member sees the same locale on every device. No-op when
-        // user.language is missing or doesn't match a supported locale.
         applyServerLanguage(user.language ?? null)
       },
       logout: () => {
+        // Same reasoning — wipe cached data on the way out so a shared
+        // kiosk / front-desk PC doesn't surface the prior session's
+        // tenant data to the next user. Also clear the persisted
+        // zustand store so user/staff PII doesn't survive a
+        // logout-then-refresh.
+        try { queryClient.clear() } catch { /* defensive */ }
         localStorage.removeItem('auth_token')
+        localStorage.removeItem('loyalty-auth')
         set({ token: null, user: null, staff: null })
       },
       isAdmin: () => {

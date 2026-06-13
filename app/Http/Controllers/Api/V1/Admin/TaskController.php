@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * First-class task CRUD. Powers:
@@ -73,7 +74,7 @@ class TaskController extends Controller
             'title'                => 'required|string|max:200',
             'description'          => 'nullable|string|max:4000',
             'due_at'               => 'nullable|date',
-            'assigned_to'          => 'nullable|integer|exists:users,id',
+            'assigned_to'          => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'custom_data'          => 'nullable|array',
         ]);
 
@@ -133,7 +134,7 @@ class TaskController extends Controller
             'title'       => 'sometimes|string|max:200',
             'description' => 'sometimes|nullable|string|max:4000',
             'due_at'      => 'sometimes|nullable|date',
-            'assigned_to' => 'sometimes|nullable|integer|exists:users,id',
+            'assigned_to' => ['sometimes','nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'custom_data' => 'sometimes|nullable|array',
         ]);
 

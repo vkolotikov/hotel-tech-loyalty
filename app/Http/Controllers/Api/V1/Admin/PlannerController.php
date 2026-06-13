@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class PlannerController extends Controller
 {
@@ -52,7 +53,7 @@ class PlannerController extends Controller
     {
         $validated = $request->validate([
             'employee_name'        => 'nullable|string|max:150',
-            'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
+            'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'title'                => 'required|string|max:200',
             // Nullable: backlog tasks live without a date until someone
             // schedules them by dragging onto a day cell.
@@ -112,7 +113,7 @@ class PlannerController extends Controller
         $taskModel = $this->resolveTask($task);
         $validated = $request->validate([
             'employee_name'        => 'nullable|string|max:150',
-            'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
+            'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'title'                => 'sometimes|string|max:200',
             // Accept null so editor / drag-to-backlog can unschedule.
             'task_date'            => 'sometimes|nullable|date',
@@ -166,7 +167,7 @@ class PlannerController extends Controller
             // resurfaces in the sidebar backlog drawer.
             'task_date'            => 'nullable|date',
             'employee_name'        => 'nullable|string|max:150',
-            'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
+            'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'start_time'           => 'nullable|date_format:H:i',
         ]);
 
@@ -390,7 +391,7 @@ class PlannerController extends Controller
         $validated = $request->validate([
             'task_date'            => 'required|date',
             'employee_name'        => 'nullable|string|max:150',
-            'assigned_to_user_id'  => 'nullable|integer|exists:users,id',
+            'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
         ]);
 
         // replicate() doesn't copy timestamps. We exclude completed +

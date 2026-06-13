@@ -164,9 +164,20 @@ export function SendTemplateModal({ defaultTo, memberId, context, onClose, onSen
                 {selected ? (
                   <>
                     <div className="text-[10px] uppercase tracking-wider text-t-secondary mb-2">Preview</div>
-                    <div
-                      className="prose prose-invert prose-sm max-w-none bg-white/[0.02] border border-dark-border rounded-lg p-3 text-xs text-gray-200"
-                      dangerouslySetInnerHTML={{ __html: selected.html_body }}
+                    {/* Sandboxed iframe — matches the pattern used by every other
+                        email preview surface in the app (EmailCampaigns,
+                        EmailTemplates, Notifications). Earlier this rendered the
+                        admin-authored template HTML straight into the main DOM via
+                        dangerouslySetInnerHTML, which lets any template author plant
+                        <img src=x onerror="…"> or <script> and steal the auth_token
+                        from localStorage on every other staff member's session.
+                        sandbox="" strips scripts + popups + form submission + same-
+                        origin access. See AUDIT-2026-06-13.md frontend high. */}
+                    <iframe
+                      title="Template preview"
+                      sandbox=""
+                      srcDoc={selected.html_body}
+                      className="w-full h-72 bg-white rounded-lg border border-dark-border"
                     />
                     <p className="text-[10px] text-gray-600 mt-2">
                       Merge tags like <code className="text-primary-300">{'{{name}}'}</code> are substituted server-side when sending. Preview shows the raw template.

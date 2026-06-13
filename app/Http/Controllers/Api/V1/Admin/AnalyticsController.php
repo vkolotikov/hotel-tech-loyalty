@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Activity;
 use App\Models\Guest;
 use App\Models\Inquiry;
+use App\Models\Property;
 use App\Models\Reservation;
 use App\Models\VenueBooking;
 use App\Services\AnalyticsService;
@@ -370,7 +372,11 @@ class AnalyticsController extends Controller
             ? "(check_out::date - check_in::date)"
             : "DATEDIFF(check_out, check_in)";
 
-        $totalRooms = DB::table('properties')->where('is_active', true)->sum('room_count');
+        // Tenant-scoped via Property's BelongsToOrganization global scope.
+        // Previously used DB::table('properties')->sum() which leaked every
+        // tenant's room inventory into the Occupancy% denominator — see
+        // AUDIT-2026-06-13.md critical #1.
+        $totalRooms = Property::where('is_active', true)->sum('room_count');
 
         $occupied = Reservation::select(
                 DB::raw("{$periodSql} as period"),
@@ -572,8 +578,18 @@ class AnalyticsController extends Controller
         // Joins activities ← inquiries to attribute by the inquiry's
         // current owner. Activities table is append-only so the
         // window matches the activity timestamp.
-        $activityRows = DB::table('activities')
+        //
+        // Tenant boundary: cross-table joins blow past Eloquent global
+        // scopes, so we EXPLICITLY constrain organization_id on BOTH
+        // tables. Previously this used raw DB::table('activities') with
+        // no org filter and surfaced cross-tenant rows whenever owner
+        // names happened to overlap (Anna in org A + Anna in org B got
+        // summed). See AUDIT-2026-06-13.md critical #2.
+        $orgId = (int) (request()->user()?->organization_id ?? app('current_organization_id'));
+        $activityRows = Activity::query()
             ->join('inquiries', 'activities.inquiry_id', '=', 'inquiries.id')
+            ->where('activities.organization_id', $orgId)
+            ->where('inquiries.organization_id', $orgId)
             ->where('activities.occurred_at', '>=', $from)
             ->whereNotNull('inquiries.assigned_to')
             ->where('inquiries.assigned_to', '!=', '')

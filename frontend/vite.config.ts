@@ -19,7 +19,13 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-query': ['@tanstack/react-query'],
-            'vendor-charts': ['recharts'],
+            // 'vendor-charts': ['recharts'] — removed 2026-06-13.
+            // Vite was emitting a <link rel="modulepreload"> for the
+            // 434KB recharts chunk in index.html so EVERY cold load
+            // (including /login + every chartless page) fetched it.
+            // Only 6 lazy-loaded pages use recharts; letting Rollup
+            // co-bundle it into those chunks saves ~434KB on cold
+            // load. See AUDIT-2026-06-13.md frontend high perf.
           },
         },
       },
