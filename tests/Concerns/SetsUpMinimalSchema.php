@@ -207,6 +207,74 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Loyalty service award/redeem schema — opt-in extension for
+     * tests that exercise LoyaltyService::awardPoints and
+     * redeemPoints. Adds the side-effect tables both methods
+     * touch: domain_events, point_expiry_buckets, tier_assessments,
+     * plus the soft_landing column on loyalty_tiers (used by
+     * assessTier which fires from inside awardPoints).
+     */
+    protected function setUpLoyaltyAwardSchema(): void
+    {
+        $this->setUpLoyaltySchema();
+
+        if (!Schema::hasColumn('loyalty_tiers', 'soft_landing')) {
+            Schema::table('loyalty_tiers', function ($table) {
+                $table->boolean('soft_landing')->default(false);
+            });
+        }
+
+        if (!Schema::hasTable('domain_events')) {
+            Schema::create('domain_events', function ($table) {
+                $table->bigIncrements('id');
+                $table->string('event_type');
+                $table->string('aggregate_type');
+                $table->unsignedBigInteger('aggregate_id');
+                $table->text('payload')->nullable();
+                $table->unsignedBigInteger('property_id')->nullable();
+                $table->boolean('is_processed')->default(false);
+                $table->timestamp('processed_at')->nullable();
+                $table->timestamps();
+                $table->index(['aggregate_type', 'aggregate_id']);
+            });
+        }
+
+        if (!Schema::hasTable('point_expiry_buckets')) {
+            Schema::create('point_expiry_buckets', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('member_id');
+                $table->unsignedBigInteger('transaction_id')->nullable();
+                $table->integer('original_points');
+                $table->integer('remaining_points');
+                $table->date('earned_at');
+                $table->date('expires_at');
+                $table->boolean('is_expired')->default(false);
+                $table->timestamps();
+                $table->index(['member_id', 'is_expired', 'expires_at']);
+            });
+        }
+
+        if (!Schema::hasTable('tier_assessments')) {
+            Schema::create('tier_assessments', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('member_id');
+                $table->unsignedBigInteger('old_tier_id')->nullable();
+                $table->unsignedBigInteger('new_tier_id')->nullable();
+                $table->string('reason')->nullable();
+                $table->integer('qualifying_points_at_assessment')->nullable();
+                $table->integer('qualifying_nights_at_assessment')->nullable();
+                $table->integer('qualifying_stays_at_assessment')->nullable();
+                $table->decimal('qualifying_spend_at_assessment', 12, 2)->nullable();
+                $table->date('assessment_window_start')->nullable();
+                $table->date('assessment_window_end')->nullable();
+                $table->unsignedBigInteger('assessed_by')->nullable();
+                $table->timestamps();
+                $table->index('member_id');
+            });
+        }
+    }
+
+    /**
      * Organization setup schema — opt-in extension for tests that
      * exercise OrganizationSetupService::setupDefaults().
      *
