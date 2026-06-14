@@ -521,6 +521,25 @@ trait SetsUpMinimalSchema
                 $table->boolean('invitation_only')->default(false);
             });
         }
+        // Tier-lookup thresholds: max_points + per-model min_*
+        // columns (nights/stays/spend). All nullable — only present
+        // for tiers using the relevant qualification model.
+        $extraCols = [
+            ['max_points', 'integer'],
+            ['min_nights', 'integer'],
+            ['min_stays',  'integer'],
+            ['min_spend',  'decimal'],
+        ];
+        Schema::table('loyalty_tiers', function ($table) use ($extraCols) {
+            foreach ($extraCols as [$col, $type]) {
+                if (Schema::hasColumn('loyalty_tiers', $col)) continue;
+                $colDef = match ($type) {
+                    'decimal' => $table->decimal($col, 12, 2),
+                    default   => $table->{$type}($col),
+                };
+                $colDef->nullable();
+            }
+        });
 
         if (!Schema::hasTable('domain_events')) {
             Schema::create('domain_events', function ($table) {
