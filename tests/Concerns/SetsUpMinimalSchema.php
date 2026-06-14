@@ -251,6 +251,53 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Engagement schema — opt-in extension for tests that
+     * exercise EngagementDailySummaryService + EngagementFeedService
+     * (the parts that need DB access). Adds chat_conversations +
+     * visitors + adds the timezone column to organizations.
+     */
+    protected function setUpEngagementSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        // Organizations needs a timezone column for orgNow().
+        if (!Schema::hasColumn('organizations', 'timezone')) {
+            Schema::table('organizations', function ($table) {
+                $table->string('timezone', 64)->nullable();
+            });
+        }
+
+        if (!Schema::hasTable('visitors')) {
+            Schema::create('visitors', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->boolean('is_lead')->default(false);
+                $table->string('current_page')->nullable();
+                $table->string('display_name')->nullable();
+                $table->string('email')->nullable();
+                $table->string('phone')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('chat_conversations')) {
+            Schema::create('chat_conversations', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('status', 16)->default('active');
+                $table->boolean('ai_enabled')->default(true);
+                $table->unsignedBigInteger('assigned_to')->nullable();
+                $table->string('visitor_name')->nullable();
+                $table->string('visitor_email')->nullable();
+                $table->timestamp('last_message_at')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+    }
+
+    /**
      * Notification service schema — opt-in extension for tests
      * that exercise NotificationService::send. Adds push_notifications
      * table + the push columns on loyalty_members.
