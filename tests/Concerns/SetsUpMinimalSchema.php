@@ -207,6 +207,29 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Realtime events schema — opt-in extension for tests that
+     * exercise RealtimeEventService::dispatch / since / cleanup.
+     */
+    protected function setUpRealtimeEventsSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('realtime_events')) {
+            Schema::create('realtime_events', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->string('type');
+                $table->string('title');
+                $table->text('body')->nullable();
+                $table->text('data')->nullable();
+                $table->timestamp('created_at')->nullable();
+                $table->index(['organization_id', 'id']);
+                $table->index('created_at');
+            });
+        }
+    }
+
+    /**
      * Booking admin controller schema — opt-in extension for
      * tests that exercise BookingAdminController::updateStatus.
      * Adds booking_submissions + booking_notes + booking_price_elements
