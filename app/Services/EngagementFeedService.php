@@ -373,7 +373,7 @@ class EngagementFeedService
             conversation: $conversation,
         );
 
-        $score = $this->scoreRow(
+        $score = self::scoreRow(
             isOnline:        $isOnline,
             hasContact:      $hasContact,
             hasUnreadVisitor: $waitingForHuman || $unreadCount > 0,
@@ -483,7 +483,12 @@ class EngagementFeedService
      *
      * Each branch returns the highest-applicable base score; boosts add on top.
      */
-    private function scoreRow(
+    /**
+     * Promoted to public static so the priority math is testable
+     * in isolation. Uses no instance state — same pattern as
+     * scoreHotLead (the sister heuristic).
+     */
+    public static function scoreRow(
         bool $isOnline,
         bool $hasContact,
         bool $hasUnreadVisitor,
