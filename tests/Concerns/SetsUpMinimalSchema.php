@@ -207,6 +207,67 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Availability schema — opt-in extension for tests that exercise
+     * AvailabilityService::check() and its 3-tier acceptance logic.
+     *
+     * Adds `booking_rooms` (the primary room catalog, used by getRooms)
+     * + the `brands` table (BookingRoom uses BelongsToBrand and would
+     * otherwise hit "no such table: brands" during the default-brand
+     * lookup on row create). booking_mirror comes from the underlying
+     * BookingRefundSchema (used by bookedCountForRoom inventory checks).
+     */
+    protected function setUpAvailabilitySchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('booking_rooms')) {
+            Schema::create('booking_rooms', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('pms_id')->nullable();
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->text('description')->nullable();
+                $table->text('short_description')->nullable();
+                $table->integer('max_guests')->default(2);
+                $table->integer('bedrooms')->default(1);
+                $table->string('bed_type')->nullable();
+                $table->decimal('base_price', 12, 2)->default(0);
+                $table->integer('inventory_count')->default(1);
+                $table->string('currency', 8)->default('EUR');
+                $table->string('image')->nullable();
+                $table->text('gallery')->nullable();
+                $table->text('amenities')->nullable();
+                $table->text('tags')->nullable();
+                $table->string('size')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->text('meta')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+                $table->index(['organization_id', 'pms_id']);
+            });
+        }
+    }
+
+    /**
      * Loyalty schema — opt-in extension for tests that exercise
      * LoyaltyService (award/redeem/reverse) and the tier ladder.
      * Includes a richer points_transactions schema covering every
