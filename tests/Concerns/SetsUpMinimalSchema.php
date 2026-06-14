@@ -207,6 +207,43 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Notification service schema — opt-in extension for tests
+     * that exercise NotificationService::send. Adds push_notifications
+     * table + the push columns on loyalty_members.
+     */
+    protected function setUpNotificationSchema(): void
+    {
+        $this->setUpLoyaltySchema();
+
+        if (!Schema::hasTable('push_notifications')) {
+            Schema::create('push_notifications', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('member_id');
+                $table->string('type');
+                $table->string('title');
+                $table->text('body')->nullable();
+                $table->text('data')->nullable();
+                $table->string('channel', 16)->default('push');
+                $table->boolean('is_sent')->default(false);
+                $table->timestamps();
+                $table->index('member_id');
+            });
+        }
+
+        // Add the push-related columns to loyalty_members if missing.
+        if (!Schema::hasColumn('loyalty_members', 'expo_push_token')) {
+            Schema::table('loyalty_members', function ($table) {
+                $table->string('expo_push_token')->nullable();
+            });
+        }
+        if (!Schema::hasColumn('loyalty_members', 'notification_preferences')) {
+            Schema::table('loyalty_members', function ($table) {
+                $table->text('notification_preferences')->nullable();
+            });
+        }
+    }
+
+    /**
      * Realtime events schema — opt-in extension for tests that
      * exercise RealtimeEventService::dispatch / since / cleanup.
      */
