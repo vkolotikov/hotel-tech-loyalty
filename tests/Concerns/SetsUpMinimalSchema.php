@@ -207,6 +207,50 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Knowledge service schema — opt-in extension for tests that
+     * exercise KnowledgeService::searchRelevantItems +
+     * tokeniseQuery. Adds knowledge_items table + brands (for
+     * BelongsToBrand) on top of setUpMinimalSchema.
+     */
+    protected function setUpKnowledgeSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('knowledge_items')) {
+            Schema::create('knowledge_items', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->unsignedBigInteger('category_id')->nullable();
+                $table->text('question');
+                $table->text('answer');
+                $table->text('keywords')->nullable(); // array-cast
+                $table->integer('priority')->default(0);
+                $table->integer('use_count')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+    }
+
+    /**
      * Notification service schema — opt-in extension for tests
      * that exercise NotificationService::send. Adds push_notifications
      * table + the push columns on loyalty_members.
