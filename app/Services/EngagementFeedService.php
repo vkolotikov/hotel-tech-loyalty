@@ -364,7 +364,7 @@ class EngagementFeedService
             && $lastMessage?->sender_type === 'visitor'
             && $conversation->ai_enabled === false;
 
-        $isHotLead = $this->scoreHotLead(
+        $isHotLead = self::scoreHotLead(
             isOnline:     $isOnline,
             hasContact:   $hasContact,
             currentPage:  $v->current_page,
@@ -438,8 +438,12 @@ class EngagementFeedService
      *     active/waiting conversation, returning visitor, intent_tag
      *     classified as booking_inquiry, 3+ messages exchanged.
      * Strict enough that the "Hot leads" filter never floods.
+     *
+     * Promoted to public static so the rule set can be locked by
+     * isolated unit tests without standing up the full feed query.
+     * Touches no instance state.
      */
-    private function scoreHotLead(
+    public static function scoreHotLead(
         bool $isOnline,
         bool $hasContact,
         ?string $currentPage,
