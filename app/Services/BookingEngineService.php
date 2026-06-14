@@ -26,6 +26,42 @@ class BookingEngineService
 {
     public function __construct(private SmoobuClient $smoobu) {}
 
+    /**
+     * Classify a Smoobu createReservation exception message as transient
+     * (retry-safe; create a local-only mirror, retry cron picks it up)
+     * or fatal (rollback after payment; throw an actionable error).
+     *
+     * Used by BOTH single-room confirm() AND multi-room confirmCombo().
+     * Hoisted to a static helper from two inline call sites that had
+     * drifted: confirmCombo() was missing the "Smoobu channel
+     * configuration always fatal" override, so the combo path could
+     * incorrectly retry on misconfiguration that would never self-heal.
+     *
+     * The asymmetry: false-transient creates a local-only mirror that
+     * the retry cron picks up; false-fatal rolls back the entire
+     * transaction AFTER the guest already paid. The pattern is
+     * deliberately generous toward transient classification — any
+     * infrastructure-shaped error (HTML proxy pages, "Service
+     * Unavailable" text, DNS failures, SSL handshake errors,
+     * timeouts, 5xx, 429) routes to the recoverable bucket.
+     *
+     * Override: "Smoobu channel configuration" errors from
+     * resolveDirectChannelId() are ALWAYS fatal — a retry won't fix a
+     * misconfigured channel.
+     */
+    public static function isTransientSmoobuError(string $msg): bool
+    {
+        // Channel-config errors are NEVER transient even if the message
+        // contains transient-looking sub-strings.
+        if (stripos($msg, 'Smoobu channel configuration') !== false) {
+            return false;
+        }
+        return (bool) preg_match(
+            '/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i',
+            $msg,
+        );
+    }
+
     /** Create a price quote with hold token. */
     public function quote(array $data): array
     {
@@ -774,16 +810,7 @@ class BookingEngineService
                 // bucket. A false-transient creates a local-only mirror
                 // that the retry cron picks up; a false-fatal rolls back
                 // the entire transaction after the guest already paid.
-                $isTransient =
-                    preg_match('/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i', $msg);
-                // Override: "Smoobu channel configuration" errors from
-                // resolveDirectChannelId() are ALWAYS fatal regardless of
-                // incidental transient-looking sub-strings in $listError.
-                // A retry won't fix a misconfigured channel — we need a
-                // human in the loop.
-                if (stripos($msg, 'Smoobu channel configuration') !== false) {
-                    $isTransient = false;
-                }
+                $isTransient = self::isTransientSmoobuError($msg);
                 $pmsFatal = !$isTransient ? $msg : null;
                 // Hold the verbatim exception so the outer fatal-throw
                 // below can pass it as `previous`. Without this the
@@ -1760,10 +1787,10 @@ class BookingEngineService
                         $pmsResult = $this->smoobu->createReservation($smoobuPayload);
                     } catch (\Throwable $e) {
                         $msg = $e->getMessage();
-                        $isTransient = (bool) preg_match(
-                            '/\b(50[0-9]|502|503|504|timed?\s*out|timeout|connection|network|gateway|cURL|getaddrinfo|temporar(y|ily)|rate\s*limit|429|unavailable|internal[\s_-]*(?:server[\s_-]*)?error|service[\s_-]*error|bad[\s_-]*gateway|HTTP[\s\/]*[5]\d{2}|ECONNREFUSED|ENOTFOUND|reset\s*by\s*peer|recv\s*failure|SSL)/i',
-                            $msg,
-                        );
+                        // Use the shared classifier so single-room +
+                        // combo paths agree on the channel-config-is-fatal
+                        // override and on the transient-keyword set.
+                        $isTransient = self::isTransientSmoobuError($msg);
                         if (!$isTransient) {
                             $pmsFatal = $msg;
                             // Preserve the verbatim Smoobu exception so the
