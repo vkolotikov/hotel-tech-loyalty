@@ -207,6 +207,73 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Guest merge schema — opt-in extension for tests that
+     * exercise GuestMergeService::merge(). Extends the minimal
+     * guests table with the columns merge() touches (notes,
+     * stays counters, etc.) and adds a single PLAIN_TABLES
+     * target (inquiries) for the re-pointing tests. audit_logs
+     * comes from setUpBookingRefundSchema.
+     */
+    protected function setUpGuestMergeSchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+
+        $extraGuestCols = [
+            ['mobile',              'string',             true],
+            ['position_title',      'string',             true],
+            ['nationality',         'string',             true],
+            ['city',                'string',             true],
+            ['address',             'string',             true],
+            ['postal_code',         'string',             true],
+            ['date_of_birth',       'date',               true],
+            ['passport_no',         'string',             true],
+            ['id_number',           'string',             true],
+            ['salutation',          'string',             true],
+            ['preferred_language',  'string',             true],
+            ['preferred_room_type', 'string',             true],
+            ['preferred_floor',     'string',             true],
+            ['dietary_preferences', 'text',               true],
+            ['special_needs',       'text',               true],
+            ['vip_level',           'string',             true],
+            ['email_key',           'string',             true],
+            ['phone_key',           'string',             true],
+            ['total_stays',         'integer',            true],
+            ['total_nights',        'integer',            true],
+            ['total_revenue',       'decimal',            true],
+            ['first_stay_date',     'date',               true],
+            ['last_activity_at',    'timestamp',          true],
+        ];
+        Schema::table('guests', function ($table) use ($extraGuestCols) {
+            foreach ($extraGuestCols as [$col, $type, $nullable]) {
+                if (Schema::hasColumn('guests', $col)) continue;
+                $colDef = match ($type) {
+                    'decimal' => $table->decimal($col, 12, 2),
+                    default   => $table->{$type}($col),
+                };
+                if ($nullable) $colDef->nullable();
+            }
+        });
+
+        if (!Schema::hasTable('inquiries')) {
+            Schema::create('inquiries', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->unsignedBigInteger('guest_id')->nullable();
+                $table->unsignedBigInteger('pipeline_id')->nullable();
+                $table->unsignedBigInteger('pipeline_stage_id')->nullable();
+                $table->string('status')->nullable();
+                $table->timestamps();
+                $table->index('guest_id');
+            });
+        } elseif (!Schema::hasColumn('inquiries', 'guest_id')) {
+            Schema::table('inquiries', function ($table) {
+                $table->unsignedBigInteger('guest_id')->nullable();
+            });
+        }
+    }
+
+    /**
      * Loyalty service award/redeem schema — opt-in extension for
      * tests that exercise LoyaltyService::awardPoints and
      * redeemPoints. Adds the side-effect tables both methods
