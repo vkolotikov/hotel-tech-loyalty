@@ -207,6 +207,35 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Custom fields schema — opt-in extension for tests that exercise
+     * CustomFieldService (validate / generateKey / applyPreset).
+     */
+    protected function setUpCustomFieldsSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('custom_fields')) {
+            Schema::create('custom_fields', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('entity', 32);
+                $table->string('key', 100);
+                $table->string('label');
+                $table->string('type', 32);
+                $table->text('config')->nullable();
+                $table->text('help_text')->nullable();
+                $table->boolean('required')->default(false);
+                $table->boolean('is_active')->default(true);
+                $table->boolean('show_in_list')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->timestamps();
+                $table->index(['organization_id', 'entity']);
+                $table->unique(['organization_id', 'entity', 'key']);
+            });
+        }
+    }
+
+    /**
      * Availability schema — opt-in extension for tests that exercise
      * AvailabilityService::check() and its 3-tier acceptance logic.
      *
