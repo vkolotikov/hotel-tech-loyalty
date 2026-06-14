@@ -48,9 +48,17 @@ trait ReleasesScheduleLock
                     ->delete();
             } catch (Throwable $e) {
                 // Last-gasp cleanup; never let this kill the process.
-                Log::warning('ReleasesScheduleLock shutdown cleanup failed', [
-                    'error' => $e->getMessage(),
-                ]);
+                // Log::warning itself may throw at shutdown when the
+                // facade has already been torn down (PHP tears down
+                // facades in non-deterministic order). Wrap so a
+                // shutdown-time Log failure can't bubble out and crash
+                // the process with a non-zero exit (which would make
+                // the scheduler think the cron failed).
+                try {
+                    Log::warning('ReleasesScheduleLock shutdown cleanup failed', [
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (Throwable) { /* defensive — process is dying */ }
             }
         });
     }

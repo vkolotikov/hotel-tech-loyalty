@@ -335,6 +335,44 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Capture-pending cron schema — opt-in extension for tests
+     * that exercise CapturePendingPaymentIntents. Builds on
+     * booking_mirror + audit_logs + realtime_events and adds
+     * service_bookings (the cron queries both surfaces).
+     */
+    protected function setUpCapturePendingSchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+        $this->setUpRealtimeEventsSchema();
+
+        // ReleasesScheduleLock trait runs a shutdown DELETE on
+        // cache_locks. Provide the table so the warning path
+        // (which can fail at shutdown when the Log facade is
+        // unbootable) doesn't fire.
+        if (!Schema::hasTable('cache_locks')) {
+            Schema::create('cache_locks', function ($table) {
+                $table->string('key')->primary();
+                $table->string('owner');
+                $table->integer('expiration');
+            });
+        }
+
+        if (!Schema::hasTable('service_bookings')) {
+            Schema::create('service_bookings', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('payment_status', 32)->nullable();
+                $table->string('stripe_payment_intent_id')->nullable();
+                $table->decimal('price_total', 12, 2)->default(0);
+                $table->decimal('price_paid', 12, 2)->nullable();
+                $table->string('internal_status', 32)->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+    }
+
+    /**
      * Realtime events schema — opt-in extension for tests that
      * exercise RealtimeEventService::dispatch / since / cleanup.
      */
