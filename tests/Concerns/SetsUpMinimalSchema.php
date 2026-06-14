@@ -207,6 +207,47 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Member merge schema — opt-in extension for tests that
+     * exercise MemberMergeService::merge(). Builds on
+     * setUpLoyaltyAwardSchema (loyalty_members + points_transactions
+     * + tier_assessments + point_expiry_buckets for assessTier
+     * inside merge) and adds the merge-specific extras:
+     *   - member_merges (the audit table)
+     *   - referred_by + nfc_uid + nfc_card_issued_at + referral_code
+     *     columns on loyalty_members
+     */
+    protected function setUpMemberMergeSchema(): void
+    {
+        $this->setUpLoyaltyAwardSchema();
+
+        $extraMemberCols = [
+            ['referred_by',          'unsignedBigInteger', true],
+            ['nfc_uid',              'string',             true],
+            ['nfc_card_issued_at',   'timestamp',          true],
+            ['referral_code',        'string',             true],
+        ];
+        Schema::table('loyalty_members', function ($table) use ($extraMemberCols) {
+            foreach ($extraMemberCols as [$col, $type, $nullable]) {
+                if (Schema::hasColumn('loyalty_members', $col)) continue;
+                $colDef = $table->{$type}($col);
+                if ($nullable) $colDef->nullable();
+            }
+        });
+
+        if (!Schema::hasTable('member_merges')) {
+            Schema::create('member_merges', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('surviving_member_id');
+                $table->unsignedBigInteger('merged_member_id');
+                $table->text('merged_data')->nullable();
+                $table->unsignedBigInteger('performed_by')->nullable();
+                $table->text('reason')->nullable();
+                $table->timestamps();
+            });
+        }
+    }
+
+    /**
      * Guest merge schema — opt-in extension for tests that
      * exercise GuestMergeService::merge(). Extends the minimal
      * guests table with the columns merge() touches (notes,
