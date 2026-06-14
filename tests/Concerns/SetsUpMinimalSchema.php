@@ -207,6 +207,55 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Booking admin controller schema — opt-in extension for
+     * tests that exercise BookingAdminController::updateStatus.
+     * Adds booking_submissions + booking_notes + booking_price_elements
+     * tables so the controller's show() helper (called after a
+     * successful update) doesn't blow up on missing tables.
+     */
+    protected function setUpBookingAdminSchema(): void
+    {
+        $this->setUpBookingRefundSchema();
+
+        if (!Schema::hasTable('booking_submissions')) {
+            Schema::create('booking_submissions', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('reservation_id')->nullable();
+                $table->string('booking_reference')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('booking_notes')) {
+            Schema::create('booking_notes', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->unsignedBigInteger('booking_mirror_id');
+                $table->string('reservation_id')->nullable();
+                $table->unsignedBigInteger('staff_id')->nullable();
+                $table->text('body')->nullable();
+                $table->timestamps();
+                $table->index('booking_mirror_id');
+            });
+        }
+
+        if (!Schema::hasTable('booking_price_elements')) {
+            Schema::create('booking_price_elements', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('booking_mirror_id');
+                $table->string('type')->nullable();
+                $table->string('name')->nullable();
+                $table->decimal('amount', 12, 2)->default(0);
+                $table->timestamps();
+                $table->index('booking_mirror_id');
+            });
+        }
+    }
+
+    /**
      * Loyalty preset schema — opt-in extension for tests that
      * exercise LoyaltyPresetService::apply(). Builds on
      * setUpOrgSetupSchema (loyalty_tiers + loyalty_members +
