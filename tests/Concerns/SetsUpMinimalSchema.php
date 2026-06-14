@@ -207,6 +207,47 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Planner preset schema — opt-in extension for tests that
+     * exercise PlannerPresetService::apply(). Smaller surface than
+     * the CRM preset: just crm_settings (for planner_groups +
+     * planner_preset keys) and planner_templates (the seeded
+     * library).
+     */
+    protected function setUpPlannerPresetSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('crm_settings')) {
+            Schema::create('crm_settings', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('key', 100);
+                $table->text('value')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'key']);
+            });
+        }
+
+        if (!Schema::hasTable('planner_templates')) {
+            Schema::create('planner_templates', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('title')->nullable();
+                $table->string('task_group')->nullable();
+                $table->string('task_category')->nullable();
+                $table->string('priority', 16)->nullable();
+                $table->integer('duration_minutes')->nullable();
+                $table->text('description')->nullable();
+                $table->string('category')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->timestamps();
+                $table->index(['organization_id', 'name']);
+            });
+        }
+    }
+
+    /**
      * CRM preset schema — opt-in extension for tests that exercise
      * IndustryPresetService::apply(). Builds the minimal table set
      * the service writes to: pipelines + pipeline_stages +
