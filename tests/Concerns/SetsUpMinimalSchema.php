@@ -207,6 +207,29 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Loyalty preset schema — opt-in extension for tests that
+     * exercise LoyaltyPresetService::apply(). Builds on
+     * setUpOrgSetupSchema (loyalty_tiers + loyalty_members +
+     * benefit_definitions + hotel_settings) and adds crm_settings
+     * (where the active preset key + members_preset stamp live).
+     */
+    protected function setUpLoyaltyPresetSchema(): void
+    {
+        $this->setUpOrgSetupSchema();
+
+        if (!Schema::hasTable('crm_settings')) {
+            Schema::create('crm_settings', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('key', 100);
+                $table->text('value')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'key']);
+            });
+        }
+    }
+
+    /**
      * Member merge schema — opt-in extension for tests that
      * exercise MemberMergeService::merge(). Builds on
      * setUpLoyaltyAwardSchema (loyalty_members + points_transactions
@@ -752,6 +775,8 @@ trait SetsUpMinimalSchema
                 $table->decimal('earn_rate', 6, 2)->default(1.0);
                 $table->integer('sort_order')->default(0);
                 $table->string('color_hex', 8)->nullable();
+                $table->string('icon')->nullable();
+                $table->text('perks')->nullable(); // array-cast on the model
                 $table->string('qualification_model', 32)->nullable();
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
