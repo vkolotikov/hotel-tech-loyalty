@@ -207,6 +207,110 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * CRM preset schema — opt-in extension for tests that exercise
+     * IndustryPresetService::apply(). Builds the minimal table set
+     * the service writes to: pipelines + pipeline_stages +
+     * inquiry_lost_reasons + inquiries (for stage migration) +
+     * crm_settings + brands (Inquiry uses BelongsToBrand).
+     *
+     * The chatbot_behavior_configs write is best-effort in
+     * production (wrapped in try/catch) so we skip its table —
+     * the service logs a warning and continues.
+     */
+    protected function setUpCrmPresetSchema(): void
+    {
+        $this->setUpCustomFieldsSchema();
+
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('pipelines')) {
+            Schema::create('pipelines', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->text('description')->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('pipeline_stages')) {
+            Schema::create('pipeline_stages', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('pipeline_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('color', 16)->nullable();
+                $table->string('kind', 16); // open / won / lost
+                $table->integer('sort_order')->default(0);
+                $table->integer('default_win_probability')->nullable();
+                $table->timestamps();
+                $table->index(['organization_id', 'pipeline_id']);
+            });
+        }
+
+        if (!Schema::hasTable('inquiry_lost_reasons')) {
+            Schema::create('inquiry_lost_reasons', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('label');
+                $table->string('slug')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        // Minimal inquiries table — only the columns the preset
+        // service writes / reads during stage migration.
+        if (!Schema::hasTable('inquiries')) {
+            Schema::create('inquiries', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->unsignedBigInteger('pipeline_id')->nullable();
+                $table->unsignedBigInteger('pipeline_stage_id')->nullable();
+                $table->unsignedBigInteger('lost_reason_id')->nullable();
+                $table->string('status')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+                $table->index('pipeline_stage_id');
+            });
+        }
+
+        if (!Schema::hasTable('crm_settings')) {
+            Schema::create('crm_settings', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('key', 100);
+                $table->text('value')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'key']);
+            });
+        }
+    }
+
+    /**
      * Custom fields schema — opt-in extension for tests that exercise
      * CustomFieldService (validate / generateKey / applyPreset).
      */
