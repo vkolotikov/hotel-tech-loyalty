@@ -207,6 +207,85 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Organization setup schema — opt-in extension for tests that
+     * exercise OrganizationSetupService::setupDefaults().
+     *
+     * Builds on top of setUpLoyaltySchema (brands + loyalty_tiers +
+     * loyalty_members + booking_mirror + hotel_settings) and adds
+     * the remaining tables setupDefaults() touches: properties (with
+     * the GLOBALLY-unique `code` column the property-code auto-
+     * suffix exercises), benefit_definitions, and review_forms.
+     */
+    protected function setUpOrgSetupSchema(): void
+    {
+        $this->setUpLoyaltySchema();
+
+        if (!Schema::hasTable('properties')) {
+            Schema::create('properties', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('code')->unique(); // globally unique per CLAUDE.md
+                $table->string('property_type')->nullable();
+                $table->string('email')->nullable();
+                $table->string('phone')->nullable();
+                $table->string('website')->nullable();
+                $table->string('gm_name')->nullable();
+                $table->string('image_url')->nullable();
+                $table->string('address')->nullable();
+                $table->string('city')->nullable();
+                $table->string('country')->nullable();
+                $table->string('timezone')->nullable();
+                $table->string('currency', 8)->nullable();
+                $table->integer('star_rating')->nullable();
+                $table->integer('room_count')->nullable();
+                $table->string('pms_type')->nullable();
+                $table->string('pms_property_id')->nullable();
+                $table->text('settings')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('benefit_definitions')) {
+            Schema::create('benefit_definitions', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('code'); // NOT globally unique — per-org
+                $table->text('description')->nullable();
+                $table->string('category')->nullable();
+                $table->string('fulfillment_mode')->nullable();
+                $table->integer('usage_limit_per_stay')->nullable();
+                $table->integer('usage_limit_per_year')->nullable();
+                $table->boolean('requires_active_stay')->default(false);
+                $table->text('operational_constraints')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->unique(['organization_id', 'code']);
+            });
+        }
+
+        if (!Schema::hasTable('review_forms')) {
+            Schema::create('review_forms', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('type', 32)->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->boolean('is_default')->default(false);
+                $table->text('config')->nullable();
+                $table->string('embed_key', 64)->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+    }
+
+    /**
      * Planner preset schema — opt-in extension for tests that
      * exercise PlannerPresetService::apply(). Smaller surface than
      * the CRM preset: just crm_settings (for planner_groups +
@@ -498,6 +577,7 @@ trait SetsUpMinimalSchema
                 $table->integer('sort_order')->default(0);
                 $table->string('color_hex', 8)->nullable();
                 $table->string('qualification_model', 32)->nullable();
+                $table->boolean('is_active')->default(true);
                 $table->timestamps();
                 $table->index('organization_id');
             });
