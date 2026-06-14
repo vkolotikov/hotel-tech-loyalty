@@ -354,6 +354,20 @@ trait SetsUpMinimalSchema
                 $table->boolean('soft_landing')->default(false);
             });
         }
+        // assessTier reads qualification_window from the current tier
+        // (calendar_year/anniversary_year/rolling_12) and reads
+        // invitation_only via getTierForPoints to skip those tiers
+        // from auto-assignment.
+        if (!Schema::hasColumn('loyalty_tiers', 'qualification_window')) {
+            Schema::table('loyalty_tiers', function ($table) {
+                $table->string('qualification_window', 32)->nullable();
+            });
+        }
+        if (!Schema::hasColumn('loyalty_tiers', 'invitation_only')) {
+            Schema::table('loyalty_tiers', function ($table) {
+                $table->boolean('invitation_only')->default(false);
+            });
+        }
 
         if (!Schema::hasTable('domain_events')) {
             Schema::create('domain_events', function ($table) {
