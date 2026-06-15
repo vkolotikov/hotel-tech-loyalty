@@ -255,6 +255,35 @@ export function parsePlannerChannels(raw: any): ChannelDef[] {
   return out
 }
 
+/* ───────────────────  Employee preferences  ─────────────────── */
+
+export interface EmployeePref { groups: string[]; tasks: string[] }
+
+/**
+ * Normalise the raw `planner_employee_prefs` setting: a map of employee
+ * name -> { groups, tasks } marking which task groups + tasks best fit
+ * that employee's knowledge. Soft preference only (anyone can still be
+ * assigned anything) — used to highlight the New-task drawer pickers and
+ * (later) to inform AI task assignment.
+ */
+export function parseEmployeePrefs(raw: any): Record<string, EmployeePref> {
+  let parsed: any = raw
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw) } catch { parsed = null }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+  const out: Record<string, EmployeePref> = {}
+  for (const [name, val] of Object.entries(parsed)) {
+    if (!val || typeof val !== 'object') continue
+    const v = val as any
+    out[String(name)] = {
+      groups: Array.isArray(v.groups) ? v.groups.map((g: any) => String(g)) : [],
+      tasks: Array.isArray(v.tasks) ? v.tasks.map((t: any) => String(t)) : [],
+    }
+  }
+  return out
+}
+
 /* ─────────────────────────  Hooks  ───────────────────────── */
 
 /**

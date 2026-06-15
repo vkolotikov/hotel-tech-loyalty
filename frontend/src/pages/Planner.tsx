@@ -6,7 +6,7 @@ import { useSettings } from '../lib/crmSettings'
 import {
   TASK_GROUP_META as SHARED_TASK_GROUP_META,
   CUSTOM_GROUP_META as SHARED_CUSTOM_GROUP_META,
-  parsePlannerGroups, parsePlannerChannels, getIcon,
+  parsePlannerGroups, parsePlannerChannels, parseEmployeePrefs, getIcon,
   type GroupMeta,
 } from '../lib/plannerMeta'
 import { useAuthStore } from '../stores/authStore'
@@ -1624,6 +1624,7 @@ export function Planner() {
   const { custom: customGroupMetaSnapshot } = parsePlannerGroups(rawSettings?.planner_groups)
   _customGroupMeta = customGroupMetaSnapshot
   const taskChannels = parsePlannerChannels(rawSettings?.planner_channels)
+  const employeePrefs = parseEmployeePrefs(rawSettings?.planner_employee_prefs)
   const [tab, setTab] = useState<Tab>('schedule')
   const [currentDate, setCurrentDate] = useState(() => fmtDate(new Date()))
   const [weekStart, setWeekStart] = useState(() => fmtDate(getMonday(new Date())))
@@ -3261,6 +3262,11 @@ export function Planner() {
           if (g.length === 0) return true
           return form.task_group ? g.includes(form.task_group) : false
         })
+        // Preferred groups/tasks for the assigned employee — highlighted
+        // (amber) in the pickers below. Soft hint only; any choice is allowed.
+        const empPref = form.employee_name ? employeePrefs[form.employee_name] : undefined
+        const prefGroups = empPref?.groups ?? []
+        const prefTasks = empPref?.tasks ?? []
 
         return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
@@ -3288,9 +3294,12 @@ export function Planner() {
                             ((c.groups ?? []).length === 0 || (!!ng && (c.groups ?? []).includes(ng))))
                           return { ...f, task_group: ng, task_category: keep ? f.task_category : '' }
                         })}
-                        className={'flex flex-col items-center gap-1 p-2 rounded-md border text-[11px] font-bold transition ' +
-                          (active ? 'text-black' : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
+                        className={'relative flex flex-col items-center gap-1 p-2 rounded-md border text-[11px] font-bold transition ' +
+                          (active ? 'text-black'
+                            : prefGroups.includes(g) ? 'text-amber-200 border-amber-400/50 bg-amber-400/10 hover:bg-amber-400/15'
+                            : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
                         style={active ? { background: meta.color, borderColor: meta.color } : {}}>
+                        {prefGroups.includes(g) && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" title={`Fits ${form.employee_name}`} />}
                         <Icon size={14} />
                         {g}
                       </button>
@@ -3314,9 +3323,12 @@ export function Planner() {
                     return (
                       <button key={c.key} type="button"
                         onClick={() => setForm(f => ({ ...f, task_category: active ? '' : c.key }))}
-                        className={'flex flex-col items-center gap-0.5 p-1.5 rounded-md border text-[10px] font-semibold transition ' +
-                          (active ? 'text-black' : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
+                        className={'relative flex flex-col items-center gap-0.5 p-1.5 rounded-md border text-[10px] font-semibold transition ' +
+                          (active ? 'text-black'
+                            : prefTasks.includes(c.key) ? 'text-amber-200 border-amber-400/50 bg-amber-400/10 hover:bg-amber-400/15'
+                            : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
                         style={active ? { background: c.color, borderColor: c.color } : {}}>
+                        {prefTasks.includes(c.key) && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" title={`Fits ${form.employee_name}`} />}
                         <Icon size={13} />
                         {c.label}
                       </button>

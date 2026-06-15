@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { parsePlannerGroups, parsePlannerChannels } from '../lib/plannerMeta'
 
 type BacklogTask = {
   id: number
@@ -71,7 +72,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
     try { localStorage.setItem(SCOPE_STORAGE_KEY, scope) } catch {}
   }, [scope])
 
-  const [quickAdd, setQuickAdd] = useState('')
+  const [qa, setQa] = useState({ title: '', task_group: '', task_category: '', duration: '' })
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [search, setSearch] = useState('')
   const [isDropTarget, setIsDropTarget] = useState(false)
@@ -93,6 +94,23 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
     queryFn: () => api.get('/v1/admin/planner/backlog', { params: { scope: 'pool' } }).then((r: any) => r.data),
   })
 
+  // Planner groups + tasks for the quick-add Category / Task pickers.
+  // Reuses the cached crm-settings query shared across the SPA.
+  const { data: crmSettings } = useQuery<Record<string, any>>({
+    queryKey: ['crm-settings'],
+    queryFn: () => api.get('/v1/admin/crm-settings').then((r: any) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const groupNames = parsePlannerGroups(crmSettings?.planner_groups).names
+  const taskList = parsePlannerChannels(crmSettings?.planner_channels)
+  // Tasks available for the chosen category: those tagged to it + untagged
+  // (universal) tasks. Mirrors the main drawer's filter.
+  const qaTasks = taskList.filter(c => {
+    const g = c.groups ?? []
+    if (g.length === 0) return true
+    return qa.task_group ? g.includes(qa.task_group) : false
+  })
+
   const activeTasks = scope === 'mine' ? mineTasks : poolTasks
   const isLoading   = scope === 'mine' ? mineLoading : poolLoading
 
@@ -104,7 +122,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setQuickAdd(''); setShowQuickAdd(false); toast.success('Added to backlog') },
+    onSuccess: () => { invalidate(); setQa({ title: '', task_group: '', task_category: '', duration: '' }); setShowQuickAdd(false); toast.success('Added to backlog') },
     onError:  (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -134,10 +152,10 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
-  const handleQuickAdd = (intoPool: boolean) => {
-    const title = quickAdd.trim()
+  const handleQuickAdd = () => {
+    const title = qa.title.trim()
     if (!title) return
-    const defaultGroup = intoPool && plannerSkills && plannerSkills.length > 0 ? plannerSkills[0] : null
+    const intoPool = scope === 'pool'
     createMutation.mutate({
       title,
       assigned_to_user_id: intoPool ? null : (currentUserId ?? null),
@@ -145,7 +163,9 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
       task_date:           null,
       priority:            'normal',
       status:              'todo',
-      task_group:          defaultGroup,
+      task_group:          qa.task_group || null,
+      task_category:       qa.task_category || null,
+      duration_minutes:    qa.duration ? Number(qa.duration) : null,
     })
   }
 
@@ -259,43 +279,75 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
 
           <div className="flex-1" />
 
-          {/* Quick-add: inline input that expands on click. Same dual-
-              destination pattern (Mine / Pool) as the old drawer. */}
-          {showQuickAdd ? (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <input
-                autoFocus
-                value={quickAdd}
-                onChange={(e) => setQuickAdd(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd(scope === 'pool') }
-                  if (e.key === 'Escape') { setShowQuickAdd(false); setQuickAdd('') }
-                }}
-                placeholder={scope === 'pool' ? 'New pool task…' : 'New task for me…'}
-                className="bg-dark-bg border border-gold-500/40 rounded-md px-2 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-gold-500 w-[180px]"
-              />
-              <button
-                onClick={() => handleQuickAdd(scope === 'pool')}
-                disabled={!quickAdd.trim() || createMutation.isPending}
-                className="px-2 py-1 rounded-md bg-gold-500 text-black text-[11px] font-bold disabled:opacity-40"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => { setShowQuickAdd(false); setQuickAdd('') }}
-                className="w-6 h-6 rounded text-gray-500 hover:text-white hover:bg-white/5 flex items-center justify-center"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ) : (
+          {/* Quick-add: compact popover form (Name + Category + Task +
+              approx Duration), mirroring the main drawer's fields. Adds to
+              the current scope (Mine = assigned to me, Pool = unassigned). */}
+          <div className="relative flex-shrink-0">
             <button
-              onClick={() => setShowQuickAdd(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] font-medium flex-shrink-0"
+              onClick={() => {
+                if (showQuickAdd) { setShowQuickAdd(false); return }
+                setQa({ title: '', task_group: (scope === 'pool' && plannerSkills?.[0]) || '', task_category: '', duration: '' })
+                setShowQuickAdd(true)
+              }}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] font-medium"
             >
               <Plus size={11} /> New task
             </button>
-          )}
+            {showQuickAdd && (
+              <div className="absolute right-0 top-full mt-1 z-30 w-72 bg-dark-surface border border-dark-border rounded-lg p-3 shadow-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-white">{scope === 'pool' ? 'New open-pool task' : 'New task for me'}</span>
+                  <button onClick={() => setShowQuickAdd(false)} className="text-gray-500 hover:text-white"><X size={12} /></button>
+                </div>
+                <input
+                  autoFocus
+                  value={qa.title}
+                  onChange={(e) => setQa(q => ({ ...q, title: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd() }
+                    if (e.key === 'Escape') setShowQuickAdd(false)
+                  }}
+                  placeholder="Task name…"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+                />
+                <select
+                  value={qa.task_group}
+                  onChange={(e) => setQa(q => ({ ...q, task_group: e.target.value, task_category: '' }))}
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                >
+                  <option value="">Category — none</option>
+                  {groupNames.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                {qaTasks.length > 0 && (
+                  <select
+                    value={qa.task_category}
+                    onChange={(e) => setQa(q => ({ ...q, task_category: e.target.value }))}
+                    className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                  >
+                    <option value="">Task — none</option>
+                    {qaTasks.map(tk => <option key={tk.key} value={tk.key}>{tk.label}</option>)}
+                  </select>
+                )}
+                <select
+                  value={qa.duration}
+                  onChange={(e) => setQa(q => ({ ...q, duration: e.target.value }))}
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                >
+                  <option value="">Approx duration — none</option>
+                  {[15, 30, 45, 60, 90, 120, 180, 240].map(m => (
+                    <option key={m} value={m}>{m < 60 ? `${m} min` : `${m / 60}h${m % 60 ? ` ${m % 60}m` : ''}`}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleQuickAdd}
+                  disabled={!qa.title.trim() || createMutation.isPending}
+                  className="w-full px-2 py-1.5 rounded-md bg-gold-500 hover:bg-gold-400 text-black text-[11px] font-bold disabled:opacity-40"
+                >
+                  Add to {scope === 'pool' ? 'open pool' : 'my backlog'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Expand / collapse */}
           <button

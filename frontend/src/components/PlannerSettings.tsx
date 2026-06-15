@@ -5,11 +5,12 @@ import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
   CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
+  Users, ChevronUp, ChevronDown,
 } from 'lucide-react'
 import {
   ICON_OPTIONS, COLOR_OPTIONS, TASK_GROUP_META, CUSTOM_GROUP_META,
-  parsePlannerGroups, parsePlannerChannels, getIcon,
-  type ChannelDef, type GroupMeta,
+  parsePlannerGroups, parsePlannerChannels, parseEmployeePrefs, getIcon,
+  type ChannelDef, type GroupMeta, type EmployeePref,
 } from '../lib/plannerMeta'
 
 /**
@@ -84,6 +85,7 @@ export function PlannerSettings() {
       <PresetPicker />
       <GroupsEditor />
       <ChannelsEditor />
+      <EmployeesEditor />
       <TemplatesEditor />
     </div>
   )
@@ -639,6 +641,119 @@ function ChannelsEditor() {
           <Plus size={13} /> Add
         </button>
       </form>
+    </div>
+  )
+}
+
+/* ─────────────────────── Employees editor ─────────────────────── */
+
+/**
+ * Per-employee preferred task groups + tasks. Soft preference only — any
+ * employee can still be assigned anything; preferred items get highlighted
+ * in the New-task drawer when that employee is selected (and will feed AI
+ * task assignment later). Keyed by employee NAME (matches the drawer's
+ * Assign-to list, settings.employees); stored in crm_settings.planner_employee_prefs.
+ */
+function EmployeesEditor() {
+  const qc = useQueryClient()
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
+
+  const parseEmployees = (raw: any): string[] => {
+    let p = raw
+    if (typeof raw === 'string') { try { p = JSON.parse(raw) } catch { p = [] } }
+    return Array.isArray(p) ? p.filter((x: any) => typeof x === 'string' && x.trim()) : []
+  }
+  const employees = parseEmployees(rawSettings?.employees)
+  const { names: groupNames } = parsePlannerGroups(rawSettings?.planner_groups)
+  const tasks = parsePlannerChannels(rawSettings?.planner_channels)
+  const prefs = parseEmployeePrefs(rawSettings?.planner_employee_prefs)
+
+  const save = useMutation({
+    mutationFn: (next: Record<string, EmployeePref>) => api.put('/v1/admin/crm-settings/planner_employee_prefs', {
+      value: JSON.stringify(next),
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Employee preferences saved') },
+    onError: () => toast.error('Could not save preferences'),
+  })
+
+  const toggle = (emp: string, kind: 'groups' | 'tasks', val: string) => {
+    const cur = prefs[emp] ?? { groups: [], tasks: [] }
+    const arr = cur[kind]
+    const nextArr = arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]
+    save.mutate({ ...prefs, [emp]: { ...cur, [kind]: nextArr } })
+  }
+
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2"><Users size={14} /> Employee skills</h3>
+        <p className="text-[11px] text-gray-500 mt-0.5">Mark the task groups + tasks that best fit each employee. They can still be assigned anything — preferred items are highlighted in the New-task drawer when that employee is selected.</p>
+      </div>
+
+      {employees.length === 0 ? (
+        <p className="text-xs text-gray-500 italic py-4 text-center">No employees in the assign-to list yet. Add team members (Settings → Team), then mark their preferred tasks here.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {employees.map(emp => {
+            const p = prefs[emp] ?? { groups: [], tasks: [] }
+            const open = expanded === emp
+            const count = p.groups.length + p.tasks.length
+            return (
+              <div key={emp} className="bg-dark-bg border border-dark-border rounded-md">
+                <button onClick={() => setExpanded(open ? null : emp)} className="w-full flex items-center gap-2 px-2.5 py-2 text-left">
+                  <span className="w-7 h-7 rounded-full bg-primary-500/15 text-primary-300 flex items-center justify-center text-xs font-bold flex-shrink-0">{emp.charAt(0).toUpperCase()}</span>
+                  <span className="flex-1 text-sm text-white">{emp}</span>
+                  {count > 0 && <span className="text-[10px] text-amber-300/80">{count} preferred</span>}
+                  {open ? <ChevronUp size={13} className="text-gray-500" /> : <ChevronDown size={13} className="text-gray-500" />}
+                </button>
+                {open && (
+                  <div className="border-t border-dark-border px-3 py-2.5 space-y-3">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wide font-bold text-gray-500 block mb-1.5">Task groups</span>
+                      {groupNames.length === 0 ? (
+                        <span className="text-[10px] text-gray-600 italic">No groups defined.</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {groupNames.map(g => {
+                            const on = p.groups.includes(g)
+                            return (
+                              <button key={g} type="button" onClick={() => toggle(emp, 'groups', g)}
+                                className={'text-[10px] px-2 py-0.5 rounded-full border transition ' +
+                                  (on ? 'bg-amber-400/20 border-amber-400 text-amber-200' : 'border-dark-border text-gray-500 hover:text-white hover:border-gray-500')}>
+                                {g}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wide font-bold text-gray-500 block mb-1.5">Tasks</span>
+                      {tasks.length === 0 ? (
+                        <span className="text-[10px] text-gray-600 italic">No tasks defined yet (add some in the Tasks section above).</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {tasks.map(tk => {
+                            const on = p.tasks.includes(tk.key)
+                            return (
+                              <button key={tk.key} type="button" onClick={() => toggle(emp, 'tasks', tk.key)}
+                                className={'text-[10px] px-2 py-0.5 rounded-full border transition ' +
+                                  (on ? 'bg-amber-400/20 border-amber-400 text-amber-200' : 'border-dark-border text-gray-500 hover:text-white hover:border-gray-500')}>
+                                {tk.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
