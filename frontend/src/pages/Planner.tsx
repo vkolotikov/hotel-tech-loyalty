@@ -3064,6 +3064,19 @@ export function Planner() {
             const total = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
             const done = stats.by_employee.reduce((s: number, e: any) => s + e.completed, 0)
             const rate = total > 0 ? Math.round((done / total) * 100) : 0
+            // Hours: worked = completed task durations; planned = all scheduled.
+            const workHoursPerDay = Number(rawSettings?.planner_work_hours_per_day) || 8
+            const workDaysPerWeek = Number(rawSettings?.planner_work_days_per_week) || 5
+            const workedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.worked_minutes) || 0), 0) / 60
+            const plannedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.planned_minutes) || 0), 0) / 60
+            const byDay = (stats.by_day ?? []) as any[]
+            const perDay = byDay.map((d: any) => ({ date: String(d.task_date).slice(5), worked: Math.round(((Number(d.worked_minutes) || 0) / 60) * 10) / 10 }))
+            const daysWithWork = byDay.filter((d: any) => (Number(d.worked_minutes) || 0) > 0).length
+            const avgPerDay = daysWithWork > 0 ? workedH / daysWithWork : 0
+            const hoursByEmployee = (stats.by_employee as any[])
+              .map((e: any) => ({ name: e.employee_name || 'Unassigned', workedH: (Number(e.worked_minutes) || 0) / 60, plannedH: (Number(e.planned_minutes) || 0) / 60 }))
+              .filter((e: any) => e.workedH > 0 || e.plannedH > 0)
+              .sort((a: any, b: any) => b.workedH - a.workedH)
             return (<>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[['Total Tasks', total, 'text-white'], ['Completed', done, 'text-green-400'], ['Pending', total - done, 'text-amber-400'], ['Rate', rate + '%', 'text-primary-400']].map(([l, v, c]) => (
@@ -3099,6 +3112,71 @@ export function Planner() {
                         <Tooltip contentStyle={TOOLTIP_STYLE} />
                         <Bar dataKey="total" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Total" />
                         <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
+                </div>
+              </div>
+
+              {/* ── Hours worked (from completed task durations) ── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-medium">Hours worked</p>
+                  <p className="text-3xl font-bold mt-2 text-green-400">{workedH.toFixed(1)}h</p>
+                  <p className="text-[11px] text-gray-500 mt-1">completed tasks</p>
+                </div>
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-medium">Planned hours</p>
+                  <p className="text-3xl font-bold mt-2 text-white">{plannedH.toFixed(1)}h</p>
+                  <p className="text-[11px] text-gray-500 mt-1">all scheduled</p>
+                </div>
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-medium">Workday target</p>
+                  <p className="text-3xl font-bold mt-2 text-primary-400">{workHoursPerDay}h</p>
+                  <p className="text-[11px] text-gray-500 mt-1">{workHoursPerDay * workDaysPerWeek}h / week</p>
+                </div>
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-medium">Avg / active day</p>
+                  <p className="text-3xl font-bold mt-2 text-white">{avgPerDay.toFixed(1)}h</p>
+                  <p className="text-[11px] text-gray-500 mt-1">{daysWithWork} day{daysWithWork === 1 ? '' : 's'} worked</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <h2 className="text-sm font-semibold text-white mb-4">Hours by employee <span className="text-[11px] font-normal text-gray-500">(for the selected range)</span></h2>
+                  {hoursByEmployee.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-dark-border">
+                            <th className="py-2 font-semibold">Employee</th>
+                            <th className="py-2 font-semibold text-right">Worked</th>
+                            <th className="py-2 font-semibold text-right">Planned</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {hoursByEmployee.map((e: any) => (
+                            <tr key={e.name} className="border-b border-dark-border/40">
+                              <td className="py-2 text-white">{e.name}</td>
+                              <td className="py-2 text-right text-green-400 font-semibold tabular-nums">{e.workedH.toFixed(1)}h</td>
+                              <td className="py-2 text-right text-gray-400 tabular-nums">{e.plannedH.toFixed(1)}h</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : <div className="h-[120px] flex items-center justify-center text-gray-600 text-sm">No hours logged</div>}
+                </div>
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <h2 className="text-sm font-semibold text-white mb-4">Hours per day <span className="text-[11px] font-normal text-gray-500">(worked · target {workHoursPerDay}h)</span></h2>
+                  {perDay.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={perDay}>
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Bar dataKey="worked" fill="#10b981" radius={[4, 4, 0, 0]} name="Worked h" />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}

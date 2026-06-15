@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
   CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
-  Users, ChevronUp, ChevronDown,
+  Users, ChevronUp, ChevronDown, Clock,
 } from 'lucide-react'
 import {
   ICON_OPTIONS, COLOR_OPTIONS, TASK_GROUP_META, CUSTOM_GROUP_META,
@@ -86,6 +86,7 @@ export function PlannerSettings() {
       <GroupsEditor />
       <ChannelsEditor />
       <EmployeesEditor />
+      <WorkdayEditor />
       <TemplatesEditor />
     </div>
   )
@@ -764,6 +765,52 @@ function EmployeesEditor() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─────────────────────── Workday editor ─────────────────────── */
+
+/**
+ * Org-wide workday length. Worked hours (from completed task durations) are
+ * totalled per day/week in Planner → Stats and compared against this target —
+ * the basis for payroll. Stored in crm_settings.planner_work_hours_per_day +
+ * planner_work_days_per_week.
+ */
+function WorkdayEditor() {
+  const qc = useQueryClient()
+  const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
+  const hoursPerDay = Number(rawSettings?.planner_work_hours_per_day) || 8
+  const daysPerWeek = Number(rawSettings?.planner_work_days_per_week) || 5
+
+  const save = useMutation({
+    mutationFn: ({ key, value }: { key: string; value: number }) =>
+      api.put(`/v1/admin/crm-settings/${key}`, { value: JSON.stringify(value) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Workday saved') },
+    onError: () => toast.error('Could not save workday'),
+  })
+
+  return (
+    <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2"><Clock size={14} /> Workday</h3>
+        <p className="text-[11px] text-gray-500 mt-0.5">Worked hours (from completed task durations) are totalled per day + week in Planner &rarr; Stats and compared against this target &mdash; your basis for payroll.</p>
+      </div>
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="text-[11px] text-gray-400">
+          Hours per day
+          <input key={'h' + hoursPerDay} type="number" min={1} max={24} step={0.5} defaultValue={hoursPerDay}
+            onBlur={e => { const v = Math.max(1, Math.min(24, Number(e.target.value) || 8)); if (v !== hoursPerDay) save.mutate({ key: 'planner_work_hours_per_day', value: v }) }}
+            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-none focus:border-primary-500" />
+        </label>
+        <label className="text-[11px] text-gray-400">
+          Work days / week
+          <input key={'d' + daysPerWeek} type="number" min={1} max={7} step={1} defaultValue={daysPerWeek}
+            onBlur={e => { const v = Math.max(1, Math.min(7, Number(e.target.value) || 5)); if (v !== daysPerWeek) save.mutate({ key: 'planner_work_days_per_week', value: v }) }}
+            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-none focus:border-primary-500" />
+        </label>
+        <div className="text-[11px] text-gray-500 pb-1.5">Weekly target: <span className="text-white font-semibold text-sm">{hoursPerDay * daysPerWeek}h</span></div>
+      </div>
     </div>
   )
 }
