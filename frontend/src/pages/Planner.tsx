@@ -3253,6 +3253,14 @@ export function Planner() {
         // that don't fit a configured group.
         const groups = [...(settings.planner_groups || []), 'Custom']
         const activeMeta = getGroupMeta(form.task_group)
+        // The Task picker shows only tasks tagged to the selected group;
+        // untagged tasks (groups: []) are universal and show for every group
+        // (incl. "Custom", where task_group is '').
+        const visibleTasks = taskChannels.filter(c => {
+          const g = c.groups ?? []
+          if (g.length === 0) return true
+          return form.task_group ? g.includes(form.task_group) : false
+        })
 
         return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
@@ -3273,7 +3281,13 @@ export function Planner() {
                     const Icon = meta.icon
                     return (
                       <button key={g} type="button"
-                        onClick={() => setForm(f => ({ ...f, task_group: g === 'Custom' ? '' : g }))}
+                        onClick={() => setForm(f => {
+                          const ng = g === 'Custom' ? '' : g
+                          // Drop the chosen task if it isn't available for the new group.
+                          const keep = taskChannels.some(c => c.key === f.task_category &&
+                            ((c.groups ?? []).length === 0 || (!!ng && (c.groups ?? []).includes(ng))))
+                          return { ...f, task_group: ng, task_category: keep ? f.task_category : '' }
+                        })}
                         className={'flex flex-col items-center gap-1 p-2 rounded-md border text-[11px] font-bold transition ' +
                           (active ? 'text-black' : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
                         style={active ? { background: meta.color, borderColor: meta.color } : {}}>
@@ -3285,16 +3299,16 @@ export function Planner() {
                 </div>
               </div>
 
-              {/* Channel — optional communication channel for this task.
-                  Reads from settings.planner_channels so admins can
-                  add / rename / re-icon the choices in Settings →
-                  Planner without code changes. Stored in
-                  task_category as the channel's stable `key`. */}
-              {taskChannels.length > 0 && (
+              {/* Task — the specific task within the selected group. Reads from
+                  settings.planner_channels (the "Tasks" editor in Settings →
+                  Planner) filtered to tasks tagged to the chosen group; untagged
+                  tasks show under every group. Stored in task_category as the
+                  task's stable `key`. */}
+              {visibleTasks.length > 0 && (
               <div>
-                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.channel_label', 'Channel')}</label>
+                <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">{t('planner.drawer.task_label', 'Task')}</label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                  {taskChannels.map(c => {
+                  {visibleTasks.map(c => {
                     const active = (form.task_category || '') === c.key
                     const Icon = getIcon(c.icon)
                     return (

@@ -5,11 +5,10 @@ import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
   CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
-  MessageCircle,
 } from 'lucide-react'
 import {
   ICON_OPTIONS, COLOR_OPTIONS, TASK_GROUP_META, CUSTOM_GROUP_META,
-  DEFAULT_CHANNELS, parsePlannerGroups, parsePlannerChannels, getIcon,
+  parsePlannerGroups, parsePlannerChannels, getIcon,
   type ChannelDef, type GroupMeta,
 } from '../lib/plannerMeta'
 
@@ -480,13 +479,14 @@ function ChannelsEditor() {
 
   const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
   const channels: ChannelDef[] = parsePlannerChannels(rawSettings?.planner_channels)
+  const { names: groupNames } = parsePlannerGroups(rawSettings?.planner_groups)
 
   const save = useMutation({
     mutationFn: (next: ChannelDef[]) => api.put('/v1/admin/crm-settings/planner_channels', {
       value: JSON.stringify(next),
     }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Channels saved') },
-    onError: () => toast.error('Could not save channels'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Tasks saved') },
+    onError: () => toast.error('Could not save tasks'),
   })
 
   // Slugify label → key. Keeps existing keys stable on rename so
@@ -498,20 +498,20 @@ function ChannelsEditor() {
     if (!v) return
     const key = slugify(v)
     if (channels.some(c => c.key === key || c.label.toLowerCase() === v.toLowerCase())) {
-      toast.error('Channel already exists'); return
+      toast.error('Task already exists'); return
     }
-    save.mutate([...channels, { key, label: v, icon: 'phone', color: '#94a3b8' }])
+    save.mutate([...channels, { key, label: v, icon: 'clipboard-list', color: '#94a3b8', groups: [] }])
     setAdding('')
   }
   const removeChannel = (key: string) => {
-    if (!confirm(`Remove this channel?\n\nTasks already tagged with it keep their value; the chip just disappears from the picker.`)) return
+    if (!confirm(`Remove this task?\n\nPlanner tasks already tagged with it keep their value; it just disappears from the picker.`)) return
     save.mutate(channels.filter(c => c.key !== key))
   }
   const renameChannel = (idx: number, label: string) => {
     const v = label.trim()
     if (!v) return
     if (v !== channels[idx].label && channels.some(c => c.label.toLowerCase() === v.toLowerCase())) {
-      toast.error('Channel already exists'); return
+      toast.error('Task already exists'); return
     }
     const next = [...channels]; next[idx] = { ...next[idx], label: v }
     save.mutate(next)
@@ -525,6 +525,14 @@ function ChannelsEditor() {
     const next = [...channels]; next[idx] = { ...next[idx], color }
     save.mutate(next)
   }
+  // Toggle a group tag on a task. Empty groups = the task shows under every
+  // group in the New-task drawer; otherwise only under the tagged groups.
+  const toggleGroup = (idx: number, group: string) => {
+    const cur = channels[idx].groups ?? []
+    const groups = cur.includes(group) ? cur.filter(g => g !== group) : [...cur, group]
+    const next = [...channels]; next[idx] = { ...next[idx], groups }
+    save.mutate(next)
+  }
   const move = (idx: number, delta: number) => {
     const j = idx + delta
     if (j < 0 || j >= channels.length) return
@@ -532,21 +540,14 @@ function ChannelsEditor() {
     ;[next[idx], next[j]] = [next[j], next[idx]]
     save.mutate(next)
   }
-  const resetDefaults = () => {
-    if (!confirm('Reset channels to the 6 starter defaults?')) return
-    save.mutate(DEFAULT_CHANNELS)
-  }
 
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <div>
-          <h3 className="text-sm font-bold text-white flex items-center gap-2"><MessageCircle size={14} /> Channels</h3>
-          <p className="text-[11px] text-gray-500 mt-0.5">Communication-method picker in the New task drawer. Click the icon tile to customise; rename inline.</p>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2"><CheckCircle2 size={14} /> Tasks</h3>
+          <p className="text-[11px] text-gray-500 mt-0.5">The task picker in the New task drawer. Tag each task to the groups it belongs to (leave untagged = shows under every group). Click the icon tile to customise; rename inline.</p>
         </div>
-        <button onClick={resetDefaults} className="text-[10px] text-gray-500 hover:text-white border border-dark-border rounded px-2 py-1 hover:bg-dark-surface2 transition">
-          Reset to defaults
-        </button>
       </div>
 
       <div className="space-y-1.5 mb-3">
@@ -590,6 +591,25 @@ function ChannelsEditor() {
                   <button onClick={() => removeChannel(c.key)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
                 </div>
               </div>
+              {groupNames.length > 0 && (
+                <div className="px-2.5 pb-2 pt-0.5 flex flex-wrap items-center gap-1 border-t border-dark-border/60">
+                  <span className="text-[10px] text-gray-600 mr-1">Groups:</span>
+                  {groupNames.map(g => {
+                    const on = (c.groups ?? []).includes(g)
+                    return (
+                      <button key={g} type="button" onClick={() => toggleGroup(idx, g)}
+                        className={'text-[10px] px-2 py-0.5 rounded-full border transition ' +
+                          (on ? 'bg-primary-500/20 border-primary-500 text-primary-200'
+                              : 'border-dark-border text-gray-500 hover:text-white hover:border-gray-500')}>
+                        {g}
+                      </button>
+                    )
+                  })}
+                  {(c.groups ?? []).length === 0 && (
+                    <span className="text-[10px] text-gray-600 italic">all groups</span>
+                  )}
+                </div>
+              )}
               {open && (
                 <IconColorPicker
                   selectedIcon={c.icon}
@@ -603,7 +623,7 @@ function ChannelsEditor() {
           )
         })}
         {channels.length === 0 && (
-          <p className="text-xs text-gray-500 italic py-4 text-center">No channels yet. Add one below or click Reset to defaults.</p>
+          <p className="text-xs text-gray-500 italic py-4 text-center">No tasks yet. Add your first one below, then tag it to the groups it belongs to.</p>
         )}
       </div>
 
@@ -611,7 +631,7 @@ function ChannelsEditor() {
         <input
           value={adding}
           onChange={e => setAdding(e.target.value)}
-          placeholder="Add a new channel (e.g. Slack, Telegram)"
+          placeholder="Add a new task (e.g. Cold call, Site visit)"
           className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}

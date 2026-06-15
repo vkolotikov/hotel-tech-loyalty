@@ -131,7 +131,7 @@ export const COLOR_OPTIONS: string[] = [
 /* ─────────────────────────  Group meta  ───────────────────────── */
 
 export interface GroupMeta { icon: any; color: string; iconKey?: string }
-export interface ChannelDef { key: string; label: string; icon: string; color: string }
+export interface ChannelDef { key: string; label: string; icon: string; color: string; groups: string[] }
 
 /**
  * Built-in group → meta map. Falls through for anything an admin
@@ -212,18 +212,20 @@ export function resolveGroupMeta(
 
 /** Starter set — what every org sees until they customise. */
 export const DEFAULT_CHANNELS: ChannelDef[] = [
-  { key: 'call',      label: 'Call',      icon: 'phone',           color: '#22d3ee' },
-  { key: 'email',     label: 'Email',     icon: 'mail',            color: '#a78bfa' },
-  { key: 'whatsapp',  label: 'WhatsApp',  icon: 'message-circle',  color: '#25D366' },
-  { key: 'sms',       label: 'SMS',       icon: 'message-square',  color: '#8b5cf6' },
-  { key: 'video',     label: 'Video',     icon: 'video',           color: '#06b6d4' },
-  { key: 'in_person', label: 'In-person', icon: 'user',            color: '#fbbf24' },
+  { key: 'call',      label: 'Call',      icon: 'phone',           color: '#22d3ee', groups: [] },
+  { key: 'email',     label: 'Email',     icon: 'mail',            color: '#a78bfa', groups: [] },
+  { key: 'whatsapp',  label: 'WhatsApp',  icon: 'message-circle',  color: '#25D366', groups: [] },
+  { key: 'sms',       label: 'SMS',       icon: 'message-square',  color: '#8b5cf6', groups: [] },
+  { key: 'video',     label: 'Video',     icon: 'video',           color: '#06b6d4', groups: [] },
+  { key: 'in_person', label: 'In-person', icon: 'user',            color: '#fbbf24', groups: [] },
 ]
 
 /**
- * Normalise the raw `planner_channels` setting value. Falls back to
- * DEFAULT_CHANNELS when the setting is empty / malformed so the
- * picker always has something to render.
+ * Normalise the raw `planner_channels` setting value into the planner's
+ * "Tasks" list. Returns [] when empty / malformed (the org defines its own
+ * group-specific tasks — we no longer auto-inject the comm-channel defaults).
+ * Each task carries `groups`: the group names it belongs to; an empty array
+ * means "universal" (shows under every group in the New-task drawer).
  */
 export function parsePlannerChannels(raw: any): ChannelDef[] {
   let parsed: any = raw
@@ -233,7 +235,7 @@ export function parsePlannerChannels(raw: any): ChannelDef[] {
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     parsed = Object.values(parsed)
   }
-  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CHANNELS
+  if (!Array.isArray(parsed) || parsed.length === 0) return []
 
   const out: ChannelDef[] = []
   for (const entry of parsed) {
@@ -246,9 +248,11 @@ export function parsePlannerChannels(raw: any): ChannelDef[] {
       label,
       icon: entry.icon ?? 'phone',
       color: entry.color ?? '#94a3b8',
+      // Groups this task belongs to. Empty = universal (shows everywhere).
+      groups: Array.isArray(entry.groups) ? entry.groups.map((g: any) => String(g)) : [],
     })
   }
-  return out.length > 0 ? out : DEFAULT_CHANNELS
+  return out
 }
 
 /* ─────────────────────────  Hooks  ───────────────────────── */
