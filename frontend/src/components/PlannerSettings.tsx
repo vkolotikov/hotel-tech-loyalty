@@ -658,13 +658,23 @@ function EmployeesEditor() {
   const qc = useQueryClient()
   const [expanded, setExpanded] = useState<string | null>(null)
   const { data: rawSettings } = useQuery<Record<string, any>>({ queryKey: ['crm-settings'] })
+  const { data: teamData } = useQuery<{ staff?: any[] }>({
+    queryKey: ['admin-team'],
+    queryFn: () => api.get('/v1/admin/team').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const parseEmployees = (raw: any): string[] => {
     let p = raw
     if (typeof raw === 'string') { try { p = JSON.parse(raw) } catch { p = [] } }
     return Array.isArray(p) ? p.filter((x: any) => typeof x === 'string' && x.trim()) : []
   }
-  const employees = parseEmployees(rawSettings?.employees)
+  // Real team members (Settings → Team) unioned with the legacy
+  // settings.employees list — matches the planner's Assign-to dropdown.
+  const employees = Array.from(new Set([
+    ...((teamData?.staff ?? []).filter((s: any) => s.is_active !== false).map((s: any) => s.name).filter(Boolean)),
+    ...parseEmployees(rawSettings?.employees),
+  ])) as string[]
   const { names: groupNames } = parsePlannerGroups(rawSettings?.planner_groups)
   const tasks = parsePlannerChannels(rawSettings?.planner_channels)
   const prefs = parseEmployeePrefs(rawSettings?.planner_employee_prefs)

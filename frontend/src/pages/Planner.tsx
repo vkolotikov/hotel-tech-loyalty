@@ -1625,6 +1625,18 @@ export function Planner() {
   _customGroupMeta = customGroupMetaSnapshot
   const taskChannels = parsePlannerChannels(rawSettings?.planner_channels)
   const employeePrefs = parseEmployeePrefs(rawSettings?.planner_employee_prefs)
+  // Assignable employees come from the REAL team (staff/users via
+  // /v1/admin/team) so people added in Settings → Team show up in every
+  // assign dropdown — unioned with the legacy settings.employees list.
+  const { data: teamData } = useQuery<{ staff?: any[] }>({
+    queryKey: ['admin-team'],
+    queryFn: () => api.get('/v1/admin/team').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const assignableEmployees: string[] = Array.from(new Set([
+    ...((teamData?.staff ?? []).filter((s: any) => s.is_active !== false).map((s: any) => s.name).filter(Boolean)),
+    ...(settings.employees ?? []),
+  ])) as string[]
   const [tab, setTab] = useState<Tab>('schedule')
   const [currentDate, setCurrentDate] = useState(() => fmtDate(new Date()))
   const [weekStart, setWeekStart] = useState(() => fmtDate(getMonday(new Date())))
@@ -2044,7 +2056,7 @@ export function Planner() {
   // Collect unique employees from tasks for the schedule view
   const scheduleEmployees: string[] = (() => {
     const fromTasks = [...new Set(tasks.map((t: any) => t.employee_name).filter(Boolean))]
-    const fromSettings = settings.employees ?? []
+    const fromSettings = assignableEmployees
     const merged = [...new Set([...fromSettings, ...fromTasks])] as string[]
     if (employee) return merged.filter(e => e === employee)
     return merged.length > 0 ? merged : ['Unassigned']
@@ -2151,7 +2163,7 @@ export function Planner() {
             )}
             <select value={employee} onChange={e => setEmployee(e.target.value)} className={filterSel + ' flex-1 sm:flex-initial min-w-0'}>
               <option value="">{t('planner.actions.all_team', 'All Team')}</option>
-              {settings.employees.map((e: string) => <option key={e}>{e}</option>)}
+              {assignableEmployees.map((e: string) => <option key={e}>{e}</option>)}
             </select>
             <div className="flex items-center gap-1">
               <button onClick={() => navigate(-1)} className="p-2 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-surface2 transition-all"><ChevronLeft size={16} /></button>
@@ -2325,7 +2337,7 @@ export function Planner() {
               // an employee_name so they remain visible.
               const dayTasks = tasks.filter((t: any) => t.start_time)
               const fromTasks = Array.from(new Set(dayTasks.map((t: any) => t.employee_name).filter(Boolean))) as string[]
-              const fromSettings = (settings.employees ?? []) as string[]
+              const fromSettings = assignableEmployees
               const merged = Array.from(new Set([...fromSettings, ...fromTasks]))
               const hasUnassigned = dayTasks.some((t: any) => !t.employee_name)
               const dayEmployees = employee
@@ -3105,7 +3117,7 @@ export function Planner() {
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); copyMutation.mutate({ id: copyTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') ?? '' }) }} className="space-y-4">
               <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.duplicate_modal.target_date', 'Target Date')}</label><input required type="date" name="task_date" defaultValue={copyTarget.date} className={inp} /></div>
               <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.duplicate_modal.assign_to', 'Assign To')}</label>
-                <select name="employee_name" className={inp}><option value="">{t('planner.duplicate_modal.keep_original', 'Keep original')}</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
+                <select name="employee_name" className={inp}><option value="">{t('planner.duplicate_modal.keep_original', 'Keep original')}</option>{assignableEmployees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setCopyTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
@@ -3202,7 +3214,7 @@ export function Planner() {
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); moveMutation.mutate({ id: moveTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') || undefined }) }} className="space-y-4">
               <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.move_modal.new_date', 'New Date')}</label><input required type="date" name="task_date" defaultValue={moveTarget.date} className={inp} /></div>
               <div><label className="block text-xs font-medium text-gray-400 mb-1.5">{t('planner.move_modal.reassign', 'Reassign')}</label>
-                <select name="employee_name" className={inp}><option value="">{t('planner.move_modal.keep_current', 'Keep current')}</option>{settings.employees.map((e: string) => <option key={e}>{e}</option>)}</select>
+                <select name="employee_name" className={inp}><option value="">{t('planner.move_modal.keep_current', 'Keep current')}</option>{assignableEmployees.map((e: string) => <option key={e}>{e}</option>)}</select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setMoveTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
@@ -3391,7 +3403,7 @@ export function Planner() {
                     className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500">
                     <option value="">{t('planner.drawer.unassigned_option', 'Unassigned')}</option>
                     {myName && <option value={myName}>{myName} (me)</option>}
-                    {settings.employees.filter((e: string) => e !== myName).map((emp: string) => <option key={emp}>{emp}</option>)}
+                    {assignableEmployees.filter((e: string) => e !== myName).map((emp: string) => <option key={emp}>{emp}</option>)}
                   </select>
                 </div>
                 <div>
