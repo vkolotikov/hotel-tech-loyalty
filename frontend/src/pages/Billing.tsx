@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { useSubscription } from '../hooks/useSubscription'
+import { logoutAndRedirect } from '../lib/logout'
 
 interface PlanData {
   id: string; name: string; slug: string; description: string
@@ -40,6 +41,11 @@ export function Billing() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [activateLoading, setActivateLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  // Set when a billing action (checkout / activate / portal) fails — e.g. the
+  // workspace was removed on the SaaS platform or its trial ended with no live
+  // subscription, so there's nothing to bill here. Surfaces a persistent escape
+  // (sign out + switch workspace) instead of a dead button + transient toast.
+  const [billingError, setBillingError] = useState<string | null>(null)
 
   // Fetch live plans from SaaS — use fallback only if API fails or returns empty
   const { data: plansData, isLoading: plansLoading, isError: plansError } = useQuery({
@@ -112,6 +118,7 @@ export function Billing() {
         } catch { /* ignore fallback error */ }
       }
       toast.error(msg)
+      setBillingError(msg)
     } finally {
       setCheckoutLoading(null)
     }
@@ -138,6 +145,7 @@ export function Billing() {
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Activation failed. Please try again.'
       toast.error(msg)
+      setBillingError(msg)
     } finally {
       setActivateLoading(false)
     }
@@ -153,7 +161,9 @@ export function Billing() {
       }
       toast.error('Billing portal is not available')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Could not open billing portal')
+      const msg = err.response?.data?.error || 'Could not open billing portal'
+      toast.error(msg)
+      setBillingError(msg)
     } finally {
       setPortalLoading(false)
     }
@@ -192,6 +202,33 @@ export function Billing() {
           <p className="text-sm text-t-secondary mt-0.5">Manage your plan, view trial status, and upgrade</p>
         </div>
       </div>
+
+      {billingError && (
+        <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={20} className="text-orange-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-white">Billing couldn't open for this workspace</h3>
+              <p className="text-xs text-gray-300 mt-1">{billingError}</p>
+              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                If this workspace was removed, or its trial ended without an active subscription, it can't be
+                billed here. Sign out and switch to your active workspace — or ask the workspace owner to manage
+                the subscription.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button onClick={() => { void logoutAndRedirect() }}
+                  className="px-3 py-1.5 rounded-md bg-primary-500 hover:bg-primary-400 text-black text-xs font-semibold">
+                  Sign out &amp; switch workspace
+                </button>
+                <button onClick={() => setBillingError(null)}
+                  className="px-3 py-1.5 rounded-md border border-dark-border text-gray-300 hover:text-white text-xs">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trial countdown banner */}
       {status === 'TRIALING' && daysLeft !== null && (
