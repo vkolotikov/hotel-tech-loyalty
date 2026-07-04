@@ -384,13 +384,25 @@ class BookingPublicController extends Controller
     {
         $this->bindOrg($request);
 
-        // Validation runs BEFORE the outer try/catch so a malformed body
-        // returns 422 the standard way. If the customer's widget already
-        // created a PI in paymentIntent() but then sent a broken /confirm,
-        // the PI on Stripe is still in requires_payment_method (the widget
-        // validates client-side before submit so confirmPayment never ran)
-        // — no captured funds, no rescue needed.
-        $validated = $request->validate([
+        // Validate MANUALLY (not $request->validate()) so a validation
+        // failure doesn't escape straight to the framework's 422 handler
+        // BEFORE we can rescue the customer's held authorization.
+        //
+        // The old assumption here was "the widget validates client-side, so
+        // confirmPayment never ran on a broken /confirm — no funds to
+        // rescue." That is FALSE. The widget runs stripe.confirmPayment()
+        // *before* it POSTs /confirm (booking-widget.blade.php), so by the
+        // time a malformed body lands the card is very likely already
+        // AUTHORIZED (PI in requires_capture, funds held). A bare 422 here
+        // strands that hold for 7 days with zero trace — the guest sees
+        // "contact support", their money is reserved, and staff have to
+        // hand-create the reservation. (Forrest Glamp, 2026-06-30: guest
+        // paid €150, /confirm 422'd, hold sat uncaptured, no audit row.)
+        //
+        // Route the failure through the SAME audit + PI-rescue path every
+        // other confirm failure uses. The rescue helper already falls back
+        // to the hold's cached PI id when the body didn't carry one.
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'hold_token'           => 'required|string',
             'guest.first_name'     => 'required|string|max:100',
             'guest.last_name'      => 'required|string|max:100',
@@ -400,6 +412,44 @@ class BookingPublicController extends Controller
             'payment_intent_id'    => 'nullable|string|max:255',
             'special_requests'     => 'nullable|string|max:2000',
         ]);
+
+        if ($validator->fails()) {
+            $errors  = $validator->errors()->toArray();
+            $rawPi   = trim((string) $request->input('payment_intent_id', '')) ?: null;
+            $rawHold = trim((string) $request->input('hold_token', '')) ?: null;
+
+            // 1) Log a `booking.confirm.failed` row (stage=validation) so the
+            //    failure is visible to diag:recent-confirm-failures + feeds
+            //    the confirm-failure cluster alarm, instead of vanishing.
+            $this->logConfirmFailureWithContext(
+                'validation',
+                [
+                    'hold_token'        => $rawHold,
+                    'payment_intent_id' => $rawPi,
+                    'guest'             => (array) $request->input('guest', []),
+                ],
+                new \RuntimeException('Confirm input validation failed: ' . json_encode($errors)),
+                ['validation_errors' => $errors],
+            );
+
+            // 2) Release the held authorization so the guest's money is not
+            //    stranded. No-op when there's no PI to cancel.
+            $this->rescuePaymentIntentOnConfirmFailure(
+                $rawPi,
+                $rawHold,
+                ['stage' => 'validation', 'errors' => $errors],
+                new \RuntimeException('Confirm input validation failed'),
+            );
+
+            return response()->json([
+                'error'  => 'We could not confirm your booking because some details were missing or invalid. '
+                          . 'If your card shows a charge, it is only a temporary hold that will be released — '
+                          . 'please try again or contact us to complete your booking.',
+                'errors' => $errors,
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         // ─────────────────────────────────────────────────────────────
         // SAFETY NET — wrap every 4xx/5xx exit path in a rescue block.
