@@ -179,8 +179,18 @@ class EarnRateEventTest extends TestCase
     {
         // when's dayOfWeek MUST appear in the list. Lock with a
         // fixed when so the test is deterministic.
+        //
+        // The event's active window MUST bracket the fixed $monday —
+        // otherwise the days_of_week gate under test is masked by the
+        // active-window gate. (Before: the window defaulted to now()±1d,
+        // so this passed only while "today" happened to be 2026-06-15
+        // and failed for every other calendar day.)
         $monday = \Carbon\Carbon::create(2026, 6, 15, 12, 0, 0); // Mon
-        $event = $this->event(['days_of_week' => [(int) $monday->dayOfWeek]]); // 1
+        $event = $this->event([
+            'days_of_week' => [(int) $monday->dayOfWeek], // 1
+            'starts_at'    => $monday->copy()->subWeek(),
+            'ends_at'      => $monday->copy()->addWeek(),
+        ]);
 
         $this->assertTrue($event->appliesTo($this->member(), null, $monday),
             'Event with Mon-only days_of_week MUST apply when when=Monday.');
