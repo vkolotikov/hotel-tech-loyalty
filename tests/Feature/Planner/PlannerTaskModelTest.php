@@ -82,6 +82,12 @@ class PlannerTaskModelTest extends TestCase
                 $t->string('recurring', 32)->nullable();
                 $t->date('recurring_until')->nullable();
                 $t->unsignedBigInteger('recurring_parent_id')->nullable();
+                // Pool horizon (2026-07): metadata on an unscheduled pool
+                // task. The PlannerTask saving() hook writes these on every
+                // create (clears them when task_date is set), so the test
+                // schema must carry them or the INSERT fails.
+                $t->string('pool_horizon', 16)->nullable();
+                $t->date('pool_due_date')->nullable();
                 $t->timestamps();
                 $t->index(['organization_id', 'task_date']);
                 // Partial indexes from 2026-05-24:

@@ -12,6 +12,29 @@ type Task = {
   duration_minutes?: number | null
   assigned_to_user_id?: number | null
   employee_name?: string | null
+  pool_horizon?: 'general' | 'week' | 'day' | null
+  pool_due_date?: string | null
+}
+
+/** Tiny horizon/urgency label for a pool task. Null = nothing to show. */
+function teamHorizonBadge(t: Task): { label: string; over: boolean } | null {
+  const h = t.pool_horizon
+  if (!h || h === 'general') return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const due = t.pool_due_date ? new Date(String(t.pool_due_date).slice(0, 10) + 'T00:00:00') : null
+  const over = !!due && due.getTime() < today.getTime()
+  if (h === 'day' && due) {
+    const diff = Math.round((due.getTime() - today.getTime()) / 86400000)
+    if (over) return { label: 'overdue', over: true }
+    if (diff === 0) return { label: 'today', over: false }
+    if (diff === 1) return { label: 'tomorrow', over: false }
+    return { label: `${String(due.getDate()).padStart(2, '0')}.${String(due.getMonth() + 1).padStart(2, '0')}`, over: false }
+  }
+  // 'week' due is the server-computed (UTC) end-of-week; a 1-day grace absorbs
+  // the server-UTC vs viewer-local skew at the Sun→Mon boundary while still
+  // flagging genuinely stale week tasks. Mirrors BacklogStrip.horizonBadge.
+  const weekOver = !!due && due.getTime() < today.getTime() - 86400000
+  return weekOver ? { label: 'overdue', over: true } : { label: 'this week', over: false }
 }
 
 type Bucket = {
@@ -298,6 +321,7 @@ function TeamCard({ task }: { task: Task }) {
         {task.duration_minutes && (
           <span className="text-gray-500">{task.duration_minutes}m</span>
         )}
+        {(() => { const b = teamHorizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
       </div>
     </div>
   )

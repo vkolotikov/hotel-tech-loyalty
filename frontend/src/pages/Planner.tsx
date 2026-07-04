@@ -16,12 +16,13 @@ import {
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText, LayoutGrid,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
-  Sparkles,
+  Sparkles, Inbox,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend, PieChart, Pie, Cell } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { BacklogStrip } from '../components/BacklogStrip'
 import { TeamBucketsView } from '../components/TeamBucketsView'
+import { PoolManager } from '../components/PoolManager'
 import { PlannerDaySidebar } from '../components/PlannerDaySidebar'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
@@ -142,7 +143,7 @@ const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50',
 const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
 const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500'
 
-type Tab = 'day' | 'schedule' | 'month' | 'team' | 'stats'
+type Tab = 'day' | 'schedule' | 'month' | 'pool' | 'team' | 'stats'
 type TaskForm = {
   employee_name: string; title: string; task_date: string; start_time: string; end_time: string
   priority: string; task_group: string; task_category: string; duration_minutes: string
@@ -1659,6 +1660,9 @@ export function Planner() {
   // scope ('mine' = me, 'pool' = unassigned open-pool). Lets the backlog
   // strip reuse the full drawer instead of its cramped popover.
   const [backlogMode, setBacklogMode] = useState<null | 'mine' | 'pool'>(null)
+  // Pool-horizon selection inside the drawer (only when backlogMode==='pool').
+  const [poolHorizon, setPoolHorizon] = useState<'general' | 'week' | 'day'>('general')
+  const [poolDue, setPoolDue] = useState('') // target day for horizon='day'
   const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
@@ -1766,7 +1770,11 @@ export function Planner() {
   const { data: allTasks = [] } = useQuery({
     queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'schedule' ? weekStart : monthYear, employee],
     queryFn: () => api.get('/v1/admin/planner/tasks', { params: queryParams }).then(r => r.data),
-    enabled: tab !== 'stats',
+    // Only the calendar tabs (day/schedule/month) consume this list, and
+    // only those set a date bound in queryParams. On stats/pool/team the
+    // payload is never rendered — and with no date bound the endpoint would
+    // return the org's ENTIRE unbounded task table. Skip the fetch on them.
+    enabled: tab !== 'stats' && tab !== 'pool' && tab !== 'team',
   })
   const tasks = (() => {
     let out = allTasks
@@ -1886,6 +1894,10 @@ export function Planner() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['planner-tasks']   })
       qc.invalidateQueries({ queryKey: ['planner-backlog'] })
+      // Scheduling a date-less pool/backlog card sets task_date, which flips
+      // the row from "excluded from stats" to "counted" — bust the Stats
+      // aggregate too so the analytics tab doesn't show a stale total.
+      qc.invalidateQueries({ queryKey: ['planner-stats']   })
       setMoveTarget(null)
     },
   })
@@ -2015,9 +2027,12 @@ export function Planner() {
   }
 
   // Open the full new-task drawer in backlog mode (no scheduled date).
-  const openBacklogCreate = (scope: 'mine' | 'pool') => {
+  // For pool scope, an optional `horizon` seeds the Horizon control.
+  const openBacklogCreate = (scope: 'mine' | 'pool', horizon: 'general' | 'week' | 'day' = 'general') => {
     setEditTask(null)
     setBacklogMode(scope)
+    setPoolHorizon(horizon)
+    setPoolDue('')
     setShowTemplatePicker(false)
     setForm({
       ...EMPTY_FORM,
@@ -2057,7 +2072,12 @@ export function Planner() {
 
   const openEdit = (task: any) => {
     setEditTask(task)
-    setBacklogMode(null)
+    // A pool task (no date, no owner) opens in pool mode so its horizon is
+    // editable; anything scheduled/owned edits normally.
+    const isPoolTask = !task.task_date && !task.assigned_to_user_id && !task.employee_name
+    setBacklogMode(isPoolTask ? 'pool' : null)
+    setPoolHorizon(isPoolTask ? ((task.pool_horizon as any) || 'general') : 'general')
+    setPoolDue(isPoolTask && task.pool_horizon === 'day' ? String(task.pool_due_date || '').slice(0, 10) : '')
     setShowTemplatePicker(false)
     setForm({
       employee_name: task.employee_name ?? '', title: task.title ?? '',
@@ -2073,19 +2093,35 @@ export function Planner() {
   }
 
   const handleSubmit = () => {
+    if (backlogMode === 'pool' && poolHorizon === 'day' && !poolDue) {
+      toast.error('Pick a target day for this task')
+      return
+    }
     const body: any = { ...form }
     if (!body.start_time) body.start_time = null
     if (!body.end_time) body.end_time = null
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
     ;['employee_name', 'task_group', 'task_category', 'description'].forEach(k => { if (!body[k]) body[k] = null })
-    // Backlog create: no date left = keep in backlog; assignment is
-    // fixed by the scope the drawer was opened with. 'pool' = unassigned
-    // (anyone can claim); 'mine' = assigned to me.
-    if (backlogMode && !editTask) {
-      if (!body.task_date) { body.task_date = null; body.start_time = null; body.end_time = null }
-      if (backlogMode === 'pool') { body.assigned_to_user_id = null; body.employee_name = null }
-      else { body.assigned_to_user_id = user?.id ?? null; body.employee_name = myName || null }
+    // Pool horizon (create OR edit of a pool task). 'day' carries the
+    // chosen date; week is server-normalised; general clears it.
+    if (backlogMode === 'pool') {
+      body.pool_horizon  = poolHorizon
+      body.pool_due_date = poolHorizon === 'day' ? (poolDue || null) : null
+    }
+    // Backlog: no date left = keep in backlog/pool. Assignment is fixed by
+    // scope on CREATE only ('pool' = unassigned/anyone-claims; 'mine' = me);
+    // an edit preserves the existing owner.
+    if (backlogMode) {
+      if (!body.task_date) {
+        body.task_date = null; body.start_time = null; body.end_time = null
+        // A dateless task can't recur (recurring expansion needs a date).
+        body.recurring = 'none'
+      }
+      if (!editTask) {
+        if (backlogMode === 'pool') { body.assigned_to_user_id = null; body.employee_name = null }
+        else { body.assigned_to_user_id = user?.id ?? null; body.employee_name = myName || null }
+      }
     }
     // For status, ensure it's always a valid value or null
     if (!body.status || !['todo', 'in_progress', 'blocked', 'done'].includes(body.status)) {
@@ -2162,7 +2198,7 @@ export function Planner() {
             <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{subtitle}</p>
           </div>
           {/* Mobile-only: Add button next to title to save a row */}
-          {tab !== 'stats' && tab !== 'team' && (
+          {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
               className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
@@ -2191,6 +2227,9 @@ export function Planner() {
                 ['schedule', CalendarDays, t('planner.tabs.schedule', 'Schedule')],
                 ['month', CalendarRange, t('planner.tabs.month', 'Month')],
               ]
+              // Pool tab — everyone. Authors + organises the unassigned open
+              // pool into General / week / day horizons; anyone can claim.
+              tabs.push(['pool', Inbox, t('planner.tabs.pool', 'Pool')])
               // Team tab is manager-only — it's a cross-employee kanban view
               // of the backlog. Non-managers don't need it (they only see
               // their own bucket via the drawer's "Mine" tab anyway).
@@ -2216,7 +2255,7 @@ export function Planner() {
             })()}
           </div>
 
-          {tab !== 'stats' && tab !== 'team' && <>
+          {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && <>
             {/* "Just mine" filter — quick toggle to hide everyone
                 else's tasks. Persists in localStorage so the user's
                 preference survives reload. Hidden when no user name
@@ -2255,7 +2294,7 @@ export function Planner() {
       </div>
 
       {/* Group filter tabs — shared across Day / Schedule / Month */}
-      {tab !== 'stats' && tab !== 'team' && (settings.planner_groups?.length ?? 0) > 0 && (
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (settings.planner_groups?.length ?? 0) > 0 && (
         <div className="mb-4">
           <GroupFilterTabs
             groups={settings.planner_groups}
@@ -2274,7 +2313,7 @@ export function Planner() {
           to schedule; drag a scheduled chip UP into the strip to
           unschedule. Hidden on Team + Stats (those views don't drop
           tasks onto a calendar). */}
-      {tab !== 'stats' && tab !== 'team' && (
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
         <BacklogStrip
           currentUserId={user?.id ?? null}
           currentUserName={myName}
@@ -2289,7 +2328,7 @@ export function Planner() {
           mirror what's actually rendered below. Overdue + Unassigned
           are clickable filters (a future iteration could deep-link
           into a filtered subview — for now they're informational). */}
-      {tab !== 'stats' && tab !== 'team' && (() => {
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (() => {
         const todayISO = fmtDate(new Date())
         const total = tasks.length
         const completed = tasks.filter((t: any) => t.completed).length
@@ -3110,6 +3149,21 @@ export function Planner() {
         </div>
       )}
 
+      {/* ═══ POOL VIEW (everyone) ═══
+          Dedicated open-pool management: author + organise unassigned
+          work into General / week / day horizons, categorised by type
+          and highlighted by relevance to the viewer's skills. Reads the
+          same ['planner-backlog','pool'] rows as the BacklogStrip + Team
+          pool column. */}
+      {tab === 'pool' && (
+        <PoolManager
+          plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+          isManager={useAuthStore.getState().isAdmin()}
+          onNewTask={(horizon) => openBacklogCreate('pool', horizon)}
+          onEditTask={(task) => openEdit(task)}
+        />
+      )}
+
       {/* ═══ TEAM VIEW (manager-only) ═══
           Full-width cross-employee bucket kanban — the same data the
           drawer's old "team mode" rendered at 720px wide, now promoted
@@ -3721,11 +3775,13 @@ export function Planner() {
           <div className="bg-dark-surface border-l border-dark-border w-full max-w-md h-full flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-dark-border">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{editTask ? 'Edit task' : backlogMode ? 'New backlog task' : 'New task'}</h2>
+                <h2 className="text-lg font-bold text-white">{editTask ? (backlogMode === 'pool' ? 'Edit pool task' : 'Edit task') : backlogMode ? 'New backlog task' : 'New task'}</h2>
                 {backlogMode && (
                   <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full border ' +
                     (backlogMode === 'pool' ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'bg-gold-500/15 text-gold-300 border-gold-500/40')}>
-                    {backlogMode === 'pool' ? 'Open pool' : 'Mine'}
+                    {backlogMode === 'pool'
+                      ? 'Open pool' + (poolHorizon === 'week' ? ' · This week' : poolHorizon === 'day' ? ' · By day' : '')
+                      : 'Mine'}
                   </span>
                 )}
               </div>
@@ -3871,9 +3927,35 @@ export function Planner() {
                 </div>
               </div>
 
-              {/* Date with quick chips. In backlog mode the date is
-                  optional — leaving it empty keeps the task in the backlog
-                  (schedule it later by dragging onto the calendar). */}
+              {/* Pool mode → Horizon control (General / This week / Specific
+                  day). Otherwise → the normal Date picker (optional in
+                  'mine' backlog mode, required for a scheduled task). */}
+              {backlogMode === 'pool' ? (
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5">
+                    <Inbox size={11} /> When should it be done?
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([['general', 'General'], ['week', 'This week'], ['day', 'Specific day']] as const).map(([k, lbl]) => {
+                      const active = poolHorizon === k
+                      return (
+                        <button key={k} type="button" onClick={() => setPoolHorizon(k)}
+                          className={'px-2 py-2 rounded-md text-xs font-semibold border transition-colors ' +
+                            (active ? 'bg-primary-500/20 border-primary-500/60 text-primary-300' : 'border-dark-border text-gray-500 hover:text-white hover:bg-dark-surface2')}>
+                          {lbl}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {poolHorizon === 'day' && (
+                    <input type="date" required value={poolDue} onChange={e => setPoolDue(e.target.value)}
+                      className="w-full mt-2 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                  )}
+                  <p className="text-[11px] text-gray-600 mt-1.5">
+                    Pool tasks stay unscheduled &amp; unassigned until someone claims them. {poolHorizon === 'week' ? 'Tagged for this week.' : poolHorizon === 'day' ? 'Tagged for the chosen day.' : 'No deadline.'}
+                  </p>
+                </div>
+              ) : (
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5">
                   <Calendar size={11} /> Date {backlogMode && <span className="normal-case font-normal text-gray-600">· optional</span>}
@@ -3896,8 +3978,12 @@ export function Planner() {
                   <p className="text-[11px] text-gray-600 mt-1.5">No date → stays in the backlog. Drag it onto the calendar later to schedule.</p>
                 )}
               </div>
+              )}
 
-              {/* Start time — 30min slots, 24h labels (07:00 → 21:00). */}
+              {/* Start time — 30min slots, 24h labels (07:00 → 21:00).
+                  Hidden for pool tasks (unscheduled — a time is set when
+                  claimed + placed on the calendar). */}
+              {backlogMode !== 'pool' && (
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Clock size={11} /> Start time</label>
                 <div className="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto p-1 bg-dark-bg border border-dark-border rounded-md">
@@ -3919,6 +4005,7 @@ export function Planner() {
                   </button>
                 )}
               </div>
+              )}
 
               {/* Duration chips */}
               <div>
@@ -3970,7 +4057,9 @@ export function Planner() {
                 )}
               </div>
 
-              {/* Recurring */}
+              {/* Recurring — not applicable to unscheduled pool tasks
+                  (recurrence needs a concrete date to expand from). */}
+              {backlogMode !== 'pool' && (
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Repeat size={11} /> Repeat</label>
                 <div className="flex gap-1.5 flex-wrap">
@@ -3994,6 +4083,7 @@ export function Planner() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Notes */}
               <div>

@@ -18,6 +18,30 @@ type BacklogTask = {
   assigned_to_user_id?: number | null
   employee_name?: string | null
   created_at?: string
+  pool_horizon?: 'general' | 'week' | 'day' | null
+  pool_due_date?: string | null
+}
+
+/** Tiny horizon/urgency label for a pool task. Null = nothing to show. */
+function horizonBadge(t: BacklogTask): { label: string; over: boolean } | null {
+  const h = t.pool_horizon
+  if (!h || h === 'general') return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const due = t.pool_due_date ? new Date(String(t.pool_due_date).slice(0, 10) + 'T00:00:00') : null
+  const over = !!due && due.getTime() < today.getTime()
+  if (h === 'day' && due) {
+    const diff = Math.round((due.getTime() - today.getTime()) / 86400000)
+    if (over) return { label: 'overdue', over: true }
+    if (diff === 0) return { label: 'today', over: false }
+    if (diff === 1) return { label: 'tomorrow', over: false }
+    return { label: `${String(due.getDate()).padStart(2, '0')}.${String(due.getMonth() + 1).padStart(2, '0')}`, over: false }
+  }
+  // 'week' due is the server-computed (UTC) end-of-week; the compare above is
+  // in the viewer's local tz, so a UTC+ viewer at the Sun→Mon boundary can be
+  // one day ahead of the stored Sunday. A 1-day grace absorbs that skew while
+  // still flagging genuinely stale week tasks (≥7 days past).
+  const weekOver = !!due && due.getTime() < today.getTime() - 86400000
+  return weekOver ? { label: 'overdue', over: true } : { label: 'this week', over: false }
 }
 
 type Scope = 'mine' | 'pool'
@@ -490,6 +514,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
                     {task.task_group && <span className="px-1 rounded bg-white/5">{task.task_group}</span>}
                     {task.priority === 'high' && <span className="text-red-400 flex items-center gap-0.5"><Flag size={9} />high</span>}
+                    {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
                   </div>
                   {mobileScheduling?.id === task.id ? (
                     <div className="mt-2 flex flex-col gap-1.5">
@@ -557,6 +582,7 @@ function BacklogCardChip({ task, scope, onClaim }: {
             {task.task_group && <span className="px-1 rounded bg-white/5 text-gray-400 truncate max-w-[60px]">{task.task_group}</span>}
             {task.priority === 'high' && <span className="flex items-center gap-0.5 text-red-400"><Flag size={8} />high</span>}
             {task.duration_minutes && <span className="text-gray-500 tabular-nums">{task.duration_minutes}m</span>}
+            {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
           </div>
         </div>
         {/* Pool cards expose a tiny claim affordance on hover; mine

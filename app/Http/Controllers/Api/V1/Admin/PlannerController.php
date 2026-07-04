@@ -68,6 +68,9 @@ class PlannerController extends Controller
             'description'          => 'nullable|string',
             'recurring'            => 'nullable|string|in:none,daily,weekly,monthly',
             'recurring_until'      => 'nullable|date|after:task_date',
+            // Pool horizon metadata (only meaningful when task_date is null).
+            'pool_horizon'         => 'nullable|string|in:general,week,day',
+            'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
         $validated['status'] = $validated['status'] ?? 'todo';
@@ -76,6 +79,8 @@ class PlannerController extends Controller
         $recurring = $validated['recurring'] ?? null;
         if ($recurring === 'none' || $recurring === '') $recurring = null;
         $validated['recurring'] = $recurring;
+
+        $validated = $this->normalisePoolHorizon($validated);
 
         $parent = PlannerTask::create($validated);
 
@@ -126,10 +131,33 @@ class PlannerController extends Controller
             'duration_minutes'     => 'nullable|integer|min:1',
             'completed'            => 'nullable|boolean',
             'description'          => 'nullable|string',
+            'pool_horizon'         => 'nullable|string|in:general,week,day',
+            'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
+
+        $validated = $this->normalisePoolHorizon($validated);
 
         $taskModel->update($validated);
         return response()->json($taskModel->fresh()->load('subtasks'));
+    }
+
+    /**
+     * Snap a 'week' horizon to the current Monday-based week's end (Sunday)
+     * so the client never has to send a week date. 'day' keeps the supplied
+     * date; 'general'/absent leave the columns untouched (the model's
+     * saving() hook does the final NULL-ing). Only keys actually present in
+     * the payload are modified, so a partial PUT can't wipe an existing
+     * horizon it didn't mean to touch.
+     */
+    private function normalisePoolHorizon(array $validated): array
+    {
+        if (($validated['pool_horizon'] ?? null) === 'week') {
+            $validated['pool_due_date'] = now()
+                ->startOfWeek(\Carbon\Carbon::MONDAY)
+                ->addDays(6) // Sunday of the current week
+                ->toDateString();
+        }
+        return $validated;
     }
 
     public function destroyTask(Request $request, int $task): JsonResponse

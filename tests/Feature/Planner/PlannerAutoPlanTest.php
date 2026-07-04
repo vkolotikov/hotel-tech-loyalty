@@ -88,6 +88,11 @@ class PlannerAutoPlanTest extends TestCase
                 $t->string('task_category')->nullable();
                 $t->string('status', 16)->default('todo');
                 $t->boolean('completed')->default(false);
+                // Pool horizon (2026-07): the PlannerTask saving() hook
+                // writes these columns whenever a model is saved (autoPlan
+                // apply re-saves rows), so they must exist in the schema.
+                $t->string('pool_horizon', 16)->nullable();
+                $t->date('pool_due_date')->nullable();
                 $t->timestamps();
                 $t->index(['organization_id', 'task_date']);
             });
