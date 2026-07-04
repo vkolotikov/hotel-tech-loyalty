@@ -559,9 +559,13 @@ class PlannerController extends Controller
             ->groupBy('employee_name')
             ->get();
 
+        // "By type" = task_group. Includes worked minutes so the analytics
+        // page can show hours-by-type alongside task counts.
         $byGroup = PlannerTask::select('task_group',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed')
+                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
+                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
+                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
             ->whereNotNull('task_group')
@@ -569,11 +573,37 @@ class PlannerController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        // Worked (completed) + planned task-minutes per day across the range —
-        // powers the "hours per day" view and weekly totals for payroll.
+        // Priority mix (case-normalised so 'High' + 'high' collapse).
+        $byPriority = PlannerTask::select(
+                DB::raw("lower(coalesce(nullif(priority, ''), 'normal')) as priority"),
+                DB::raw('count(*) as total'),
+                DB::raw('sum(case when completed then 1 else 0 end) as completed')
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->groupBy(DB::raw("lower(coalesce(nullif(priority, ''), 'normal'))"))
+            ->get();
+
+        // Type × employee matrix — powers the stacked "type by employee"
+        // chart. Cross-references worked minutes so the same rows also feed
+        // an hours-by-type-per-person breakdown without a second query.
+        $byEmployeeGroup = PlannerTask::select('employee_name', 'task_group',
+                DB::raw('count(*) as total'),
+                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
+                DB::raw('sum(coalesce(duration_minutes, 0)) as minutes')
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->whereNotNull('task_group')
+            ->groupBy('employee_name', 'task_group')
+            ->get();
+
+        // Worked (completed) + planned task-minutes AND task counts per day
+        // across the range — powers the "hours per day" view, the tasks-
+        // completed trend, and weekly totals for payroll.
         $byDay = PlannerTask::select('task_date',
                 DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
-                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
+                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes'),
+                DB::raw('count(*) as total_tasks'),
+                DB::raw('sum(case when completed then 1 else 0 end) as completed_tasks')
             )
             ->whereBetween('task_date', [$from, $to])
             ->whereNotNull('task_date')
@@ -581,7 +611,13 @@ class PlannerController extends Controller
             ->orderBy('task_date')
             ->get();
 
-        return response()->json(['by_employee' => $byEmployee, 'by_group' => $byGroup, 'by_day' => $byDay]);
+        return response()->json([
+            'by_employee'       => $byEmployee,
+            'by_group'          => $byGroup,
+            'by_priority'       => $byPriority,
+            'by_employee_group' => $byEmployeeGroup,
+            'by_day'            => $byDay,
+        ]);
     }
 
     /* ─── Templates ────────────────────────────────────────────── */

@@ -18,7 +18,7 @@ import {
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
   Sparkles,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend, PieChart, Pie, Cell } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { BacklogStrip } from '../components/BacklogStrip'
 import { TeamBucketsView } from '../components/TeamBucketsView'
@@ -1660,6 +1660,26 @@ export function Planner() {
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
+  const [statsRange, setStatsRange] = useState<'week' | 'month' | 'last30' | 'year' | 'custom'>('month')
+  const applyStatsRange = (kind: 'week' | 'month' | 'last30' | 'year') => {
+    const now = new Date()
+    let from = new Date(), to = new Date()
+    if (kind === 'week') {
+      const dow = (now.getDay() + 6) % 7 // Monday = 0
+      from = new Date(now); from.setDate(now.getDate() - dow)
+      to = new Date(from);  to.setDate(from.getDate() + 6)
+    } else if (kind === 'month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1)
+      to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    } else if (kind === 'last30') {
+      from = new Date(now); from.setDate(now.getDate() - 29)
+      to = now
+    } else { // year
+      from = new Date(now.getFullYear(), 0, 1)
+      to = new Date(now.getFullYear(), 11, 31)
+    }
+    setStatsFrom(fmtDate(from)); setStatsTo(fmtDate(to)); setStatsRange(kind)
+  }
   // Auto-plan modal state — null = closed, populated = showing preview.
   const [autoPlan, setAutoPlan] = useState<null | {
     proposals: Array<{ task_id: number; title: string; task_group: string | null; priority: string | null; duration_minutes: number; start_time: string }>
@@ -2606,7 +2626,7 @@ export function Planner() {
             {/* Header row — left column sticky so the "View by employee"
                 label stays put while the user scrolls the day columns
                 horizontally on cramped screens. */}
-            <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+            <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
               <div className="sticky left-0 z-10 bg-dark-surface px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center border-r border-dark-border/30">
                 <User size={14} className="mr-2" /> View by employee
               </div>
@@ -2642,7 +2662,7 @@ export function Planner() {
               const loadPct = Math.min(100, (totalHours / 40) * 100)
               const loadColor = totalHours > 40 ? '#ef4444' : totalHours > 32 ? '#f59e0b' : '#22c55e'
               return (
-                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
                   {/* Employee name cell — sticky left so the name +
                       workload stay visible while horizontally
                       scrolling the day columns. z-10 keeps it above
@@ -2787,9 +2807,9 @@ export function Planner() {
                                         {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
                                       </div>
                                     )}
-                                    <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
+                                    <div className={'flex items-start gap-1 mt-0.5 min-w-0 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
                                       <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
-                                      <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>
+                                      <span className={'text-xs truncate flex-1 min-w-0 ' + (task.completed ? 'line-through' : '')}>
                                         {task.title}
                                       </span>
                                     </div>
@@ -2847,7 +2867,7 @@ export function Planner() {
               const unassigned = tasks.filter((t: any) => !t.employee_name)
               if (unassigned.length === 0 && scheduleEmployees.length > 0) return null
               return (
-                <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
                     <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
                     <span className="text-sm font-medium text-gray-500 italic">{t('planner.actions.unassigned', 'Unassigned')}</span>
@@ -3056,132 +3076,264 @@ export function Planner() {
       {/* ═══ STATS VIEW ═══ */}
       {tab === 'stats' && (
         <div className="space-y-5">
-          <div className="flex gap-3 items-end flex-wrap">
-            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} /></div>
-            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} /></div>
+          {/* Quick range presets + custom from/to. Presets set both dates
+              in one click; editing either date drops to "Custom". */}
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              {([['week', 'This week'], ['month', 'This month'], ['last30', 'Last 30 days'], ['year', 'This year']] as const).map(([k, label]) => (
+                <button key={k} type="button" onClick={() => applyStatsRange(k)}
+                  className={'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
+                    (statsRange === k
+                      ? 'bg-primary-500 text-black border-primary-500'
+                      : 'bg-dark-surface text-gray-400 border-dark-border hover:text-white hover:border-white/15')}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-end gap-2 ml-auto">
+              <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => { setStatsFrom(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
+              <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => { setStatsTo(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
+            </div>
           </div>
           {stats && (() => {
-            const total = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
-            const done = stats.by_employee.reduce((s: number, e: any) => s + e.completed, 0)
+            const num = (v: any) => Number(v) || 0
+            const byEmp = (stats.by_employee ?? []) as any[]
+            const total = byEmp.reduce((s: number, e: any) => s + num(e.total), 0)
+            const done = byEmp.reduce((s: number, e: any) => s + num(e.completed), 0)
             const rate = total > 0 ? Math.round((done / total) * 100) : 0
             // Hours: worked = completed task durations; planned = all scheduled.
             const workHoursPerDay = Number(rawSettings?.planner_work_hours_per_day) || 8
             const workDaysPerWeek = Number(rawSettings?.planner_work_days_per_week) || 5
-            const workedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.worked_minutes) || 0), 0) / 60
-            const plannedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.planned_minutes) || 0), 0) / 60
+            const workedMin = byEmp.reduce((s: number, e: any) => s + num(e.worked_minutes), 0)
+            const plannedMin = byEmp.reduce((s: number, e: any) => s + num(e.planned_minutes), 0)
+            const workedH = workedMin / 60
+            const plannedH = plannedMin / 60
+            const avgTaskMin = total > 0 ? Math.round(plannedMin / total) : 0
             const byDay = (stats.by_day ?? []) as any[]
-            const perDay = byDay.map((d: any) => ({ date: String(d.task_date).slice(5), worked: Math.round(((Number(d.worked_minutes) || 0) / 60) * 10) / 10 }))
-            const daysWithWork = byDay.filter((d: any) => (Number(d.worked_minutes) || 0) > 0).length
+            const perDay = byDay.map((d: any) => ({
+              date: String(d.task_date).slice(5),
+              worked: Math.round((num(d.worked_minutes) / 60) * 10) / 10,
+              tasks: num(d.total_tasks),
+              done: num(d.completed_tasks),
+            }))
+            const daysWithWork = byDay.filter((d: any) => num(d.worked_minutes) > 0).length
             const avgPerDay = daysWithWork > 0 ? workedH / daysWithWork : 0
-            const hoursByEmployee = (stats.by_employee as any[])
-              .map((e: any) => ({ name: e.employee_name || 'Unassigned', workedH: (Number(e.worked_minutes) || 0) / 60, plannedH: (Number(e.planned_minutes) || 0) / 60 }))
-              .filter((e: any) => e.workedH > 0 || e.plannedH > 0)
+            const busiest = [...perDay].sort((a, b) => b.worked - a.worked)[0]
+            const topEmp = [...byEmp].filter(e => num(e.worked_minutes) > 0).sort((a, b) => num(b.worked_minutes) - num(a.worked_minutes))[0]
+            const hoursByEmployee = byEmp
+              .map((e: any) => ({ name: e.employee_name || 'Unassigned', total: num(e.total), completed: num(e.completed), workedH: num(e.worked_minutes) / 60, plannedH: num(e.planned_minutes) / 60 }))
+              .filter((e: any) => e.total > 0)
               .sort((a: any, b: any) => b.workedH - a.workedH)
-            return (<>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[['Total Tasks', total, 'text-white'], ['Completed', done, 'text-green-400'], ['Pending', total - done, 'text-amber-400'], ['Rate', rate + '%', 'text-primary-400']].map(([l, v, c]) => (
-                  <div key={l as string} className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">{l}</p>
-                    <p className={'text-3xl font-bold mt-2 ' + c}>{v}</p>
-                    {l === 'Rate' && <div className="mt-2"><ProgressBar done={done} total={total} /></div>}
-                  </div>
-                ))}
+            // Priority mix (normalised lowercase from the backend).
+            const priMeta: Record<string, string> = { high: '#ef4444', normal: '#3b82f6', low: '#9ca3af' }
+            const byPriority = (['high', 'normal', 'low'] as const).map(p => {
+              const row = (stats.by_priority ?? []).find((r: any) => (r.priority || 'normal') === p)
+              return { priority: p[0].toUpperCase() + p.slice(1), key: p, total: num(row?.total), completed: num(row?.completed), fill: priMeta[p] }
+            }).filter(r => r.total > 0)
+            // By type (task_group) with worked hours.
+            const byType = ((stats.by_group ?? []) as any[]).map((g: any) => ({
+              task_group: g.task_group || '—', total: num(g.total), completed: num(g.completed),
+              workedH: Math.round((num(g.worked_minutes) / 60) * 10) / 10, color: getGroupMeta(g.task_group).color,
+            }))
+            // Type × employee → stacked bar (hours per group per person).
+            const empGroup = (stats.by_employee_group ?? []) as any[]
+            const groupsInData = Array.from(new Set(empGroup.map((r: any) => r.task_group).filter(Boolean))) as string[]
+            const typeByEmp = Object.values(empGroup.reduce((acc: Record<string, any>, r: any) => {
+              const emp = r.employee_name || 'Unassigned'
+              acc[emp] = acc[emp] || { employee: emp }
+              acc[emp][r.task_group] = Math.round(((num(r.minutes)) / 60) * 10) / 10
+              return acc
+            }, {})).sort((a: any, b: any) => {
+              const sum = (o: any) => groupsInData.reduce((s, g) => s + (o[g] || 0), 0)
+              return sum(b) - sum(a)
+            })
+            const KPI = ({ label, value, sub, color }: { label: string; value: any; sub?: string; color?: string }) => (
+              <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                <p className="text-xs text-gray-500 font-medium">{label}</p>
+                <p className={'text-3xl font-bold mt-2 ' + (color || 'text-white')}>{value}</p>
+                {sub && <p className="text-[11px] text-gray-500 mt-1">{sub}</p>}
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            )
+            const Card = ({ title, sub, children }: { title: string; sub?: string; children: any }) => (
+              <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                <h2 className="text-sm font-semibold text-white mb-4">{title}{sub && <span className="text-[11px] font-normal text-gray-500 ml-1.5">{sub}</span>}</h2>
+                {children}
+              </div>
+            )
+            const NoData = ({ h = 260 }: { h?: number }) => <div style={{ height: h }} className="flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>
+            return (<>
+              {/* ── KPI row 1 — task throughput ── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_employee', 'By Employee')}</h2>
-                  {stats.by_employee.length > 0 ? (
+                  <p className="text-xs text-gray-500 font-medium">Total Tasks</p>
+                  <p className="text-3xl font-bold mt-2 text-white">{total}</p>
+                </div>
+                <KPI label="Completed" value={done} color="text-green-400" sub={`${done} of ${total}`} />
+                <KPI label="Pending" value={total - done} color="text-amber-400" />
+                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-medium">Completion Rate</p>
+                  <p className="text-3xl font-bold mt-2 text-primary-400">{rate}%</p>
+                  <div className="mt-2"><ProgressBar done={done} total={total} /></div>
+                </div>
+              </div>
+
+              {/* ── KPI row 2 — hours + efficiency ── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <KPI label="Hours worked" value={`${workedH.toFixed(1)}h`} color="text-green-400" sub="completed tasks" />
+                <KPI label="Planned hours" value={`${plannedH.toFixed(1)}h`} sub="all scheduled" />
+                <KPI label="Avg task length" value={avgTaskMin ? `${avgTaskMin}m` : '—'} color="text-primary-400" sub={`over ${total} task${total === 1 ? '' : 's'}`} />
+                <KPI label="Avg / active day" value={`${avgPerDay.toFixed(1)}h`} sub={`${daysWithWork} day${daysWithWork === 1 ? '' : 's'} · target ${workHoursPerDay}h`} />
+              </div>
+
+              {/* ── Highlights strip ── */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <KPI label="Most active" value={topEmp?.employee_name || '—'} color="text-white" sub={topEmp ? `${(num(topEmp.worked_minutes) / 60).toFixed(1)}h worked` : 'no hours logged'} />
+                <KPI label="Busiest day" value={busiest?.date || '—'} color="text-white" sub={busiest ? `${busiest.worked.toFixed(1)}h · ${busiest.done} done` : '—'} />
+                <KPI label="Weekly capacity" value={`${workHoursPerDay * workDaysPerWeek}h`} sub={`${workHoursPerDay}h/day × ${workDaysPerWeek} days`} />
+              </div>
+
+              {/* ── Completion trend over time ── */}
+              <Card title="Task activity over time" sub="(scheduled vs completed per day)">
+                {perDay.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={perDay} margin={{ left: -18, right: 8, top: 6, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="gTasks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c9a84c" stopOpacity={0.35} /><stop offset="100%" stopColor="#c9a84c" stopOpacity={0.02} /></linearGradient>
+                        <linearGradient id="gDone" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.45} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.03} /></linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Area type="monotone" dataKey="tasks" stroke="#c9a84c" strokeWidth={2} fill="url(#gTasks)" name="Scheduled" />
+                      <Area type="monotone" dataKey="done" stroke="#10b981" strokeWidth={2} fill="url(#gDone)" name="Completed" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : <NoData h={280} />}
+              </Card>
+
+              {/* ── Type + priority breakdowns ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Card title="By type" sub="(task count · completed)">
+                    {byType.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={byType} margin={{ left: -20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                          <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#9ca3af' }} interval={0} angle={-15} textAnchor="end" height={50} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="total" fill="#374151" radius={[4, 4, 0, 0]} name="Total" />
+                          <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <NoData />}
+                  </Card>
+                </div>
+                <Card title="By priority">
+                  {byPriority.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie data={byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                            {byPriority.map(p => <Cell key={p.key} fill={p.fill} />)}
+                          </Pie>
+                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-1.5 mt-2">
+                        {byPriority.map(p => (
+                          <div key={p.key} className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.fill }} />{p.priority}</span>
+                            <span className="tabular-nums text-gray-400">{p.completed}/{p.total} done</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : <NoData h={180} />}
+                </Card>
+              </div>
+
+              {/* ── Type by employee (stacked hours) ── */}
+              <Card title="Type by employee" sub="(hours per type, per person)">
+                {typeByEmp.length > 0 && groupsInData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={Math.max(220, typeByEmp.length * 42)}>
+                    <BarChart data={typeByEmp} layout="vertical" margin={{ left: 10, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit="h" />
+                      <YAxis dataKey="employee" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={110} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {groupsInData.map((g, i) => (
+                        <Bar key={g} dataKey={g} stackId="h" fill={getGroupMeta(g).color} radius={i === groupsInData.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]} name={g} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <NoData />}
+              </Card>
+
+              {/* ── By employee + hours per day ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title={t('planner.stats.by_employee', 'By Employee')} sub="(total vs done)">
+                  {byEmp.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={stats.by_employee} layout="vertical">
-                        <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                      <BarChart data={byEmp} layout="vertical" margin={{ left: 10 }}>
+                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
                         <YAxis dataKey="employee_name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
                         <Tooltip contentStyle={TOOLTIP_STYLE} />
-                        <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" stackId="a" />
-                        <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Remaining" stackId="a" />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Total" />
+                        <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_group', 'By Group')}</h2>
-                  {stats.by_group.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={stats.by_group}>
-                        <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#6b7280' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
-                        <Bar dataKey="total" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Total" />
-                        <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
-              </div>
-
-              {/* ── Hours worked (from completed task durations) ── */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Hours worked</p>
-                  <p className="text-3xl font-bold mt-2 text-green-400">{workedH.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">completed tasks</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Planned hours</p>
-                  <p className="text-3xl font-bold mt-2 text-white">{plannedH.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">all scheduled</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Workday target</p>
-                  <p className="text-3xl font-bold mt-2 text-primary-400">{workHoursPerDay}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">{workHoursPerDay * workDaysPerWeek}h / week</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Avg / active day</p>
-                  <p className="text-3xl font-bold mt-2 text-white">{avgPerDay.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">{daysWithWork} day{daysWithWork === 1 ? '' : 's'} worked</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">Hours by employee <span className="text-[11px] font-normal text-gray-500">(for the selected range)</span></h2>
-                  {hoursByEmployee.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-dark-border">
-                            <th className="py-2 font-semibold">Employee</th>
-                            <th className="py-2 font-semibold text-right">Worked</th>
-                            <th className="py-2 font-semibold text-right">Planned</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hoursByEmployee.map((e: any) => (
-                            <tr key={e.name} className="border-b border-dark-border/40">
-                              <td className="py-2 text-white">{e.name}</td>
-                              <td className="py-2 text-right text-green-400 font-semibold tabular-nums">{e.workedH.toFixed(1)}h</td>
-                              <td className="py-2 text-right text-gray-400 tabular-nums">{e.plannedH.toFixed(1)}h</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : <div className="h-[120px] flex items-center justify-center text-gray-600 text-sm">No hours logged</div>}
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">Hours per day <span className="text-[11px] font-normal text-gray-500">(worked · target {workHoursPerDay}h)</span></h2>
+                  ) : <NoData />}
+                </Card>
+                <Card title="Hours per day" sub={`(worked · target ${workHoursPerDay}h)`}>
                   {perDay.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={perDay}>
+                      <BarChart data={perDay} margin={{ left: -20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                         <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
                         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
                         <Tooltip contentStyle={TOOLTIP_STYLE} />
                         <Bar dataKey="worked" fill="#10b981" radius={[4, 4, 0, 0]} name="Worked h" />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
+                  ) : <NoData />}
+                </Card>
               </div>
+
+              {/* ── Hours-by-employee table ── */}
+              <Card title="Hours & task breakdown by employee" sub="(for the selected range)">
+                {hoursByEmployee.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-dark-border">
+                          <th className="py-2 font-semibold">Employee</th>
+                          <th className="py-2 font-semibold text-right">Tasks</th>
+                          <th className="py-2 font-semibold text-right">Done</th>
+                          <th className="py-2 font-semibold text-right">Worked</th>
+                          <th className="py-2 font-semibold text-right">Planned</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hoursByEmployee.map((e: any) => (
+                          <tr key={e.name} className="border-b border-dark-border/40">
+                            <td className="py-2 text-white">{e.name}</td>
+                            <td className="py-2 text-right text-gray-300 tabular-nums">{e.total}</td>
+                            <td className="py-2 text-right text-green-400 tabular-nums">{e.completed}</td>
+                            <td className="py-2 text-right text-green-400 font-semibold tabular-nums">{e.workedH.toFixed(1)}h</td>
+                            <td className="py-2 text-right text-gray-400 tabular-nums">{e.plannedH.toFixed(1)}h</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <div className="h-[120px] flex items-center justify-center text-gray-600 text-sm">No hours logged</div>}
+              </Card>
             </>)
           })()}
         </div>
@@ -3561,6 +3713,29 @@ export function Planner() {
                     className="px-2 py-1.5 rounded-md text-[11px] text-gray-600 hover:text-gray-400">
                     Clear
                   </button>
+                </div>
+                {/* Custom duration — 15-min steps (arrows) or any exact value.
+                    Covers the gap between the 1h / 1.5h / 2h / 4h chips. */}
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500">Custom</span>
+                  <div className="flex items-center bg-dark-bg border border-dark-border rounded-md overflow-hidden">
+                    <button type="button" title="−15 min"
+                      onClick={() => setDuration(Math.max(5, (Number(form.duration_minutes) || 0) - 15))}
+                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-dark-surface2">−</button>
+                    <input type="number" min={5} max={720} step={15}
+                      value={form.duration_minutes || ''}
+                      onChange={e => { const v = e.target.value; if (v === '') { setForm(f => ({ ...f, duration_minutes: '', end_time: '' })) } else { setDuration(Math.max(1, Number(v))) } }}
+                      placeholder="min"
+                      className="w-16 bg-transparent text-center text-xs text-white tabular-nums outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                    <button type="button" title="+15 min"
+                      onClick={() => setDuration((Number(form.duration_minutes) || 0) + 15)}
+                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-dark-surface2">+</button>
+                  </div>
+                  <span className="text-[11px] text-gray-600 tabular-nums">
+                    {Number(form.duration_minutes) > 0
+                      ? `${Math.floor(Number(form.duration_minutes) / 60) ? `${Math.floor(Number(form.duration_minutes) / 60)}h ` : ''}${Number(form.duration_minutes) % 60 ? `${Number(form.duration_minutes) % 60}m` : (Number(form.duration_minutes) >= 60 ? '' : '')}`.trim() || `${form.duration_minutes}m`
+                      : 'min'}
+                  </span>
                 </div>
                 {form.start_time && form.end_time && (
                   <div className="mt-2 text-[11px] text-gray-500 flex items-center gap-1.5">
