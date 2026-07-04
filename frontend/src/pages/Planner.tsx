@@ -1654,20 +1654,32 @@ export function Planner() {
   }, [mineOnly])
   const [showModal, setShowModal] = useState(false)
   const [editTask, setEditTask] = useState<any>(null)
+  // When set, the new-task drawer is in "backlog" mode: the date is
+  // optional (empty = stays in backlog) and the assignment is fixed by
+  // scope ('mine' = me, 'pool' = unassigned open-pool). Lets the backlog
+  // strip reuse the full drawer instead of its cramped popover.
+  const [backlogMode, setBacklogMode] = useState<null | 'mine' | 'pool'>(null)
   const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
-  const [statsRange, setStatsRange] = useState<'week' | 'month' | 'last30' | 'year' | 'custom'>('month')
-  const applyStatsRange = (kind: 'week' | 'month' | 'last30' | 'year') => {
+  type StatsRangeKind = 'today' | 'week' | '2weeks' | 'month' | 'last30' | 'year'
+  const [statsRange, setStatsRange] = useState<StatsRangeKind | 'custom'>('month')
+  const applyStatsRange = (kind: StatsRangeKind) => {
     const now = new Date()
     let from = new Date(), to = new Date()
-    if (kind === 'week') {
+    if (kind === 'today') {
+      from = new Date(now); to = new Date(now)
+    } else if (kind === 'week') {
       const dow = (now.getDay() + 6) % 7 // Monday = 0
       from = new Date(now); from.setDate(now.getDate() - dow)
       to = new Date(from);  to.setDate(from.getDate() + 6)
+    } else if (kind === '2weeks') {
+      const dow = (now.getDay() + 6) % 7
+      from = new Date(now); from.setDate(now.getDate() - dow - 7) // last Monday of previous week
+      to = new Date(from);  to.setDate(from.getDate() + 13)
     } else if (kind === 'month') {
       from = new Date(now.getFullYear(), now.getMonth(), 1)
       to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
@@ -1680,6 +1692,15 @@ export function Planner() {
     }
     setStatsFrom(fmtDate(from)); setStatsTo(fmtDate(to)); setStatsRange(kind)
   }
+  // Previous equal-length window immediately before [statsFrom, statsTo] —
+  // powers the period-over-period comparison deltas on the KPI cards.
+  const statsPrevRange = useMemo(() => {
+    const f = new Date(statsFrom + 'T00:00:00'), t = new Date(statsTo + 'T00:00:00')
+    const days = Math.max(0, Math.round((t.getTime() - f.getTime()) / 86400000)) + 1
+    const pt = new Date(f); pt.setDate(f.getDate() - 1)
+    const pf = new Date(pt); pf.setDate(pt.getDate() - (days - 1))
+    return { from: fmtDate(pf), to: fmtDate(pt) }
+  }, [statsFrom, statsTo])
   // Auto-plan modal state — null = closed, populated = showing preview.
   const [autoPlan, setAutoPlan] = useState<null | {
     proposals: Array<{ task_id: number; title: string; task_group: string | null; priority: string | null; duration_minutes: number; start_time: string }>
@@ -1762,6 +1783,12 @@ export function Planner() {
     queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsFrom, to: statsTo } }).then(r => r.data),
     enabled: tab === 'stats',
   })
+  // Previous equal-length period — for the comparison deltas.
+  const { data: statsPrev } = useQuery({
+    queryKey: ['planner-stats', statsPrevRange.from, statsPrevRange.to],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsPrevRange.from, to: statsPrevRange.to } }).then(r => r.data),
+    enabled: tab === 'stats',
+  })
 
   /* ─── mutations ───────────────────────────────────────────────── */
   // Backlog drawer reads from ['planner-backlog'] — scheduling /
@@ -1775,7 +1802,7 @@ export function Planner() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }); toast.success('Task created') },
+    onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setBacklogMode(null); setForm({ ...EMPTY_FORM }); toast.success(backlogMode ? 'Added to backlog' : 'Task created') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -1974,12 +2001,27 @@ export function Planner() {
 
   const openCreate = (date: string, emp?: string, startTime?: string) => {
     setEditTask(null)
+    setBacklogMode(null)
     setShowTemplatePicker(false)
     setForm({
       ...EMPTY_FORM,
       task_date: date,
       employee_name: emp ?? myName,
       start_time: startTime ?? '',
+    })
+    setShowModal(true)
+  }
+
+  // Open the full new-task drawer in backlog mode (no scheduled date).
+  const openBacklogCreate = (scope: 'mine' | 'pool') => {
+    setEditTask(null)
+    setBacklogMode(scope)
+    setShowTemplatePicker(false)
+    setForm({
+      ...EMPTY_FORM,
+      task_date: '',
+      employee_name: scope === 'mine' ? myName : '',
+      start_time: '',
     })
     setShowModal(true)
   }
@@ -2013,6 +2055,7 @@ export function Planner() {
 
   const openEdit = (task: any) => {
     setEditTask(task)
+    setBacklogMode(null)
     setShowTemplatePicker(false)
     setForm({
       employee_name: task.employee_name ?? '', title: task.title ?? '',
@@ -2034,6 +2077,14 @@ export function Planner() {
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
     ;['employee_name', 'task_group', 'task_category', 'description'].forEach(k => { if (!body[k]) body[k] = null })
+    // Backlog create: no date left = keep in backlog; assignment is
+    // fixed by the scope the drawer was opened with. 'pool' = unassigned
+    // (anyone can claim); 'mine' = assigned to me.
+    if (backlogMode && !editTask) {
+      if (!body.task_date) { body.task_date = null; body.start_time = null; body.end_time = null }
+      if (backlogMode === 'pool') { body.assigned_to_user_id = null; body.employee_name = null }
+      else { body.assigned_to_user_id = user?.id ?? null; body.employee_name = myName || null }
+    }
     // For status, ensure it's always a valid value or null
     if (!body.status || !['todo', 'in_progress', 'blocked', 'done'].includes(body.status)) {
       body.status = editTask ? editTask.status : 'todo'
@@ -2226,6 +2277,7 @@ export function Planner() {
           currentUserId={user?.id ?? null}
           currentUserName={myName}
           plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+          onNewTask={(scope) => openBacklogCreate(scope)}
         />
       )}
 
@@ -3080,7 +3132,7 @@ export function Planner() {
               in one click; editing either date drops to "Custom". */}
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-wrap gap-1.5">
-              {([['week', 'This week'], ['month', 'This month'], ['last30', 'Last 30 days'], ['year', 'This year']] as const).map(([k, label]) => (
+              {([['today', 'Today'], ['week', 'This week'], ['2weeks', '2 weeks'], ['month', 'This month'], ['last30', 'Last 30 days'], ['year', 'This year']] as const).map(([k, label]) => (
                 <button key={k} type="button" onClick={() => applyStatsRange(k)}
                   className={'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
                     (statsRange === k
@@ -3110,8 +3162,12 @@ export function Planner() {
             const plannedH = plannedMin / 60
             const avgTaskMin = total > 0 ? Math.round(plannedMin / total) : 0
             const byDay = (stats.by_day ?? []) as any[]
+            // task_date arrives as 'YYYY-MM-DD' from the backend (to_char).
+            // Render it as DD.MM; defensive slice(0,10) also strips any
+            // stray time portion so an ISO datetime can never leak through.
+            const fmtD = (s: any) => { const p = String(s).slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}` : String(s) }
             const perDay = byDay.map((d: any) => ({
-              date: String(d.task_date).slice(5),
+              date: fmtD(d.task_date),
               worked: Math.round((num(d.worked_minutes) / 60) * 10) / 10,
               tasks: num(d.total_tasks),
               done: num(d.completed_tasks),
@@ -3147,10 +3203,38 @@ export function Planner() {
               const sum = (o: any) => groupsInData.reduce((s, g) => s + (o[g] || 0), 0)
               return sum(b) - sum(a)
             })
-            const KPI = ({ label, value, sub, color }: { label: string; value: any; sub?: string; color?: string }) => (
+            // By task (specific task label) — top 12 by frequency for the
+            // "what work actually got done" charts.
+            const byTask = ((stats.by_task ?? []) as any[]).slice(0, 12).map((r: any) => ({
+              task: String(r.task || '—'), total: num(r.total), completed: num(r.completed),
+              workedH: Math.round((num(r.worked_minutes) / 60) * 10) / 10,
+            }))
+            // Period-over-period comparison against the previous equal window.
+            const pEmp = (statsPrev?.by_employee ?? []) as any[]
+            const pTotal = pEmp.reduce((s: number, e: any) => s + num(e.total), 0)
+            const pDone = pEmp.reduce((s: number, e: any) => s + num(e.completed), 0)
+            const pWorkedH = pEmp.reduce((s: number, e: any) => s + num(e.worked_minutes), 0) / 60
+            const pRate = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0
+            const hasPrev = !!statsPrev && pTotal > 0
+            // A small ▲/▼ delta badge vs the previous period. `pp` = the
+            // metric is already a percentage (show "pt" not "%").
+            const Delta = ({ cur, prev, pp = false, invert = false }: { cur: number; prev: number; pp?: boolean; invert?: boolean }) => {
+              if (!hasPrev) return null
+              const d = Math.round((cur - prev) * 10) / 10
+              if (d === 0) return <span className="text-[11px] text-gray-500 mt-1 inline-block">no change</span>
+              const up = d > 0
+              const good = invert ? !up : up
+              return (
+                <span className={'text-[11px] font-medium mt-1 inline-flex items-center gap-0.5 ' + (good ? 'text-green-400' : 'text-red-400')}>
+                  {up ? '▲' : '▼'} {Math.abs(d)}{pp ? 'pt' : ''} <span className="text-gray-600 font-normal">vs prev</span>
+                </span>
+              )
+            }
+            const KPI = ({ label, value, sub, color, delta }: { label: string; value: any; sub?: string; color?: string; delta?: any }) => (
               <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={'text-3xl font-bold mt-2 ' + (color || 'text-white')}>{value}</p>
+                {delta}
                 {sub && <p className="text-[11px] text-gray-500 mt-1">{sub}</p>}
               </div>
             )
@@ -3162,24 +3246,22 @@ export function Planner() {
             )
             const NoData = ({ h = 260 }: { h?: number }) => <div style={{ height: h }} className="flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>
             return (<>
-              {/* ── KPI row 1 — task throughput ── */}
+              {/* ── KPI row 1 — task throughput (with vs-previous deltas) ── */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Total Tasks</p>
-                  <p className="text-3xl font-bold mt-2 text-white">{total}</p>
-                </div>
-                <KPI label="Completed" value={done} color="text-green-400" sub={`${done} of ${total}`} />
-                <KPI label="Pending" value={total - done} color="text-amber-400" />
+                <KPI label="Total Tasks" value={total} delta={<Delta cur={total} prev={pTotal} />} />
+                <KPI label="Completed" value={done} color="text-green-400" sub={`${done} of ${total}`} delta={<Delta cur={done} prev={pDone} />} />
+                <KPI label="Pending" value={total - done} color="text-amber-400" delta={<Delta cur={total - done} prev={pTotal - pDone} invert />} />
                 <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
                   <p className="text-xs text-gray-500 font-medium">Completion Rate</p>
                   <p className="text-3xl font-bold mt-2 text-primary-400">{rate}%</p>
+                  <Delta cur={rate} prev={pRate} pp />
                   <div className="mt-2"><ProgressBar done={done} total={total} /></div>
                 </div>
               </div>
 
               {/* ── KPI row 2 — hours + efficiency ── */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KPI label="Hours worked" value={`${workedH.toFixed(1)}h`} color="text-green-400" sub="completed tasks" />
+                <KPI label="Hours worked" value={`${workedH.toFixed(1)}h`} color="text-green-400" sub="done tasks" delta={<Delta cur={Math.round(workedH * 10) / 10} prev={Math.round(pWorkedH * 10) / 10} />} />
                 <KPI label="Planned hours" value={`${plannedH.toFixed(1)}h`} sub="all scheduled" />
                 <KPI label="Avg task length" value={avgTaskMin ? `${avgTaskMin}m` : '—'} color="text-primary-400" sub={`over ${total} task${total === 1 ? '' : 's'}`} />
                 <KPI label="Avg / active day" value={`${avgPerDay.toFixed(1)}h`} sub={`${daysWithWork} day${daysWithWork === 1 ? '' : 's'} · target ${workHoursPerDay}h`} />
@@ -3204,7 +3286,7 @@ export function Planner() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       <Area type="monotone" dataKey="tasks" stroke="#c9a84c" strokeWidth={2} fill="url(#gTasks)" name="Scheduled" />
                       <Area type="monotone" dataKey="done" stroke="#10b981" strokeWidth={2} fill="url(#gDone)" name="Completed" />
@@ -3223,7 +3305,7 @@ export function Planner() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                           <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#9ca3af' }} interval={0} angle={-15} textAnchor="end" height={50} />
                           <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                           <Legend wrapperStyle={{ fontSize: 11 }} />
                           <Bar dataKey="total" fill="#374151" radius={[4, 4, 0, 0]} name="Total" />
                           <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
@@ -3240,7 +3322,7 @@ export function Planner() {
                           <Pie data={byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2}>
                             {byPriority.map(p => <Cell key={p.key} fill={p.fill} />)}
                           </Pie>
-                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="space-y-1.5 mt-2">
@@ -3264,7 +3346,7 @@ export function Planner() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit="h" />
                       <YAxis dataKey="employee" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={110} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       {groupsInData.map((g, i) => (
                         <Bar key={g} dataKey={g} stackId="h" fill={getGroupMeta(g).color} radius={i === groupsInData.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]} name={g} />
@@ -3274,6 +3356,49 @@ export function Planner() {
                 ) : <NoData />}
               </Card>
 
+              {/* ── By task (what actually got done) + type share pie ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Card title="By task" sub="(what got done — top tasks by volume)">
+                    {byTask.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={Math.max(220, byTask.length * 30)}>
+                        <BarChart data={byTask} layout="vertical" margin={{ left: 10, right: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                          <YAxis dataKey="task" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={150} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Total" />
+                          <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <div className="h-[220px] flex flex-col items-center justify-center text-gray-600 text-sm gap-1"><span>{t('planner.empty.no_data', 'No data')}</span><span className="text-[11px] text-gray-700">Set a Task on the new-task form to break work down here.</span></div>}
+                  </Card>
+                </div>
+                <Card title="Task type share" sub="(by count)">
+                  {byType.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={190}>
+                        <PieChart>
+                          <Pie data={byType} dataKey="total" nameKey="task_group" innerRadius={45} outerRadius={78} paddingAngle={2}>
+                            {byType.map(g => <Cell key={g.task_group} fill={g.color} />)}
+                          </Pie>
+                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-1 mt-2 max-h-28 overflow-y-auto pr-1">
+                        {byType.map(g => (
+                          <div key={g.task_group} className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-2 min-w-0"><span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: g.color }} /><span className="truncate">{g.task_group}</span></span>
+                            <span className="tabular-nums text-gray-400 flex-shrink-0 ml-2">{g.completed}/{g.total}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : <NoData h={190} />}
+                </Card>
+              </div>
+
               {/* ── By employee + hours per day ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card title={t('planner.stats.by_employee', 'By Employee')} sub="(total vs done)">
@@ -3282,7 +3407,7 @@ export function Planner() {
                       <BarChart data={byEmp} layout="vertical" margin={{ left: 10 }}>
                         <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
                         <YAxis dataKey="employee_name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Total" />
                         <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" />
@@ -3297,7 +3422,7 @@ export function Planner() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                         <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
                         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                         <Bar dataKey="worked" fill="#10b981" radius={[4, 4, 0, 0]} name="Worked h" />
                       </BarChart>
                     </ResponsiveContainer>
@@ -3464,7 +3589,7 @@ export function Planner() {
          * dropdowns and chunky chips so a non-expert can compose a
          * fully-specified task in <10 seconds.
          */
-        const close = () => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }
+        const close = () => { setShowModal(false); setEditTask(null); setBacklogMode(null); setForm({ ...EMPTY_FORM }) }
 
         const setDuration = (mins: number) => {
           setForm(f => ({
@@ -3514,7 +3639,15 @@ export function Planner() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
           <div className="bg-dark-surface border-l border-dark-border w-full max-w-md h-full flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-dark-border">
-              <h2 className="text-lg font-bold text-white">{editTask ? 'Edit task' : 'New task'}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white">{editTask ? 'Edit task' : backlogMode ? 'New backlog task' : 'New task'}</h2>
+                {backlogMode && (
+                  <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full border ' +
+                    (backlogMode === 'pool' ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'bg-gold-500/15 text-gold-300 border-gold-500/40')}>
+                    {backlogMode === 'pool' ? 'Open pool' : 'Mine'}
+                  </span>
+                )}
+              </div>
               <button onClick={close} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
             </div>
 
@@ -3657,19 +3790,30 @@ export function Planner() {
                 </div>
               </div>
 
-              {/* Date with quick chips */}
+              {/* Date with quick chips. In backlog mode the date is
+                  optional — leaving it empty keeps the task in the backlog
+                  (schedule it later by dragging onto the calendar). */}
               <div>
-                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Calendar size={11} /> Date</label>
-                <input type="date" required value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
+                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5">
+                  <Calendar size={11} /> Date {backlogMode && <span className="normal-case font-normal text-gray-600">· optional</span>}
+                </label>
+                <input type="date" required={!backlogMode} value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
                   className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
-                <div className="flex gap-1.5 mt-2 flex-wrap">
+                <div className="flex gap-1.5 mt-2 flex-wrap items-center">
                   {[{ off: 0, lbl: 'Today' }, { off: 1, lbl: 'Tomorrow' }, { off: 2, lbl: 'In 2 days' }, { off: 7, lbl: 'Next week' }].map(d => (
                     <button key={d.lbl} type="button" onClick={() => setDateQuick(d.off)}
                       className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-500 hover:text-white hover:border-dark-border/80">
                       {d.lbl}
                     </button>
                   ))}
+                  {backlogMode && form.task_date && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, task_date: '' }))}
+                      className="text-[11px] px-2 py-1 rounded text-gray-500 hover:text-white">Clear (keep in backlog)</button>
+                  )}
                 </div>
+                {backlogMode && !form.task_date && (
+                  <p className="text-[11px] text-gray-600 mt-1.5">No date → stays in the backlog. Drag it onto the calendar later to schedule.</p>
+                )}
               </div>
 
               {/* Start time — 30min slots, 24h labels (07:00 → 21:00). */}

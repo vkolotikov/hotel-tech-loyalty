@@ -30,6 +30,10 @@ interface Props {
    *  claim themselves (the pool view + claim endpoint both gate on
    *  task_group ∈ skills). */
   plannerSkills?: string[] | null
+  /** Opens the full new-task drawer in backlog mode for the given
+   *  scope. When provided, the strip's "New task" button uses this
+   *  instead of the compact inline popover. */
+  onNewTask?: (scope: Scope) => void
 }
 
 const SCOPE_STORAGE_KEY = 'planner-backlog-scope'
@@ -55,7 +59,7 @@ const OPEN_STORAGE_KEY  = 'planner-backlog-strip-open'
  * drag-drop is poor on touch. Desktop renders the strip + hides the
  * mobile FAB via the responsive class chain.
  */
-export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkills = null }: Props) {
+export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkills = null, onNewTask }: Props) {
   const qc = useQueryClient()
 
   const [open, setOpen] = useState<boolean>(() => {
@@ -288,6 +292,10 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           <div className="relative flex-shrink-0">
             <button
               onClick={() => {
+                // Prefer the full right-side drawer (matches the main
+                // planner new-task flow). Falls back to the compact
+                // inline popover only if no drawer handler is wired.
+                if (onNewTask) { onNewTask(scope); return }
                 if (showQuickAdd) { setShowQuickAdd(false); return }
                 setQa({ title: '', task_group: (scope === 'pool' && plannerSkills?.[0]) || '', task_category: '', duration: '', priority: 'normal' })
                 setShowQuickAdd(true)

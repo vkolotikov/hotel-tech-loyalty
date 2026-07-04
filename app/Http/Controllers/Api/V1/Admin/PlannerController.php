@@ -549,71 +549,113 @@ class PlannerController extends Controller
         $from = $request->get('from', now()->startOfMonth()->toDateString());
         $to   = $request->get('to', now()->toDateString());
 
+        // A task is "done" if EITHER the completed boolean OR status='done'
+        // is set — the two can diverge because different code paths (UI
+        // toggle, bulk mark-done, mobile app, imports) set one or the
+        // other. Counting only `completed` undercounts the real done-state
+        // and made the Stats "Completed" number disagree with the live
+        // KPI + the per-day chart. `$doneMinutes` is the worked-time twin.
+        $done        = "(completed or status = 'done')";
+        $doneCount   = "sum(case when {$done} then 1 else 0 end)";
+        $doneMinutes = "sum(case when {$done} then coalesce(duration_minutes, 0) else 0 end)";
+
+        // CRITICAL: every aggregation below ends in ->toBase()->get() so it
+        // returns RAW stdClass rows, NOT PlannerTask models. The model
+        // casts `completed => boolean` and `task_date => date`; if the
+        // aggregate aliases (`... as completed`, `... as task_date`) were
+        // returned as models, those casts fire on the SUM/COUNT — turning
+        // `sum(...) as completed` into `true`/`false` (so the frontend's
+        // Number(true)=1 undercounted the total to "number of employees
+        // with any done task") and `task_date` into an ISO datetime. That
+        // was the "wrong numbers" bug. toBase() bypasses casting entirely.
+
         $byEmployee = PlannerTask::select('employee_name',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
-                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes"),
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
             ->groupBy('employee_name')
-            ->get();
+            ->orderByRaw('count(*) desc')
+            ->toBase()->get();
 
         // "By type" = task_group. Includes worked minutes so the analytics
         // page can show hours-by-type alongside task counts.
         $byGroup = PlannerTask::select('task_group',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
-                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes"),
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
             ->whereNotNull('task_group')
             ->groupBy('task_group')
             ->orderByDesc('total')
-            ->get();
+            ->toBase()->get();
+
+        // "By task" = the specific task label (task_category, falling back to
+        // the title). Top 20 by frequency so the chart stays readable. This
+        // is the "what work actually got done" view the type breakdown can't
+        // give — e.g. "Engraving 200 cards" vs just "Production".
+        $taskLabel = "coalesce(nullif(task_category, ''), title)";
+        $byTask = PlannerTask::select(
+                DB::raw("{$taskLabel} as task"),
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->whereRaw("{$taskLabel} is not null and {$taskLabel} <> ''")
+            ->groupBy(DB::raw($taskLabel))
+            ->orderByDesc('total')
+            ->limit(20)
+            ->toBase()->get();
 
         // Priority mix (case-normalised so 'High' + 'high' collapse).
         $byPriority = PlannerTask::select(
                 DB::raw("lower(coalesce(nullif(priority, ''), 'normal')) as priority"),
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed')
+                DB::raw("{$doneCount} as completed")
             )
             ->whereBetween('task_date', [$from, $to])
             ->groupBy(DB::raw("lower(coalesce(nullif(priority, ''), 'normal'))"))
-            ->get();
+            ->toBase()->get();
 
         // Type × employee matrix — powers the stacked "type by employee"
         // chart. Cross-references worked minutes so the same rows also feed
         // an hours-by-type-per-person breakdown without a second query.
         $byEmployeeGroup = PlannerTask::select('employee_name', 'task_group',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
-                DB::raw('sum(coalesce(duration_minutes, 0)) as minutes')
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as minutes")
             )
             ->whereBetween('task_date', [$from, $to])
             ->whereNotNull('task_group')
             ->groupBy('employee_name', 'task_group')
-            ->get();
+            ->toBase()->get();
 
-        // Worked (completed) + planned task-minutes AND task counts per day
+        // Worked (done) + planned task-minutes AND task counts per day
         // across the range — powers the "hours per day" view, the tasks-
-        // completed trend, and weekly totals for payroll.
+        // completed trend, and weekly totals for payroll. toBase() keeps
+        // task_date a plain 'YYYY-MM-DD' string (a DATE column returns no
+        // time) instead of the model's ISO-datetime date cast.
         $byDay = PlannerTask::select('task_date',
-                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
+                DB::raw("{$doneMinutes} as worked_minutes"),
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes'),
                 DB::raw('count(*) as total_tasks'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed_tasks')
+                DB::raw("{$doneCount} as completed_tasks")
             )
             ->whereBetween('task_date', [$from, $to])
             ->whereNotNull('task_date')
             ->groupBy('task_date')
             ->orderBy('task_date')
-            ->get();
+            ->toBase()->get();
 
         return response()->json([
             'by_employee'       => $byEmployee,
             'by_group'          => $byGroup,
+            'by_task'           => $byTask,
             'by_priority'       => $byPriority,
             'by_employee_group' => $byEmployeeGroup,
             'by_day'            => $byDay,
