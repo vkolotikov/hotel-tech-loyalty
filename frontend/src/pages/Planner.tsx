@@ -1692,6 +1692,8 @@ export function Planner() {
     }
     setStatsFrom(fmtDate(from)); setStatsTo(fmtDate(to)); setStatsRange(kind)
   }
+  // Focus the whole Stats page on a single person ('' = whole team).
+  const [statsEmployee, setStatsEmployee] = useState('')
   // Previous equal-length window immediately before [statsFrom, statsTo] —
   // powers the period-over-period comparison deltas on the KPI cards.
   const statsPrevRange = useMemo(() => {
@@ -1779,14 +1781,14 @@ export function Planner() {
   })
 
   const { data: stats } = useQuery({
-    queryKey: ['planner-stats', statsFrom, statsTo],
-    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsFrom, to: statsTo } }).then(r => r.data),
+    queryKey: ['planner-stats', statsFrom, statsTo, statsEmployee],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsFrom, to: statsTo, employee: statsEmployee || undefined } }).then(r => r.data),
     enabled: tab === 'stats',
   })
   // Previous equal-length period — for the comparison deltas.
   const { data: statsPrev } = useQuery({
-    queryKey: ['planner-stats', statsPrevRange.from, statsPrevRange.to],
-    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsPrevRange.from, to: statsPrevRange.to } }).then(r => r.data),
+    queryKey: ['planner-stats', statsPrevRange.from, statsPrevRange.to, statsEmployee],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsPrevRange.from, to: statsPrevRange.to, employee: statsEmployee || undefined } }).then(r => r.data),
     enabled: tab === 'stats',
   })
 
@@ -3143,10 +3145,25 @@ export function Planner() {
               ))}
             </div>
             <div className="flex items-end gap-2 ml-auto">
+              {/* Focus every breakdown on one person (or the whole team). */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Employee</label>
+                <select value={statsEmployee} onChange={e => setStatsEmployee(e.target.value)} className={filterSel}>
+                  <option value="">All team</option>
+                  {assignableEmployees.map((e: string) => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
               <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => { setStatsFrom(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
               <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => { setStatsTo(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
             </div>
           </div>
+          {statsEmployee && (
+            <div className="flex items-center gap-2 text-xs text-primary-300 bg-primary-500/10 border border-primary-500/25 rounded-lg px-3 py-2">
+              <span className="font-semibold">Viewing: {statsEmployee}</span>
+              <span className="text-gray-500">— every chart below is filtered to this person.</span>
+              <button onClick={() => setStatsEmployee('')} className="ml-auto text-gray-400 hover:text-white">Show all team ✕</button>
+            </div>
+          )}
           {stats && (() => {
             const num = (v: any) => Number(v) || 0
             const byEmp = (stats.by_employee ?? []) as any[]
@@ -3205,10 +3222,30 @@ export function Planner() {
             })
             // By task (specific task label) — top 12 by frequency for the
             // "what work actually got done" charts.
+            // Map task_category slugs → their human label (from the
+            // planner_channels config), falling back to the raw value.
+            const taskLabelMap: Record<string, string> = Object.fromEntries(
+              (taskChannels || []).map((c: any) => [String(c.key), c.label])
+            )
+            const prettyTask = (s: any) => taskLabelMap[String(s)] || String(s || '—')
             const byTask = ((stats.by_task ?? []) as any[]).slice(0, 12).map((r: any) => ({
-              task: String(r.task || '—'), total: num(r.total), completed: num(r.completed),
+              task: prettyTask(r.task), total: num(r.total), completed: num(r.completed),
               workedH: Math.round((num(r.worked_minutes) / 60) * 10) / 10,
             }))
+            // Type → Task hierarchy: group the (type, task) rows under each
+            // type, so "under each type you see the tasks" — the headline
+            // "what did the week's work consist of" breakdown.
+            const groupTaskTree = Object.values(
+              ((stats.by_group_task ?? []) as any[]).reduce((acc: Record<string, any>, r: any) => {
+                const g = r.task_group || '—'
+                acc[g] = acc[g] || { type: g, color: getGroupMeta(g).color, total: 0, completed: 0, minutes: 0, tasks: [] as any[] }
+                const tt = num(r.total), tc = num(r.completed), tm = num(r.minutes)
+                acc[g].total += tt; acc[g].completed += tc; acc[g].minutes += tm
+                acc[g].tasks.push({ task: prettyTask(r.task), total: tt, completed: tc, workedH: Math.round((tm / 60) * 10) / 10 })
+                return acc
+              }, {})
+            ).map((g: any) => ({ ...g, workedH: Math.round((g.minutes / 60) * 10) / 10, tasks: g.tasks.sort((a: any, b: any) => b.total - a.total) }))
+              .sort((a: any, b: any) => b.total - a.total)
             // Period-over-period comparison against the previous equal window.
             const pEmp = (statsPrev?.by_employee ?? []) as any[]
             const pTotal = pEmp.reduce((s: number, e: any) => s + num(e.total), 0)
@@ -3293,6 +3330,50 @@ export function Planner() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : <NoData h={280} />}
+              </Card>
+
+              {/* ── Types & their tasks — the hierarchy that answers
+                  "what did the week's work actually consist of" ── */}
+              <Card title="Types & their tasks" sub={statsEmployee ? `(${statsEmployee} — under each type, the tasks done)` : '(under each type, the tasks that made it up)'}>
+                {groupTaskTree.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {groupTaskTree.map((g: any) => {
+                      const gRate = g.total > 0 ? Math.round((g.completed / g.total) * 100) : 0
+                      return (
+                        <div key={g.type} className="rounded-lg border border-dark-border bg-dark-bg/40 p-3">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: g.color }} />
+                            <span className="font-semibold text-white">{g.type}</span>
+                            <span className="text-[11px] text-gray-500">{g.tasks.length} task{g.tasks.length === 1 ? '' : 's'}</span>
+                            <div className="ml-auto flex items-center gap-3 text-[11px]">
+                              <span className="tabular-nums text-gray-400"><span className="text-green-400 font-semibold">{g.completed}</span>/{g.total} done</span>
+                              <span className="tabular-nums text-gray-500">{g.workedH}h</span>
+                              <span className="tabular-nums font-semibold" style={{ color: gRate >= 80 ? '#10b981' : gRate >= 40 ? '#f59e0b' : '#6b7280' }}>{gRate}%</span>
+                            </div>
+                          </div>
+                          <div className="mt-2 space-y-1">
+                            {g.tasks.map((tk: any, i: number) => {
+                              const pct = g.total > 0 ? (tk.total / g.total) * 100 : 0
+                              const donePct = tk.total > 0 ? (tk.completed / tk.total) * 100 : 0
+                              return (
+                                <div key={i} className="flex items-center gap-2 text-[11px]">
+                                  <span className="text-gray-300 w-40 truncate flex-shrink-0" title={tk.task}>{tk.task}</span>
+                                  <div className="flex-1 h-2.5 rounded bg-white/[0.04] overflow-hidden min-w-[60px]" title={`${tk.completed} of ${tk.total} done`}>
+                                    <div className="h-full rounded" style={{ width: `${pct}%`, background: g.color + '55' }}>
+                                      <div className="h-full rounded" style={{ width: `${donePct}%`, background: g.color }} />
+                                    </div>
+                                  </div>
+                                  <span className="tabular-nums text-gray-400 w-14 text-right flex-shrink-0">{tk.completed}/{tk.total}</span>
+                                  <span className="tabular-nums text-gray-600 w-12 text-right flex-shrink-0">{tk.workedH}h</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : <div className="h-[140px] flex flex-col items-center justify-center text-gray-600 text-sm gap-1"><span>{t('planner.empty.no_data', 'No data')}</span><span className="text-[11px] text-gray-700">Set a Type + Task on the new-task form to build this breakdown.</span></div>}
               </Card>
 
               {/* ── Type + priority breakdowns ── */}

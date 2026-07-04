@@ -548,6 +548,10 @@ class PlannerController extends Controller
     {
         $from = $request->get('from', now()->startOfMonth()->toDateString());
         $to   = $request->get('to', now()->toDateString());
+        // Optional focus on a single person — every breakdown below narrows
+        // to them so the page answers "how did THIS employee's week go".
+        // Null/empty = the whole team.
+        $employee = $request->get('employee') ?: null;
 
         // A task is "done" if EITHER the completed boolean OR status='done'
         // is set — the two can diverge because different code paths (UI
@@ -558,6 +562,9 @@ class PlannerController extends Controller
         $done        = "(completed or status = 'done')";
         $doneCount   = "sum(case when {$done} then 1 else 0 end)";
         $doneMinutes = "sum(case when {$done} then coalesce(duration_minutes, 0) else 0 end)";
+        // The "task" label used by the task + type→task breakdowns: the
+        // structured task_category, falling back to the free-text title.
+        $taskLabel   = "coalesce(nullif(task_category, ''), title)";
 
         // CRITICAL: every aggregation below ends in ->toBase()->get() so it
         // returns RAW stdClass rows, NOT PlannerTask models. The model
@@ -576,6 +583,7 @@ class PlannerController extends Controller
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->groupBy('employee_name')
             ->orderByRaw('count(*) desc')
             ->toBase()->get();
@@ -589,6 +597,7 @@ class PlannerController extends Controller
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereNotNull('task_group')
             ->groupBy('task_group')
             ->orderByDesc('total')
@@ -598,7 +607,6 @@ class PlannerController extends Controller
         // the title). Top 20 by frequency so the chart stays readable. This
         // is the "what work actually got done" view the type breakdown can't
         // give — e.g. "Engraving 200 cards" vs just "Production".
-        $taskLabel = "coalesce(nullif(task_category, ''), title)";
         $byTask = PlannerTask::select(
                 DB::raw("{$taskLabel} as task"),
                 DB::raw('count(*) as total'),
@@ -606,10 +614,30 @@ class PlannerController extends Controller
                 DB::raw("{$doneMinutes} as worked_minutes")
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereRaw("{$taskLabel} is not null and {$taskLabel} <> ''")
             ->groupBy(DB::raw($taskLabel))
             ->orderByDesc('total')
             ->limit(20)
+            ->toBase()->get();
+
+        // Type → Task hierarchy: every (task_group, task) pair with its
+        // counts + done + minutes. Powers the "Types & their tasks"
+        // breakdown — under each type you see exactly which tasks got done,
+        // how many, and how long. The single most useful view for spotting
+        // where the week's effort actually went.
+        $byGroupTask = PlannerTask::select('task_group',
+                DB::raw("{$taskLabel} as task"),
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as minutes")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereNotNull('task_group')
+            ->whereRaw("{$taskLabel} is not null and {$taskLabel} <> ''")
+            ->groupBy('task_group', DB::raw($taskLabel))
+            ->orderByDesc('total')
             ->toBase()->get();
 
         // Priority mix (case-normalised so 'High' + 'high' collapse).
@@ -619,6 +647,7 @@ class PlannerController extends Controller
                 DB::raw("{$doneCount} as completed")
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->groupBy(DB::raw("lower(coalesce(nullif(priority, ''), 'normal'))"))
             ->toBase()->get();
 
@@ -631,6 +660,7 @@ class PlannerController extends Controller
                 DB::raw("{$doneMinutes} as minutes")
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereNotNull('task_group')
             ->groupBy('employee_name', 'task_group')
             ->toBase()->get();
@@ -647,6 +677,7 @@ class PlannerController extends Controller
                 DB::raw("{$doneCount} as completed_tasks")
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereNotNull('task_date')
             ->groupBy('task_date')
             ->orderBy('task_date')
@@ -656,6 +687,7 @@ class PlannerController extends Controller
             'by_employee'       => $byEmployee,
             'by_group'          => $byGroup,
             'by_task'           => $byTask,
+            'by_group_task'     => $byGroupTask,
             'by_priority'       => $byPriority,
             'by_employee_group' => $byEmployeeGroup,
             'by_day'            => $byDay,
