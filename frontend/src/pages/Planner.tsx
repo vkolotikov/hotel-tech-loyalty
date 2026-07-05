@@ -713,7 +713,7 @@ function InlineQuickAdd({ onSubmit, onCancel, autoFocus = true }: {
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { if (autoFocus && ref.current) ref.current.focus() }, [autoFocus])
   return (
-    <form onSubmit={e => { e.preventDefault(); if (title.trim()) onSubmit(title.trim()) }}
+    <form onSubmit={e => { e.preventDefault(); if (title.trim()) { onSubmit(title.trim()); setTitle('') } }}
           onClick={e => e.stopPropagation()}>
       <input
         ref={ref}
@@ -1739,6 +1739,12 @@ export function Planner() {
    * priority, jump to full edit, delete.
    */
   const [taskPopover, setTaskPopover] = useState<{ task: any; anchor: DOMRect } | null>(null)
+  // Month view: a "view all" popover anchored to a day cell (opened from the
+  // "+N more" / all-done summary), and a persisted "hide completed" filter so
+  // a mostly-done month isn't wall-to-wall strikethrough.
+  const [dayPopover, setDayPopover] = useState<{ date: string; label: string; anchor: DOMRect } | null>(null)
+  const [monthHideDone, setMonthHideDone] = useState<boolean>(() => { try { return localStorage.getItem('planner-month-hide-done') === '1' } catch { return false } })
+  const toggleMonthHideDone = () => setMonthHideDone(v => { const nv = !v; try { localStorage.setItem('planner-month-hide-done', nv ? '1' : '0') } catch { /* private */ } return nv })
   /**
    * Inline-add state for Schedule + Month cells. Cell key follows
    * the same composition as `dragOverCell`. When set, that cell
@@ -3061,92 +3067,157 @@ export function Planner() {
           three task chips. On mobile (375 / 7 = 53px) the content overflows.
           Wrap in horizontal scroll with min-width so cells stay readable. */}
       {tab === 'month' && (
-        <div className="bg-dark-surface border border-dark-border rounded-xl p-3 md:p-5 overflow-x-auto">
-          <div className="grid grid-cols-7 gap-1 mb-2 min-w-[700px]">
-            {DAYS.map(d => <div key={d} className="text-center text-xs text-gray-500 font-semibold py-2 uppercase tracking-wider">{d}</div>)}
-          </div>
-          {monthWeeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1 mb-1 min-w-[700px]">
-              {week.map((date, di) => {
-                if (!date) return <div key={di} className="min-h-[100px] rounded-lg bg-dark-surface2/10" />
-                const dateStr = fmtDate(date)
-                const dayTasks = tasks.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
-                const isToday = dateStr === today
-                const done = dayTasks.filter((t: any) => t.completed).length
-                const cellId = dateStr + '|__month'
-                const isDropTarget = dragOverCell === cellId
-                const isQuickAdd = quickAddCell === cellId
-                return (
-                  <div key={di}
-                    onClick={() => { if (!isQuickAdd) { setCurrentDate(dateStr); setTab('day') } }}
-                    onDragEnter={() => setDragOverCell(cellId)}
-                    onDragLeave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverCell(null) }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setDragOverCell(null)
-                      const taskId = Number(e.dataTransfer.getData('taskId'))
-                      const sourceDate = e.dataTransfer.getData('sourceDate')
-                      if (!taskId || dateStr === sourceDate) return
-                      moveMutation.mutate({ id: taskId, task_date: dateStr })
-                    }}
-                    className={'min-h-[100px] rounded-lg border p-2 cursor-pointer transition-all hover:border-primary-500/40 hover:shadow-lg group/cell ' +
-                      (isDropTarget ? 'border-primary-500 bg-primary-500/15 ring-2 ring-primary-500/40' :
-                        (isToday ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40'))}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={'text-xs font-bold ' + (isToday ? 'text-primary-400 bg-primary-500/10 w-6 h-6 rounded-full flex items-center justify-center' : 'text-gray-400')}>{date.getDate()}</span>
-                      <div className="flex items-center gap-1">
-                        {dayTasks.length > 0 && <span className={'text-[9px] font-semibold ' + (done === dayTasks.length ? 'text-green-400' : 'text-gray-600')}>{done}/{dayTasks.length}</span>}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
-                          className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
-                          title={t('planner.actions.quick_add', 'Quick add')}>
-                          <Plus size={11} />
-                        </button>
-                      </div>
-                    </div>
-                    {isQuickAdd ? (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <InlineQuickAdd
-                          autoFocus
-                          onSubmit={(title) => { handleQuickCreate(title, dateStr); setQuickAddCell(null) }}
-                          onCancel={() => setQuickAddCell(null)}
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {dayTasks.slice(0, 3).map((t: any) => {
-                          const tMeta = getGroupMeta(t.task_group)
-                          return (
-                            <div
-                              key={t.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation()
-                                e.dataTransfer.effectAllowed = 'move'
-                                e.dataTransfer.setData('taskId', String(t.id))
-                                e.dataTransfer.setData('sourceDate', dateStr)
-                                e.dataTransfer.setData('sourceEmp', t.employee_name || '')
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })
-                              }}
-                              className="flex items-center gap-1 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing hover:bg-primary-500/15 transition-colors"
-                              style={{ borderLeft: `2px solid ${tMeta.color}`, paddingLeft: 4 }}>
-                              <span className={'text-[10px] truncate ' + (t.completed ? 'text-gray-600 line-through' : 'text-gray-300')}>{t.title}</span>
-                            </div>
-                          )
-                        })}
-                        {dayTasks.length > 3 && <div className="text-[10px] text-gray-600 pl-3">+{dayTasks.length - 3} more</div>}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-3 md:p-5">
+          {/* Legend (types present this month) + hide-completed filter.
+              A mostly-done month was wall-to-wall strikethrough before;
+              the toggle lets an ops lead focus on what's still open. */}
+          {(() => {
+            const monthTypes = Array.from(new Set((tasks as any[]).map((t: any) => t.task_group).filter(Boolean))) as string[]
+            return (
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {monthTypes.slice(0, 8).map(g => (
+                    <span key={g} className="inline-flex items-center gap-1.5 text-[10px] text-gray-400">
+                      <span className="w-2 h-2 rounded-full" style={{ background: getGroupMeta(g).color }} />{g}
+                    </span>
+                  ))}
+                  {monthTypes.length > 8 && <span className="text-[10px] text-gray-600">+{monthTypes.length - 8}</span>}
+                </div>
+                <button type="button" onClick={toggleMonthHideDone}
+                  className={'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ' +
+                    (monthHideDone ? 'bg-primary-500/15 border-primary-500/40 text-primary-200' : 'bg-dark-surface border-dark-border text-gray-400 hover:text-white')}>
+                  <CheckCircle2 size={12} /> {monthHideDone ? 'Completed hidden' : 'Hide completed'}
+                </button>
+              </div>
+            )
+          })()}
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5 min-w-[760px]">
+              {DAYS.map((d, i) => <div key={d} className={'text-center text-[11px] font-semibold py-1.5 uppercase tracking-wider ' + (i >= 5 ? 'text-gray-600' : 'text-gray-500')}>{d}</div>)}
             </div>
-          ))}
+            {monthWeeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1.5 mb-1.5 min-w-[760px]">
+                {week.map((date, di) => {
+                  const isWeekend = di >= 5
+                  if (!date) return <div key={di} className="min-h-[132px] rounded-xl bg-dark-surface2/[0.05] border border-transparent" />
+                  const dateStr = fmtDate(date)
+                  const dayTasks = (tasks as any[]).filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
+                  const total = dayTasks.length
+                  const done = dayTasks.filter((t: any) => t.completed).length
+                  const pending = total - done
+                  const allDone = total > 0 && pending === 0
+                  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+                  // isToday via LOCAL date parts, not fmtDate: fmtDate is UTC
+                  // (toISOString), which shifts a midnight-constructed grid date
+                  // back a day for UTC+ zones and highlighted tomorrow's cell.
+                  const _n = new Date()
+                  const isToday = date.getDate() === _n.getDate() && date.getMonth() === _n.getMonth() && date.getFullYear() === _n.getFullYear()
+                  const cellId = dateStr + '|__month'
+                  const isDropTarget = dragOverCell === cellId
+                  const isQuickAdd = quickAddCell === cellId
+                  const prank = (p: any) => { const s = String(p ?? '').toLowerCase(); return s === 'high' ? 0 : s === 'low' ? 2 : 1 }
+                  const sorted = [...dayTasks].sort((a: any, b: any) => {
+                    if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1
+                    if (prank(a.priority) !== prank(b.priority)) return prank(a.priority) - prank(b.priority)
+                    return String(a.start_time || '99:99').localeCompare(String(b.start_time || '99:99'))
+                  })
+                  const displayList = monthHideDone ? sorted.filter((t: any) => !t.completed) : sorted
+                  const visible = displayList.slice(0, 3)
+                  const remaining = displayList.length - visible.length
+                  const openDay = (e: React.MouseEvent) => { e.stopPropagation(); setDayPopover({ date: dateStr, label: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }), anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }) }
+                  return (
+                    <div key={di}
+                      onDragEnter={() => setDragOverCell(cellId)}
+                      onDragLeave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverCell(null) }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                      onDrop={(e) => {
+                        e.preventDefault(); e.stopPropagation(); setDragOverCell(null)
+                        const taskId = Number(e.dataTransfer.getData('taskId'))
+                        const sourceDate = e.dataTransfer.getData('sourceDate')
+                        if (!taskId || dateStr === sourceDate) return
+                        moveMutation.mutate({ id: taskId, task_date: dateStr })
+                      }}
+                      className={'min-h-[132px] rounded-xl border p-2 flex flex-col transition-all group/cell ' +
+                        (isDropTarget ? 'border-primary-500 bg-primary-500/15 ring-2 ring-primary-500/40' :
+                          (isToday ? 'border-primary-500/60 bg-primary-500/[0.07]' :
+                            (isWeekend ? 'border-dark-border/40 bg-dark-surface2/[0.10] hover:bg-dark-surface2/25' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40') + ' hover:border-primary-500/30'))}>
+                      {/* header: date · completion · quick-add */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={'text-xs font-bold flex items-center justify-center ' + (isToday ? 'text-black bg-primary-500 w-6 h-6 rounded-full' : (isWeekend ? 'text-gray-500' : 'text-gray-300'))}>{date.getDate()}</span>
+                        <div className="flex items-center gap-1">
+                          {total > 0 && <span className={'text-[9px] font-semibold tabular-nums ' + (allDone ? 'text-green-400' : 'text-gray-500')}>{done}/{total}</span>}
+                          <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
+                            className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
+                            title={t('planner.actions.quick_add', 'Quick add')}>
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                      </div>
+                      {total > 0 && (
+                        <div className="h-1 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: allDone ? '#10b981' : '#c9a84c' }} />
+                        </div>
+                      )}
+                      {isQuickAdd ? (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <InlineQuickAdd autoFocus onSubmit={(title) => { handleQuickCreate(title, dateStr); setQuickAddCell(null) }} onCancel={() => setQuickAddCell(null)} />
+                        </div>
+                      ) : total === 0 ? (
+                        <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
+                          className="flex-1 w-full opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-center justify-center text-[11px] text-gray-600 hover:text-primary-400">
+                          + Add task
+                        </button>
+                      ) : allDone && !monthHideDone ? (
+                        <button onClick={openDay}
+                          className="flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left w-full hover:bg-green-500/10 transition-colors"
+                          style={{ background: 'rgba(16,185,129,0.08)' }}>
+                          <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                          <span className="text-[11px] text-green-300/90 font-medium">All {total} done</span>
+                        </button>
+                      ) : (
+                        <div className="space-y-1">
+                          {visible.map((t: any) => {
+                            const meta = getGroupMeta(t.task_group)
+                            const highP = String(t.priority ?? '').toLowerCase() === 'high'
+                            return (
+                              <div key={t.id} draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  e.dataTransfer.setData('taskId', String(t.id))
+                                  e.dataTransfer.setData('sourceDate', dateStr)
+                                  e.dataTransfer.setData('sourceEmp', t.employee_name || '')
+                                }}
+                                onClick={(e) => { e.stopPropagation(); setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }) }}
+                                className="flex items-center gap-1.5 rounded-md pl-1.5 pr-1 py-1 cursor-grab active:cursor-grabbing hover:brightness-125 transition-all"
+                                style={{ background: meta.color + '1f' }}
+                                title={t.title}>
+                                {t.completed
+                                  ? <CheckCircle2 size={11} className="text-green-500/80 flex-shrink-0" />
+                                  : <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />}
+                                <span className={'text-[11px] truncate flex-1 min-w-0 ' + (t.completed ? 'text-gray-500' : 'text-gray-100')}>{t.title}</span>
+                                {highP && !t.completed && <Flag size={9} className="text-red-400 flex-shrink-0" />}
+                                {t.start_time && <span className="text-[9px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                              </div>
+                            )
+                          })}
+                          {remaining > 0 ? (
+                            <button onClick={openDay} className="w-full text-left text-[10px] text-gray-500 hover:text-primary-400 pl-1.5 py-0.5 transition-colors">
+                              +{remaining} more
+                            </button>
+                          ) : monthHideDone && done > 0 ? (
+                            <button onClick={openDay} className="w-full text-left text-[10px] text-green-500/70 hover:text-green-400 pl-1.5 py-0.5 transition-colors">
+                              ✓ {done} done
+                            </button>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -3779,6 +3850,68 @@ export function Planner() {
           }}
         />
       )}
+
+      {/* Month "view all" day popover — opened from a cell's "+N more" / all-done
+          summary. Lists every task that day with an inline done-toggle + quick-add,
+          so you manage a full day without leaving the Month grid. */}
+      {dayPopover && (() => {
+        const dstr = dayPopover.date
+        const dayTasks = (tasks as any[]).filter((t: any) => (t.task_date ?? '').slice(0, 10) === dstr)
+        const doneN = dayTasks.filter((t: any) => t.completed).length
+        const prank = (p: any) => { const s = String(p ?? '').toLowerCase(); return s === 'high' ? 0 : s === 'low' ? 2 : 1 }
+        const sorted = [...dayTasks].sort((a: any, b: any) => {
+          if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1
+          if (prank(a.priority) !== prank(b.priority)) return prank(a.priority) - prank(b.priority)
+          return String(a.start_time || '99:99').localeCompare(String(b.start_time || '99:99'))
+        })
+        const W = 340, maxH = 460, a = dayPopover.anchor
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+        const left = Math.max(12, Math.min(a.left, vw - W - 12))
+        const top = Math.max(12, a.top + maxH > vh - 12 ? vh - maxH - 12 : a.top)
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setDayPopover(null)} />
+            <div className="fixed z-50 bg-dark-surface border border-dark-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+              style={{ left, top, width: W, maxHeight: maxH }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{dayPopover.label}</div>
+                  <div className="text-[11px] text-gray-500">{doneN} of {dayTasks.length} done{dayTasks.length - doneN > 0 ? ` · ${dayTasks.length - doneN} open` : ''}</div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => { setCurrentDate(dstr); setTab('day'); setDayPopover(null) }}
+                    className="text-[11px] font-medium px-2 py-1 rounded-md text-primary-300 hover:bg-primary-500/15 transition-colors" title="Open full day view">Open day</button>
+                  <button onClick={() => setDayPopover(null)} className="p-1 rounded-md text-gray-500 hover:text-white hover:bg-white/5"><X size={15} /></button>
+                </div>
+              </div>
+              <div className="px-3 py-2 border-b border-dark-border">
+                <InlineQuickAdd autoFocus={false} onSubmit={(title) => handleQuickCreate(title, dstr)} onCancel={() => { }} />
+              </div>
+              <div className="overflow-y-auto p-2 space-y-1">
+                {sorted.map((t: any) => {
+                  const meta = getGroupMeta(t.task_group)
+                  const highP = String(t.priority ?? '').toLowerCase() === 'high'
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.05] transition-colors"
+                      style={{ background: meta.color + '12' }}>
+                      <button onClick={() => completeMutation.mutate(t.id)} className="flex-shrink-0" title={t.completed ? 'Mark open' : 'Mark done'}>
+                        {t.completed ? <CheckCircle2 size={16} className="text-green-500" /> : <Circle size={16} className="text-gray-600 hover:text-primary-400" />}
+                      </button>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />
+                      <button onClick={(e) => { setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }); setDayPopover(null) }}
+                        className={'flex-1 min-w-0 text-left text-xs truncate ' + (t.completed ? 'text-gray-500 line-through' : 'text-gray-100')} title={t.title}>{t.title}</button>
+                      {highP && !t.completed && <Flag size={11} className="text-red-400 flex-shrink-0" />}
+                      {t.start_time && <span className="text-[10px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                    </div>
+                  )
+                })}
+                {dayTasks.length === 0 && <div className="text-center text-xs text-gray-600 py-6">No tasks yet — add one above.</div>}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Recurring-delete scope picker. Replaces the previous window.prompt
           with three numbered choices, which felt out of place next to the
