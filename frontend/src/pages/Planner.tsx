@@ -1666,7 +1666,9 @@ export function Planner() {
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
-  const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
+  // fmtDate (LOCAL) not toISOString: the latter shifts local first-of-month
+  // back to the previous month's last day for UTC+ zones (the EU customer base).
+  const [statsFrom, setStatsFrom] = useState(() => fmtDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
   type StatsRangeKind = 'today' | 'week' | '2weeks' | 'month' | 'last30' | 'year'
   const [statsRange, setStatsRange] = useState<StatsRangeKind | 'custom'>('month')
