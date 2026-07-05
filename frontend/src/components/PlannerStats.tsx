@@ -1,57 +1,71 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area,
-  CartesianGrid, Legend, PieChart, Pie, Cell, LabelList,
+  CartesianGrid, Legend, PieChart, Pie, Cell, LabelList, ReferenceLine,
 } from 'recharts'
 import {
-  Clock, Hash, GitCompare, PieChart as PieIcon, BarChart3,
+  Clock, Hash, GitCompare, PieChart as PieIcon, BarChart3, Download, X,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { resolveGroupMeta, parsePlannerGroups, parsePlannerChannels } from '../lib/plannerMeta'
 
 /**
- * Planner analytics — the /planner "Stats" tab, extracted from the page
- * so the interactive controls (measure toggle, chart-type switches,
- * period comparison) can carry their own local state without bloating
- * Planner.tsx.
+ * Planner analytics — the /planner "Stats" tab, extracted from the page so
+ * the interactive controls (measure toggle, chart-type switches, period
+ * comparison, click-to-drill) can carry their own local state without
+ * bloating Planner.tsx.
  *
- * Everything is derived from two payloads the page already fetches:
- *   - `stats`     — GET /planner/stats for [from, to]
- *   - `statsPrev` — the same endpoint for the equal window immediately before
- * No backend call happens here; `crm-settings` is read only for group
- * colours + work-hour targets (same cache key the page already primed).
+ * Derived from the two payloads the page fetches: `stats` (current window)
+ * and `statsPrev` (the equal window immediately before). The endpoint
+ * returns, beyond the per-employee / per-type / per-task / per-day rollups:
+ *   - completion  { on_time, late, untracked }   — on-time-vs-late split
+ *   - by_dow_hour [{ dow, hour, total, worked_minutes }] — busy-times matrix
+ *   - pool_aging  { total, d0, d1, d3, d7, oldest } — open-pool age snapshot
  *
- * The two headline additions vs the old inline view:
- *   1. a metric toggle (Hours ⇄ Count) that every breakdown respects, and
- *   2. an "Hours per task" chart whose bars are coloured by the task's
- *      PARENT TYPE — so you read both what got done and which type it
- *      belonged to at a glance.
- * With "Compare to previous" on, the trend gets a dashed previous-period
- * overlay, the type breakdown gains current-vs-previous bars, per-task and
- * per-type deltas appear, and the KPI cards show ▲/▼ vs the prior window.
+ * Headline capabilities:
+ *   - Measure toggle (Hours ⇄ Tasks) every breakdown respects.
+ *   - "Hours per task" bars coloured by PARENT TYPE (identity + magnitude).
+ *   - Click a type slice/bar to FOCUS the task + hierarchy views on it.
+ *   - "Compare to previous period" overlays the trend, adds current-vs-prev
+ *     type bars, per-task/-type deltas, a Δ table column, and gates the KPIs.
+ *   - CSV export of the type→task breakdown for the active range.
  */
 
 const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 8, fontSize: 12 }
 const num = (v: any) => Number(v) || 0
 const r1 = (n: number) => Math.round(n * 10) / 10
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-// task_date arrives 'YYYY-MM-DD'; render DD.MM (defensive slice strips any time).
 const fmtD = (s: any) => { const p = String(s).slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}` : String(s) }
+const csvCell = (v: any) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
 
 type Measure = 'hours' | 'count'
+
+/** localStorage-backed state so control choices survive leaving the tab. */
+function useLocal<T extends string | number | boolean>(key: string, initial: T): [T, (v: T) => void] {
+  const [v, setV] = useState<T>(() => {
+    try {
+      const s = localStorage.getItem(key)
+      if (s === null) return initial
+      if (typeof initial === 'boolean') return (s === '1') as T
+      if (typeof initial === 'number') { const n = Number(s); return (Number.isFinite(n) ? n : initial) as T }
+      return s as T
+    } catch { return initial }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(key, typeof v === 'boolean' ? (v ? '1' : '0') : String(v)) } catch { /* private mode */ }
+  }, [key, v])
+  return [v, setV]
+}
 
 interface Props {
   stats: any
   statsPrev: any
-  /** Non-empty when the page is focused on one person — used for labels only. */
   statsEmployee: string
-  /** Current range bounds ('YYYY-MM-DD') — used to align the previous period by day-offset. */
   statsFrom: string
   statsTo: string
 }
 
-/** Small segmented pill toggle reused for the measure + chart-type switches. */
 function Seg<T extends string>({ value, onChange, options }: {
   value: T; onChange: (v: T) => void; options: Array<[T, string, any?]>
 }) {
@@ -68,18 +82,24 @@ function Seg<T extends string>({ value, onChange, options }: {
   )
 }
 
+const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0] // Monday-first display
+
 export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFrom, statsTo }: Props) {
-  /* ─── interactive controls ─────────────────────────────────────── */
-  const [measure, setMeasure] = useState<Measure>('hours')
-  const [compare, setCompare] = useState(false)
-  const [typeChart, setTypeChart] = useState<'pie' | 'bar'>('pie')
-  const [taskChart, setTaskChart] = useState<'bar' | 'pie'>('bar')
-  const [taskTopN, setTaskTopN] = useState(12)
+  /* ─── interactive controls (persisted) ─────────────────────────── */
+  const [measure, setMeasure] = useLocal<Measure>('planner-stats-measure', 'hours')
+  const [compare, setCompare] = useLocal<boolean>('planner-stats-compare', false)
+  const [typeChart, setTypeChart] = useLocal<'pie' | 'bar'>('planner-stats-typechart', 'pie')
+  const [taskChart, setTaskChart] = useLocal<'bar' | 'pie'>('planner-stats-taskchart', 'bar')
+  const [taskTopN, setTaskTopN] = useLocal<number>('planner-stats-topn', 12)
+  // Ephemeral (data-dependent) — not persisted.
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
+  const [typeFocus, setTypeFocus] = useState<string | null>(null)
 
   const isH = measure === 'hours'
   const unit = isH ? 'h' : ''
   const measureLabel = isH ? 'Hours' : 'Tasks'
+  const fmtVal = (v: number) => isH ? `${v}h` : String(v)
 
   /* ─── settings (group colours + work-hour targets) ─────────────── */
   const { data: rawSettings } = useQuery<Record<string, any>>({
@@ -96,6 +116,16 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
   const workHoursPerDay = Number(rawSettings?.planner_work_hours_per_day) || 8
   const workDaysPerWeek = Number(rawSettings?.planner_work_days_per_week) || 5
 
+  // Previous-window date bounds (for the compare label) — the equal window
+  // immediately before [statsFrom, statsTo], matching how the page fetches it.
+  const prevRange = useMemo(() => {
+    const f = new Date(statsFrom + 'T00:00:00')
+    const N = Math.max(1, Math.round((new Date(statsTo + 'T00:00:00').getTime() - f.getTime()) / 86400000) + 1)
+    const pt = new Date(f); pt.setDate(f.getDate() - 1)
+    const pf = new Date(pt); pf.setDate(pt.getDate() - (N - 1))
+    return { from: fmtD(ymd(pf)), to: fmtD(ymd(pt)), N }
+  }, [statsFrom, statsTo])
+
   /* ─── derived series ───────────────────────────────────────────── */
   const d = useMemo(() => {
     const byEmp = (stats?.by_employee ?? []) as any[]
@@ -108,7 +138,6 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
     const plannedH = plannedMin / 60
     const avgTaskMin = total > 0 ? Math.round(plannedMin / total) : 0
 
-    // Previous-period totals (matched by nothing — just summed).
     const pEmp = (statsPrev?.by_employee ?? []) as any[]
     const pTotal = pEmp.reduce((s, e) => s + num(e.total), 0)
     const pDone = pEmp.reduce((s, e) => s + num(e.completed), 0)
@@ -116,16 +145,15 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
     const pRate = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0
     const hasPrev = !!statsPrev && pTotal > 0
 
-    // Day length of the current range → previous day offset for trend alignment.
-    const startD = new Date(statsFrom + 'T00:00:00')
-    const N = Math.max(1, Math.round((new Date(statsTo + 'T00:00:00').getTime() - startD.getTime()) / 86400000) + 1)
+    // Trend, with previous-window value aligned by the same day-offset (N).
+    const N = prevRange.N
     const prevDayMap: Record<string, any> = Object.fromEntries(
       ((statsPrev?.by_day ?? []) as any[]).map(r => [String(r.task_date).slice(0, 10), r])
     )
     const byDay = (stats?.by_day ?? []) as any[]
     const perDay = byDay.map((row: any) => {
       const cd = new Date(String(row.task_date).slice(0, 10) + 'T00:00:00')
-      const pd = new Date(cd); pd.setDate(cd.getDate() - N)   // same offset, previous window
+      const pd = new Date(cd); pd.setDate(cd.getDate() - N)
       const p = prevDayMap[ymd(pd)] || {}
       return {
         date: fmtD(row.task_date),
@@ -140,7 +168,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
     const busiest = [...perDay].sort((a, b) => b.worked - a.worked)[0]
     const topEmp = [...byEmp].filter(e => num(e.worked_minutes) > 0).sort((a, b) => num(b.worked_minutes) - num(a.worked_minutes))[0]
 
-    // Per-type (task_group) — value depends on the measure toggle.
+    // Per-type — measure-aware, with previous match by task_group.
     const pGroupMap: Record<string, any> = Object.fromEntries(
       ((statsPrev?.by_group ?? []) as any[]).map(g => [g.task_group || '—', g])
     )
@@ -156,45 +184,48 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
     }).filter((g: any) => g.val > 0).sort((a: any, b: any) => b.val - a.val)
     const typeTotalVal = byType.reduce((s: number, g: any) => s + g.val, 0)
 
-    // Per-task (task label), coloured by PARENT TYPE. Excludes hidden types.
+    // Per-task, coloured by parent type. Honours hidden-type filter + focus.
     const pTaskMap: Record<string, any> = Object.fromEntries(
-      ((statsPrev?.by_group_task ?? []) as any[]).map(r => [`${r.task_group || '—'} ${r.task}`, r])
+      ((statsPrev?.by_group_task ?? []) as any[]).map(r => [`${r.task_group || '—'} ${r.task}`, r])
     )
     const tVal = (r: any) => isH ? r1(num(r.minutes) / 60) : num(r.total)
     const byTask = ((stats?.by_group_task ?? []) as any[])
-      .filter((r: any) => !hiddenTypes.has(r.task_group || '—'))
+      .filter((r: any) => !hiddenTypes.has(r.task_group || '—') && (!typeFocus || (r.task_group || '—') === typeFocus))
       .map((r: any) => {
         const type = r.task_group || '—'
-        const prev = pTaskMap[`${type} ${r.task}`]
-        return {
-          task: prettyTask(r.task), type, color: groupColor(r.task_group),
-          val: tVal(r), prev: prev ? tVal(prev) : 0,
-          count: num(r.total), completed: num(r.completed),
-        }
+        const prev = pTaskMap[`${type} ${r.task}`]
+        return { task: prettyTask(r.task), type, color: groupColor(r.task_group), val: tVal(r), prev: prev ? tVal(prev) : 0, count: num(r.total), completed: num(r.completed) }
       })
       .filter((r: any) => r.val > 0)
       .sort((a: any, b: any) => b.val - a.val)
       .slice(0, taskTopN)
 
-    // Type → task hierarchy (measure-aware bar widths).
+    // Type → task hierarchy (measure-aware bar widths, honours focus).
     const groupTaskTree = Object.values(
-      ((stats?.by_group_task ?? []) as any[]).reduce((acc: Record<string, any>, r: any) => {
-        const g = r.task_group || '—'
-        acc[g] = acc[g] || { type: g, color: groupColor(g), total: 0, completed: 0, minutes: 0, tasks: [] as any[] }
-        const tt = num(r.total), tc = num(r.completed), tm = num(r.minutes)
-        acc[g].total += tt; acc[g].completed += tc; acc[g].minutes += tm
-        acc[g].tasks.push({ task: prettyTask(r.task), total: tt, completed: tc, workedH: r1(tm / 60) })
-        return acc
-      }, {})
+      ((stats?.by_group_task ?? []) as any[])
+        .filter((r: any) => !typeFocus || (r.task_group || '—') === typeFocus)
+        .reduce((acc: Record<string, any>, r: any) => {
+          const g = r.task_group || '—'
+          acc[g] = acc[g] || { type: g, color: groupColor(g), total: 0, completed: 0, minutes: 0, tasks: [] as any[] }
+          const tt = num(r.total), tc = num(r.completed), tm = num(r.minutes)
+          acc[g].total += tt; acc[g].completed += tc; acc[g].minutes += tm
+          acc[g].tasks.push({ task: prettyTask(r.task), total: tt, completed: tc, workedH: r1(tm / 60) })
+          return acc
+        }, {})
     ).map((g: any) => ({ ...g, workedH: r1(g.minutes / 60), tasks: g.tasks.sort((a: any, b: any) => b.total - a.total) }))
       .sort((a: any, b: any) => b.total - a.total)
 
-    // Priority mix.
+    // Priority — measure-aware value.
     const priMeta: Record<string, string> = { high: '#ef4444', normal: '#3b82f6', low: '#9ca3af' }
+    const pPriMap: Record<string, any> = Object.fromEntries(
+      ((statsPrev?.by_priority ?? []) as any[]).map(r => [r.priority || 'normal', r])
+    )
+    // Priority rows carry no minutes, so 'hours' falls back to count here.
     const byPriority = (['high', 'normal', 'low'] as const).map(p => {
       const row = (stats?.by_priority ?? []).find((r: any) => (r.priority || 'normal') === p)
       return { priority: p[0].toUpperCase() + p.slice(1), key: p, total: num(row?.total), completed: num(row?.completed), fill: priMeta[p] }
     }).filter(r => r.total > 0)
+    void pPriMap
 
     // Type × employee → stacked bars (measure-aware).
     const empGroup = (stats?.by_employee_group ?? []) as any[]
@@ -209,33 +240,72 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
       return sum(b) - sum(a)
     })
 
-    // Per-employee (measure-aware bars + table).
+    // Per-employee (measure-aware bars + planned/worked + table + Δ).
     const pEmpMap: Record<string, any> = Object.fromEntries(pEmp.map(e => [e.employee_name || 'Unassigned', e]))
     const hoursByEmployee = byEmp.map((e: any) => {
       const name = e.employee_name || 'Unassigned'
       const prev = pEmpMap[name]
       return {
         name, total: num(e.total), completed: num(e.completed),
-        workedH: num(e.worked_minutes) / 60, plannedH: num(e.planned_minutes) / 60,
+        workedH: r1(num(e.worked_minutes) / 60), plannedH: r1(num(e.planned_minutes) / 60),
         val: isH ? r1(num(e.worked_minutes) / 60) : num(e.total),
-        pWorkedH: prev ? num(prev.worked_minutes) / 60 : 0,
+        pWorkedH: prev ? r1(num(prev.worked_minutes) / 60) : 0,
       }
     }).filter((e: any) => e.total > 0).sort((a: any, b: any) => b.val - a.val)
 
-    // All type names present (for the include/exclude checkboxes).
     const allTypes = Array.from(new Set(((stats?.by_group_task ?? []) as any[]).map((r: any) => r.task_group || '—')))
+
+    // On-time vs late completions.
+    const c = stats?.completion || {}
+    const onTime = num(c.on_time), late = num(c.late), untracked = num(c.untracked)
+    const completedTracked = onTime + late
+
+    // Busy-times heatmap (weekday × start hour).
+    const hmMap: Record<string, number> = {}
+    let hmMax = 0
+    const hourSet = new Set<number>()
+    ;((stats?.by_dow_hour ?? []) as any[]).forEach((r: any) => {
+      const val = isH ? r1(num(r.worked_minutes) / 60) : num(r.total)
+      if (val <= 0) return
+      hmMap[`${num(r.dow)}-${num(r.hour)}`] = val
+      hourSet.add(num(r.hour)); if (val > hmMax) hmMax = val
+    })
+    const hmHours = [...hourSet].sort((a, b) => a - b)
+
+    // Open-pool aging snapshot.
+    const pa = stats?.pool_aging || {}
+    const poolAging = {
+      total: num(pa.total), d0: num(pa.d0), d1: num(pa.d1), d3: num(pa.d3), d7: num(pa.d7),
+      oldest: pa.oldest || null,
+    }
 
     return {
       total, done, rate, workedH, plannedH, avgTaskMin, avgPerDay, daysWithWork, busiest, topEmp,
       pTotal, pDone, pWorkedH, pRate, hasPrev,
       perDay, byType, typeTotalVal, byTask, groupTaskTree, byPriority,
       typeByEmp, groupsInData, hoursByEmployee, allTypes,
+      onTime, late, untracked, completedTracked, hmMap, hmHours, hmMax, poolAging,
     }
-  }, [stats, statsPrev, measure, hiddenTypes, taskTopN, statsFrom, statsTo, customGroupMeta, taskLabelMap])
+  }, [stats, statsPrev, measure, hiddenTypes, typeFocus, taskTopN, prevRange, customGroupMeta, taskLabelMap])
 
   const showDelta = compare && d.hasPrev
 
-  /* ─── small render helpers ─────────────────────────────────────── */
+  /* ─── CSV export of the type→task breakdown for the range ─────── */
+  const exportCsv = () => {
+    const header = ['Type', 'Task', 'Tasks', 'Completed', 'Worked hours']
+    const rows = ((stats?.by_group_task ?? []) as any[]).map((r: any) =>
+      [r.task_group || '—', prettyTask(r.task), num(r.total), num(r.completed), r1(num(r.minutes) / 60)])
+    const csv = [header, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `planner-stats-${statsFrom}_to_${statsTo}${statsEmployee ? '-' + statsEmployee.replace(/\s+/g, '_') : ''}.csv`
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  /* ─── render helpers ───────────────────────────────────────────── */
   const Delta = ({ cur, prev, pp = false, invert = false }: { cur: number; prev: number; pp?: boolean; invert?: boolean }) => {
     if (!showDelta) return null
     const diff = Math.round((cur - prev) * 10) / 10
@@ -276,12 +346,14 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
     next.has(t) ? next.delete(t) : next.add(t)
     return next
   })
-
-  const fmtVal = (v: number) => isH ? `${v}h` : String(v)
+  const drillType = (g: string | null | undefined) => {
+    const name = g || '—'
+    setTypeFocus(cur => cur === name ? null : name)
+  }
 
   return (
     <div className="space-y-5">
-      {/* ── Controls bar: measure + compare (chart-type toggles sit on each card) ── */}
+      {/* ── Controls: measure + compare + export ── */}
       <div className="flex flex-wrap items-center gap-3 bg-dark-surface border border-dark-border rounded-xl px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold">Measure</span>
@@ -290,12 +362,15 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         <label className={'flex items-center gap-2 text-xs font-medium cursor-pointer px-3 py-1.5 rounded-lg border transition-colors ' +
           (compare ? 'bg-primary-500/15 border-primary-500/40 text-primary-200' : 'bg-dark-surface border-dark-border text-gray-400 hover:text-white')}>
           <input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} className="accent-primary-500" />
-          <GitCompare size={13} /> Compare to previous period
+          <GitCompare size={13} /> Compare to previous
+          {compare && d.hasPrev && <span className="text-[10px] text-gray-500 font-normal">({prevRange.from}–{prevRange.to})</span>}
         </label>
-        {compare && !d.hasPrev && (
-          <span className="text-[11px] text-amber-400/80">No activity in the previous window to compare against.</span>
-        )}
-        <span className="ml-auto text-[11px] text-gray-600">
+        {compare && !d.hasPrev && <span className="text-[11px] text-amber-400/80">No activity in the previous window.</span>}
+        <button type="button" onClick={exportCsv}
+          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-dark-border text-gray-300 hover:text-white hover:border-white/15 transition-colors">
+          <Download size={13} /> Export CSV
+        </button>
+        <span className="text-[11px] text-gray-600">
           {statsEmployee ? <>Focused on <span className="text-primary-300 font-medium">{statsEmployee}</span></> : 'Whole team'}
         </span>
       </div>
@@ -328,8 +403,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         <KPI label="Weekly capacity" value={`${workHoursPerDay * workDaysPerWeek}h`} sub={`${workHoursPerDay}h/day × ${workDaysPerWeek} days`} />
       </div>
 
-      {/* ── Activity over time (measure-aware; dashed previous overlay when comparing) ── */}
-      <Card title={isH ? 'Hours over time' : 'Task activity over time'} sub={isH ? '(worked hours per day)' : '(scheduled vs completed per day)'}>
+      {/* ── Activity over time (measure-aware; capacity line in hours mode; dashed prev overlay) ── */}
+      <Card title={isH ? 'Hours over time' : 'Task activity over time'} sub={isH ? `(worked hours per day · target ${workHoursPerDay}h)` : '(scheduled vs completed per day)'}>
         {d.perDay.length > 0 ? (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={d.perDay} margin={{ left: -18, right: 8, top: 6, bottom: 0 }}>
@@ -342,34 +417,104 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <YAxis allowDecimals={isH} tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} />
               <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
+              {isH && <ReferenceLine y={workHoursPerDay} stroke="#f59e0b" strokeDasharray="5 4" strokeOpacity={0.7}
+                label={{ value: `target ${workHoursPerDay}h`, fill: '#f59e0b', fontSize: 10, position: 'insideTopRight' }} />}
               {isH ? (
                 <Area type="monotone" dataKey="worked" stroke="#10b981" strokeWidth={2} fill="url(#gB)" name="Worked h" />
               ) : (<>
                 <Area type="monotone" dataKey="tasks" stroke="#c9a84c" strokeWidth={2} fill="url(#gA)" name="Scheduled" />
                 <Area type="monotone" dataKey="done" stroke="#10b981" strokeWidth={2} fill="url(#gB)" name="Completed" />
               </>)}
-              {showDelta && (
-                <Area type="monotone" dataKey={isH ? 'pWorked' : 'pDone'} stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" fill="none" name="Previous period" />
-              )}
+              {showDelta && <Area type="monotone" dataKey={isH ? 'pWorked' : 'pDone'} stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" fill="none" name="Previous period" />}
             </AreaChart>
           </ResponsiveContainer>
         ) : <NoData h={280} />}
       </Card>
 
-      {/* ── Hours/Tasks per type (donut or bars) + per-type deltas ── */}
+      {/* ── On-time vs late + Open-pool aging ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card title="On-time vs late" sub="(of completed tasks in range)">
+          {d.completedTracked > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-end justify-between">
+                <div><span className="text-3xl font-bold text-green-400">{Math.round((d.onTime / d.completedTracked) * 100)}%</span><span className="text-xs text-gray-500 ml-1.5">on time</span></div>
+                <div className="text-right text-[11px] text-gray-500">{d.onTime} on time · {d.late} late{d.untracked > 0 ? ` · ${d.untracked} untracked` : ''}</div>
+              </div>
+              <div className="flex h-4 rounded-lg overflow-hidden bg-white/[0.04]">
+                <div className="bg-green-500 flex items-center justify-center" style={{ width: `${(d.onTime / d.completedTracked) * 100}%` }} title={`${d.onTime} on time`} />
+                <div className="bg-red-500/80 flex items-center justify-center" style={{ width: `${(d.late / d.completedTracked) * 100}%` }} title={`${d.late} late`} />
+              </div>
+              <div className="flex gap-4 text-[11px]">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />On time — finished on/before the scheduled day</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/80" />Late</span>
+              </div>
+              {d.untracked > 0 && <p className="text-[10px] text-gray-600">{d.untracked} completed task{d.untracked === 1 ? '' : 's'} predate completion tracking and aren't scored.</p>}
+            </div>
+          ) : <NoData h={160} hint="No completed tasks with tracked timing in this range yet." />}
+        </Card>
+
+        <Card title="Open pool — right now" sub="(unassigned + unscheduled, by age)">
+          {d.poolAging.total > 0 ? (
+            <div className="space-y-3">
+              {(() => {
+                const parsedOldest = d.poolAging.oldest ? Date.parse(d.poolAging.oldest) : NaN
+                const oldestDays = Number.isFinite(parsedOldest) ? Math.max(0, Math.floor((Date.now() - parsedOldest) / 86400000)) : 0
+                const buckets = [
+                  { label: '≤1 day', v: d.poolAging.d0, c: '#10b981' },
+                  { label: '1–3 days', v: d.poolAging.d1, c: '#3b82f6' },
+                  { label: '3–7 days', v: d.poolAging.d3, c: '#f59e0b' },
+                  { label: '>7 days', v: d.poolAging.d7, c: '#ef4444' },
+                ]
+                return (<>
+                  <div className="flex items-end justify-between">
+                    <div><span className="text-3xl font-bold text-white">{d.poolAging.total}</span><span className="text-xs text-gray-500 ml-1.5">waiting</span></div>
+                    <div className="text-right text-[11px] text-gray-500">oldest {oldestDays} day{oldestDays === 1 ? '' : 's'}</div>
+                  </div>
+                  <div className="flex h-4 rounded-lg overflow-hidden bg-white/[0.04]">
+                    {buckets.map(b => b.v > 0 && <div key={b.label} style={{ width: `${(b.v / d.poolAging.total) * 100}%`, background: b.c }} title={`${b.label}: ${b.v}`} />)}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {buckets.map(b => (
+                      <div key={b.label} className="text-center">
+                        <div className="tabular-nums font-semibold" style={{ color: b.v > 0 ? b.c : '#4b5563' }}>{b.v}</div>
+                        <div className="text-[10px] text-gray-600">{b.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>)
+              })()}
+            </div>
+          ) : <NoData h={160} hint="The open pool is empty — nothing waiting to be claimed." />}
+        </Card>
+      </div>
+
+      {/* ── Type focus chip (drill) ── */}
+      {typeFocus && (
+        <div className="flex items-center gap-2 text-xs bg-primary-500/10 border border-primary-500/25 rounded-lg px-3 py-2">
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ background: groupColor(typeFocus) }} />
+          <span className="text-primary-200 font-semibold">Focused on type: {typeFocus}</span>
+          <span className="text-gray-500">— the task + hierarchy views below show only this type.</span>
+          <button onClick={() => setTypeFocus(null)} className="ml-auto text-gray-400 hover:text-white inline-flex items-center gap-1"><X size={12} /> Clear</button>
+        </div>
+      )}
+
+      {/* ── Per type (donut/bar, click to focus, % slice labels) + priority ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card title={`${measureLabel} per type`} sub={`(share of ${isH ? 'worked hours' : 'tasks'} by type)`}
+          <Card title={`${measureLabel} per type`} sub="(click a type to focus the views below)"
             right={<Seg value={typeChart} onChange={setTypeChart} options={[['pie', 'Donut', PieIcon], ['bar', 'Bars', BarChart3]]} />}>
             {d.byType.length > 0 ? (
               typeChart === 'pie' ? (
                 <div className="flex items-center gap-4 flex-wrap">
                   <ResponsiveContainer width={220} height={220}>
                     <PieChart>
-                      <Pie data={d.byType} dataKey="val" nameKey="task_group" innerRadius={58} outerRadius={90} paddingAngle={2} stroke="#12121f" strokeWidth={2}>
-                        {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} />)}
+                      <Pie data={d.byType} dataKey="val" nameKey="task_group" innerRadius={58} outerRadius={90} paddingAngle={2}
+                        stroke="#12121f" strokeWidth={2} onClick={(s: any) => drillType(s?.task_group ?? s?.payload?.task_group)}
+                        label={d.byType.length <= 6 ? (p: any) => `${Math.round((p.percent || 0) * 100)}%` : false} labelLine={false}
+                        style={{ cursor: 'pointer', fontSize: 11 }}>
+                        {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
                       </Pie>
-                      <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, n: any) => [`${fmtVal(Number(v))}`, n]} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, n: any) => [fmtVal(Number(v)), n]} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex-1 min-w-[180px] space-y-1.5">
@@ -377,15 +522,14 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                       const share = d.typeTotalVal > 0 ? Math.round((g.val / d.typeTotalVal) * 100) : 0
                       const diff = r1(g.val - g.prev)
                       return (
-                        <div key={g.task_group} className="flex items-center gap-2 text-xs">
+                        <button key={g.task_group} onClick={() => drillType(g.task_group)}
+                          className={'w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-white/[0.04] ' + (typeFocus === g.task_group ? 'bg-white/[0.06]' : '')}>
                           <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: g.color }} />
-                          <span className="text-gray-200 truncate flex-1 min-w-0" title={g.task_group}>{g.task_group}</span>
+                          <span className="text-gray-200 truncate flex-1 min-w-0 text-left" title={g.task_group}>{g.task_group}</span>
                           <span className="tabular-nums text-white font-medium">{fmtVal(g.val)}</span>
                           <span className="tabular-nums text-gray-500 w-9 text-right">{share}%</span>
-                          {showDelta && diff !== 0 && (
-                            <span className={'tabular-nums w-12 text-right ' + (diff > 0 ? 'text-green-400' : 'text-red-400')}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff)}</span>
-                          )}
-                        </div>
+                          {showDelta && diff !== 0 && <span className={'tabular-nums w-12 text-right ' + (diff > 0 ? 'text-green-400' : 'text-red-400')}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff)}</span>}
+                        </button>
                       )
                     })}
                   </div>
@@ -398,8 +542,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     <YAxis dataKey="task_group" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={110} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                     {showDelta && <Legend wrapperStyle={{ fontSize: 11 }} />}
-                    <Bar dataKey="val" radius={[0, 4, 4, 0]} name={`This period (${measureLabel.toLowerCase()})`}>
-                      {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} />)}
+                    <Bar dataKey="val" radius={[0, 4, 4, 0]} name={`This period (${measureLabel.toLowerCase()})`} onClick={(data: any) => drillType(data?.task_group ?? data?.payload?.task_group)} style={{ cursor: 'pointer' }}>
+                      {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
                       {!showDelta && <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: '#9ca3af', fontSize: 11 }} />}
                     </Bar>
                     {showDelta && <Bar dataKey="prev" radius={[0, 4, 4, 0]} fill="#4b5563" name="Previous" />}
@@ -410,13 +554,13 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           </Card>
         </div>
 
-        {/* By priority (donut, count) */}
         <Card title="By priority" sub="(task count)">
           {d.byPriority.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
-                  <Pie data={d.byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2} stroke="#12121f" strokeWidth={2}>
+                  <Pie data={d.byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2} stroke="#12121f" strokeWidth={2}
+                    label={(p: any) => `${Math.round((p.percent || 0) * 100)}%`} labelLine={false} style={{ fontSize: 11 }}>
                     {d.byPriority.map((p: any) => <Cell key={p.key} fill={p.fill} />)}
                   </Pie>
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -435,8 +579,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         </Card>
       </div>
 
-      {/* ── Hours/Tasks per task, coloured by parent type (the headline breakdown) ── */}
-      <Card title={`${measureLabel} per task`} sub="(each bar coloured by its type · what the work actually consisted of)"
+      {/* ── Per task, coloured by parent type ── */}
+      <Card title={`${measureLabel} per task`} sub="(each bar coloured by its type · what the work consisted of)"
         right={
           <div className="flex items-center gap-2">
             <select value={taskTopN} onChange={e => setTaskTopN(Number(e.target.value))}
@@ -446,8 +590,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
             <Seg value={taskChart} onChange={setTaskChart} options={[['bar', 'Bars', BarChart3], ['pie', 'Donut', PieIcon]]} />
           </div>
         }>
-        {/* Type include/exclude legend + checkboxes */}
-        {d.allTypes.length > 1 && (
+        {d.allTypes.length > 1 && !typeFocus && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {d.allTypes.map((tp: string) => {
               const on = !hiddenTypes.has(tp)
@@ -464,22 +607,15 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         {d.byTask.length > 0 ? (
           taskChart === 'bar' ? (
             <ResponsiveContainer width="100%" height={Math.max(220, d.byTask.length * 30)}>
-              <BarChart data={d.byTask} layout="vertical" margin={{ left: 10, right: 40 }}>
+              <BarChart data={d.byTask} layout="vertical" margin={{ left: 10, right: showDelta ? 64 : 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} allowDecimals={isH} />
                 <YAxis dataKey="task" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={150} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  formatter={(v: any, _n: any, p: any) => [`${fmtVal(Number(v))}${showDelta ? ` (prev ${fmtVal(p?.payload?.prev ?? 0)})` : ''}`, p?.payload?.type]} />
+                  formatter={(v: any, _n: any, p: any) => [`${fmtVal(Number(v))}${showDelta ? ` · prev ${fmtVal(p?.payload?.prev ?? 0)}` : ''}`, p?.payload?.type]} />
                 <Bar dataKey="val" radius={[0, 4, 4, 0]} name={measureLabel}>
                   {d.byTask.map((r: any, i: number) => <Cell key={i} fill={r.color} />)}
                   <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: '#9ca3af', fontSize: 10 }} />
-                  {showDelta && (
-                    <LabelList position="right" offset={34} content={(props: any) => {
-                      const row = d.byTask[props.index]; if (!row) return null
-                      const diff = r1(row.val - row.prev); if (diff === 0) return null
-                      return <text x={Number(props.x) + Number(props.width) + 34} y={Number(props.y) + Number(props.height) / 2} dy={4} fontSize={10} fill={diff > 0 ? '#34d399' : '#f87171'}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff)}</text>
-                    }} />
-                  )}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -498,6 +634,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: r.color }} />
                     <span className="text-gray-200 truncate flex-1 min-w-0" title={`${r.task} · ${r.type}`}>{r.task}</span>
+                    {showDelta && (() => { const diff = r1(r.val - r.prev); return diff !== 0 ? <span className={'tabular-nums ' + (diff > 0 ? 'text-green-400' : 'text-red-400')}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff)}</span> : null })()}
                     <span className="tabular-nums text-white font-medium">{fmtVal(r.val)}</span>
                   </div>
                 ))}
@@ -552,7 +689,42 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         ) : <NoData h={140} hint="Set a Type + Task on the new-task form to build this breakdown." />}
       </Card>
 
-      {/* ── Type by employee (stacked, measure-aware) ── */}
+      {/* ── When work happens — weekday × hour heatmap ── */}
+      <Card title="When work happens" sub={`(${isH ? 'worked hours' : 'tasks'} by weekday × start hour · timed tasks only)`}>
+        {d.hmHours.length > 0 ? (
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full">
+              <div className="flex text-[10px] text-gray-600 mb-1">
+                <div className="w-10 flex-shrink-0" />
+                {d.hmHours.map(h => <div key={h} className="flex-1 text-center min-w-[26px]">{h}</div>)}
+              </div>
+              {DOW_ORDER.map(dow => (
+                <div key={dow} className="flex items-center mb-0.5">
+                  <div className="w-10 flex-shrink-0 text-[11px] text-gray-400">{DOW_LABELS[dow]}</div>
+                  {d.hmHours.map(h => {
+                    const v = d.hmMap[`${dow}-${h}`] || 0
+                    const alpha = d.hmMax > 0 && v > 0 ? 0.14 + 0.86 * (v / d.hmMax) : 0
+                    return (
+                      <div key={h} className="flex-1 min-w-[26px] px-0.5">
+                        <div className="h-6 rounded" title={v > 0 ? `${DOW_LABELS[dow]} ${h}:00 — ${fmtVal(r1(v))}` : `${DOW_LABELS[dow]} ${h}:00 — none`}
+                          style={{ background: v > 0 ? `rgba(16,185,129,${alpha})` : 'rgba(255,255,255,0.03)' }} />
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-600">
+                <span>Less</span>
+                {[0.14, 0.4, 0.65, 1].map(a => <span key={a} className="w-5 h-3 rounded" style={{ background: `rgba(16,185,129,${a})` }} />)}
+                <span>More</span>
+                <span className="ml-2">peak {fmtVal(r1(d.hmMax))}</span>
+              </div>
+            </div>
+          </div>
+        ) : <NoData h={140} hint="Give tasks a start time to see when the team is busiest." />}
+      </Card>
+
+      {/* ── Type by employee (stacked) ── */}
       <Card title="Type by employee" sub={`(${isH ? 'hours' : 'tasks'} per type, per person)`}>
         {d.typeByEmp.length > 0 && d.groupsInData.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(220, d.typeByEmp.length * 42)}>
@@ -570,7 +742,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         ) : <NoData />}
       </Card>
 
-      {/* ── By employee (measure-aware) + hours per day ── */}
+      {/* ── By employee (measure-aware) + Planned vs Worked (estimate accuracy) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="By employee" sub={`(${measureLabel.toLowerCase()}${showDelta ? ' · vs previous' : ''})`}>
           {d.hoursByEmployee.length > 0 ? (
@@ -581,21 +753,23 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                 {showDelta && isH && <Legend wrapperStyle={{ fontSize: 11 }} />}
-                <Bar dataKey="val" fill="#10b981" radius={[0, 4, 4, 0]} name={`This period`} />
+                <Bar dataKey="val" fill="#10b981" radius={[0, 4, 4, 0]} name="This period" />
                 {showDelta && isH && <Bar dataKey="pWorkedH" fill="#4b5563" radius={[0, 4, 4, 0]} name="Previous" />}
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
-        <Card title="Hours per day" sub={`(worked · target ${workHoursPerDay}h)`}>
-          {d.perDay.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={d.perDay} margin={{ left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} unit="h" />
+        <Card title="Planned vs worked" sub="(estimate accuracy — planned vs actual hours)">
+          {d.hoursByEmployee.length > 0 ? (
+            <ResponsiveContainer width="100%" height={Math.max(220, d.hoursByEmployee.length * 40)}>
+              <BarChart data={d.hoursByEmployee} layout="vertical" margin={{ left: 10, right: 12 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit="h" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                <Bar dataKey="worked" fill="#10b981" radius={[4, 4, 0, 0]} name="Worked h" />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="plannedH" fill="#6b7280" radius={[0, 4, 4, 0]} name="Planned h" />
+                <Bar dataKey="workedH" fill="#10b981" radius={[0, 4, 4, 0]} name="Worked h" />
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}

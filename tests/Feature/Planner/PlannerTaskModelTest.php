@@ -88,6 +88,9 @@ class PlannerTaskModelTest extends TestCase
                 // schema must carry them or the INSERT fails.
                 $t->string('pool_horizon', 16)->nullable();
                 $t->date('pool_due_date')->nullable();
+                // Completion timestamp (2026-07) — the saving() hook stamps
+                // it on every done-transition, so it must exist in the schema.
+                $t->timestamp('completed_at')->nullable();
                 $t->timestamps();
                 $t->index(['organization_id', 'task_date']);
                 // Partial indexes from 2026-05-24:
@@ -169,6 +172,61 @@ class PlannerTaskModelTest extends TestCase
 
         $this->assertFalse($task->fresh()->completed,
             'New tasks MUST default to completed=false (open).');
+    }
+
+    /* ─── completed_at stamping (on-time analytics) ─── */
+
+    public function test_completed_at_is_stamped_when_task_marked_done(): void
+    {
+        // Powers the Stats on-time-vs-late split. A scheduled task carries
+        // a task_date, so this also proves the completion logic runs BEFORE
+        // the pool-horizon early-return in the saving() hook.
+        $task = $this->task(['completed' => false]);
+        $this->assertNull($task->completed_at);
+
+        $task->update(['completed' => true, 'status' => 'done']);
+
+        $this->assertNotNull($task->fresh()->completed_at,
+            'Marking a task done MUST stamp completed_at.');
+    }
+
+    public function test_completed_at_stamped_via_status_done_without_completed_flag(): void
+    {
+        // bulk set_status='done' patches status but not the boolean — the
+        // hook must still stamp because status==='done' counts as done.
+        $task = $this->task(['completed' => false, 'status' => 'todo']);
+        $task->update(['status' => 'done']);
+
+        $this->assertNotNull($task->fresh()->completed_at,
+            'status=done alone MUST stamp completed_at.');
+    }
+
+    public function test_completed_at_is_cleared_when_task_reopened(): void
+    {
+        $task = $this->task(['completed' => true, 'status' => 'done']);
+        $this->assertNotNull($task->fresh()->completed_at);
+
+        $task->update(['completed' => false, 'status' => 'todo']);
+
+        $this->assertNull($task->fresh()->completed_at,
+            'Reopening a task MUST clear completed_at.');
+    }
+
+    public function test_completed_at_not_backfilled_on_unrelated_edit_of_legacy_done_row(): void
+    {
+        // A row that is already done but has NULL completed_at (a legacy row
+        // from before the column existed) must NOT get stamped with now()
+        // just because it's edited for another reason — that would fabricate
+        // an on-time/late verdict. It stays NULL and reports as "untracked".
+        $task = $this->task(['completed' => true, 'status' => 'done']);
+        // Simulate the legacy state: done but never stamped.
+        \DB::table('planner_tasks')->where('id', $task->id)->update(['completed_at' => null]);
+
+        $reloaded = PlannerTask::find($task->id);
+        $reloaded->update(['title' => 'Renamed but not re-completed']);
+
+        $this->assertNull($reloaded->fresh()->completed_at,
+            'Editing a legacy done row (completed unchanged) MUST NOT fabricate completed_at.');
     }
 
     /* ─── recurring_until date cast ─── */

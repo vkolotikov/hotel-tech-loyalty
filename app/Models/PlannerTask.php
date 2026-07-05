@@ -31,6 +31,10 @@ class PlannerTask extends Model
         // cast serialises to a full ISO datetime, which breaks front-end
         // date parsing/labels).
         'pool_due_date'    => 'date:Y-m-d',
+        // When the task transitioned to done — powers the Stats tab's
+        // on-time-vs-late completion analytics. Stamped/cleared by the
+        // saving() hook below, never client-set (not in $fillable).
+        'completed_at'     => 'datetime',
     ];
 
     /**
@@ -43,6 +47,24 @@ class PlannerTask extends Model
     protected static function booted(): void
     {
         static::saving(function (PlannerTask $t) {
+            // Completion timestamp — stamp the moment a task ENTERS the done
+            // state, clear when it leaves. Must run BEFORE the pool-horizon
+            // early-return below, because completed tasks almost always carry
+            // a task_date (which triggers that return). `update()` on a model
+            // instance fires this, so every completion path is covered:
+            // toggleComplete / quickStatus / bulk mark_done / updateTask /
+            // create. The dirty-guard avoids mis-stamping a legacy done row
+            // (completed_at NULL) with now() when it is edited for other
+            // reasons — such rows stay NULL and report as "untracked".
+            $isDone = $t->completed || $t->status === 'done';
+            if ($isDone) {
+                if (is_null($t->completed_at) && (!$t->exists || $t->isDirty('completed') || $t->isDirty('status'))) {
+                    $t->completed_at = now();
+                }
+            } elseif (!is_null($t->completed_at)) {
+                $t->completed_at = null;
+            }
+
             if (!is_null($t->task_date)) {
                 $t->pool_horizon  = null;
                 $t->pool_due_date = null;

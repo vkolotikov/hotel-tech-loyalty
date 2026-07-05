@@ -93,6 +93,8 @@ class PlannerAutoPlanTest extends TestCase
                 // apply re-saves rows), so they must exist in the schema.
                 $t->string('pool_horizon', 16)->nullable();
                 $t->date('pool_due_date')->nullable();
+                // Completion timestamp (2026-07) — stamped by the saving() hook.
+                $t->timestamp('completed_at')->nullable();
                 $t->timestamps();
                 $t->index(['organization_id', 'task_date']);
             });
