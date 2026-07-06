@@ -2,3 +2,20 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [QSA,L]
+
+# Immutable caching for content-hashed build assets. Vite fingerprints every
+# file under assets/ with a content hash, so the URL changes whenever the bytes
+# change — they can be cached for a year and never revalidated. index.html is
+# NOT matched here (no extension in the list) so it stays revalidatable, which
+# is what points browsers at each deploy's fresh asset hashes.
+#
+# Takes effect on Apache origins + local dev. Production is fronted by
+# Cloudflare / Laravel Cloud, whose managed nginx currently emits `expires 4h`
+# for assets — the durable prod fix is a Cloudflare Cache Rule on
+# /spa/assets/* (long Edge + Browser TTL). See apps/loyalty/CLAUDE.md →
+# "SPA asset caching + nav preload".
+<IfModule mod_headers.c>
+  <FilesMatch "\.(?:js|mjs|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|avif|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
