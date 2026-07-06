@@ -25,7 +25,6 @@
  */
 
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { ChevronDown, MoreHorizontal, Star, Mail, Phone, Globe } from 'lucide-react'
 
 import { ContactActions } from './ContactActions'
@@ -208,18 +207,17 @@ function LeadRowImpl(props: LeadRowProps) {
           {/* Name + chips + subtitles */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              {inq.guest?.id ? (
-                <Link
-                  to={`/guests/${inq.guest.id}`}
-                  className="font-semibold text-[14px] text-white hover:text-primary-300 transition-colors truncate"
-                  onClick={(e) => e.stopPropagation()}
-                  title={t('inquiries.row.open_customer', { defaultValue: 'Open customer' })}
-                >
-                  {inq.guest?.full_name ?? '—'}
-                </Link>
-              ) : (
-                <span className="font-semibold text-[14px] text-white truncate">{inq.guest?.full_name ?? '—'}</span>
-              )}
+              {/* Name opens the lead's right-panel drawer (contact · activity
+                  · notes · AI · tasks) — the CRM-appropriate detail. The
+                  loyalty member card is reachable from Members, not here. */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpenInquiryDrawer() }}
+                className="font-semibold text-[14px] text-white hover:text-primary-300 transition-colors truncate text-left"
+                title={t('inquiries.row.open_lead', { defaultValue: 'Open lead' })}
+              >
+                {inq.guest?.full_name ?? '—'}
+              </button>
               <FreshnessBadge
                 createdAt={inq.created_at}
                 lastContactedAt={inq.last_contacted_at}

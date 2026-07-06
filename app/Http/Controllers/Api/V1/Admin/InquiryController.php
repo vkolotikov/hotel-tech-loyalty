@@ -279,8 +279,40 @@ class InquiryController extends Controller
 
         $inquiry->update($v);
 
-        // Auto-create reservation when confirmed
-        if (($v['status'] ?? null) === 'Confirmed' && !$inquiry->reservations()->exists() && $inquiry->property_id) {
+        // Keep pipeline_stage_id in lockstep with the status the UI writes.
+        // The leads list + kanban + detail all set `status` to the chosen
+        // stage's NAME; without this resync, the stage pill + colour (which
+        // read `pipeline_stage`) show the OLD stage while the dropdown shows
+        // the new one — the "status changes but the card doesn't" bug.
+        // Resolve the stage by name within the inquiry's pipeline, falling
+        // back to the won/lost stage by kind for the terminal statuses.
+        $syncedStage = null;
+        if (array_key_exists('status', $v) && $v['status'] !== null && $inquiry->pipeline_id) {
+            $stage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($v['status']))])
+                ->first();
+            if (!$stage) {
+                $kind = $v['status'] === 'Confirmed' ? 'won' : ($v['status'] === 'Lost' ? 'lost' : null);
+                if ($kind) {
+                    $stage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
+                        ->where('kind', $kind)->orderBy('sort_order')->first();
+                }
+            }
+            if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
+                $inquiry->pipeline_stage_id = $stage->id;
+                $inquiry->save();
+            }
+            $syncedStage = $stage;
+        }
+
+        // Auto-create reservation when the deal is won. Keyed on the resolved
+        // stage's `kind` (not just the literal "Confirmed") so orgs that
+        // renamed their won stage — or any non-hotel preset whose won stage
+        // is "Completed"/"Enrolled"/etc. — still spawn the reservation when
+        // the inline stage dropdown writes that stage's name. The property_id
+        // guard keeps non-hotel inquiries (no property) out of this path.
+        $isWon = ($v['status'] ?? null) === 'Confirmed' || (($syncedStage->kind ?? null) === 'won');
+        if ($isWon && !$inquiry->reservations()->exists() && $inquiry->property_id) {
             $confNo = strtoupper($inquiry->property->code ?? 'HTL') . '-' . str_pad($inquiry->id, 5, '0', STR_PAD_LEFT);
             Reservation::create([
                 'guest_id'             => $inquiry->guest_id,
@@ -303,7 +335,10 @@ class InquiryController extends Controller
             ]);
         }
 
-        return response()->json($inquiry->fresh()->load(['guest:id,full_name', 'property:id,name,code']));
+        return response()->json($inquiry->fresh()->load([
+            'guest:id,full_name', 'property:id,name,code',
+            'pipelineStage:id,name,color,kind',
+        ]));
     }
 
     public function destroy(int $id): JsonResponse
