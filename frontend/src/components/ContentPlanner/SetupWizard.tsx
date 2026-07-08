@@ -118,10 +118,27 @@ const DRAFT_KEY = 'cp-wizard-draft-v2'
 const CUSTOM_GOAL = '__custom__'
 const GOAL_PRESETS = ['Increase brand awareness', 'Generate leads', 'Drive sales', 'Build community', 'Improve engagement']
 const CHANNEL_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+const LANGUAGES: { code: string; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'de', label: 'German' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'lv', label: 'Latvian' },
+  { code: 'lt', label: 'Lithuanian' },
+  { code: 'et', label: 'Estonian' },
+  { code: 'pl', label: 'Polish' },
+  { code: 'fr', label: 'French' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'it', label: 'Italian' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'nl', label: 'Dutch' },
+  { code: 'sv', label: 'Swedish' },
+  { code: 'fi', label: 'Finnish' },
+  { code: 'uk', label: 'Ukrainian' },
+]
 const STEPS = ['Knowledge', 'Brand DNA', 'Audiences', 'Voice', 'Positioning', 'Platforms', 'Rhythm & goals', 'Review']
 
-const INPUT = 'w-full rounded-lg border border-dark-border bg-dark-input px-3 py-2 text-sm text-white placeholder-t-secondary outline-none focus:border-violet-500'
-const BTN_SECONDARY = 'rounded-lg border border-dark-border px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-dark-input disabled:opacity-40'
+const INPUT = 'w-full rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-sm text-white placeholder-t-secondary outline-none focus:border-violet-500'
+const BTN_SECONDARY = 'rounded-lg border border-dark-border px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-dark-surface2 disabled:opacity-40'
 const BTN_PRIMARY = 'flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50'
 
 const s = (v: string | null | undefined): string => v ?? ''
@@ -400,7 +417,7 @@ function TagInput({ value, onChange, placeholder }: { value: string[]; onChange:
     setText('')
   }
   return (
-    <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-lg border border-dark-border bg-dark-input px-2 py-1.5">
+    <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1.5">
       {value.map((tag, i) => (
         <span key={`${tag}-${i}`} className="inline-flex items-center gap-1 rounded bg-violet-600/20 px-2 py-0.5 text-xs text-violet-200">
           {tag}
@@ -430,7 +447,7 @@ function TagInput({ value, onChange, placeholder }: { value: string[]; onChange:
 
 function Segmented({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-lg border border-dark-border bg-dark-input p-1">
+    <div className="inline-flex flex-wrap gap-1 rounded-lg border border-dark-border bg-dark-surface2 p-1">
       {options.map(o => (
         <button
           key={o.value}
@@ -458,7 +475,7 @@ function Chips({ options, selected, onToggle }: { options: { value: string; labe
             type="button"
             onClick={() => onToggle(o.value)}
             className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-              on ? 'border-violet-500 bg-violet-600/20 text-violet-200' : 'border-dark-border bg-dark-input text-t-secondary hover:text-white'
+              on ? 'border-violet-500 bg-violet-600/20 text-violet-200' : 'border-dark-border bg-dark-surface2 text-t-secondary hover:text-white'
             }`}
           >
             {o.label}
@@ -487,7 +504,7 @@ function ToggleCard({ title, desc, checked, onToggle }: { title: string; desc: s
       type="button"
       onClick={onToggle}
       className={`rounded-lg border p-3 text-left transition-colors ${
-        checked ? 'border-violet-500 bg-violet-600/10' : 'border-dark-border bg-dark-input hover:border-violet-500/40'
+        checked ? 'border-violet-500 bg-violet-600/10' : 'border-dark-border bg-dark-surface2 hover:border-violet-500/40'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -516,7 +533,7 @@ function Stepper({ current, onJump }: { current: number; onJump: (i: number) => 
                   ? 'border-violet-500 bg-violet-600 text-white'
                   : i < current
                     ? 'border-violet-500/60 bg-violet-600/20 text-violet-300'
-                    : 'border-dark-border bg-dark-input text-t-secondary hover:text-white'
+                    : 'border-dark-border bg-dark-surface2 text-t-secondary hover:text-white'
               }`}
             >
               {i < current ? <Check size={12} /> : i + 1}
@@ -532,7 +549,7 @@ function Stepper({ current, onJump }: { current: number; onJump: (i: number) => 
 
 function ReadinessBars({ readiness }: { readiness: ReadinessData }) {
   return (
-    <div className="rounded-lg border border-dark-border bg-dark-input p-4">
+    <div className="rounded-lg border border-dark-border bg-dark-surface2 p-4">
       <div className="mb-3 flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">AI readiness</h4>
         <span className={`text-sm font-bold ${readiness.overall >= 70 ? 'text-green-400' : readiness.overall >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
@@ -559,7 +576,7 @@ function ReadinessBars({ readiness }: { readiness: ReadinessData }) {
 
 function SummaryCard({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-dark-border bg-dark-input p-3">
+    <div className="rounded-lg border border-dark-border bg-dark-surface2 p-3">
       <div className="mb-2 flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">{title}</h4>
         <button type="button" onClick={onEdit} className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300">
@@ -613,8 +630,12 @@ function Step1Knowledge({ form, up, detected }: StepProps & { detected?: Detecte
         <Field label="Profile name *">
           <input className={INPUT} value={form.name} onChange={e => up({ name: e.target.value })} placeholder="e.g. Main content plan" />
         </Field>
-        <Field label="Default language" hint="Language code or name, e.g. en, de, ru">
-          <input className={INPUT} value={form.default_language} onChange={e => up({ default_language: e.target.value })} placeholder="en" />
+        <Field label="Default language" hint="The main language your content is written in">
+          <select className={INPUT} value={form.default_language || 'en'} onChange={e => up({ default_language: e.target.value })}>
+            {LANGUAGES.map(l => (
+              <option key={l.code} value={l.code}>{l.label} ({l.code})</option>
+            ))}
+          </select>
         </Field>
       </div>
       <Field label="Primary goal">
@@ -705,7 +726,7 @@ function AudienceCard({ value, index, onChange, onRemove }: { value: WizardAudie
   const [more, setMore] = useState(false)
   const set = (patch: Partial<WizardAudience>) => onChange({ ...value, ...patch })
   return (
-    <div className="space-y-3 rounded-lg border border-dark-border bg-dark-input p-3">
+    <div className="space-y-3 rounded-lg border border-dark-border bg-dark-surface2 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-t-secondary">Segment {index + 1}</span>
         <button type="button" onClick={onRemove} className="text-t-secondary transition-colors hover:text-red-400" title="Remove segment">
@@ -809,7 +830,7 @@ function Step3Audiences({ form, up }: StepProps) {
         <button
           type="button"
           onClick={() => up({ audiences: [...form.audiences, emptyAudience()] })}
-          className="flex items-center gap-1.5 rounded-lg border border-dark-border px-3 py-2 text-sm font-medium text-white transition-colors hover:border-violet-500/50 hover:bg-dark-input"
+          className="flex items-center gap-1.5 rounded-lg border border-dark-border px-3 py-2 text-sm font-medium text-white transition-colors hover:border-violet-500/50 hover:bg-dark-surface2"
         >
           <Plus size={14} /> Add audience segment
         </button>
@@ -906,7 +927,7 @@ function PlatformCard({ platform, channel, audiences, onChange }: { platform: st
   const set = (patch: Partial<WizardChannel>) => onChange({ ...channel, ...patch })
   return (
     <div
-      className={`rounded-lg border bg-dark-input p-3 transition-colors ${channel.active ? 'border-violet-500/50 sm:col-span-2' : 'border-dark-border'}`}
+      className={`rounded-lg border bg-dark-surface2 p-3 transition-colors ${channel.active ? 'border-violet-500/50 sm:col-span-2' : 'border-dark-border'}`}
       style={{ borderLeftColor: meta?.color, borderLeftWidth: 3 }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -1086,7 +1107,7 @@ function Step7Rhythm({ form, up }: StepProps) {
                 max={100}
                 value={form.content_mix[k] ?? 0}
                 onChange={e => setMix(k, Number(e.target.value) || 0)}
-                className="w-16 rounded-md border border-dark-border bg-dark-input px-2 py-1 text-right text-xs text-white outline-none focus:border-violet-500"
+                className="w-16 rounded-md border border-dark-border bg-dark-surface2 px-2 py-1 text-right text-xs text-white outline-none focus:border-violet-500"
               />
             </div>
           ))}
@@ -1107,7 +1128,7 @@ function Step7Rhythm({ form, up }: StepProps) {
               type="button"
               onClick={() => up({ trend_mode: k })}
               className={`rounded-lg border p-3 text-left transition-colors ${
-                form.trend_mode === k ? 'border-violet-500 bg-violet-600/10' : 'border-dark-border bg-dark-input hover:border-violet-500/40'
+                form.trend_mode === k ? 'border-violet-500 bg-violet-600/10' : 'border-dark-border bg-dark-surface2 hover:border-violet-500/40'
               }`}
             >
               <span className="text-sm font-medium text-white">{m.label}</span>

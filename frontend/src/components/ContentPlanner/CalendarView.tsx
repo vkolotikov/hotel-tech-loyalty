@@ -240,7 +240,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
         <select
           value={quickCreate.platform}
           onChange={e => setQuickCreate({ ...quickCreate, platform: e.target.value })}
-          className="w-full rounded bg-dark-input border border-dark-border px-2 py-1.5 text-xs text-white outline-none focus:border-violet-500"
+          className="w-full rounded bg-dark-surface2 border border-dark-border px-2 py-1.5 text-xs text-white outline-none focus:border-violet-500"
         >
           {channelPlatforms.map(p => (
             <option key={p} value={p}>{PLATFORM_META[p]?.label ?? p}</option>
@@ -251,13 +251,13 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
           value={quickCreate.topic}
           onChange={e => setQuickCreate({ ...quickCreate, topic: e.target.value })}
           placeholder="Topic"
-          className="w-full rounded bg-dark-input border border-dark-border px-2 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+          className="w-full rounded bg-dark-surface2 border border-dark-border px-2 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
         />
         <input
           value={quickCreate.goal}
           onChange={e => setQuickCreate({ ...quickCreate, goal: e.target.value })}
           placeholder="Goal (optional)"
-          className="w-full rounded bg-dark-input border border-dark-border px-2 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+          className="w-full rounded bg-dark-surface2 border border-dark-border px-2 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
         />
         <button
           onClick={() => {
@@ -302,7 +302,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
               className={`relative min-h-28 cursor-pointer rounded-lg border p-1.5 transition-colors ${
                 inMonth
                   ? 'border-dark-border bg-dark-surface hover:border-violet-500/60'
-                  : 'border-dark-border/50 bg-dark-input/30 hover:border-violet-500/40'
+                  : 'border-dark-border/50 bg-dark-surface2/30 hover:border-violet-500/40'
               }`}
             >
               <p
@@ -383,7 +383,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                   <button
                     key={post.id}
                     onClick={() => onOpenPost(post.id)}
-                    className="block w-full rounded-lg border border-dark-border bg-dark-input/50 p-2 text-left transition-colors hover:border-violet-500/60"
+                    className="block w-full rounded-lg border border-dark-border bg-dark-surface2/50 p-2 text-left transition-colors hover:border-violet-500/60"
                   >
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] text-t-secondary">
                       {platformDot(post.platform)}
@@ -437,7 +437,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                       <span className="hidden shrink-0 text-[11px] text-t-secondary md:inline">{post.pillar.name}</span>
                     )}
                     {post.weekday_role && WEEKDAY_ROLE_META[post.weekday_role] && (
-                      <span className="hidden shrink-0 rounded bg-dark-input px-1.5 py-0.5 text-[10px] text-t-secondary lg:inline">
+                      <span className="hidden shrink-0 rounded bg-dark-surface2 px-1.5 py-0.5 text-[10px] text-t-secondary lg:inline">
                         {WEEKDAY_ROLE_META[post.weekday_role].label}
                       </span>
                     )}
@@ -528,7 +528,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="ml-auto rounded-lg border border-dark-border bg-dark-input px-2.5 py-1.5 text-xs text-white outline-none focus:border-violet-500"
+          className="ml-auto rounded-lg border border-dark-border bg-dark-surface2 px-2.5 py-1.5 text-xs text-white outline-none focus:border-violet-500"
         >
           <option value="">All statuses</option>
           {Object.entries(STATUS_META).map(([key, meta]) => (
@@ -622,7 +622,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                     <X size={16} />
                   </button>
                 </div>
-                <p className="rounded-lg border border-dark-border bg-dark-input/50 px-3 py-2 text-xs text-t-secondary">
+                <p className="rounded-lg border border-dark-border bg-dark-surface2/50 px-3 py-2 text-xs text-t-secondary">
                   {genFrom.toLocaleString('default', { day: 'numeric', month: 'long' })} —{' '}
                   {genTo.toLocaleString('default', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
@@ -633,7 +633,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                     onChange={e => setGenInstructions(e.target.value)}
                     rows={3}
                     placeholder="e.g. Focus on our new feature launch, keep Fridays light"
-                    className="w-full rounded-lg border border-dark-border bg-dark-input px-3 py-2 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+                    className="w-full rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
                   />
                 </div>
                 <label className="flex items-center gap-2 text-xs text-white">
@@ -641,7 +641,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                     type="checkbox"
                     checked={genFillEmpty}
                     onChange={e => setGenFillEmpty(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-dark-border bg-dark-input accent-violet-600"
+                    className="h-3.5 w-3.5 rounded border-dark-border bg-dark-surface2 accent-violet-600"
                   />
                   Only fill empty days
                 </label>

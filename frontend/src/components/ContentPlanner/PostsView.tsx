@@ -53,7 +53,7 @@ const REWRITE_TYPES: Record<string, string> = {
 const INVERTED_SCORES = ['repetition_risk', 'sales_pressure']
 
 const inputCls =
-  'w-full rounded-lg border border-dark-border bg-dark-input px-3 py-2 text-sm text-white placeholder-t-secondary outline-none focus:border-violet-500'
+  'w-full rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-sm text-white placeholder-t-secondary outline-none focus:border-violet-500'
 const labelCls = 'mb-1 block text-xs font-medium text-t-secondary'
 const cardCls = 'rounded-lg border border-dark-border bg-dark-surface p-4'
 
@@ -193,7 +193,7 @@ export function PostsView({
           </div>
 
           {showCreate && (
-            <div className="space-y-2 rounded-lg border border-dark-border bg-dark-input/40 p-3">
+            <div className="space-y-2 rounded-lg border border-dark-border bg-dark-surface2/40 p-3">
               <select
                 value={createForm.platform}
                 onChange={e => setCreateForm({ ...createForm, platform: e.target.value })}
@@ -243,7 +243,7 @@ export function PostsView({
             <button
               onClick={() => setStatusTab('')}
               className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                statusTab === '' ? 'bg-violet-600 text-white' : 'bg-dark-input text-t-secondary hover:text-white'
+                statusTab === '' ? 'bg-violet-600 text-white' : 'bg-dark-surface2 text-t-secondary hover:text-white'
               }`}
             >
               All{allPosts.length > 0 && ` · ${allPosts.length}`}
@@ -253,7 +253,7 @@ export function PostsView({
                 key={key}
                 onClick={() => setStatusTab(t => (t === key ? '' : key))}
                 className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                  statusTab === key ? 'text-white' : 'bg-dark-input text-t-secondary hover:text-white'
+                  statusTab === key ? 'text-white' : 'bg-dark-surface2 text-t-secondary hover:text-white'
                 }`}
                 style={statusTab === key ? { backgroundColor: meta.color, color: '#0b0b0e' } : undefined}
               >
@@ -307,7 +307,7 @@ export function PostsView({
                 <button
                   key={p.id}
                   onClick={() => setSelectedId(p.id)}
-                  className={`block w-full border-b border-dark-border px-4 py-3 text-left transition-colors hover:bg-dark-input/40 ${
+                  className={`block w-full border-b border-dark-border px-4 py-3 text-left transition-colors hover:bg-dark-surface2/40 ${
                     selectedId === p.id ? 'bg-violet-500/10' : ''
                   }`}
                 >
@@ -624,7 +624,7 @@ function PostDetail({
           </div>
           {cur.weekday_role && WEEKDAY_ROLE_META[cur.weekday_role] && (
             <span
-              className="inline-flex items-center rounded-full bg-dark-input px-2.5 py-1 text-[11px] text-t-secondary"
+              className="inline-flex items-center rounded-full bg-dark-surface2 px-2.5 py-1 text-[11px] text-t-secondary"
               title={WEEKDAY_ROLE_META[cur.weekday_role].desc}
             >
               Day role: {WEEKDAY_ROLE_META[cur.weekday_role].label}
@@ -674,7 +674,7 @@ function PostDetail({
                   <button
                     key={i}
                     onClick={() => set('hook', alt)}
-                    className="max-w-full truncate rounded-full border border-dark-border bg-dark-input px-2.5 py-1 text-left text-[11px] text-t-secondary transition-colors hover:border-violet-500 hover:text-white"
+                    className="max-w-full truncate rounded-full border border-dark-border bg-dark-surface2 px-2.5 py-1 text-left text-[11px] text-t-secondary transition-colors hover:border-violet-500 hover:text-white"
                     title={alt}
                   >
                     {alt}
@@ -719,7 +719,7 @@ function PostDetail({
           </div>
           <div>
             <label className={labelCls}>Hashtags</label>
-            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dark-border bg-dark-input px-2 py-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dark-border bg-dark-surface2 px-2 py-1.5">
               {(cur.hashtags ?? []).map(tag => (
                 <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] text-violet-300">
                   {tag}
@@ -776,7 +776,7 @@ function PostDetail({
                         setShowRewrite(false)
                         rewriteMutation.mutate(key)
                       }}
-                      className="block w-full px-3 py-2 text-left text-xs text-t-secondary transition-colors hover:bg-dark-input hover:text-white"
+                      className="block w-full px-3 py-2 text-left text-xs text-t-secondary transition-colors hover:bg-dark-surface2 hover:text-white"
                     >
                       {label}
                     </button>
@@ -793,7 +793,7 @@ function PostDetail({
           <div className={`${cardCls} space-y-3`}>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-t-secondary">Variations</h3>
             {(post.variations ?? []).map(v => (
-              <div key={v.id} className="rounded-lg border border-dark-border bg-dark-input/40 p-3">
+              <div key={v.id} className="rounded-lg border border-dark-border bg-dark-surface2/40 p-3">
                 <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-[11px] font-medium capitalize text-violet-300">
                     {REWRITE_TYPES[v.variation_type] ?? v.variation_type}
@@ -920,7 +920,7 @@ function PostDetail({
                         {key.replace(/_/g, ' ')}
                         {inverted && ' ↓'}
                       </span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-dark-input">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-dark-surface2">
                         <div className="h-full rounded-full" style={{ width: `${scorePct(value)}%`, backgroundColor: color }} />
                       </div>
                       <span className="w-6 text-right text-white">{value}</span>
@@ -980,7 +980,7 @@ function PostDetail({
                 value={publishUrl}
                 onChange={e => setPublishUrl(e.target.value)}
                 placeholder="Published URL (optional)"
-                className="w-56 rounded-lg border border-dark-border bg-dark-input px-2.5 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+                className="w-56 rounded-lg border border-dark-border bg-dark-surface2 px-2.5 py-1.5 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
               />
               <button
                 onClick={() => markPublishedMutation.mutate()}
