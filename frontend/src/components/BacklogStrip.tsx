@@ -18,6 +18,30 @@ type BacklogTask = {
   assigned_to_user_id?: number | null
   employee_name?: string | null
   created_at?: string
+  pool_horizon?: 'general' | 'week' | 'day' | null
+  pool_due_date?: string | null
+}
+
+/** Tiny horizon/urgency label for a pool task. Null = nothing to show. */
+function horizonBadge(t: BacklogTask): { label: string; over: boolean } | null {
+  const h = t.pool_horizon
+  if (!h || h === 'general') return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const due = t.pool_due_date ? new Date(String(t.pool_due_date).slice(0, 10) + 'T00:00:00') : null
+  const over = !!due && due.getTime() < today.getTime()
+  if (h === 'day' && due) {
+    const diff = Math.round((due.getTime() - today.getTime()) / 86400000)
+    if (over) return { label: 'overdue', over: true }
+    if (diff === 0) return { label: 'today', over: false }
+    if (diff === 1) return { label: 'tomorrow', over: false }
+    return { label: `${String(due.getDate()).padStart(2, '0')}.${String(due.getMonth() + 1).padStart(2, '0')}`, over: false }
+  }
+  // 'week' due is the server-computed (UTC) end-of-week; the compare above is
+  // in the viewer's local tz, so a UTC+ viewer at the Sun→Mon boundary can be
+  // one day ahead of the stored Sunday. A 1-day grace absorbs that skew while
+  // still flagging genuinely stale week tasks (≥7 days past).
+  const weekOver = !!due && due.getTime() < today.getTime() - 86400000
+  return weekOver ? { label: 'overdue', over: true } : { label: 'this week', over: false }
 }
 
 type Scope = 'mine' | 'pool'
@@ -30,6 +54,10 @@ interface Props {
    *  claim themselves (the pool view + claim endpoint both gate on
    *  task_group ∈ skills). */
   plannerSkills?: string[] | null
+  /** Opens the full new-task drawer in backlog mode for the given
+   *  scope. When provided, the strip's "New task" button uses this
+   *  instead of the compact inline popover. */
+  onNewTask?: (scope: Scope) => void
 }
 
 const SCOPE_STORAGE_KEY = 'planner-backlog-scope'
@@ -55,7 +83,7 @@ const OPEN_STORAGE_KEY  = 'planner-backlog-strip-open'
  * drag-drop is poor on touch. Desktop renders the strip + hides the
  * mobile FAB via the responsive class chain.
  */
-export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkills = null }: Props) {
+export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkills = null, onNewTask }: Props) {
   const qc = useQueryClient()
 
   const [open, setOpen] = useState<boolean>(() => {
@@ -72,7 +100,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
     try { localStorage.setItem(SCOPE_STORAGE_KEY, scope) } catch {}
   }, [scope])
 
-  const [qa, setQa] = useState({ title: '', task_group: '', task_category: '', duration: '' })
+  const [qa, setQa] = useState({ title: '', task_group: '', task_category: '', duration: '', priority: 'normal' })
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [search, setSearch] = useState('')
   const [isDropTarget, setIsDropTarget] = useState(false)
@@ -122,7 +150,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setQa({ title: '', task_group: '', task_category: '', duration: '' }); setShowQuickAdd(false); toast.success('Added to backlog') },
+    onSuccess: () => { invalidate(); setQa({ title: '', task_group: '', task_category: '', duration: '', priority: 'normal' }); setShowQuickAdd(false); toast.success('Added to backlog') },
     onError:  (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -161,7 +189,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
       assigned_to_user_id: intoPool ? null : (currentUserId ?? null),
       employee_name:       intoPool ? null : (currentUserName || null),
       task_date:           null,
-      priority:            'normal',
+      priority:            qa.priority || 'normal',
       status:              'todo',
       task_group:          qa.task_group || null,
       task_category:       qa.task_category || null,
@@ -191,7 +219,10 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
       {/* ── Desktop strip ────────────────────────────────────────── */}
       <div
         className={[
-          'hidden md:block bg-dark-surface border rounded-xl overflow-hidden transition-colors',
+          // NB: no `overflow-hidden` here — it would clip the quick-add
+          // popover (which opens below the header) inside the strip.
+          // The expanded cards row has its own `overflow-x-auto`.
+          'hidden md:block relative bg-dark-surface border rounded-xl transition-colors',
           isDropTarget ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-dark-border',
         ].join(' ')}
         onDragOver={(e) => {
@@ -285,8 +316,12 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           <div className="relative flex-shrink-0">
             <button
               onClick={() => {
+                // Prefer the full right-side drawer (matches the main
+                // planner new-task flow). Falls back to the compact
+                // inline popover only if no drawer handler is wired.
+                if (onNewTask) { onNewTask(scope); return }
                 if (showQuickAdd) { setShowQuickAdd(false); return }
-                setQa({ title: '', task_group: (scope === 'pool' && plannerSkills?.[0]) || '', task_category: '', duration: '' })
+                setQa({ title: '', task_group: (scope === 'pool' && plannerSkills?.[0]) || '', task_category: '', duration: '', priority: 'normal' })
                 setShowQuickAdd(true)
               }}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] font-medium"
@@ -294,7 +329,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
               <Plus size={11} /> New task
             </button>
             {showQuickAdd && (
-              <div className="absolute right-0 top-full mt-1 z-30 w-72 bg-dark-surface border border-dark-border rounded-lg p-3 shadow-xl space-y-2">
+              <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-dark-surface border border-dark-border rounded-lg p-3 shadow-2xl ring-1 ring-black/20 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-white">{scope === 'pool' ? 'New open-pool task' : 'New task for me'}</span>
                   <button onClick={() => setShowQuickAdd(false)} className="text-gray-500 hover:text-white"><X size={12} /></button>
@@ -334,10 +369,30 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                   className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
                 >
                   <option value="">Approx duration — none</option>
-                  {[15, 30, 45, 60, 90, 120, 180, 240].map(m => (
-                    <option key={m} value={m}>{m < 60 ? `${m} min` : `${m / 60}h${m % 60 ? ` ${m % 60}m` : ''}`}</option>
+                  {[15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300, 360].map(m => (
+                    <option key={m} value={m}>{m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}`}</option>
                   ))}
                 </select>
+                {/* Priority — parity with the main planner drawer so a
+                    pool task can be flagged for whoever claims it. */}
+                <div className="flex gap-1">
+                  {(['low', 'normal', 'high'] as const).map(p => {
+                    const active = qa.priority === p
+                    return (
+                      <button key={p} type="button" onClick={() => setQa(q => ({ ...q, priority: p }))}
+                        className={[
+                          'flex-1 px-2 py-1 rounded-md text-[10px] font-semibold border capitalize transition',
+                          active
+                            ? p === 'high' ? 'bg-red-500/20 border-red-500/60 text-red-300'
+                              : p === 'low' ? 'bg-gray-500/20 border-gray-500/60 text-gray-300'
+                              : 'bg-blue-500/20 border-blue-500/60 text-blue-300'
+                            : 'border-white/10 text-gray-500 hover:text-white hover:bg-white/5',
+                        ].join(' ')}>
+                        {p}
+                      </button>
+                    )
+                  })}
+                </div>
                 <button
                   onClick={handleQuickAdd}
                   disabled={!qa.title.trim() || createMutation.isPending}
@@ -459,6 +514,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
                     {task.task_group && <span className="px-1 rounded bg-white/5">{task.task_group}</span>}
                     {task.priority === 'high' && <span className="text-red-400 flex items-center gap-0.5"><Flag size={9} />high</span>}
+                    {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
                   </div>
                   {mobileScheduling?.id === task.id ? (
                     <div className="mt-2 flex flex-col gap-1.5">
@@ -526,6 +582,7 @@ function BacklogCardChip({ task, scope, onClaim }: {
             {task.task_group && <span className="px-1 rounded bg-white/5 text-gray-400 truncate max-w-[60px]">{task.task_group}</span>}
             {task.priority === 'high' && <span className="flex items-center gap-0.5 text-red-400"><Flag size={8} />high</span>}
             {task.duration_minutes && <span className="text-gray-500 tabular-nums">{task.duration_minutes}m</span>}
+            {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
           </div>
         </div>
         {/* Pool cards expose a tiny claim affordance on hover; mine

@@ -20,6 +20,15 @@ const ContentPlanner = lazy(() => import('../ContentPlanner').then(m => ({ defau
 
 type TabKey = 'campaigns' | 'email-templates' | 'reviews' | 'content-planner'
 
+// Warm a tab's chunk on hover/pointer-down so the click opens instantly.
+const TAB_IMPORT: Record<TabKey, () => Promise<unknown>> = {
+  'campaigns':       () => import('../Notifications'),
+  'email-templates': () => import('../EmailTemplates'),
+  'reviews':         () => import('../Reviews'),
+  'content-planner': () => import('../ContentPlanner'),
+}
+const preloadTab = (k: TabKey) => { try { TAB_IMPORT[k]?.() } catch { /* best-effort */ } }
+
 interface TileDef {
   key: TabKey
   label: string
@@ -95,7 +104,7 @@ export function MarketingHub() {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-w-[1400px]">
-              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} />)}
+              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} onPreload={() => preloadTab(t.key)} />)}
             </div>
           </div>
         )
@@ -129,14 +138,17 @@ export function MarketingHub() {
   )
 }
 
-function Tile({ tile, onClick }: { tile: TileDef; onClick: () => void }) {
+function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void; onPreload?: () => void }) {
   const Icon = tile.icon
   const { accent } = tile
   return (
     <button
       onClick={onClick}
+      onPointerDown={onPreload}
+      onFocus={onPreload}
       className="group relative aspect-square flex flex-col bg-dark-surface border border-dark-border rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 text-left"
       onMouseEnter={(e) => {
+        onPreload?.()
         e.currentTarget.style.borderColor = accent
         e.currentTarget.style.boxShadow = `0 12px 36px ${tint(accent, 0.22)}`
       }}

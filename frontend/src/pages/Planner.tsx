@@ -16,12 +16,13 @@ import {
   BarChart2, Calendar, CalendarDays, CalendarRange, FileText, LayoutGrid,
   ChevronDown, Edit, ArrowRight, Clock, User, X, Copy,
   ListChecks, AlertCircle, Flag, Tag, Pencil, Repeat, PlayCircle,
-  Sparkles,
+  Sparkles, Inbox,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { BacklogStrip } from '../components/BacklogStrip'
 import { TeamBucketsView } from '../components/TeamBucketsView'
+import { PoolManager } from '../components/PoolManager'
+import PlannerStats from '../components/PlannerStats'
 import { PlannerDaySidebar } from '../components/PlannerDaySidebar'
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
@@ -137,12 +138,11 @@ function addMinutes(timeHHMM: string, minutes: number): string {
   if (total >= 24 * 60) return ''
   return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0')
 }
-const TOOLTIP_STYLE = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 8, fontSize: 12 }
 
 const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
 const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500'
 
-type Tab = 'day' | 'schedule' | 'month' | 'team' | 'stats'
+type Tab = 'day' | 'schedule' | 'month' | 'pool' | 'team' | 'stats'
 type TaskForm = {
   employee_name: string; title: string; task_date: string; start_time: string; end_time: string
   priority: string; task_group: string; task_category: string; duration_minutes: string
@@ -713,7 +713,7 @@ function InlineQuickAdd({ onSubmit, onCancel, autoFocus = true }: {
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { if (autoFocus && ref.current) ref.current.focus() }, [autoFocus])
   return (
-    <form onSubmit={e => { e.preventDefault(); if (title.trim()) onSubmit(title.trim()) }}
+    <form onSubmit={e => { e.preventDefault(); if (title.trim()) { onSubmit(title.trim()); setTitle('') } }}
           onClick={e => e.stopPropagation()}>
       <input
         ref={ref}
@@ -1654,12 +1654,60 @@ export function Planner() {
   }, [mineOnly])
   const [showModal, setShowModal] = useState(false)
   const [editTask, setEditTask] = useState<any>(null)
+  // When set, the new-task drawer is in "backlog" mode: the date is
+  // optional (empty = stays in backlog) and the assignment is fixed by
+  // scope ('mine' = me, 'pool' = unassigned open-pool). Lets the backlog
+  // strip reuse the full drawer instead of its cramped popover.
+  const [backlogMode, setBacklogMode] = useState<null | 'mine' | 'pool'>(null)
+  // Pool-horizon selection inside the drawer (only when backlogMode==='pool').
+  const [poolHorizon, setPoolHorizon] = useState<'general' | 'week' | 'day'>('general')
+  const [poolDue, setPoolDue] = useState('') // target day for horizon='day'
   const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [copyTarget, setCopyTarget] = useState<{ taskId: number; date: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<{ taskId: number; date: string } | null>(null)
-  const [statsFrom, setStatsFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
+  // fmtDate (LOCAL) not toISOString: the latter shifts local first-of-month
+  // back to the previous month's last day for UTC+ zones (the EU customer base).
+  const [statsFrom, setStatsFrom] = useState(() => fmtDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
   const [statsTo, setStatsTo] = useState(() => fmtDate(new Date()))
+  type StatsRangeKind = 'today' | 'week' | '2weeks' | 'month' | 'last30' | 'year'
+  const [statsRange, setStatsRange] = useState<StatsRangeKind | 'custom'>('month')
+  const applyStatsRange = (kind: StatsRangeKind) => {
+    const now = new Date()
+    let from = new Date(), to = new Date()
+    if (kind === 'today') {
+      from = new Date(now); to = new Date(now)
+    } else if (kind === 'week') {
+      const dow = (now.getDay() + 6) % 7 // Monday = 0
+      from = new Date(now); from.setDate(now.getDate() - dow)
+      to = new Date(from);  to.setDate(from.getDate() + 6)
+    } else if (kind === '2weeks') {
+      const dow = (now.getDay() + 6) % 7
+      from = new Date(now); from.setDate(now.getDate() - dow - 7) // last Monday of previous week
+      to = new Date(from);  to.setDate(from.getDate() + 13)
+    } else if (kind === 'month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1)
+      to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    } else if (kind === 'last30') {
+      from = new Date(now); from.setDate(now.getDate() - 29)
+      to = now
+    } else { // year
+      from = new Date(now.getFullYear(), 0, 1)
+      to = new Date(now.getFullYear(), 11, 31)
+    }
+    setStatsFrom(fmtDate(from)); setStatsTo(fmtDate(to)); setStatsRange(kind)
+  }
+  // Focus the whole Stats page on a single person ('' = whole team).
+  const [statsEmployee, setStatsEmployee] = useState('')
+  // Previous equal-length window immediately before [statsFrom, statsTo] —
+  // powers the period-over-period comparison deltas on the KPI cards.
+  const statsPrevRange = useMemo(() => {
+    const f = new Date(statsFrom + 'T00:00:00'), t = new Date(statsTo + 'T00:00:00')
+    const days = Math.max(0, Math.round((t.getTime() - f.getTime()) / 86400000)) + 1
+    const pt = new Date(f); pt.setDate(f.getDate() - 1)
+    const pf = new Date(pt); pf.setDate(pt.getDate() - (days - 1))
+    return { from: fmtDate(pf), to: fmtDate(pt) }
+  }, [statsFrom, statsTo])
   // Auto-plan modal state — null = closed, populated = showing preview.
   const [autoPlan, setAutoPlan] = useState<null | {
     proposals: Array<{ task_id: number; title: string; task_group: string | null; priority: string | null; duration_minutes: number; start_time: string }>
@@ -1691,6 +1739,12 @@ export function Planner() {
    * priority, jump to full edit, delete.
    */
   const [taskPopover, setTaskPopover] = useState<{ task: any; anchor: DOMRect } | null>(null)
+  // Month view: a "view all" popover anchored to a day cell (opened from the
+  // "+N more" / all-done summary), and a persisted "hide completed" filter so
+  // a mostly-done month isn't wall-to-wall strikethrough.
+  const [dayPopover, setDayPopover] = useState<{ date: string; label: string; anchor: DOMRect } | null>(null)
+  const [monthHideDone, setMonthHideDone] = useState<boolean>(() => { try { return localStorage.getItem('planner-month-hide-done') === '1' } catch { return false } })
+  const toggleMonthHideDone = () => setMonthHideDone(v => { const nv = !v; try { localStorage.setItem('planner-month-hide-done', nv ? '1' : '0') } catch { /* private */ } return nv })
   /**
    * Inline-add state for Schedule + Month cells. Cell key follows
    * the same composition as `dragOverCell`. When set, that cell
@@ -1723,7 +1777,11 @@ export function Planner() {
   const { data: allTasks = [] } = useQuery({
     queryKey: ['planner-tasks', tab, tab === 'day' ? currentDate : tab === 'schedule' ? weekStart : monthYear, employee],
     queryFn: () => api.get('/v1/admin/planner/tasks', { params: queryParams }).then(r => r.data),
-    enabled: tab !== 'stats',
+    // Only the calendar tabs (day/schedule/month) consume this list, and
+    // only those set a date bound in queryParams. On stats/pool/team the
+    // payload is never rendered — and with no date bound the endpoint would
+    // return the org's ENTIRE unbounded task table. Skip the fetch on them.
+    enabled: tab !== 'stats' && tab !== 'pool' && tab !== 'team',
   })
   const tasks = (() => {
     let out = allTasks
@@ -1738,8 +1796,14 @@ export function Planner() {
   })
 
   const { data: stats } = useQuery({
-    queryKey: ['planner-stats', statsFrom, statsTo],
-    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsFrom, to: statsTo } }).then(r => r.data),
+    queryKey: ['planner-stats', statsFrom, statsTo, statsEmployee],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsFrom, to: statsTo, employee: statsEmployee || undefined } }).then(r => r.data),
+    enabled: tab === 'stats',
+  })
+  // Previous equal-length period — for the comparison deltas.
+  const { data: statsPrev } = useQuery({
+    queryKey: ['planner-stats', statsPrevRange.from, statsPrevRange.to, statsEmployee],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: statsPrevRange.from, to: statsPrevRange.to, employee: statsEmployee || undefined } }).then(r => r.data),
     enabled: tab === 'stats',
   })
 
@@ -1755,7 +1819,7 @@ export function Planner() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/v1/admin/planner/tasks', body),
-    onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }); toast.success('Task created') },
+    onSuccess: () => { invalidate(); setShowModal(false); setEditTask(null); setBacklogMode(null); setForm({ ...EMPTY_FORM }); toast.success(backlogMode ? 'Added to backlog' : 'Task created') },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Error'),
   })
 
@@ -1837,6 +1901,10 @@ export function Planner() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['planner-tasks']   })
       qc.invalidateQueries({ queryKey: ['planner-backlog'] })
+      // Scheduling a date-less pool/backlog card sets task_date, which flips
+      // the row from "excluded from stats" to "counted" — bust the Stats
+      // aggregate too so the analytics tab doesn't show a stale total.
+      qc.invalidateQueries({ queryKey: ['planner-stats']   })
       setMoveTarget(null)
     },
   })
@@ -1954,12 +2022,30 @@ export function Planner() {
 
   const openCreate = (date: string, emp?: string, startTime?: string) => {
     setEditTask(null)
+    setBacklogMode(null)
     setShowTemplatePicker(false)
     setForm({
       ...EMPTY_FORM,
       task_date: date,
       employee_name: emp ?? myName,
       start_time: startTime ?? '',
+    })
+    setShowModal(true)
+  }
+
+  // Open the full new-task drawer in backlog mode (no scheduled date).
+  // For pool scope, an optional `horizon` seeds the Horizon control.
+  const openBacklogCreate = (scope: 'mine' | 'pool', horizon: 'general' | 'week' | 'day' = 'general') => {
+    setEditTask(null)
+    setBacklogMode(scope)
+    setPoolHorizon(horizon)
+    setPoolDue('')
+    setShowTemplatePicker(false)
+    setForm({
+      ...EMPTY_FORM,
+      task_date: '',
+      employee_name: scope === 'mine' ? myName : '',
+      start_time: '',
     })
     setShowModal(true)
   }
@@ -1993,6 +2079,12 @@ export function Planner() {
 
   const openEdit = (task: any) => {
     setEditTask(task)
+    // A pool task (no date, no owner) opens in pool mode so its horizon is
+    // editable; anything scheduled/owned edits normally.
+    const isPoolTask = !task.task_date && !task.assigned_to_user_id && !task.employee_name
+    setBacklogMode(isPoolTask ? 'pool' : null)
+    setPoolHorizon(isPoolTask ? ((task.pool_horizon as any) || 'general') : 'general')
+    setPoolDue(isPoolTask && task.pool_horizon === 'day' ? String(task.pool_due_date || '').slice(0, 10) : '')
     setShowTemplatePicker(false)
     setForm({
       employee_name: task.employee_name ?? '', title: task.title ?? '',
@@ -2008,12 +2100,36 @@ export function Planner() {
   }
 
   const handleSubmit = () => {
+    if (backlogMode === 'pool' && poolHorizon === 'day' && !poolDue) {
+      toast.error('Pick a target day for this task')
+      return
+    }
     const body: any = { ...form }
     if (!body.start_time) body.start_time = null
     if (!body.end_time) body.end_time = null
     if (!body.duration_minutes) body.duration_minutes = null
     else body.duration_minutes = Number(body.duration_minutes)
     ;['employee_name', 'task_group', 'task_category', 'description'].forEach(k => { if (!body[k]) body[k] = null })
+    // Pool horizon (create OR edit of a pool task). 'day' carries the
+    // chosen date; week is server-normalised; general clears it.
+    if (backlogMode === 'pool') {
+      body.pool_horizon  = poolHorizon
+      body.pool_due_date = poolHorizon === 'day' ? (poolDue || null) : null
+    }
+    // Backlog: no date left = keep in backlog/pool. Assignment is fixed by
+    // scope on CREATE only ('pool' = unassigned/anyone-claims; 'mine' = me);
+    // an edit preserves the existing owner.
+    if (backlogMode) {
+      if (!body.task_date) {
+        body.task_date = null; body.start_time = null; body.end_time = null
+        // A dateless task can't recur (recurring expansion needs a date).
+        body.recurring = 'none'
+      }
+      if (!editTask) {
+        if (backlogMode === 'pool') { body.assigned_to_user_id = null; body.employee_name = null }
+        else { body.assigned_to_user_id = user?.id ?? null; body.employee_name = myName || null }
+      }
+    }
     // For status, ensure it's always a valid value or null
     if (!body.status || !['todo', 'in_progress', 'blocked', 'done'].includes(body.status)) {
       body.status = editTask ? editTask.status : 'todo'
@@ -2089,7 +2205,7 @@ export function Planner() {
             <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{subtitle}</p>
           </div>
           {/* Mobile-only: Add button next to title to save a row */}
-          {tab !== 'stats' && tab !== 'team' && (
+          {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
               className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
@@ -2118,6 +2234,9 @@ export function Planner() {
                 ['schedule', CalendarDays, t('planner.tabs.schedule', 'Schedule')],
                 ['month', CalendarRange, t('planner.tabs.month', 'Month')],
               ]
+              // Pool tab — everyone. Authors + organises the unassigned open
+              // pool into General / week / day horizons; anyone can claim.
+              tabs.push(['pool', Inbox, t('planner.tabs.pool', 'Pool')])
               // Team tab is manager-only — it's a cross-employee kanban view
               // of the backlog. Non-managers don't need it (they only see
               // their own bucket via the drawer's "Mine" tab anyway).
@@ -2143,7 +2262,7 @@ export function Planner() {
             })()}
           </div>
 
-          {tab !== 'stats' && tab !== 'team' && <>
+          {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && <>
             {/* "Just mine" filter — quick toggle to hide everyone
                 else's tasks. Persists in localStorage so the user's
                 preference survives reload. Hidden when no user name
@@ -2182,7 +2301,7 @@ export function Planner() {
       </div>
 
       {/* Group filter tabs — shared across Day / Schedule / Month */}
-      {tab !== 'stats' && tab !== 'team' && (settings.planner_groups?.length ?? 0) > 0 && (
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (settings.planner_groups?.length ?? 0) > 0 && (
         <div className="mb-4">
           <GroupFilterTabs
             groups={settings.planner_groups}
@@ -2201,11 +2320,12 @@ export function Planner() {
           to schedule; drag a scheduled chip UP into the strip to
           unschedule. Hidden on Team + Stats (those views don't drop
           tasks onto a calendar). */}
-      {tab !== 'stats' && tab !== 'team' && (
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
         <BacklogStrip
           currentUserId={user?.id ?? null}
           currentUserName={myName}
           plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+          onNewTask={(scope) => openBacklogCreate(scope)}
         />
       )}
 
@@ -2215,7 +2335,7 @@ export function Planner() {
           mirror what's actually rendered below. Overdue + Unassigned
           are clickable filters (a future iteration could deep-link
           into a filtered subview — for now they're informational). */}
-      {tab !== 'stats' && tab !== 'team' && (() => {
+      {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (() => {
         const todayISO = fmtDate(new Date())
         const total = tasks.length
         const completed = tasks.filter((t: any) => t.completed).length
@@ -2606,7 +2726,7 @@ export function Planner() {
             {/* Header row — left column sticky so the "View by employee"
                 label stays put while the user scrolls the day columns
                 horizontally on cramped screens. */}
-            <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+            <div className="grid border-b border-dark-border min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
               <div className="sticky left-0 z-10 bg-dark-surface px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center border-r border-dark-border/30">
                 <User size={14} className="mr-2" /> View by employee
               </div>
@@ -2642,7 +2762,7 @@ export function Planner() {
               const loadPct = Math.min(100, (totalHours / 40) * 100)
               const loadColor = totalHours > 40 ? '#ef4444' : totalHours > 32 ? '#f59e0b' : '#22c55e'
               return (
-                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div key={emp} className="grid border-b border-dark-border/50 hover:bg-dark-surface2/20 transition-colors min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
                   {/* Employee name cell — sticky left so the name +
                       workload stay visible while horizontally
                       scrolling the day columns. z-10 keeps it above
@@ -2787,9 +2907,9 @@ export function Planner() {
                                         {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
                                       </div>
                                     )}
-                                    <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
+                                    <div className={'flex items-start gap-1 mt-0.5 min-w-0 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
                                       <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
-                                      <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>
+                                      <span className={'text-xs truncate flex-1 min-w-0 ' + (task.completed ? 'line-through' : '')}>
                                         {task.title}
                                       </span>
                                     </div>
@@ -2847,7 +2967,7 @@ export function Planner() {
               const unassigned = tasks.filter((t: any) => !t.employee_name)
               if (unassigned.length === 0 && scheduleEmployees.length > 0) return null
               return (
-                <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}>
+                <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
                     <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
                     <span className="text-sm font-medium text-gray-500 italic">{t('planner.actions.unassigned', 'Unassigned')}</span>
@@ -2947,93 +3067,173 @@ export function Planner() {
           three task chips. On mobile (375 / 7 = 53px) the content overflows.
           Wrap in horizontal scroll with min-width so cells stay readable. */}
       {tab === 'month' && (
-        <div className="bg-dark-surface border border-dark-border rounded-xl p-3 md:p-5 overflow-x-auto">
-          <div className="grid grid-cols-7 gap-1 mb-2 min-w-[700px]">
-            {DAYS.map(d => <div key={d} className="text-center text-xs text-gray-500 font-semibold py-2 uppercase tracking-wider">{d}</div>)}
-          </div>
-          {monthWeeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1 mb-1 min-w-[700px]">
-              {week.map((date, di) => {
-                if (!date) return <div key={di} className="min-h-[100px] rounded-lg bg-dark-surface2/10" />
-                const dateStr = fmtDate(date)
-                const dayTasks = tasks.filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
-                const isToday = dateStr === today
-                const done = dayTasks.filter((t: any) => t.completed).length
-                const cellId = dateStr + '|__month'
-                const isDropTarget = dragOverCell === cellId
-                const isQuickAdd = quickAddCell === cellId
-                return (
-                  <div key={di}
-                    onClick={() => { if (!isQuickAdd) { setCurrentDate(dateStr); setTab('day') } }}
-                    onDragEnter={() => setDragOverCell(cellId)}
-                    onDragLeave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverCell(null) }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setDragOverCell(null)
-                      const taskId = Number(e.dataTransfer.getData('taskId'))
-                      const sourceDate = e.dataTransfer.getData('sourceDate')
-                      if (!taskId || dateStr === sourceDate) return
-                      moveMutation.mutate({ id: taskId, task_date: dateStr })
-                    }}
-                    className={'min-h-[100px] rounded-lg border p-2 cursor-pointer transition-all hover:border-primary-500/40 hover:shadow-lg group/cell ' +
-                      (isDropTarget ? 'border-primary-500 bg-primary-500/15 ring-2 ring-primary-500/40' :
-                        (isToday ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40'))}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={'text-xs font-bold ' + (isToday ? 'text-primary-400 bg-primary-500/10 w-6 h-6 rounded-full flex items-center justify-center' : 'text-gray-400')}>{date.getDate()}</span>
-                      <div className="flex items-center gap-1">
-                        {dayTasks.length > 0 && <span className={'text-[9px] font-semibold ' + (done === dayTasks.length ? 'text-green-400' : 'text-gray-600')}>{done}/{dayTasks.length}</span>}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
-                          className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
-                          title={t('planner.actions.quick_add', 'Quick add')}>
-                          <Plus size={11} />
-                        </button>
-                      </div>
-                    </div>
-                    {isQuickAdd ? (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <InlineQuickAdd
-                          autoFocus
-                          onSubmit={(title) => { handleQuickCreate(title, dateStr); setQuickAddCell(null) }}
-                          onCancel={() => setQuickAddCell(null)}
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {dayTasks.slice(0, 3).map((t: any) => {
-                          const tMeta = getGroupMeta(t.task_group)
-                          return (
-                            <div
-                              key={t.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation()
-                                e.dataTransfer.effectAllowed = 'move'
-                                e.dataTransfer.setData('taskId', String(t.id))
-                                e.dataTransfer.setData('sourceDate', dateStr)
-                                e.dataTransfer.setData('sourceEmp', t.employee_name || '')
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() })
-                              }}
-                              className="flex items-center gap-1 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing hover:bg-primary-500/15 transition-colors"
-                              style={{ borderLeft: `2px solid ${tMeta.color}`, paddingLeft: 4 }}>
-                              <span className={'text-[10px] truncate ' + (t.completed ? 'text-gray-600 line-through' : 'text-gray-300')}>{t.title}</span>
-                            </div>
-                          )
-                        })}
-                        {dayTasks.length > 3 && <div className="text-[10px] text-gray-600 pl-3">+{dayTasks.length - 3} more</div>}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-3 md:p-5">
+          {/* Legend (types present this month) + hide-completed filter.
+              A mostly-done month was wall-to-wall strikethrough before;
+              the toggle lets an ops lead focus on what's still open. */}
+          {(() => {
+            const monthTypes = Array.from(new Set((tasks as any[]).map((t: any) => t.task_group).filter(Boolean))) as string[]
+            return (
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {monthTypes.slice(0, 8).map(g => (
+                    <span key={g} className="inline-flex items-center gap-1.5 text-[10px] text-gray-400">
+                      <span className="w-2 h-2 rounded-full" style={{ background: getGroupMeta(g).color }} />{g}
+                    </span>
+                  ))}
+                  {monthTypes.length > 8 && <span className="text-[10px] text-gray-600">+{monthTypes.length - 8}</span>}
+                </div>
+                <button type="button" onClick={toggleMonthHideDone}
+                  className={'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ' +
+                    (monthHideDone ? 'bg-primary-500/15 border-primary-500/40 text-primary-200' : 'bg-dark-surface border-dark-border text-gray-400 hover:text-white')}>
+                  <CheckCircle2 size={12} /> {monthHideDone ? 'Completed hidden' : 'Hide completed'}
+                </button>
+              </div>
+            )
+          })()}
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5 min-w-[760px]">
+              {DAYS.map((d, i) => <div key={d} className={'text-center text-[11px] font-semibold py-1.5 uppercase tracking-wider ' + (i >= 5 ? 'text-gray-600' : 'text-gray-500')}>{d}</div>)}
             </div>
-          ))}
+            {monthWeeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1.5 mb-1.5 min-w-[760px]">
+                {week.map((date, di) => {
+                  const isWeekend = di >= 5
+                  if (!date) return <div key={di} className="min-h-[132px] rounded-xl bg-dark-surface2/[0.05] border border-transparent" />
+                  const dateStr = fmtDate(date)
+                  const dayTasks = (tasks as any[]).filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
+                  const total = dayTasks.length
+                  const done = dayTasks.filter((t: any) => t.completed).length
+                  const pending = total - done
+                  const allDone = total > 0 && pending === 0
+                  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+                  // isToday via LOCAL date parts, not fmtDate: fmtDate is UTC
+                  // (toISOString), which shifts a midnight-constructed grid date
+                  // back a day for UTC+ zones and highlighted tomorrow's cell.
+                  const _n = new Date()
+                  const isToday = date.getDate() === _n.getDate() && date.getMonth() === _n.getMonth() && date.getFullYear() === _n.getFullYear()
+                  const cellId = dateStr + '|__month'
+                  const isDropTarget = dragOverCell === cellId
+                  const isQuickAdd = quickAddCell === cellId
+                  const prank = (p: any) => { const s = String(p ?? '').toLowerCase(); return s === 'high' ? 0 : s === 'low' ? 2 : 1 }
+                  const sorted = [...dayTasks].sort((a: any, b: any) => {
+                    if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1
+                    if (prank(a.priority) !== prank(b.priority)) return prank(a.priority) - prank(b.priority)
+                    return String(a.start_time || '99:99').localeCompare(String(b.start_time || '99:99'))
+                  })
+                  const displayList = monthHideDone ? sorted.filter((t: any) => !t.completed) : sorted
+                  const visible = displayList.slice(0, 3)
+                  const remaining = displayList.length - visible.length
+                  const openDay = (e: React.MouseEvent) => { e.stopPropagation(); setDayPopover({ date: dateStr, label: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }), anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }) }
+                  return (
+                    <div key={di}
+                      onDragEnter={() => setDragOverCell(cellId)}
+                      onDragLeave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDragOverCell(null) }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                      onDrop={(e) => {
+                        e.preventDefault(); e.stopPropagation(); setDragOverCell(null)
+                        const taskId = Number(e.dataTransfer.getData('taskId'))
+                        const sourceDate = e.dataTransfer.getData('sourceDate')
+                        if (!taskId || dateStr === sourceDate) return
+                        moveMutation.mutate({ id: taskId, task_date: dateStr })
+                      }}
+                      className={'min-h-[132px] rounded-xl border p-2 flex flex-col transition-all group/cell ' +
+                        (isDropTarget ? 'border-primary-500 bg-primary-500/15 ring-2 ring-primary-500/40' :
+                          (isToday ? 'border-primary-500/60 bg-primary-500/[0.07]' :
+                            (isWeekend ? 'border-dark-border/40 bg-dark-surface2/[0.10] hover:bg-dark-surface2/25' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40') + ' hover:border-primary-500/30'))}>
+                      {/* header: date · completion · quick-add */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={'text-xs font-bold flex items-center justify-center ' + (isToday ? 'text-black bg-primary-500 w-6 h-6 rounded-full' : (isWeekend ? 'text-gray-500' : 'text-gray-300'))}>{date.getDate()}</span>
+                        <div className="flex items-center gap-1">
+                          {total > 0 && <span className={'text-[9px] font-semibold tabular-nums ' + (allDone ? 'text-green-400' : 'text-gray-500')}>{done}/{total}</span>}
+                          <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
+                            className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
+                            title={t('planner.actions.quick_add', 'Quick add')}>
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                      </div>
+                      {total > 0 && (
+                        <div className="h-1 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: allDone ? '#10b981' : '#c9a84c' }} />
+                        </div>
+                      )}
+                      {isQuickAdd ? (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <InlineQuickAdd autoFocus onSubmit={(title) => { handleQuickCreate(title, dateStr); setQuickAddCell(null) }} onCancel={() => setQuickAddCell(null)} />
+                        </div>
+                      ) : total === 0 ? (
+                        <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
+                          className="flex-1 w-full opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-center justify-center text-[11px] text-gray-600 hover:text-primary-400">
+                          + Add task
+                        </button>
+                      ) : allDone && !monthHideDone ? (
+                        <button onClick={openDay}
+                          className="flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left w-full hover:bg-green-500/10 transition-colors"
+                          style={{ background: 'rgba(16,185,129,0.08)' }}>
+                          <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                          <span className="text-[11px] text-green-300/90 font-medium">All {total} done</span>
+                        </button>
+                      ) : (
+                        <div className="space-y-1">
+                          {visible.map((t: any) => {
+                            const meta = getGroupMeta(t.task_group)
+                            const highP = String(t.priority ?? '').toLowerCase() === 'high'
+                            return (
+                              <div key={t.id} draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  e.dataTransfer.setData('taskId', String(t.id))
+                                  e.dataTransfer.setData('sourceDate', dateStr)
+                                  e.dataTransfer.setData('sourceEmp', t.employee_name || '')
+                                }}
+                                onClick={(e) => { e.stopPropagation(); setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }) }}
+                                className="flex items-center gap-1.5 rounded-md pl-1.5 pr-1 py-1 cursor-grab active:cursor-grabbing hover:brightness-125 transition-all"
+                                style={{ background: meta.color + '1f' }}
+                                title={t.title}>
+                                {t.completed
+                                  ? <CheckCircle2 size={11} className="text-green-500/80 flex-shrink-0" />
+                                  : <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />}
+                                <span className={'text-[11px] truncate flex-1 min-w-0 ' + (t.completed ? 'text-gray-500' : 'text-gray-100')}>{t.title}</span>
+                                {highP && !t.completed && <Flag size={9} className="text-red-400 flex-shrink-0" />}
+                                {t.start_time && <span className="text-[9px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                              </div>
+                            )
+                          })}
+                          {remaining > 0 ? (
+                            <button onClick={openDay} className="w-full text-left text-[10px] text-gray-500 hover:text-primary-400 pl-1.5 py-0.5 transition-colors">
+                              +{remaining} more
+                            </button>
+                          ) : monthHideDone && done > 0 ? (
+                            <button onClick={openDay} className="w-full text-left text-[10px] text-green-500/70 hover:text-green-400 pl-1.5 py-0.5 transition-colors">
+                              ✓ {done} done
+                            </button>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* ═══ POOL VIEW (everyone) ═══
+          Dedicated open-pool management: author + organise unassigned
+          work into General / week / day horizons, categorised by type
+          and highlighted by relevance to the viewer's skills. Reads the
+          same ['planner-backlog','pool'] rows as the BacklogStrip + Team
+          pool column. */}
+      {tab === 'pool' && (
+        <PoolManager
+          plannerSkills={useAuthStore.getState().staff?.planner_skills ?? null}
+          isManager={useAuthStore.getState().isAdmin()}
+          onNewTask={(horizon) => openBacklogCreate('pool', horizon)}
+          onEditTask={(task) => openEdit(task)}
+        />
       )}
 
       {/* ═══ TEAM VIEW (manager-only) ═══
@@ -3056,134 +3256,43 @@ export function Planner() {
       {/* ═══ STATS VIEW ═══ */}
       {tab === 'stats' && (
         <div className="space-y-5">
-          <div className="flex gap-3 items-end flex-wrap">
-            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => setStatsFrom(e.target.value)} className={filterSel} /></div>
-            <div><label className="block text-xs text-gray-400 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => setStatsTo(e.target.value)} className={filterSel} /></div>
+          {/* Quick range presets + custom from/to. Presets set both dates
+              in one click; editing either date drops to "Custom". */}
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              {([['today', 'Today'], ['week', 'This week'], ['2weeks', '2 weeks'], ['month', 'This month'], ['last30', 'Last 30 days'], ['year', 'This year']] as const).map(([k, label]) => (
+                <button key={k} type="button" onClick={() => applyStatsRange(k)}
+                  className={'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
+                    (statsRange === k
+                      ? 'bg-primary-500 text-black border-primary-500'
+                      : 'bg-dark-surface text-gray-400 border-dark-border hover:text-white hover:border-white/15')}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-end gap-2 ml-auto">
+              {/* Focus every breakdown on one person (or the whole team). */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Employee</label>
+                <select value={statsEmployee} onChange={e => setStatsEmployee(e.target.value)} className={filterSel}>
+                  <option value="">All team</option>
+                  {assignableEmployees.map((e: string) => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+              <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.from', 'From')}</label><input type="date" value={statsFrom} onChange={e => { setStatsFrom(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
+              <div><label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('planner.stats.to', 'To')}</label><input type="date" value={statsTo} onChange={e => { setStatsTo(e.target.value); setStatsRange('custom') }} className={filterSel} /></div>
+            </div>
           </div>
-          {stats && (() => {
-            const total = stats.by_employee.reduce((s: number, e: any) => s + e.total, 0)
-            const done = stats.by_employee.reduce((s: number, e: any) => s + e.completed, 0)
-            const rate = total > 0 ? Math.round((done / total) * 100) : 0
-            // Hours: worked = completed task durations; planned = all scheduled.
-            const workHoursPerDay = Number(rawSettings?.planner_work_hours_per_day) || 8
-            const workDaysPerWeek = Number(rawSettings?.planner_work_days_per_week) || 5
-            const workedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.worked_minutes) || 0), 0) / 60
-            const plannedH = stats.by_employee.reduce((s: number, e: any) => s + (Number(e.planned_minutes) || 0), 0) / 60
-            const byDay = (stats.by_day ?? []) as any[]
-            const perDay = byDay.map((d: any) => ({ date: String(d.task_date).slice(5), worked: Math.round(((Number(d.worked_minutes) || 0) / 60) * 10) / 10 }))
-            const daysWithWork = byDay.filter((d: any) => (Number(d.worked_minutes) || 0) > 0).length
-            const avgPerDay = daysWithWork > 0 ? workedH / daysWithWork : 0
-            const hoursByEmployee = (stats.by_employee as any[])
-              .map((e: any) => ({ name: e.employee_name || 'Unassigned', workedH: (Number(e.worked_minutes) || 0) / 60, plannedH: (Number(e.planned_minutes) || 0) / 60 }))
-              .filter((e: any) => e.workedH > 0 || e.plannedH > 0)
-              .sort((a: any, b: any) => b.workedH - a.workedH)
-            return (<>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[['Total Tasks', total, 'text-white'], ['Completed', done, 'text-green-400'], ['Pending', total - done, 'text-amber-400'], ['Rate', rate + '%', 'text-primary-400']].map(([l, v, c]) => (
-                  <div key={l as string} className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                    <p className="text-xs text-gray-500 font-medium">{l}</p>
-                    <p className={'text-3xl font-bold mt-2 ' + c}>{v}</p>
-                    {l === 'Rate' && <div className="mt-2"><ProgressBar done={done} total={total} /></div>}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_employee', 'By Employee')}</h2>
-                  {stats.by_employee.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={stats.by_employee} layout="vertical">
-                        <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <YAxis dataKey="employee_name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
-                        <Bar dataKey="completed" fill="#10b981" radius={[0, 4, 4, 0]} name="Done" stackId="a" />
-                        <Bar dataKey="total" fill="#374151" radius={[0, 4, 4, 0]} name="Remaining" stackId="a" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">{t('planner.stats.by_group', 'By Group')}</h2>
-                  {stats.by_group.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={stats.by_group}>
-                        <XAxis dataKey="task_group" tick={{ fontSize: 10, fill: '#6b7280' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
-                        <Bar dataKey="total" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Total" />
-                        <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Done" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
-              </div>
-
-              {/* ── Hours worked (from completed task durations) ── */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Hours worked</p>
-                  <p className="text-3xl font-bold mt-2 text-green-400">{workedH.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">completed tasks</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Planned hours</p>
-                  <p className="text-3xl font-bold mt-2 text-white">{plannedH.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">all scheduled</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Workday target</p>
-                  <p className="text-3xl font-bold mt-2 text-primary-400">{workHoursPerDay}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">{workHoursPerDay * workDaysPerWeek}h / week</p>
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-medium">Avg / active day</p>
-                  <p className="text-3xl font-bold mt-2 text-white">{avgPerDay.toFixed(1)}h</p>
-                  <p className="text-[11px] text-gray-500 mt-1">{daysWithWork} day{daysWithWork === 1 ? '' : 's'} worked</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">Hours by employee <span className="text-[11px] font-normal text-gray-500">(for the selected range)</span></h2>
-                  {hoursByEmployee.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-dark-border">
-                            <th className="py-2 font-semibold">Employee</th>
-                            <th className="py-2 font-semibold text-right">Worked</th>
-                            <th className="py-2 font-semibold text-right">Planned</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hoursByEmployee.map((e: any) => (
-                            <tr key={e.name} className="border-b border-dark-border/40">
-                              <td className="py-2 text-white">{e.name}</td>
-                              <td className="py-2 text-right text-green-400 font-semibold tabular-nums">{e.workedH.toFixed(1)}h</td>
-                              <td className="py-2 text-right text-gray-400 tabular-nums">{e.plannedH.toFixed(1)}h</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : <div className="h-[120px] flex items-center justify-center text-gray-600 text-sm">No hours logged</div>}
-                </div>
-                <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-4">Hours per day <span className="text-[11px] font-normal text-gray-500">(worked · target {workHoursPerDay}h)</span></h2>
-                  {perDay.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={perDay}>
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} />
-                        <Bar dataKey="worked" fill="#10b981" radius={[4, 4, 0, 0]} name="Worked h" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="h-[260px] flex items-center justify-center text-gray-600 text-sm">{t('planner.empty.no_data', 'No data')}</div>}
-                </div>
-              </div>
-            </>)
-          })()}
+          {statsEmployee && (
+            <div className="flex items-center gap-2 text-xs text-primary-300 bg-primary-500/10 border border-primary-500/25 rounded-lg px-3 py-2">
+              <span className="font-semibold">Viewing: {statsEmployee}</span>
+              <span className="text-gray-500">— every chart below is filtered to this person.</span>
+              <button onClick={() => setStatsEmployee('')} className="ml-auto text-gray-400 hover:text-white">Show all team ✕</button>
+            </div>
+          )}
+          {stats && (
+            <PlannerStats stats={stats} statsPrev={statsPrev} statsEmployee={statsEmployee} statsFrom={statsFrom} statsTo={statsTo} />
+          )}
         </div>
       )}
 
@@ -3312,7 +3421,7 @@ export function Planner() {
          * dropdowns and chunky chips so a non-expert can compose a
          * fully-specified task in <10 seconds.
          */
-        const close = () => { setShowModal(false); setEditTask(null); setForm({ ...EMPTY_FORM }) }
+        const close = () => { setShowModal(false); setEditTask(null); setBacklogMode(null); setForm({ ...EMPTY_FORM }) }
 
         const setDuration = (mins: number) => {
           setForm(f => ({
@@ -3362,7 +3471,17 @@ export function Planner() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
           <div className="bg-dark-surface border-l border-dark-border w-full max-w-md h-full flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-dark-border">
-              <h2 className="text-lg font-bold text-white">{editTask ? 'Edit task' : 'New task'}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white">{editTask ? (backlogMode === 'pool' ? 'Edit pool task' : 'Edit task') : backlogMode ? 'New backlog task' : 'New task'}</h2>
+                {backlogMode && (
+                  <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full border ' +
+                    (backlogMode === 'pool' ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'bg-gold-500/15 text-gold-300 border-gold-500/40')}>
+                    {backlogMode === 'pool'
+                      ? 'Open pool' + (poolHorizon === 'week' ? ' · This week' : poolHorizon === 'day' ? ' · By day' : '')
+                      : 'Mine'}
+                  </span>
+                )}
+              </div>
               <button onClick={close} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
             </div>
 
@@ -3505,22 +3624,63 @@ export function Planner() {
                 </div>
               </div>
 
-              {/* Date with quick chips */}
+              {/* Pool mode → Horizon control (General / This week / Specific
+                  day). Otherwise → the normal Date picker (optional in
+                  'mine' backlog mode, required for a scheduled task). */}
+              {backlogMode === 'pool' ? (
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5">
+                    <Inbox size={11} /> When should it be done?
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([['general', 'General'], ['week', 'This week'], ['day', 'Specific day']] as const).map(([k, lbl]) => {
+                      const active = poolHorizon === k
+                      return (
+                        <button key={k} type="button" onClick={() => setPoolHorizon(k)}
+                          className={'px-2 py-2 rounded-md text-xs font-semibold border transition-colors ' +
+                            (active ? 'bg-primary-500/20 border-primary-500/60 text-primary-300' : 'border-dark-border text-gray-500 hover:text-white hover:bg-dark-surface2')}>
+                          {lbl}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {poolHorizon === 'day' && (
+                    <input type="date" required value={poolDue} onChange={e => setPoolDue(e.target.value)}
+                      className="w-full mt-2 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                  )}
+                  <p className="text-[11px] text-gray-600 mt-1.5">
+                    Pool tasks stay unscheduled &amp; unassigned until someone claims them. {poolHorizon === 'week' ? 'Tagged for this week.' : poolHorizon === 'day' ? 'Tagged for the chosen day.' : 'No deadline.'}
+                  </p>
+                </div>
+              ) : (
               <div>
-                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Calendar size={11} /> Date</label>
-                <input type="date" required value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
+                <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5">
+                  <Calendar size={11} /> Date {backlogMode && <span className="normal-case font-normal text-gray-600">· optional</span>}
+                </label>
+                <input type="date" required={!backlogMode} value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
                   className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
-                <div className="flex gap-1.5 mt-2 flex-wrap">
+                <div className="flex gap-1.5 mt-2 flex-wrap items-center">
                   {[{ off: 0, lbl: 'Today' }, { off: 1, lbl: 'Tomorrow' }, { off: 2, lbl: 'In 2 days' }, { off: 7, lbl: 'Next week' }].map(d => (
                     <button key={d.lbl} type="button" onClick={() => setDateQuick(d.off)}
                       className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-500 hover:text-white hover:border-dark-border/80">
                       {d.lbl}
                     </button>
                   ))}
+                  {backlogMode && form.task_date && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, task_date: '' }))}
+                      className="text-[11px] px-2 py-1 rounded text-gray-500 hover:text-white">Clear (keep in backlog)</button>
+                  )}
                 </div>
+                {backlogMode && !form.task_date && (
+                  <p className="text-[11px] text-gray-600 mt-1.5">No date → stays in the backlog. Drag it onto the calendar later to schedule.</p>
+                )}
               </div>
+              )}
 
-              {/* Start time — 30min slots, 24h labels (07:00 → 21:00). */}
+              {/* Start time — 30min slots, 24h labels (07:00 → 21:00).
+                  Hidden for pool tasks (unscheduled — a time is set when
+                  claimed + placed on the calendar). */}
+              {backlogMode !== 'pool' && (
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Clock size={11} /> Start time</label>
                 <div className="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto p-1 bg-dark-bg border border-dark-border rounded-md">
@@ -3542,6 +3702,7 @@ export function Planner() {
                   </button>
                 )}
               </div>
+              )}
 
               {/* Duration chips */}
               <div>
@@ -3562,6 +3723,29 @@ export function Planner() {
                     Clear
                   </button>
                 </div>
+                {/* Custom duration — 15-min steps (arrows) or any exact value.
+                    Covers the gap between the 1h / 1.5h / 2h / 4h chips. */}
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500">Custom</span>
+                  <div className="flex items-center bg-dark-bg border border-dark-border rounded-md overflow-hidden">
+                    <button type="button" title="−15 min"
+                      onClick={() => setDuration(Math.max(5, (Number(form.duration_minutes) || 0) - 15))}
+                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-dark-surface2">−</button>
+                    <input type="number" min={5} max={720} step={15}
+                      value={form.duration_minutes || ''}
+                      onChange={e => { const v = e.target.value; if (v === '') { setForm(f => ({ ...f, duration_minutes: '', end_time: '' })) } else { setDuration(Math.max(1, Number(v))) } }}
+                      placeholder="min"
+                      className="w-16 bg-transparent text-center text-xs text-white tabular-nums outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                    <button type="button" title="+15 min"
+                      onClick={() => setDuration((Number(form.duration_minutes) || 0) + 15)}
+                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-dark-surface2">+</button>
+                  </div>
+                  <span className="text-[11px] text-gray-600 tabular-nums">
+                    {Number(form.duration_minutes) > 0
+                      ? `${Math.floor(Number(form.duration_minutes) / 60) ? `${Math.floor(Number(form.duration_minutes) / 60)}h ` : ''}${Number(form.duration_minutes) % 60 ? `${Number(form.duration_minutes) % 60}m` : (Number(form.duration_minutes) >= 60 ? '' : '')}`.trim() || `${form.duration_minutes}m`
+                      : 'min'}
+                  </span>
+                </div>
                 {form.start_time && form.end_time && (
                   <div className="mt-2 text-[11px] text-gray-500 flex items-center gap-1.5">
                     <activeMeta.icon size={11} style={{ color: activeMeta.color }} />
@@ -3570,7 +3754,9 @@ export function Planner() {
                 )}
               </div>
 
-              {/* Recurring */}
+              {/* Recurring — not applicable to unscheduled pool tasks
+                  (recurrence needs a concrete date to expand from). */}
+              {backlogMode !== 'pool' && (
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><Repeat size={11} /> Repeat</label>
                 <div className="flex gap-1.5 flex-wrap">
@@ -3594,6 +3780,7 @@ export function Planner() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Notes */}
               <div>
@@ -3663,6 +3850,68 @@ export function Planner() {
           }}
         />
       )}
+
+      {/* Month "view all" day popover — opened from a cell's "+N more" / all-done
+          summary. Lists every task that day with an inline done-toggle + quick-add,
+          so you manage a full day without leaving the Month grid. */}
+      {dayPopover && (() => {
+        const dstr = dayPopover.date
+        const dayTasks = (tasks as any[]).filter((t: any) => (t.task_date ?? '').slice(0, 10) === dstr)
+        const doneN = dayTasks.filter((t: any) => t.completed).length
+        const prank = (p: any) => { const s = String(p ?? '').toLowerCase(); return s === 'high' ? 0 : s === 'low' ? 2 : 1 }
+        const sorted = [...dayTasks].sort((a: any, b: any) => {
+          if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1
+          if (prank(a.priority) !== prank(b.priority)) return prank(a.priority) - prank(b.priority)
+          return String(a.start_time || '99:99').localeCompare(String(b.start_time || '99:99'))
+        })
+        const W = 340, maxH = 460, a = dayPopover.anchor
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+        const left = Math.max(12, Math.min(a.left, vw - W - 12))
+        const top = Math.max(12, a.top + maxH > vh - 12 ? vh - maxH - 12 : a.top)
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setDayPopover(null)} />
+            <div className="fixed z-50 bg-dark-surface border border-dark-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+              style={{ left, top, width: W, maxHeight: maxH }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{dayPopover.label}</div>
+                  <div className="text-[11px] text-gray-500">{doneN} of {dayTasks.length} done{dayTasks.length - doneN > 0 ? ` · ${dayTasks.length - doneN} open` : ''}</div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => { setCurrentDate(dstr); setTab('day'); setDayPopover(null) }}
+                    className="text-[11px] font-medium px-2 py-1 rounded-md text-primary-300 hover:bg-primary-500/15 transition-colors" title="Open full day view">Open day</button>
+                  <button onClick={() => setDayPopover(null)} className="p-1 rounded-md text-gray-500 hover:text-white hover:bg-white/5"><X size={15} /></button>
+                </div>
+              </div>
+              <div className="px-3 py-2 border-b border-dark-border">
+                <InlineQuickAdd autoFocus={false} onSubmit={(title) => handleQuickCreate(title, dstr)} onCancel={() => { }} />
+              </div>
+              <div className="overflow-y-auto p-2 space-y-1">
+                {sorted.map((t: any) => {
+                  const meta = getGroupMeta(t.task_group)
+                  const highP = String(t.priority ?? '').toLowerCase() === 'high'
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.05] transition-colors"
+                      style={{ background: meta.color + '12' }}>
+                      <button onClick={() => completeMutation.mutate(t.id)} className="flex-shrink-0" title={t.completed ? 'Mark open' : 'Mark done'}>
+                        {t.completed ? <CheckCircle2 size={16} className="text-green-500" /> : <Circle size={16} className="text-gray-600 hover:text-primary-400" />}
+                      </button>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />
+                      <button onClick={(e) => { setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }); setDayPopover(null) }}
+                        className={'flex-1 min-w-0 text-left text-xs truncate ' + (t.completed ? 'text-gray-500 line-through' : 'text-gray-100')} title={t.title}>{t.title}</button>
+                      {highP && !t.completed && <Flag size={11} className="text-red-400 flex-shrink-0" />}
+                      {t.start_time && <span className="text-[10px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                    </div>
+                  )
+                })}
+                {dayTasks.length === 0 && <div className="text-center text-xs text-gray-600 py-6">No tasks yet — add one above.</div>}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Recurring-delete scope picker. Replaces the previous window.prompt
           with three numbered choices, which felt out of place next to the

@@ -20,6 +20,7 @@ import GraceWindowBanner from './GraceWindowBanner'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
 import { api, resolveImage } from '../lib/api'
 import { logoutAndRedirect } from '../lib/logout'
+import { preloadRoute } from '../lib/routePreload'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
@@ -718,6 +719,9 @@ export function Layout({ children }: { children: ReactNode }) {
                       key={path}
                       to={path}
                       title={displayCollapsed ? itemLabel : undefined}
+                      onMouseEnter={() => preloadRoute(path)}
+                      onFocus={() => preloadRoute(path)}
+                      onPointerDown={() => preloadRoute(path)}
                       className={clsx(
                         'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                         displayCollapsed ? 'justify-center px-0' : 'px-3',

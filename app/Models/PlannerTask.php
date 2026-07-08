@@ -17,13 +17,69 @@ class PlannerTask extends Model
         'duration_minutes', 'completed', 'description',
         // Planner v2 — recurring task support.
         'recurring', 'recurring_until', 'recurring_parent_id',
+        // Pool horizon (2026-07) — metadata on an unscheduled pool task:
+        // 'general' | 'week' | 'day' (NULL == general). pool_due_date is the
+        // target day for 'day' (and the week-end date for 'week').
+        'pool_horizon', 'pool_due_date',
     ];
 
     protected $casts = [
         'task_date'        => 'date',
         'completed'        => 'boolean',
         'recurring_until'  => 'date',
+        // date:Y-m-d so the API returns a plain 'YYYY-MM-DD' (a bare `date`
+        // cast serialises to a full ISO datetime, which breaks front-end
+        // date parsing/labels).
+        'pool_due_date'    => 'date:Y-m-d',
+        // When the task transitioned to done — powers the Stats tab's
+        // on-time-vs-late completion analytics. Stamped/cleared by the
+        // saving() hook below, never client-set (not in $fillable).
+        'completed_at'     => 'datetime',
     ];
+
+    /**
+     * Central invariant for the pool-horizon columns. A scheduled task
+     * (task_date set) can NEVER carry a pool horizon — the calendar date
+     * wins — so both columns are cleared here. Firing on `saving` covers
+     * every write path (store / update / move / bulk / claim), so no
+     * caller can leave a horizon stranded on a scheduled row.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (PlannerTask $t) {
+            // Completion timestamp — stamp the moment a task ENTERS the done
+            // state, clear when it leaves. Must run BEFORE the pool-horizon
+            // early-return below, because completed tasks almost always carry
+            // a task_date (which triggers that return). `update()` on a model
+            // instance fires this, so every completion path is covered:
+            // toggleComplete / quickStatus / bulk mark_done / updateTask /
+            // create. The dirty-guard avoids mis-stamping a legacy done row
+            // (completed_at NULL) with now() when it is edited for other
+            // reasons — such rows stay NULL and report as "untracked".
+            $isDone = $t->completed || $t->status === 'done';
+            if ($isDone) {
+                if (is_null($t->completed_at) && (!$t->exists || $t->isDirty('completed') || $t->isDirty('status'))) {
+                    $t->completed_at = now();
+                }
+            } elseif (!is_null($t->completed_at)) {
+                $t->completed_at = null;
+            }
+
+            if (!is_null($t->task_date)) {
+                $t->pool_horizon  = null;
+                $t->pool_due_date = null;
+                return;
+            }
+            // Blank string normalises to NULL (== general). 'general' keeps
+            // its explicit value but never carries a due date.
+            if ($t->pool_horizon === '') {
+                $t->pool_horizon = null;
+            }
+            if (is_null($t->pool_horizon) || $t->pool_horizon === 'general') {
+                $t->pool_due_date = null;
+            }
+        });
+    }
 
     public function subtasks(): HasMany
     {

@@ -8,6 +8,10 @@ const ChatbotAnalytics = lazy(() => import('./ChatbotAnalytics').then(m => ({ de
 // CRM sales reporting (funnel / forecast / lost-reasons / owner board /
 // company LTV). Previously /reports — moved into the Leads tab here.
 const Reports = lazy(() => import('./Reports').then(m => ({ default: m.Reports })))
+// Planner / team-ops analytics — the full interactive Stats surface from
+// /planner, embedded here so operations reporting lives with the rest of
+// analytics. Gated on the `time_management` entitlement by the caller.
+const PlannerStatsPanel = lazy(() => import('../components/PlannerStatsPanel'))
 import toast from 'react-hot-toast'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -18,6 +22,7 @@ import { api } from '../lib/api'
 import { triggerExport } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import { useAuthStore } from '../stores/authStore'
+import { useSubscription } from '../hooks/useSubscription'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { Link } from 'react-router-dom'
 import {
@@ -26,7 +31,7 @@ import {
   BarChart3, Zap, Hotel, AlertTriangle, Briefcase, MapPin, Globe, UserCheck,
   TrendingDown, MoveRight, ChevronRight, Mail, MessageCircle, Package,
   Sparkles, CreditCard, Settings2, PlayCircle, PackageCheck, CheckCircle2,
-  Eye, Bot,
+  Eye, Bot, ClipboardList, Timer,
 } from 'lucide-react'
 
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
@@ -68,7 +73,7 @@ const CRM_PERIOD_OPTIONS = [
 // Members + Points & Rewards merged into a single "Loyalty" tab (the
 // tab id stays 'members' to avoid breaking saved selections; only the
 // label changes).
-type ActiveTab = 'overview' | 'marketing' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
+type ActiveTab = 'overview' | 'planner' | 'marketing' | 'chat' | 'leads' | 'deals' | 'members' | 'bookings' | 'venues'
 
 // Shared channel meta — keep in sync with AnalyticsService::categorizeChannel.
 // 'Unknown' is the honest bucket for visitors whose Referer header was
@@ -135,6 +140,13 @@ export function Analytics() {
   // (React Query error toasts, broken empty charts, wasted requests).
   const userIndustry = useAuthStore(s => s.user?.industry)
   const isHotelIndustry = !userIndustry || userIndustry === 'hotel'
+
+  // Planner (Time Management) is an Enterprise-gated module — /planner/*
+  // routes 402 for non-entitled orgs. Gate the Planner tab + the overview
+  // ops-KPI fetch client-side so we never fire a request that pops the
+  // upgrade modal from a background analytics load.
+  const { hasFeature } = useSubscription()
+  const canPlanner = hasFeature('time_management')
 
   // Loyalty queries
   const { data: overview } = useQuery({
@@ -276,8 +288,9 @@ export function Analytics() {
   const kpis = overview?.kpis
   const tierDist = overview?.tier_distribution ?? []
 
-  const tabs: { id: ActiveTab; label: string; icon: any }[] = [
+  const tabs: { id: ActiveTab; label: string; icon: any }[] = ([
     { id: 'overview',  label: t('analytics.tabs.overview', 'Overview'),  icon: <BarChart3 size={15} /> },
+    { id: 'planner',   label: t('analytics.tabs.planner', 'Planner'),    icon: <ClipboardList size={15} /> },
     { id: 'marketing', label: t('analytics.tabs.marketing', 'Marketing'), icon: <Target size={15} /> },
     { id: 'chat',      label: t('analytics.tabs.chat', 'Chat'),           icon: <MessageCircle size={15} /> },
     { id: 'leads',    label: t('analytics.tabs.leads', 'Leads'),       icon: <Briefcase size={15} /> },
@@ -285,7 +298,9 @@ export function Analytics() {
     { id: 'members',  label: t('analytics.tabs.loyalty', 'Loyalty'),   icon: <Award size={15} /> },
     { id: 'bookings', label: t('analytics.tabs.bookings', 'Bookings & Revenue'), icon: <Hotel size={15} /> },
     { id: 'venues',   label: t('analytics.tabs.venues', 'Venues & Guests'), icon: <MapPin size={15} /> },
-  ]
+  ] as { id: ActiveTab; label: string; icon: any }[])
+    // Planner is Enterprise-only — drop the tab when the org isn't entitled.
+    .filter(tab => tab.id !== 'planner' || canPlanner)
 
   // Lazy-fetch the data behind each operational page's stats so the
   // analytics tab can render them without each operational page also
@@ -312,6 +327,18 @@ export function Analytics() {
     queryKey: ['analytics-overview-trends'],
     queryFn: () => api.get('/v1/admin/analytics/overview-trends?days=30').then(r => r.data),
     enabled: activeTab === 'overview',
+  })
+  // Team-operations KPIs for the Overview strip — this-month planner stats.
+  // Reuses the /planner/stats endpoint; entitlement-gated so non-Enterprise
+  // orgs never fire it (would 402 + pop the upgrade modal).
+  // Local first-of-month (not toISOString, which shifts to the previous
+  // month's last day for UTC+ zones — the whole EU customer base).
+  const _pOvMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const plannerOverviewFrom = `${_pOvMonth.getFullYear()}-${String(_pOvMonth.getMonth() + 1).padStart(2, '0')}-01`
+  const { data: plannerOverview } = useQuery<any>({
+    queryKey: ['analytics-planner-overview', plannerOverviewFrom],
+    queryFn: () => api.get('/v1/admin/planner/stats', { params: { from: plannerOverviewFrom } }).then(r => r.data),
+    enabled: activeTab === 'overview' && canPlanner,
   })
   const { data: dealsKpis } = useQuery<any>({
     queryKey: ['analytics-deals-kpis'],
@@ -418,6 +445,12 @@ export function Analytics() {
       </div>
 
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
+      {activeTab === 'planner' && canPlanner && (
+        <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+          <PlannerStatsPanel enabled={canPlanner} />
+        </Suspense>
+      )}
+
       {activeTab === 'overview' && (
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
@@ -464,6 +497,47 @@ export function Analytics() {
               )
             })}
           </div>
+
+          {/* Team operations — planner health for the current month. Only
+              rendered for Enterprise orgs (the fetch is entitlement-gated). */}
+          {canPlanner && plannerOverview && (() => {
+            const n = (v: any) => Number(v) || 0
+            const byEmp = (plannerOverview.by_employee ?? []) as any[]
+            const tot = byEmp.reduce((s, e) => s + n(e.total), 0)
+            const dn = byEmp.reduce((s, e) => s + n(e.completed), 0)
+            const rate = tot > 0 ? Math.round((dn / tot) * 100) : 0
+            const workedH = byEmp.reduce((s, e) => s + n(e.worked_minutes), 0) / 60
+            const c = plannerOverview.completion || {}
+            const onTime = n(c.on_time), late = n(c.late)
+            const otPct = (onTime + late) > 0 ? Math.round((onTime / (onTime + late)) * 100) : null
+            const ops = [
+              { key: 'tasks',  label: t('analytics.ops.tasks', 'Tasks this month'), value: tot.toLocaleString(), icon: <ClipboardList size={18} />, color: 'text-blue-400',   bg: 'bg-blue-500/15',   sub: '' },
+              { key: 'rate',   label: t('analytics.ops.completion', 'Completion rate'), value: `${rate}%`, icon: <CheckCircle2 size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15', sub: `${dn} of ${tot} done` },
+              { key: 'hours',  label: t('analytics.ops.hours', 'Hours worked'), value: `${workedH.toFixed(1)}h`, icon: <Clock size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15', sub: 'done tasks' },
+              { key: 'ontime', label: t('analytics.ops.on_time', 'On-time'), value: otPct == null ? '—' : `${otPct}%`, icon: <Timer size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15', sub: otPct == null ? 'no tracked completions' : `${onTime} on time · ${late} late` },
+            ]
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <ClipboardList size={15} className="text-primary-400" />
+                  <h3 className="text-sm font-semibold text-white">{t('analytics.ops.title', 'Team operations')}</h3>
+                  <span className="text-[11px] text-t-secondary">{t('analytics.ops.this_month', 'this month')} ·{' '}
+                    <button onClick={() => setActiveTab('planner')} className="text-primary-400 hover:underline">{t('analytics.ops.full', 'full planner analytics →')}</button>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                  {ops.map(m => (
+                    <div key={m.key} className="bg-dark-surface rounded-xl border border-dark-border p-5">
+                      <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
+                      <p className="text-2xl font-bold text-white">{m.value}</p>
+                      <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
+                      {m.sub && <p className="text-[11px] text-[#636366] mt-0.5">{m.sub}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Points Activity */}
           <Card>

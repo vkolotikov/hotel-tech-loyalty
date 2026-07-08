@@ -35,6 +35,18 @@ const LeadForms          = lazy(() => import('../LeadForms').then(m => ({ defaul
 
 type TabKey = 'inquiries' | 'customers' | 'companies' | 'duplicates' | 'lead-forms'
 
+// Warm a tab's chunk on hover/pointer-down so clicking the tile opens it
+// instantly instead of waiting on the lazy fetch. Same module specifiers as
+// the lazy() above → the registry dedupes, no double download.
+const TAB_IMPORT: Record<TabKey, () => Promise<unknown>> = {
+  'inquiries':  () => import('../Inquiries'),
+  'customers':  () => import('../Customers'),
+  'companies':  () => import('../Corporate'),
+  'duplicates': () => import('../CustomerDuplicates'),
+  'lead-forms': () => import('../LeadForms'),
+}
+const preloadTab = (k: TabKey) => { try { TAB_IMPORT[k]?.() } catch { /* best-effort */ } }
+
 interface TileDef {
   key: TabKey
   label: string
@@ -116,7 +128,7 @@ export function LeadsHub() {
                 equal-weight choices. Capped width via the grid so they
                 don't balloon on ultrawide displays. */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 max-w-[1400px]">
-              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} />)}
+              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} onPreload={() => preloadTab(t.key)} />)}
             </div>
           </div>
         )
@@ -153,14 +165,17 @@ export function LeadsHub() {
 
 // ─── Tile ────────────────────────────────────────────────────────────
 
-function Tile({ tile, onClick }: { tile: TileDef; onClick: () => void }) {
+function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void; onPreload?: () => void }) {
   const Icon = tile.icon
   const { accent } = tile
   return (
     <button
       onClick={onClick}
+      onPointerDown={onPreload}
+      onFocus={onPreload}
       className="group relative aspect-square flex flex-col bg-dark-surface border border-dark-border rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 text-left"
       onMouseEnter={(e) => {
+        onPreload?.()
         e.currentTarget.style.borderColor = accent
         e.currentTarget.style.boxShadow = `0 12px 36px ${tint(accent, 0.22)}`
       }}

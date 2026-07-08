@@ -218,6 +218,21 @@ export function Inquiries() {
     refetchInterval: 120_000,
   })
 
+  // Pipeline stages drive the inline stage editor so it lists the org's
+  // ACTUAL (renamed/recoloured) stages — not the separate, drift-prone
+  // `inquiry_statuses` config. The dropdown writes `status = stage.name`
+  // and the backend keeps `pipeline_stage_id` (the pill's source) in sync.
+  const { data: pipelinesData } = useQuery<any>({
+    queryKey: ['pipelines'],
+    queryFn: () => api.get('/v1/admin/pipelines').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const pipelineStages = useMemo(() => {
+    const pls = Array.isArray(pipelinesData) ? pipelinesData : (pipelinesData?.data ?? [])
+    const def = pls.find((p: any) => p.is_default) ?? pls[0]
+    return ((def?.stages ?? []) as any[]).slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  }, [pipelinesData])
+
   // KPI data has moved to /analytics → Leads tab. Same /v1/admin/
   // inquiries/kpis endpoint powers it there.
 
@@ -417,9 +432,20 @@ export function Inquiries() {
   // PLUS a per-status filter inside the kanban-view column loop. See
   // AUDIT-2026-06-13.md performance finding.
   const { inquiries, stageCounts, byStatus } = useMemo(() => {
+    // Classify by pipeline_stage.kind first (won/lost → closed) so a
+    // RENAMED stage never falls out of the pills; fall back to the
+    // status-name buckets for the leads/deals split, defaulting an
+    // unrecognised OPEN stage to "leads" rather than dropping the row.
+    const classify = (i: any): 'leads' | 'deals' | 'closed' => {
+      const kind = i.pipeline_stage?.kind
+      if (kind === 'won' || kind === 'lost') return 'closed'
+      if (STAGE_GROUPS.deals.includes(i.status)) return 'deals'
+      if (STAGE_GROUPS.closed.includes(i.status)) return 'closed'
+      return 'leads'
+    }
     const filtered = stageGroup === 'all'
       ? allInquiries
-      : allInquiries.filter((i: any) => (STAGE_GROUPS[stageGroup] || []).includes(i.status))
+      : allInquiries.filter((i: any) => classify(i) === stageGroup)
 
     // stageCounts derives from the unfiltered list so the pill counts
     // stay stable as the user changes stageGroup (the pills SHOW the
@@ -430,11 +456,7 @@ export function Inquiries() {
       deals:  0,
       closed: 0,
     }
-    for (const inq of allInquiries) {
-      if (STAGE_GROUPS.leads.includes(inq.status)) counts.leads++
-      else if (STAGE_GROUPS.deals.includes(inq.status)) counts.deals++
-      else if (STAGE_GROUPS.closed.includes(inq.status)) counts.closed++
-    }
+    for (const inq of allInquiries) counts[classify(inq)]++
 
     // byStatus is keyed off the FILTERED list so the kanban view's
     // per-column lookup matches the previous `inquiries.filter(...)`
@@ -1293,18 +1315,15 @@ export function Inquiries() {
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              {inq.guest?.id ? (
-                                <Link
-                                  to={`/guests/${inq.guest.id}`}
-                                  className="text-sm font-semibold text-white hover:text-primary-300 truncate transition-colors"
-                                  onClick={e => e.stopPropagation()}
-                                  draggable={false}
-                                >
-                                  {inq.guest?.full_name ?? '—'}
-                                </Link>
-                              ) : (
-                                <div className="text-sm font-semibold text-white truncate">{inq.guest?.full_name ?? '—'}</div>
-                              )}
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); setInquiryDrawerId(inq.id) }}
+                                draggable={false}
+                                className="text-sm font-semibold text-white hover:text-primary-300 truncate transition-colors text-left"
+                                title={t('inquiries.row.open_lead', { defaultValue: 'Open lead' })}
+                              >
+                                {inq.guest?.full_name ?? '—'}
+                              </button>
                               {ageChip && (
                                 <span
                                   className={`flex-shrink-0 inline-flex items-center text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ageChip.cls}`}
@@ -1667,13 +1686,24 @@ export function Inquiries() {
           <div data-menu-root
             style={{ position: 'fixed', top, left, right, zIndex: 60 }}
             className="bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
-            {openMenu.type === 'status' && settings.inquiry_statuses.map(s => (
-              <button key={s} onClick={() => statusMutation.mutate({ id: openMenu.id, status: s })}
-                disabled={statusMutation.isPending || s === inq.status}
-                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 ${s === inq.status ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
-                {s === inq.status && '✓ '}{s}
-              </button>
-            ))}
+            {openMenu.type === 'status' && (() => {
+              // Prefer the live pipeline stages (name + colour); fall back to
+              // the legacy status list only if pipelines haven't loaded.
+              const opts: Array<{ name: string; color: string | null }> = pipelineStages.length > 0
+                ? pipelineStages.map((st: any) => ({ name: st.name, color: st.color ?? null }))
+                : settings.inquiry_statuses.map((s: string) => ({ name: s, color: null }))
+              const current = inq.pipeline_stage?.name ?? inq.status
+              return opts.map(o => (
+                <button key={o.name} onClick={() => statusMutation.mutate({ id: openMenu.id, status: o.name })}
+                  disabled={statusMutation.isPending || o.name === current}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 flex items-center gap-2 ${o.name === current ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
+                  {o.color
+                    ? <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: o.color }} />
+                    : <span className="w-2 flex-shrink-0" />}
+                  {o.name === current ? '✓ ' : ''}{o.name}
+                </button>
+              ))
+            })()}
             {openMenu.type === 'priority' && settings.priorities.map(p => {
               const cls = PRIORITY_COLORS[p] ?? 'text-gray-300'
               return (

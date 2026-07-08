@@ -68,6 +68,9 @@ class PlannerController extends Controller
             'description'          => 'nullable|string',
             'recurring'            => 'nullable|string|in:none,daily,weekly,monthly',
             'recurring_until'      => 'nullable|date|after:task_date',
+            // Pool horizon metadata (only meaningful when task_date is null).
+            'pool_horizon'         => 'nullable|string|in:general,week,day',
+            'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
         $validated['status'] = $validated['status'] ?? 'todo';
@@ -76,6 +79,8 @@ class PlannerController extends Controller
         $recurring = $validated['recurring'] ?? null;
         if ($recurring === 'none' || $recurring === '') $recurring = null;
         $validated['recurring'] = $recurring;
+
+        $validated = $this->normalisePoolHorizon($validated);
 
         $parent = PlannerTask::create($validated);
 
@@ -126,10 +131,33 @@ class PlannerController extends Controller
             'duration_minutes'     => 'nullable|integer|min:1',
             'completed'            => 'nullable|boolean',
             'description'          => 'nullable|string',
+            'pool_horizon'         => 'nullable|string|in:general,week,day',
+            'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
+
+        $validated = $this->normalisePoolHorizon($validated);
 
         $taskModel->update($validated);
         return response()->json($taskModel->fresh()->load('subtasks'));
+    }
+
+    /**
+     * Snap a 'week' horizon to the current Monday-based week's end (Sunday)
+     * so the client never has to send a week date. 'day' keeps the supplied
+     * date; 'general'/absent leave the columns untouched (the model's
+     * saving() hook does the final NULL-ing). Only keys actually present in
+     * the payload are modified, so a partial PUT can't wipe an existing
+     * horizon it didn't mean to touch.
+     */
+    private function normalisePoolHorizon(array $validated): array
+    {
+        if (($validated['pool_horizon'] ?? null) === 'week') {
+            $validated['pool_due_date'] = now()
+                ->startOfWeek(\Carbon\Carbon::MONDAY)
+                ->addDays(6) // Sunday of the current week
+                ->toDateString();
+        }
+        return $validated;
     }
 
     public function destroyTask(Request $request, int $task): JsonResponse
@@ -548,40 +576,214 @@ class PlannerController extends Controller
     {
         $from = $request->get('from', now()->startOfMonth()->toDateString());
         $to   = $request->get('to', now()->toDateString());
+        // Optional focus on a single person — every breakdown below narrows
+        // to them so the page answers "how did THIS employee's week go".
+        // Null/empty = the whole team.
+        $employee = $request->get('employee') ?: null;
+
+        // Org timezone for the on-time/late split: `completed_at` is stored
+        // UTC (stamped with now()), while `task_date` is the admin's LOCAL
+        // calendar date. Comparing the bare UTC date against the local date
+        // mis-flags a same-day completion as "late" for west-of-UTC orgs, so
+        // we shift completed_at into the org's own frame before ::date.
+        $tz = \App\Models\Organization::find($request->user()->organization_id)?->timezone ?: config('app.timezone', 'UTC');
+
+        // A task is "done" if EITHER the completed boolean OR status='done'
+        // is set — the two can diverge because different code paths (UI
+        // toggle, bulk mark-done, mobile app, imports) set one or the
+        // other. Counting only `completed` undercounts the real done-state
+        // and made the Stats "Completed" number disagree with the live
+        // KPI + the per-day chart. `$doneMinutes` is the worked-time twin.
+        $done        = "(completed or status = 'done')";
+        $doneCount   = "sum(case when {$done} then 1 else 0 end)";
+        $doneMinutes = "sum(case when {$done} then coalesce(duration_minutes, 0) else 0 end)";
+        // The "task" label used by the task + type→task breakdowns: the
+        // structured task_category, falling back to the free-text title.
+        $taskLabel   = "coalesce(nullif(task_category, ''), title)";
+
+        // CRITICAL: every aggregation below ends in ->toBase()->get() so it
+        // returns RAW stdClass rows, NOT PlannerTask models. The model
+        // casts `completed => boolean` and `task_date => date`; if the
+        // aggregate aliases (`... as completed`, `... as task_date`) were
+        // returned as models, those casts fire on the SUM/COUNT — turning
+        // `sum(...) as completed` into `true`/`false` (so the frontend's
+        // Number(true)=1 undercounted the total to "number of employees
+        // with any done task") and `task_date` into an ISO datetime. That
+        // was the "wrong numbers" bug. toBase() bypasses casting entirely.
 
         $byEmployee = PlannerTask::select('employee_name',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed'),
-                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes"),
                 DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->groupBy('employee_name')
-            ->get();
+            ->orderByRaw('count(*) desc')
+            ->toBase()->get();
 
+        // "By type" = task_group. Includes worked minutes so the analytics
+        // page can show hours-by-type alongside task counts.
         $byGroup = PlannerTask::select('task_group',
                 DB::raw('count(*) as total'),
-                DB::raw('sum(case when completed then 1 else 0 end) as completed')
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes"),
+                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereNotNull('task_group')
             ->groupBy('task_group')
             ->orderByDesc('total')
-            ->get();
+            ->toBase()->get();
 
-        // Worked (completed) + planned task-minutes per day across the range —
-        // powers the "hours per day" view and weekly totals for payroll.
-        $byDay = PlannerTask::select('task_date',
-                DB::raw('sum(case when completed then coalesce(duration_minutes, 0) else 0 end) as worked_minutes'),
-                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes')
+        // "By task" = the specific task label (task_category, falling back to
+        // the title). Top 20 by frequency so the chart stays readable. This
+        // is the "what work actually got done" view the type breakdown can't
+        // give — e.g. "Engraving 200 cards" vs just "Production".
+        $byTask = PlannerTask::select(
+                DB::raw("{$taskLabel} as task"),
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as worked_minutes")
             )
             ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereRaw("{$taskLabel} is not null and {$taskLabel} <> ''")
+            ->groupBy(DB::raw($taskLabel))
+            ->orderByDesc('total')
+            ->limit(20)
+            ->toBase()->get();
+
+        // Type → Task hierarchy: every (task_group, task) pair with its
+        // counts + done + minutes. Powers the "Types & their tasks"
+        // breakdown — under each type you see exactly which tasks got done,
+        // how many, and how long. The single most useful view for spotting
+        // where the week's effort actually went.
+        $byGroupTask = PlannerTask::select('task_group',
+                DB::raw("{$taskLabel} as task"),
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as minutes")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereNotNull('task_group')
+            ->whereRaw("{$taskLabel} is not null and {$taskLabel} <> ''")
+            ->groupBy('task_group', DB::raw($taskLabel))
+            ->orderByDesc('total')
+            ->toBase()->get();
+
+        // Priority mix (case-normalised so 'High' + 'high' collapse).
+        $byPriority = PlannerTask::select(
+                DB::raw("lower(coalesce(nullif(priority, ''), 'normal')) as priority"),
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->groupBy(DB::raw("lower(coalesce(nullif(priority, ''), 'normal'))"))
+            ->toBase()->get();
+
+        // Type × employee matrix — powers the stacked "type by employee"
+        // chart. Cross-references worked minutes so the same rows also feed
+        // an hours-by-type-per-person breakdown without a second query.
+        $byEmployeeGroup = PlannerTask::select('employee_name', 'task_group',
+                DB::raw('count(*) as total'),
+                DB::raw("{$doneCount} as completed"),
+                DB::raw("{$doneMinutes} as minutes")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereNotNull('task_group')
+            ->groupBy('employee_name', 'task_group')
+            ->toBase()->get();
+
+        // Worked (done) + planned task-minutes AND task counts per day
+        // across the range — powers the "hours per day" view, the tasks-
+        // completed trend, and weekly totals for payroll. toBase() keeps
+        // task_date a plain 'YYYY-MM-DD' string (a DATE column returns no
+        // time) instead of the model's ISO-datetime date cast.
+        $byDay = PlannerTask::select('task_date',
+                DB::raw("{$doneMinutes} as worked_minutes"),
+                DB::raw('sum(coalesce(duration_minutes, 0)) as planned_minutes'),
+                DB::raw('count(*) as total_tasks'),
+                DB::raw("{$doneCount} as completed_tasks")
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
             ->whereNotNull('task_date')
             ->groupBy('task_date')
             ->orderBy('task_date')
-            ->get();
+            ->toBase()->get();
 
-        return response()->json(['by_employee' => $byEmployee, 'by_group' => $byGroup, 'by_day' => $byDay]);
+        // On-time vs late completions — among in-range done tasks, split by
+        // whether they finished on/before their scheduled day. `completed_at`
+        // is stamped by the PlannerTask saving() hook; rows completed before
+        // that column existed carry NULL and are reported as `untracked` so
+        // they are never mis-attributed as on-time or late.
+        // `local_done::date` = completed_at shifted UTC → org tz, then dated.
+        // coalesce(sum(...),0): an ungrouped sum() over an empty set (e.g. a
+        // range with no dated tasks) returns NULL in Postgres, not 0.
+        $localDone = "(completed_at at time zone 'UTC' at time zone ?)::date";
+        $completion = PlannerTask::selectRaw(
+                "coalesce(sum(case when {$done} and completed_at is not null and {$localDone} <= task_date then 1 else 0 end), 0) as on_time,
+                 coalesce(sum(case when {$done} and completed_at is not null and {$localDone} >  task_date then 1 else 0 end), 0) as late,
+                 coalesce(sum(case when {$done} and completed_at is null then 1 else 0 end), 0) as untracked",
+                [$tz, $tz]
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereNotNull('task_date')
+            ->toBase()->first();
+
+        // When work happens — a weekday × start-hour matrix (only timed tasks
+        // contribute). dow: 0=Sunday … 6=Saturday (Postgres extract). Powers
+        // the "busy times" heatmap so an ops lead sees when the team clusters.
+        $byDowHour = PlannerTask::selectRaw(
+                "extract(dow from task_date)::int as dow,
+                 extract(hour from start_time)::int as hour,
+                 count(*) as total,
+                 {$doneMinutes} as worked_minutes"
+            )
+            ->whereBetween('task_date', [$from, $to])
+            ->when($employee, fn ($q) => $q->where('employee_name', $employee))
+            ->whereNotNull('task_date')
+            ->whereNotNull('start_time')
+            ->groupByRaw('1, 2')
+            ->toBase()->get();
+
+        // Open-pool aging — a "right now" snapshot (deliberately NOT range-
+        // bound, since pool tasks have no task_date) of unassigned +
+        // unscheduled tasks bucketed by how long they've waited. Surfaces
+        // work rotting in the pool that nobody has claimed. Ignores the
+        // employee filter — a pool task has no employee by definition.
+        $poolAging = PlannerTask::selectRaw(
+                "count(*) as total,
+                 coalesce(sum(case when created_at >= now() - interval '1 day'  then 1 else 0 end), 0) as d0,
+                 coalesce(sum(case when created_at <  now() - interval '1 day'  and created_at >= now() - interval '3 days' then 1 else 0 end), 0) as d1,
+                 coalesce(sum(case when created_at <  now() - interval '3 days' and created_at >= now() - interval '7 days' then 1 else 0 end), 0) as d3,
+                 coalesce(sum(case when created_at <  now() - interval '7 days' then 1 else 0 end), 0) as d7,
+                 to_char(min(created_at), 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as oldest"
+            )
+            ->whereNull('task_date')
+            ->whereNull('assigned_to_user_id')
+            ->where(fn ($q) => $q->whereNull('employee_name')->orWhere('employee_name', ''))
+            ->toBase()->first();
+
+        return response()->json([
+            'by_employee'       => $byEmployee,
+            'by_group'          => $byGroup,
+            'by_task'           => $byTask,
+            'by_group_task'     => $byGroupTask,
+            'by_priority'       => $byPriority,
+            'by_employee_group' => $byEmployeeGroup,
+            'by_day'            => $byDay,
+            'completion'        => $completion,
+            'by_dow_hour'       => $byDowHour,
+            'pool_aging'        => $poolAging,
+        ]);
     }
 
     /* ─── Templates ────────────────────────────────────────────── */

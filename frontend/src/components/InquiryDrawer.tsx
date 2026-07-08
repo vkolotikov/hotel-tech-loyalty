@@ -10,6 +10,7 @@ import { api } from '../lib/api'
 import EditableField from './EditableField'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { ChatHistoryPanel } from './ChatHistoryPanel'
+import { InquiryActivityTimeline } from './InquiryActivityTimeline'
 
 /**
  * InquiryDrawer — left-side slide panel showing a single lead's full detail
@@ -731,21 +732,12 @@ export function InquiryDrawer({
                     page so both surfaces stay in sync. */}
                 <ChatHistoryPanel inquiryId={inq.id} />
 
-                {/* Remaining activity types — calls, emails, stage changes,
-                    notes timeline — still to come. The placeholder is dropped
-                    INSIDE the tab so the chat panel above takes precedence
-                    for the most common workflow (reviewing a chatbot lead). */}
-                <div className="bg-dark-bg/40 border border-dark-border/60 rounded-xl py-6 px-6 flex flex-col items-center justify-center text-center">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: 'rgba(34, 211, 238, 0.10)', border: '1px solid rgba(34, 211, 238, 0.25)' }}>
-                    <Sparkles size={16} className="text-cyan-400" />
-                  </div>
-                  <p className="text-xs font-bold text-white mb-1">
-                    {t('inquiryDrawer.activity.more_coming', 'More activity coming soon')}
-                  </p>
-                  <span className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-                    {t('inquiryDrawer.activity.hint', 'Calls, emails, notes and stage changes will show up here.')}
-                  </span>
-                </div>
+                {/* The lead's own activity timeline + a quick log composer —
+                    inquiry-scoped so a note/call logged here appears on the
+                    /inquiries/:id detail page too (both hit ActivityController
+                    on the same Activity table). This is what the "add note /
+                    log" affordance the card was missing. */}
+                <InquiryActivityTimeline inquiryId={inq.id} />
               </div>
             )}
           </div>
