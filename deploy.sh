@@ -18,6 +18,16 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Install PHP dependencies when composer is available on the deploy host.
+# Guarded so platforms that install deps in a separate build step (and may
+# not expose composer on PATH here) don't fail the whole deploy.
+if command -v composer >/dev/null 2>&1; then
+  echo "→ Installing PHP dependencies…"
+  composer install --no-dev --optimize-autoloader --no-interaction
+else
+  echo "→ composer not on PATH — assuming the platform installs dependencies separately."
+fi
+
 echo "→ Clearing stale framework caches…"
 php artisan optimize:clear
 
