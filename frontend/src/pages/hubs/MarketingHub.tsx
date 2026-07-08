@@ -1,11 +1,9 @@
 import { lazy, Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Bell, Mail, Star, ArrowLeft, Search } from 'lucide-react'
+import { Bell, Mail, Star, ArrowLeft, Search, Sparkles } from 'lucide-react'
 
 /**
- * "Marketing" hub — outbound communication + customer feedback. The
- * three legacy standalone pages (Notifications/Campaigns, Email
- * Templates, Reviews) live here as tabs.
+ * "Marketing" hub — outbound communication + customer feedback + AI content planning.
  *
  * Layout (2026-05-30 rev): flat square-tile grid. Outreach / Feedback
  * section headers dropped — each tile carries its own accent for
@@ -18,8 +16,9 @@ import { Bell, Mail, Star, ArrowLeft, Search } from 'lucide-react'
 const Notifications  = lazy(() => import('../Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('../EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Reviews        = lazy(() => import('../Reviews').then(m => ({ default: m.Reviews })))
+const ContentPlanner = lazy(() => import('../ContentPlanner').then(m => ({ default: m.ContentPlanner })))
 
-type TabKey = 'campaigns' | 'email-templates' | 'reviews'
+type TabKey = 'campaigns' | 'email-templates' | 'reviews' | 'content-planner'
 
 interface TileDef {
   key: TabKey
@@ -33,6 +32,7 @@ const TILES: TileDef[] = [
   { key: 'campaigns',       label: 'Campaigns',       desc: 'Scheduled and one-off push + email campaigns',  icon: Bell, accent: '#a78bfa' }, // violet
   { key: 'email-templates', label: 'Email Templates', desc: 'Reusable email designs you can send to anyone', icon: Mail, accent: '#f472b6' }, // pink
   { key: 'reviews',         label: 'Reviews',         desc: 'Post-stay reviews and the forms to collect them', icon: Star, accent: '#c9a84c' }, // gold
+  { key: 'content-planner', label: 'AI Content Planner', desc: 'Generate and manage social media content with AI', icon: Sparkles, accent: '#8b5cf6' }, // purple
 ]
 
 const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
@@ -118,9 +118,10 @@ export function MarketingHub() {
           </div>
 
           <Suspense fallback={fallback}>
-            {active === 'campaigns'       && <Notifications />}
-            {active === 'email-templates' && <EmailTemplates />}
-            {active === 'reviews'         && <Reviews />}
+            {active === 'campaigns'        && <Notifications />}
+            {active === 'email-templates'  && <EmailTemplates />}
+            {active === 'reviews'          && <Reviews />}
+            {active === 'content-planner'  && <ContentPlanner />}
           </Suspense>
         </div>
       )}
