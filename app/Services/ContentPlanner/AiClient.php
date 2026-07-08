@@ -24,10 +24,12 @@ final class AiClient
 
     public function __construct()
     {
+        // Read via config (not env()) so the key survives config:cache in
+        // production — env() returns null outside config files once cached.
         $this->client = new Client(
-            apiKey: env('ANTHROPIC_API_KEY'),
+            apiKey: (string) config('services.anthropic.api_key'),
         );
-        $this->model = env('CONTENT_PLANNER_AI_MODEL', 'claude-sonnet-5');
+        $this->model = (string) config('services.anthropic.content_planner_model', 'claude-sonnet-5');
     }
 
     /**

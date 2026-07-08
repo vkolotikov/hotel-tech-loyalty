@@ -34,6 +34,10 @@ return [
         // absent — every admin AI call would 400 on an unknown model.
         // See AUDIT-2026-06-13.md configuration finding.
         'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+        // Dedicated model for the AI Content Planner so it can differ from
+        // the chatbot model. Read via config (not env()) so it survives
+        // config:cache in production.
+        'content_planner_model' => env('CONTENT_PLANNER_AI_MODEL', 'claude-sonnet-5'),
     ],
 
     'saas' => [
