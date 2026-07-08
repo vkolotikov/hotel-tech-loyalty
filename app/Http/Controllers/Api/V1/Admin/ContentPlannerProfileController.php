@@ -113,9 +113,97 @@ class ContentPlannerProfileController extends Controller
             'channels' => 'nullable|array',
         ]);
 
+        [$profile, $readiness] = $this->persistProfile(
+            $org,
+            $brandId,
+            $validated,
+            $request->boolean('use_existing_knowledge'),
+            $request->user()?->id
+        );
+
+        return response()->json([
+            'profile' => $profile->fresh(['audiences', 'channels', 'brandVoices', 'pillars']),
+            'readiness' => $readiness,
+            'message' => 'Content Planner profile saved.',
+        ], 201);
+    }
+
+    /**
+     * Quick Start: minimal input (name, goal, platforms, intensity) + one AI
+     * call that fills brand DNA / audience / voice / positioning from the
+     * company's existing FAQ, chatbot and org knowledge. Everything the AI
+     * inferred is returned as `assumptions` and the audience is flagged
+     * is_ai_assumed so the user can review it in Advanced setup.
+     */
+    public function quickSetup(Request $request, \App\Services\ContentPlanner\ProfileBootstrapService $bootstrap): JsonResponse
+    {
+        set_time_limit(600); // one AI call, can take ~30-90s
+
+        $orgId = $request->user()?->organization_id ?? app('current_organization_id');
+        if (!$orgId) {
+            return response()->json(['error' => 'User has no organization'], 403);
+        }
+        $org = Organization::find($orgId);
+        $brandId = Brand::currentOrDefaultIdForOrg($org->id)
+            ?: Brand::where('organization_id', $org->id)->value('id');
+        if (!$brandId) {
+            return response()->json(['error' => 'Organization has no brands configured'], 422);
+        }
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'default_language' => 'nullable|string|max:10',
+            'primary_goal' => 'nullable|string|max:500',
+            'platforms' => 'required|array|min:1',
+            'platforms.*' => 'string|max:50',
+            'intensity' => 'nullable|string|in:light,standard,active',
+        ]);
+
+        // The AI logger needs a profile row, so create the shell first.
+        $profile = ContentPlannerProfile::firstOrCreate(
+            ['organization_id' => $org->id, 'brand_id' => $brandId],
+            [
+                'name' => $validated['name'] ?? ($org->name . ' Content Plan'),
+                'default_language' => $validated['default_language'] ?? 'en',
+                'created_by' => $request->user()?->id,
+            ]
+        );
+
+        try {
+            $result = $bootstrap->bootstrap($profile, $validated);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Quick setup failed',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+
+        [$profile, $readiness] = $this->persistProfile(
+            $org,
+            $brandId,
+            $result['payload'],
+            true,
+            $request->user()?->id
+        );
+
+        return response()->json([
+            'profile' => $profile->fresh(['audiences', 'channels', 'brandVoices', 'pillars']),
+            'readiness' => $readiness,
+            'assumptions' => $result['assumptions'],
+            'message' => 'Profile built from your existing knowledge. Review the AI\'s assumptions any time in Setup.',
+        ], 201);
+    }
+
+    /**
+     * Persist a wizard-shaped payload: upsert the profile row and replace
+     * audiences / channels / brand voice in one transaction. Shared by the
+     * Advanced wizard (store) and Quick Start (quickSetup).
+     */
+    private function persistProfile(Organization $org, int $brandId, array $validated, bool $useKnowledge, ?int $userId): array
+    {
         // Get knowledge summary if using existing sources
         $summary = null;
-        if ($request->boolean('use_existing_knowledge')) {
+        if ($useKnowledge) {
             $summary = $this->knowledgeService->summarizeForAi($org->id, $brandId);
         }
 
@@ -146,7 +234,7 @@ class ContentPlannerProfileController extends Controller
             'trend_mode' => $validated['trend_mode'] ?? 'evergreen',
             'setup_step' => $validated['setup_step'] ?? 0,
             'setup_completed_at' => now(),
-            'created_by' => $request->user()?->id,
+            'created_by' => $userId,
         ];
 
         if ($summary !== null) {
@@ -211,7 +299,7 @@ class ContentPlannerProfileController extends Controller
                 $audIdx = $ch['audience_index'] ?? null;
                 $profile->channels()->create($base + [
                     'platform' => $ch['platform'] ?? 'linkedin',
-                    'label' => $ch['label'] ?? null,
+                    'label' => $ch['label'] ?? ucfirst((string) ($ch['platform'] ?? 'channel')),
                     'url' => $ch['url'] ?? null,
                     'goal' => $ch['goal'] ?? null,
                     'role' => $ch['role'] ?? null,
@@ -252,11 +340,7 @@ class ContentPlannerProfileController extends Controller
             return [$profile, $readiness];
         });
 
-        return response()->json([
-            'profile' => $profile->fresh(['audiences', 'channels', 'brandVoices', 'pillars']),
-            'readiness' => $readiness,
-            'message' => 'Content Planner profile saved.',
-        ], 201);
+        return [$profile, $readiness];
     }
 
     /**

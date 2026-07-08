@@ -746,6 +746,8 @@ function PostDetail({
         </div>
 
         {/* e) AI actions */}
+        <div className="rounded-lg border border-violet-500/25 bg-violet-500/5 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-violet-300">AI tools</p>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleGenerateCopy}
@@ -786,6 +788,10 @@ function PostDetail({
             )}
           </div>
           {aiPending && <span className="text-[11px] text-t-secondary">AI is working — this can take up to 90 seconds…</span>}
+        </div>
+        <p className="mt-2 text-[11px] text-t-secondary">
+          <span className="text-white">Generate copy</span> writes the full post from your strategy · <span className="text-white">Rewrite</span> makes a different version of what's there.
+        </p>
         </div>
 
         {/* f) Variations */}

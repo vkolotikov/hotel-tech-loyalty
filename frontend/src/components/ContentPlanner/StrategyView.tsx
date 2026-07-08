@@ -23,11 +23,34 @@ const STRATEGY_STATUS: Record<string, { label: string; cls: string }> = {
 
 /* ─── Small presentational helpers ───────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, children, collapsible = false }: { title: string; children: ReactNode; collapsible?: boolean }) {
+  // Deep-detail sections start collapsed so the page reads as a summary
+  // first; a click expands the expert-level detail.
+  const [open, setOpen] = useState(!collapsible)
+
+  if (!collapsible) {
+    return (
+      <section className="rounded-lg border border-dark-border bg-dark-surface p-4">
+        <h3 className="text-sm font-semibold text-white mb-3">{title}</h3>
+        {children}
+      </section>
+    )
+  }
+
   return (
-    <section className="rounded-lg border border-dark-border bg-dark-surface p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">{title}</h3>
-      {children}
+    <section className="rounded-lg border border-dark-border bg-dark-surface">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center justify-between gap-2 p-4 text-left"
+      >
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        <span className="flex items-center gap-1.5 text-xs text-t-secondary">
+          {open ? 'Hide' : 'Show'}
+          <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
     </section>
   )
 }
@@ -341,7 +364,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
 
       {/* 3. Audience map */}
       {!!out.audience_map?.length && (
-        <Section title="Audience map">
+        <Section title="Audience map" collapsible>
           <div className="grid md:grid-cols-2 gap-3">
             {out.audience_map.map((a, i) => (
               <div key={i} className="rounded-lg border border-dark-border bg-dark-surface2 p-3 space-y-2.5">
@@ -450,7 +473,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
 
       {/* 7. Platform strategy */}
       {platformEntries.length > 0 && (
-        <Section title="Platform strategy">
+        <Section title="Platform strategy" collapsible>
           <div className="space-y-2">
             {platformEntries.map(([platform, ps]) => {
               const meta = PLATFORM_META[platform]
@@ -506,7 +529,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
       {(hasEngagement || hasConversion) && (
         <div className="grid md:grid-cols-2 gap-4">
           {hasEngagement && (
-            <Section title="Engagement strategy">
+            <Section title="Engagement strategy" collapsible>
               <div className="space-y-3">
                 <ChipGroup
                   label="Primary goals"
@@ -528,7 +551,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
             </Section>
           )}
           {hasConversion && (
-            <Section title="Conversion strategy">
+            <Section title="Conversion strategy" collapsible>
               <div className="space-y-3">
                 {cs?.approach && <p className="text-sm text-gray-300">{cs.approach}</p>}
                 {!!cs?.soft_cta_examples?.length && (
@@ -547,14 +570,14 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
 
       {/* 9. Visual direction */}
       {out.visual_direction && (
-        <Section title="Visual direction">
+        <Section title="Visual direction" collapsible>
           <p className="text-sm text-gray-300 leading-relaxed">{out.visual_direction}</p>
         </Section>
       )}
 
       {/* 10. Monthly themes & campaign ideas */}
       {(!!out.monthly_themes?.length || !!out.campaign_ideas?.length) && (
-        <Section title="Monthly themes & campaigns">
+        <Section title="Monthly themes & campaigns" collapsible>
           <div className="space-y-3">
             <Chips items={out.monthly_themes} />
             {!!out.campaign_ideas?.length && (
@@ -574,7 +597,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
 
       {/* 11. Example posts */}
       {!!out.example_posts?.length && (
-        <Section title="Example posts">
+        <Section title="Example posts" collapsible>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {out.example_posts.map((p, i) => {
               const meta = p.platform ? PLATFORM_META[p.platform] : undefined

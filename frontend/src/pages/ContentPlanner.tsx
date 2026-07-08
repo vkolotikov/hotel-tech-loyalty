@@ -10,6 +10,7 @@ const StrategyView = lazy(() => import('../components/ContentPlanner/StrategyVie
 const CalendarView = lazy(() => import('../components/ContentPlanner/CalendarView').then(m => ({ default: m.CalendarView })))
 const PostsView = lazy(() => import('../components/ContentPlanner/PostsView').then(m => ({ default: m.PostsView })))
 const SetupWizard = lazy(() => import('../components/ContentPlanner/SetupWizard').then(m => ({ default: m.SetupWizard })))
+const QuickSetup = lazy(() => import('../components/ContentPlanner/QuickSetup').then(m => ({ default: m.QuickSetup })))
 
 type Tab = 'dashboard' | 'strategy' | 'calendar' | 'posts' | 'setup'
 
@@ -27,6 +28,7 @@ export function ContentPlanner() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('dashboard')
   const [openPostId, setOpenPostId] = useState<number | null>(null)
+  const [advancedSetup, setAdvancedSetup] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cp-profile'],
@@ -62,10 +64,18 @@ export function ContentPlanner() {
   if (!data.exists || !data.profile) {
     return (
       <Suspense fallback={fallback}>
-        <SetupWizard
-          detected={data.detected_knowledge}
-          onComplete={() => queryClient.invalidateQueries({ queryKey: ['cp-profile'] })}
-        />
+        {advancedSetup ? (
+          <SetupWizard
+            detected={data.detected_knowledge}
+            onComplete={() => queryClient.invalidateQueries({ queryKey: ['cp-profile'] })}
+          />
+        ) : (
+          <QuickSetup
+            detected={data.detected_knowledge}
+            onComplete={() => queryClient.invalidateQueries({ queryKey: ['cp-profile'] })}
+            onAdvanced={() => setAdvancedSetup(true)}
+          />
+        )}
       </Suspense>
     )
   }

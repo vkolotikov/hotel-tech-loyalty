@@ -478,6 +478,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('profile',                           [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'show']);
                 Route::post('profile',                          [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'store']);
                 Route::get('profile/readiness',                 [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'readiness']);
+                Route::post('profile/quick-setup',              [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'quickSetup']);
                 Route::put('profile/{id}',                      [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'update']);
                 Route::post('profile/{id}/refresh-knowledge',   [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'refreshKnowledge']);
 

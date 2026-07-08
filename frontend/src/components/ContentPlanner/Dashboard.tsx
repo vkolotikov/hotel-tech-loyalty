@@ -87,8 +87,53 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
 
   const stat = (v: number) => (postsLoading ? '—' : v)
 
+  // Guided journey for new users: setup → strategy → plan → publish.
+  // Hidden once every step is done — experts never see it again.
+  const journeySteps = [
+    { key: 'setup', label: 'Set up profile', done: true, action: 'setup' as const, cta: 'Review setup' },
+    { key: 'strategy', label: 'Generate strategy', done: !!currentStrategy, action: 'strategy' as const, cta: 'Generate strategy' },
+    { key: 'plan', label: 'Plan your month', done: plannedThisMonth > 0, action: 'calendar' as const, cta: 'Open calendar' },
+    { key: 'publish', label: 'Review & publish', done: posts.some(p => p.status === 'ready_to_publish' || p.status === 'published'), action: 'posts' as const, cta: 'Review posts' },
+  ]
+  const nextStep = journeySteps.find(s => !s.done)
+  const journeyDone = !nextStep
+
   return (
     <div className="space-y-4">
+      {/* Guided journey (new users) */}
+      {!journeyDone && !postsLoading && (
+        <div className="rounded-lg border border-violet-500/40 bg-violet-500/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {journeySteps.map((s, i) => (
+                <div key={s.key} className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                    s.done
+                      ? 'bg-green-500/15 text-green-300'
+                      : s === nextStep
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-dark-surface2 text-t-secondary'
+                  }`}>
+                    {s.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                    {s.label}
+                  </span>
+                  {i < journeySteps.length - 1 && <ArrowRight size={11} className="text-t-secondary/40" />}
+                </div>
+              ))}
+            </div>
+            {nextStep && (
+              <button
+                type="button"
+                onClick={() => onNavigate(nextStep.action)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-violet-700"
+              >
+                {nextStep.cta} <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-lg border border-dark-border bg-dark-surface p-4">

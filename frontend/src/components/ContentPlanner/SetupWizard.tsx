@@ -104,6 +104,7 @@ interface WizardForm {
   channels: Record<string, WizardChannel>
   weekly_rhythm: Record<string, { role: string; notes: string }>
   content_mix: Record<string, number>
+  mix_ai: boolean
   engagement_goals: string[]
   trend_mode: string
   visual: { style: string; image_types: string[]; avoid: string[]; aspect_ratios: string[]; colors: string[] }
@@ -196,6 +197,7 @@ function emptyForm(): WizardForm {
       WEEKDAYS.map(d => [d, { role: DEFAULT_RHYTHM[d].role, notes: DEFAULT_RHYTHM[d].notes }] as [string, { role: string; notes: string }]),
     ),
     content_mix: { ...DEFAULT_MIX },
+    mix_ai: true,
     engagement_goals: [],
     trend_mode: 'evergreen',
     visual: { style: 'premium', image_types: [], avoid: [], aspect_ratios: [], colors: [] },
@@ -276,6 +278,7 @@ function fromProfile(p: PlannerProfile): WizardForm {
       }),
     ),
     content_mix: p.content_mix && Object.keys(p.content_mix).length ? { ...p.content_mix } : { ...DEFAULT_MIX },
+    mix_ai: !(p.content_mix && Object.keys(p.content_mix).length),
     engagement_goals: sl(p.engagement_goals),
     trend_mode: p.trend_mode || 'evergreen',
     visual: {
@@ -376,7 +379,7 @@ function buildPayload(form: WizardForm): Record<string, unknown> {
     important_links: form.important_links,
     positioning: form.positioning,
     key_messages: form.key_messages,
-    content_mix: Object.fromEntries(Object.entries(form.content_mix).filter(([, v]) => v > 0)),
+    content_mix: form.mix_ai ? {} : Object.fromEntries(Object.entries(form.content_mix).filter(([, v]) => v > 0)),
     weekly_rhythm: form.weekly_rhythm,
     engagement_goals: form.engagement_goals,
     visual_style: form.visual,
@@ -1089,13 +1092,34 @@ function Step7Rhythm({ form, up }: StepProps) {
       <div>
         <div className="mb-2 flex items-center justify-between gap-3">
           <h4 className="text-sm font-semibold text-white">Content mix</h4>
-          <div className="flex items-center gap-3">
-            <span className={`text-sm font-bold ${total === 100 ? 'text-green-400' : 'text-amber-400'}`}>Total: {total}%</span>
-            <button type="button" onClick={() => up({ content_mix: normalizeMix(form.content_mix) })} className="text-xs text-violet-400 hover:text-violet-300">
-              Balance to 100%
-            </button>
-          </div>
+          {!form.mix_ai && (
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-bold ${total === 100 ? 'text-green-400' : 'text-amber-400'}`}>Total: {total}%</span>
+              <button type="button" onClick={() => up({ content_mix: normalizeMix(form.content_mix) })} className="text-xs text-violet-400 hover:text-violet-300">
+                Balance to 100%
+              </button>
+            </div>
+          )}
         </div>
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => up({ mix_ai: true })}
+            className={`rounded-lg border p-3 text-left transition-colors ${form.mix_ai ? 'border-violet-500/60 bg-violet-500/10' : 'border-dark-border bg-dark-surface hover:border-dark-border2'}`}
+          >
+            <p className="text-sm font-medium text-white">Let AI decide <span className="text-violet-300">(recommended)</span></p>
+            <p className="mt-0.5 text-xs text-t-secondary">The strategy generator picks the best split for your brand.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => up({ mix_ai: false })}
+            className={`rounded-lg border p-3 text-left transition-colors ${!form.mix_ai ? 'border-violet-500/60 bg-violet-500/10' : 'border-dark-border bg-dark-surface hover:border-dark-border2'}`}
+          >
+            <p className="text-sm font-medium text-white">Set manually</p>
+            <p className="mt-0.5 text-xs text-t-secondary">Control the exact percentage of each content type.</p>
+          </button>
+        </div>
+        {!form.mix_ai && (
         <div className="space-y-2">
           {Object.entries(MIX_CATEGORIES).map(([k, label]) => (
             <div key={k} className="flex items-center gap-3">
@@ -1112,6 +1136,7 @@ function Step7Rhythm({ form, up }: StepProps) {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       <div>
@@ -1237,7 +1262,9 @@ function Step8Review({ form, readiness, onEdit }: { form: WizardForm; readiness?
       <SummaryCard title="Rhythm & goals" onEdit={() => onEdit(6)}>
         <p>
           <span className="font-medium text-white">Content mix:</span>{' '}
-          <span className={mixTotal === 100 ? 'text-green-400' : 'text-amber-400'}>{mixTotal}%</span> allocated
+          {form.mix_ai
+            ? <span className="text-violet-300">AI decides (recommended)</span>
+            : <><span className={mixTotal === 100 ? 'text-green-400' : 'text-amber-400'}>{mixTotal}%</span> allocated</>}
         </p>
         <Row k="Engagement goals" v={form.engagement_goals.length ? form.engagement_goals.map(g => ENGAGEMENT_GOALS[g] ?? g).join(', ') : '—'} />
         <Row k="Trend mode" v={TREND_MODES[form.trend_mode]?.label ?? cap(form.trend_mode)} />

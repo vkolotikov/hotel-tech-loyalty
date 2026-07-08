@@ -259,6 +259,8 @@ export const cp = {
   getProfile: () => api.get<ProfileResponse>(`${BASE}/profile`).then(r => r.data),
   saveProfile: (payload: Record<string, unknown>) =>
     api.post(`${BASE}/profile`, payload, { timeout: 120_000 }).then(r => r.data),
+  quickSetup: (payload: { name?: string; default_language?: string; primary_goal?: string; platforms: string[]; intensity?: string }) =>
+    api.post(`${BASE}/profile/quick-setup`, payload, { timeout: AI_TIMEOUT }).then(r => r.data),
   updateProfile: (id: number, payload: Record<string, unknown>) =>
     api.put(`${BASE}/profile/${id}`, payload).then(r => r.data),
   getReadiness: () => api.get<{ readiness: Readiness }>(`${BASE}/profile/readiness`).then(r => r.data),
@@ -430,6 +432,26 @@ export const POST_TYPES: Record<string, string> = {
   video_script: 'Video script',
   product_demo: 'Product demo',
 }
+
+export const LANGUAGES: { code: string; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'de', label: 'German' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'lv', label: 'Latvian' },
+  { code: 'lt', label: 'Lithuanian' },
+  { code: 'et', label: 'Estonian' },
+  { code: 'pl', label: 'Polish' },
+  { code: 'fr', label: 'French' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'it', label: 'Italian' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'nl', label: 'Dutch' },
+  { code: 'sv', label: 'Swedish' },
+  { code: 'fi', label: 'Finnish' },
+  { code: 'uk', label: 'Ukrainian' },
+]
+
+export const GOAL_PRESETS = ['Increase brand awareness', 'Generate leads', 'Drive sales', 'Build community', 'Improve engagement']
 
 export const FORMALITY_LEVELS = ['casual', 'balanced', 'formal']
 export const SENTENCE_STYLES = ['short', 'balanced', 'storytelling']
