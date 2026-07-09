@@ -39,7 +39,7 @@ class CrmAiController extends Controller
             $r = \Illuminate\Support\Facades\Http::timeout(10)
                 ->withHeaders(["x-api-key" => $apiKey, "anthropic-version" => "2023-06-01", "content-type" => "application/json"])
                 ->post("https://api.anthropic.com/v1/messages", [
-                    "model" => "claude-sonnet-4-20250514", "max_tokens" => 5,
+                    "model" => config("services.anthropic.model", "claude-sonnet-5"), "max_tokens" => 5,
                     "messages" => [["role" => "user", "content" => "Say hi"]],
                 ]);
             $checks["api_status"] = $r->status();

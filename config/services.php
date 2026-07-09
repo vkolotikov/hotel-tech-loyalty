@@ -28,12 +28,12 @@ return [
 
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
-        // Default must be a real Anthropic model id. The previous
-        // `claude-sonnet-4-6` was a typo that shipped through
-        // config:cache to prod whenever .env's ANTHROPIC_MODEL was
-        // absent — every admin AI call would 400 on an unknown model.
-        // See AUDIT-2026-06-13.md configuration finding.
-        'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+        // Default must be a CURRENTLY AVAILABLE Anthropic model id. Stale
+        // ids (e.g. the retired `claude-sonnet-4-20250514`) return a 404
+        // not_found_error on every call — which the CRM AI extractors mask
+        // as "Could not extract …". Keep this in sync with what the API key
+        // actually serves; override per-env with ANTHROPIC_MODEL.
+        'model'   => env('ANTHROPIC_MODEL', 'claude-sonnet-5'),
         // Dedicated model for the AI Content Planner so it can differ from
         // the chatbot model. Read via config (not env()) so it survives
         // config:cache in production.

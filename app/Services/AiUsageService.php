@@ -49,6 +49,8 @@ class AiUsageService
         'claude-opus-4-7'                => ['input' => 15.00, 'output' => 75.00],
         'claude-opus-4-7[1m]'            => ['input' => 30.00, 'output' => 150.00], // 1M context tier
         'claude-opus-4-6'                => ['input' => 15.00, 'output' => 75.00],
+        'claude-sonnet-5'                => ['input' => 3.00,  'output' => 15.00],
+        'claude-fable-5'                 => ['input' => 3.00,  'output' => 15.00],
         'claude-sonnet-4-6'              => ['input' => 3.00,  'output' => 15.00],
         'claude-sonnet-4-20250514'       => ['input' => 3.00,  'output' => 15.00],
         'claude-haiku-4-5-20251001'      => ['input' => 1.00,  'output' => 5.00],
