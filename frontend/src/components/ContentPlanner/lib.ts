@@ -149,6 +149,12 @@ export interface VisualBrief {
   text_overlay?: string | null
   avoid?: string | null
   video_script?: string | null
+  image_prompt_future?: string | null
+  image_url?: string | null
+  image_status?: string | null
+  image_model?: string | null
+  image_error?: string | null
+  image_generated_at?: string | null
   metadata?: Record<string, unknown> | null
 }
 
@@ -286,6 +292,8 @@ export const cp = {
     api.post(`${BASE}/posts/${id}/generate-alternative?type=${type}`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   generateVisualBrief: (id: number) =>
     api.post(`${BASE}/posts/${id}/visual-brief`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
+  generateImage: (id: number) =>
+    api.post(`${BASE}/posts/${id}/generate-image`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   qualityCheck: (id: number) =>
     api.post(`${BASE}/posts/${id}/quality-check`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   markReady: (id: number) => api.post(`${BASE}/posts/${id}/mark-ready`).then(r => r.data),

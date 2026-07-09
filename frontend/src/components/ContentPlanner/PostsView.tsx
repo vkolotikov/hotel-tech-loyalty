@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Clipboard,
   Copy,
+  Download,
   Image,
   Loader,
   Plus,
@@ -17,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { resolveImage } from '../../lib/api'
 import {
   cp,
   errMsg,
@@ -447,6 +449,15 @@ function PostDetail({
     onError: e => toast.error(errMsg(e)),
   })
 
+  const imageMutation = useMutation({
+    mutationFn: () => cp.generateImage(post.id),
+    onSuccess: () => {
+      toast.success('Image generated')
+      invalidate()
+    },
+    onError: e => toast.error(errMsg(e)),
+  })
+
   const duplicateMutation = useMutation({
     mutationFn: () => cp.duplicatePost(post.id),
     onSuccess: (resp: { post?: Post; id?: number }) => {
@@ -489,7 +500,7 @@ function PostDetail({
   })
 
   const aiPending =
-    generateMutation.isPending || rewriteMutation.isPending || visualBriefMutation.isPending || qualityMutation.isPending
+    generateMutation.isPending || rewriteMutation.isPending || visualBriefMutation.isPending || qualityMutation.isPending || imageMutation.isPending
 
   const handleGenerateCopy = () => {
     const hasCopy = Boolean(cur.main_copy) || 'main_copy' in edits
@@ -836,39 +847,98 @@ function PostDetail({
             </button>
           </div>
           {brief ? (
-            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
-              {(
-                [
-                  ['Type', brief.visual_type],
-                  ['Aspect ratio', brief.aspect_ratio],
-                  ['Style', brief.style],
-                  ['Mood', brief.mood],
-                  ['Scene', brief.scene],
-                  ['Composition', brief.composition],
-                  ['Text overlay', brief.text_overlay],
-                  ['Avoid', brief.avoid],
-                ] as const
-              )
-                .filter(([, v]) => Boolean(v))
-                .map(([label, value]) => (
-                  <div key={label}>
-                    <p className="mb-0.5 font-medium text-t-secondary">{label}</p>
-                    <p className="text-white">{value}</p>
+            <>
+              <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                {(
+                  [
+                    ['Type', brief.visual_type],
+                    ['Aspect ratio', brief.aspect_ratio],
+                    ['Style', brief.style],
+                    ['Mood', brief.mood],
+                    ['Scene', brief.scene],
+                    ['Composition', brief.composition],
+                    ['Text overlay', brief.text_overlay],
+                    ['Avoid', brief.avoid],
+                  ] as const
+                )
+                  .filter(([, v]) => Boolean(v))
+                  .map(([label, value]) => (
+                    <div key={label}>
+                      <p className="mb-0.5 font-medium text-t-secondary">{label}</p>
+                      <p className="text-white">{value}</p>
+                    </div>
+                  ))}
+                {brief.description && (
+                  <div className="sm:col-span-2">
+                    <p className="mb-0.5 font-medium text-t-secondary">Description</p>
+                    <p className="text-white">{brief.description}</p>
                   </div>
-                ))}
-              {brief.description && (
-                <div className="sm:col-span-2">
-                  <p className="mb-0.5 font-medium text-t-secondary">Description</p>
-                  <p className="text-white">{brief.description}</p>
+                )}
+                {brief.video_script && (
+                  <div className="sm:col-span-2">
+                    <p className="mb-0.5 font-medium text-t-secondary">Video script</p>
+                    <p className="whitespace-pre-wrap text-white">{brief.video_script}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* AI image */}
+              <div className="mt-3 border-t border-dark-border/60 pt-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-300">
+                    <Image size={13} /> AI image
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {brief.image_url && (
+                      <a
+                        href={resolveImage(brief.image_url) ?? brief.image_url}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-dark-border px-2.5 py-1.5 text-[11px] font-medium text-white transition-colors hover:border-violet-500/60"
+                      >
+                        <Download size={12} /> Download
+                      </a>
+                    )}
+                    <button
+                      onClick={() => imageMutation.mutate()}
+                      disabled={aiPending}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+                    >
+                      {imageMutation.isPending ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                      {imageMutation.isPending ? 'Generating…' : brief.image_url ? 'Regenerate' : 'Generate image'}
+                    </button>
+                  </div>
                 </div>
-              )}
-              {brief.video_script && (
-                <div className="sm:col-span-2">
-                  <p className="mb-0.5 font-medium text-t-secondary">Video script</p>
-                  <p className="whitespace-pre-wrap text-white">{brief.video_script}</p>
-                </div>
-              )}
-            </div>
+
+                {imageMutation.isPending ? (
+                  <div className="mt-3 flex aspect-square max-w-sm items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark-surface2/40">
+                    <div className="text-center">
+                      <Loader size={20} className="mx-auto animate-spin text-violet-400" />
+                      <p className="mt-2 text-[11px] text-t-secondary">Creating your image… (up to a minute)</p>
+                    </div>
+                  </div>
+                ) : brief.image_url ? (
+                  <a href={resolveImage(brief.image_url) ?? brief.image_url} target="_blank" rel="noreferrer" className="group mt-3 block max-w-sm">
+                    <img
+                      src={resolveImage(brief.image_url) ?? brief.image_url}
+                      alt="Generated visual for this post"
+                      className="w-full rounded-lg border border-dark-border transition-opacity group-hover:opacity-90"
+                      loading="lazy"
+                    />
+                    <p className="mt-1 text-[10px] text-t-secondary">
+                      {brief.image_model ?? 'AI'} · click to open full size
+                    </p>
+                  </a>
+                ) : brief.image_status === 'failed' ? (
+                  <p className="mt-2 text-[11px] text-red-300">{brief.image_error || 'Image generation failed. Try again.'}</p>
+                ) : (
+                  <p className="mt-2 text-[11px] text-t-secondary">
+                    Generate a ready-to-post image from this brief with OpenAI.
+                  </p>
+                )}
+              </div>
+            </>
           ) : (
             <p className="text-xs text-t-secondary">No visual brief yet — generate one to guide design.</p>
           )}

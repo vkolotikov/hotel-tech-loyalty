@@ -21,10 +21,16 @@ class ContentPlannerVisualBrief extends Model
         'video_script',
         'image_prompt_future',
         'metadata',
+        'image_url',
+        'image_status',
+        'image_model',
+        'image_error',
+        'image_generated_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'image_generated_at' => 'datetime',
     ];
 
     public function post(): BelongsTo

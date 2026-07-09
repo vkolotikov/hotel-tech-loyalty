@@ -42,6 +42,8 @@ class ContentVisualBriefService
                 'text_overlay' => $this->str($data['text_overlay'] ?? null, 255),
                 'avoid' => $this->str($data['avoid'] ?? null),
                 'video_script' => $this->str($data['video_script'] ?? null),
+                // Ready-to-use prompt for AI image generation (OpenAI).
+                'image_prompt_future' => $this->str($data['image_prompt'] ?? null),
                 'metadata' => [
                     'stock_idea' => $this->str($data['stock_idea'] ?? null),
                     'design_notes' => $this->str($data['design_notes'] ?? null),
@@ -87,9 +89,11 @@ Hashtags: {$hashtags}
 
 Decide the visual type, aspect ratio (platform-native), scene/concept, mood, composition, text overlay suggestion, colors/style direction, what to avoid, a stock image idea if relevant, and design notes. Include a short video scene plan ONLY if the visual should be a video — otherwise video_script must be null.
 
+Also write "image_prompt": a single, self-contained prompt (2-4 sentences) ready to paste into an AI image generator (OpenAI gpt-image-1 / DALL·E). It must describe the concrete scene, subject, composition, lighting, mood, and brand colors/style — photographic and specific, not abstract. Do NOT ask for text/words in the image unless a short overlay is essential. Never depict real logos, real people, or invented statistics.
+
 Return ONLY valid JSON wrapped in ```json fences, exactly this shape:
 ```json
-{"visual_type":"image","aspect_ratio":"1:1","style":"...","description":"...","scene":"...","mood":"...","composition":"...","text_overlay":"...","avoid":"...","video_script":null,"stock_idea":"...","design_notes":"..."}
+{"visual_type":"image","aspect_ratio":"1:1","style":"...","description":"...","scene":"...","mood":"...","composition":"...","text_overlay":"...","avoid":"...","video_script":null,"stock_idea":"...","design_notes":"...","image_prompt":"..."}
 ```
 PROMPT;
     }

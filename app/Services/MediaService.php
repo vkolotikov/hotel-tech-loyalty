@@ -73,6 +73,37 @@ class MediaService
     }
 
     /**
+     * Store raw bytes (e.g. an AI-generated image) and return the public URL.
+     * Mirrors upload() but for content we already hold in memory rather than
+     * an UploadedFile. $extension without the dot (e.g. 'png').
+     */
+    public static function putRaw(string $contents, string $folder, string $extension = 'png', string $visibility = 'public'): string
+    {
+        $disk = static::disk();
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        $prefix = $orgId ? "org-{$orgId}/{$folder}" : $folder;
+        $name = bin2hex(random_bytes(16)) . '.' . ltrim($extension, '.');
+        $path = trim($prefix, '/') . '/' . $name;
+
+        try {
+            Storage::disk($disk)->put($path, $contents, $visibility);
+        } catch (\Throwable $e) {
+            Log::error('MediaService putRaw failed', [
+                'disk'   => $disk,
+                'folder' => $folder,
+                'error'  => $e->getMessage(),
+            ]);
+            throw new \RuntimeException("Media store failed ({$disk}): " . $e->getMessage());
+        }
+
+        if ($disk === 'public') {
+            return '/storage/' . $path;
+        }
+
+        return Storage::disk($disk)->url($path);
+    }
+
+    /**
      * Delete a file by its stored URL/path.
      */
     public static function delete(?string $url): void

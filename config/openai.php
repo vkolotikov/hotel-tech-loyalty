@@ -34,4 +34,19 @@ return [
 
     'model' => env('OPENAI_MODEL', 'gpt-4o'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Content Planner Image Model
+    |--------------------------------------------------------------------------
+    |
+    | Model used to generate post images. 'gpt-image-1' is best quality but
+    | may require OpenAI org verification; the Content Planner auto-falls back
+    | to 'dall-e-3' on an access error. Override with CONTENT_PLANNER_IMAGE_MODEL.
+    | Image request timeout is separate (generation can take 10-40s).
+    */
+
+    'image_model' => env('CONTENT_PLANNER_IMAGE_MODEL', 'gpt-image-1'),
+    'image_fallback_model' => env('CONTENT_PLANNER_IMAGE_FALLBACK_MODEL', 'dall-e-3'),
+    'image_timeout' => env('CONTENT_PLANNER_IMAGE_TIMEOUT', 120),
+
 ];

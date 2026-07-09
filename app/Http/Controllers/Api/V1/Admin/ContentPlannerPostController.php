@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
+use App\Services\ContentPlanner\ImageGenerationService;
 use App\Services\ContentPostGenerationService;
 use App\Services\ContentQualityService;
 use App\Services\ContentVisualBriefService;
@@ -17,6 +18,7 @@ class ContentPlannerPostController extends Controller
         protected ContentPostGenerationService $postService,
         protected ContentVisualBriefService $visualBriefService,
         protected ContentQualityService $qualityService,
+        protected ImageGenerationService $imageService,
     ) {}
 
     /**
@@ -228,6 +230,36 @@ class ContentPlannerPostController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => 'Visual brief generation failed',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate (or regenerate) an AI image for a post via OpenAI.
+     */
+    public function generateImage(Request $request, int $id): JsonResponse
+    {
+        $post = ContentPlannerPost::findOrFail($id);
+        $orgId = $request->user()?->organization_id ?? app('current_organization_id');
+
+        if ($post->organization_id !== $orgId) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        set_time_limit(600);
+
+        try {
+            $brief = $this->imageService->generateForPost($post);
+
+            return response()->json([
+                'visual_brief' => $brief,
+                'post' => $post->fresh(),
+                'message' => 'Image generated.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Image generation failed',
                 'message' => $e->getMessage(),
             ], 500);
         }

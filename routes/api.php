@@ -515,6 +515,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('posts/{id}/generate-copy',         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateCopy']);
                 Route::post('posts/{id}/generate-alternative',  [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateAlternative']);
                 Route::post('posts/{id}/visual-brief',          [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'visualBrief']);
+                Route::post('posts/{id}/generate-image',        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateImage']);
                 Route::post('posts/{id}/quality-check',         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'qualityCheck']);
                 Route::post('posts/{id}/mark-ready',            [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'markReady']);
                 Route::post('posts/{id}/mark-published',        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'markPublished']);
