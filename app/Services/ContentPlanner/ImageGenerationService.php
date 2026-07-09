@@ -29,7 +29,7 @@ class ImageGenerationService
      * Generate (or regenerate) the image for a post.
      * Ensures a visual brief exists first (generating one if needed).
      */
-    public function generateForPost(ContentPlannerPost $post): ContentPlannerVisualBrief
+    public function generateForPost(ContentPlannerPost $post, ?string $instructions = null): ContentPlannerVisualBrief
     {
         $profile = $post->profile;
         if (!$profile) {
@@ -46,7 +46,7 @@ class ImageGenerationService
             $brief = $this->visualBriefService->generateFor($post);
         }
 
-        $prompt = $this->buildImagePrompt($post, $brief, $profile);
+        $prompt = $this->buildImagePrompt($post, $brief, $profile, $instructions);
         $size = $this->sizeForModel($this->model(), $brief->aspect_ratio);
 
         try {
@@ -147,7 +147,7 @@ class ImageGenerationService
     /**
      * Compose the final image prompt from the brief + brand visual style.
      */
-    private function buildImagePrompt(ContentPlannerPost $post, ContentPlannerVisualBrief $brief, $profile): string
+    private function buildImagePrompt(ContentPlannerPost $post, ContentPlannerVisualBrief $brief, $profile, ?string $instructions = null): string
     {
         $parts = [];
 
@@ -184,6 +184,11 @@ class ImageGenerationService
         // Only ask for text in-image when the brief explicitly wants an overlay.
         if (!$brief->text_overlay) {
             $parts[] = 'Do not render any words or text in the image.';
+        }
+
+        $extra = trim((string) $instructions);
+        if ($extra !== '') {
+            $parts[] = 'Additional direction from the user (prioritize this): ' . mb_substr($extra, 0, 800);
         }
 
         return mb_substr(implode(' ', $parts), 0, 3800);

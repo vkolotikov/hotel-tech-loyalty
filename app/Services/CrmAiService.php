@@ -172,7 +172,7 @@ class CrmAiService
             }
         }
 
-        return ['success' => false, 'error' => 'Could not extract inquiry from the text.'];
+        return $this->extractionFailure($res, 'Could not extract inquiry from the text.');
     }
 
     public function extractMember(string $text): array
@@ -228,7 +228,7 @@ class CrmAiService
             }
         }
 
-        return ['success' => false, 'error' => 'Could not extract member information from the text.'];
+        return $this->extractionFailure($res, 'Could not extract member information from the text.');
     }
 
     /**
@@ -410,7 +410,7 @@ class CrmAiService
             }
         }
 
-        return ['success' => false, 'error' => 'Could not extract a guest profile from the text.'];
+        return $this->extractionFailure($res, 'Could not extract a guest profile from the text.');
     }
 
     public function extractCorporate(string $text): array
@@ -480,7 +480,7 @@ class CrmAiService
             }
         }
 
-        return ['success' => false, 'error' => 'Could not extract corporate information from the text.'];
+        return $this->extractionFailure($res, 'Could not extract corporate information from the text.');
     }
 
     /* ────────── Claude HTTP ────────── */
@@ -498,6 +498,25 @@ class CrmAiService
         if (!$orgId) return \App\Models\Organization::DEFAULT_INDUSTRY;
         return \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
             ?? \App\Models\Organization::DEFAULT_INDUSTRY;
+    }
+
+    /**
+     * Build a failure result, surfacing the real API/transport error when
+     * call() returned an error text block instead of a tool_use block. This
+     * turns opaque "Could not extract …" messages into diagnosable ones
+     * (e.g. an unavailable model or a rate limit) without leaking internals.
+     */
+    private function extractionFailure(array $res, string $fallback): array
+    {
+        foreach ($res['content'] ?? [] as $block) {
+            if (($block['type'] ?? '') === 'text') {
+                $text = trim((string) ($block['text'] ?? ''));
+                if ($text !== '' && preg_match('/^(API error|AI service|AI call failed|Empty response)/i', $text)) {
+                    return ['success' => false, 'error' => $fallback . ' (' . mb_substr($text, 0, 200) . ')'];
+                }
+            }
+        }
+        return ['success' => false, 'error' => $fallback];
     }
 
     private function call(string $system, array $messages, array $tools, ?array $toolChoice = null): array

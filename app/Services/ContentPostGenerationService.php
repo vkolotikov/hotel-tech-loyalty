@@ -24,11 +24,11 @@ class ContentPostGenerationService
     /**
      * Generate full copy + visual brief for a specific post.
      */
-    public function generate(ContentPlannerPost $post): array
+    public function generate(ContentPlannerPost $post, ?string $instructions = null): array
     {
         $profile = $post->profile;
 
-        $prompt = $this->buildPostPrompt($post, $profile);
+        $prompt = $this->buildPostPrompt($post, $profile, $instructions);
 
         $data = $this->ai->generateJson($profile, 'post_copy', $prompt, 6000);
 
@@ -59,7 +59,7 @@ class ContentPostGenerationService
     /**
      * Generate an alternative version of an existing post.
      */
-    public function generateAlternatives(ContentPlannerPost $post, string $variation = 'alternative'): array
+    public function generateAlternatives(ContentPlannerPost $post, string $variation = 'alternative', ?string $instructions = null): array
     {
         $profile = $post->profile;
 
@@ -72,6 +72,11 @@ class ContentPostGenerationService
         ];
 
         $instruction = $prompts[$variation] ?? $prompts['alternative'];
+
+        $extra = trim((string) $instructions);
+        if ($extra !== '') {
+            $instruction .= "\n\nEXTRA GUIDANCE FROM THE USER (follow this, without breaking the brand voice or inventing facts):\n" . mb_substr($extra, 0, 1000);
+        }
 
         $aiOutput = $this->ai->generateText(
             $profile,
@@ -97,7 +102,7 @@ class ContentPostGenerationService
      * platform rules, post strategy fields, engagement goal mechanics, and
      * anti-repetition digest, with the exact required output schema.
      */
-    protected function buildPostPrompt(ContentPlannerPost $post, ContentPlannerProfile $profile): string
+    protected function buildPostPrompt(ContentPlannerPost $post, ContentPlannerProfile $profile, ?string $instructions = null): string
     {
         $context = $this->context->build($profile);
         $recentDigest = $this->context->recentPostsDigest($profile, 30, $post->id);
@@ -162,6 +167,14 @@ PROMPT;
 
         if ($recentDigest !== '') {
             $prompt .= "\n\n# ANTI-REPETITION\n\n" . $recentDigest;
+        }
+
+        $extra = trim((string) $instructions);
+        if ($extra !== '') {
+            $prompt .= "\n\n# EXTRA GUIDANCE FROM THE USER\n"
+                . "Follow this specific direction for this post. It refines the task but must NOT override the golden rules above "
+                . "(brand voice, no invented facts, platform rules still apply):\n"
+                . mb_substr($extra, 0, 1000);
         }
 
         $prompt .= "\n\n" . $this->outputFormatBlock();

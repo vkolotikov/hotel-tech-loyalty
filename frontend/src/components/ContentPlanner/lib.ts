@@ -286,14 +286,14 @@ export const cp = {
     api.put(`${BASE}/posts/${id}`, payload).then(r => r.data),
   deletePost: (id: number) => api.delete(`${BASE}/posts/${id}`).then(r => r.data),
   duplicatePost: (id: number) => api.post(`${BASE}/posts/${id}/duplicate`).then(r => r.data),
-  generateCopy: (id: number) =>
-    api.post(`${BASE}/posts/${id}/generate-copy`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
-  generateAlternative: (id: number, type: string) =>
-    api.post(`${BASE}/posts/${id}/generate-alternative?type=${type}`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
+  generateCopy: (id: number, instructions?: string) =>
+    api.post(`${BASE}/posts/${id}/generate-copy`, instructions ? { instructions } : {}, { timeout: AI_TIMEOUT }).then(r => r.data),
+  generateAlternative: (id: number, type: string, instructions?: string) =>
+    api.post(`${BASE}/posts/${id}/generate-alternative?type=${type}`, instructions ? { instructions } : {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   generateVisualBrief: (id: number) =>
     api.post(`${BASE}/posts/${id}/visual-brief`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
-  generateImage: (id: number) =>
-    api.post(`${BASE}/posts/${id}/generate-image`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
+  generateImage: (id: number, instructions?: string) =>
+    api.post(`${BASE}/posts/${id}/generate-image`, instructions ? { instructions } : {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   qualityCheck: (id: number) =>
     api.post(`${BASE}/posts/${id}/quality-check`, {}, { timeout: AI_TIMEOUT }).then(r => r.data),
   markReady: (id: number) => api.post(`${BASE}/posts/${id}/mark-ready`).then(r => r.data),

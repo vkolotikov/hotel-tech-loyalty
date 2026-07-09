@@ -379,6 +379,8 @@ function PostDetail({
   const [showRewrite, setShowRewrite] = useState(false)
   const [showPublish, setShowPublish] = useState(false)
   const [publishUrl, setPublishUrl] = useState('')
+  const [copyGuidance, setCopyGuidance] = useState('')   // one-shot guidance for Generate copy + Rewrite
+  const [imageGuidance, setImageGuidance] = useState('')  // one-shot guidance for image generation
 
   const cur: Post = { ...post, ...edits }
   const dirty = Object.keys(edits).length > 0
@@ -400,19 +402,21 @@ function PostDetail({
   })
 
   const generateMutation = useMutation({
-    mutationFn: () => cp.generateCopy(post.id),
+    mutationFn: () => cp.generateCopy(post.id, copyGuidance.trim() || undefined),
     onSuccess: () => {
       toast.success('Copy generated')
       setEdits({})
+      setCopyGuidance('')
       invalidate()
     },
     onError: e => toast.error(errMsg(e)),
   })
 
   const rewriteMutation = useMutation({
-    mutationFn: (type: string) => cp.generateAlternative(post.id, type),
+    mutationFn: (type: string) => cp.generateAlternative(post.id, type, copyGuidance.trim() || undefined),
     onSuccess: () => {
       toast.success('Variation generated')
+      setCopyGuidance('')
       invalidate()
     },
     onError: e => toast.error(errMsg(e)),
@@ -450,9 +454,10 @@ function PostDetail({
   })
 
   const imageMutation = useMutation({
-    mutationFn: () => cp.generateImage(post.id),
+    mutationFn: () => cp.generateImage(post.id, imageGuidance.trim() || undefined),
     onSuccess: () => {
       toast.success('Image generated')
+      setImageGuidance('')
       invalidate()
     },
     onError: e => toast.error(errMsg(e)),
@@ -759,6 +764,14 @@ function PostDetail({
         {/* e) AI actions */}
         <div className="rounded-lg border border-violet-500/25 bg-violet-500/5 p-3">
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-violet-300">AI tools</p>
+        <textarea
+          value={copyGuidance}
+          onChange={e => setCopyGuidance(e.target.value.slice(0, 1000))}
+          disabled={aiPending}
+          rows={2}
+          placeholder="Optional guidance for Generate/Rewrite — e.g. “make it more casual and mention our free trial”"
+          className="mb-2 w-full resize-none rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+        />
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleGenerateCopy}
@@ -910,6 +923,14 @@ function PostDetail({
                     </button>
                   </div>
                 </div>
+
+                <input
+                  value={imageGuidance}
+                  onChange={e => setImageGuidance(e.target.value.slice(0, 800))}
+                  disabled={aiPending}
+                  placeholder="Optional image direction — e.g. “darker background, no people, more minimal”"
+                  className="mt-2 w-full rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-xs text-white placeholder-t-secondary outline-none focus:border-violet-500"
+                />
 
                 {imageMutation.isPending ? (
                   <div className="mt-3 flex aspect-square max-w-sm items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark-surface2/40">

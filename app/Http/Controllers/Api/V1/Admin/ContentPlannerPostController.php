@@ -161,7 +161,7 @@ class ContentPlannerPostController extends Controller
         set_time_limit(600);
 
         try {
-            $result = $this->postService->generate($post);
+            $result = $this->postService->generate($post, $request->input('instructions'));
 
             return response()->json([
                 'post' => $result['post'],
@@ -192,7 +192,7 @@ class ContentPlannerPostController extends Controller
         set_time_limit(600);
 
         try {
-            $result = $this->postService->generateAlternatives($post, $variation);
+            $result = $this->postService->generateAlternatives($post, $variation, $request->input('instructions'));
 
             return response()->json([
                 'variation' => $result['variation'],
@@ -250,7 +250,7 @@ class ContentPlannerPostController extends Controller
         set_time_limit(600);
 
         try {
-            $brief = $this->imageService->generateForPost($post);
+            $brief = $this->imageService->generateForPost($post, $request->input('instructions'));
 
             return response()->json([
                 'visual_brief' => $brief,
