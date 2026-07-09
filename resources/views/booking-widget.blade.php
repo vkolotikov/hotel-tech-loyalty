@@ -105,6 +105,14 @@ input,select,textarea{font-family:inherit}
 .room-hero img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
 .room-card:hover .room-hero img{transform:scale(1.03)}
 .room-hero-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);opacity:.4}
+/* Room photo carousel (arrows only) */
+.room-hero-track{display:flex;height:100%;width:100%;transition:transform .3s ease}
+.room-hero-slide{flex:0 0 100%;width:100%;height:100%;object-fit:cover}
+.room-hero-nav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;color:#222;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:3;opacity:0;transition:opacity .2s;padding:0}
+.room-hero:hover .room-hero-nav{opacity:1}
+.room-hero-nav.prev{left:8px}
+.room-hero-nav.next{right:8px}
+@media(max-width:600px){.room-hero-nav{opacity:.92;width:34px;height:34px}}
 .room-tags{position:absolute;top:10px;left:10px;display:flex;gap:5px;flex-wrap:wrap}
 .room-tag{padding:3px 9px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;font-size:10px;font-weight:600;color:#1a1a1a}
 .room-body{padding:18px;display:flex;flex-direction:column;flex:1;min-width:0}
@@ -520,6 +528,19 @@ function getRoomImage(unit) {
   return ASSETS_BASE + 'ForRest_Lodge.jpg';
 }
 
+function getRoomImages(unit) {
+  // Ordered list: cover (existing behavior incl. name-based fallback) + gallery.
+  var list = [getRoomImage(unit)];
+  if (unit.gallery && unit.gallery.length) {
+    unit.gallery.forEach(function(g) {
+      if (!g) return;
+      var r = resolveStorageImage(g);
+      if (list.indexOf(r) === -1) list.push(r);
+    });
+  }
+  return list;
+}
+
 function getRoomAmenities(unit) {
   var name = (unit.name || '').toLowerCase();
   var desc = (unit.description || '').toLowerCase();
@@ -911,9 +932,18 @@ function renderRooms() {
       var amenities = apiAmenities || getRoomAmenities(u);
 
       h += '<div class="room-card' + (sel ? ' selected' : '') + '" data-unit="' + esc(u.id) + '">';
-      // Hero image
-      h += '<div class="room-hero">';
-      h += '<img src="' + esc(img) + '" alt="' + esc(u.name) + '" loading="lazy">';
+      // Hero image / carousel
+      var imgs = getRoomImages(u);
+      h += '<div class="room-hero" data-cur="0">';
+      h += '<div class="room-hero-track">';
+      imgs.forEach(function(src) {
+        h += '<img class="room-hero-slide" src="' + esc(src) + '" alt="' + esc(u.name) + '" loading="lazy">';
+      });
+      h += '</div>';
+      if (imgs.length > 1) {
+        h += '<button type="button" class="room-hero-nav prev" data-nav="prev" aria-label="Previous photo">&#8249;</button>';
+        h += '<button type="button" class="room-hero-nav next" data-nav="next" aria-label="Next photo">&#8250;</button>';
+      }
       if (tags.length) {
         h += '<div class="room-tags">';
         tags.forEach(function(t) { h += '<span class="room-tag">' + esc(t) + '</span>'; });
@@ -1316,6 +1346,28 @@ function bindEvents() {
         render();
       });
     })(rooms[i]);
+  }
+
+  // Room photo carousel arrows — slide without selecting the room or re-rendering.
+  var navBtns = document.querySelectorAll('.room-hero-nav');
+  for (var ni = 0; ni < navBtns.length; ni++) {
+    (function(btn) {
+      btn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        var hero = btn.closest('.room-hero');
+        if (!hero) return;
+        var track = hero.querySelector('.room-hero-track');
+        var slides = hero.querySelectorAll('.room-hero-slide');
+        var count = slides.length;
+        if (count < 2) return;
+        var cur = parseInt(hero.getAttribute('data-cur') || '0', 10);
+        cur = btn.getAttribute('data-nav') === 'next'
+          ? (cur + 1) % count
+          : (cur - 1 + count) % count;
+        hero.setAttribute('data-cur', String(cur));
+        track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+      });
+    })(navBtns[ni]);
   }
 
   // Combo package cards

@@ -5,7 +5,7 @@ import { resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Plus, Trash2, Pencil, Image as ImageIcon, Upload, RefreshCw,
-  Users, BedDouble, Maximize, X, Save, Tag,
+  Users, BedDouble, Maximize, X, Save, Tag, Star, GripVertical,
 } from 'lucide-react'
 import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
 import { money } from '../lib/money'
@@ -259,6 +259,13 @@ export default function BookingRooms() {
 }
 
 /* ── Room Form Modal ──────────────────────────────────────────────── */
+interface PhotoItem {
+  id: string
+  url?: string      // existing photo (already stored)
+  file?: File       // newly picked photo
+  preview: string   // display URL (resolved or object URL)
+}
+
 function RoomForm({ room, onClose, onSave, saving }: {
   room: Room | null
   onClose: () => void
@@ -278,9 +285,16 @@ function RoomForm({ room, onClose, onSave, saving }: {
   const [tags, setTags] = useState<string[]>(room?.tags || [])
   const [isActive, setIsActive] = useState(room?.is_active ?? true)
   const [newTag, setNewTag] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(room?.image ? (resolveImage(room.image) || null) : null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  // Unified ordered photo list: cover (image) first, then gallery.
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => {
+    const urls: string[] = []
+    if (room?.image) urls.push(room.image)
+    for (const g of room?.gallery ?? []) if (g && !urls.includes(g)) urls.push(g)
+    return urls.map((url, i) => ({ id: `e${i}`, url, preview: resolveImage(url) || url }))
+  })
 
   const toggleAmenity = (val: string) => {
     setAmenities(prev => prev.includes(val) ? prev.filter(a => a !== val) : [...prev, val])
@@ -291,12 +305,28 @@ function RoomForm({ room, onClose, onSave, saving }: {
     if (t && !tags.includes(t)) { setTags([...tags, t]); setNewTag('') }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      setImagePreview(URL.createObjectURL(file))
-    }
+  const addPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    const next: PhotoItem[] = Array.from(files).map((file, i) => ({
+      id: `n${Date.now()}-${i}`,
+      file,
+      preview: URL.createObjectURL(file),
+    }))
+    setPhotos(p => [...p, ...next])
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const removePhoto = (id: string) => setPhotos(p => p.filter(x => x.id !== id))
+
+  const movePhoto = (from: number, to: number) => {
+    setPhotos(p => {
+      if (to < 0 || to >= p.length) return p
+      const next = [...p]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
   }
 
   const handleSubmit = () => {
@@ -315,7 +345,13 @@ function RoomForm({ room, onClose, onSave, saving }: {
     fd.append('amenities', JSON.stringify(amenities))
     fd.append('tags', JSON.stringify(tags))
     fd.append('is_active', isActive ? '1' : '0')
-    if (imageFile) fd.append('image', imageFile)
+
+    // Ordered photo list: existing → URL, new → "new:N" (index into gallery_files).
+    const newPhotos = photos.filter(p => p.file)
+    const order = photos.map(p => (p.file ? `new:${newPhotos.indexOf(p)}` : p.url as string))
+    fd.append('photos_order', JSON.stringify(order))
+    newPhotos.forEach(p => fd.append('gallery_files[]', p.file as File))
+
     onSave(fd)
   }
 
@@ -330,21 +366,65 @@ function RoomForm({ room, onClose, onSave, saving }: {
         </div>
 
         <div className="space-y-4">
-          {/* Image Upload */}
+          {/* Photos */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">Hero Image</label>
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-24 rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex items-center justify-center cursor-pointer"
-                onClick={() => fileRef.current?.click()}>
-                {imagePreview ? (
-                  <img src={imagePreview} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-center"><Upload size={20} className="mx-auto text-gray-600 mb-1" /><span className="text-[10px] text-gray-600">Upload</span></div>
-                )}
-              </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              <div className="text-xs text-gray-600">Recommended: 800×500px, JPG/PNG. This image appears in the booking widget.</div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-gray-400">Photos</label>
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] px-2.5 py-1.5 text-xs font-medium text-white hover:border-primary-500/50 transition-all">
+                <Upload size={13} /> Add photos
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addPhotos} />
             </div>
+
+            {photos.length === 0 ? (
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="w-full rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02] py-8 text-center hover:border-primary-500/40 transition-all">
+                <Upload size={22} className="mx-auto text-gray-600 mb-1.5" />
+                <span className="text-xs text-gray-500">Add one or more photos. The first is the cover shown in the booking widget.</span>
+              </button>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                  {photos.map((p, i) => (
+                    <div
+                      key={p.id}
+                      draggable
+                      onDragStart={() => setDragIndex(i)}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={() => { if (dragIndex !== null && dragIndex !== i) movePhoto(dragIndex, i); setDragIndex(null) }}
+                      onDragEnd={() => setDragIndex(null)}
+                      className={`group relative aspect-[4/3] overflow-hidden rounded-xl border cursor-move ${
+                        i === 0 ? 'border-primary-500/60' : 'border-white/[0.08]'
+                      } ${dragIndex === i ? 'opacity-40' : ''}`}
+                    >
+                      <img src={p.preview} className="h-full w-full object-cover" />
+                      {/* Cover badge */}
+                      {i === 0 && (
+                        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-primary-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          <Star size={10} /> Cover
+                        </span>
+                      )}
+                      <span className="absolute right-1.5 top-1.5 rounded bg-black/50 p-0.5 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <GripVertical size={12} />
+                      </span>
+                      {/* Controls */}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-0.5">
+                          <button type="button" onClick={() => movePhoto(i, i - 1)} disabled={i === 0}
+                            className="rounded p-0.5 text-white/80 hover:text-white disabled:opacity-30" title="Move left">‹</button>
+                          <button type="button" onClick={() => movePhoto(i, i + 1)} disabled={i === photos.length - 1}
+                            className="rounded p-0.5 text-white/80 hover:text-white disabled:opacity-30" title="Move right">›</button>
+                        </div>
+                        <button type="button" onClick={() => removePhoto(p.id)}
+                          className="rounded p-0.5 text-white/80 hover:text-red-400" title="Remove"><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-gray-600">Drag to reorder (or use ‹ ›). The first photo is the cover; guests scroll the rest in the booking widget.</p>
+              </>
+            )}
           </div>
 
           {/* Name + Price */}

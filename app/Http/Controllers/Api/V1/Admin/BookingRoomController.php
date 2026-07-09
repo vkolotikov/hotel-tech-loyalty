@@ -59,19 +59,7 @@ class BookingRoomController extends Controller
         $data['organization_id'] = app('current_organization_id');
         $data['slug'] = Str::slug($data['name']);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-rooms');
-        }
-
-        // Handle gallery uploads
-        if ($request->hasFile('gallery_files')) {
-            $gallery = [];
-            foreach ($request->file('gallery_files') as $file) {
-                $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
-            }
-            $data['gallery'] = $gallery;
-        }
+        $this->applyPhotos($request, null, $data);
 
         $room = BookingRoom::create($data);
 
@@ -120,21 +108,80 @@ class BookingRoomController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        if ($request->hasFile('image')) {
-            $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-rooms');
-        }
-
-        if ($request->hasFile('gallery_files')) {
-            $gallery = $room->gallery ?? [];
-            foreach ($request->file('gallery_files') as $file) {
-                $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
-            }
-            $data['gallery'] = $gallery;
-        }
+        $this->applyPhotos($request, $room, $data);
 
         $room->update($data);
 
         return response()->json($room->fresh());
+    }
+
+    /**
+     * Resolve room photos from the request.
+     *
+     * Preferred: a `photos_order` JSON array (the full ordered photo list)
+     * where each entry is either an existing URL or "new:N" referencing
+     * gallery_files[N]. The first photo becomes the cover (`image`) and the
+     * rest become `gallery`, so [image, ...gallery] is the ordered gallery.
+     * Orphaned uploads (removed photos we previously stored) are deleted.
+     *
+     * Legacy fallback (no photos_order): a single `image` file plus appended
+     * `gallery_files`, preserving the old client behavior.
+     */
+    private function applyPhotos(Request $request, ?BookingRoom $room, array &$data): void
+    {
+        if (!$request->has('photos_order')) {
+            if ($request->hasFile('image')) {
+                $data['image'] = \App\Services\MediaService::upload($request->file('image'), 'booking-rooms');
+            }
+            if ($request->hasFile('gallery_files')) {
+                $gallery = $room?->gallery ?? [];
+                foreach ($request->file('gallery_files') as $file) {
+                    $gallery[] = \App\Services\MediaService::upload($file, 'booking-rooms');
+                }
+                $data['gallery'] = $gallery;
+            }
+            return;
+        }
+
+        $order = json_decode((string) $request->input('photos_order'), true);
+        if (!is_array($order)) {
+            $order = [];
+        }
+
+        // Upload new files, keyed by their array index (matches "new:N").
+        $uploaded = [];
+        if ($request->hasFile('gallery_files')) {
+            foreach ($request->file('gallery_files') as $idx => $file) {
+                $uploaded[(string) $idx] = \App\Services\MediaService::upload($file, 'booking-rooms');
+            }
+        }
+
+        $final = [];
+        foreach ($order as $token) {
+            if (!is_string($token)) {
+                continue;
+            }
+            if (str_starts_with($token, 'new:')) {
+                $key = substr($token, 4);
+                if (isset($uploaded[$key])) {
+                    $final[] = $uploaded[$key];
+                }
+            } else {
+                $final[] = $token; // existing URL kept
+            }
+        }
+        $final = array_values(array_unique(array_filter($final)));
+
+        // Delete files we stored that are no longer referenced.
+        $oldUrls = array_filter(array_merge([$room?->image], $room?->gallery ?? []));
+        foreach ($oldUrls as $old) {
+            if (!in_array($old, $final, true) && str_contains((string) $old, 'booking-rooms/')) {
+                \App\Services\MediaService::delete($old);
+            }
+        }
+
+        $data['image'] = $final[0] ?? null;
+        $data['gallery'] = array_values(array_slice($final, 1));
     }
 
     /** DELETE /v1/admin/booking-rooms/{id} */
