@@ -2340,7 +2340,7 @@ function HeaderMenu({
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors disabled:opacity-50"
           >
             <Download size={14} />
-            <span className="flex-1 text-left">{exporting ? t('inquiries.actions.exporting', 'Exporting…') : t('inquiries.actions.export', 'Export CSV')}</span>
+            <span className="flex-1 text-left">{exporting ? t('inquiries.actions.exporting', 'Exporting…') : t('inquiries.actions.export', 'Export Excel')}</span>
           </button>
           <div className="h-px bg-dark-border my-1" />
           <Link

@@ -8,10 +8,10 @@ import {
   Globe, Mail, Phone as PhoneIcon, AtSign,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { api, API_URL } from '../lib/api'
+import { api } from '../lib/api'
 import { ContactActions } from '../components/ContactActions'
 import { NewCustomerDrawer } from '../components/NewCustomerDrawer'
-import { useSettings, type CustomerFieldConfig } from '../lib/crmSettings'
+import { useSettings, triggerExport, type CustomerFieldConfig } from '../lib/crmSettings'
 import { format } from 'date-fns'
 
 /**
@@ -253,22 +253,25 @@ export function Customers() {
     onError: () => toast.error('Bulk delete failed'),
   })
 
-  const exportSelected = () => {
-    // Reuse the existing /guests/export endpoint with `ids[]` so the CSV
-    // contains only what the admin checked. Falls through to current
-    // filter set when no selection — that's the "export everything I
-    // see" behaviour staff usually want.
+  const exportSelected = async () => {
+    // /guests/export with `ids` limits the workbook to what the admin
+    // checked. Falls through to the current filter set when no
+    // selection — that's the "export everything I see" behaviour staff
+    // usually want. Must go through triggerExport (authorized fetch +
+    // blob download): the old window.open() couldn't send the bearer
+    // token, so this button 401'd and downloaded nothing.
     const ids = Array.from(selected)
-    const qs = new URLSearchParams()
+    const params: Record<string, string> = {}
     if (ids.length) {
-      ids.forEach(id => qs.append('ids[]', String(id)))
+      params.ids = ids.join(',')
     } else {
-      if (q.trim())  qs.set('search', q.trim())
-      if (vipOnly)   qs.set('vip_level', 'VIP')
-      if (b2bOnly)   qs.set('guest_type', 'Corporate')
-      if (company)   qs.set('company', company)
+      if (q.trim())  params.search = q.trim()
+      if (vipOnly)   params.vip_level = 'VIP'
+      if (b2bOnly)   params.guest_type = 'Corporate'
+      if (company)   params.company = company
     }
-    window.open(`${API_URL}/api/v1/admin/guests/export?${qs.toString()}`, '_blank')
+    try { await triggerExport('/v1/admin/guests/export', params) }
+    catch { toast.error('Export failed') }
   }
 
   return (
@@ -530,7 +533,7 @@ export function Customers() {
             onClick={() => exportSelected()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition"
           >
-            <Download size={11} /> Export CSV
+            <Download size={11} /> Export Excel
           </button>
           <button
             onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { vip_level: 'VIP' } })}

@@ -1071,7 +1071,7 @@
     "actions": {
       "ai_capture": "AI захват",
       "ai_short": "AI",
-      "export": "Экспорт",
+      "export": "Экспорт в Excel",
       "add": "Добавить запрос",
       "add_short": "Добавить"
     },
