@@ -185,7 +185,14 @@ export function Engagement() {
   // The hook diffs against the previous snapshot and fires a toast +
   // (when permission is granted) a browser notification for each newly-hot
   // visitor, rate-limited at one alert per visitor per 30s.
-  const hotIds = useMemo(() => rows.filter(r => r.is_hot_lead).map(r => r.id), [rows])
+  //
+  // Only ONLINE hot leads qualify as "arrivals" — is_hot_lead alone is a
+  // durable attribute (returning visitor with contact info stays hot for
+  // weeks), so without the online gate every old lead that scrolled into
+  // the page fired a "Hot lead arrived" card. The resetKey re-baselines
+  // the diff when the admin changes filter/range/search/sort/page, so
+  // view changes never read as arrivals either.
+  const hotIds = useMemo(() => rows.filter(r => r.is_hot_lead && r.is_online).map(r => r.id), [rows])
   const lookupRow = useCallback((id: number): HotLeadInfo | undefined => {
     const r = rows.find(x => x.id === id)
     if (!r) return undefined
@@ -198,7 +205,7 @@ export function Engagement() {
       : undefined
     return { id, name: r.effective_name, context }
   }, [rows])
-  useHotLeadAlert(hotIds, lookupRow)
+  useHotLeadAlert(hotIds, lookupRow, `${filter}|${range}|${search}|${sort}|${page}`)
 
   // Browser notification permission state — drives the small banner at
   // the top of the page that nudges the agent to enable notifications

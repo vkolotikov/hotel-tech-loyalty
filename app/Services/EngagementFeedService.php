@@ -63,8 +63,13 @@ class EngagementFeedService
                               'intent_tag'])
                     ->latest('last_message_at')
                     ->limit(1)
+                    // Skip system rows ("Auto-resolved after 4h of
+                    // inactivity", "Conversation assigned to …") — the
+                    // preview + hot-lead toast context should show the
+                    // last real exchange, not ops annotations.
                     ->with(['messages' => fn ($qq) => $qq
                         ->select(['id', 'conversation_id', 'sender_type', 'content', 'is_read', 'created_at'])
+                        ->where('sender_type', '!=', 'system')
                         ->latest('created_at')
                         ->limit(1)])
                     ->withCount(['messages as unread_admin_count' => fn ($qq) => $qq
