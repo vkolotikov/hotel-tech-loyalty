@@ -12,6 +12,8 @@ import {
   Inbox, Star, Flame,
 } from 'lucide-react'
 import FreshnessBadge from '../components/FreshnessBadge'
+import { InquiryDrawer } from '../components/InquiryDrawer'
+import { CustomerDrawer } from '../components/CustomerDrawer'
 
 // 5 active stages + completed terminal. Order matters: drives the
 // progress-bar segmentation on each row.
@@ -84,6 +86,12 @@ export function Deals() {
   // chevron to surface customer details + payment breakdown + notes
   // without leaving the page.
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
+  // Row click slides the deal card in from the right — the same
+  // InquiryDrawer the Leads page uses (a deal IS an inquiry), so the
+  // two lists share one interaction language. The nested CustomerDrawer
+  // opens from the drawer's Customer tab, mirroring Inquiries.tsx.
+  const [drawerDealId, setDrawerDealId] = useState<number | null>(null)
+  const [customerDrawerGuestId, setCustomerDrawerGuestId] = useState<number | null>(null)
 
   // Translate the active filter pill into the controller's query params.
   // `focus` overrides `stage`/`payment` for the overdue + high_value buckets.
@@ -358,7 +366,9 @@ export function Deals() {
 
                 return (
                   <React.Fragment key={d.id}>
-                  <tr className={[
+                  <tr
+                    onClick={() => setDrawerDealId(d.id)}
+                    className={[
                     'group border-b border-dark-border/40 hover:bg-white/[0.025] transition-colors cursor-pointer',
                     isOverdue ? 'bg-red-500/[0.025]' : '',
                     isExpanded ? 'bg-white/[0.02]' : '',
@@ -947,6 +957,33 @@ export function Deals() {
           ))}
         </div>
       )}
+
+      {/* Deal card drawer — same slide-in as the Leads list */}
+      <InquiryDrawer
+        open={drawerDealId !== null}
+        inquiry={drawerDealId !== null ? deals.find((d: any) => d.id === drawerDealId) : null}
+        onClose={() => setDrawerDealId(null)}
+        onInquiryUpdated={() => {
+          qc.invalidateQueries({ queryKey: ['deals'] })
+          qc.invalidateQueries({ queryKey: ['deals-kpis'] })
+        }}
+        onInquiryDeleted={() => {
+          setDrawerDealId(null)
+          qc.invalidateQueries({ queryKey: ['deals'] })
+          qc.invalidateQueries({ queryKey: ['deals-kpis'] })
+        }}
+        onRequestCustomerDrawer={(gid) => setCustomerDrawerGuestId(gid)}
+      />
+      <CustomerDrawer
+        open={customerDrawerGuestId !== null}
+        guestId={customerDrawerGuestId}
+        onClose={() => setCustomerDrawerGuestId(null)}
+        onGuestUpdated={() => qc.invalidateQueries({ queryKey: ['deals'] })}
+        onGuestDeleted={() => {
+          setCustomerDrawerGuestId(null)
+          qc.invalidateQueries({ queryKey: ['deals'] })
+        }}
+      />
     </div>
   )
 }
