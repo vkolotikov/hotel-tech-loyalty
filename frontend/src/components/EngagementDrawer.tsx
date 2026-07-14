@@ -265,7 +265,7 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${
+        className={`fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 transition-opacity ${
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}

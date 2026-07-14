@@ -946,7 +946,7 @@ function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40"
+        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
         onClick={onClose}
       />
       {/* Drawer */}

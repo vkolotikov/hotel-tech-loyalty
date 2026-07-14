@@ -295,7 +295,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
     <>
       {/* Backdrop — pinned full screen, click to close */}
       <div
-        className="fixed inset-0 z-40 bg-black/75 backdrop-blur-md"
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden="true"
       />
