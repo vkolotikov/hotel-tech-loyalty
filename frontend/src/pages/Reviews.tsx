@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download, TabletSmartphone, RefreshCw } from 'lucide-react'
+import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download, TabletSmartphone, RefreshCw, QrCode, X } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
 
 type Tab = 'submissions' | 'invitations' | 'forms' | 'devices' | 'integrations'
@@ -399,6 +399,7 @@ function DevicesTab() {
   const qc = useQueryClient()
   const [newName, setNewName] = useState('')
   const [newLocation, setNewLocation] = useState('')
+  const [qrModal, setQrModal] = useState<{ name: string; url: string; qr: string } | null>(null)
 
   const { data, isLoading } = useQuery<{ devices: KioskDevice[] }>({
     queryKey: ['review-devices'],
@@ -506,6 +507,16 @@ function DevicesTab() {
                   className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
                   <Copy size={11} /> Copy link
                 </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await api.get(`/v1/admin/reviews/devices/${d.id}/qr`).then(r => r.data)
+                      setQrModal({ name: d.name, url: res.url, qr: res.qr })
+                    } catch { toast.error('Could not generate QR') }
+                  }}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  <QrCode size={11} /> QR
+                </button>
                 <a href={kioskUrl(d)} target="_blank" rel="noreferrer"
                   className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
                   <ExternalLink size={11} /> Open
@@ -521,6 +532,33 @@ function DevicesTab() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* QR modal — scan with the tablet's camera to open the kiosk page */}
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+          onClick={() => setQrModal(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Kiosk QR code"
+            className="bg-dark-surface border border-dark-border rounded-2xl p-6 w-full max-w-sm text-center"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">{qrModal.name}</h3>
+              <button onClick={() => setQrModal(null)} aria-label="Close"
+                className="text-[#636366] hover:text-white p-1"><X size={16} /></button>
+            </div>
+            <div className="bg-white rounded-xl p-4 inline-block">
+              <img src={qrModal.qr} alt="Kiosk QR code" className="w-52 h-52" />
+            </div>
+            <p className="text-[11px] text-[#a0a0a0] mt-4 leading-relaxed">
+              On the tablet: open the camera, scan, tap the link, then add the page to the
+              home screen / enable kiosk mode so it stays full-screen.
+            </p>
+            <button onClick={() => { navigator.clipboard.writeText(qrModal.url); toast.success('Link copied') }}
+              className="mt-3 text-[11px] text-primary-400 hover:text-primary-300 font-semibold break-all">
+              {qrModal.url}
+            </button>
+          </div>
         </div>
       )}
     </div>

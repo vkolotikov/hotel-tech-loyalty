@@ -325,6 +325,19 @@ class SurveyKioskTest extends TestCase
         $this->assertSame('eq', $copy['questions'][1]['condition_operator']);
     }
 
+    /* ─── kiosk QR ─────────────────────────────────────────────────── */
+
+    public function test_device_qr_returns_kiosk_url_and_image_data_uri(): void
+    {
+        $device = $this->makeDevice($this->makeForm());
+
+        $res = app(ReviewController::class)->deviceQr($device->id, app(\App\Services\QrCodeService::class));
+        $data = $res->getData(true);
+
+        $this->assertStringContainsString('/k/' . $device->device_key, $data['url']);
+        $this->assertStringStartsWith('data:image/', $data['qr']);
+    }
+
     /* ─── stat bump primitive ──────────────────────────────────────── */
 
     public function test_stat_bump_upserts_and_increments(): void

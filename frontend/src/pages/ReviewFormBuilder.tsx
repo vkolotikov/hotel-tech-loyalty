@@ -296,6 +296,7 @@ export function ReviewFormBuilder() {
           onSave={() => saveFormMut.mutate()}
           saving={saveFormMut.isPending}
           previewUrl={publicUrl + '&preview=1'}
+          embed={{ formId: form.id, embedKey: form.embed_key, origin: API_URL }}
         />
       )}
       {view === 'analytics' && <SurveyAnalyticsPanel formId={form.id} />}

@@ -669,6 +669,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('reviews/devices/{id}',               [AdminReviewController::class, 'updateDevice']);
                 Route::delete('reviews/devices/{id}',            [AdminReviewController::class, 'deleteDevice']);
                 Route::post('reviews/devices/{id}/rotate-key',   [AdminReviewController::class, 'rotateDeviceKey']);
+                Route::get('reviews/devices/{id}/qr',            [AdminReviewController::class, 'deviceQr']);
 
                 Route::get('reviews/integrations',               [AdminReviewController::class, 'listIntegrations']);
                 Route::post('reviews/integrations',              [AdminReviewController::class, 'upsertIntegration']);

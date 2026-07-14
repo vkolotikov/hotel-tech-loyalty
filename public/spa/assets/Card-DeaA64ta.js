@@ -1,0 +1,1 @@
+import{j as e}from"./vendor-query-BZq49VEw.js";import{s as a}from"./index-AcF7dW_r.js";function m({children:r,className:o,padding:s=!0}){return e.jsx("div",{className:a("bg-dark-surface rounded-xl border border-dark-border",s&&"p-6",o),children:r})}export{m as C};

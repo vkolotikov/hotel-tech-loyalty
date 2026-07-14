@@ -547,6 +547,21 @@ class ReviewController extends Controller
         return response()->json(['device' => $device->fresh('form:id,name')]);
     }
 
+    /**
+     * GET /v1/admin/reviews/devices/{id}/qr — QR of the kiosk URL so
+     * setting up a tablet is: open camera, scan, tap, go full-screen.
+     */
+    public function deviceQr(int $id, \App\Services\QrCodeService $qr): JsonResponse
+    {
+        $device = ReviewDevice::findOrFail($id);
+        $url = rtrim(config('app.url'), '/') . '/k/' . $device->device_key;
+
+        return response()->json([
+            'url' => $url,
+            'qr'  => $qr->urlQrDataUri($url),
+        ]);
+    }
+
     // ─── Per-survey analytics ───────────────────────────────────────────────
 
     /**

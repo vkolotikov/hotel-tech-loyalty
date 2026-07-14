@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Monitor, TabletSmartphone, Palette, BarChart3, RefreshCw } from 'lucide-react'
+import { Monitor, TabletSmartphone, Palette, BarChart3, RefreshCw, Code2, Copy, Send } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 
 /**
@@ -44,12 +45,13 @@ function L({ label, children }: { label: string; children: React.ReactNode }) {
   )
 }
 
-export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUrl }: {
+export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUrl, embed }: {
   config: Record<string, any>
   setConfig: (c: Record<string, any>) => void
   onSave: () => void
   saving: boolean
   previewUrl: string
+  embed: { formId: number; embedKey: string; origin: string }
 }) {
   const theme = config.theme ?? {}
   const setTheme = (patch: Record<string, any>) => setConfig({ ...config, theme: { ...theme, ...patch } })
@@ -153,6 +155,32 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
           <p className="text-[11px] text-[#666] mt-2">
             Kiosk only: after the thank-you screen (or when a guest walks away mid-survey), the kiosk resets for the next guest.
           </p>
+        </Section>
+
+
+        <Section title="Post-stay automation" icon={<Send size={14} className="text-primary-400" />}>
+          <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer">
+            <input type="checkbox" checked={config.auto_send_post_stay === true}
+              onChange={e => setConfig({ ...config, auto_send_post_stay: e.target.checked })} />
+            Automatically email this survey to guests after checkout
+          </label>
+          {config.auto_send_post_stay === true && (
+            <div className="mt-3 max-w-[220px]">
+              <L label="Days after checkout">
+                <input type="number" min={1} max={14} value={config.auto_send_delay_days ?? 1}
+                  onChange={e => setConfig({ ...config, auto_send_delay_days: Math.max(1, Number(e.target.value) || 1) })}
+                  className={inputCls} />
+              </L>
+            </div>
+          )}
+          <p className="text-[11px] text-[#666] mt-3 leading-relaxed">
+            Runs daily at 09:00 — invites every booking-engine guest (with an email) who checked out that many
+            days earlier. Each booking is invited once. Enable this on ONE survey only, or guests get multiple emails.
+          </p>
+        </Section>
+
+        <Section title="Website widget & embed" icon={<Code2 size={14} className="text-primary-400" />}>
+          <WidgetSnippet embed={embed} />
         </Section>
 
         <button onClick={() => { onSave(); setTimeout(() => setPreviewNonce(n => n + 1), 700) }} disabled={saving}
@@ -323,6 +351,97 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/* ─── Website widget snippet generator ──────────────────────────────── */
+
+function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; origin: string } }) {
+  const [mode, setMode] = useState<'button' | 'popup' | 'slideup'>('button')
+  const [position, setPosition] = useState<'right' | 'left'>('right')
+  const [label, setLabel] = useState('Feedback')
+  const [color, setColor] = useState('#2563eb')
+  const [delay, setDelay] = useState(5)
+
+  const snippet = useMemo(() => {
+    const attrs = [
+      `src="${embed.origin}/widget/hotel-survey.js"`,
+      `data-survey="${embed.formId}"`,
+      `data-key="${embed.embedKey}"`,
+      `data-mode="${mode}"`,
+      mode === 'button' ? `data-position="${position}" data-label="${label}" data-color="${color}"` : `data-delay="${delay}"`,
+      'async',
+    ]
+    return `<script ${attrs.join(' ')}></` + 'script>'
+  }, [embed, mode, position, label, color, delay])
+
+  const iframeSnippet = `<iframe src="${embed.origin}/review/${embed.formId}?key=${embed.embedKey}" style="width:100%;min-height:640px;border:0;border-radius:16px" title="Feedback survey"></iframe>`
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        {([
+          { key: 'button',  title: 'Floating button', desc: 'Side tab, always available' },
+          { key: 'popup',   title: 'Popup',           desc: 'Centered, opens after a delay' },
+          { key: 'slideup', title: 'Slide-up',        desc: 'Corner card, opens after a delay' },
+        ] as const).map(o => (
+          <button key={o.key} onClick={() => setMode(o.key)}
+            className={`text-left p-3 rounded-xl border transition-colors ${mode === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-[#1a1a1a] hover:border-primary-500/40'}`}>
+            <div className="text-xs font-semibold text-white">{o.title}</div>
+            <div className="text-[10px] text-[#888] mt-0.5 leading-snug">{o.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      {mode === 'button' ? (
+        <div className="grid grid-cols-3 gap-3">
+          <L label="Button label">
+            <input value={label} onChange={e => setLabel(e.target.value)} className={inputCls} />
+          </L>
+          <L label="Color">
+            <input type="color" value={color} onChange={e => setColor(e.target.value)}
+              className="w-full h-9 rounded-lg bg-[#1e1e1e] border border-dark-border cursor-pointer" />
+          </L>
+          <L label="Side">
+            <select value={position} onChange={e => setPosition(e.target.value as any)} className={inputCls}>
+              <option value="right">Right</option><option value="left">Left</option>
+            </select>
+          </L>
+        </div>
+      ) : (
+        <div className="max-w-[180px]">
+          <L label="Open after (seconds)">
+            <input type="number" min={0} max={120} value={delay} onChange={e => setDelay(Number(e.target.value) || 0)} className={inputCls} />
+          </L>
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#888]">Paste before &lt;/body&gt;</span>
+          <button onClick={() => { navigator.clipboard.writeText(snippet); toast.success('Snippet copied') }}
+            className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 font-semibold">
+            <Copy size={11} /> Copy
+          </button>
+        </div>
+        <pre className="bg-[#111] border border-dark-border rounded-lg p-3 text-[10.5px] text-[#9ae6b4] overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
+        <p className="text-[10px] text-[#666] mt-2 leading-relaxed">
+          Auto-open modes remember each visitor: after they submit, the survey stays away for 90 days;
+          after they dismiss it, 7 days. The floating button is always available until they submit.
+        </p>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#888]">Or embed inline (iframe)</span>
+          <button onClick={() => { navigator.clipboard.writeText(iframeSnippet); toast.success('Iframe snippet copied') }}
+            className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 font-semibold">
+            <Copy size={11} /> Copy
+          </button>
+        </div>
+        <pre className="bg-[#111] border border-dark-border rounded-lg p-3 text-[10.5px] text-[#93c5fd] overflow-x-auto whitespace-pre-wrap break-all">{iframeSnippet}</pre>
+      </div>
     </div>
   )
 }
