@@ -12,6 +12,7 @@ class ReviewSubmission extends Model
 
     protected $fillable = [
         'organization_id', 'form_id', 'invitation_id',
+        'device_id', 'channel',
         'guest_id', 'loyalty_member_id',
         'overall_rating', 'nps_score', 'answers', 'comment',
         'redirected_externally', 'external_platform',

@@ -361,6 +361,24 @@ Route::get('/review/{id}', function (int $id, \Illuminate\Http\Request $request)
         ->header('Content-Security-Policy', "frame-ancestors *");
 })->where('id', '[0-9]+');
 
+// Kiosk flow: /k/{deviceKey} — a feedback tablet opens this URL once.
+// The page resolves its ASSIGNED survey via the public device endpoint,
+// renders it in kiosk mode (fullscreen stepper, big touch targets,
+// auto-reset between guests) and re-checks the assignment every 60s so
+// admins can repoint the tablet from Settings without touching it.
+Route::get('/k/{deviceKey}', function (string $deviceKey) {
+    $apiBase = rtrim(url('/'), '/') . '/api';
+    return response()
+        ->view('review-form', [
+            'mode' => 'kiosk',
+            'key'  => ['device' => $deviceKey],
+            'apiBase' => $apiBase,
+            'color' => '',
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+});
+
 // ─── Public Lead-Capture Form (CRM Phase 10) ───────────────────────────────
 // Embeddable form rendered as a standalone HTML page. The customer's
 // website embeds it via <iframe src="/form/{embed_key}">. The form
@@ -423,7 +441,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|form/|privacy|terms|data-deletion).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|privacy|terms|data-deletion).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

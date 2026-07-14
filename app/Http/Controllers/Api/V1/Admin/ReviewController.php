@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ReviewDevice;
 use App\Models\ReviewForm;
 use App\Models\ReviewFormQuestion;
+use App\Models\ReviewFormStat;
 use App\Models\ReviewIntegration;
 use App\Models\ReviewInvitation;
 use App\Models\ReviewSubmission;
@@ -471,5 +473,227 @@ class ReviewController extends Controller
             'ok'         => true,
             'invitation' => $invitation->load(['form:id,name', 'guest:id,full_name,email', 'member.user:id,name,email']),
         ], 201);
+    }
+
+    // ─── Kiosk devices ──────────────────────────────────────────────────────
+
+    public function listDevices(): JsonResponse
+    {
+        $devices = ReviewDevice::with('form:id,name')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($d) => array_merge($d->toArray(), ['is_online' => $d->is_online]));
+
+        return response()->json(['devices' => $devices]);
+    }
+
+    public function createDevice(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name'     => 'required|string|max:120',
+            'location' => 'nullable|string|max:160',
+            'form_id'  => 'nullable|integer',
+        ]);
+
+        // Scoped re-fetch — the raw id must belong to this org.
+        if (!empty($data['form_id']) && !ReviewForm::find($data['form_id'])) {
+            return response()->json(['message' => 'Unknown survey for this organization.'], 422);
+        }
+
+        $device = ReviewDevice::create(array_merge($data, [
+            'device_key' => Str::random(40),
+            'is_active'  => true,
+        ]));
+
+        return response()->json(['device' => $device->load('form:id,name')], 201);
+    }
+
+    public function updateDevice(Request $request, int $id): JsonResponse
+    {
+        $device = ReviewDevice::findOrFail($id);
+        $data = $request->validate([
+            'name'      => 'sometimes|string|max:120',
+            'location'  => 'nullable|string|max:160',
+            'form_id'   => 'nullable|integer',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        if (array_key_exists('form_id', $data) && $data['form_id'] !== null
+            && !ReviewForm::find($data['form_id'])) {
+            return response()->json(['message' => 'Unknown survey for this organization.'], 422);
+        }
+
+        // Reassignment bumps the form's updated_at via touch so the
+        // kiosk's `version` poll notices even when only the pointer
+        // changed (the version string is derived from the FORM).
+        $device->update($data);
+        if (array_key_exists('form_id', $data) && $device->form) {
+            $device->form->touch();
+        }
+
+        return response()->json(['device' => $device->fresh('form:id,name')]);
+    }
+
+    public function deleteDevice(int $id): JsonResponse
+    {
+        ReviewDevice::findOrFail($id)->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    public function rotateDeviceKey(int $id): JsonResponse
+    {
+        $device = ReviewDevice::findOrFail($id);
+        $device->update(['device_key' => Str::random(40)]);
+        return response()->json(['device' => $device->fresh('form:id,name')]);
+    }
+
+    // ─── Per-survey analytics ───────────────────────────────────────────────
+
+    /**
+     * GET /v1/admin/reviews/forms/{id}/analytics?days=30
+     *
+     * Everything the survey Analytics tab renders in one call: totals
+     * (views / submissions / completion / avg rating / NPS), a daily
+     * series, per-question breakdowns (distributions for scale kinds,
+     * option counts for choice kinds, latest texts for free-form), and
+     * channel + device splits.
+     */
+    public function formAnalytics(Request $request, int $id): JsonResponse
+    {
+        $form = ReviewForm::with('questions')->findOrFail($id);
+        $days = max(7, min(90, (int) $request->get('days', 30)));
+        $since = now()->subDays($days)->startOfDay();
+
+        $stats = ReviewFormStat::where('form_id', $form->id)
+            ->where('date', '>=', $since->toDateString())
+            ->orderBy('date')
+            ->get(['date', 'views', 'submissions']);
+
+        $views = (int) $stats->sum('views');
+        $submissionsInWindow = (int) $stats->sum('submissions');
+
+        // Bounded aggregation set — enough for accurate distributions
+        // without loading an unbounded table.
+        $subs = ReviewSubmission::where('form_id', $form->id)
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('id')
+            ->limit(2000)
+            ->get(['id', 'overall_rating', 'nps_score', 'answers', 'comment', 'channel', 'device_id', 'created_at']);
+
+        $ratings = $subs->pluck('overall_rating')->filter(fn ($v) => $v !== null);
+        $npsScores = $subs->pluck('nps_score')->filter(fn ($v) => $v !== null);
+
+        $nps = null;
+        if ($npsScores->count() > 0) {
+            $promoters  = $npsScores->filter(fn ($v) => $v >= 9)->count();
+            $detractors = $npsScores->filter(fn ($v) => $v <= 6)->count();
+            $nps = (int) round((($promoters - $detractors) / $npsScores->count()) * 100);
+        }
+
+        // Per-question breakdowns from the answers json ({question_id: value}).
+        $perQuestion = $form->questions->map(function ($q) use ($subs) {
+            $values = $subs->map(fn ($s) => $s->answers[(string) $q->id] ?? $s->answers[$q->id] ?? null)
+                ->filter(fn ($v) => $v !== null && $v !== '' && $v !== []);
+
+            $row = [
+                'id'       => $q->id,
+                'label'    => $q->label,
+                'kind'     => $q->kind,
+                'answered' => $values->count(),
+            ];
+
+            if (in_array($q->kind, ['stars', 'scale', 'emoji', 'nps'], true)) {
+                $nums = $values->map(fn ($v) => (float) $v)->filter(fn ($v) => is_finite($v));
+                $dist = [];
+                foreach ($nums as $v) {
+                    $k = (string) (int) $v;
+                    $dist[$k] = ($dist[$k] ?? 0) + 1;
+                }
+                ksort($dist, SORT_NUMERIC);
+                $row['average'] = $nums->count() ? round($nums->avg(), 2) : null;
+                $row['distribution'] = $dist;
+            } elseif (in_array($q->kind, ['single_choice', 'multi_choice', 'boolean'], true)) {
+                $dist = [];
+                foreach ($values as $v) {
+                    foreach ((array) $v as $opt) {
+                        $k = (string) $opt;
+                        $dist[$k] = ($dist[$k] ?? 0) + 1;
+                    }
+                }
+                arsort($dist);
+                $row['distribution'] = $dist;
+            } else {
+                $row['latest'] = $values->take(10)->map(fn ($v) => (string) $v)->values();
+            }
+
+            return $row;
+        })->values();
+
+        $channels = $subs->groupBy(fn ($s) => $s->channel ?? 'link')
+            ->map(fn ($g) => $g->count());
+
+        $deviceCounts = $subs->whereNotNull('device_id')->groupBy('device_id')->map->count();
+        $deviceNames = ReviewDevice::whereIn('id', $deviceCounts->keys())->pluck('name', 'id');
+        $devices = $deviceCounts->map(fn ($count, $deviceId) => [
+            'name'  => $deviceNames[$deviceId] ?? "Device #{$deviceId}",
+            'count' => $count,
+        ])->values();
+
+        return response()->json([
+            'days'   => $days,
+            'totals' => [
+                'views'           => $views,
+                'submissions'     => $submissionsInWindow,
+                'completion_rate' => $views > 0 ? round($submissionsInWindow / $views * 100) : null,
+                'avg_rating'      => $ratings->count() ? round($ratings->avg(), 2) : null,
+                'nps'             => $nps,
+            ],
+            'series'       => $stats->map(fn ($s) => [
+                'date'        => $s->date->toDateString(),
+                'views'       => (int) $s->views,
+                'submissions' => (int) $s->submissions,
+            ])->values(),
+            'per_question' => $perQuestion,
+            'channels'     => $channels,
+            'devices'      => $devices,
+        ]);
+    }
+
+    /**
+     * POST /v1/admin/reviews/forms/{id}/duplicate — clone a survey with
+     * its questions (fresh embed key, inactive until published).
+     */
+    public function duplicateForm(int $id): JsonResponse
+    {
+        $form = ReviewForm::with('questions')->findOrFail($id);
+
+        $copy = ReviewForm::create([
+            'organization_id' => $form->organization_id,
+            'name'            => $form->name . ' (copy)',
+            'type'            => $form->type,
+            'is_active'       => false,
+            'is_default'      => false,
+            'config'          => $form->config,
+            'embed_key'       => Str::random(32),
+        ]);
+
+        foreach ($form->questions as $q) {
+            ReviewFormQuestion::create([
+                'organization_id'    => $form->organization_id,
+                'form_id'            => $copy->id,
+                'order'              => $q->order,
+                'kind'               => $q->kind,
+                'label'              => $q->label,
+                'help_text'          => $q->help_text,
+                'options'            => $q->options,
+                'required'           => $q->required,
+                'weight'             => $q->weight,
+                'condition_index'    => $q->condition_index,
+                'condition_operator' => $q->condition_operator,
+                'condition_value'    => $q->condition_value,
+            ]);
+        }
+
+        return response()->json(['form' => $copy->load('questions')], 201);
     }
 }

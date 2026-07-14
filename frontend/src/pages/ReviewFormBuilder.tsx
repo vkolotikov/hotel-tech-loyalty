@@ -9,6 +9,7 @@ import {
   Settings2, Link2, Zap,
 } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
+import { SurveyDesignPanel, SurveyAnalyticsPanel } from '../components/SurveyDesignPanel'
 
 type Kind = 'text' | 'textarea' | 'stars' | 'scale' | 'nps' | 'single_choice' | 'multi_choice' | 'boolean' | 'emoji'
 type CondOp = 'eq' | 'neq' | 'gte' | 'lte' | 'contains' | 'any_of'
@@ -78,6 +79,7 @@ export function ReviewFormBuilder() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [showSettings, setShowSettings] = useState(false)
+  const [view, setView] = useState<'build' | 'design' | 'analytics'>('build')
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
@@ -277,6 +279,30 @@ export function ReviewFormBuilder() {
         </button>
       </div>
 
+      {/* Build / Design / Analytics switcher */}
+      <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit mb-6">
+        {(['build', 'design', 'analytics'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)}
+            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}>
+            {v === 'build' ? 'Questions' : v}
+          </button>
+        ))}
+      </div>
+
+      {view === 'design' && (
+        <SurveyDesignPanel
+          config={config}
+          setConfig={setConfig}
+          onSave={() => saveFormMut.mutate()}
+          saving={saveFormMut.isPending}
+          previewUrl={publicUrl + '&preview=1'}
+        />
+      )}
+      {view === 'analytics' && <SurveyAnalyticsPanel formId={form.id} />}
+
+      {/* Build view — display-gated (not unmounted) so in-progress edits
+          survive a tab switch; the fixed save bar hides with it. */}
+      <div style={view === 'build' ? undefined : { display: 'none' }}>
       {/* Collapsible Settings Panel */}
       {showSettings && (
         <div className="bg-dark-surface border border-dark-border rounded-xl mb-6 overflow-hidden">
@@ -632,6 +658,7 @@ export function ReviewFormBuilder() {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }
