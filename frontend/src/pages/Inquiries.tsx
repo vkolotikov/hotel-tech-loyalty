@@ -107,7 +107,6 @@ export function Inquiries() {
   const [assignedTo, setAssignedTo] = useState('')
   const [source, setSource] = useState('')
   const [taskDue, setTaskDue] = useState('')
-  const [activeOnly, setActiveOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -137,7 +136,7 @@ export function Inquiries() {
   // Pipeline stage grouping — gives staff a quick way to think about the
   // pipeline as Leads (just-arrived) vs Active Deals (being worked) vs
   // Closed (won/lost). Pure client-side slice so we don't touch the API.
-  const [stageGroup, setStageGroup] = useState<'all' | 'leads' | 'deals' | 'closed'>('all')
+  const [stageGroup, setStageGroup] = useState<'all' | 'leads' | 'deals'>('all')
   // Focus mode — hides the filter / saved-views / advanced-filter rows
   // so the table gets the full viewport. Persisted to localStorage so
   // the preference survives page navigation + reloads. Stage-group +
@@ -200,7 +199,10 @@ export function Inquiries() {
   if (assignedTo) params.assigned_to = assignedTo
   if (source) params.source = source
   if (taskDue) params.task_due = taskDue
-  if (activeOnly) params.active_only = 1
+  // Leads is ACTIVE work only — Confirmed rows live in /deals and Lost
+  // customers stay in /leads?tab=customers (Contacts). Always-on filter,
+  // not a user toggle.
+  params.active_only = 1
 
   const { data, isLoading } = useQuery({
     queryKey: ['inquiries', params],
@@ -326,8 +328,8 @@ export function Inquiries() {
       qc.invalidateQueries({ queryKey: ['inquiries-insights'] })
       qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
       toast.success(
-        vars.status === 'Confirmed' ? 'Marked as Won — reservation created'
-        : vars.status === 'Lost'    ? 'Marked as Lost'
+        vars.status === 'Confirmed' ? t('inquiries.toasts.won_moved', 'Deal won — reservation created. Find it under Deals.')
+        : vars.status === 'Lost'    ? t('inquiries.toasts.lost_kept', 'Marked as Lost — the customer stays in Contacts.')
         : `Status → ${vars.status}`
       )
       setOpenMenu(null)
@@ -471,7 +473,7 @@ export function Inquiries() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allInquiries, stageGroup])
 
-  const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly
+  const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue
 
   const toggleSort = (col: string) => {
     if (sort === col) setDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -523,7 +525,6 @@ export function Inquiries() {
             { v: 'all',    label: 'All',          tone: 'from-gray-500 to-gray-600' },
             { v: 'leads',  label: 'Leads',        tone: 'from-blue-500 to-indigo-500' },
             { v: 'deals',  label: 'Active Deals', tone: 'from-amber-500 to-orange-500' },
-            { v: 'closed', label: 'Closed',       tone: 'from-emerald-500 to-teal-500' },
           ] as const).map(({ v, label, tone }) => (
             <button key={v} onClick={() => setStageGroup(v)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${stageGroup === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
@@ -556,7 +557,7 @@ export function Inquiries() {
           in focus mode along with the rest of the filter chrome. */}
       {!focusMode && <SavedViews
         page="inquiries"
-        currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue, activeOnly }}
+        currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue }}
         hasActiveFilters={!!hasFilters}
         onApply={(f: any) => {
           setStatus(f.status ?? '')
@@ -566,7 +567,6 @@ export function Inquiries() {
           setAssignedTo(f.assignedTo ?? '')
           setSource(f.source ?? '')
           setTaskDue(f.taskDue ?? '')
-          setActiveOnly(!!f.activeOnly)
           setPage(1)
         }}
       />}
@@ -585,7 +585,7 @@ export function Inquiries() {
           {view === 'list' && (
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
               <option value="">{t('inquiries.filters.all_statuses', 'All Statuses')}</option>
-              {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
+              {settings.inquiry_statuses.filter(s => !STAGE_GROUPS.closed.includes(s)).map(s => <option key={s}>{s}</option>)}
             </select>
           )}
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
@@ -673,11 +673,7 @@ export function Inquiries() {
               <option value="overdue">{t('inquiries.filters.overdue', 'Overdue')}</option>
               <option value="soon">{t('inquiries.filters.due_soon_3d', 'Due Soon (3d)')}</option>
             </select>
-            <label className="flex items-center gap-2 text-sm text-t-secondary cursor-pointer">
-              <input type="checkbox" checked={activeOnly} onChange={e => { setActiveOnly(e.target.checked); setPage(1) }} className="accent-primary-500" />
-              {t('inquiries.filters.active_only', 'Active only')}
-            </label>
-            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setActiveOnly(false); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
+            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -775,12 +771,12 @@ export function Inquiries() {
                           the secondary line tells staff how leads land
                           here so they know what next-step to take. */}
                       <div className="text-[15px] font-semibold text-white">
-                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly)
+                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue)
                           ? t('inquiries.empty.filtered_title', 'No leads match these filters')
                           : t('inquiries.empty.title', 'No leads yet')}
                       </div>
                       <div className="text-[12.5px] text-gray-500 leading-relaxed">
-                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue || activeOnly)
+                        {(search || status || priority || inquiryType || propertyId || assignedTo || source || taskDue)
                           ? t('inquiries.empty.filtered_body', 'Try clearing a filter or two — or use Add Inquiry to create one manually.')
                           : t('inquiries.empty.body', 'Inquiries from your booking widget, chat, and lead forms land here automatically. Add one manually to get started.')}
                       </div>
@@ -1259,7 +1255,17 @@ export function Inquiries() {
                 <div className="flex-1 p-2 space-y-2 min-h-[120px]">
                   {cards.length === 0 && (
                     <div className={`text-center text-[10px] py-4 transition-colors ${isDropTarget ? 'text-primary-400/70' : 'text-gray-700'}`}>
-                      {isDropTarget ? t('inquiries.table.drop_here', 'Drop here →') : t('inquiries.table.drop_cards_here', 'Drop cards here')}
+                      {/* Confirmed/Lost columns are pure drop-zones now —
+                          the list is active-only, so closed cards leave
+                          the board the moment they land. Explain where
+                          they go instead of showing a dead column. */}
+                      {isDropTarget
+                        ? t('inquiries.table.drop_here', 'Drop here →')
+                        : STAGE_GROUPS.closed.includes(col)
+                          ? (col === 'Confirmed'
+                              ? t('inquiries.table.drop_won_hint', 'Drop to win — deal moves to Deals')
+                              : t('inquiries.table.drop_lost_hint', 'Drop to close — customer stays in Contacts'))
+                          : t('inquiries.table.drop_cards_here', 'Drop cards here')}
                     </div>
                   )}
                   {cards.map((inq: any) => {
