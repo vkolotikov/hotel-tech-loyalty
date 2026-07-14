@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import { ArrowLeftRight, Users, AlertCircle, Mail, Phone, ExternalLink } from 'lucide-react'
@@ -23,18 +24,19 @@ interface Pair {
   loser: MemberRow
 }
 
-const REASON_LABELS: Record<string, { label: string; color: string }> = {
-  shared_email: { label: 'Shared email', color: 'bg-blue-500/20 text-blue-300' },
-  shared_phone: { label: 'Shared phone', color: 'bg-purple-500/20 text-purple-300' },
-}
-
 export function MemberDuplicates() {
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [pendingPair, setPendingPair] = useState<Pair | null>(null)
   const [reason, setReason] = useState('')
   const [swapped, setSwapped] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const REASON_LABELS: Record<string, { label: string; color: string }> = {
+    shared_email: { label: t('members.duplicates.shared_email', 'Shared email'), color: 'bg-blue-500/20 text-blue-300' },
+    shared_phone: { label: t('members.duplicates.shared_phone', 'Shared phone'), color: 'bg-purple-500/20 text-purple-300' },
+  }
+
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['member-duplicates'],
     queryFn: () => api.get('/v1/admin/members/duplicates').then(r => r.data),
   })
@@ -43,17 +45,31 @@ export function MemberDuplicates() {
     mutationFn: (body: { winner_id: number; loser_id: number; reason: string }) =>
       api.post('/v1/admin/members/merge', body),
     onSuccess: () => {
-      toast.success('Members merged')
+      toast.success(t('members.duplicates.merged', 'Members merged'))
       qc.invalidateQueries({ queryKey: ['member-duplicates'] })
-      qc.invalidateQueries({ queryKey: ['members'] })
+      // The list + KPI queries actually live under these keys — the old
+      // ['members'] invalidation matched nothing (prefix mismatch), so
+      // tier counts stayed stale for 30s after a merge.
+      qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       setPendingPair(null)
       setReason('')
       setSwapped(false)
     },
     onError: (e: any) => {
-      toast.error(e.response?.data?.message || 'Merge failed')
+      toast.error(e.response?.data?.message || t('members.duplicates.merge_failed', 'Merge failed'))
     },
   })
+
+  // Escape closes the confirm modal (unless a merge is mid-flight).
+  useEffect(() => {
+    if (!pendingPair) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !mergeMutation.isPending) setPendingPair(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pendingPair, mergeMutation.isPending])
 
   const pairs: Pair[] = data?.pairs ?? []
 
@@ -64,30 +80,39 @@ export function MemberDuplicates() {
     mergeMutation.mutate({ winner_id: winner.id, loser_id: loser.id, reason })
   }
 
+  const roleWinner = t('members.duplicates.winner_role', 'Winner (kept)')
+  const roleLoser  = t('members.duplicates.loser_role', 'Loser (removed)')
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Duplicate Members</h1>
+        <h1 className="text-2xl font-bold text-white">{t('members.duplicates.title', 'Duplicate Members')}</h1>
         <p className="text-sm text-t-secondary mt-0.5">
-          Suggested matches based on shared email or phone. Review each pair before merging.
+          {t('members.duplicates.subtitle', 'Suggested matches based on shared email or phone. Review each pair before merging.')}
         </p>
       </div>
 
       <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
         <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
         <div className="text-xs text-amber-200/90 leading-relaxed">
-          Merging is permanent. The "loser" member's points, transactions, bookings,
-          NFC cards, inquiries, and CRM guest record are reassigned to the "winner",
-          and the loser account is deleted. Use the swap button to flip which one survives.
+          {t('members.duplicates.warning', 'Merging is permanent. The "loser" member\'s points, transactions, bookings, NFC cards, inquiries, and CRM guest record are reassigned to the "winner", and the loser account is deleted. Use the swap button to flip which one survives.')}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center text-[#636366] py-12">Searching for duplicates...</div>
+        <div className="text-center text-[#636366] py-12">{t('members.duplicates.searching', 'Searching for duplicates...')}</div>
+      ) : isError ? (
+        <div className="text-center py-16 bg-dark-surface border border-red-500/25 rounded-xl">
+          <AlertCircle size={32} className="mx-auto mb-3 text-red-400/70" />
+          <p className="text-sm text-red-300">{t('members.duplicates.load_failed', 'Could not load duplicate suggestions.')}</p>
+          <button onClick={() => refetch()} className="mt-3 text-xs text-primary-400 hover:text-primary-300 font-semibold">
+            {t('common.retry', 'Try again')}
+          </button>
+        </div>
       ) : pairs.length === 0 ? (
         <div className="text-center text-[#636366] py-16 bg-dark-surface border border-dark-border rounded-xl">
           <Users size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No duplicate members found.</p>
+          <p className="text-sm">{t('members.duplicates.none', 'No duplicate members found.')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -103,15 +128,15 @@ export function MemberDuplicates() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <MemberCard member={pair.winner} role="Winner (kept)" />
-                  <MemberCard member={pair.loser}  role="Loser (removed)" />
+                  <MemberCard member={pair.winner} role={roleWinner} joinedLabel={t('members.duplicates.joined', 'Joined')} lastActiveLabel={t('members.duplicates.last_active', 'last active')} />
+                  <MemberCard member={pair.loser}  role={roleLoser} joinedLabel={t('members.duplicates.joined', 'Joined')} lastActiveLabel={t('members.duplicates.last_active', 'last active')} />
                 </div>
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={() => { setPendingPair(pair); setSwapped(false); setReason('') }}
                     className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    <ArrowLeftRight size={12} /> Review & Merge
+                    <ArrowLeftRight size={12} /> {t('members.duplicates.review_merge', 'Review & Merge')}
                   </button>
                 </div>
               </div>
@@ -125,31 +150,40 @@ export function MemberDuplicates() {
         const winner = swapped ? pendingPair.loser : pendingPair.winner
         const loser  = swapped ? pendingPair.winner : pendingPair.loser
         return (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl p-6">
-              <h2 className="text-lg font-bold text-white mb-1">Confirm merge</h2>
+          <div
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={() => { if (!mergeMutation.isPending) setPendingPair(null) }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('members.duplicates.confirm_title', 'Confirm merge')}
+              className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-2xl p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-lg font-bold text-white mb-1">{t('members.duplicates.confirm_title', 'Confirm merge')}</h2>
               <p className="text-xs text-t-secondary mb-4">
-                {loser.name} → {winner.name}. This cannot be undone.
+                {t('members.duplicates.confirm_line', '{{loser}} → {{winner}}. This cannot be undone.', { loser: loser.name, winner: winner.name })}
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <MemberCard member={winner} role="Winner (kept)" />
-                <MemberCard member={loser}  role="Loser (removed)" />
+                <MemberCard member={winner} role={roleWinner} joinedLabel={t('members.duplicates.joined', 'Joined')} lastActiveLabel={t('members.duplicates.last_active', 'last active')} />
+                <MemberCard member={loser}  role={roleLoser} joinedLabel={t('members.duplicates.joined', 'Joined')} lastActiveLabel={t('members.duplicates.last_active', 'last active')} />
               </div>
 
               <button
                 onClick={() => setSwapped(s => !s)}
                 className="text-xs text-primary-400 hover:text-primary-300 mb-4 flex items-center gap-1"
               >
-                <ArrowLeftRight size={12} /> Swap winner / loser
+                <ArrowLeftRight size={12} /> {t('members.duplicates.swap', 'Swap winner / loser')}
               </button>
 
-              <label className="block text-xs font-medium text-t-secondary mb-1">Reason (optional)</label>
+              <label className="block text-xs font-medium text-t-secondary mb-1">{t('members.duplicates.reason_label', 'Reason (optional)')}</label>
               <textarea
                 value={reason}
                 onChange={e => setReason(e.target.value)}
                 rows={2}
-                placeholder="e.g. Same person — used different email at front desk"
+                placeholder={t('members.duplicates.reason_placeholder', 'e.g. Same person — used different email at front desk')}
                 className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
               />
 
@@ -159,14 +193,14 @@ export function MemberDuplicates() {
                   className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white"
                   disabled={mergeMutation.isPending}
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   onClick={confirmMerge}
                   disabled={mergeMutation.isPending}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50"
                 >
-                  {mergeMutation.isPending ? 'Merging...' : 'Merge permanently'}
+                  {mergeMutation.isPending ? t('members.duplicates.merging', 'Merging...') : t('members.duplicates.merge_btn', 'Merge permanently')}
                 </button>
               </div>
             </div>
@@ -177,7 +211,7 @@ export function MemberDuplicates() {
   )
 }
 
-function MemberCard({ member, role }: { member: MemberRow; role: string }) {
+function MemberCard({ member, role, joinedLabel, lastActiveLabel }: { member: MemberRow; role: string; joinedLabel: string; lastActiveLabel: string }) {
   return (
     <div className="bg-dark-surface2 border border-dark-border rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
@@ -195,8 +229,8 @@ function MemberCard({ member, role }: { member: MemberRow; role: string }) {
         <div><span className="text-[#636366]">Current</span> <span className="text-white font-medium">{member.current_points.toLocaleString()}</span></div>
       </div>
       <div className="text-[10px] text-[#636366] mt-1">
-        Joined {new Date(member.created_at).toLocaleDateString()}
-        {member.last_activity_at && ` · last active ${new Date(member.last_activity_at).toLocaleDateString()}`}
+        {joinedLabel} {new Date(member.created_at).toLocaleDateString()}
+        {member.last_activity_at && ` · ${lastActiveLabel} ${new Date(member.last_activity_at).toLocaleDateString()}`}
       </div>
     </div>
   )

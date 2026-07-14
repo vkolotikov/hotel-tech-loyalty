@@ -184,6 +184,7 @@ export function MemberDetail() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['member', id] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       toast.success(`${pointsForm.points} points awarded`)
       setPointsForm({ points: '', description: '' })
     },
@@ -201,6 +202,7 @@ export function MemberDetail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['member', id] })
       qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       toast.success(member?.is_active ? 'Member deactivated' : 'Member reactivated')
       setKebabOpen(false)
     },
@@ -211,6 +213,7 @@ export function MemberDetail() {
     mutationFn: () => api.delete(`/v1/admin/members/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       toast.success('Member deleted')
       navigate('/members')
     },
@@ -225,6 +228,7 @@ export function MemberDetail() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['member', id] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       toast.success(`${pointsForm.points} points redeemed`)
       setPointsForm({ points: '', description: '' })
     },
@@ -910,7 +914,7 @@ export function MemberDetail() {
               </p>
               <button
                 onClick={() => {
-                  if (confirm(`Permanently delete ${user?.name ?? 'this member'}? All their data will be removed.`)) {
+                  if (confirm(t('memberDetail.kebab.delete_confirm', { name: user?.name ?? 'this member', defaultValue: 'Permanently delete {{name}}? All their data will be removed.' }))) {
                     deleteMutation.mutate()
                   }
                 }}

@@ -6,6 +6,7 @@ import { Plus, X, Image as ImageIcon, Pencil, Trash2, Eye, EyeOff, Search, Check
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { api, resolveImage } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Card } from '../components/ui/Card'
 
 type Tab = 'catalog' | 'redemptions'
@@ -14,6 +15,7 @@ interface RewardRow {
   id: number
   name: string
   description: string | null
+  terms: string | null
   category: string | null
   image_url: string | null
   points_cost: number
@@ -54,7 +56,7 @@ export function Rewards() {
     return () => clearTimeout(handle)
   }, [redSearch])
 
-  const { data: rewardsData, isLoading } = useQuery({
+  const { data: rewardsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-rewards', search],
     queryFn: () => api.get('/v1/admin/rewards', { params: { q: search || undefined } }).then(r => r.data),
   })
@@ -69,11 +71,17 @@ export function Rewards() {
   const saveMutation = useMutation({
     mutationFn: () => {
       const fd = new FormData()
-      const numericFields = ['points_cost', 'stock', 'per_member_limit', 'sort_order']
+      // On UPDATE, clearable fields must be sent even when blanked —
+      // skipping them made "clear the stock to unlimited" silently keep
+      // the old value while toasting success. Laravel's
+      // ConvertEmptyStringsToNull turns the '' into a proper null.
+      const clearableOnEdit = ['description', 'terms', 'category', 'stock', 'per_member_limit', 'expires_at']
       Object.entries(form).forEach(([k, v]) => {
-        if (v === '' || v == null) return
+        if (v === '' || v == null) {
+          if (editId && clearableOnEdit.includes(k)) fd.append(k, '')
+          return
+        }
         if (typeof v === 'boolean') fd.append(k, v ? '1' : '0')
-        else if (numericFields.includes(k)) fd.append(k, String(v))
         else fd.append(k, String(v))
       })
       if (imageFile) fd.append('image', imageFile)
@@ -104,13 +112,13 @@ export function Rewards() {
 
   const fulfillMutation = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/rewards/redemptions/${id}/fulfill`).then(r => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reward-redemptions'] }); toast.success(t('rewards.toasts.fulfilled', 'Marked fulfilled')) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reward-redemptions'] }); qc.invalidateQueries({ queryKey: ['admin-rewards'] }); toast.success(t('rewards.toasts.fulfilled', 'Marked fulfilled')) },
     onError: (e: any) => toast.error(e.response?.data?.message || t('rewards.toasts.fulfill_failed', 'Fulfill failed')),
   })
 
   const cancelMutation = useMutation({
     mutationFn: (id: number) => api.post(`/v1/admin/rewards/redemptions/${id}/cancel`).then(r => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reward-redemptions'] }); toast.success(t('rewards.toasts.cancelled', 'Cancelled (points refunded if pending)')) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reward-redemptions'] }); qc.invalidateQueries({ queryKey: ['admin-rewards'] }); toast.success(t('rewards.toasts.cancelled', 'Cancelled (points refunded if pending)')) },
     onError: (e: any) => toast.error(e.response?.data?.message || t('rewards.toasts.cancel_failed', 'Cancel failed')),
   })
 
@@ -122,7 +130,7 @@ export function Rewards() {
   const startEdit = (r: RewardRow) => {
     setEditId(r.id)
     setForm({
-      name: r.name, description: r.description ?? '', terms: '',
+      name: r.name, description: r.description ?? '', terms: r.terms ?? '',
       category: r.category ?? '',
       points_cost: String(r.points_cost),
       stock: r.stock === null ? '' : String(r.stock),
@@ -270,7 +278,9 @@ export function Rewards() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {isLoading ? (
+              {isError ? (
+                <div className="col-span-full"><QueryError onRetry={() => refetch()} /></div>
+              ) : isLoading ? (
                 Array(6).fill(0).map((_, i) => (
                   <div key={i} className="h-48 bg-dark-surface2 rounded-xl animate-pulse" />
                 ))

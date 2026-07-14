@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Award, Plus, Pencil, Trash2, X, Filter, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -37,7 +38,7 @@ export function Benefits() {
   const [showInactive, setShowInactive] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-benefits'],
     queryFn: () => api.get('/v1/admin/benefits').then(r => r.data),
   })
@@ -199,6 +200,8 @@ export function Benefits() {
 
       {isLoading ? (
         <div className="text-center text-t-secondary py-12">{t('benefits.table.loading', 'Loading...')}</div>
+      ) : isError ? (
+        <QueryError onRetry={() => refetch()} />
       ) : (
         <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
           <table className="w-full">

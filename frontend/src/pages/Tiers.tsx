@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Crown, Plus, Pencil, X, Users, Award, Star, Gem, ShieldCheck, Layers, Sparkles, Calculator } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -73,6 +74,11 @@ export function Tiers() {
   const [previewResult, setPreviewResult] = useState<any>(undefined)
   const [previewLoading, setPreviewLoading] = useState(false)
 
+  // A previous result describes previous inputs — clear it the moment
+  // the admin changes the model or any value so the badge never lies.
+  const setPreviewModelAndReset = (m: typeof previewModel) => { setPreviewModel(m); setPreviewResult(undefined) }
+  const setPreviewValsAndReset = (v: typeof previewVals) => { setPreviewVals(v); setPreviewResult(undefined) }
+
   const runPreview = async () => {
     setPreviewLoading(true)
     try {
@@ -90,7 +96,7 @@ export function Tiers() {
     }
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-tiers'],
     queryFn: () => api.get('/v1/admin/tiers').then(r => r.data),
   })
@@ -115,6 +121,17 @@ export function Tiers() {
       toast.success(editId ? t('tiers.toasts.updated', 'Tier updated') : t('tiers.toasts.created', 'Tier created'))
     },
     onError: () => toast.error(t('tiers.toasts.save_failed', 'Failed to save tier')),
+  })
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: (tier: Tier) => api.put(`/v1/admin/tiers/${tier.id}`, { is_active: !(tier.is_active !== false) }),
+    onSuccess: (_res, tier) => {
+      qc.invalidateQueries({ queryKey: ['admin-tiers'] })
+      toast.success(tier.is_active !== false
+        ? t('tiers.toasts.disabled', 'Tier disabled')
+        : t('tiers.toasts.enabled', 'Tier enabled'))
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('tiers.toasts.toggle_failed', 'Could not update tier')),
   })
 
   const assignBenefitMutation = useMutation({
@@ -193,7 +210,7 @@ export function Tiers() {
             <label className="block text-[11px] font-medium text-t-secondary mb-1">{t('tiers.preview.model', 'Model')}</label>
             <select
               value={previewModel}
-              onChange={e => setPreviewModel(e.target.value as any)}
+              onChange={e => setPreviewModelAndReset(e.target.value as any)}
               className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm"
             >
               <option value="points">{t('tiers.preview.points', 'Points')}</option>
@@ -209,7 +226,7 @@ export function Tiers() {
               <input
                 type="number" min={0}
                 value={previewVals.points}
-                onChange={e => setPreviewVals(v => ({ ...v, points: e.target.value }))}
+                onChange={e => setPreviewValsAndReset({ ...previewVals, points: e.target.value })}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-28"
               />
             </div>
@@ -220,7 +237,7 @@ export function Tiers() {
               <input
                 type="number" min={0}
                 value={previewVals.nights}
-                onChange={e => setPreviewVals(v => ({ ...v, nights: e.target.value }))}
+                onChange={e => setPreviewValsAndReset({ ...previewVals, nights: e.target.value })}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-24"
               />
             </div>
@@ -231,7 +248,7 @@ export function Tiers() {
               <input
                 type="number" min={0}
                 value={previewVals.stays}
-                onChange={e => setPreviewVals(v => ({ ...v, stays: e.target.value }))}
+                onChange={e => setPreviewValsAndReset({ ...previewVals, stays: e.target.value })}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-24"
               />
             </div>
@@ -242,7 +259,7 @@ export function Tiers() {
               <input
                 type="number" min={0} step="0.01"
                 value={previewVals.spend}
-                onChange={e => setPreviewVals(v => ({ ...v, spend: e.target.value }))}
+                onChange={e => setPreviewValsAndReset({ ...previewVals, spend: e.target.value })}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm w-28"
               />
             </div>
@@ -338,6 +355,8 @@ export function Tiers() {
 
       {isLoading ? (
         <div className="text-center text-t-secondary py-12">{t('tiers.loading', 'Loading...')}</div>
+      ) : isError ? (
+        <QueryError onRetry={() => refetch()} />
       ) : (
         <div className="space-y-4">
           {tiers.map(tier => {
@@ -363,11 +382,25 @@ export function Tiers() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
+                  {tier.is_active === false && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-500/20 text-gray-300">
+                      {t('tiers.disabled_badge', 'Disabled')}
+                    </span>
+                  )}
                   <div className="flex items-center gap-1 text-t-secondary">
                     <Users size={14} />
                     <span className="text-sm">{tier.member_count}</span>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(tier) }} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleActiveMutation.mutate(tier) }}
+                    role="switch"
+                    aria-checked={tier.is_active !== false}
+                    title={tier.is_active !== false ? t('tiers.toggle_off', 'Disable tier (hidden from qualification sweeps)') : t('tiers.toggle_on', 'Enable tier')}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${tier.is_active !== false ? 'bg-primary-600' : 'bg-dark-surface3 border border-dark-border'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${tier.is_active !== false ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(tier) }} aria-label={t('tiers.edit_label', 'Edit tier')} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
                 </div>
               </div>
 

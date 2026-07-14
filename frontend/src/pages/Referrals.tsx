@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { Users, Trophy, Gift, TrendingUp, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { api } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Card } from '../components/ui/Card'
 
 /**
@@ -30,7 +31,7 @@ export function Referrals() {
     queryFn: () => api.get('/v1/admin/referrals/stats').then(r => r.data),
   })
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-referrals', debouncedSearch, status, page],
     queryFn: () => api.get('/v1/admin/referrals', {
       params: { search: debouncedSearch, status: status || undefined, page },
@@ -125,7 +126,9 @@ export function Referrals() {
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
-              {isLoading ? (
+              {isError ? (
+                <tr><td colSpan={6} className="py-8"><QueryError onRetry={() => refetch()} /></td></tr>
+              ) : isLoading ? (
                 Array(6).fill(0).map((_, i) => (
                   <tr key={i}>
                     {Array(6).fill(0).map((_, j) => (

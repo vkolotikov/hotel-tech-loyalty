@@ -56,6 +56,21 @@ class MemberMergeService
         $snapshot = $loser->load('user')->toArray();
 
         return DB::transaction(function () use ($winner, $loser, $snapshot, $performedByUserId, $reason) {
+            // 0) Lock both member rows so a concurrent award/redeem (booking
+            //    webhook, mobile redemption) can't slip a balance change in
+            //    between our stale reads and the full-attribute save() below
+            //    — that change would be silently overwritten and the loser
+            //    row hard-deleted right after. Lock in id order to avoid
+            //    deadlocks with another merge running the opposite way.
+            [$firstId, $secondId] = $winner->id < $loser->id
+                ? [$winner->id, $loser->id]
+                : [$loser->id, $winner->id];
+            $lockedFirst  = LoyaltyMember::whereKey($firstId)->lockForUpdate()->firstOrFail();
+            $lockedSecond = LoyaltyMember::whereKey($secondId)->lockForUpdate()->firstOrFail();
+            [$winner, $loser] = $winner->id === $firstId
+                ? [$lockedFirst, $lockedSecond]
+                : [$lockedSecond, $lockedFirst];
+
             // 1) Plain re-points. Skip missing tables/columns via Schema checks
             //    — on PostgreSQL, letting a query error bubble up aborts the
             //    whole transaction (25P02), so a try/catch around DB::table

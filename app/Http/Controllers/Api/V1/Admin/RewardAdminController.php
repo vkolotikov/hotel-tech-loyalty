@@ -151,16 +151,28 @@ class RewardAdminController extends Controller
 
     public function fulfill(Request $request, int $id): JsonResponse
     {
-        $row = RewardRedemption::with('reward')->findOrFail($id);
-        if ($row->status !== RewardRedemption::STATUS_PENDING) {
-            return response()->json(['message' => "Redemption is already {$row->status}."], 422);
+        // Status transition happens under a row lock — otherwise a
+        // concurrent cancel() can refund the points while we mark the
+        // same redemption fulfilled, leaving the member with both the
+        // reward AND the refunded points.
+        try {
+            $row = DB::transaction(function () use ($request, $id) {
+                $row = RewardRedemption::whereKey($id)->lockForUpdate()->firstOrFail();
+                if ($row->status !== RewardRedemption::STATUS_PENDING) {
+                    abort(422, "Redemption is already {$row->status}.");
+                }
+                $row->update([
+                    'status'               => RewardRedemption::STATUS_FULFILLED,
+                    'fulfilled_at'         => now(),
+                    'fulfilled_by_user_id' => $request->user()->id,
+                    'notes'                => $request->input('notes', $row->notes),
+                ]);
+                return $row;
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
-        $row->update([
-            'status'               => RewardRedemption::STATUS_FULFILLED,
-            'fulfilled_at'         => now(),
-            'fulfilled_by_user_id' => $request->user()->id,
-            'notes'                => $request->input('notes', $row->notes),
-        ]);
+        $row->load('reward');
 
         AuditLog::record('reward_redemption_fulfilled', $row,
             ['status' => 'fulfilled'], ['status' => 'pending'],
@@ -179,32 +191,45 @@ class RewardAdminController extends Controller
             return response()->json(['message' => 'Redemption is already cancelled.'], 422);
         }
 
-        DB::transaction(function () use ($row, $request, $loyalty) {
-            // Only refund points if the redemption hadn't been fulfilled.
-            // A cancel on a fulfilled redemption is bookkeeping — staff
-            // adjust separately if they want to give the points back.
-            if ($row->status === RewardRedemption::STATUS_PENDING) {
-                if ($row->member && $row->points_spent > 0) {
-                    $loyalty->awardPoints(
-                        $row->member,
-                        $row->points_spent,
-                        "Refund: cancelled reward redemption {$row->code}",
-                        'adjust',
-                    );
+        try {
+            DB::transaction(function () use (&$row, $request, $loyalty) {
+                // Re-read under lock: two concurrent cancels both passed
+                // the pre-check above and BOTH refunded points + stock —
+                // a double-clicked Cancel handed out a free double refund.
+                $row = RewardRedemption::with('reward', 'member')
+                    ->whereKey($row->id)->lockForUpdate()->firstOrFail();
+                if ($row->status === RewardRedemption::STATUS_CANCELLED) {
+                    abort(422, 'Redemption is already cancelled.');
                 }
-                // Return stock if the reward tracks it.
-                if ($row->reward && $row->reward->stock !== null) {
-                    $row->reward->increment('stock');
-                }
-            }
 
-            $row->update([
-                'status'               => RewardRedemption::STATUS_CANCELLED,
-                'cancelled_at'         => now(),
-                'cancelled_by_user_id' => $request->user()->id,
-                'notes'                => $request->input('notes', $row->notes),
-            ]);
-        });
+                // Only refund points if the redemption hadn't been fulfilled.
+                // A cancel on a fulfilled redemption is bookkeeping — staff
+                // adjust separately if they want to give the points back.
+                if ($row->status === RewardRedemption::STATUS_PENDING) {
+                    if ($row->member && $row->points_spent > 0) {
+                        $loyalty->awardPoints(
+                            $row->member,
+                            $row->points_spent,
+                            "Refund: cancelled reward redemption {$row->code}",
+                            'adjust',
+                        );
+                    }
+                    // Return stock if the reward tracks it.
+                    if ($row->reward && $row->reward->stock !== null) {
+                        $row->reward->increment('stock');
+                    }
+                }
+
+                $row->update([
+                    'status'               => RewardRedemption::STATUS_CANCELLED,
+                    'cancelled_at'         => now(),
+                    'cancelled_by_user_id' => $request->user()->id,
+                    'notes'                => $request->input('notes', $row->notes),
+                ]);
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+        }
 
         AuditLog::record('reward_redemption_cancelled', $row,
             ['status' => 'cancelled'], ['status' => $row->getOriginal('status')],

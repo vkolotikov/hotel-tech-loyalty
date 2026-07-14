@@ -235,6 +235,34 @@ class LoyaltyServiceAwardRedeemTest extends TestCase
         }
     }
 
+    public function test_redeem_rechecks_balance_under_lock_so_stale_instances_cannot_overdraw(): void
+    {
+        // Double-spend guard (2026-07 launch hardening). The advisory
+        // pre-check reads the caller's in-memory instance; the
+        // AUTHORITATIVE check re-fetches the row under lockForUpdate
+        // inside the transaction. A stale instance — exactly what the
+        // loser of a concurrent redeem race holds — must throw, not
+        // drive current_points negative.
+        $memberA = $this->seedMember(500);
+        $memberB = LoyaltyMember::find($memberA->id); // second handle, same row
+
+        $this->service->redeemPoints($memberA, 400, 'First spend');
+
+        // $memberB still believes current_points=500; only the in-tx
+        // re-check can catch that the row now holds 100.
+        $this->assertSame(500, (int) $memberB->current_points, 'precondition: stale handle');
+
+        try {
+            $this->service->redeemPoints($memberB, 400, 'Racing spend');
+            $this->fail('Stale-instance overdraw must throw.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Insufficient points', $e->getMessage());
+        }
+
+        $this->assertSame(100, (int) $memberA->fresh()->current_points,
+            'Balance must never go negative from a stale-instance redeem.');
+    }
+
     public function test_redeem_decrements_current_points_only_lifetime_stays(): void
     {
         // The append-only ledger invariant: lifetime_points

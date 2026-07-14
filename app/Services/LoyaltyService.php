@@ -52,6 +52,22 @@ class LoyaltyService
             $referenceId, $amountSpent, $propertyId, $outletId, $reasonCode,
             $sourceType, $sourceId, $idempotencyKey, $qualifying, $approvalStatus,
         ) {
+            // Serialize per-member writes, then re-check idempotency
+            // under the lock. The pre-transaction check alone is a
+            // TOCTOU race: two same-key retries can both pass it and
+            // double-credit (idempotency_key has no unique index).
+            // Lock via a throwaway SELECT and refresh the CALLER's
+            // instance in place — swapping in a new instance would
+            // leave the caller holding stale attributes after return.
+            LoyaltyMember::whereKey($member->id)->lockForUpdate()->firstOrFail();
+            $member->refresh();
+            if ($idempotencyKey) {
+                $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
             $member->increment('current_points', $points);
             $member->increment('lifetime_points', $points);
 
@@ -82,7 +98,6 @@ class LoyaltyService
                 'idempotency_key'  => $idempotencyKey ?? Str::uuid()->toString(),
                 'reason_code'      => $reasonCode ?? $type,
                 'approval_status'  => $approvalStatus,
-                'approved_by'      => $approvalStatus === 'auto_approved' ? null : null,
                 'approved_at'      => $approvalStatus === 'auto_approved' ? now() : null,
             ]);
 
@@ -136,6 +151,8 @@ class LoyaltyService
         ?string       $reasonCode = null,
         ?string       $idempotencyKey = null,
     ): PointsTransaction {
+        // Advisory fast-fail only — the authoritative balance check runs
+        // under a row lock inside the transaction below.
         if ($member->current_points < $points) {
             throw new \RuntimeException("Insufficient points. Available: {$member->current_points}, Requested: {$points}");
         }
@@ -149,6 +166,30 @@ class LoyaltyService
         }
 
         return DB::transaction(function () use ($member, $points, $description, $staff, $propertyId, $reasonCode, $idempotencyKey) {
+            // Serialize concurrent redemptions on the member row. Without
+            // the lock, two simultaneous redeems (double-clicked button,
+            // admin + mobile app at once) both pass the balance pre-check
+            // and both decrement — driving current_points negative.
+            // Lock + refresh in place (see awardPoints for why not a
+            // re-fetch): the balance check below then reads the row's
+            // true committed state, not the caller's possibly-stale copy.
+            LoyaltyMember::whereKey($member->id)->lockForUpdate()->firstOrFail();
+            $member->refresh();
+
+            // Idempotency re-check under the lock — same-key retries that
+            // raced past the pre-transaction check settle to exactly-once
+            // here instead of double-debiting.
+            if ($idempotencyKey) {
+                $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            if ($member->current_points < $points) {
+                throw new \RuntimeException("Insufficient points. Available: {$member->current_points}, Requested: {$points}");
+            }
+
             // Consume from oldest expiry buckets first
             $remaining = $points;
             $buckets = $member->activeExpiryBuckets()->get();
@@ -201,13 +242,24 @@ class LoyaltyService
         string            $reason,
         ?User             $staff = null,
     ): PointsTransaction {
+        // Advisory fast-fail; the authoritative check re-reads the row
+        // under lock inside the transaction.
         if ($transaction->is_reversed) {
             throw new \RuntimeException('Transaction already reversed.');
         }
 
         return DB::transaction(function () use ($transaction, $reason, $staff) {
+            // Same TOCTOU class as redeemPoints: without the lock, a
+            // double-clicked "Reverse" runs twice — both requests read
+            // is_reversed=false, both flip it, and a single +500 award
+            // gets reversed into a net −500.
+            $transaction = PointsTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            if ($transaction->is_reversed) {
+                throw new \RuntimeException('Transaction already reversed.');
+            }
+
             $transaction->update(['is_reversed' => true]);
-            $member = $transaction->member;
+            $member = LoyaltyMember::whereKey($transaction->member_id)->lockForUpdate()->firstOrFail();
 
             $reversePoints = -$transaction->points;
             $member->increment('current_points', $reversePoints);
@@ -715,9 +767,4 @@ class LoyaltyService
     /**
      * Check if a manual award requires approval based on thresholds.
      */
-    public function requiresApproval(int $points, ?User $staff = null): bool
-    {
-        $threshold = (int) HotelSetting::getValue('manual_award_approval_threshold', 500);
-        return $points > $threshold;
-    }
 }
