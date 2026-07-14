@@ -635,7 +635,9 @@ textarea.sv-input{min-height:22vh;resize:none}
           var cls = n<=6 ? 'n-red' : (n<=8 ? 'n-amber' : 'n-green');
           html += '<button class="'+cls+(v===n?' on':'')+'" data-v="'+n+'">'+n+'</button>';
         }
-        html += '</div><div class="sv-nps-legend"><span>Not likely at all</span><span>Extremely likely</span></div></div>';
+        var lo = (q.options && q.options.left_label) || 'Not likely at all';
+        var hi = (q.options && q.options.right_label) || 'Extremely likely';
+        html += '</div><div class="sv-nps-legend"><span>'+esc(lo)+'</span><span>'+esc(hi)+'</span></div></div>';
         return { html:html, skippable:skippable, bind: tapBind('.sv-nps button', function(b){
           b.addEventListener('click', function(){ state.answers[q.id] = parseInt(b.dataset.v,10); advance(); });
         })};
@@ -646,7 +648,11 @@ textarea.sv-input{min-height:22vh;resize:none}
           var cls2 = s<=4 ? 'n-red' : (s<=7 ? 'n-amber' : 'n-green');
           html += '<button class="'+cls2+(v===s?' on':'')+'" data-v="'+s+'">'+s+'</button>';
         }
-        html += '</div></div>';
+        html += '</div>';
+        if (q.options && (q.options.left_label || q.options.right_label)) {
+          html += '<div class="sv-nps-legend"><span>'+esc(q.options.left_label||'')+'</span><span>'+esc(q.options.right_label||'')+'</span></div>';
+        }
+        html += '</div>';
         return { html:html, skippable:skippable, bind: tapBind('.sv-nps button', function(b){
           b.addEventListener('click', function(){ state.answers[q.id] = parseInt(b.dataset.v,10); advance(); });
         })};
