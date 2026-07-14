@@ -443,7 +443,9 @@ function DevicesTab() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Rotate failed'),
   })
 
-  const kioskUrl = (d: KioskDevice) => `${API_URL}/k/${d.device_key}`
+  // API_URL is '' in production (same-origin SPA) — kiosk links leave
+  // this browser, so they need the real origin.
+  const kioskUrl = (d: KioskDevice) => `${API_URL || window.location.origin}/k/${d.device_key}`
 
   return (
     <div className="space-y-4">

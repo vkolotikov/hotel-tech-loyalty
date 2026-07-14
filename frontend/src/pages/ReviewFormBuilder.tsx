@@ -100,7 +100,11 @@ export function ReviewFormBuilder() {
   }, [data])
 
   const form = data?.form
-  const publicUrl = form ? `${API_URL}/review/${form.id}?key=${form.embed_key}` : ''
+  // API_URL is '' in production builds (same-origin SPA) — snippets and
+  // share links must carry a real origin or they break when pasted into
+  // the customer's own website.
+  const ORIGIN = API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+  const publicUrl = form ? `${ORIGIN}/review/${form.id}?key=${form.embed_key}` : ''
 
   const saveFormMut = useMutation({
     mutationFn: () => api.put(`/v1/admin/reviews/forms/${id}`, {
@@ -296,7 +300,7 @@ export function ReviewFormBuilder() {
           onSave={() => saveFormMut.mutate()}
           saving={saveFormMut.isPending}
           previewUrl={publicUrl + '&preview=1'}
-          embed={{ formId: form.id, embedKey: form.embed_key, origin: API_URL }}
+          embed={{ formId: form.id, embedKey: form.embed_key, origin: ORIGIN }}
         />
       )}
       {view === 'analytics' && <SurveyAnalyticsPanel formId={form.id} />}
@@ -304,8 +308,19 @@ export function ReviewFormBuilder() {
       {/* Build view — display-gated (not unmounted) so in-progress edits
           survive a tab switch; the fixed save bar hides with it. */}
       <div style={view === 'build' ? undefined : { display: 'none' }}>
+      {/* Basic surveys have a fixed structure (star rating + optional
+          comment) — their settings ARE the build surface, so they render
+          unconditionally with an explainer instead of a blank page. */}
+      {form.type === 'basic' && (
+        <div className="bg-primary-500/[0.06] border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-[#c8c8cc] leading-relaxed">
+          This is a <span className="font-semibold text-white">basic survey</span>: a 5-star rating question
+          {config.ask_for_comment ? ' plus an optional comment box' : ''}, with high ratings offered a redirect
+          to your public review profiles. Adjust its behaviour below — or create a <span className="font-semibold text-white">custom survey</span> from
+          the Forms tab to compose your own questions (NPS, smileys, choices, follow-ups…).
+        </div>
+      )}
       {/* Collapsible Settings Panel */}
-      {showSettings && (
+      {(showSettings || form.type === 'basic') && (
         <div className="bg-dark-surface border border-dark-border rounded-xl mb-6 overflow-hidden">
           <div className="p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

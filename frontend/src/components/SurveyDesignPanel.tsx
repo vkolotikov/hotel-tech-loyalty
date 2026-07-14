@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Monitor, TabletSmartphone, Palette, BarChart3, RefreshCw, Code2, Copy, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -45,6 +45,52 @@ function L({ label, children }: { label: string; children: React.ReactNode }) {
   )
 }
 
+/** iOS-style switch — replaces bare checkboxes across the panel. */
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+      className="flex items-center gap-3 text-left group">
+      <span className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary-500' : 'bg-white/[0.09] border border-dark-border'}`}>
+        <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+      </span>
+      <span className="text-sm text-[#c8c8cc] group-hover:text-white transition-colors">{label}</span>
+    </button>
+  )
+}
+
+/** Color swatch + hex field combo. */
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <L label={label}>
+      <div className="flex items-center gap-2">
+        <label className="relative w-9 h-9 rounded-lg overflow-hidden border border-dark-border cursor-pointer flex-shrink-0"
+          style={{ background: value }}>
+          <input type="color" value={value} onChange={e => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer" />
+        </label>
+        <input value={value} onChange={e => onChange(e.target.value)} spellCheck={false}
+          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-2.5 py-2 text-xs font-mono text-white" />
+      </div>
+    </L>
+  )
+}
+
+/** Slider + live value bubble for timing settings. */
+function RangeField({ label, value, onChange, min, max, unit }: {
+  label: string; value: number; onChange: (v: number) => void; min: number; max: number; unit: string
+}) {
+  return (
+    <L label={label}>
+      <div className="flex items-center gap-3">
+        <input type="range" min={min} max={max} value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="flex-1 accent-primary-500 cursor-pointer" />
+        <span className="w-14 text-right text-sm font-semibold text-white tabular-nums">{value}{unit}</span>
+      </div>
+    </L>
+  )
+}
+
 export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUrl, embed }: {
   config: Record<string, any>
   setConfig: (c: Record<string, any>) => void
@@ -60,6 +106,22 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
   const kiosk = theme.kiosk ?? {}
   // Bump to reload the preview iframe after a save.
   const [previewNonce, setPreviewNonce] = useState(0)
+  const frameRef = useRef<HTMLIFrameElement>(null)
+
+  // LIVE preview: push the draft config into the iframe (debounced) so
+  // every tweak renders instantly — no save round-trip. The renderer
+  // only honours this in ?preview=1 mode.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        frameRef.current?.contentWindow?.postMessage(
+          { source: 'hotel-tech-review-admin', config },
+          '*',
+        )
+      } catch { /* iframe not ready yet — the reload covers it */ }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [config, previewNonce])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
@@ -109,11 +171,8 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
                 { key: 'button_bg', label: 'Buttons', def: '#ffffff' },
                 { key: 'text_color', label: 'Text', def: '#ffffff' },
               ].map(c => (
-                <L key={c.key} label={c.label}>
-                  <input type="color" value={theme[c.key] ?? c.def}
-                    onChange={e => setTheme({ [c.key]: e.target.value })}
-                    className="w-full h-9 rounded-lg bg-[#1e1e1e] border border-dark-border cursor-pointer" />
-                </L>
+                <ColorField key={c.key} label={c.label} value={theme[c.key] ?? c.def}
+                  onChange={v => setTheme({ [c.key]: v })} />
               ))}
             </div>
           )}
@@ -125,11 +184,11 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
         </Section>
 
         <Section title="Welcome screen" icon={<TabletSmartphone size={14} className="text-primary-400" />}>
-          <label className="flex items-center gap-2 text-sm text-[#a0a0a0] mb-3 cursor-pointer">
-            <input type="checkbox" checked={welcome.enabled === true}
-              onChange={e => setTheme({ welcome: { ...welcome, enabled: e.target.checked } })} />
-            Show a welcome screen before the first question (kiosks always show it)
-          </label>
+          <div className="mb-4">
+            <Switch checked={welcome.enabled === true}
+              onChange={v => setTheme({ welcome: { ...welcome, enabled: v } })}
+              label="Show a welcome screen before the first question (kiosks always show it)" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <L label="Title"><input value={welcome.title ?? ''} onChange={e => setTheme({ welcome: { ...welcome, title: e.target.value } })} placeholder="Please rate your experience today" className={inputCls} /></L>
             <L label="Subtitle"><input value={welcome.subtitle ?? ''} onChange={e => setTheme({ welcome: { ...welcome, subtitle: e.target.value } })} placeholder="It takes less than a minute" className={inputCls} /></L>
@@ -142,15 +201,13 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
             <L label="Thank-you title"><input value={thanks.title ?? ''} onChange={e => setTheme({ thanks: { ...thanks, title: e.target.value } })} placeholder="Thank you!" className={inputCls} /></L>
             <L label="Thank-you message"><input value={thanks.message ?? ''} onChange={e => setTheme({ thanks: { ...thanks, message: e.target.value } })} placeholder="Your feedback helps us improve." className={inputCls} /></L>
           </div>
-          <div className="grid grid-cols-2 gap-3 max-w-md">
-            <L label="Reset after thanks (sec)">
-              <input type="number" min={3} max={60} value={kiosk.reset_seconds ?? 8}
-                onChange={e => setTheme({ kiosk: { ...kiosk, reset_seconds: Number(e.target.value) || 8 } })} className={inputCls} />
-            </L>
-            <L label="Idle reset (sec)">
-              <input type="number" min={15} max={600} value={kiosk.idle_reset_seconds ?? 60}
-                onChange={e => setTheme({ kiosk: { ...kiosk, idle_reset_seconds: Number(e.target.value) || 60 } })} className={inputCls} />
-            </L>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-w-xl">
+            <RangeField label="Reset after thanks" min={3} max={60} unit="s"
+              value={kiosk.reset_seconds ?? 8}
+              onChange={v => setTheme({ kiosk: { ...kiosk, reset_seconds: v } })} />
+            <RangeField label="Idle reset (guest walked away)" min={15} max={300} unit="s"
+              value={kiosk.idle_reset_seconds ?? 60}
+              onChange={v => setTheme({ kiosk: { ...kiosk, idle_reset_seconds: v } })} />
           </div>
           <p className="text-[11px] text-[#666] mt-2">
             Kiosk only: after the thank-you screen (or when a guest walks away mid-survey), the kiosk resets for the next guest.
@@ -159,18 +216,14 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
 
 
         <Section title="Post-stay automation" icon={<Send size={14} className="text-primary-400" />}>
-          <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer">
-            <input type="checkbox" checked={config.auto_send_post_stay === true}
-              onChange={e => setConfig({ ...config, auto_send_post_stay: e.target.checked })} />
-            Automatically email this survey to guests after checkout
-          </label>
+          <Switch checked={config.auto_send_post_stay === true}
+            onChange={v => setConfig({ ...config, auto_send_post_stay: v })}
+            label="Automatically email this survey to guests after checkout" />
           {config.auto_send_post_stay === true && (
-            <div className="mt-3 max-w-[220px]">
-              <L label="Days after checkout">
-                <input type="number" min={1} max={14} value={config.auto_send_delay_days ?? 1}
-                  onChange={e => setConfig({ ...config, auto_send_delay_days: Math.max(1, Number(e.target.value) || 1) })}
-                  className={inputCls} />
-              </L>
+            <div className="mt-4 max-w-xs">
+              <RangeField label="Days after checkout" min={1} max={14} unit="d"
+                value={config.auto_send_delay_days ?? 1}
+                onChange={v => setConfig({ ...config, auto_send_delay_days: v })} />
             </div>
           )}
           <p className="text-[11px] text-[#666] mt-3 leading-relaxed">
@@ -198,10 +251,13 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
           </button>
         </div>
         <div className="rounded-[28px] border-4 border-[#222] bg-black overflow-hidden shadow-2xl" style={{ aspectRatio: '9/16' }}>
-          <iframe key={previewNonce} src={previewUrl} title="Survey preview" className="w-full h-full border-0" />
+          <iframe ref={frameRef} key={previewNonce} src={previewUrl} title="Survey preview" className="w-full h-full border-0"
+            onLoad={() => {
+              try { frameRef.current?.contentWindow?.postMessage({ source: 'hotel-tech-review-admin', config }, '*') } catch {}
+            }} />
         </div>
         <p className="text-[10px] text-[#666] mt-2 leading-relaxed">
-          Preview shows the saved version — click "Save design" to refresh it. Preview loads don't count in analytics.
+          Updates live as you tweak the design. Question changes need a save + Reload. Preview loads don't count in analytics.
         </p>
       </div>
     </div>
@@ -399,10 +455,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
           <L label="Button label">
             <input value={label} onChange={e => setLabel(e.target.value)} className={inputCls} />
           </L>
-          <L label="Color">
-            <input type="color" value={color} onChange={e => setColor(e.target.value)}
-              className="w-full h-9 rounded-lg bg-[#1e1e1e] border border-dark-border cursor-pointer" />
-          </L>
+          <ColorField label="Color" value={color} onChange={setColor} />
           <L label="Side">
             <select value={position} onChange={e => setPosition(e.target.value as any)} className={inputCls}>
               <option value="right">Right</option><option value="left">Left</option>
@@ -410,10 +463,8 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
           </L>
         </div>
       ) : (
-        <div className="max-w-[180px]">
-          <L label="Open after (seconds)">
-            <input type="number" min={0} max={120} value={delay} onChange={e => setDelay(Number(e.target.value) || 0)} className={inputCls} />
-          </L>
+        <div className="max-w-xs">
+          <RangeField label="Open after" min={0} max={60} unit="s" value={delay} onChange={setDelay} />
         </div>
       )}
 

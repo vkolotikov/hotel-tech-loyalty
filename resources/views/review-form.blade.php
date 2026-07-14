@@ -236,6 +236,29 @@ textarea.sv-input{min-height:22vh;resize:none}
     postParent({ event: 'review-loaded', form_id: state.form.id, form_type: state.form.type });
   }
 
+  // Live design preview — the builder's Design tab postMessages the
+  // DRAFT config into this frame so every color/copy/layout tweak
+  // renders instantly, before saving. Preview mode only.
+  if (PREVIEW) {
+    window.addEventListener('message', function (ev) {
+      var d = ev.data || {};
+      if (d.source !== 'hotel-tech-review-admin' || !d.config || !state.form) return;
+      state.form.config = d.config;
+      applyTheme();
+      var stepper = isStepper();
+      document.body.classList.toggle('sv-stepper', stepper);
+      if (stepper) {
+        buildSteps();
+        if (state.step < -1 || state.step > visibleSteps().length) state.step = welcomeEnabled() ? -1 : 0;
+        if (state.step === -1 && !welcomeEnabled()) state.step = 0;
+        if (state.step >= 0 && d.jumpToWelcome) state.step = welcomeEnabled() ? -1 : 0;
+        renderStepper();
+      } else {
+        render();
+      }
+    });
+  }
+
   // Kiosk assignment polling — reload when the admin repoints or
   // restyles this device's survey.
   function startDevicePolling(){
