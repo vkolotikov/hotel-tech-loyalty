@@ -536,6 +536,42 @@ class DocumentationController extends Controller
                 ],
             ],
             [
+                'slug' => 'content-planner',
+                'title' => 'AI Content Planner',
+                'icon' => 'Sparkles',
+                'description' => "Turn your existing FAQ, services and brand knowledge into a full social-media plan: an AI content strategy, a scheduled calendar, and ready-to-post captions, hashtags and images. Under Marketing > AI Content Planner.",
+                'articles' => [
+                    [
+                        'title' => "What it is & how it works",
+                        'content' => "The AI Content Planner (Marketing > **AI Content Planner**) turns the knowledge you already have in the platform into a complete social-media content operation — strategy, calendar, captions and images — without you writing a brief from scratch.\n\n**It grounds itself on your existing data.** The AI reads your FAQ / Knowledge Base, your AI chat widget settings (company name, welcome message, canned answers), your Services, and your organization info (name, industry, website) — so you don't re-enter who you are. It does **not** read booking, revenue or member data; content is grounded on brand + knowledge only. It also remembers your last ~30 posts to avoid repeating topics.\n\n**Prerequisite:** your org needs at least one Brand configured (Settings > Brands) — the planner builds a content profile per brand.\n\n**Availability:** included for every admin — this feature is not restricted to a higher plan.\n\n**The flow, top to bottom:** Setup a content profile -> generate a Strategy -> generate a Calendar of draft posts -> open each Post to write copy, add a visual and quality-check it -> Mark ready -> Mark published. The five tabs (Dashboard, Strategy, Calendar, Posts, Setup) follow that order.",
+                    ],
+                    [
+                        'title' => "Setup — building your content profile",
+                        'content' => "The first time you open the planner it offers two setup paths:\n\n**Quick setup (recommended)** — you supply only the essentials: profile name, default language, primary goal, which platforms you post on, and a posting intensity (Light = 2 posts/week Tue+Thu, Standard = 3 Mon/Wed/Fri, Active = 5 Mon–Fri). One AI call then fills in the expert fields you'd struggle to write yourself — brand summary, USP, mission, values, brand promise, differentiators, proof points, positioning (old way vs new way), key messages, a first target audience, and a brand voice. Anything the AI inferred is flagged as an assumption so you can correct it.\n\n**Advanced setup** — a full manual wizard (seeded with the knowledge we detected) if you'd rather enter everything yourself.\n\n**Readiness score** — the header shows a Readiness % across six areas: Company info, FAQ & knowledge, Audience, Brand voice, Social channels, and Strategy inputs. Each area gives concrete hints on what to fill in to sharpen the AI's output.\n\n**Refresh knowledge** — after you update your FAQ / Knowledge Base or chat widget, use this to re-sync that information into the planner. It's a data refresh, not an AI call, so it's free and instant.\n\n**Channels** — configure each social channel you post to (platform, goal, posts per week, preferred formats, hashtag/emoji policy, tone override, max length, language). Supported platforms: LinkedIn, Instagram, TikTok, Facebook, X, YouTube, blog and email. The calendar only plans for channels you've marked active.",
+                    ],
+                    [
+                        'title' => "Strategy — the AI content plan",
+                        'content' => "The **Strategy** tab generates your master content plan in one click (optionally scoped to a target audience, specific platforms, or with free-text instructions).\n\nThe AI produces a full strategy document: a positioning narrative, an audience map, **4–7 content pillars** (the recurring themes you post about), a **content mix** (what % of posts are educational vs promotional vs behind-the-scenes, etc.), a **weekly rhythm** (what to post each day), a per-platform strategy, engagement + conversion tactics, a visual direction, monthly themes, campaign ideas, example posts, and a list of risks / opportunities / missing information.\n\nGenerating a new strategy sets it **active** and moves the previous one to **superseded** (old strategies are kept, never destroyed — you can archive them). The first strategy also backfills your profile's content mix and weekly rhythm so the calendar has a rhythm to follow.\n\nDo this before generating a calendar — the calendar builds on the active strategy's pillars and rhythm.",
+                    ],
+                    [
+                        'title' => "Calendar — scheduling draft posts",
+                        'content' => "The **Calendar** tab asks the AI to fill a date range with draft posts, one per platform slot, following your strategy's rhythm and pillars.\n\nPick a start and end date (up to **62 days** at a time), optionally limit to certain platforms or add instructions. By default **Fill empty slots only** is on, so re-running the generator won't overwrite posts you've already got — it only fills the gaps.\n\nEach generated slot becomes a **draft post** pre-loaded with: the platform, date & time, a topic, a hook, a call-to-action, hashtags, the funnel stage, the post type, a strategic reason (why this post on this day), an engagement mechanic, a first draft of the copy, and a visual idea. Posts are only created for **active channels** and within your window — anything the AI proposes for an inactive platform, a filled slot, or a date outside the range is skipped and reported back to you with the reason.\n\nClick any post on the calendar to open it in the Posts tab and refine it.",
+                    ],
+                    [
+                        'title' => "Posts — writing, refining, quality-checking",
+                        'content' => "The **Posts** tab is where each post is finished. Open a post and you get these AI helpers plus manual editing:\n\n**Generate copy** — writes the full caption: hook, main copy, a short version, CTA, hashtags, and an engagement mechanic, plus alternative hooks to choose from. Moves the post to **Needs review**.\n\n**Generate alternative** — rewrites the current copy in a different flavour: shorter, longer, more professional, friendlier, or a fresh alternative. Saved as a separate **variation** so your main copy is never lost — pick the one you like.\n\n**Quality check** — scores the post 1–10 across nine dimensions (brand fit, audience fit, platform fit, clarity, originality, engagement potential, CTA strength, repetition risk, sales-pressure) and returns a verdict of **Good / Needs work / Weak** with specific flags and improvement suggestions. Use it as a second pair of eyes before publishing.\n\n**Post lifecycle (status):** Idea -> Draft -> Needs review -> (Needs visual) -> Approved -> Ready to publish -> Published, with Skipped and Archived as off-ramps. Calendar posts start at Draft; generating copy moves them to Needs review; **Mark ready** sets Ready to publish; **Mark published** records it as done. **Duplicate** clones a post as a fresh draft scheduled a week later — handy for recurring formats.",
+                    ],
+                    [
+                        'title' => "Visuals — briefs & AI images",
+                        'content' => "Every post can carry a visual:\n\n**Visual brief** — the AI writes an art-direction brief: visual type, aspect ratio, style, the scene to depict, mood, composition, any text overlay, what to avoid, and (for video) a short script. It also produces a ready-to-paste image prompt and stock-photo / design notes — so even if you make the image elsewhere, you have a precise brief.\n\n**Generate image** — produces the actual image with OpenAI (gpt-image-1, with an automatic fallback to DALL·E 3). It builds the prompt from the visual brief plus your brand's visual style (colours, style, things to avoid) and sizes it to the brief's aspect ratio (portrait / landscape / square). The finished PNG is stored on the post. If the post was waiting on a visual, adding the image moves it back into Needs review.",
+                    ],
+                    [
+                        'title' => "Publishing & cost",
+                        'content' => "**Publishing is manual — the planner does not auto-post to social networks.** It's your content studio: it plans, writes and illustrates. When you actually post something (from your own social accounts or scheduler), click **Mark published** on the post to record it — you can paste the live URL. There is no direct LinkedIn / Instagram / etc. publishing integration.\n\n**AI models** — all text (strategy, calendar, captions, rewrites, briefs, quality checks) uses Anthropic Claude (default Claude Sonnet 5); images use OpenAI. Every generation is logged with token counts and an estimated cost, so AI spend from the planner is measurable alongside the rest of your AI usage.\n\n**Tips:** keep your FAQ / Knowledge Base current and hit Refresh knowledge before a big planning session — the richer your knowledge, the sharper the output. Generate the strategy first, then the calendar, then polish individual posts. Run a quality check on anything you're unsure about before marking it ready.",
+                    ],
+                ],
+            ],
+            [
                 'slug' => 'wallet-passes',
                 'title' => 'Wallet Passes (Apple + Google)',
                 'icon' => 'CreditCard',
@@ -905,6 +941,26 @@ class DocumentationController extends Controller
                 'category' => 'CRM',
                 'question' => 'What format are exports in now?',
                 'answer' => 'Leads, Customers and Members export as a styled Excel (.xlsx) workbook - frozen header row, filter dropdowns, zebra striping, and the full data including contact details (email/phone/mobile), pipeline + stage and every custom field. The old exports were missing contact columns; the new ones are complete. Excel opens them cleanly with no import step.',
+            ],
+            [
+                'category' => 'Content Planner',
+                'question' => 'Does the AI Content Planner post to my social media automatically?',
+                'answer' => 'No. It plans, writes captions and generates images, but publishing is manual — you post from your own accounts or scheduler, then click Mark published on the post (and optionally paste the live URL) to record it. There is no direct social-network publishing integration.',
+            ],
+            [
+                'category' => 'Content Planner',
+                'question' => 'How does the planner know about my business?',
+                'answer' => 'It reads what you already have in the platform: your FAQ / Knowledge Base, your AI chat widget settings, your Services, and your organization info. Quick setup then uses one AI pass to fill the expert branding fields. Keep your knowledge current and use Refresh knowledge before planning so the output stays accurate. It never uses booking, revenue or member data.',
+            ],
+            [
+                'category' => 'Content Planner',
+                'question' => 'In what order should I use the tabs?',
+                'answer' => 'Setup your profile first (Quick setup is enough), then generate a Strategy, then generate a Calendar of draft posts, then open each Post to write copy, add a visual and quality-check it. Finish with Mark ready and Mark published. The tabs are laid out in that order.',
+            ],
+            [
+                'category' => 'Content Planner',
+                'question' => 'Do I need a higher plan to use the AI Content Planner?',
+                'answer' => 'No — it\'s available to every admin. The only requirement is that your organization has at least one Brand configured (Settings > Brands), since the planner builds a content profile per brand.',
             ],
             [
                 'category' => 'Errors',
