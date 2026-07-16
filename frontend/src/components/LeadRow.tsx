@@ -83,16 +83,6 @@ function initialsOf(name?: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-/* Mask the tail of phone numbers so emails + phones can be scanned on
- * shared screens without exposing the full digits at a glance. */
-function maskPhone(phone?: string | null): string | null {
-  if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length < 5) return phone
-  const lead = phone.slice(0, Math.max(4, phone.length - 4))
-  return `${lead}····`
-}
-
 /**
  * Internal — wrapped at the bottom in React.memo so the parent's 25-row
  * table doesn't re-render every row on every keystroke / 120s background
@@ -252,22 +242,22 @@ function LeadRowImpl(props: LeadRowProps) {
               </div>
             )}
 
+            {/* Full contact — email + phone shown in full below the name,
+                each on its own line so long addresses aren't clipped and
+                staff can read/copy the whole value at a glance. */}
             {(inq.guest?.email || inq.guest?.phone || inq.guest?.mobile) && (
-              <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 truncate">
+              <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
                 {inq.guest?.email && (
-                  <span className="inline-flex items-center gap-1 truncate" title={inq.guest.email}>
+                  <div className="inline-flex items-center gap-1 break-all" title={inq.guest.email}>
                     <Mail size={10} className="opacity-60 flex-shrink-0" />
-                    <span className="truncate max-w-[180px]">{inq.guest.email}</span>
-                  </span>
+                    <span className="break-all">{inq.guest.email}</span>
+                  </div>
                 )}
                 {(inq.guest?.phone || inq.guest?.mobile) && (
-                  <>
-                    {inq.guest?.email && <span className="text-gray-600">·</span>}
-                    <span className="inline-flex items-center gap-1" title={inq.guest?.phone || inq.guest?.mobile}>
-                      <Phone size={10} className="opacity-60 flex-shrink-0" />
-                      <span className="tabular-nums">{maskPhone(inq.guest?.phone || inq.guest?.mobile)}</span>
-                    </span>
-                  </>
+                  <div className="flex items-center gap-1" title={inq.guest?.phone || inq.guest?.mobile}>
+                    <Phone size={10} className="opacity-60 flex-shrink-0" />
+                    <span className="tabular-nums">{inq.guest?.phone || inq.guest?.mobile}</span>
+                  </div>
                 )}
               </div>
             )}

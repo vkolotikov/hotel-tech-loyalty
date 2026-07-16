@@ -1103,6 +1103,10 @@
       "due_today": "Due Today",
       "overdue": "Overdue",
       "due_soon_3d": "Due Soon (3d)",
+      "all_countries": "All Countries",
+      "any_phone": "Phone: any",
+      "with_phone": "With phone / mobile",
+      "without_phone": "Without phone / mobile",
       "active_only": "Active only",
       "filters_label": "Filters",
       "clear": "Clear"

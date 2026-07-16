@@ -107,6 +107,8 @@ export function Inquiries() {
   const [assignedTo, setAssignedTo] = useState('')
   const [source, setSource] = useState('')
   const [taskDue, setTaskDue] = useState('')
+  const [country, setCountry] = useState('')
+  const [hasPhone, setHasPhone] = useState('') // '' | 'yes' | 'no'
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -190,6 +192,16 @@ export function Inquiries() {
   })
   const properties: any[] = propertiesData?.properties ?? propertiesData?.data ?? (Array.isArray(propertiesData) ? propertiesData : [])
 
+  // Distinct guest countries for the Country filter dropdown. Lead
+  // countries come from the linked guest, so we reuse the guests facets
+  // endpoint (same distinct-country set).
+  const { data: facetsData } = useQuery({
+    queryKey: ['guests-facets'],
+    queryFn: () => api.get('/v1/admin/guests/facets').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const countryOptions: string[] = facetsData?.country ?? []
+
   const params: any = { page, per_page: 25, sort, dir }
   if (search) params.search = search
   if (status) params.status = status
@@ -199,6 +211,8 @@ export function Inquiries() {
   if (assignedTo) params.assigned_to = assignedTo
   if (source) params.source = source
   if (taskDue) params.task_due = taskDue
+  if (country) params.country = country
+  if (hasPhone) params.has_phone = hasPhone
   // Leads is ACTIVE work only — Confirmed rows live in /deals and Lost
   // customers stay in /leads?tab=customers (Contacts). Always-on filter,
   // not a user toggle.
@@ -473,15 +487,22 @@ export function Inquiries() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allInquiries, stageGroup])
 
-  const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue
+  const hasFilters = status || priority || inquiryType || propertyId || assignedTo || source || taskDue || country || hasPhone
 
   const toggleSort = (col: string) => {
     if (sort === col) setDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSort(col); setDir('desc') }
   }
 
-  const SortHeader = ({ col, label }: { col: string; label: string }) => (
-    <th className="text-left px-4 py-3 text-xs font-medium text-t-secondary cursor-pointer hover:text-gray-300 select-none whitespace-nowrap" onClick={() => toggleSort(col)}>
+  // Renders the <th> itself (do NOT wrap in another <th> — nesting
+  // th-in-th is invalid HTML and was breaking the Value column's
+  // alignment). Matches the plain header cells' styling so sortable and
+  // non-sortable columns look identical; `align` right-aligns Value.
+  const SortHeader = ({ col, label, align = 'left' }: { col: string; label: string; align?: 'left' | 'right' }) => (
+    <th
+      className={`${align === 'right' ? 'text-right' : 'text-left'} px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 cursor-pointer hover:text-gray-300 select-none whitespace-nowrap`}
+      onClick={() => toggleSort(col)}
+    >
       {label} {sort === col ? (dir === 'asc' ? '↑' : '↓') : ''}
     </th>
   )
@@ -557,7 +578,7 @@ export function Inquiries() {
           in focus mode along with the rest of the filter chrome. */}
       {!focusMode && <SavedViews
         page="inquiries"
-        currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue }}
+        currentFilters={{ status, priority, inquiryType, propertyId, assignedTo, source, taskDue, country, hasPhone }}
         hasActiveFilters={!!hasFilters}
         onApply={(f: any) => {
           setStatus(f.status ?? '')
@@ -567,6 +588,8 @@ export function Inquiries() {
           setAssignedTo(f.assignedTo ?? '')
           setSource(f.source ?? '')
           setTaskDue(f.taskDue ?? '')
+          setCountry(f.country ?? '')
+          setHasPhone(f.hasPhone ?? '')
           setPage(1)
         }}
       />}
@@ -673,7 +696,16 @@ export function Inquiries() {
               <option value="overdue">{t('inquiries.filters.overdue', 'Overdue')}</option>
               <option value="soon">{t('inquiries.filters.due_soon_3d', 'Due Soon (3d)')}</option>
             </select>
-            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
+            <select value={country} onChange={e => { setCountry(e.target.value); setPage(1) }} className={filterSel}>
+              <option value="">{t('inquiries.filters.all_countries', 'All Countries')}</option>
+              {countryOptions.map((c: string) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={hasPhone} onChange={e => { setHasPhone(e.target.value); setPage(1) }} className={filterSel}>
+              <option value="">{t('inquiries.filters.any_phone', 'Phone: any')}</option>
+              <option value="yes">{t('inquiries.filters.with_phone', 'With phone / mobile')}</option>
+              <option value="no">{t('inquiries.filters.without_phone', 'Without phone / mobile')}</option>
+            </select>
+            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setCountry(''); setHasPhone(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -712,17 +744,13 @@ export function Inquiries() {
                 </th>
                 {fieldCfg.list.stay && <SortHeader col="check_in" label={t('inquiries.table.stay_or_event', 'Stay / Event')} />}
                 {fieldCfg.list.value && (
-                  <th className="text-right px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
-                    <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} />
-                  </th>
+                  <SortHeader col="total_value" label={t('inquiries.table.value', 'Value')} align="right" />
                 )}
                 <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
                   {t('inquiries.table.stage', 'Stage')}
                 </th>
                 {fieldCfg.list.ai_signal && (
-                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
-                    <SortHeader col="ai_win_probability" label={t('inquiries.table.ai_signal', 'AI signal')} />
-                  </th>
+                  <SortHeader col="ai_win_probability" label={t('inquiries.table.ai_signal', 'AI signal')} />
                 )}
                 {fieldCfg.list.owner && (
                   <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
@@ -730,9 +758,7 @@ export function Inquiries() {
                   </th>
                 )}
                 {fieldCfg.list.next_task && (
-                  <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
-                    <SortHeader col="next_task_due" label={t('inquiries.table.next_action', 'Next action')} />
-                  </th>
+                  <SortHeader col="next_task_due" label={t('inquiries.table.next_action', 'Next action')} />
                 )}
                 {fieldCfg.list.touches && (
                   <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">

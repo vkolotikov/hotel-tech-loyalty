@@ -60,6 +60,14 @@ class InquiryController extends Controller
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
+        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
+        if ($v = $request->get('has_phone')) {
+            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
+                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
+            if ($v === 'yes') $query->whereHas('guest', $has);
+            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
+        }
         if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
         if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
@@ -818,6 +826,14 @@ class InquiryController extends Controller
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
+        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
+        if ($v = $request->get('has_phone')) {
+            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
+                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
+            if ($v === 'yes') $query->whereHas('guest', $has);
+            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
+        }
         if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
         if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
