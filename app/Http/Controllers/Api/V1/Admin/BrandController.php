@@ -155,19 +155,23 @@ class BrandController extends Controller
             $brand->is_default = false; // never auto-promote a freshly created brand
             $brand->save();
 
-            // Seed brand-scoped config rows so the new brand is usable
-            // immediately. Without this, an admin who switches to the
-            // new brand in the BrandSwitcher hits empty/404 on:
-            //   - Chat widget (no ChatWidgetConfig → embed code 404)
-            //   - Chatbot Setup (no ChatbotBehaviorConfig / ModelConfig)
-            //   - Knowledge Base (no KnowledgeCategory)
-            // Each clone is best-effort — a missing source row just means
-            // the new brand starts blank for that surface (still better
-            // than 404). Errors are logged but don't roll back the brand.
-            $this->seedBrandDefaults($brand, $orgId);
-
             return $brand;
         });
+
+        // Seed brand-scoped config rows so the new brand is usable
+        // immediately. Without this, an admin who switches to the
+        // new brand in the BrandSwitcher hits empty/404 on:
+        //   - Chat widget (no ChatWidgetConfig → embed code 404)
+        //   - Chatbot Setup (no ChatbotBehaviorConfig / ModelConfig)
+        //   - Knowledge Base (no KnowledgeCategory)
+        //
+        // Deliberately runs AFTER the transaction commits. Each clone is
+        // best-effort and swallows its own errors — but on Postgres a caught
+        // error inside a transaction aborts it (SQLSTATE 25P02), turning the
+        // COMMIT into a ROLLBACK. Seeding inside the tx therefore made a
+        // single failed clone silently discard the brand while the API still
+        // returned 201. Outside the tx, the brand is already durable.
+        $this->seedBrandDefaults($brand, $orgId);
 
         if ($request->hasFile('logo')) {
             $brand->logo_url = MediaService::upload($request->file('logo'), 'brand-logos');
@@ -199,9 +203,14 @@ class BrandController extends Controller
                 ->where('brand_id', $defaultBrandId)
                 ->first();
             if ($widget) {
-                $clone = $widget->replicate(['widget_key', 'created_at', 'updated_at']);
+                // widget_key is a uuid column and api_key is UNIQUE — both
+                // must be regenerated (matching ChatWidgetConfig's own
+                // defaults), otherwise the clone dies on a type/unique error
+                // and the new brand silently ends up with no chat widget.
+                $clone = $widget->replicate(['widget_key', 'api_key', 'created_at', 'updated_at']);
                 $clone->brand_id = $newBrand->id;
-                $clone->widget_key = \Illuminate\Support\Str::random(40);
+                $clone->widget_key = (string) \Illuminate\Support\Str::uuid();
+                $clone->api_key = \Illuminate\Support\Str::random(48);
                 $clone->save();
             }
         } catch (\Throwable $e) {
