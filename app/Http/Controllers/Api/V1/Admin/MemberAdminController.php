@@ -16,9 +16,11 @@ use App\Services\OpenAiService;
 use App\Services\AnalyticsService;
 use App\Services\QrCodeService;
 use App\Services\RealtimeEventService;
+use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MemberAdminController extends Controller
@@ -300,17 +302,22 @@ class MemberAdminController extends Controller
         $avgPoints     = (int) round((clone $base)->avg('current_points') ?? 0);
 
         // Top tier = highest min_points. Order descending so the first
-        // row is the top tier (used for the top_tier_pct KPI).
+        // row is the top tier (used for the top_tier_pct KPI). One
+        // grouped aggregate instead of a COUNT per tier row.
+        $countsByTier = LoyaltyMember::query()
+            ->selectRaw('tier_id, COUNT(*) AS n')
+            ->groupBy('tier_id')
+            ->pluck('n', 'tier_id');
         $tierBreakdown = LoyaltyTier::query()
             ->orderByDesc('min_points')
             ->get(['id', 'name', 'color_hex', 'min_points'])
-            ->map(function ($t) {
+            ->map(function ($t) use ($countsByTier) {
                 return [
                     'id'         => $t->id,
                     'name'       => $t->name,
                     'color_hex'  => $t->color_hex,
                     'min_points' => $t->min_points,
-                    'count'      => LoyaltyMember::where('tier_id', $t->id)->count(),
+                    'count'      => (int) ($countsByTier[$t->id] ?? 0),
                 ];
             });
 
@@ -442,6 +449,15 @@ class MemberAdminController extends Controller
             $memberFields['tier_override_until'] = $request->input('tier_override_until');
         }
 
+        // The raw `exists:loyalty_tiers,id` rule ignores TenantScope — a
+        // guessed tier id from another org passes it. Re-fetch through
+        // the scoped model (mirrors store()); a cross-org id 422s here
+        // instead of corrupting the member's tier FK (which would make
+        // $member->tier resolve null and 500 getProgressToNextTier()).
+        if (isset($memberFields['tier_id']) && !LoyaltyTier::find($memberFields['tier_id'])) {
+            return response()->json(['message' => 'Invalid tier for this organization.'], 422);
+        }
+
         // When tier_id changes via admin override, also refresh the timing
         // fields so mobile-app tier progress / expiry / review calculations
         // aren't stuck on the previous tier's schedule. Without this the
@@ -457,11 +473,20 @@ class MemberAdminController extends Controller
             $member->update($memberFields);
         }
 
-        // Update user fields
+        // Update user fields. name/email are never clearable (filtered),
+        // but phone / nationality / language / date_of_birth accept an
+        // explicit null as "clear this field" — array_filter used to
+        // strip those nulls, so blanking a phone number toasted success
+        // while silently keeping the old value.
         $userFields = array_filter(
-            $request->only(['name', 'email', 'phone', 'nationality', 'language', 'date_of_birth']),
+            $request->only(['name', 'email']),
             fn($v) => $v !== null
         );
+        foreach (['phone', 'nationality', 'language', 'date_of_birth'] as $clearable) {
+            if ($request->has($clearable)) {
+                $userFields[$clearable] = $request->input($clearable);
+            }
+        }
 
         // Handle avatar upload
         if ($request->hasFile('avatar')) {
@@ -704,11 +729,16 @@ class MemberAdminController extends Controller
         ]);
         $dryRun = (bool) $request->boolean('dry_run', false);
 
-        // Plan-cap pre-check — surfaces an upgrade prompt instead of
-        // creating up to the cap and then erroring on the next row.
+        // Plan-cap enforcement. `usage` feeds the response payload; the
+        // derived `$capRemaining` actually GATES row creation below —
+        // without that gate this endpoint was a full bypass of the plan
+        // member limit that store() enforces with a 402.
         $usage = app(\App\Services\PlanLimitGuard::class)->usage(
             \App\Services\PlanLimitGuard::KEY_MEMBERS
         );
+        $capRemaining = $usage['limit'] !== null
+            ? max(0, $usage['limit'] - $usage['count'])
+            : PHP_INT_MAX;
 
         $rows = [];
         $handle = fopen($request->file('file')->getRealPath(), 'r');
@@ -767,6 +797,15 @@ class MemberAdminController extends Controller
             if (!$tier) {
                 $results[] = ['line' => $line, 'email' => $email, 'status' => 'error', 'reason' => "Unknown tier '{$tierName}'"];
                 $errCount++;
+                continue;
+            }
+
+            // Plan cap — applies to dry-run too so the preview matches
+            // what a commit would actually create.
+            if ($okCount >= $capRemaining) {
+                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip',
+                              'reason' => "Over plan member limit ({$usage['limit']})"];
+                $skipCount++;
                 continue;
             }
 
@@ -833,8 +872,13 @@ class MemberAdminController extends Controller
 
     public function awardPoints(Request $request): JsonResponse
     {
+        // Fail CLOSED on a missing Staff row — SaasAuthMiddleware repairs
+        // those every request, so a null here means that repair failed
+        // too; proceeding would grant full award rights to an account in
+        // an unknown permission state. Matches PlannerController /
+        // SettingsController's `!$staff ||` convention.
         $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();
-        if ($staff && !$staff->can_award_points) {
+        if (!$staff || !$staff->can_award_points) {
             return response()->json(['message' => 'You do not have permission to award points.'], 403);
         }
 
@@ -851,11 +895,13 @@ class MemberAdminController extends Controller
         $points = $validated['points'];
 
         try {
-            // Approval workflow: if above threshold, mark as pending
-            $approvalStatus = $this->loyaltyService->requiresApproval($points, $request->user())
-                ? 'pending_approval'
-                : 'auto_approved';
-
+            // No pending-approval state here: the old `requiresApproval`
+            // threshold stamped transactions "pending_approval" and told
+            // the admin "submitted for approval" while the points had
+            // ALREADY been credited — and no approve/reject endpoint ever
+            // existed. Until a real deferred-crediting workflow ships,
+            // awards are honest: permission-gated (can_award_points),
+            // capped by validation (max 100k), instantly applied.
             $transaction = $this->loyaltyService->awardPoints(
                 member:         $member,
                 points:         $points,
@@ -864,7 +910,6 @@ class MemberAdminController extends Controller
                 staff:          $request->user(),
                 reasonCode:     $validated['reason_code'] ?? null,
                 idempotencyKey: $validated['idempotency_key'] ?? null,
-                approvalStatus: $approvalStatus,
             );
         } catch (\Throwable $e) {
             \Log::error('awardPoints failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -889,17 +934,14 @@ class MemberAdminController extends Controller
             \Log::warning('realtime dispatch failed: ' . $e->getMessage());
         }
 
-        $message = $approvalStatus === 'pending_approval'
-            ? 'Points submitted for approval'
-            : 'Points awarded';
-
-        return response()->json(['message' => $message, 'transaction' => $transaction]);
+        return response()->json(['message' => 'Points awarded', 'transaction' => $transaction]);
     }
 
     public function redeemPoints(Request $request): JsonResponse
     {
+        // Fail closed — see awardPoints() for the rationale.
         $staff = \App\Models\Staff::where('user_id', $request->user()->id)->first();
-        if ($staff && !$staff->can_redeem_points) {
+        if (!$staff || !$staff->can_redeem_points) {
             return response()->json(['message' => 'You do not have permission to redeem points.'], 403);
         }
 
@@ -961,7 +1003,16 @@ class MemberAdminController extends Controller
         return response()->json(['message' => 'Transaction reversed', 'reversal' => $reversal]);
     }
 
-    public function export(Request $request): StreamedResponse
+    /**
+     * GET /v1/admin/members/export — download the filtered member list.
+     *
+     * Styled .xlsx by default (frozen brand header, autofilter, zebra
+     * rows, native number cells); `?format=csv` keeps a plain CSV.
+     * Same column map for both, now including qualifying points,
+     * referral code, consent + notification flags and last activity —
+     * the old CSV stopped at lifetime points.
+     */
+    public function export(Request $request): StreamedResponse|BinaryFileResponse
     {
         $query = LoyaltyMember::with(['user:id,name,email,phone', 'tier:id,name'])
             ->when($request->search, function ($q, $search) {
@@ -974,21 +1025,57 @@ class MemberAdminController extends Controller
             ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')))
             ->orderByDesc('created_at');
 
-        return response()->streamDownload(function () use ($query) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID','Member Number','Name','Email','Phone','Tier','Current Points','Lifetime Points','Active','Joined']);
-            $query->chunk(500, function ($rows) use ($out) {
-                foreach ($rows as $m) {
-                    fputcsv($out, [
-                        $m->id, $m->member_number, $m->user?->name, $m->user?->email, $m->user?->phone,
-                        $m->tier?->name, $m->current_points, $m->lifetime_points,
-                        $m->is_active ? 'Yes' : 'No', $m->joined_at?->toDateString(),
-                    ]);
-                }
-            });
-            fclose($out);
-        }, 'members-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
+        $columns = [
+            ['header' => 'ID',                'width' => 7,  'type' => 'number'],
+            ['header' => 'Member Number',     'width' => 15],
+            ['header' => 'Name',              'width' => 22],
+            ['header' => 'Email',             'width' => 26],
+            ['header' => 'Phone',             'width' => 16],
+            ['header' => 'Tier',              'width' => 13],
+            ['header' => 'Current Points',    'width' => 13, 'type' => 'number'],
+            ['header' => 'Lifetime Points',   'width' => 13, 'type' => 'number'],
+            ['header' => 'Qualifying Points', 'width' => 14, 'type' => 'number'],
+            ['header' => 'Referral Code',     'width' => 14],
+            ['header' => 'Active',            'width' => 8],
+            ['header' => 'Marketing Consent', 'width' => 15],
+            ['header' => 'Email Notifications', 'width' => 15],
+            ['header' => 'Joined',            'width' => 11],
+            ['header' => 'Last Activity',     'width' => 12],
+        ];
+
+        $mapRow = fn (LoyaltyMember $m) => [
+            $m->id, $m->member_number, $m->user?->name, $m->user?->email, $m->user?->phone,
+            $m->tier?->name, $m->current_points, $m->lifetime_points, $m->qualifying_points,
+            $m->referral_code,
+            $m->is_active ? 'Yes' : 'No',
+            $m->marketing_consent ? 'Yes' : 'No',
+            $m->email_notifications ? 'Yes' : 'No',
+            $m->joined_at?->toDateString(), $m->last_activity_at?->toDateString(),
+        ];
+
+        $stamp = date('Y-m-d');
+
+        if ($request->get('format') === 'csv') {
+            return response()->streamDownload(function () use ($query, $columns, $mapRow) {
+                $out = fopen('php://output', 'w');
+                fwrite($out, "\xEF\xBB\xBF");
+                fputcsv($out, array_column($columns, 'header'));
+                $query->chunk(500, function ($rows) use ($out, $mapRow) {
+                    foreach ($rows as $m) fputcsv($out, $mapRow($m));
+                });
+                fclose($out);
+            }, "members-{$stamp}.csv", ['Content-Type' => 'text/csv']);
+        }
+
+        $xlsx = new XlsxWriter('Members');
+        $xlsx->setColumns($columns);
+        $query->chunk(500, function ($rows) use ($xlsx, $mapRow) {
+            foreach ($rows as $m) $xlsx->addRow($mapRow($m));
+        });
+
+        return response()->download($xlsx->toTempFile(), "members-{$stamp}.xlsx", [
+            'Content-Type' => XlsxWriter::MIME,
+        ])->deleteFileAfterSend(true);
     }
 
     public function aiInsights(int $id): JsonResponse

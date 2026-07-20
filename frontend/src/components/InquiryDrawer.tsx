@@ -267,7 +267,7 @@ export function InquiryDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex justify-end"
+        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 flex justify-end"
         onClick={() => { if (!confirmDelete) onClose() }}
       >
         <div

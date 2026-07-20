@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Star, Sparkles, Upload } from 'lucide-react'
 import { api, resolveImage } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Card } from '../components/ui/Card'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import { format } from 'date-fns'
@@ -14,7 +15,7 @@ export function Offers() {
   const [editOffer, setEditOffer] = useState<any>(null)
   const qc = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-offers'],
     queryFn: () => api.get('/v1/admin/offers').then(r => r.data),
   })
@@ -22,6 +23,7 @@ export function Offers() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/offers/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-offers'] }); toast.success(t('offers.toasts.deleted', 'Offer deleted')) },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('offers.toasts.delete_failed', 'Delete failed')),
   })
 
   const typeColors: Record<string, string> = {
@@ -46,7 +48,9 @@ export function Offers() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {isLoading
+        {isError
+          ? <div className="col-span-full"><QueryError onRetry={() => refetch()} /></div>
+          : isLoading
           ? Array(6).fill(0).map((_, i) => <div key={i} className="bg-dark-surface rounded-xl border border-dark-border p-6 animate-pulse"><div className="h-4 bg-dark-surface2 rounded w-3/4 mb-3" /><div className="h-3 bg-dark-surface2 rounded w-1/2" /></div>)
           : (data?.data ?? []).map((offer: any) => (
             <Card key={offer.id} className="relative overflow-hidden">
@@ -90,7 +94,17 @@ export function Offers() {
                 <button onClick={() => { setEditOffer(offer); setShowForm(true) }} className="p-1.5 text-[#636366] hover:text-primary-400 hover:bg-primary-500/10 rounded">
                   <Edit size={14} />
                 </button>
-                <button onClick={() => deleteMutation.mutate(offer.id)} className="p-1.5 text-[#636366] hover:text-[#ff375f] hover:bg-[#ff375f]/10 rounded">
+                <button
+                  onClick={() => {
+                    // SpecialOffer has no SoftDeletes — this is permanent.
+                    // Every other delete in this section confirms first.
+                    if (confirm(t('offers.delete_confirm', { name: offer.title, defaultValue: 'Permanently delete "{{name}}"? This cannot be undone.' }))) {
+                      deleteMutation.mutate(offer.id)
+                    }
+                  }}
+                  aria-label={t('offers.delete_label', 'Delete offer')}
+                  className="p-1.5 text-[#636366] hover:text-[#ff375f] hover:bg-[#ff375f]/10 rounded"
+                >
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -141,7 +155,10 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
       formData.append('value', String(form.value))
       formData.append('start_date', form.start_date)
       formData.append('end_date', form.end_date)
+      // On edit, send '' when cleared so the limit actually resets to
+      // unlimited (ConvertEmptyStringsToNull → null server-side).
       if (form.usage_limit) formData.append('usage_limit', String(form.usage_limit))
+      else if (offer) formData.append('usage_limit', '')
       formData.append('is_featured', form.is_featured ? '1' : '0')
       formData.append('is_active', form.is_active ? '1' : '0')
       if (imageFile) formData.append('image', imageFile)
@@ -228,6 +245,17 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.end_date', 'End Date')}</label>
               <DatePicker value={form.end_date} onChange={(v) => setForm({ ...form, end_date: v })} placeholder={t('offers.form.end_placeholder', 'Pick end date')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.usage_limit', 'Usage limit')}</label>
+              <input
+                type="number"
+                min={1}
+                value={form.usage_limit}
+                onChange={(e) => setForm({ ...form, usage_limit: e.target.value })}
+                placeholder={t('offers.form.usage_limit_placeholder', 'Unlimited')}
+                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+              />
             </div>
           </div>
           <div className="flex gap-4">

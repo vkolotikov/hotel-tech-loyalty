@@ -5,6 +5,7 @@ import { Search, ChevronRight, Plus, X, Download, Sparkles, Loader2, Send, Uploa
 import { useTranslation } from 'react-i18next'
 import { api, resolveImage } from '../lib/api'
 import { useVocabulary } from '../lib/vocabulary'
+import { QueryError } from '../components/QueryError'
 import { triggerExport, useSettings } from '../lib/crmSettings'
 import { Card } from '../components/ui/Card'
 import { TierBadge } from '../components/ui/TierBadge'
@@ -76,6 +77,7 @@ export function Members() {
   const [quickAward, setQuickAward] = useState<{ id: number; name: string } | null>(null)
   const [quickAwardPts, setQuickAwardPts] = useState('')
   const [quickAwardReason, setQuickAwardReason] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -92,13 +94,6 @@ export function Members() {
     + (memberFields.list.status ? 1 : 0)
   const { t } = useTranslation()
   const vocab = useVocabulary()
-
-  // Gate render: while we don't know yet, show nothing; once we
-  // know, either show the wizard or fall through to the real page.
-  if (settingsLoading) return null
-  if (!onboardingDone && !wizardDismissed) {
-    return <MembersOnboarding onComplete={() => setWizardDismissed(true)} />
-  }
 
   const { data: tiersData } = useQuery({
     queryKey: ['admin-tiers'],
@@ -119,7 +114,7 @@ export function Members() {
   })
   const tierBreakdown = statsData?.tier_breakdown ?? []
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-members', debouncedSearch, tierId, statusFilter, sortBy, page],
     queryFn: () => api.get('/v1/admin/members', {
       params: {
@@ -195,6 +190,7 @@ export function Members() {
     onSuccess: (res: any) => {
       toast.success(`Imported ${res.ok} members (skipped ${res.skip}, errors ${res.error})`)
       qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       setShowImport(false)
       setImportFile(null)
       setImportPreview(null)
@@ -238,6 +234,7 @@ export function Members() {
     }).then(r => r.data),
     onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ['admin-members'] })
+      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
       toast.success(data?.message ?? 'Member created — welcome email sent.')
       setShowCreate(false)
       setForm({ name: '', email: '', phone: '', tier_id: '' })
@@ -252,6 +249,16 @@ export function Members() {
       }
     },
   })
+
+  // Gate render AFTER every hook above has run. These two early returns
+  // used to sit before the queries/mutations — a Rules-of-Hooks
+  // violation that crashed the page ("Rendered more hooks than during
+  // the previous render") on the very first loading→content transition,
+  // i.e. every hard refresh of /members.
+  if (settingsLoading) return null
+  if (!onboardingDone && !wizardDismissed) {
+    return <MembersOnboarding onComplete={() => setWizardDismissed(true)} />
+  }
 
   const kpis = [
     {
@@ -302,7 +309,21 @@ export function Members() {
             {t('members.actions.import_csv', 'Import CSV')}
           </button>
           <button
-            onClick={() => triggerExport('/v1/admin/members/export', { search, tier_id: tierId || undefined })}
+            onClick={async () => {
+              setExporting(true)
+              try {
+                await triggerExport('/v1/admin/members/export', {
+                  search,
+                  tier_id: tierId || undefined,
+                  // Mirror the list's status toggle — exporting "Inactive"
+                  // must not silently download everyone.
+                  is_active: statusFilter !== '' ? statusFilter : undefined,
+                })
+              } catch {
+                toast.error(t('members.toasts.export_failed', 'Export failed'))
+              } finally { setExporting(false) }
+            }}
+            disabled={exporting}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Download size={16} />
@@ -426,6 +447,8 @@ export function Members() {
                 <div className="h-3 bg-dark-surface2 rounded w-24" />
               </div>
             ))
+          ) : isError ? (
+            <QueryError onRetry={() => refetch()} />
           ) : (data as any)?.data?.length === 0 ? (
             <p className="text-center text-[#636366] py-8 text-sm">
               {t('members.empty.no_members', 'No members yet.')} {search && t('members.empty.try_different_search', 'Try a different search term.')}
@@ -506,6 +529,8 @@ export function Members() {
                     ))}
                   </tr>
                 ))
+              ) : isError ? (
+                <tr><td colSpan={visibleMemberCols} className="py-6"><QueryError onRetry={() => refetch()} /></td></tr>
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
                   <td colSpan={visibleMemberCols} className="py-12 text-center text-[#636366]">
@@ -628,7 +653,7 @@ export function Members() {
           <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-dark-border">
               <h2 className="text-lg font-bold text-white">Add New Member</h2>
-              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} className="text-[#636366] hover:text-white">
+              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white">
                 <X size={20} />
               </button>
             </div>
@@ -767,6 +792,7 @@ export function Members() {
                                 send_welcome_email: true,
                               })
                               qc.invalidateQueries({ queryKey: ['admin-members'] })
+                              qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
                               toast.success(resp.data?.message ?? `Member created for ${r.name}`)
                               setShowCreate(false); setCaptureResult(null); setCaptureText('')
                             } catch (e: any) {
@@ -826,7 +852,7 @@ export function Members() {
                   <p className="text-[11px] text-t-secondary truncate">to {quickAward.name}</p>
                 </div>
               </div>
-              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} className="text-[#636366] hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-3">
               <input
@@ -877,7 +903,7 @@ export function Members() {
           <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-dark-border">
               <h2 className="text-base font-bold text-white">Send to {selectedIds.size} members</h2>
-              <button onClick={() => setShowBulkMessage(false)} className="text-[#636366] hover:text-white"><X size={20} /></button>
+              <button onClick={() => setShowBulkMessage(false)} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-3">
               <div>
@@ -947,7 +973,7 @@ export function Members() {
           <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-dark-border">
               <h2 className="text-base font-bold text-white">Bulk import members</h2>
-              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} className="text-[#636366] hover:text-white"><X size={20} /></button>
+              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-3">
               <p className="text-xs text-[#a0a0a0]">

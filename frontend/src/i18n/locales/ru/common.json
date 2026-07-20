@@ -1071,7 +1071,7 @@
     "actions": {
       "ai_capture": "AI захват",
       "ai_short": "AI",
-      "export": "Экспорт",
+      "export": "Экспорт в Excel",
       "add": "Добавить запрос",
       "add_short": "Добавить"
     },
@@ -1113,6 +1113,10 @@
       "due_today": "На сегодня",
       "overdue": "Просрочено",
       "due_soon_3d": "Скоро (3 дня)",
+      "all_countries": "Все страны",
+      "any_phone": "Телефон: любой",
+      "with_phone": "С телефоном / моб.",
+      "without_phone": "Без телефона / моб.",
       "active_only": "Только активные",
       "filters_label": "Фильтры",
       "clear": "Очистить"

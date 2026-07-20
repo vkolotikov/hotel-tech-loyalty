@@ -135,6 +135,11 @@ class RewardController extends Controller
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             // Validation-style aborts above — surface the original message.
             return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+        } catch (\RuntimeException $e) {
+            // LoyaltyService::redeemPoints re-checks the balance under a
+            // row lock inside the transaction — a concurrent spend that
+            // wins the race lands here as a clean 422, not a 500.
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         return response()->json([

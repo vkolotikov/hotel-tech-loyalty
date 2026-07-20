@@ -34,7 +34,7 @@ interface DocFaq { question: string; answer: string; category: string }
 const ICON_MAP: Record<string, any> = {
   Globe, Users, Star, CreditCard, Bot, Calendar, Settings2, Bell, Briefcase,
   Gift, Crown, Layers, ShieldCheck, MessageSquare, ClipboardList, GitBranch,
-  BookOpen, FileText, HelpCircle,
+  BookOpen, FileText, HelpCircle, Sparkles, Brain,
 }
 
 // Section accents — semantic mapping by slug. Falls back to a
@@ -51,6 +51,7 @@ const ACCENT_MAP: Record<string, string> = {
   ai:           '#c084fc', // purple
   marketing:    '#f97316', // orange
   reviews:      '#fbbf24',
+  'content-planner': '#8b5cf6', // purple — matches the Marketing hub tile
   analytics:    '#22d3ee', // cyan
   notifications:'#f97316',
   settings:     '#9ca3af',

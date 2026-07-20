@@ -21,6 +21,20 @@ use Illuminate\Support\Str;
 class CustomFieldService
 {
     /**
+     * Flatten one stored custom_data value into a spreadsheet-cell
+     * scalar for the XLSX/CSV exports — multiselect arrays join with
+     * commas, checkboxes read Yes/No, everything else passes through.
+     */
+    public function exportValue(?array $customData, CustomField $cf): mixed
+    {
+        $v = $customData[$cf->key] ?? null;
+        if ($v === null || $v === '') return null;
+        if (is_array($v))             return implode(', ', array_map('strval', $v));
+        if ($cf->type === 'checkbox') return $v ? 'Yes' : 'No';
+        return $v;
+    }
+
+    /**
      * Validate + cast a raw custom_data array against the active fields
      * for the given entity. Returns a new array safe to persist.
      *

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\ReviewDevice;
 use App\Models\ReviewForm;
+use App\Models\ReviewFormStat;
 use App\Models\ReviewIntegration;
 use App\Models\ReviewInvitation;
 use App\Models\ReviewSubmission;
@@ -51,6 +53,8 @@ class ReviewPublicController extends Controller
             ])->save();
         }
 
+        ReviewFormStat::bump($invitation->organization_id, $invitation->form_id, 'views');
+
         return response()->json([
             'status'      => $invitation->status,
             'invitation'  => [
@@ -92,6 +96,11 @@ class ReviewPublicController extends Controller
             return response()->json(['message' => 'Anonymous submissions disabled'], 403);
         }
 
+        // ?preview=1 is the builder's live preview — don't pollute stats.
+        if (!$request->boolean('preview')) {
+            ReviewFormStat::bump($form->organization_id, $form->id, 'views');
+        }
+
         return response()->json([
             'status'        => 'open',
             'form'          => $this->formPayload($form),
@@ -127,6 +136,7 @@ class ReviewPublicController extends Controller
             invitation: $invitation,
             data: $data,
             request: $request,
+            channel: 'invitation',
         );
 
         $invitation->forceFill([
@@ -163,12 +173,24 @@ class ReviewPublicController extends Controller
 
         $data = $this->validateSubmission($request, $form);
 
+        // Kiosk submissions carry the device_key so analytics can split
+        // per-device. Only accept a device belonging to the same org.
+        $device = null;
+        if ($dk = $request->input('device_key')) {
+            $device = ReviewDevice::withoutGlobalScope(TenantScope::class)
+                ->where('device_key', $dk)
+                ->where('organization_id', $form->organization_id)
+                ->first();
+        }
+
         $submission = $this->recordSubmission(
             form: $form,
             orgId: $form->organization_id,
             invitation: null,
             data: $data,
             request: $request,
+            channel: $device ? 'kiosk' : ($request->input('channel') === 'embed' ? 'embed' : 'link'),
+            device: $device,
         );
 
         return response()->json($this->buildSubmitResponse($submission, $form));
@@ -204,6 +226,43 @@ class ReviewPublicController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * GET /api/v1/public/reviews/device/{deviceKey}
+     *
+     * Kiosk assignment resolution + heartbeat. The kiosk page calls this
+     * on boot and every 60s: `version` changes whenever the assigned
+     * form (or its config) changes, telling the kiosk to reload itself
+     * — so admins repoint or restyle a tablet without touching it.
+     */
+    public function deviceResolve(string $deviceKey): JsonResponse
+    {
+        $device = ReviewDevice::withoutGlobalScope(TenantScope::class)
+            ->where('device_key', $deviceKey)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$device) {
+            return response()->json(['message' => 'Device not found'], 404);
+        }
+
+        $device->forceFill(['last_seen_at' => now()])->save();
+
+        $form = null;
+        if ($device->form_id) {
+            $form = ReviewForm::withoutGlobalScope(TenantScope::class)
+                ->where('id', $device->form_id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        return response()->json([
+            'device'  => ['name' => $device->name, 'location' => $device->location],
+            'form_id' => $form?->id,
+            'key'     => $form?->embed_key,
+            'version' => $form ? ($form->id . ':' . $form->updated_at?->timestamp) : 'unassigned',
+        ]);
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────
 
     private function validateSubmission(Request $request, ReviewForm $form): array
@@ -224,13 +283,19 @@ class ReviewPublicController extends Controller
         ?ReviewInvitation $invitation,
         array $data,
         Request $request,
+        ?string $channel = null,
+        ?ReviewDevice $device = null,
     ): ReviewSubmission {
         // Bind tenant context so BelongsToOrganization fills org id.
         app()->instance('current_organization_id', $orgId);
 
+        ReviewFormStat::bump($orgId, $form->id, 'submissions');
+
         return ReviewSubmission::create([
             'form_id'          => $form->id,
             'invitation_id'    => $invitation?->id,
+            'device_id'        => $device?->id,
+            'channel'          => $channel,
             'guest_id'         => $invitation?->guest_id,
             'loyalty_member_id'=> $invitation?->loyalty_member_id,
             'overall_rating'   => $data['overall_rating']  ?? null,

@@ -1061,7 +1061,7 @@
     "actions": {
       "ai_capture": "Captura IA",
       "ai_short": "IA",
-      "export": "Exportar",
+      "export": "Exportar Excel",
       "add": "Añadir consulta",
       "add_short": "Añadir"
     },

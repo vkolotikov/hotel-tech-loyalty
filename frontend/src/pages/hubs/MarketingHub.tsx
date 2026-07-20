@@ -40,7 +40,7 @@ interface TileDef {
 const TILES: TileDef[] = [
   { key: 'campaigns',       label: 'Campaigns',       desc: 'Scheduled and one-off push + email campaigns',  icon: Bell, accent: '#a78bfa' }, // violet
   { key: 'email-templates', label: 'Email Templates', desc: 'Reusable email designs you can send to anyone', icon: Mail, accent: '#f472b6' }, // pink
-  { key: 'reviews',         label: 'Reviews',         desc: 'Post-stay reviews and the forms to collect them', icon: Star, accent: '#c9a84c' }, // gold
+  { key: 'reviews',         label: 'Reviews & Surveys', desc: 'Feedback surveys for web, email and on-site kiosks — with per-survey analytics', icon: Star, accent: '#c9a84c' }, // gold
   { key: 'content-planner', label: 'AI Content Planner', desc: 'Generate and manage social media content with AI', icon: Sparkles, accent: '#8b5cf6' }, // purple
 ]
 

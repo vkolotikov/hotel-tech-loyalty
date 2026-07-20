@@ -386,7 +386,7 @@ export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuest
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end"
+        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 flex justify-end"
         onClick={() => { if (!loading && !confirmDelete) onClose() }}
       >
         <div

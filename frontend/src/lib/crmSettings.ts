@@ -462,12 +462,21 @@ export async function triggerExport(path: string, params: Record<string, any> = 
   const token = localStorage.getItem('auth_token')
   const base = API_BASE
   const url = `${base}${path}${qs.toString() ? '?' + qs.toString() : ''}`
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'text/csv' } })
+  // Leads + customers exports return a styled .xlsx by default now;
+  // older endpoints (members, reservations, analytics) still stream
+  // CSV. Accept both — the filename always comes from the server's
+  // content-disposition header anyway.
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv',
+    },
+  })
   if (!res.ok) throw new Error('Export failed')
   const blob = await res.blob()
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
-  a.download = (res.headers.get('content-disposition') ?? '').match(/filename="?([^"]+)"?/)?.[1] ?? 'export.csv'
+  a.download = (res.headers.get('content-disposition') ?? '').match(/filename="?([^"]+)"?/)?.[1] ?? 'export.xlsx'
   a.click()
   URL.revokeObjectURL(a.href)
 }

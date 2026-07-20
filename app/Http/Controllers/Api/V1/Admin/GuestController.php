@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\CustomField;
 use App\Models\Guest;
 use App\Models\GuestActivity;
 use App\Models\GuestImportRun;
@@ -11,8 +12,10 @@ use App\Models\GuestSegment;
 use App\Models\GuestTag;
 use App\Services\CustomFieldService;
 use App\Services\GuestMemberLinkService;
+use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GuestController extends Controller
@@ -500,30 +503,115 @@ class GuestController extends Controller
         return response()->json(['deleted' => $deleted]);
     }
 
-    public function export(Request $request): StreamedResponse
+    /**
+     * GET /v1/admin/guests/export — download the filtered customer list.
+     *
+     * Default output is a styled .xlsx workbook (frozen header,
+     * autofilter, brand header row, zebra rows, money/number formats);
+     * `?format=csv` keeps a plain-CSV shape for imports into other
+     * tools. The column map now carries the full CRM profile — job
+     * title, lifecycle/importance/owner, address block, birthday,
+     * language, consent flags, ADR + first-stay/last-activity dates
+     * and every active guest custom field. Passport / ID stay out on
+     * purpose (they're $hidden on the model for a reason).
+     */
+    public function export(Request $request): StreamedResponse|BinaryFileResponse
     {
         $query = Guest::query();
         $this->applyFilters($query, $request);
         $query->orderBy('full_name');
 
-        return response()->streamDownload(function () use ($query) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID','Salutation','Full Name','Email','Phone','Mobile','Company','Guest Type','Nationality','Country','City','VIP Level','Loyalty Tier','Total Stays','Total Nights','Total Revenue','Last Stay','Lead Source','Notes','Created']);
+        $customFields = CustomField::where('entity', 'guest')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
 
-            $query->chunk(500, function ($guests) use ($out) {
-                foreach ($guests as $g) {
-                    fputcsv($out, [
-                        $g->id, $g->salutation, $g->full_name, $g->email, $g->phone, $g->mobile,
-                        $g->company, $g->guest_type, $g->nationality, $g->country, $g->city,
-                        $g->vip_level, $g->loyalty_tier, $g->total_stays, $g->total_nights,
-                        $g->total_revenue, $g->last_stay_date?->toDateString(), $g->lead_source, $g->notes,
-                        $g->created_at?->toDateString(),
-                    ]);
-                }
-            });
-            fclose($out);
-        }, 'guests-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
+        $columns = [
+            ['header' => 'ID',                'width' => 7,  'type' => 'number'],
+            ['header' => 'Created',           'width' => 11],
+            ['header' => 'Salutation',        'width' => 10],
+            ['header' => 'Full Name',         'width' => 22],
+            ['header' => 'Email',             'width' => 26],
+            ['header' => 'Phone',             'width' => 16],
+            ['header' => 'Mobile',            'width' => 16],
+            ['header' => 'Company',           'width' => 20],
+            ['header' => 'Job Title',         'width' => 16],
+            ['header' => 'Guest Type',        'width' => 12],
+            ['header' => 'Lifecycle',         'width' => 12],
+            ['header' => 'Importance',        'width' => 11],
+            ['header' => 'Owner',             'width' => 15],
+            ['header' => 'Lead Source',       'width' => 14],
+            ['header' => 'Nationality',       'width' => 12],
+            ['header' => 'Country',           'width' => 12],
+            ['header' => 'City',              'width' => 14],
+            ['header' => 'Address',           'width' => 24],
+            ['header' => 'Postal Code',       'width' => 11],
+            ['header' => 'Date of Birth',     'width' => 12],
+            ['header' => 'Language',          'width' => 10],
+            ['header' => 'VIP Level',         'width' => 10],
+            ['header' => 'Loyalty Tier',      'width' => 12],
+            ['header' => 'Total Stays',       'width' => 10, 'type' => 'number'],
+            ['header' => 'Total Nights',      'width' => 11, 'type' => 'number'],
+            ['header' => 'Total Revenue',     'width' => 13, 'type' => 'money'],
+            ['header' => 'Avg Daily Rate',    'width' => 13, 'type' => 'money'],
+            ['header' => 'First Stay',        'width' => 11],
+            ['header' => 'Last Stay',         'width' => 11],
+            ['header' => 'Last Activity',     'width' => 12],
+            ['header' => 'Email Consent',     'width' => 12],
+            ['header' => 'Marketing Consent', 'width' => 15],
+            ['header' => 'Notes',             'width' => 34, 'type' => 'wrap'],
+        ];
+        foreach ($customFields as $cf) {
+            $columns[] = [
+                'header' => $cf->label,
+                'width'  => 16,
+                'type'   => $cf->type === 'number' ? 'number' : 'text',
+            ];
+        }
+
+        $mapRow = function (Guest $g) use ($customFields) {
+            $row = [
+                $g->id, $g->created_at?->toDateString(), $g->salutation, $g->full_name,
+                $g->email, $g->phone, $g->mobile, $g->company, $g->position_title,
+                $g->guest_type, $g->lifecycle_status, $g->importance, $g->owner_name,
+                $g->lead_source, $g->nationality, $g->country, $g->city,
+                $g->address, $g->postal_code, $g->date_of_birth?->toDateString(),
+                $g->preferred_language, $g->vip_level, $g->loyalty_tier,
+                $g->total_stays, $g->total_nights, $g->total_revenue, $g->avg_daily_rate,
+                $g->first_stay_date?->toDateString(), $g->last_stay_date?->toDateString(),
+                $g->last_activity_at?->toDateString(),
+                $g->email_consent ? 'Yes' : 'No', $g->marketing_consent ? 'Yes' : 'No',
+                $g->notes,
+            ];
+            foreach ($customFields as $cf) {
+                $row[] = $this->customFields->exportValue($g->custom_data, $cf);
+            }
+            return $row;
+        };
+
+        $stamp = date('Y-m-d');
+
+        if ($request->get('format') === 'csv') {
+            return response()->streamDownload(function () use ($query, $columns, $mapRow) {
+                $out = fopen('php://output', 'w');
+                fwrite($out, "\xEF\xBB\xBF");
+                fputcsv($out, array_column($columns, 'header'));
+                $query->chunk(500, function ($guests) use ($out, $mapRow) {
+                    foreach ($guests as $g) fputcsv($out, $mapRow($g));
+                });
+                fclose($out);
+            }, "customers-{$stamp}.csv", ['Content-Type' => 'text/csv']);
+        }
+
+        $xlsx = new XlsxWriter('Customers');
+        $xlsx->setColumns($columns);
+        $query->chunk(500, function ($guests) use ($xlsx, $mapRow) {
+            foreach ($guests as $g) $xlsx->addRow($mapRow($g));
+        });
+
+        return response()->download($xlsx->toTempFile(), "customers-{$stamp}.xlsx", [
+            'Content-Type' => XlsxWriter::MIME,
+        ])->deleteFileAfterSend(true);
     }
 
     private function applyFilters($query, Request $request): void

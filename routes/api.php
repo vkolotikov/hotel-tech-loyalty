@@ -172,6 +172,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('token/{token}',          [ReviewPublicController::class, 'submitByToken'])->middleware('throttle:10,1');
         Route::post('form/{id}',              [ReviewPublicController::class, 'submitByFormKey'])->middleware('throttle:10,1');
         Route::post('{submissionId}/redirected', [ReviewPublicController::class, 'markRedirected']);
+        // Kiosk assignment resolution + heartbeat (device polls every 60s).
+        Route::get('device/{deviceKey}',      [ReviewPublicController::class, 'deviceResolve']);
     });
 
     // ─── Public Meta (Facebook/Instagram/WhatsApp) Webhooks ────────────────────
@@ -658,6 +660,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('reviews/forms/{id}',              [AdminReviewController::class, 'deleteForm']);
                 Route::post('reviews/forms/{id}/rotate-key',     [AdminReviewController::class, 'rotateEmbedKey']);
                 Route::put('reviews/forms/{id}/questions',       [AdminReviewController::class, 'replaceQuestions']);
+                Route::post('reviews/forms/{id}/duplicate',      [AdminReviewController::class, 'duplicateForm']);
+                Route::get('reviews/forms/{id}/analytics',       [AdminReviewController::class, 'formAnalytics']);
+
+                // Kiosk devices — register tablets, assign surveys, rotate keys.
+                Route::get('reviews/devices',                    [AdminReviewController::class, 'listDevices']);
+                Route::post('reviews/devices',                   [AdminReviewController::class, 'createDevice']);
+                Route::put('reviews/devices/{id}',               [AdminReviewController::class, 'updateDevice']);
+                Route::delete('reviews/devices/{id}',            [AdminReviewController::class, 'deleteDevice']);
+                Route::post('reviews/devices/{id}/rotate-key',   [AdminReviewController::class, 'rotateDeviceKey']);
+                Route::get('reviews/devices/{id}/qr',            [AdminReviewController::class, 'deviceQr']);
 
                 Route::get('reviews/integrations',               [AdminReviewController::class, 'listIntegrations']);
                 Route::post('reviews/integrations',              [AdminReviewController::class, 'upsertIntegration']);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import {
   Search, X, Users, UserCheck, Briefcase, Crown, Loader2,
   ChevronRight, Filter, Star, Edit3, Trash2, Download, CheckSquare, Square,
@@ -8,10 +8,11 @@ import {
   Globe, Mail, Phone as PhoneIcon, AtSign,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { api, API_URL } from '../lib/api'
+import { api } from '../lib/api'
 import { ContactActions } from '../components/ContactActions'
 import { NewCustomerDrawer } from '../components/NewCustomerDrawer'
-import { useSettings, type CustomerFieldConfig } from '../lib/crmSettings'
+import { CustomerDrawer } from '../components/CustomerDrawer'
+import { useSettings, triggerExport, type CustomerFieldConfig } from '../lib/crmSettings'
 import { format } from 'date-fns'
 
 /**
@@ -19,10 +20,11 @@ import { format } from 'date-fns'
  *
  * The unified entry point into the per-customer detail view. Every Guest row
  * here represents a real person the org has done business with — including
- * inquiry-only leads, guests who have stayed, and B2B contacts associated
- * with a Company. Clicking opens /guests/:id, which auto-redirects to
- * /members/:member_id when the guest has a linked loyalty member (the
- * standard case post-2026-05). Orphan guests fall through to GuestDetail.
+ * inquiry-only leads (lost ones included — closing a lead never removes
+ * the person), guests who have stayed, and B2B contacts associated with a
+ * Company. Clicking a row slides in the shared CustomerDrawer (same
+ * pattern as the Leads list); the full /guests/:id page stays reachable
+ * from the drawer's open-page link.
  *
  * Why this page exists: until now there was no way to browse customers as
  * a list — the only entries into a guest detail were /guests/:id direct
@@ -74,7 +76,6 @@ const SORTS = [
 ] as const
 
 export function Customers() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   // Per-org column visibility — admin toggles in Settings → Pipelines → Fields → Customers.
@@ -218,6 +219,10 @@ export function Customers() {
   /* ─── Inline edit drawer state ────────────────────────────────────── */
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
+  // Same interaction as the Leads list: clicking a row slides the
+  // customer card in as a drawer instead of navigating away. The full
+  // /guests/:id page stays reachable from the drawer's open-page link.
+  const [openGuestId, setOpenGuestId] = useState<number | null>(null)
 
   /* ─── Mutations ───────────────────────────────────────────────────── */
   const updateMutation = useMutation({
@@ -253,22 +258,25 @@ export function Customers() {
     onError: () => toast.error('Bulk delete failed'),
   })
 
-  const exportSelected = () => {
-    // Reuse the existing /guests/export endpoint with `ids[]` so the CSV
-    // contains only what the admin checked. Falls through to current
-    // filter set when no selection — that's the "export everything I
-    // see" behaviour staff usually want.
+  const exportSelected = async () => {
+    // /guests/export with `ids` limits the workbook to what the admin
+    // checked. Falls through to the current filter set when no
+    // selection — that's the "export everything I see" behaviour staff
+    // usually want. Must go through triggerExport (authorized fetch +
+    // blob download): the old window.open() couldn't send the bearer
+    // token, so this button 401'd and downloaded nothing.
     const ids = Array.from(selected)
-    const qs = new URLSearchParams()
+    const params: Record<string, string> = {}
     if (ids.length) {
-      ids.forEach(id => qs.append('ids[]', String(id)))
+      params.ids = ids.join(',')
     } else {
-      if (q.trim())  qs.set('search', q.trim())
-      if (vipOnly)   qs.set('vip_level', 'VIP')
-      if (b2bOnly)   qs.set('guest_type', 'Corporate')
-      if (company)   qs.set('company', company)
+      if (q.trim())  params.search = q.trim()
+      if (vipOnly)   params.vip_level = 'VIP'
+      if (b2bOnly)   params.guest_type = 'Corporate'
+      if (company)   params.company = company
     }
-    window.open(`${API_URL}/api/v1/admin/guests/export?${qs.toString()}`, '_blank')
+    try { await triggerExport('/v1/admin/guests/export', params) }
+    catch { toast.error('Export failed') }
   }
 
   return (
@@ -530,7 +538,7 @@ export function Customers() {
             onClick={() => exportSelected()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition"
           >
-            <Download size={11} /> Export CSV
+            <Download size={11} /> Export Excel
           </button>
           <button
             onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { vip_level: 'VIP' } })}
@@ -599,7 +607,7 @@ export function Customers() {
               selected={selected.has(g.id)}
               onToggle={() => toggleOne(g.id)}
               onEdit={() => setEditingGuest(g)}
-              onOpen={() => navigate(`/guests/${g.id}`)}
+              onOpen={() => setOpenGuestId(g.id)}
             />
           ))
         )}
@@ -621,9 +629,21 @@ export function Customers() {
       {creatingNew && (
         <NewCustomerDrawer
           onClose={() => setCreatingNew(false)}
-          onCreated={(id) => { setCreatingNew(false); navigate(`/guests/${id}`) }}
+          onCreated={(id) => { setCreatingNew(false); queryClient.invalidateQueries({ queryKey: ['customers-list'] }); setOpenGuestId(id) }}
         />
       )}
+
+      {/* Customer card drawer — mirrors the Leads page pattern */}
+      <CustomerDrawer
+        open={openGuestId !== null}
+        guestId={openGuestId}
+        onClose={() => setOpenGuestId(null)}
+        onGuestUpdated={() => queryClient.invalidateQueries({ queryKey: ['customers-list'] })}
+        onGuestDeleted={() => {
+          setOpenGuestId(null)
+          queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+        }}
+      />
 
       {/* Pagination */}
       {data && data.last_page > 1 && (
@@ -926,7 +946,7 @@ function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40"
+        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
         onClick={onClose}
       />
       {/* Drawer */}

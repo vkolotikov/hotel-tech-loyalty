@@ -72,6 +72,20 @@ class QrCodeService
         ]);
     }
 
+    /**
+     * QR for an arbitrary URL as a ready-to-render data URI. PNG when
+     * the GD/Imagick extension is available, SVG fallback otherwise —
+     * same fallback story as the member-card QRs.
+     */
+    public function urlQrDataUri(string $url): string
+    {
+        try {
+            return 'data:image/png;base64,' . $this->buildQrPng($url);
+        } catch (\Throwable) {
+            return 'data:image/svg+xml;base64,' . base64_encode($this->buildQrSvg($url));
+        }
+    }
+
     private function buildQrPng(string $data): string
     {
         $result = Builder::create()

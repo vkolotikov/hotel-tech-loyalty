@@ -107,7 +107,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 h-screen w-full max-w-lg bg-dark-surface border-l border-dark-border shadow-2xl z-50 flex flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">

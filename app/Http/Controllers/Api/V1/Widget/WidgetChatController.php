@@ -469,29 +469,44 @@ class WidgetChatController extends Controller
                 ]
             );
 
-            ChatConversation::updateOrCreate(
-                ['session_id' => $sessionId],
-                [
-                    'organization_id'    => $config->organization_id,
-                    'brand_id'           => $brandId,
-                    'visitor_id'         => $visitor->id,
-                    'visitor_name'       => $visitorName ?: $visitor->display_name,
-                    'visitor_email'      => $visitor->email,
-                    'visitor_phone'      => $visitor->phone,
-                    'visitor_ip'         => $visitor->visitor_ip,
-                    'visitor_user_agent' => $userAgent,
-                    'page_url'           => $pageUrl,
-                    'channel'            => 'widget',
-                    'status'             => 'active',
-                    'last_message_at'    => now(),
-                ]
-            );
+            // Metadata refreshes on every init, but `status` and
+            // `last_message_at` only stamp on CREATE. Forcing them on
+            // resume put every returning visitor's resolved conversation
+            // back to `active` with a fake message timestamp — the
+            // chat:reap cron then re-resolved it 4h later and appended
+            // another "Auto-resolved" system row, looping forever and
+            // filling the thread (and the admin feed) with noise. A
+            // visitor who actually SENDS a message still reactivates via
+            // the message paths (resolved → waiting).
+            $conv = ChatConversation::firstOrNew(['session_id' => $sessionId]);
+            $isNewConv = !$conv->exists;
+            $conv->fill([
+                'organization_id'    => $config->organization_id,
+                'brand_id'           => $brandId,
+                'visitor_id'         => $visitor->id,
+                'visitor_name'       => $visitorName ?: $visitor->display_name,
+                'visitor_email'      => $visitor->email,
+                'visitor_phone'      => $visitor->phone,
+                'visitor_ip'         => $visitor->visitor_ip,
+                'visitor_user_agent' => $userAgent,
+                'page_url'           => $pageUrl,
+                'channel'            => 'widget',
+            ]);
+            if ($isNewConv) {
+                $conv->status          = 'active';
+                $conv->last_message_at = now();
+            }
+            $conv->save();
 
             // When resuming, return prior messages so the widget can
             // rehydrate the thread instead of showing an empty panel.
+            // System rows ("Auto-resolved after 4h of inactivity",
+            // "Conversation assigned to …") are internal ops annotations
+            // for the admin timeline — never show them to the visitor.
             $history = [];
             if ($existingConv) {
                 $history = ChatMessage::where('conversation_id', $existingConv->id)
+                    ->where('sender_type', '!=', 'system')
                     ->orderBy('id')
                     ->limit(200)
                     ->get(['id', 'sender_type', 'content', 'attachment_url', 'attachment_type', 'created_at'])
@@ -1253,7 +1268,7 @@ class WidgetChatController extends Controller
      * GET /v1/widget/{widgetKey}/poll
      *
      * Long-poll-style endpoint the embedded widget hits every few seconds while
-     * the chat panel is open. Returns any agent/ai/system messages with id
+     * the chat panel is open. Returns any agent/ai messages with id
      * greater than `since_id`, plus the current "agent typing" indicator and
      * the active human agent's name/avatar (when a human has taken over).
      * This is what makes agent inbox replies actually appear in the visitor's
@@ -1289,11 +1304,12 @@ class WidgetChatController extends Controller
 
         // Only deliver messages that did NOT originate from the visitor — the
         // visitor already has their own messages locally, so echoing them back
-        // would cause duplicates. Agent + AI + system messages are what we
-        // need to push down.
+        // would cause duplicates. Agent + AI replies are what we push down.
+        // System rows (auto-resolve notes, assignment/status annotations) are
+        // admin-timeline internals and must never render in the widget.
         $messages = ChatMessage::where('conversation_id', $conv->id)
             ->where('id', '>', $sinceId)
-            ->whereIn('sender_type', ['agent', 'ai', 'system'])
+            ->whereIn('sender_type', ['agent', 'ai'])
             ->orderBy('id')
             ->get(['id', 'sender_type', 'content', 'attachment_url', 'attachment_type', 'created_at'])
             ->map(fn ($m) => [

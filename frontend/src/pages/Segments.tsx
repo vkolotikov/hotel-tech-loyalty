@@ -6,6 +6,7 @@ import { Plus, X, Pencil, Trash2, Send, Sparkles, Users, Filter, Loader2, Eye } 
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { api } from '../lib/api'
+import { QueryError } from '../components/QueryError'
 import { Card } from '../components/ui/Card'
 
 /**
@@ -66,7 +67,7 @@ export function Segments() {
   const [sendingSegment, setSendingSegment] = useState<Segment | null>(null)
   const [sendForm, setSendForm] = useState({ title: '', body: '', send_email: false, category: 'transactional' as const })
 
-  const { data: segmentsData, isLoading } = useQuery({
+  const { data: segmentsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-segments'],
     queryFn: () => api.get('/v1/admin/segments').then(r => r.data),
   })
@@ -183,7 +184,7 @@ export function Segments() {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-white">{editId ? t('segments.form.edit_title', 'Edit segment') : t('segments.form.new_title', 'New segment')}</h2>
-            <button onClick={resetForm} className="text-t-secondary hover:text-white"><X size={18} /></button>
+            <button onClick={resetForm} aria-label={t('common.close', 'Close')} className="text-t-secondary hover:text-white"><X size={18} /></button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -292,6 +293,8 @@ export function Segments() {
       <Card>
         {isLoading ? (
           <p className="text-center text-[#636366] py-8 text-sm">{t('segments.list.loading', 'Loading…')}</p>
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : segments.length === 0 ? (
           <p className="text-center text-[#636366] py-8 text-sm">
             {t('segments.list.empty', 'No saved segments yet. Click "New segment" to create your first.')}
@@ -364,7 +367,7 @@ export function Segments() {
                     : t('segments.send.audience_unknown', 'Audience: ~? members')}
                 </p>
               </div>
-              <button onClick={() => setSendingSegment(null)} className="text-[#636366] hover:text-white"><X size={20} /></button>
+              <button onClick={() => setSendingSegment(null)} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-3">
               <div>

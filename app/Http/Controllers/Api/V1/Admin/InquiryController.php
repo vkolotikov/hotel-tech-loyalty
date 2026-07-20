@@ -8,15 +8,18 @@ use App\Models\AuditLog;
 use App\Models\Inquiry;
 use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
+use App\Models\CustomField;
 use App\Models\PipelineStage;
 use App\Models\Reservation;
 use App\Models\Task;
 use App\Services\CustomFieldService;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
+use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InquiryController extends Controller
@@ -57,6 +60,14 @@ class InquiryController extends Controller
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
+        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
+        if ($v = $request->get('has_phone')) {
+            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
+                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
+            if ($v === 'yes') $query->whereHas('guest', $has);
+            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
+        }
         if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
         if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
@@ -780,9 +791,27 @@ class InquiryController extends Controller
         ]);
     }
 
-    public function export(Request $request): StreamedResponse
+    /**
+     * GET /v1/admin/inquiries/export — download the filtered lead list.
+     *
+     * Default output is a styled .xlsx workbook (frozen header,
+     * autofilter, brand header row, zebra rows, money/number formats);
+     * `?format=csv` keeps the old plain-CSV shape for imports into
+     * other tools. Both formats share one column map, which now
+     * includes the guest's CONTACT details (email / phone / mobile),
+     * pipeline + stage, party size, payment state, event block, lost
+     * reason, follow-up dates, notes and every active inquiry custom
+     * field — the old CSV silently dropped all of those.
+     */
+    public function export(Request $request): StreamedResponse|BinaryFileResponse
     {
-        $query = Inquiry::with(['guest:id,full_name,company', 'property:id,name']);
+        $query = Inquiry::with([
+            'guest:id,full_name,email,phone,mobile,company',
+            'property:id,name',
+            'pipeline:id,name',
+            'pipelineStage:id,name',
+            'lostReason:id,label',
+        ]);
 
         if ($s = $request->get('search')) {
             $query->where(function ($q) use ($s) {
@@ -797,6 +826,14 @@ class InquiryController extends Controller
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
+        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
+        if ($v = $request->get('has_phone')) {
+            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
+                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
+            if ($v === 'yes') $query->whereHas('guest', $has);
+            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
+        }
         if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
         if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
@@ -810,24 +847,108 @@ class InquiryController extends Controller
                 default   => null,
             };
         }
+        // `ids` filter — bulk export of checked rows only. Accepts an
+        // array or a comma-separated list (parity with guests/export).
+        if ($v = $request->get('ids')) {
+            $ids = is_array($v) ? $v : explode(',', (string) $v);
+            $query->whereIn('id', array_filter($ids, 'is_numeric'));
+        }
 
-        return response()->streamDownload(function () use ($query) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID','Guest','Company','Property','Type','Check-in','Check-out','Nights','Rooms','Room Type','Rate','Total Value','Status','Priority','Assigned To','Source','Created']);
-            $query->chunk(500, function ($rows) use ($out) {
-                foreach ($rows as $r) {
-                    fputcsv($out, [
-                        $r->id, $r->guest?->full_name, $r->guest?->company, $r->property?->name,
-                        $r->inquiry_type, $r->check_in?->toDateString(), $r->check_out?->toDateString(),
-                        $r->num_nights, $r->num_rooms, $r->room_type_requested, $r->rate_offered,
-                        $r->total_value, $r->status, $r->priority, $r->assigned_to, $r->source,
-                        $r->created_at?->toDateString(),
-                    ]);
-                }
-            });
-            fclose($out);
-        }, 'inquiries-' . date('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
+        // Active admin-defined custom fields become trailing columns.
+        // TenantScope keeps this org-local.
+        $customFields = CustomField::where('entity', 'inquiry')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $columns = [
+            ['header' => 'ID',               'width' => 7,  'type' => 'number'],
+            ['header' => 'Created',          'width' => 11],
+            ['header' => 'Guest',            'width' => 22],
+            ['header' => 'Email',            'width' => 26],
+            ['header' => 'Phone',            'width' => 16],
+            ['header' => 'Mobile',           'width' => 16],
+            ['header' => 'Company',          'width' => 20],
+            ['header' => 'Property',         'width' => 18],
+            ['header' => 'Type',             'width' => 12],
+            ['header' => 'Status',           'width' => 12],
+            ['header' => 'Pipeline',         'width' => 14],
+            ['header' => 'Stage',            'width' => 15],
+            ['header' => 'Priority',         'width' => 10],
+            ['header' => 'Check-in',         'width' => 11],
+            ['header' => 'Check-out',        'width' => 11],
+            ['header' => 'Nights',           'width' => 8,  'type' => 'number'],
+            ['header' => 'Rooms',            'width' => 8,  'type' => 'number'],
+            ['header' => 'Adults',           'width' => 8,  'type' => 'number'],
+            ['header' => 'Children',         'width' => 9,  'type' => 'number'],
+            ['header' => 'Room Type',        'width' => 16],
+            ['header' => 'Rate',             'width' => 12, 'type' => 'money'],
+            ['header' => 'Total Value',      'width' => 13, 'type' => 'money'],
+            ['header' => 'Currency',         'width' => 9],
+            ['header' => 'Paid Amount',      'width' => 12, 'type' => 'money'],
+            ['header' => 'Payment Status',   'width' => 14],
+            ['header' => 'Assigned To',      'width' => 16],
+            ['header' => 'Source',           'width' => 14],
+            ['header' => 'Event Type',       'width' => 13],
+            ['header' => 'Event Name',       'width' => 20],
+            ['header' => 'Event Pax',        'width' => 10, 'type' => 'number'],
+            ['header' => 'Lost Reason',      'width' => 18],
+            ['header' => 'Next Task Due',    'width' => 13],
+            ['header' => 'Last Contacted',   'width' => 13],
+            ['header' => 'Special Requests', 'width' => 30, 'type' => 'wrap'],
+            ['header' => 'Notes',            'width' => 34, 'type' => 'wrap'],
+        ];
+        foreach ($customFields as $cf) {
+            $columns[] = [
+                'header' => $cf->label,
+                'width'  => 16,
+                'type'   => $cf->type === 'number' ? 'number' : 'text',
+            ];
+        }
+
+        $mapRow = function ($r) use ($customFields) {
+            $row = [
+                $r->id, $r->created_at?->toDateString(),
+                $r->guest?->full_name, $r->guest?->email, $r->guest?->phone, $r->guest?->mobile,
+                $r->guest?->company, $r->property?->name, $r->inquiry_type, $r->status,
+                $r->pipeline?->name, $r->pipelineStage?->name, $r->priority,
+                $r->check_in?->toDateString(), $r->check_out?->toDateString(),
+                $r->num_nights, $r->num_rooms, $r->num_adults, $r->num_children,
+                $r->room_type_requested, $r->rate_offered, $r->total_value, $r->currency,
+                $r->paid_amount, $r->payment_status, $r->assigned_to, $r->source,
+                $r->event_type, $r->event_name, $r->event_pax,
+                $r->lostReason?->label, $r->next_task_due?->toDateString(),
+                $r->last_contacted_at?->toDateString(), $r->special_requests, $r->notes,
+            ];
+            foreach ($customFields as $cf) {
+                $row[] = $this->customFields->exportValue($r->custom_data, $cf);
+            }
+            return $row;
+        };
+
+        $stamp = date('Y-m-d');
+
+        if ($request->get('format') === 'csv') {
+            return response()->streamDownload(function () use ($query, $columns, $mapRow) {
+                $out = fopen('php://output', 'w');
+                fwrite($out, "\xEF\xBB\xBF");
+                fputcsv($out, array_column($columns, 'header'));
+                $query->chunk(500, function ($rows) use ($out, $mapRow) {
+                    foreach ($rows as $r) fputcsv($out, $mapRow($r));
+                });
+                fclose($out);
+            }, "leads-{$stamp}.csv", ['Content-Type' => 'text/csv']);
+        }
+
+        $xlsx = new XlsxWriter('Leads');
+        $xlsx->setColumns($columns);
+        $query->chunk(500, function ($rows) use ($xlsx, $mapRow) {
+            foreach ($rows as $r) $xlsx->addRow($mapRow($r));
+        });
+
+        return response()->download($xlsx->toTempFile(), "leads-{$stamp}.xlsx", [
+            'Content-Type' => XlsxWriter::MIME,
+        ])->deleteFileAfterSend(true);
     }
 
     /**

@@ -182,7 +182,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end"
+      className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 flex justify-end"
       onClick={onClose}
     >
       <div

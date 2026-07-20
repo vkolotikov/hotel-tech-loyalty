@@ -9,6 +9,7 @@ import {
   Settings2, Link2, Zap,
 } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
+import { SurveyDesignPanel, SurveyAnalyticsPanel } from '../components/SurveyDesignPanel'
 
 type Kind = 'text' | 'textarea' | 'stars' | 'scale' | 'nps' | 'single_choice' | 'multi_choice' | 'boolean' | 'emoji'
 type CondOp = 'eq' | 'neq' | 'gte' | 'lte' | 'contains' | 'any_of'
@@ -37,28 +38,75 @@ interface Form {
   questions: Question[]
 }
 
-const KIND_META: Record<Kind, { label: string; icon: typeof Star; color: string }> = {
-  stars:         { label: 'Star Rating',   icon: Star,         color: '#f59e0b' },
-  scale:         { label: 'Scale (1-10)',  icon: Hash,         color: '#8b5cf6' },
-  nps:           { label: 'NPS (0-10)',    icon: Zap,          color: '#06b6d4' },
-  text:          { label: 'Short Text',    icon: MessageSquare,color: '#10b981' },
-  textarea:      { label: 'Long Text',     icon: AlignLeft,    color: '#3b82f6' },
-  single_choice: { label: 'Single Choice', icon: List,         color: '#f97316' },
-  multi_choice:  { label: 'Multi Choice',  icon: CheckSquare,  color: '#ec4899' },
-  boolean:       { label: 'Yes / No',      icon: ToggleLeft,   color: '#14b8a6' },
-  emoji:         { label: 'Emoji Reaction',icon: Smile,        color: '#eab308' },
+const KIND_META: Record<Kind, { label: string; icon: typeof Star; color: string; desc: string }> = {
+  stars:         { label: 'Star Rating',   icon: Star,         color: '#f59e0b', desc: 'Classic 1–5 stars' },
+  emoji:         { label: 'Smileys',       icon: Smile,        color: '#eab308', desc: 'Tap a face — fastest on kiosks' },
+  nps:           { label: 'NPS (0–10)',    icon: Zap,          color: '#06b6d4', desc: '"Would you recommend us?"' },
+  scale:         { label: 'Scale (1–10)',  icon: Hash,         color: '#8b5cf6', desc: 'Numeric satisfaction scale' },
+  single_choice: { label: 'Single Choice', icon: List,         color: '#f97316', desc: 'Pick one option' },
+  multi_choice:  { label: 'Multiple Choice', icon: CheckSquare, color: '#ec4899', desc: 'Pick any that apply' },
+  boolean:       { label: 'Yes / No',      icon: ToggleLeft,   color: '#14b8a6', desc: 'One quick decision' },
+  text:          { label: 'Short Text',    icon: MessageSquare,color: '#10b981', desc: 'One-line answer' },
+  textarea:      { label: 'Long Text',     icon: AlignLeft,    color: '#3b82f6', desc: 'Open feedback box' },
 }
 
 const COND_OP_LABELS: Record<CondOp, string> = {
-  eq: 'equals',
-  neq: 'does not equal',
+  eq: 'is exactly',
+  neq: 'is not',
   gte: 'is at least',
   lte: 'is at most',
-  contains: 'contains',
-  any_of: 'is any of',
+  contains: 'includes',
+  any_of: 'is one of',
+}
+
+/** Operators that make sense per PARENT question kind — no more asking
+ *  "does this star rating contain…". */
+const OPS_BY_PARENT_KIND: Record<Kind, CondOp[]> = {
+  stars:         ['lte', 'gte', 'eq', 'neq'],
+  scale:         ['lte', 'gte', 'eq', 'neq'],
+  nps:           ['lte', 'gte', 'eq', 'neq'],
+  emoji:         ['eq', 'neq', 'any_of'],
+  single_choice: ['eq', 'neq', 'any_of'],
+  multi_choice:  ['contains', 'any_of'],
+  boolean:       ['eq'],
+  text:          ['contains', 'eq', 'neq'],
+  textarea:      ['contains', 'eq', 'neq'],
+}
+
+/** Kinds whose answers can meaningfully branch a follow-up. */
+const BRANCHABLE_KINDS: Kind[] = ['stars', 'scale', 'nps', 'emoji', 'single_choice', 'boolean']
+
+/** One-click follow-up presets — "if the answer was bad, ask why". */
+function followupPreset(parent: Question, parentIndex: number): Question {
+  const base: Question = {
+    kind: 'textarea', label: 'What could we improve?', required: false, weight: 1,
+    condition_index: parentIndex, condition_operator: 'lte', condition_value: '2',
+  }
+  switch (parent.kind) {
+    case 'stars':  return base // ≤ 2 stars
+    case 'scale':  return { ...base, condition_value: '4' }
+    case 'nps':    return { ...base, condition_value: '6', label: 'What would it take to score us higher?' }
+    case 'emoji': {
+      const first = parent.options?.choices?.[0] ?? parent.options?.emojis?.[0] ?? ''
+      return { ...base, condition_operator: 'eq', condition_value: first }
+    }
+    case 'single_choice': {
+      const first = parent.options?.choices?.[0] ?? ''
+      return { ...base, condition_operator: 'eq', condition_value: first, label: `Tell us more about "${first}"` }
+    }
+    case 'boolean': return { ...base, condition_operator: 'eq', condition_value: 'false', label: 'What went wrong?' }
+    default:        return base
+  }
 }
 
 const DEFAULT_EMOJIS = ['😡', '😕', '😐', '🙂', '😍']
+
+const EMOJI_PRESETS: { name: string; emojis: string[]; labels: string[] }[] = [
+  { name: '5 smileys', emojis: ['😡', '😕', '😐', '🙂', '😍'], labels: ['Awful', 'Poor', 'OK', 'Good', 'Great'] },
+  { name: '3 smileys', emojis: ['😞', '😐', '😊'],             labels: ['Bad', 'OK', 'Great'] },
+  { name: 'Thumbs',    emojis: ['👎', '👍'],                   labels: ['No', 'Yes'] },
+  { name: 'Hearts',    emojis: ['💔', '❤️', '😍'],             labels: ['Not for me', 'Liked it', 'Loved it'] },
+]
 
 export function ReviewFormBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -78,6 +126,7 @@ export function ReviewFormBuilder() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [showSettings, setShowSettings] = useState(false)
+  const [view, setView] = useState<'build' | 'design' | 'analytics'>('build')
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
@@ -98,7 +147,11 @@ export function ReviewFormBuilder() {
   }, [data])
 
   const form = data?.form
-  const publicUrl = form ? `${API_URL}/review/${form.id}?key=${form.embed_key}` : ''
+  // API_URL is '' in production builds (same-origin SPA) — snippets and
+  // share links must carry a real origin or they break when pasted into
+  // the customer's own website.
+  const ORIGIN = API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+  const publicUrl = form ? `${ORIGIN}/review/${form.id}?key=${form.embed_key}` : ''
 
   const saveFormMut = useMutation({
     mutationFn: () => api.put(`/v1/admin/reviews/forms/${id}`, {
@@ -150,6 +203,53 @@ export function ReviewFormBuilder() {
     setQuestions(qs => [...qs, { kind, label: '', required: false, weight: 1, options }])
     setExpanded(ex => ({ ...ex, [newIdx]: true }))
     setShowAddMenu(false)
+  }
+
+  /** Insert a pre-wired follow-up right after its parent, shifting the
+   *  condition_index of everything that pointed past the insert point. */
+  const addFollowup = (parentIndex: number) => {
+    const follow = followupPreset(questions[parentIndex], parentIndex)
+    setQuestions(qs => {
+      const next = qs.map(q => {
+        if (q.condition_index === null || q.condition_index === undefined) return q
+        return q.condition_index > parentIndex ? { ...q, condition_index: q.condition_index + 1 } : q
+      })
+      next.splice(parentIndex + 1, 0, follow)
+      return next
+    })
+    setExpanded(ex => {
+      const next: Record<number, boolean> = {}
+      Object.entries(ex).forEach(([k, v]) => {
+        const ki = Number(k)
+        next[ki > parentIndex ? ki + 1 : ki] = v
+      })
+      next[parentIndex + 1] = true
+      return next
+    })
+  }
+
+  /** Delete + heal every condition reference. Children pointing AT the
+   *  deleted question lose their condition (they'd otherwise silently
+   *  retarget the question that slides into the same slot); references
+   *  past it shift down by one. */
+  const removeQuestion = (i: number) => {
+    setQuestions(qs => qs
+      .filter((_, ix) => ix !== i)
+      .map(q => {
+        if (q.condition_index === null || q.condition_index === undefined) return q
+        if (q.condition_index === i) return { ...q, condition_index: null, condition_operator: null, condition_value: null }
+        if (q.condition_index > i) return { ...q, condition_index: q.condition_index - 1 }
+        return q
+      }))
+    setExpanded(ex => {
+      const next: Record<number, boolean> = {}
+      Object.entries(ex).forEach(([k, v]) => {
+        const ki = Number(k)
+        if (ki < i) next[ki] = v
+        else if (ki > i) next[ki - 1] = v
+      })
+      return next
+    })
   }
 
   const moveQuestion = (from: number, to: number) => {
@@ -277,8 +377,44 @@ export function ReviewFormBuilder() {
         </button>
       </div>
 
+      {/* Build / Design / Analytics switcher */}
+      <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit mb-6">
+        {(['build', 'design', 'analytics'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)}
+            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}>
+            {v === 'build' ? 'Questions' : v}
+          </button>
+        ))}
+      </div>
+
+      {view === 'design' && (
+        <SurveyDesignPanel
+          config={config}
+          setConfig={setConfig}
+          onSave={() => saveFormMut.mutate()}
+          saving={saveFormMut.isPending}
+          previewUrl={publicUrl + '&preview=1'}
+          embed={{ formId: form.id, embedKey: form.embed_key, origin: ORIGIN }}
+        />
+      )}
+      {view === 'analytics' && <SurveyAnalyticsPanel formId={form.id} />}
+
+      {/* Build view — display-gated (not unmounted) so in-progress edits
+          survive a tab switch; the fixed save bar hides with it. */}
+      <div style={view === 'build' ? undefined : { display: 'none' }}>
+      {/* Basic surveys have a fixed structure (star rating + optional
+          comment) — their settings ARE the build surface, so they render
+          unconditionally with an explainer instead of a blank page. */}
+      {form.type === 'basic' && (
+        <div className="bg-primary-500/[0.06] border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-[#c8c8cc] leading-relaxed">
+          This is a <span className="font-semibold text-white">basic survey</span>: a 5-star rating question
+          {config.ask_for_comment ? ' plus an optional comment box' : ''}, with high ratings offered a redirect
+          to your public review profiles. Adjust its behaviour below — or create a <span className="font-semibold text-white">custom survey</span> from
+          the Forms tab to compose your own questions (NPS, smileys, choices, follow-ups…).
+        </div>
+      )}
       {/* Collapsible Settings Panel */}
-      {showSettings && (
+      {(showSettings || form.type === 'basic') && (
         <div className="bg-dark-surface border border-dark-border rounded-xl mb-6 overflow-hidden">
           <div className="p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -423,11 +559,15 @@ export function ReviewFormBuilder() {
                   {/* Condition connector line */}
                   {hasCondition && (
                     <div className="flex items-center gap-2 px-4 pt-3 pb-0">
-                      <div className="flex items-center gap-1.5 text-[10px] font-medium text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded-full px-2.5 py-1">
-                        <GitBranch size={10} />
-                        Show if Q{(q.condition_index ?? 0) + 1} {COND_OP_LABELS[q.condition_operator ?? 'eq']}{' '}
-                        <span className="text-purple-300 font-semibold">
-                          {Array.isArray(q.condition_value) ? q.condition_value.join(', ') : q.condition_value}
+                      <span className="w-4 border-l-2 border-b-2 border-purple-500/40 rounded-bl-lg h-3 -mb-1" />
+                      <div className="flex items-center gap-1.5 text-[10px] font-medium text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded-full px-2.5 py-1 min-w-0">
+                        <GitBranch size={10} className="shrink-0" />
+                        <span className="truncate">
+                          Only if "{(questions[q.condition_index ?? 0]?.label || `Q${(q.condition_index ?? 0) + 1}`).slice(0, 28)}"{' '}
+                          {COND_OP_LABELS[q.condition_operator ?? 'eq']}{' '}
+                          <span className="text-purple-300 font-semibold">
+                            {Array.isArray(q.condition_value) ? q.condition_value.join(', ') : String(q.condition_value ?? '')}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -460,6 +600,12 @@ export function ReviewFormBuilder() {
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-[#666]">{meta.label}</span>
                           {q.required && <span className="text-[10px] text-amber-400/70 font-medium">Required</span>}
+                          {(() => {
+                            const kids = questions.filter(x => x.condition_index === i).length
+                            return kids > 0
+                              ? <span className="text-[10px] text-purple-400/80 font-medium flex items-center gap-0.5"><GitBranch size={9} /> {kids} follow-up{kids > 1 ? 's' : ''}</span>
+                              : null
+                          })()}
                         </div>
                       )}
                     </div>
@@ -533,6 +679,28 @@ export function ReviewFormBuilder() {
                           />
                         )}
 
+                        {/* Scale / NPS end labels */}
+                        {(q.kind === 'nps' || q.kind === 'scale') && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <Field label="Left label (low end)">
+                              <input
+                                value={(q.options as any)?.left_label ?? ''}
+                                onChange={e => setQuestions(qs => qs.map((x, ix) => ix === i ? { ...x, options: { ...x.options, left_label: e.target.value || undefined } as any } : x))}
+                                placeholder={q.kind === 'nps' ? 'Not likely at all' : 'Poor'}
+                                className={inputCls}
+                              />
+                            </Field>
+                            <Field label="Right label (high end)">
+                              <input
+                                value={(q.options as any)?.right_label ?? ''}
+                                onChange={e => setQuestions(qs => qs.map((x, ix) => ix === i ? { ...x, options: { ...x.options, right_label: e.target.value || undefined } as any } : x))}
+                                placeholder={q.kind === 'nps' ? 'Extremely likely' : 'Excellent'}
+                                className={inputCls}
+                              />
+                            </Field>
+                          </div>
+                        )}
+
                         {/* Preview */}
                         <QuestionPreview q={q} />
 
@@ -555,23 +723,23 @@ export function ReviewFormBuilder() {
                               onChange={v => setQuestions(qs => qs.map((x, ix) => ix === i ? { ...x, required: v } : x))}
                             />
                           </div>
-                          <button
-                            onClick={() => {
-                              setQuestions(qs => qs.filter((_, ix) => ix !== i))
-                              setExpanded(ex => {
-                                const next: Record<number, boolean> = {}
-                                Object.entries(ex).forEach(([k, v]) => {
-                                  const ki = Number(k)
-                                  if (ki < i) next[ki] = v
-                                  else if (ki > i) next[ki - 1] = v
-                                })
-                                return next
-                              })
-                            }}
-                            className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs"
-                          >
-                            <Trash2 size={13} /> Remove
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            {BRANCHABLE_KINDS.includes(q.kind) && (
+                              <button
+                                onClick={() => addFollowup(i)}
+                                title="Insert a question that only shows for certain answers to this one"
+                                className="text-purple-300/80 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/25 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
+                              >
+                                <GitBranch size={12} /> Add follow-up
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeQuestion(i)}
+                              className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs"
+                            >
+                              <Trash2 size={13} /> Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -591,22 +759,23 @@ export function ReviewFormBuilder() {
             </button>
 
             {showAddMenu && (
-              <div className="absolute left-0 right-0 bottom-full mb-2 bg-[#1a1a1a] border border-dark-border rounded-xl shadow-2xl shadow-black/40 p-2 grid grid-cols-3 gap-1 z-50">
+              <div className="absolute left-0 right-0 bottom-full mb-2 bg-[#161616] border border-dark-border rounded-2xl shadow-2xl shadow-black/50 p-3 grid grid-cols-2 md:grid-cols-3 gap-2 z-50 max-h-[60vh] overflow-y-auto">
                 {(Object.entries(KIND_META) as [Kind, typeof KIND_META[Kind]][]).map(([kind, meta]) => {
                   const Icon = meta.icon
                   return (
                     <button
                       key={kind}
                       onClick={() => addQuestion(kind)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left hover:bg-white/[0.06] transition-colors group/item"
+                      className="rounded-xl border border-dark-border bg-[#1c1c1c] hover:border-primary-500/40 hover:bg-white/[0.03] transition-all text-left p-3 group/item"
                     >
-                      <div
-                        className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: meta.color + '18' }}
-                      >
-                        <Icon size={14} style={{ color: meta.color }} />
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: meta.color + '18' }}>
+                          <Icon size={14} style={{ color: meta.color }} />
+                        </div>
+                        <span className="text-xs text-white font-semibold">{meta.label}</span>
                       </div>
-                      <span className="text-xs text-[#ccc] group-hover/item:text-white font-medium">{meta.label}</span>
+                      <div className="text-[10px] text-[#777] mb-2 leading-snug">{meta.desc}</div>
+                      <KindExample kind={kind} />
                     </button>
                   )
                 })}
@@ -632,6 +801,7 @@ export function ReviewFormBuilder() {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }
@@ -713,6 +883,14 @@ function EmojiEditor({ emojis, labels, onChange }: {
   return (
     <div>
       <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">Emoji reactions</label>
+      <div className="flex flex-wrap gap-1.5 mb-2.5">
+        {EMOJI_PRESETS.map(p => (
+          <button key={p.name} onClick={() => onChange([...p.emojis], [...p.labels])}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1e1e1e] border border-dark-border text-[11px] font-medium text-[#bbb] hover:text-white hover:border-primary-500/40 transition-colors">
+            <span className="leading-none">{p.emojis.join('')}</span> {p.name}
+          </button>
+        ))}
+      </div>
       <div className="space-y-1.5">
         {emojis.map((emoji, ci) => (
           <div key={ci} className="flex gap-2 items-center">
@@ -759,70 +937,199 @@ function ConditionEditor({ q, index, priorQuestions, onChange }: {
   q: Question; index: number; priorQuestions: Question[]; onChange: (q: Question) => void
 }) {
   const hasCondition = q.condition_index !== null && q.condition_index !== undefined
-  const condValStr = Array.isArray(q.condition_value)
-    ? q.condition_value.join(', ')
-    : (q.condition_value ?? '')
+  const parent = hasCondition ? priorQuestions[q.condition_index ?? 0] : null
+  const ops: CondOp[] = parent ? (OPS_BY_PARENT_KIND[parent.kind] ?? ['eq', 'neq']) : ['eq']
+
+  const setParent = (pi: number) => {
+    const p = priorQuestions[pi]
+    const firstOp = (OPS_BY_PARENT_KIND[p.kind] ?? ['eq'])[0]
+    // Sensible default value per parent kind so the rule is valid the
+    // moment it's created.
+    let value: any = ''
+    if (p.kind === 'stars') value = '2'
+    else if (p.kind === 'scale') value = '4'
+    else if (p.kind === 'nps') value = '6'
+    else if (p.kind === 'boolean') value = 'true'
+    else if (p.kind === 'emoji' || p.kind === 'single_choice' || p.kind === 'multi_choice') {
+      value = p.options?.choices?.[0] ?? p.options?.emojis?.[0] ?? ''
+    }
+    onChange({ ...q, condition_index: pi, condition_operator: firstOp, condition_value: value })
+  }
 
   return (
-    <div className={`rounded-lg border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/[0.03]' : 'border-dashed border-dark-border bg-transparent'} p-3`}>
-      <label className="flex items-center gap-2 text-xs cursor-pointer mb-0">
-        <input
-          type="checkbox"
-          checked={hasCondition}
-          onChange={e => {
-            if (e.target.checked) {
-              onChange({
-                ...q,
-                condition_index: index - 1,
-                condition_operator: 'eq',
-                condition_value: '',
-              })
-            } else {
-              onChange({ ...q, condition_index: null, condition_operator: null, condition_value: null })
-            }
-          }}
-          className="w-3.5 h-3.5"
-        />
-        <GitBranch size={12} className={hasCondition ? 'text-purple-400' : 'text-[#666]'} />
-        <span className={hasCondition ? 'text-purple-300 font-medium' : 'text-[#888]'}>
-          Conditional logic — show only if...
-        </span>
-      </label>
+    <div className={`rounded-xl border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/[0.04]' : 'border-dashed border-dark-border'} p-3.5`}>
+      <div className="flex items-center gap-2 mb-0">
+        <GitBranch size={13} className={hasCondition ? 'text-purple-400' : 'text-[#666]'} />
+        <span className="text-xs font-semibold text-[#ccc]">Show this question</span>
+        <div className="flex gap-0.5 bg-[#141414] border border-dark-border p-0.5 rounded-lg ml-1">
+          <button
+            onClick={() => onChange({ ...q, condition_index: null, condition_operator: null, condition_value: null })}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${!hasCondition ? 'bg-white/[0.09] text-white' : 'text-[#888] hover:text-white'}`}
+          >Always</button>
+          <button
+            onClick={() => { if (!hasCondition) setParent(index - 1) }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${hasCondition ? 'bg-purple-500/25 text-purple-200' : 'text-[#888] hover:text-white'}`}
+          >Only if…</button>
+        </div>
+      </div>
 
-      {hasCondition && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
-          <select
-            value={q.condition_index ?? 0}
-            onChange={e => onChange({ ...q, condition_index: Number(e.target.value) })}
-            className={inputCls}
-          >
-            {priorQuestions.map((pq, pi) => (
-              <option key={pi} value={pi}>Q{pi + 1}: {pq.label.slice(0, 35) || 'Untitled'}</option>
-            ))}
-          </select>
-          <select
-            value={q.condition_operator ?? 'eq'}
-            onChange={e => onChange({ ...q, condition_operator: e.target.value as CondOp })}
-            className={inputCls}
-          >
-            {Object.entries(COND_OP_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-          <input
-            value={condValStr}
-            onChange={e => {
-              const raw = e.target.value
-              const val = q.condition_operator === 'any_of'
-                ? raw.split(',').map(s => s.trim()).filter(Boolean)
-                : raw
-              onChange({ ...q, condition_value: val })
-            }}
-            placeholder={q.condition_operator === 'any_of' ? 'a, b, c' : 'value'}
-            className={inputCls}
-          />
+      {hasCondition && parent && (
+        <div className="mt-3 space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <select
+              value={q.condition_index ?? 0}
+              onChange={e => setParent(Number(e.target.value))}
+              className={inputCls}
+            >
+              {priorQuestions.map((pq, pi) => (
+                <option key={pi} value={pi}>Q{pi + 1} · {KIND_META[pq.kind].label}: {pq.label.slice(0, 32) || 'Untitled'}</option>
+              ))}
+            </select>
+            <select
+              value={q.condition_operator ?? ops[0]}
+              onChange={e => {
+                const op = e.target.value as CondOp
+                // any_of stores an array; scalar ops store a string.
+                let value = q.condition_value
+                if (op === 'any_of' && !Array.isArray(value)) value = value ? [value] : []
+                if (op !== 'any_of' && Array.isArray(value)) value = value[0] ?? ''
+                onChange({ ...q, condition_operator: op, condition_value: value })
+              }}
+              className={inputCls}
+            >
+              {ops.map(op => <option key={op} value={op}>answer {COND_OP_LABELS[op]}</option>)}
+            </select>
+          </div>
+
+          <ConditionValuePicker parent={parent} q={q} onChange={onChange} />
+
+          <p className="text-[10px] text-[#666] leading-relaxed">
+            The guest only sees this question when the rule matches — otherwise the survey skips straight past it.
+          </p>
         </div>
       )}
     </div>
   )
+}
+
+/** Value input rendered as the PARENT's answer widget — tap the stars /
+ *  pills / chips the guest would tap, instead of typing raw values. */
+function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Question; onChange: (q: Question) => void }) {
+  const isMulti = q.condition_operator === 'any_of'
+  const asArray: string[] = isMulti
+    ? (Array.isArray(q.condition_value) ? q.condition_value.map(String) : (q.condition_value ? [String(q.condition_value)] : []))
+    : []
+  const scalar = Array.isArray(q.condition_value) ? String(q.condition_value[0] ?? '') : String(q.condition_value ?? '')
+
+  const pick = (v: string) => {
+    if (isMulti) {
+      const next = asArray.includes(v) ? asArray.filter(x => x !== v) : [...asArray, v]
+      onChange({ ...q, condition_value: next })
+    } else {
+      onChange({ ...q, condition_value: v })
+    }
+  }
+  const isOn = (v: string) => isMulti ? asArray.includes(v) : scalar === v
+
+  if (parent.kind === 'stars') {
+    return (
+      <div className="flex items-center gap-1.5">
+        {[1, 2, 3, 4, 5].map(n => (
+          <button key={n} onClick={() => pick(String(n))} title={`${n} star${n > 1 ? 's' : ''}`}
+            className="p-0.5">
+            <Star size={22} className={Number(scalar) >= n ? 'text-amber-400 fill-amber-400' : 'text-[#3a3a3a]'} />
+          </button>
+        ))}
+        <span className="text-xs text-[#888] ml-2">{scalar || '—'} star{scalar === '1' ? '' : 's'}</span>
+      </div>
+    )
+  }
+
+  if (parent.kind === 'scale' || parent.kind === 'nps') {
+    const lo = parent.kind === 'nps' ? 0 : 1
+    return (
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: 11 - lo }, (_, ix) => lo + ix).map(n => (
+          <button key={n} onClick={() => pick(String(n))}
+            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${isOn(String(n)) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#999] hover:text-white'}`}>
+            {n}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  if (parent.kind === 'boolean') {
+    return (
+      <div className="flex gap-1.5">
+        {[['true', 'Yes'], ['false', 'No']].map(([v, lbl]) => (
+          <button key={v} onClick={() => pick(v)}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOn(v) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#999] hover:text-white'}`}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  if (parent.kind === 'emoji' || parent.kind === 'single_choice' || parent.kind === 'multi_choice') {
+    const opts = parent.options?.choices?.length
+      ? parent.options.choices
+      : (parent.options?.emojis ?? [])
+    const emojis = parent.options?.emojis ?? []
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {opts.map((c, ci) => (
+          <button key={ci} onClick={() => pick(c)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${isOn(c) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#bbb] hover:text-white'}`}>
+            {parent.kind === 'emoji' && emojis[ci] && <span className="text-sm leading-none">{emojis[ci]}</span>}
+            {c}
+          </button>
+        ))}
+        {isMulti && <span className="text-[10px] text-[#666] self-center ml-1">tap all that apply</span>}
+      </div>
+    )
+  }
+
+  // text / textarea parents — free text match
+  return (
+    <input
+      value={scalar}
+      onChange={e => onChange({ ...q, condition_value: e.target.value })}
+      placeholder="text to match…"
+      className={inputCls}
+    />
+  )
+}
+
+/** Mini visual example per kind — used inside the type-picker gallery. */
+function KindExample({ kind }: { kind: Kind }) {
+  switch (kind) {
+    case 'stars':
+      return <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} size={13} className={n <= 4 ? 'text-amber-400 fill-amber-400' : 'text-[#333]'} />)}</div>
+    case 'emoji':
+      return <div className="flex gap-1 text-[13px] leading-none">😡 😕 😐 🙂 😍</div>
+    case 'nps':
+      return (
+        <div className="flex gap-[2px]">
+          {Array.from({ length: 11 }, (_, n) => (
+            <span key={n} className={`w-2.5 h-2.5 rounded-[2px] ${n <= 6 ? 'bg-red-400/70' : n <= 8 ? 'bg-amber-400/70' : 'bg-emerald-400/70'}`} />
+          ))}
+        </div>
+      )
+    case 'scale':
+      return <div className="flex gap-[2px]">{Array.from({ length: 10 }, (_, n) => <span key={n} className={`w-2.5 h-2.5 rounded-[2px] ${n < 6 ? 'bg-violet-400/70' : 'bg-[#333]'}`} />)}</div>
+    case 'single_choice':
+      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-orange-400/40" /><div className="h-[7px] w-3/5 rounded bg-[#333]" /></div>
+    case 'multi_choice':
+      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-pink-400/40" /><div className="h-[7px] w-2/3 rounded bg-pink-400/40" /></div>
+    case 'boolean':
+      return <div className="flex gap-1 text-[12px] leading-none">👍 👎</div>
+    case 'text':
+      return <div className="h-[8px] w-full rounded bg-[#333]" />
+    case 'textarea':
+      return <div className="space-y-[3px]"><div className="h-[7px] w-full rounded bg-[#333]" /><div className="h-[7px] w-2/3 rounded bg-[#333]" /></div>
+  }
 }
 
 /* ──────────────────────── Question preview ──────────────────────── */

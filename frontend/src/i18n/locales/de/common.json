@@ -1061,7 +1061,7 @@
     "actions": {
       "ai_capture": "KI-Erfassung",
       "ai_short": "KI",
-      "export": "Exportieren",
+      "export": "Excel exportieren",
       "add": "Anfrage hinzufügen",
       "add_short": "Hinzufügen"
     },

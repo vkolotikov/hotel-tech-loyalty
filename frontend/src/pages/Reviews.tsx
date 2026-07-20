@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download } from 'lucide-react'
+import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download, TabletSmartphone, RefreshCw, QrCode, X } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
 
-type Tab = 'submissions' | 'invitations' | 'forms' | 'integrations'
+type Tab = 'submissions' | 'invitations' | 'forms' | 'devices' | 'integrations'
 
 interface Form {
   id: number
@@ -80,7 +80,7 @@ export function Reviews() {
       {/* Tabs scroll horizontally on small viewports */}
       <div className="overflow-x-auto -mx-1 px-1 mb-4">
         <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit">
-          {(['submissions', 'invitations', 'forms', 'integrations'] as const).map(t => (
+          {(['submissions', 'invitations', 'forms', 'devices', 'integrations'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -95,6 +95,7 @@ export function Reviews() {
       {tab === 'submissions' && <SubmissionsTab />}
       {tab === 'invitations' && <InvitationsTab />}
       {tab === 'forms' && <FormsTab />}
+      {tab === 'devices' && <DevicesTab />}
       {tab === 'integrations' && <IntegrationsTab />}
     </div>
   )
@@ -375,6 +376,193 @@ function CreateFormModal({ onClose, onCreate, pending }: { onClose: () => void; 
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+
+// ─── Devices Tab (feedback kiosks) ───────────────────────────────────────
+
+interface KioskDevice {
+  id: number
+  name: string
+  location: string | null
+  device_key: string
+  is_active: boolean
+  is_online: boolean
+  last_seen_at: string | null
+  form_id: number | null
+  form?: { id: number; name: string } | null
+}
+
+function DevicesTab() {
+  const qc = useQueryClient()
+  const [newName, setNewName] = useState('')
+  const [newLocation, setNewLocation] = useState('')
+  const [qrModal, setQrModal] = useState<{ name: string; url: string; qr: string } | null>(null)
+
+  const { data, isLoading } = useQuery<{ devices: KioskDevice[] }>({
+    queryKey: ['review-devices'],
+    queryFn: () => api.get('/v1/admin/reviews/devices').then(r => r.data),
+    refetchInterval: 30_000, // keep the online dots honest
+  })
+  const devices = data?.devices ?? []
+
+  const { data: formsData } = useQuery<{ forms: Form[] }>({
+    queryKey: ['review-forms'],
+    queryFn: () => api.get('/v1/admin/reviews/forms').then(r => r.data),
+  })
+  const forms = formsData?.forms ?? []
+
+  const createMutation = useMutation({
+    mutationFn: () => api.post('/v1/admin/reviews/devices', { name: newName, location: newLocation || null }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['review-devices'] })
+      toast.success('Device registered — open its kiosk link on the tablet')
+      setNewName(''); setNewLocation('')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not register device'),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: Record<string, any> }) =>
+      api.put(`/v1/admin/reviews/devices/${id}`, patch).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['review-devices'] }),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Update failed'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/admin/reviews/devices/${id}`).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['review-devices'] }); toast.success('Device removed') },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
+  })
+
+  const rotateMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/v1/admin/reviews/devices/${id}/rotate-key`).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['review-devices'] }); toast.success('Key rotated — update the tablet with the new link') },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Rotate failed'),
+  })
+
+  // API_URL is '' in production (same-origin SPA) — kiosk links leave
+  // this browser, so they need the real origin.
+  const kioskUrl = (d: KioskDevice) => `${API_URL || window.location.origin}/k/${d.device_key}`
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <TabletSmartphone size={15} className="text-primary-400" />
+          <h3 className="text-sm font-semibold text-white">Feedback kiosks</h3>
+        </div>
+        <p className="text-xs text-[#a0a0a0] leading-relaxed mb-3">
+          Register each tablet once, open its kiosk link in the tablet's browser (full-screen), and assign a survey.
+          Reassigning here repoints the tablet within a minute — no need to touch the device. Surveys render in
+          kiosk mode automatically: full-screen, big touch targets, auto-reset between guests.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Device name (e.g. Reception iPad)"
+            className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]" />
+          <input value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="Location (optional)"
+            className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]" />
+          <button onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
+            className="flex items-center justify-center gap-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            <Plus size={14} /> Register device
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center text-[#636366] py-10 text-sm">Loading devices…</div>
+      ) : devices.length === 0 ? (
+        <div className="text-center text-[#636366] py-14 bg-dark-surface border border-dark-border rounded-xl">
+          <TabletSmartphone size={30} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No kiosks yet. Register your first tablet above.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {devices.map(d => (
+            <div key={d.id} className="bg-dark-surface border border-dark-border rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 md:w-64">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${d.is_online ? 'bg-emerald-400' : 'bg-gray-600'}`}
+                  title={d.is_online ? 'Online — kiosk page open' : 'Offline'} />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{d.name}</div>
+                  <div className="text-[11px] text-[#636366] truncate">
+                    {d.location || '—'}{d.last_seen_at ? ` · seen ${new Date(d.last_seen_at).toLocaleString()}` : ' · never connected'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-[11px] text-[#636366] whitespace-nowrap">Shows survey:</span>
+                <select
+                  value={d.form_id ?? ''}
+                  onChange={e => updateMutation.mutate({ id: d.id, patch: { form_id: e.target.value ? Number(e.target.value) : null } })}
+                  className="flex-1 max-w-xs bg-[#1e1e1e] border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white">
+                  <option value="">— none assigned —</option>
+                  {forms.map(f => <option key={f.id} value={f.id}>{f.name}{f.is_active ? '' : ' (inactive)'}</option>)}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button onClick={() => { navigator.clipboard.writeText(kioskUrl(d)); toast.success('Kiosk link copied') }}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  <Copy size={11} /> Copy link
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await api.get(`/v1/admin/reviews/devices/${d.id}/qr`).then(r => r.data)
+                      setQrModal({ name: d.name, url: res.url, qr: res.qr })
+                    } catch { toast.error('Could not generate QR') }
+                  }}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  <QrCode size={11} /> QR
+                </button>
+                <a href={kioskUrl(d)} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  <ExternalLink size={11} /> Open
+                </a>
+                <button onClick={() => { if (confirm("Rotate this device's key? The old kiosk link stops working.")) rotateMutation.mutate(d.id) }}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  <RefreshCw size={11} /> Rotate key
+                </button>
+                <button onClick={() => { if (confirm(`Remove "${d.name}"?`)) deleteMutation.mutate(d.id) }}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20">
+                  <Trash2 size={11} /> Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* QR modal — scan with the tablet's camera to open the kiosk page */}
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+          onClick={() => setQrModal(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Kiosk QR code"
+            className="bg-dark-surface border border-dark-border rounded-2xl p-6 w-full max-w-sm text-center"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">{qrModal.name}</h3>
+              <button onClick={() => setQrModal(null)} aria-label="Close"
+                className="text-[#636366] hover:text-white p-1"><X size={16} /></button>
+            </div>
+            <div className="bg-white rounded-xl p-4 inline-block">
+              <img src={qrModal.qr} alt="Kiosk QR code" className="w-52 h-52" />
+            </div>
+            <p className="text-[11px] text-[#a0a0a0] mt-4 leading-relaxed">
+              On the tablet: open the camera, scan, tap the link, then add the page to the
+              home screen / enable kiosk mode so it stays full-screen.
+            </p>
+            <button onClick={() => { navigator.clipboard.writeText(qrModal.url); toast.success('Link copied') }}
+              className="mt-3 text-[11px] text-primary-400 hover:text-primary-300 font-semibold break-all">
+              {qrModal.url}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
