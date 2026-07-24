@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Key, Plus, Copy, Trash2, AlertCircle, Loader2, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { LeadIntegrationGuide } from './LeadIntegrationGuide'
 
 /**
  * Personal API tokens — for external systems pushing leads into the CRM
@@ -94,17 +95,6 @@ export function ApiTokensPanel() {
         <p className="text-[12px] leading-relaxed text-gray-400">
           Generate a personal access token, then paste it into the third-party system's <code className="font-mono text-amber-300 text-[11px]">CRM_API_TOKEN</code> env var. Leads it pushes land in this account. Revoke instantly if a token leaks.
         </p>
-
-        {/* Endpoint reference */}
-        <div className="rounded-lg border border-white/[0.04] bg-black/30 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Endpoint</div>
-          <code className="block font-mono text-[11px] text-emerald-300 break-all">
-            POST {window.location.origin}/api/v1/integrations/leads
-          </code>
-          <code className="block font-mono text-[10px] text-gray-500 mt-1">
-            Authorization: Bearer &lt;token&gt;
-          </code>
-        </div>
 
         {/* New-token form */}
         {creating && (
@@ -199,6 +189,9 @@ export function ApiTokensPanel() {
             ))}
           </div>
         )}
+
+        {/* Copy-paste integration guide — pre-fills with a freshly created token */}
+        <LeadIntegrationGuide initialToken={justCreated?.token} />
       </div>
     </div>
   )
