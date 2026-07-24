@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Integrations;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Guest;
 use App\Models\Inquiry;
 use App\Models\Pipeline;
@@ -11,6 +12,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Public lead-intake endpoint for external systems pushing leads into the
@@ -41,17 +43,23 @@ class LeadIntakeController extends Controller
     {
         $validated = $request->validate([
             'external_source'    => 'required|string|max:50',
-            'external_id'        => 'required|string|max:255',
+            // Optional: your own unique id per submission enables safe retries
+            // (same id → same lead). Omit it and each POST creates a new lead.
+            'external_id'        => 'nullable|string|max:255',
             'external_url'       => 'nullable|url|max:2048',
-            'submitted_at'       => 'required|date',
+            'submitted_at'       => 'nullable|date',
+            // Optional: route the lead to a specific brand. Validated below to
+            // belong to the token's organization. Omit → org's default brand.
+            'brand_id'           => 'nullable|integer',
             'contact'            => 'required|array',
             'contact.name'       => 'required|string|max:255',
             'contact.email'      => 'required|email|max:255',
             'contact.phone'      => 'nullable|string|max:255',
             'contact.company'    => 'nullable|string|max:255',
             'contact.position'   => 'nullable|string|max:255',
-            'amount'             => 'required|numeric|min:0',
-            'currency'           => 'required|string|size:3',
+            // Optional — plain signup forms have no order value.
+            'amount'             => 'nullable|numeric|min:0',
+            'currency'           => 'nullable|string|size:3',
             'description'        => 'nullable|string',
         ]);
 
@@ -68,7 +76,25 @@ class LeadIntakeController extends Controller
 
         $orgId = $user->organization_id;
         $source = $validated['external_source'];
-        $externalId = $validated['external_id'];
+        // Generate a fallback id when the caller doesn't supply one, so the
+        // (org, source, external_id) unique index stays populated.
+        $externalId = ($validated['external_id'] ?? null) ?: (string) Str::uuid();
+
+        // Security: a brand_id must belong to the token owner's organization —
+        // never let a token push a lead into another org's brand.
+        $brandId = $validated['brand_id'] ?? null;
+        if ($brandId !== null) {
+            $ownsBrand = Brand::withoutGlobalScopes()
+                ->where('id', $brandId)
+                ->where('organization_id', $orgId)
+                ->whereNull('deleted_at')
+                ->exists();
+            if (!$ownsBrand) {
+                return response()->json([
+                    'error' => 'brand_id does not belong to your organization',
+                ], 422);
+            }
+        }
 
         // Pre-check: existing lead with same external attribution returns 200.
         // This is the safe path 99% of the time — retries hit here.
@@ -83,7 +109,7 @@ class LeadIntakeController extends Controller
         }
 
         try {
-            $inquiry = DB::transaction(function () use ($validated, $orgId) {
+            $inquiry = DB::transaction(function () use ($validated, $orgId, $brandId, $externalId) {
                 $guest = $this->upsertGuest($validated['contact'], $orgId);
 
                 // Default pipeline + first open stage so the lead is visible
@@ -98,6 +124,9 @@ class LeadIntakeController extends Controller
 
                 return Inquiry::create([
                     'guest_id'              => $guest->id,
+                    // Explicit brand_id wins over BelongsToBrand's auto-fill;
+                    // when null it falls back to the org's default brand.
+                    'brand_id'              => $brandId,
                     'source'                => $validated['external_source'],
                     'status'                => $firstStage?->name ?: 'New',
                     'priority'              => 'Medium',
@@ -105,13 +134,13 @@ class LeadIntakeController extends Controller
                     'pipeline_stage_id'     => $firstStage?->id,
                     // inquiry_type is NOT NULL on the table — fall back to General.
                     'inquiry_type'          => 'General',
-                    'total_value'           => $validated['amount'],
-                    'currency'              => strtoupper($validated['currency']),
+                    'total_value'           => $validated['amount'] ?? 0,
+                    'currency'              => strtoupper($validated['currency'] ?? 'EUR'),
                     'notes'                 => $validated['description'] ?? null,
                     'external_source'       => $validated['external_source'],
-                    'external_id'           => $validated['external_id'],
+                    'external_id'           => $externalId,
                     'external_url'          => $validated['external_url']   ?? null,
-                    'external_submitted_at' => $validated['submitted_at'],
+                    'external_submitted_at' => $validated['submitted_at'] ?? now(),
                 ]);
             });
         } catch (QueryException $e) {
