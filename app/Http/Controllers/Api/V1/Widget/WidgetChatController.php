@@ -558,6 +558,22 @@ class WidgetChatController extends Controller
         $brandId = $config->brand_id
             ?: \App\Models\Brand::currentOrDefaultIdForOrg($orgId);
 
+        // A conversation with no visitor_id is invisible in the admin feed —
+        // that feed is visitor-centric, so an unattached conversation exists
+        // in the DB but can never be reached. If the caller's visitor lookup
+        // failed, retry here rather than storing an orphan.
+        if (!$visitor) {
+            try {
+                $visitor = $this->resolveVisitor($request, $orgId, $request->input('visitor_cookie'));
+            } catch (\Throwable $e) {
+                \Log::error('Widget conversation visitor fallback failed', [
+                    'org_id'     => $orgId,
+                    'session_id' => $sessionId,
+                    'error'      => $e->getMessage(),
+                ]);
+            }
+        }
+
         $conv = ChatConversation::withoutGlobalScope(BrandScope::class)
             ->where('session_id', $sessionId)
             ->where('organization_id', $orgId)
@@ -841,11 +857,19 @@ class WidgetChatController extends Controller
         ]);
 
         // Bump visitor heartbeat so they stay "online" while chatting.
+        // The cookie MUST be passed: every other call site (init, heartbeat,
+        // page-view) identifies by it, and omitting it here resolved the
+        // chatter to a different visitor identity than the one being tracked
+        // — the conversation then hung off a row the admin wasn't looking at.
         try {
-            $visitor = $this->resolveVisitor($request, (int) $orgId);
+            $visitor = $this->resolveVisitor($request, (int) $orgId, $request->input('visitor_cookie'));
             $visitor->increment('messages_count');
         } catch (\Throwable $e) {
-            \Log::warning('Widget visitor heartbeat (sendMessage) failed: ' . $e->getMessage());
+            \Log::error('Widget visitor resolve (sendMessage) failed', [
+                'org_id'     => $orgId,
+                'session_id' => $request->session_id,
+                'error'      => $e->getMessage(),
+            ]);
             $visitor = null;
         }
 
@@ -915,7 +939,18 @@ class WidgetChatController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            \Log::warning('Widget inbox save failed: ' . $e->getMessage());
+            // Loud on purpose: when this swallows, the visitor still gets a
+            // 200 + AI answer while the exchange is never stored, so the chat
+            // simply does not exist for the admin. Log enough context to
+            // identify the org/brand/session without hunting.
+            \Log::error('Widget inbox save failed', [
+                'org_id'     => $orgId,
+                'brand_id'   => $config->brand_id,
+                'session_id' => $request->session_id,
+                'visitor_id' => $visitor->id ?? null,
+                'error'      => $e->getMessage(),
+                'at'         => $e->getFile() . ':' . $e->getLine(),
+            ]);
         }
 
         // Auto-capture: if the visitor typed an email or phone number in
