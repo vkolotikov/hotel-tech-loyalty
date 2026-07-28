@@ -998,6 +998,49 @@ class WidgetChatController extends Controller
      * we only create a lead when the signal is unambiguous (proper email
      * shape, or 8+ digit run that starts with + or a digit).
      */
+    /**
+     * Pull a phone number out of a free-text chat message.
+     *
+     * The previous pattern required 9+ digits, so a local number typed
+     * WITHOUT a country code never matched — Latvian/Estonian/Lithuanian/
+     * Norwegian/Danish mobiles are 8 digits ("26123456", "26 123 456").
+     * Those visitors left a real contact and still never reached Leads or
+     * the "Has contact" filter.
+     *
+     * Accepts 8-15 digits (8 covers those local formats, 15 is the E.164
+     * maximum) with the separators people actually type: + 00 spaces dashes
+     * dots slashes parentheses. Date-shaped runs are skipped — "28.07.2026"
+     * is also 8 digits and would otherwise be captured as a phone number.
+     */
+    private function extractPhoneFromText(string $message): ?string
+    {
+        // Leading "(" is allowed so "(371) 26123456" keeps its opening
+        // bracket instead of being stored as "371) 26123456".
+        if (!preg_match_all('/\+?\(?\d[\d\s\-\(\)\.\/]{6,}\d/u', $message, $matches)) {
+            return null;
+        }
+
+        foreach ($matches[0] as $raw) {
+            $candidate = trim($raw, " \t\n\r.,;:/-");
+
+            // 28.07.2026 · 2026-07-28 · 1/2/26 — a date, not a phone.
+            if (preg_match('/^\d{1,4}\s*[.\/\-]\s*\d{1,2}\s*[.\/\-]\s*\d{2,4}$/', $candidate)) {
+                continue;
+            }
+
+            $digits = preg_replace('/\D/', '', $candidate) ?? '';
+            $length = strlen($digits);
+
+            if ($length < 8 || $length > 15) {
+                continue;
+            }
+
+            return $candidate;
+        }
+
+        return null;
+    }
+
     private function autoCaptureLeadFromMessage(ChatConversation $conv, ?Visitor $visitor, string $message): void
     {
         $email = null;
@@ -1006,12 +1049,7 @@ class WidgetChatController extends Controller
         if (preg_match('/[\w\.\-\+]+@[\w\-]+\.[\w\-\.]+/', $message, $m)) {
             $email = strtolower(trim($m[0], " .,;:"));
         }
-        if (preg_match('/(?:\+?\d[\s\-\(\)]?){8,}\d/', $message, $m)) {
-            $digits = preg_replace('/\D/', '', $m[0]);
-            if ($digits !== null && strlen($digits) >= 8) {
-                $phone = trim($m[0]);
-            }
-        }
+        $phone = $this->extractPhoneFromText($message);
 
         if (!$email && !$phone) return;
 
