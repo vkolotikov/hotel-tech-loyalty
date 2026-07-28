@@ -7,7 +7,7 @@ import {
   Eye, MessageSquare, Mail, Phone, Sparkles, Star,
   Search, ChevronLeft, ChevronRight, RefreshCw,
   Bot, Wifi, MapPin, BellRing, BellOff, Bell, X, Monitor,
-  SlidersHorizontal, Archive, UserX,
+  SlidersHorizontal, Archive, UserX, MailQuestion,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { INTENT_META } from '../lib/intentMeta'
@@ -29,7 +29,7 @@ import { useHotLeadAlert, useNotificationPermission, type HotLeadInfo } from '..
 // row (low signal — intent tagging is shown on each row already) were
 // dropped. Backend still accepts the old filter values for API
 // compatibility; the UI just no longer exposes them.
-type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat' | 'resolved' | 'anonymous'
+type FilterKey = 'priority' | 'online' | 'has_contact' | 'active_chat' | 'resolved' | 'anonymous' | 'missed'
 
 interface EngagementRow {
   id: number
@@ -79,6 +79,9 @@ const FILTERS: { key: FilterKey; label: string; icon: any; tone?: string }[] = [
   { key: 'online',      label: 'Online',       icon: Wifi,  tone: 'green'     },
   { key: 'has_contact', label: 'Has contact',  icon: Mail                     },
   { key: 'active_chat', label: 'Active chat',  icon: MessageSquare            },
+  // Missed = a visitor wrote and no human ever replied. These auto-resolve
+  // out of Priority/Active chat, so without this tab they are invisible.
+  { key: 'missed',      label: 'Missed',       icon: MailQuestion, tone: 'amber' },
   // History view — backend has supported `resolved` and `anonymous` filter
   // values forever; they were dropped from the UI in a 2026-05 polish pass
   // and that left admins with no way to browse closed conversations from
@@ -484,7 +487,7 @@ export function Engagement() {
       {isLoading ? (
         <div className="text-center py-12 text-t-secondary text-sm">{t('engagement.loading', 'Loading…')}</div>
       ) : rows.length === 0 ? (
-        <EmptyState filter={filter} hasBrandFilter={brands.length > 1} />
+        <EmptyState filter={filter} hasBrandFilter={brands.length > 1} counts={counts} onJump={setFilter} />
       ) : (
         <div className="space-y-1.5">
           {rows.map(r => <Row key={r.id} row={r} onOpen={openDrawer} />)}
@@ -696,7 +699,12 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
   )
 }
 
-function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFilter: boolean }) {
+function EmptyState({ filter, hasBrandFilter, counts, onJump }: {
+  filter: FilterKey
+  hasBrandFilter: boolean
+  counts?: Record<string, number>
+  onJump?: (f: FilterKey) => void
+}) {
   const { t } = useTranslation()
   // English fallbacks kept inline so the page still reads if the locale
   // file is missing a key. Keep in sync with engagement.empty.* in the
@@ -708,10 +716,21 @@ function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFil
     active_chat:     { title: 'No active chats',              sub: 'Open conversations will appear here.' },
     resolved:        { title: 'No resolved conversations',    sub: 'Closed chats land here so you can review history.' },
     anonymous:       { title: 'No anonymous visitors',        sub: 'Pure-browse visitors with no captured contact appear here.' },
+    missed:          { title: 'Nothing was missed',           sub: 'Conversations where someone wrote and no human replied show up here.' },
   }
   const fb = fallbacks[filter]
   const title = t(`engagement.empty.${filter}.title`, fb.title)
   const sub = t(`engagement.empty.${filter}.sub`, fb.sub)
+
+  // This filter is empty — but the brand may still have plenty of history
+  // under another tab. Saying only "nothing needs attention" made admins
+  // believe the brand had no conversations at all, so surface where the
+  // data actually is and let them jump straight to it.
+  const elsewhere = (Object.entries(counts ?? {}) as [FilterKey, number][])
+    .filter(([k, n]) => k !== filter && n > 0 && FILTERS.some(f => f.key === k))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+
   return (
     <div className="text-center py-16 px-6">
       <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-4">
@@ -719,6 +738,32 @@ function EmptyState({ filter, hasBrandFilter }: { filter: FilterKey; hasBrandFil
       </div>
       <h2 className="text-base font-semibold mb-2">{title}</h2>
       <p className="text-sm text-t-secondary max-w-md mx-auto">{sub}</p>
+
+      {elsewhere.length > 0 && (
+        <div className="mt-5">
+          <p className="text-xs text-t-secondary mb-2">
+            {t('engagement.empty.elsewhere', 'This brand does have activity — just not under this filter:')}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {elsewhere.map(([key, n]) => {
+              const meta = FILTERS.find(f => f.key === key)!
+              const Icon = meta.icon
+              return (
+                <button
+                  key={key}
+                  onClick={() => onJump?.(key)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors"
+                >
+                  <Icon size={12} />
+                  {t(filterLabelKey(key), meta.label)}
+                  <span className="opacity-70">{n}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {hasBrandFilter && (
         <p className="text-xs text-t-secondary mt-3 italic">
           {t('engagement.empty.brand_tip', 'Tip: pick a different brand from the top-bar switcher to see its engagement.')}

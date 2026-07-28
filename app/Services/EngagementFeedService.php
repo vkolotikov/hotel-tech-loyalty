@@ -23,6 +23,12 @@ class EngagementFeedService
     /** Visitor counts as "online" if last_seen_at is within this window. */
     public const ONLINE_THRESHOLD_SECONDS = 90;
 
+    /**
+     * Message sender types that count as "a human replied". Anything else
+     * (visitor, ai, system) leaves the conversation unanswered by staff.
+     */
+    private const HUMAN_SENDER_TYPES = ['admin', 'agent', 'staff', 'user'];
+
     /** Recently-active threshold for the "+50 priority boost". */
     private const RECENT_ACTIVITY_HOURS = 24;
 
@@ -201,7 +207,7 @@ class EngagementFeedService
     {
         $threshold = now()->subSeconds(self::ONLINE_THRESHOLD_SECONDS);
         $filters = ['priority', 'online', 'has_contact', 'active_chat', 'hot_lead',
-                    'anonymous', 'resolved',
+                    'anonymous', 'resolved', 'missed',
                     'booking_inquiry', 'info_request', 'complaint', 'cancellation', 'support'];
         $counts = [];
         foreach ($filters as $f) {
@@ -289,6 +295,17 @@ class EngagementFeedService
                 break;
             case 'resolved':
                 $query->whereHas('conversations', fn ($q) => $q->where('status', 'resolved'));
+                break;
+            case 'missed':
+                // "Missed" = a real person wrote to us and no human ever
+                // replied. Catches the conversations that quietly ended
+                // with only the AI answering (or nothing at all) — the
+                // ones nobody follows up because they never appear under
+                // Priority / Active chat once they auto-resolve.
+                $query->whereHas('conversations', fn ($c) => $c
+                    ->whereHas('messages', fn ($m) => $m->where('sender_type', 'visitor'))
+                    ->whereDoesntHave('messages', fn ($m) => $m
+                        ->whereIn('sender_type', self::HUMAN_SENDER_TYPES)));
                 break;
             case 'priority':
                 // "Priority" = rows the agent actually needs to look at.

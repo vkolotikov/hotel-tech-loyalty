@@ -31,7 +31,7 @@ class EngagementController extends Controller
     public function feed(Request $request): JsonResponse
     {
         $params = $request->validate([
-            'filter'   => 'nullable|string|in:priority,all,online,has_contact,active_chat,hot_lead,anonymous,resolved,booking_inquiry,info_request,complaint,cancellation,support',
+            'filter'   => 'nullable|string|in:priority,all,online,has_contact,active_chat,hot_lead,anonymous,resolved,missed,booking_inquiry,info_request,complaint,cancellation,support',
             'range'    => 'nullable|string|in:today,week,month,all',
             'sort'     => 'nullable|string|in:priority,recent,engagement',
             'search'   => 'nullable|string|max:200',
