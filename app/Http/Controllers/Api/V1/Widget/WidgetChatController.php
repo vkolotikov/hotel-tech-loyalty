@@ -51,11 +51,24 @@ class WidgetChatController extends Controller
         // IP + UA usually don't, and we want those sessions to collapse to
         // the same Visitor row so the inbox shows a returning visit rather
         // than a fresh face. Matches the inbox's cascading dedup intent.
-        $fingerprint = hash('sha256', $orgId . '|' . $ip . '|' . substr($ua, 0, 200));
+        //
+        // BRAND is part of the identity. Visitors are brand-scoped rows and
+        // the Engagement feed filters them by the selected brand, but this
+        // fingerprint used to be org-wide — so one person visiting two brands
+        // of the same org collapsed into a SINGLE visitor row pinned (by
+        // BelongsToBrand, which stamps once on insert) to whichever brand
+        // they happened to hit first. Their later conversations on brand B
+        // were stamped brand B while their visitor row still said brand A,
+        // and the visitor-centric feed could never reach them: the chat was
+        // stored yet invisible in every brand. Private windows did not help
+        // because IP + UA are identical there.
+        $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $fingerprint = hash('sha256', $orgId . '|' . ($brandId ?: 'org') . '|' . $ip . '|' . substr($ua, 0, 200));
 
         $visitor = Visitor::withoutGlobalScopes()
             ->where('organization_id', $orgId)
             ->where('visitor_key', $fingerprint)
+            ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
             ->first();
 
         $now      = now();
