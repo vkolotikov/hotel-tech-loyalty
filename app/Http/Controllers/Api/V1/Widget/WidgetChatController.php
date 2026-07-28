@@ -822,6 +822,16 @@ class WidgetChatController extends Controller
                 $chatConv->update([
                     'last_message_at' => now(),
                     'messages_count' => $chatConv->messages_count + 2,
+                    // Revive a closed thread when the visitor actually writes.
+                    // chat:reap auto-resolves after N hours of inactivity, and
+                    // widget init deliberately does NOT reset status on resume
+                    // (that caused a reap loop). Without reviving here, a
+                    // returning visitor chats inside a 'resolved' conversation
+                    // forever: the exchange is live but the admin's Active-chat
+                    // filter — which requires active/waiting — never shows it.
+                    'status' => in_array($chatConv->status, ['resolved', 'closed', 'archived'], true)
+                        ? 'active'
+                        : $chatConv->status,
                 ]);
 
                 // Phase 2 — when this conversation lives on an external
