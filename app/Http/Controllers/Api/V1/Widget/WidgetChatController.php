@@ -19,6 +19,7 @@ use App\Services\AvailabilityService;
 use App\Services\BookingContextService;
 use App\Services\KnowledgeService;
 use App\Services\OpenAiService;
+use App\Scopes\BrandScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -536,6 +537,54 @@ class WidgetChatController extends Controller
     /**
      * POST /v1/widget/{widgetKey}/message
      */
+    /**
+     * Find (or create) the ChatConversation backing a widget session.
+     *
+     * Looked up WITHOUT BrandScope on purpose: session_id is globally
+     * unique, so a conversation started under another brand must be found
+     * and re-stamped rather than duplicated (a scoped lookup would miss it
+     * and the insert would hit chat_conversations_session_id_unique).
+     * Never returns null for a valid widget — a visitor message must always
+     * have somewhere to land.
+     */
+    private function resolveConversationForSession(Request $request, $config, ?Visitor $visitor): ?ChatConversation
+    {
+        $sessionId = (string) $request->session_id;
+        if ($sessionId === '') {
+            return null;
+        }
+
+        $orgId = (int) $config->organization_id;
+        $brandId = $config->brand_id
+            ?: \App\Models\Brand::currentOrDefaultIdForOrg($orgId);
+
+        $conv = ChatConversation::withoutGlobalScope(BrandScope::class)
+            ->where('session_id', $sessionId)
+            ->where('organization_id', $orgId)
+            ->first();
+
+        if (!$conv) {
+            $conv = new ChatConversation([
+                'organization_id' => $orgId,
+                'session_id'      => $sessionId,
+                'channel'         => 'widget',
+                'status'          => 'active',
+                'last_message_at' => now(),
+                'page_url'        => $request->input('page_url') ?: $request->header('Referer'),
+            ]);
+        }
+
+        // Re-stamp brand + visitor so the conversation always surfaces in the
+        // inbox of the brand whose widget is actually being used.
+        $conv->brand_id = $brandId;
+        if ($visitor && !$conv->visitor_id) {
+            $conv->visitor_id = $visitor->id;
+        }
+        $conv->save();
+
+        return $conv;
+    }
+
     public function sendMessage(Request $request, string $widgetKey): JsonResponse
     {
         $request->validate([
@@ -556,7 +605,11 @@ class WidgetChatController extends Controller
 
         // If an agent has muted the AI on this conversation, just record the
         // visitor message and return — a human will reply from the inbox.
-        $existingChatConv = ChatConversation::where('session_id', $request->session_id)
+        // Without BrandScope: session_id is globally unique, so a session
+        // started under another brand must still be found (otherwise an
+        // agent's "AI muted" flag is silently ignored).
+        $existingChatConv = ChatConversation::withoutGlobalScope(BrandScope::class)
+            ->where('session_id', $request->session_id)
             ->where('organization_id', $orgId)
             ->first();
         if ($existingChatConv && $existingChatConv->ai_enabled === false) {
@@ -799,7 +852,16 @@ class WidgetChatController extends Controller
         // Store in chat_messages for inbox
         $aiMessageId = null;
         try {
-            $chatConv = ChatConversation::where('session_id', $request->session_id)->first();
+            // Guarantee a conversation exists before persisting the exchange.
+            // Previously this was a plain lookup guarded by `if ($chatConv)`:
+            // when the session had no row the visitor still got an AI answer
+            // but NOTHING was stored — the chat was invisible in the admin
+            // ("Browsing — no chat yet", Active chat 0). That happens with a
+            // stale session_id in localStorage, an init that never completed,
+            // or a conversation belonging to another brand (BrandScope hides
+            // it, so the lookup returned null and a duplicate insert would
+            // have violated the UNIQUE session_id index).
+            $chatConv = $this->resolveConversationForSession($request, $config, $visitor ?? null);
             if ($chatConv && $visitor && !$chatConv->visitor_id) {
                 $chatConv->visitor_id = $visitor->id;
             }
