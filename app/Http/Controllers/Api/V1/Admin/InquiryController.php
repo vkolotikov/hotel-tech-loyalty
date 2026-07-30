@@ -48,10 +48,28 @@ class InquiryController extends Controller
         ]);
 
         if ($s = $request->get('search')) {
-            $query->where(function ($q) use ($s) {
+            // Search covers what staff actually paste into the box: a name,
+            // a company, an email, or a phone number. Email/phone were
+            // missing, so looking up a lead by the address it was captured
+            // with returned "No leads match these filters" even though the
+            // row was right there. Phone is matched on digits only, so
+            // "26123456" still finds a number stored as "26 123 456" or
+            // "+371 26 123 456".
+            $digits = preg_replace('/\D/', '', $s);
+            $query->where(function ($q) use ($s, $digits) {
                 $q->where('event_name', 'ilike', "%$s%")
                   ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', fn($q2) => $q2->where('full_name', 'ilike', "%$s%")->orWhere('company', 'ilike', "%$s%"));
+                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
+                      $q2->where('full_name', 'ilike', "%$s%")
+                         ->orWhere('company', 'ilike', "%$s%")
+                         ->orWhere('email', 'ilike', "%$s%")
+                         ->orWhere('phone', 'ilike', "%$s%")
+                         ->orWhere('mobile', 'ilike', "%$s%");
+                      if (strlen((string) $digits) >= 4) {
+                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
+                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
+                      }
+                  });
             });
         }
         if ($v = $request->get('status'))        $query->where('status', $v);
@@ -814,10 +832,28 @@ class InquiryController extends Controller
         ]);
 
         if ($s = $request->get('search')) {
-            $query->where(function ($q) use ($s) {
+            // Search covers what staff actually paste into the box: a name,
+            // a company, an email, or a phone number. Email/phone were
+            // missing, so looking up a lead by the address it was captured
+            // with returned "No leads match these filters" even though the
+            // row was right there. Phone is matched on digits only, so
+            // "26123456" still finds a number stored as "26 123 456" or
+            // "+371 26 123 456".
+            $digits = preg_replace('/\D/', '', $s);
+            $query->where(function ($q) use ($s, $digits) {
                 $q->where('event_name', 'ilike', "%$s%")
                   ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', fn($q2) => $q2->where('full_name', 'ilike', "%$s%")->orWhere('company', 'ilike', "%$s%"));
+                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
+                      $q2->where('full_name', 'ilike', "%$s%")
+                         ->orWhere('company', 'ilike', "%$s%")
+                         ->orWhere('email', 'ilike', "%$s%")
+                         ->orWhere('phone', 'ilike', "%$s%")
+                         ->orWhere('mobile', 'ilike', "%$s%");
+                      if (strlen((string) $digits) >= 4) {
+                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
+                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
+                      }
+                  });
             });
         }
         if ($v = $request->get('status'))        $query->where('status', $v);
