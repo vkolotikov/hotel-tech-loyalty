@@ -644,6 +644,10 @@ trait SetsUpMinimalSchema
         if (!Schema::hasTable('point_expiry_buckets')) {
             Schema::create('point_expiry_buckets', function ($table) {
                 $table->bigIncrements('id');
+                // Mirrors 2026_08_10_100000_tenant_scope_loyalty_child_tables:
+                // the model now carries BelongsToOrganization, so the column
+                // has to exist here or every insert fails under sqlite.
+                $table->unsignedBigInteger('organization_id')->nullable();
                 $table->unsignedBigInteger('member_id');
                 $table->unsignedBigInteger('transaction_id')->nullable();
                 $table->integer('original_points');
@@ -659,6 +663,7 @@ trait SetsUpMinimalSchema
         if (!Schema::hasTable('tier_assessments')) {
             Schema::create('tier_assessments', function ($table) {
                 $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
                 $table->unsignedBigInteger('member_id');
                 $table->unsignedBigInteger('old_tier_id')->nullable();
                 $table->unsignedBigInteger('new_tier_id')->nullable();

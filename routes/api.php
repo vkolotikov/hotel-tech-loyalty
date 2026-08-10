@@ -612,13 +612,20 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('properties/{id}/outlets',             [PropertyAdminController::class, 'storeOutlet']);
             Route::put('properties/{id}/outlets/{outletId}',   [PropertyAdminController::class, 'updateOutlet']);
 
-            // Campaign segments
-            Route::get('segments',                             [CampaignSegmentController::class, 'index']);
-            Route::post('segments',                            [CampaignSegmentController::class, 'store']);
-            Route::get('segments/{id}',                        [CampaignSegmentController::class, 'show']);
-            Route::put('segments/{id}',                        [CampaignSegmentController::class, 'update']);
-            Route::delete('segments/{id}',                     [CampaignSegmentController::class, 'destroy']);
-            Route::get('segments/{id}/preview',                [CampaignSegmentController::class, 'preview']);
+            // Campaign segments — intentionally NOT registered.
+            //
+            // These URIs collided with the member-segment routes above, and
+            // because Laravel keeps the LAST registration the Segments page
+            // was split across two unrelated models: index/store/show/update/
+            // destroy resolved here (campaign_segments) while preview + send
+            // still resolved to SegmentAdminController (member_segments).
+            //
+            // The page was therefore dead — it posts {name, description,
+            // definition} and store() below requires `rules`, so every save
+            // 422'd — and `send` looked up ids from one table in the other,
+            // which is a mis-send waiting to happen. Nothing in the SPA calls
+            // CampaignSegmentController; give it distinct URIs before
+            // reinstating it.
 
             Route::get('analytics/export',              [AnalyticsController::class, 'export']);
             Route::get('analytics/overview',             [AnalyticsController::class, 'overview']);

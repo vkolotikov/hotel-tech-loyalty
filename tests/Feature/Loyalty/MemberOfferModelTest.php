@@ -63,6 +63,8 @@ class MemberOfferModelTest extends TestCase
         if (!Schema::hasTable('member_offers')) {
             Schema::create('member_offers', function ($t) {
                 $t->bigIncrements('id');
+                // Mirrors 2026_08_10_100000_tenant_scope_loyalty_child_tables.
+                $t->unsignedBigInteger('organization_id')->nullable();
                 $t->unsignedBigInteger('member_id');
                 $t->unsignedBigInteger('offer_id')->nullable();
                 $t->boolean('ai_generated')->default(false);

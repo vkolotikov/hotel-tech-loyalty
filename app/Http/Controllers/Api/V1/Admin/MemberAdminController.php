@@ -18,6 +18,7 @@ use App\Services\AnalyticsService;
 use App\Services\QrCodeService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -252,6 +253,57 @@ class MemberAdminController extends Controller
         return response()->json(['message' => 'Welcome email sent to ' . $member->user->email]);
     }
 
+    /**
+     * The member list filters, shared by index() and export().
+     *
+     * The search term MUST live in its own nested group. Previously the
+     * `orWhere('member_number', …)` was attached at the top level, and
+     * because AND binds tighter than OR in SQL the whole WHERE collapsed to
+     *
+     *     nameOrEmailMatch OR (numberMatch AND tier_id = ? AND is_active = ?)
+     *
+     * so any member matching the text came back regardless of the tier and
+     * status filters showing as active on screen. Filtering to "Inactive"
+     * and typing a name listed active members — and `export()` carried the
+     * identical bug, so the spreadsheet that left the building disagreed
+     * with the screen it was launched from.
+     *
+     * Phone is searched too. Leads gained that in 7f9033cef; members never
+     * did, so a customer who left only a number could not be found here.
+     */
+    private function applyMemberFilters(Builder $query, Request $request): void
+    {
+        $query
+            ->when($request->search, function ($q, $search) {
+                $digits = preg_replace('/\D/', '', (string) $search) ?? '';
+
+                $q->where(function ($group) use ($search, $digits) {
+                    $group
+                        ->whereHas('user', function ($u) use ($search, $digits) {
+                            $u->where('name', 'ILIKE', "%{$search}%")
+                              ->orWhere('email', 'ILIKE', "%{$search}%")
+                              ->orWhere('phone', 'ILIKE', "%{$search}%");
+
+                            // Digits-only match so "26123456" finds a number
+                            // stored as "+371 26 123 456". Guarded at 4+ so a
+                            // short numeric query doesn't sweep in everyone.
+                            if (strlen($digits) >= 4) {
+                                $u->orWhereRaw(
+                                    "regexp_replace(coalesce(phone, ''), '\\D', '', 'g') LIKE ?",
+                                    ["%{$digits}%"]
+                                );
+                            }
+                        })
+                        ->orWhere('member_number', 'ILIKE', "%{$search}%");
+                });
+            })
+            ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
+            ->when($request->tier, fn($q, $tierName) => $q->whereHas('tier', fn($t) => $t->where('name', $tierName)))
+            ->when($request->lead_source, fn($q, $src) => $q->whereHas('guests', fn($g) => $g->where('lead_source', $src)))
+            ->when($request->lifecycle, fn($q, $ls) => $q->whereHas('guests', fn($g) => $g->where('lifecycle_status', $ls)))
+            ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')));
+    }
+
     public function index(Request $request): JsonResponse
     {
         // Eager-load the linked CRM guest (if any) so the unified Members
@@ -265,16 +317,7 @@ class MemberAdminController extends Controller
                     ->latest('id')
                     ->limit(1),
             ])
-            ->when($request->search, function ($q, $search) {
-                $q->whereHas('user', fn($u) => $u->where('name', 'ILIKE', "%{$search}%")
-                    ->orWhere('email', 'ILIKE', "%{$search}%"))
-                  ->orWhere('member_number', 'ILIKE', "%{$search}%");
-            })
-            ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
-            ->when($request->tier, fn($q, $tierName) => $q->whereHas('tier', fn($t) => $t->where('name', $tierName)))
-            ->when($request->lead_source, fn($q, $src) => $q->whereHas('guests', fn($g) => $g->where('lead_source', $src)))
-            ->when($request->lifecycle, fn($q, $ls) => $q->whereHas('guests', fn($g) => $g->where('lifecycle_status', $ls)))
-            ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')));
+            ->tap(fn ($q) => $this->applyMemberFilters($q, $request));
 
         // Sort. Server-side because the list is paginated — client-only
         // sort would only reorder the current page.
@@ -285,7 +328,13 @@ class MemberAdminController extends Controller
                 User::select('name')->whereColumn('users.id', 'loyalty_members.user_id'),
                 'asc'
             ),
-            'last_activity' => $query->orderByDesc('updated_at'),
+            // `last_activity_at`, not `updated_at`. The hourly points-expiry
+            // sweep decrements balances, which bumps `updated_at` without
+            // touching real activity — so sorting by it floated the members
+            // whose points had just expired (by definition the dormant ones)
+            // to the top of "most recently active". NULLS LAST keeps
+            // never-active members from taking the top slots.
+            'last_activity' => $query->orderByRaw('last_activity_at DESC NULLS LAST'),
             default         => $query->orderByDesc('created_at'),
         };
 
@@ -980,15 +1029,11 @@ class MemberAdminController extends Controller
      */
     public function export(Request $request): StreamedResponse|BinaryFileResponse
     {
+        // Same filters as index(), via the same method — an export that
+        // disagrees with the screen it was launched from is worse than no
+        // export, and this pair had already drifted into that state.
         $query = LoyaltyMember::with(['user:id,name,email,phone', 'tier:id,name'])
-            ->when($request->search, function ($q, $search) {
-                $q->whereHas('user', fn($u) => $u->where('name', 'ILIKE', "%{$search}%")
-                    ->orWhere('email', 'ILIKE', "%{$search}%"))
-                  ->orWhere('member_number', 'ILIKE', "%{$search}%");
-            })
-            ->when($request->tier_id, fn($q, $tierId) => $q->where('tier_id', $tierId))
-            ->when($request->tier, fn($q, $tierName) => $q->whereHas('tier', fn($t) => $t->where('name', $tierName)))
-            ->when($request->is_active !== null, fn($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->tap(fn ($q) => $this->applyMemberFilters($q, $request))
             ->orderByDesc('created_at');
 
         $columns = [
