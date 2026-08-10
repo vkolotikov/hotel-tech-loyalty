@@ -232,17 +232,33 @@ class EmailCampaignController extends Controller
         $failed = 0;
 
         try {
-            LoyaltyMember::whereIn('id', $memberIds)
-                ->with('user:id,name,email')
-                ->where('email_notifications', true)
-                ->chunk(200, function ($chunk) use ($campaign, &$sent, &$failed) {
+            $compliance = app(\App\Services\EmailComplianceService::class);
+            $isMarketing = ($campaign->category ?? 'marketing') !== \App\Services\EmailComplianceService::TRANSACTIONAL;
+            $category = $isMarketing ? 'marketing' : \App\Services\EmailComplianceService::TRANSACTIONAL;
+            $orgName = \App\Models\Organization::find($campaign->organization_id)?->name;
+
+            $recipients = LoyaltyMember::whereIn('id', $memberIds)->with('user:id,name,email');
+            // Consent gate. This used to filter on `email_notifications`
+            // alone, which defaults to TRUE — so a campaign reached every
+            // member including those who had never agreed to marketing.
+            $compliance->scopeEligible($recipients, $category);
+
+            $recipients
+                ->chunk(200, function ($chunk) use ($campaign, &$sent, &$failed, $compliance, $category, $isMarketing, $orgName) {
                     foreach ($chunk as $m) {
                         $email = $m->user?->email;
                         if (!$email) { $failed++; continue; }
                         try {
-                            Mail::html($campaign->body_html, function ($mail) use ($email, $campaign, $m) {
+                            $html = $campaign->body_html;
+                            if ($isMarketing) {
+                                // Visible unsubscribe link, in the body, every time.
+                                $html .= $compliance->footerHtml($m, $orgName);
+                            }
+
+                            Mail::html($html, function ($mail) use ($email, $campaign, $m, $compliance, $category) {
                                 $mail->to($email, $m->user->name ?? null)
                                      ->subject($campaign->subject);
+                                $compliance->applyHeaders($mail, $m, $category);
                             });
                             $sent++;
                         } catch (\Throwable $e) {

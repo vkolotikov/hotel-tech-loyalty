@@ -434,6 +434,16 @@ Route::get('/privacy', fn () => view('privacy'));
 Route::get('/terms', fn () => view('terms'));
 Route::get('/data-deletion', fn () => view('data-deletion'));
 
+/*
+ * Public unsubscribe. No auth, no tenant, no brand middleware — the person
+ * clicking is in their mail client, not signed in, and the 48-character
+ * token is the credential. Registered BEFORE the SPA fallback (and excluded
+ * from its pattern) so the React shell never swallows it.
+ */
+Route::get ('/unsubscribe/{token}',             [\App\Http\Controllers\UnsubscribeController::class, 'show']);
+Route::post('/unsubscribe/{token}',             [\App\Http\Controllers\UnsubscribeController::class, 'oneClick']);
+Route::post('/unsubscribe/{token}/resubscribe', [\App\Http\Controllers\UnsubscribeController::class, 'resubscribe']);
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -441,7 +451,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|privacy|terms|data-deletion).*$');
+})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');

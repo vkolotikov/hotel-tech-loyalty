@@ -22,6 +22,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
         ]);
+
+        // RFC 8058 one-click unsubscribe. Gmail and Yahoo POST to this URL
+        // straight from their own "Unsubscribe" button — there is no
+        // browser session and no way for them to carry a CSRF token, so
+        // requiring one would silently break the very feature those
+        // providers require of bulk senders. The 48-character token in the
+        // path is the credential.
+        $middleware->validateCsrfTokens(except: [
+            'unsubscribe/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {

@@ -176,9 +176,15 @@ class SegmentAdminController extends Controller
 
         $members = LoyaltyMember::whereIn('id', $memberIds)->with('user')->get();
 
+        $compliance = app(\App\Services\EmailComplianceService::class);
+        $orgName = \App\Models\Organization::find($members->first()?->organization_id)?->name;
+
         $pushSent = 0;
         $emailSent = 0;
         $skipped = 0;
+        // Counted separately from push `skipped` so the operator can tell
+        // "no push token" apart from "never consented to marketing".
+        $emailSkipped = 0;
 
         foreach ($members as $m) {
             try {
@@ -193,11 +199,26 @@ class SegmentAdminController extends Controller
                 } else {
                     $skipped++;
                 }
-                if (!empty($validated['send_email']) && $m->email_notifications && $m->user?->email) {
-                    Mail::raw($validated['body'], function ($mail) use ($m, $validated) {
+                // Consent, not just the channel switch. `email_notifications`
+                // defaults to TRUE and `marketing_consent` to FALSE, so gating
+                // on the former sent commercial mail to everyone who had never
+                // agreed to receive any. Transactional mail is unaffected.
+                if (!empty($validated['send_email']) && $compliance->canReceive($m, $category)) {
+                    $body = $validated['body'];
+                    if ($category !== \App\Services\EmailComplianceService::TRANSACTIONAL) {
+                        $body .= $compliance->footerText($m, $orgName);
+                    }
+
+                    Mail::raw($body, function ($mail) use ($m, $validated, $compliance, $category) {
                         $mail->to($m->user->email)->subject($validated['title']);
+                        // One-click unsubscribe headers (RFC 8058) — required by
+                        // Gmail/Yahoo for bulk senders, and nothing upstream adds
+                        // them for us on a plain SMTP transport.
+                        $compliance->applyHeaders($mail, $m, $category);
                     });
                     $emailSent++;
+                } elseif (!empty($validated['send_email'])) {
+                    $emailSkipped++;
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Segment campaign send failed', [
@@ -213,6 +234,14 @@ class SegmentAdminController extends Controller
             'total_sent_count' => $segment->total_sent_count + $pushSent + $emailSent,
         ])->save();
 
+        if ($emailSkipped > 0) {
+            \Log::info('segment send: recipients without marketing consent', [
+                'segment_id' => $segment->id,
+                'skipped'    => $emailSkipped,
+                'category'   => $category,
+            ]);
+        }
+
         AuditLog::record('segment_campaign_sent', $segment, [
             'recipients' => $members->count(),
             'push_sent'  => $pushSent,
@@ -222,10 +251,13 @@ class SegmentAdminController extends Controller
             "Campaign sent to segment '{$segment->name}' — push: {$pushSent}, email: {$emailSent}");
 
         return response()->json([
-            'total'      => $members->count(),
-            'push_sent'  => $pushSent,
-            'email_sent' => $emailSent,
-            'skipped'    => $skipped,
+            'total'         => $members->count(),
+            'push_sent'     => $pushSent,
+            'email_sent'    => $emailSent,
+            'skipped'       => $skipped,
+            // Reported so "I sent to 5,000 and 12 got it" is visible in the
+            // UI rather than something the operator discovers later.
+            'email_skipped' => $emailSkipped,
         ]);
     }
 

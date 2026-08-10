@@ -1102,9 +1102,16 @@ trait SetsUpMinimalSchema
                 $table->unsignedBigInteger('property_id')->nullable();
                 $table->date('points_expiry_date')->nullable();
                 $table->boolean('is_active')->default(true);
+                // Defaults deliberately mirror production: consent is
+                // opt-IN (false) while the channel switch is opt-OUT (true).
+                // The gap between the two is the whole reason the compliance
+                // gate exists.
                 $table->boolean('marketing_consent')->default(false);
                 $table->boolean('email_notifications')->default(true);
                 $table->boolean('push_notifications')->default(true);
+                // Mirrors 2026_08_10_110000_add_unsubscribe_to_loyalty_members.
+                $table->string('unsubscribe_token', 64)->nullable();
+                $table->timestamp('unsubscribed_at')->nullable();
                 $table->timestamp('joined_at')->nullable();
                 $table->timestamp('last_activity_at')->nullable();
                 $table->timestamps();

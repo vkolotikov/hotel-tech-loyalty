@@ -20,12 +20,14 @@ class LoyaltyMember extends Model
         'points_expiry_date', 'qr_code_token', 'nfc_uid', 'nfc_card_issued_at',
         'referral_code', 'referred_by', 'is_active', 'marketing_consent',
         'email_notifications', 'push_notifications', 'notification_preferences', 'expo_push_token',
+        'unsubscribe_token', 'unsubscribed_at',
         'joined_at', 'welcomed_at', 'last_activity_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'marketing_consent' => 'boolean',
+        'unsubscribed_at' => 'datetime',
         'email_notifications' => 'boolean',
         'push_notifications' => 'boolean',
         'notification_preferences' => 'array',

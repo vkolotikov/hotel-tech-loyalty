@@ -703,10 +703,13 @@ class MemberAdminController extends Controller
 
         $members = LoyaltyMember::whereIn('id', $validated['member_ids'])->with('user')->get();
         $svc = app(NotificationService::class);
+        $compliance = app(\App\Services\EmailComplianceService::class);
+        $orgName = \App\Models\Organization::find($members->first()?->organization_id)?->name;
 
         $pushSent = 0;
         $emailSent = 0;
         $skipped = 0;
+        $emailSkipped = 0;
 
         foreach ($members as $m) {
             try {
@@ -721,14 +724,26 @@ class MemberAdminController extends Controller
                 } else {
                     $skipped++;
                 }
-                if (!empty($validated['send_email']) && $m->email_notifications && $m->user?->email) {
+                // Consent gate + unsubscribe. Gating on `email_notifications`
+                // alone (default TRUE) sent marketing to members who had never
+                // opted in; `marketing_consent` defaults FALSE and is the flag
+                // that actually records agreement.
+                if (!empty($validated['send_email']) && $compliance->canReceive($m, $category)) {
+                    $body = $validated['body'];
+                    if ($category !== \App\Services\EmailComplianceService::TRANSACTIONAL) {
+                        $body .= $compliance->footerText($m, $orgName);
+                    }
+
                     \Illuminate\Support\Facades\Mail::raw(
-                        $validated['body'],
-                        function ($mail) use ($m, $validated) {
+                        $body,
+                        function ($mail) use ($m, $validated, $compliance, $category) {
                             $mail->to($m->user->email)->subject($validated['title']);
+                            $compliance->applyHeaders($mail, $m, $category);
                         }
                     );
                     $emailSent++;
+                } elseif (!empty($validated['send_email'])) {
+                    $emailSkipped++;
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Bulk message send failed', [
@@ -753,10 +768,13 @@ class MemberAdminController extends Controller
         );
 
         return response()->json([
-            'total'      => $members->count(),
-            'push_sent'  => $pushSent,
-            'email_sent' => $emailSent,
-            'skipped'    => $skipped,
+            'total'         => $members->count(),
+            'push_sent'     => $pushSent,
+            'email_sent'    => $emailSent,
+            'skipped'       => $skipped,
+            // Distinct from `skipped` (no push token): these are members
+            // who have not consented to marketing email.
+            'email_skipped' => $emailSkipped,
         ]);
     }
 
