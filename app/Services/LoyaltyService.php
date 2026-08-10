@@ -237,6 +237,71 @@ class LoyaltyService
     /**
      * Reverse a transaction (creates a counter-entry, never deletes).
      */
+    /**
+     * Put the expiry buckets back in agreement with the balance after a
+     * reversal.
+     *
+     * Two directions:
+     *
+     *  - Reversing an EARN takes points away, so the bucket that award
+     *     created must give them up. It may already be partly spent, so we
+     *     take what is left and log any shortfall rather than going
+     *     negative — the shortfall means those points were redeemed from
+     *     this bucket before the reversal, and the redemption's own ledger
+     *     row already accounts for them.
+     *  - Reversing a REDEEM hands points back, and the buckets it consumed
+     *     were decremented at the time. Rather than guess which ones and by
+     *     how much, mint one replacement bucket for the restored amount. It
+     *     carries a fresh expiry window, which is marginally generous to
+     *     the member and never the other way round.
+     */
+    private function realignExpiryBuckets(LoyaltyMember $member, PointsTransaction $transaction): void
+    {
+        $points = (int) $transaction->points;
+
+        if ($points > 0) {
+            $bucket = PointExpiryBucket::where('transaction_id', $transaction->id)->first()
+                ?? ($transaction->expiry_bucket_id
+                    ? PointExpiryBucket::find($transaction->expiry_bucket_id)
+                    : null);
+
+            if (!$bucket) {
+                return;
+            }
+
+            $reclaim = min((int) $bucket->remaining_points, $points);
+            $bucket->update([
+                'remaining_points' => (int) $bucket->remaining_points - $reclaim,
+                'is_expired'       => ((int) $bucket->remaining_points - $reclaim) <= 0,
+            ]);
+
+            if ($reclaim < $points) {
+                Log::info('reverseTransaction: bucket partly spent before reversal', [
+                    'transaction_id' => $transaction->id,
+                    'member_id'      => $member->id,
+                    'reversed'       => $points,
+                    'reclaimed'      => $reclaim,
+                ]);
+            }
+
+            return;
+        }
+
+        if ($points < 0) {
+            $restored = -$points;
+            $expiryMonths = (int) HotelSetting::getValue('points_expiry_months', 24);
+
+            PointExpiryBucket::create([
+                'member_id'        => $member->id,
+                'transaction_id'   => $transaction->id,
+                'original_points'  => $restored,
+                'remaining_points' => $restored,
+                'earned_at'        => now()->toDateString(),
+                'expires_at'       => now()->addMonths($expiryMonths)->toDateString(),
+            ]);
+        }
+    }
+
     public function reverseTransaction(
         PointsTransaction $transaction,
         string            $reason,
@@ -270,6 +335,16 @@ class LoyaltyService
             if ($transaction->points > 0) {
                 $member->decrement('lifetime_points', $transaction->points);
             }
+
+            // Keep the expiry buckets in step with the balance.
+            //
+            // Without this the counters unwind but the buckets don't, so
+            // reversing a +500 award left a bucket still holding 500 points
+            // the member no longer has. The hourly expiry sweep then debits
+            // that orphan and drives the balance to -500 — a customer-facing
+            // negative balance produced by an ordinary refund, since
+            // BookingRefundService calls this for every refunded booking.
+            $this->realignExpiryBuckets($member, $transaction);
 
             $reversal = PointsTransaction::create([
                 'member_id'       => $member->id,
@@ -698,12 +773,40 @@ class LoyaltyService
 
         foreach ($buckets as $bucket) {
             DB::transaction(function () use ($bucket, $org, &$expired) {
-                $points = $bucket->remaining_points;
                 $member = LoyaltyMember::find($bucket->member_id);
                 if (!$member) {
                     // Bucket points at a member that isn't visible — skip rather
                     // than crash. Could only happen if the member row was hard-
                     // deleted while this bucket survived.
+                    return;
+                }
+
+                // Never debit more than the member actually holds.
+                //
+                // `remaining_points` is a claim about the balance, not the
+                // balance itself, and any drift between them landed here as
+                // a negative balance shown to the customer as "-350 points".
+                // The column is a signed bigint with no CHECK, so nothing
+                // downstream would have stopped it. Clamping keeps the ledger
+                // truthful and surfaces the drift instead of compounding it.
+                $available = max(0, (int) $member->current_points);
+                $points = min((int) $bucket->remaining_points, $available);
+
+                if ($points < (int) $bucket->remaining_points) {
+                    Log::warning('expirePoints: bucket exceeded member balance', [
+                        'member_id'        => $member->id,
+                        'bucket_id'        => $bucket->id,
+                        'bucket_remaining' => (int) $bucket->remaining_points,
+                        'member_balance'   => (int) $member->current_points,
+                        'shortfall'        => (int) $bucket->remaining_points - $points,
+                    ]);
+                }
+
+                // Still retire the bucket — it is past its date either way,
+                // and leaving it live would re-report the same shortfall
+                // every hour.
+                if ($points <= 0) {
+                    $bucket->update(['remaining_points' => 0, 'is_expired' => true]);
                     return;
                 }
 

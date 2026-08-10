@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
+use App\Models\PointsTransaction;
 use App\Models\Reward;
 use App\Models\RewardRedemption;
 use App\Services\AnalyticsService;
@@ -207,12 +208,36 @@ class RewardAdminController extends Controller
                 // adjust separately if they want to give the points back.
                 if ($row->status === RewardRedemption::STATUS_PENDING) {
                     if ($row->member && $row->points_spent > 0) {
-                        $loyalty->awardPoints(
-                            $row->member,
-                            $row->points_spent,
-                            "Refund: cancelled reward redemption {$row->code}",
-                            'adjust',
-                        );
+                        // Reverse the original debit rather than awarding the
+                        // points back. awardPoints() increments lifetime_points,
+                        // which redeemPoints() never decremented — so every
+                        // cancel used to push the member permanently above their
+                        // true earnings (verified: redeem 300 then refund 300
+                        // left lifetime at 1300, not 1000) and could hand out a
+                        // tier upgrade nobody earned. reverseTransaction() puts
+                        // the balance and the expiry buckets back without
+                        // touching lifetime.
+                        $debit = PointsTransaction::where('idempotency_key', 'reward_redemption_' . $row->id)
+                            ->where('is_reversed', false)
+                            ->first();
+
+                        if ($debit) {
+                            $loyalty->reverseTransaction(
+                                $debit,
+                                "cancelled reward redemption {$row->code}",
+                                $request->user(),
+                            );
+                        } else {
+                            // No matching debit (legacy rows predating the
+                            // idempotency key). Fall back to a credit so the
+                            // member is not left short, and say so on the row.
+                            $loyalty->awardPoints(
+                                $row->member,
+                                $row->points_spent,
+                                "Refund: cancelled reward redemption {$row->code}",
+                                'adjust',
+                            );
+                        }
                     }
                     // Return stock if the reward tracks it.
                     if ($row->reward && $row->reward->stock !== null) {

@@ -1113,6 +1113,10 @@ trait SetsUpMinimalSchema
                 $table->index('user_id');
             });
         }
+
+        // reverseTransaction now realigns expiry buckets, so every caller
+        // of this schema needs the table — not just the award-path tests.
+        $this->setUpExpiryBucketSchema();
     }
 
     /**
@@ -1130,6 +1134,33 @@ trait SetsUpMinimalSchema
      * — tests using this schema must mock the SmoobuClient surface
      * and short-circuit before the transaction body executes.
      */
+    /**
+     * Expiry buckets, needed wherever reverseTransaction runs.
+     *
+     * Reversal now releases the bucket its award opened (and mints a
+     * replacement when undoing a redeem), so every caller of
+     * setUpLoyaltySchema — including the BookingRefundService tests —
+     * needs this table, not just the award-path tests.
+     */
+    protected function setUpExpiryBucketSchema(): void
+    {
+        if (!Schema::hasTable('point_expiry_buckets')) {
+            Schema::create('point_expiry_buckets', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->unsignedBigInteger('member_id');
+                $table->unsignedBigInteger('transaction_id')->nullable();
+                $table->integer('original_points');
+                $table->integer('remaining_points');
+                $table->date('earned_at');
+                $table->date('expires_at');
+                $table->boolean('is_expired')->default(false);
+                $table->timestamps();
+                $table->index(['member_id', 'is_expired', 'expires_at']);
+            });
+        }
+    }
+
     protected function setUpBookingConfirmSchema(): void
     {
         $this->setUpBookingRefundSchema();

@@ -4,6 +4,8 @@ namespace Tests\Feature\Loyalty;
 
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Models\PointExpiryBucket;
+use Illuminate\Support\Facades\DB;
 use App\Models\PointsTransaction;
 use App\Services\LoyaltyService;
 use Database\Factories\LoyaltyMemberFactory;
@@ -62,7 +64,11 @@ class LoyaltyServiceReverseTransactionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setUpLoyaltySchema();
+        // Award-path superset: the bucket-realignment tests below drive
+        // real awards and redemptions through the service rather than
+        // seeding transaction rows, so they need domain_events and the
+        // extra tier columns assessTier reads.
+        $this->setUpLoyaltyAwardSchema();
         // Resolve through the container so any container-side wiring
         // (e.g. constructor injection) is exercised — matches how
         // BookingRefundService gets its LoyaltyService.
@@ -203,5 +209,142 @@ class LoyaltyServiceReverseTransactionTest extends TestCase
         $this->expectExceptionMessage('Transaction already reversed');
 
         $this->service->reverseTransaction($tx, 'second reverse (must throw)');
+    }
+
+    /**
+     * Reversing an earn must take the points out of the expiry bucket too.
+     *
+     * Before this, reverseTransaction unwound the three counters and left
+     * the bucket alone, so a reversed +500 award left a bucket still
+     * claiming 500 points the member no longer had. The hourly expiry
+     * sweep then debited that orphan and drove the balance to -500 —
+     * reached through an ordinary booking refund, since
+     * BookingRefundService reverses points for every refunded booking.
+     */
+    public function test_reversing_an_earn_releases_its_expiry_bucket(): void
+    {
+        $org = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $org->id);
+
+        $tier = LoyaltyTierFactory::new()->bronze()->create();
+        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(0)->create();
+
+        $tx = $this->service->awardPoints($member->refresh(), 500, 'earn under test');
+
+        $this->assertSame(
+            500,
+            (int) PointExpiryBucket::where('member_id', $member->id)->sum('remaining_points'),
+            'award should have opened a 500-point bucket'
+        );
+
+        $this->service->reverseTransaction($tx, 'refund');
+
+        $this->assertSame(0, (int) $member->fresh()->current_points);
+        $this->assertSame(
+            0,
+            (int) PointExpiryBucket::where('member_id', $member->id)
+                ->where('is_expired', false)->sum('remaining_points'),
+            'the bucket must not outlive the points it represented'
+        );
+    }
+
+    /**
+     * Reversing a redeem gives the points back, so they need somewhere to
+     * live — otherwise the balance says 300 and the buckets say nothing,
+     * and the next redemption walks an empty bucket list.
+     */
+    public function test_reversing_a_redeem_restores_a_spendable_bucket(): void
+    {
+        $org = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $org->id);
+
+        $tier = LoyaltyTierFactory::new()->bronze()->create();
+        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(0)->create();
+
+        $this->service->awardPoints($member->refresh(), 1000, 'seed');
+        $debit = $this->service->redeemPoints($member->refresh(), 300, 'spend');
+
+        $this->assertSame(700, (int) $member->fresh()->current_points);
+
+        $this->service->reverseTransaction($debit, 'cancelled');
+
+        $member = $member->fresh();
+        $this->assertSame(1000, (int) $member->current_points);
+        $this->assertSame(
+            1000,
+            (int) PointExpiryBucket::where('member_id', $member->id)
+                ->where('is_expired', false)->sum('remaining_points'),
+            'restored points must be backed by spendable buckets'
+        );
+    }
+
+    /**
+     * A refund is not new earnings.
+     *
+     * Cancelling a redemption used to credit the points back with
+     * awardPoints(), which increments lifetime_points — a counter
+     * redeemPoints() never decremented. Every cancel therefore pushed the
+     * member permanently above their true earnings and could trigger a
+     * tier upgrade nobody earned. Reversing the original debit is the
+     * correct undo.
+     */
+    public function test_reversing_a_redeem_does_not_inflate_lifetime_points(): void
+    {
+        $org = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $org->id);
+
+        $tier = LoyaltyTierFactory::new()->bronze()->create();
+        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(0)->create();
+
+        $this->service->awardPoints($member->refresh(), 1000, 'seed');
+        $lifetimeAfterEarning = (int) $member->fresh()->lifetime_points;
+
+        $debit = $this->service->redeemPoints($member->refresh(), 300, 'spend');
+        $this->service->reverseTransaction($debit, 'cancelled');
+
+        $this->assertSame(
+            $lifetimeAfterEarning,
+            (int) $member->fresh()->lifetime_points,
+            'refunding a redemption must not count as earning the points again'
+        );
+    }
+
+    /**
+     * The expiry sweep may never debit more than the member holds.
+     *
+     * remaining_points is a claim about the balance, not the balance
+     * itself. Any drift between them used to land as a negative balance,
+     * shown to the customer as "-350 points", on a signed column with no
+     * CHECK constraint to stop it.
+     */
+    public function test_expiry_sweep_never_drives_the_balance_negative(): void
+    {
+        $org = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $org->id);
+
+        $tier = LoyaltyTierFactory::new()->bronze()->create();
+        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(0)->create();
+
+        $this->service->awardPoints($member->refresh(), 500, 'seed');
+
+        // Force the drift this guard exists for: a bucket claiming more
+        // than the member actually holds, now past its expiry date.
+        DB::table('loyalty_members')->where('id', $member->id)->update(['current_points' => 100]);
+        DB::table('point_expiry_buckets')->where('member_id', $member->id)
+            ->update(['expires_at' => now()->subDay()->toDateString()]);
+
+        $this->service->expirePoints($org);
+
+        $this->assertSame(
+            0,
+            (int) $member->fresh()->current_points,
+            'the sweep must clamp at zero, not subtract the full bucket'
+        );
+        $this->assertSame(
+            0,
+            (int) PointExpiryBucket::where('member_id', $member->id)
+                ->where('is_expired', false)->count(),
+            'the expired bucket must still be retired so it stops re-reporting'
+        );
     }
 }
