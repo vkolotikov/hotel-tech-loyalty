@@ -12,6 +12,7 @@ import { TierBadge } from '../components/ui/TierBadge'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { MembersOnboarding } from '../components/MembersOnboarding'
+import { MemberImportWizard } from '../components/MemberImportWizard'
 
 export function Members() {
   /**
@@ -69,8 +70,6 @@ export function Members() {
   const [showBulkMessage, setShowBulkMessage] = useState(false)
   const [bulkMsg, setBulkMsg] = useState({ title: '', body: '', send_email: false, category: 'transactional' as 'offers' | 'points' | 'tier' | 'stays' | 'transactional' })
   const [showImport, setShowImport] = useState(false)
-  const [importFile, setImportFile] = useState<File | null>(null)
-  const [importPreview, setImportPreview] = useState<any>(null)
 
   // Quick award modal — opened by the hover action on each row.
   // Keeps the staff from leaving the list for a routine +pts adjustment.
@@ -170,44 +169,6 @@ export function Members() {
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Could not send broadcast'),
   })
-
-  const importPreviewMutation = useMutation({
-    mutationFn: () => {
-      const fd = new FormData()
-      fd.append('file', importFile as File)
-      fd.append('dry_run', '1')
-      return api.post('/v1/admin/members/bulk-import', fd).then(r => r.data)
-    },
-    onSuccess: (res: any) => setImportPreview(res),
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Could not parse CSV'),
-  })
-  const importCommitMutation = useMutation({
-    mutationFn: () => {
-      const fd = new FormData()
-      fd.append('file', importFile as File)
-      return api.post('/v1/admin/members/bulk-import', fd).then(r => r.data)
-    },
-    onSuccess: (res: any) => {
-      toast.success(`Imported ${res.ok} members (skipped ${res.skip}, errors ${res.error})`)
-      qc.invalidateQueries({ queryKey: ['admin-members'] })
-      qc.invalidateQueries({ queryKey: ['admin-members-stats'] })
-      setShowImport(false)
-      setImportFile(null)
-      setImportPreview(null)
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Import failed'),
-  })
-
-  const downloadCsvTemplate = () => {
-    const csv = 'name,email,phone,tier_name\nJohn Smith,john@example.com,+15551234567,Bronze\n'
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'members-template.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
 
   const quickAwardMutation = useMutation({
     mutationFn: () => api.post('/v1/admin/points/award', {
@@ -968,83 +929,8 @@ export function Members() {
       )}
 
       {/* CSV import modal — dry-run preview then commit */}
-      {showImport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-dark-border">
-              <h2 className="text-base font-bold text-white">Bulk import members</h2>
-              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <p className="text-xs text-[#a0a0a0]">
-                Upload a CSV with columns <code>name, email, phone, tier_name</code>. Up to 500 rows per import.
-                Duplicates by email are skipped automatically.
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={downloadCsvTemplate}
-                  className="flex items-center gap-1.5 bg-dark-surface2 border border-dark-border text-[#e0e0e0] px-3 py-1.5 rounded-lg text-xs font-medium"
-                >
-                  <Download size={12} /> Template
-                </button>
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
-                  className="text-xs text-[#a0a0a0]"
-                />
-              </div>
-              {importPreview && (
-                <div className="rounded-lg border border-dark-border bg-[#1a1a1a] p-3">
-                  <div className="flex gap-4 text-xs mb-2">
-                    <span className="text-emerald-400 font-semibold">OK: {importPreview.ok}</span>
-                    <span className="text-amber-400 font-semibold">Skip: {importPreview.skip}</span>
-                    <span className="text-red-400 font-semibold">Error: {importPreview.error}</span>
-                    <span className="text-[#636366]">/ {importPreview.total} rows</span>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto text-[11px] font-mono">
-                    {importPreview.rows?.slice(0, 50).map((r: any) => (
-                      <div key={r.line} className={`flex gap-2 py-0.5 ${r.status === 'error' ? 'text-red-400' : r.status === 'skip' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                        <span className="text-[#636366] w-10">L{r.line}</span>
-                        <span className="w-12 uppercase">{r.status}</span>
-                        <span className="flex-1 truncate">{r.email}</span>
-                        {r.reason && <span className="text-[#a0a0a0] truncate">{r.reason}</span>}
-                      </div>
-                    ))}
-                    {importPreview.rows?.length > 50 && (
-                      <div className="text-[#636366] pt-2">+ {importPreview.rows.length - 50} more rows…</div>
-                    )}
-                  </div>
-                  {importPreview.plan_limit?.limit && (
-                    <p className="text-[11px] text-[#a0a0a0] mt-2">
-                      Plan cap: currently using {importPreview.plan_limit.count} of {importPreview.plan_limit.limit} loyalty-member slots.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 p-5 border-t border-dark-border">
-              <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null) }} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
-              <button
-                onClick={() => importPreviewMutation.mutate()}
-                disabled={!importFile || importPreviewMutation.isPending}
-                className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-white text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
-              >
-                {importPreviewMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
-                Preview
-              </button>
-              <button
-                onClick={() => importCommitMutation.mutate()}
-                disabled={!importPreview || importPreview.ok === 0 || importCommitMutation.isPending}
-                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
-              >
-                {importCommitMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                Import {importPreview ? importPreview.ok : ''}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showImport && <MemberImportWizard onClose={() => setShowImport(false)} />}
+
     </div>
   )
 }
