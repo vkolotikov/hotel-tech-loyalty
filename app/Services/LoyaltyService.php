@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+
 use App\Models\AuditLog;
 use App\Models\DomainEvent;
 use App\Models\HotelSetting;
@@ -399,7 +400,14 @@ class LoyaltyService
         // surprise 6x for a member. Stable, predictable behaviour for
         // a marketing surface that has to be auditable.
         $multiplier = $this->bestActiveMultiplier($member, $propertyId);
-        return (int) floor($amount * $earnRate * $multiplier);
+
+        // A tier may also carry a standing `points_multiplier` benefit
+        // ("Gold earns 2x"). It composes with the event multiplier because
+        // the two mean different things: one is a privilege the member
+        // holds, the other a promotion running this week.
+        $tierMultiplier = app(DiscountService::class)->pointsMultiplierFor($member, $propertyId);
+
+        return (int) floor($amount * $earnRate * $multiplier * $tierMultiplier);
     }
 
     /**

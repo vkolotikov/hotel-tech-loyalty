@@ -100,8 +100,23 @@ class BenefitAdminController extends Controller
             'benefit_id'         => 'required|exists:benefit_definitions,id',
             'property_id'        => 'nullable|exists:properties,id',
             'value'              => 'nullable|string|max:255',
+            // Typed value: what makes the benefit enforceable rather than
+            // a sentence on a screen. `value` stays as the human wording.
+            'value_type'         => 'nullable|string|in:' . implode(',', \App\Services\DiscountService::VALUE_TYPES),
+            'value_amount'       => 'nullable|numeric|min:0|max:1000000',
             'custom_description' => 'nullable|string',
         ]);
+
+        // A percentage above 100 would hand money back; a multiplier below
+        // 1 would punish the member for holding the tier.
+        if (($validated['value_type'] ?? null) === \App\Services\DiscountService::PERCENT
+            && (float) ($validated['value_amount'] ?? 0) > 100) {
+            return response()->json(['message' => 'A percentage discount cannot exceed 100%.'], 422);
+        }
+        if (($validated['value_type'] ?? null) === \App\Services\DiscountService::MULTIPLIER
+            && (float) ($validated['value_amount'] ?? 0) < 1) {
+            return response()->json(['message' => 'A points multiplier must be at least 1.'], 422);
+        }
 
         $tierBenefit = TierBenefit::updateOrCreate(
             [
@@ -111,6 +126,8 @@ class BenefitAdminController extends Controller
             ],
             [
                 'value'              => $validated['value'] ?? null,
+                'value_type'         => $validated['value_type'] ?? 'text',
+                'value_amount'       => $validated['value_amount'] ?? null,
                 'custom_description' => $validated['custom_description'] ?? null,
                 'is_active'          => true,
             ]

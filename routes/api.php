@@ -596,6 +596,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::put('benefits/{id}',                        [BenefitAdminController::class, 'update']);
             Route::delete('benefits/{id}',                     [BenefitAdminController::class, 'destroy']);
             Route::post('benefits/{id}/toggle',                [BenefitAdminController::class, 'toggle']);
+            // ─── Discounts: what a member actually gets off a bill ───
+            // The counter-facing side of the benefit/offer engine. `quote`
+            // is read-only so staff can re-quote as an order changes;
+            // `use-offer` is what finally burns a claim.
+            Route::post('discounts/quote',                     [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'quote']);
+            Route::get ('discounts/members/{memberId}',        [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'benefits']);
+            Route::post('discounts/offers/{id}/use',           [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'useOffer']);
+
             Route::get('tiers/{tierId}/benefits',              [BenefitAdminController::class, 'tierBenefits']);
             Route::post('tier-benefits',                       [BenefitAdminController::class, 'assignTierBenefit']);
             Route::delete('tier-benefits/{id}',                [BenefitAdminController::class, 'removeTierBenefit']);
