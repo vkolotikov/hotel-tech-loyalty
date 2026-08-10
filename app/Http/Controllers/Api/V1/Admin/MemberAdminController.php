@@ -10,6 +10,7 @@ use App\Models\LoyaltyTier;
 use App\Models\User;
 use App\Services\GuestMemberLinkService;
 use App\Services\LoyaltyService;
+use App\Services\MemberImportService;
 use App\Services\NotificationService;
 use App\Services\PlanLimitGuard;
 use App\Services\OpenAiService;
@@ -32,6 +33,7 @@ class MemberAdminController extends Controller
         protected QrCodeService $qrCode,
         protected GuestMemberLinkService $linkService,
         protected RealtimeEventService $realtime,
+        protected MemberImportService $importer,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -81,6 +83,11 @@ class MemberAdminController extends Controller
                     'password'  => Hash::make($validated['password'] ?? \Illuminate\Support\Str::random(40)),
                     'phone'     => $validated['phone'] ?? null,
                     'user_type' => 'member',
+                    // Required, not optional: TenantScope fails closed, so a
+                    // member user row without an org can log in and then see
+                    // an empty app, while the admin list shows them as fine.
+                    'organization_id' => $request->user()?->organization_id
+                        ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null),
                 ]);
 
                 $member = LoyaltyMember::create([
@@ -721,152 +728,111 @@ class MemberAdminController extends Controller
      * Returns per-row results so the admin can show a "fixed N of M"
      * summary in the SPA.
      */
+    /**
+     * Import existing customers from a CSV.
+     *
+     * Two-phase by design: `dry_run` returns exactly the same per-row
+     * verdicts a commit would produce, so the operator approves a real
+     * preview rather than a guess. Parsing and creation live in
+     * MemberImportService; this method is transport, limits and audit.
+     */
     public function bulkImport(Request $request): JsonResponse
     {
         $request->validate([
-            'file'    => 'required|file|mimes:csv,txt|max:2048',
+            'file'    => 'required|file|mimes:csv,txt|max:20480',
             'dry_run' => 'sometimes|boolean',
         ]);
         $dryRun = (bool) $request->boolean('dry_run', false);
+
+        // A 5 000-row commit is minutes of work, not seconds. Without this
+        // the request dies at PHP's default 30s having created a random
+        // prefix of the file, with no way to tell which rows landed.
+        @set_time_limit(600);
+        @ini_set('memory_limit', '512M');
+
+        $parsed = $this->importer->parseFile($request->file('file')->getRealPath());
+        if ($parsed['error']) {
+            return response()->json(['error' => $parsed['error']], 422);
+        }
+        if ($parsed['rows'] === []) {
+            return response()->json(['error' => 'No data rows found under the header.'], 422);
+        }
+        if (!in_array('email', $parsed['headers'], true)) {
+            $found = $parsed['unmapped'] ? implode(', ', array_slice($parsed['unmapped'], 0, 8)) : 'none';
+            return response()->json([
+                'error' => "Could not find an email column. Columns found: {$found}. "
+                         . 'Rename one column to "email" and try again.',
+            ], 422);
+        }
+
+        // Refuse to half-import. Committing a truncated file leaves the
+        // operator with no way to know which customers made it.
+        if ($parsed['truncated'] && !$dryRun) {
+            return response()->json([
+                'error' => "This file has {$parsed['file_rows']} rows, above the "
+                         . MemberImportService::MAX_ROWS . '-row limit for one import. '
+                         . 'Split it into smaller files so none are silently dropped.',
+            ], 422);
+        }
 
         // Plan-cap enforcement. `usage` feeds the response payload; the
         // derived `$capRemaining` actually GATES row creation below —
         // without that gate this endpoint was a full bypass of the plan
         // member limit that store() enforces with a 402.
-        $usage = app(\App\Services\PlanLimitGuard::class)->usage(
-            \App\Services\PlanLimitGuard::KEY_MEMBERS
-        );
+        $usage = app(PlanLimitGuard::class)->usage(PlanLimitGuard::KEY_MEMBERS);
         $capRemaining = $usage['limit'] !== null
             ? max(0, $usage['limit'] - $usage['count'])
             : PHP_INT_MAX;
 
-        $rows = [];
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        if (!$handle) {
-            return response()->json(['error' => 'Could not read CSV file.'], 422);
+        $orgId = $request->user()?->organization_id
+            ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        if (!$orgId) {
+            return response()->json(['error' => 'No organization context.'], 422);
         }
-        $headers = fgetcsv($handle);
-        if (!$headers) {
-            fclose($handle);
-            return response()->json(['error' => 'CSV is empty.'], 422);
-        }
-        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), $headers);
-        while (($r = fgetcsv($handle)) !== false) {
-            if (count($rows) >= 500) break;
-            $rows[] = array_combine($headers, array_pad($r, count($headers), null));
-        }
-        fclose($handle);
 
-        $tiersByName = LoyaltyTier::all()->keyBy(fn ($t) => strtolower($t->name));
-        $defaultTier = LoyaltyTier::where('name', 'Bronze')->first() ?? LoyaltyTier::orderBy('min_points')->first();
+        $report = $this->importer->process(
+            rows: $parsed['rows'],
+            dryRun: $dryRun,
+            orgId: (int) $orgId,
+            capRemaining: $capRemaining,
+            planLimit: $usage['limit'],
+        );
 
-        $results = [];
-        $okCount = 0;
-        $skipCount = 0;
-        $errCount = 0;
-
-        $seenEmails = [];
-        foreach ($rows as $i => $row) {
-            $line = $i + 2; // header is row 1
-            $name = trim((string) ($row['name'] ?? ''));
-            $email = strtolower(trim((string) ($row['email'] ?? '')));
-            $phone = trim((string) ($row['phone'] ?? '')) ?: null;
-            $tierName = trim((string) ($row['tier_name'] ?? ''));
-
-            if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $results[] = ['line' => $line, 'email' => $email, 'status' => 'error', 'reason' => 'Missing name or invalid email'];
-                $errCount++;
-                continue;
-            }
-            if (isset($seenEmails[$email])) {
-                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip', 'reason' => 'Duplicate email in CSV'];
-                $skipCount++;
-                continue;
-            }
-            $seenEmails[$email] = true;
-
-            if (User::withoutGlobalScopes()->where('email', $email)->exists()) {
-                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip', 'reason' => 'Email already exists'];
-                $skipCount++;
-                continue;
-            }
-
-            $tier = $tierName !== ''
-                ? ($tiersByName[strtolower($tierName)] ?? null)
-                : $defaultTier;
-            if (!$tier) {
-                $results[] = ['line' => $line, 'email' => $email, 'status' => 'error', 'reason' => "Unknown tier '{$tierName}'"];
-                $errCount++;
-                continue;
-            }
-
-            // Plan cap — applies to dry-run too so the preview matches
-            // what a commit would actually create.
-            if ($okCount >= $capRemaining) {
-                $results[] = ['line' => $line, 'email' => $email, 'status' => 'skip',
-                              'reason' => "Over plan member limit ({$usage['limit']})"];
-                $skipCount++;
-                continue;
-            }
-
-            $results[] = ['line' => $line, 'email' => $email, 'status' => 'ok', 'tier' => $tier->name];
-            $okCount++;
-
-            if (!$dryRun) {
-                try {
-                    \DB::transaction(function () use ($name, $email, $phone, $tier) {
-                        $user = User::create([
-                            'name'      => $name,
-                            'email'     => $email,
-                            'password'  => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(40)),
-                            'phone'     => $phone,
-                            'user_type' => 'member',
-                        ]);
-                        LoyaltyMember::create([
-                            'user_id'        => $user->id,
-                            'tier_id'        => $tier->id,
-                            'member_number'  => $this->qrCode->generateMemberNumber(),
-                            'qr_code_token'  => \Illuminate\Support\Str::random(64),
-                            'referral_code'  => $this->qrCode->generateReferralCode(),
-                            'lifetime_points'=> 0,
-                            'current_points' => 0,
-                            'is_active'      => true,
-                            'joined_at'      => now(),
-                        ]);
-                    });
-                } catch (\Throwable $e) {
-                    // Last-row error shouldn't abort the whole import —
-                    // flip the row's status to error and keep going.
-                    $results[count($results) - 1] = [
-                        'line' => $line, 'email' => $email, 'status' => 'error',
-                        'reason' => 'Create failed: ' . substr($e->getMessage(), 0, 200),
-                    ];
-                    $okCount--;
-                    $errCount++;
-                }
-            }
-        }
+        // Rows that never survived parsing still belong in the operator's
+        // error list — they are the rows most likely to need a fix.
+        $rows = array_merge(
+            array_map(fn ($e) => $e + ['email' => '', 'status' => 'error'], $parsed['parse_errors']),
+            $report['rows'],
+        );
+        $errCount = $report['error'] + count($parsed['parse_errors']);
 
         if (!$dryRun) {
             AuditLog::record(
                 'members_bulk_import',
                 null,
-                ['imported' => $okCount, 'skipped' => $skipCount, 'errors' => $errCount],
+                ['imported' => $report['ok'], 'skipped' => $report['skip'], 'errors' => $errCount,
+                 'points_awarded' => $report['points_awarded'], 'batch_id' => $report['batch_id']],
                 [],
                 $request->user(),
-                "Bulk CSV import: {$okCount} created, {$skipCount} skipped, {$errCount} errors"
+                "Bulk CSV import: {$report['ok']} created, {$report['skip']} skipped, {$errCount} errors"
             );
             AnalyticsService::clearDashboardCache();
         }
 
         return response()->json([
-            'dry_run'   => $dryRun,
-            'ok'        => $okCount,
-            'skip'      => $skipCount,
-            'error'     => $errCount,
-            'total'     => count($rows),
-            'rows'      => $results,
-            'plan_limit'=> $usage,
+            'dry_run'        => $dryRun,
+            'ok'             => $report['ok'],
+            'skip'           => $report['skip'],
+            'error'          => $errCount,
+            'total'          => $parsed['file_rows'],
+            'file_rows'      => $parsed['file_rows'],
+            'truncated'      => $parsed['truncated'],
+            'points_awarded' => $report['points_awarded'],
+            'columns_used'   => $parsed['headers'],
+            'columns_ignored'=> $parsed['unmapped'],
+            'batch_id'       => $report['batch_id'],
+            'rows'           => $rows,
+            'plan_limit'     => $usage,
         ]);
     }
 

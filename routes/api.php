@@ -555,6 +555,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('members/merge',          [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'merge']);
             Route::post('members/bulk-message',   [MemberAdminController::class, 'bulkMessage']);
             Route::post('members/bulk-import',    [MemberAdminController::class, 'bulkImport']);
+
+            // Resumable CSV import. `bulk-import` above still serves small
+            // one-shot files; this flow is what a real 5 000-member
+            // migration uses — upload once, then drive it in chunks so the
+            // operator sees progress and no request ever times out.
+            // Static segments are declared before members/{id} so "import"
+            // is never captured as a member id.
+            Route::get ('members/imports',                  [\App\Http\Controllers\Api\V1\Admin\MemberImportController::class, 'index']);
+            Route::post('members/imports/preview',           [\App\Http\Controllers\Api\V1\Admin\MemberImportController::class, 'preview']);
+            Route::get ('members/imports/{uuid}',            [\App\Http\Controllers\Api\V1\Admin\MemberImportController::class, 'show']);
+            Route::post('members/imports/{uuid}/process',    [\App\Http\Controllers\Api\V1\Admin\MemberImportController::class, 'process']);
+            Route::post('members/imports/{uuid}/cancel',     [\App\Http\Controllers\Api\V1\Admin\MemberImportController::class, 'cancel']);
             Route::post('members',                [MemberAdminController::class, 'store']);
             Route::get('members/{id}',            [MemberAdminController::class, 'show']);
             Route::put('members/{id}',            [MemberAdminController::class, 'update']);
