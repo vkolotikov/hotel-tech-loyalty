@@ -329,12 +329,24 @@ export function Tiers() {
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
           </div>
           <div className="flex items-center gap-6">
-            <select value={form.qualification_window} onChange={e => setForm({ ...form, qualification_window: e.target.value })}
-              className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
-              <option value="rolling_12">{t('tiers.form.qualification.rolling_12', 'Rolling 12 Months')}</option>
-              <option value="calendar_year">{t('tiers.form.qualification.calendar_year', 'Calendar Year')}</option>
-              <option value="anniversary_year">{t('tiers.form.qualification.anniversary_year', 'Anniversary Year')}</option>
-            </select>
+            <div>
+              <select value={form.qualification_window} onChange={e => setForm({ ...form, qualification_window: e.target.value })}
+                className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+                <option value="rolling_12">{t('tiers.form.qualification.rolling_12', 'Rolling 12 Months')}</option>
+                <option value="calendar_year">{t('tiers.form.qualification.calendar_year', 'Calendar Year')}</option>
+                <option value="anniversary_year">{t('tiers.form.qualification.anniversary_year', 'Anniversary Year')}</option>
+              </select>
+              {/* The window is real now, but only when the org opts in —
+                  every tier already carries "Rolling 12 Months" from the
+                  schema default, so switching it on globally would requalify
+                  every existing member against 12 months instead of their
+                  lifetime and downgrade most of them overnight. Saying so
+                  beats a dropdown that silently does nothing. */}
+              <p className="text-[10px] text-t-secondary mt-1 max-w-[220px] leading-relaxed">
+                {t('tiers.form.qualification.hint',
+                   'Applies only when tier qualification is set to "windowed" in Settings. Otherwise tiers use lifetime points.')}
+              </p>
+            </div>
             <label className="flex items-center gap-2 text-sm text-t-secondary">
               <input type="checkbox" checked={form.soft_landing} onChange={e => setForm({ ...form, soft_landing: e.target.checked })} className="rounded" />
               {t('tiers.form.soft_landing', 'Soft Landing')}

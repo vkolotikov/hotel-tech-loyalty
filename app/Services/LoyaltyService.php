@@ -484,6 +484,47 @@ class LoyaltyService
             return false;
         }
 
+        // Grace period. `loyalty_tiers.grace_period_days` was validated,
+        // stored and rendered in the UI but read NOWHERE in app/ — a
+        // setting that did nothing.
+        //
+        // On the first assessment that would drop a member, start the clock
+        // instead and leave them where they are; only drop them once it has
+        // run out. `tier_effective_until` was already being written and
+        // never read, so it becomes the deadline.
+        //
+        // Applies regardless of qualification basis because it can only ever
+        // DELAY a downgrade — it never promotes anyone or extends a benefit
+        // they hadn't already earned.
+        if ($isDowngrade) {
+            $graceDays = (int) ($currentTier->grace_period_days ?? 0);
+
+            if ($graceDays > 0) {
+                $until = $member->tier_effective_until;
+
+                if (!$until) {
+                    $member->update([
+                        'tier_effective_until' => now()->addDays($graceDays)->toDateString(),
+                        'tier_review_date'     => now()->addDays($graceDays)->toDateString(),
+                    ]);
+
+                    Log::info('tier downgrade deferred by grace period', [
+                        'member_id'   => $member->id,
+                        'tier_id'     => $currentTier->id,
+                        'grace_days'  => $graceDays,
+                        'review_date' => now()->addDays($graceDays)->toDateString(),
+                    ]);
+
+                    return false;
+                }
+
+                // Clock started but not yet expired — hold the tier.
+                if (now()->lt($until)) {
+                    return false;
+                }
+            }
+        }
+
         // Honour a still-active admin tier override. Pre-fix admins could
         // manually promote a member (e.g. "give them Platinum for this
         // stay") and the next assessTier sweep would drop them back —
@@ -524,6 +565,8 @@ class LoyaltyService
         $member->update([
             'tier_id'             => $appropriateTier->id,
             'tier_effective_from' => now()->toDateString(),
+            // Resets any grace clock that was running: the member has moved,
+            // so the old deadline no longer describes anything.
             'tier_effective_until'=> now()->addYear()->toDateString(),
             'tier_review_date'    => now()->addYear()->toDateString(),
         ]);
@@ -579,6 +622,75 @@ class LoyaltyService
     /**
      * Determine the appropriate tier for a member based on qualification model.
      */
+    /**
+     * Org setting that decides whether tier windows mean anything.
+     *
+     * `lifetime` (the default) qualifies on monotonic `lifetime_points`,
+     * which is what this app has always done. `windowed` honours each
+     * tier's `qualification_window`.
+     *
+     * Opt-in on purpose. `loyalty_tiers.qualification_window` defaults to
+     * `rolling_12` in the schema, so every tier already carries a value
+     * nobody deliberately chose — switching it on globally would silently
+     * re-qualify every existing member against twelve months of points
+     * instead of their lifetime, and downgrade most of them overnight.
+     */
+    public const BASIS_LIFETIME = 'lifetime';
+    public const BASIS_WINDOWED = 'windowed';
+
+    public function qualificationBasis(): string
+    {
+        return HotelSetting::getValue('tier_qualification_basis', self::BASIS_LIFETIME) === self::BASIS_WINDOWED
+            ? self::BASIS_WINDOWED
+            : self::BASIS_LIFETIME;
+    }
+
+    /**
+     * The points total a member is judged on.
+     *
+     * Under `lifetime` this is just `lifetime_points`. Under `windowed` it
+     * is what they actually earned inside the tier's window — the thing the
+     * "Rolling 12 Months / Calendar Year / Anniversary Year" dropdown has
+     * always claimed to control while changing nothing.
+     *
+     * Only positive, non-reversed ledger rows count: a redemption spends
+     * points but does not un-earn them, and a reversal already has its own
+     * offsetting row that would double-count if included.
+     */
+    public function qualifyingPointsFor(LoyaltyMember $member): int
+    {
+        if ($this->qualificationBasis() === self::BASIS_LIFETIME) {
+            return (int) $member->lifetime_points;
+        }
+
+        $window = $member->tier?->qualification_window ?? 'rolling_12';
+        $start = $this->windowStartFor($member, $window);
+
+        return (int) PointsTransaction::where('member_id', $member->id)
+            ->where('is_reversed', false)
+            ->where('points', '>', 0)
+            // Expiry and redemption rows are negative and already excluded;
+            // this keeps corrections from inflating a window.
+            ->whereIn('type', ['earn', 'bonus', 'adjust'])
+            ->where('created_at', '>=', $start)
+            ->sum('points');
+    }
+
+    /** When the qualification window for this member opened. */
+    public function windowStartFor(LoyaltyMember $member, string $window): \Illuminate\Support\Carbon
+    {
+        $joined = $member->joined_at ? $member->joined_at->copy() : now()->subYear();
+
+        return match ($window) {
+            'calendar_year'    => now()->startOfYear(),
+            // Most recent anniversary of joining, not the next one.
+            'anniversary_year' => $joined->setYear(
+                $joined->copy()->setYear(now()->year)->isFuture() ? now()->year - 1 : now()->year
+            )->startOfDay(),
+            default            => now()->subYear(),
+        };
+    }
+
     public function getTierForMember(LoyaltyMember $member): ?LoyaltyTier
     {
         $model = $member->tier_qualification_model ?? 'points';
@@ -588,7 +700,7 @@ class LoyaltyService
             'stays'  => $this->getTierByStays($member->qualifying_stays),
             'spend'  => $this->getTierBySpend($member->qualifying_spend),
             'hybrid' => $this->getTierHybrid($member),
-            default  => $this->getTierForPoints($member->lifetime_points),
+            default  => $this->getTierForPoints($this->qualifyingPointsFor($member)),
         };
     }
 

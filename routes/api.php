@@ -480,6 +480,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('email-campaigns/{id}',          [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'destroy']);
                 Route::post('email-campaigns/{id}/send',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'send']);
                 Route::post('email-campaigns/{id}/duplicate',  [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'duplicate']);
+                // Escape hatches for a send in flight. Without these the
+                // only way out of a wedged campaign was duplicate(), which
+                // duplicates the deliveries too.
+                Route::post('email-campaigns/{id}/cancel',     [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'cancel']);
+                Route::post('email-campaigns/{id}/reset',      [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'reset']);
                 Route::post('email-campaigns/{id}/test',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'test']);
             });
 

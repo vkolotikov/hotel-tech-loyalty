@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Jobs\SendEmailCampaignChunk;
 use App\Models\EmailCampaign;
 use App\Models\LoyaltyMember;
 use App\Models\MemberSegment;
@@ -219,6 +220,8 @@ class EmailCampaignController extends Controller
             return response()->json(['message' => 'No recipients — link a segment with members or provide member_ids.'], 422);
         }
 
+        $recipientCount = count($memberIds);
+
         $campaign->forceFill([
             'status'          => EmailCampaign::STATUS_SENDING,
             'sent_by_user_id' => $request->user()->id,
@@ -228,75 +231,96 @@ class EmailCampaignController extends Controller
             'error_message'   => null,
         ])->save();
 
-        $sent = 0;
-        $failed = 0;
+        // Hand off to the queue rather than sending inline.
+        //
+        // The loop that used to live here ran inside the HTTP request: the
+        // campaign flipped to SENDING up front and only reached SENT after
+        // every message had gone, so a timeout on a large list left it
+        // wedged in SENDING forever — and send/update/destroy all refuse a
+        // non-draft row, making duplicate() the only escape, which
+        // duplicates the deliveries too.
+        //
+        // The job chains chunk by chunk, so counters stay accurate, a crash
+        // resumes from a known offset, and delivery is paced instead of
+        // handing an SMTP relay 5 000 messages at once.
+        SendEmailCampaignChunk::dispatch($campaign->id, array_values($memberIds));
 
-        try {
-            $compliance = app(\App\Services\EmailComplianceService::class);
-            $isMarketing = ($campaign->category ?? 'marketing') !== \App\Services\EmailComplianceService::TRANSACTIONAL;
-            $category = $isMarketing ? 'marketing' : \App\Services\EmailComplianceService::TRANSACTIONAL;
-            $orgName = \App\Models\Organization::find($campaign->organization_id)?->name;
-
-            $recipients = LoyaltyMember::whereIn('id', $memberIds)->with('user:id,name,email');
-            // Consent gate. This used to filter on `email_notifications`
-            // alone, which defaults to TRUE — so a campaign reached every
-            // member including those who had never agreed to marketing.
-            $compliance->scopeEligible($recipients, $category);
-
-            $recipients
-                ->chunk(200, function ($chunk) use ($campaign, &$sent, &$failed, $compliance, $category, $isMarketing, $orgName) {
-                    foreach ($chunk as $m) {
-                        $email = $m->user?->email;
-                        if (!$email) { $failed++; continue; }
-                        try {
-                            $html = $campaign->body_html;
-                            if ($isMarketing) {
-                                // Visible unsubscribe link, in the body, every time.
-                                $html .= $compliance->footerHtml($m, $orgName);
-                            }
-
-                            Mail::html($html, function ($mail) use ($email, $campaign, $m, $compliance, $category) {
-                                $mail->to($email, $m->user->name ?? null)
-                                     ->subject($campaign->subject);
-                                $compliance->applyHeaders($mail, $m, $category);
-                            });
-                            $sent++;
-                        } catch (\Throwable $e) {
-                            $failed++;
-                            Log::warning('Email campaign send failed', [
-                                'campaign_id' => $campaign->id,
-                                'member_id'   => $m->id,
-                                'error'       => $e->getMessage(),
-                            ]);
-                        }
-                    }
-                });
-
-            $campaign->forceFill([
-                'status'       => EmailCampaign::STATUS_SENT,
-                'sent_count'   => $sent,
-                'failed_count' => $failed,
-                'sent_at'      => now(),
-            ])->save();
-        } catch (\Throwable $e) {
-            $campaign->forceFill([
-                'status'        => EmailCampaign::STATUS_FAILED,
-                'error_message' => substr($e->getMessage(), 0, 500),
-            ])->save();
-            Log::error('Email campaign aborted', ['campaign_id' => $campaign->id, 'error' => $e->getMessage()]);
-            return response()->json(['message' => 'Send aborted: ' . $e->getMessage()], 500);
-        }
-
-        AuditLog::record('email_campaign_sent', $campaign,
-            ['sent' => $sent, 'failed' => $failed, 'recipients' => count($memberIds)],
+        // Records the decision to send, not the outcome — the outcome now
+        // arrives asynchronously and lives on the campaign's counters.
+        AuditLog::record('email_campaign_queued', $campaign,
+            ['recipients' => count($memberIds)],
             [], $request->user(),
-            "Email campaign '{$campaign->name}' sent — {$sent} delivered, {$failed} failed");
+            "Email campaign '{$campaign->name}' queued for {$recipientCount} recipients");
 
         return response()->json([
             'campaign'   => $campaign->fresh(),
-            'sent'       => $sent,
-            'failed'     => $failed,
-            'recipients' => count($memberIds),
+            'queued'     => true,
+            'recipients' => $recipientCount,
+            'message'    => "Sending to {$recipientCount} recipients. Progress updates as it goes.",
+        ]);
+    }
+
+    /**
+     * Stop a campaign mid-flight.
+     *
+     * The chained job checks this status before each chunk, so cancelling
+     * takes effect within one chunk rather than needing the queue drained.
+     * Messages already sent stay sent — this is a stop, not an undo.
+     */
+    public function cancel(Request $request, int $id): JsonResponse
+    {
+        $campaign = EmailCampaign::findOrFail($id);
+
+        if ($campaign->status !== EmailCampaign::STATUS_SENDING) {
+            return response()->json([
+                'message' => "Only a sending campaign can be cancelled — this one is {$campaign->status}.",
+            ], 422);
+        }
+
+        $campaign->forceFill([
+            'status'        => EmailCampaign::STATUS_CANCELLED,
+            'error_message' => 'Cancelled by ' . ($request->user()->name ?? 'an admin'),
+        ])->save();
+
+        AuditLog::record('email_campaign_cancelled', $campaign,
+            ['sent_before_cancel' => $campaign->sent_count],
+            [], $request->user(),
+            "Email campaign '{$campaign->name}' cancelled after {$campaign->sent_count} sent");
+
+        return response()->json(['campaign' => $campaign->fresh()]);
+    }
+
+    /**
+     * Put a failed or cancelled campaign back in draft so it can be
+     * edited and sent again.
+     *
+     * Previously the only way out of a stuck campaign was duplicate(),
+     * which also duplicates every delivery already made.
+     */
+    public function reset(Request $request, int $id): JsonResponse
+    {
+        $campaign = EmailCampaign::findOrFail($id);
+
+        if (!in_array($campaign->status, [EmailCampaign::STATUS_FAILED, EmailCampaign::STATUS_CANCELLED], true)) {
+            return response()->json([
+                'message' => "Only a failed or cancelled campaign can be reset — this one is {$campaign->status}.",
+            ], 422);
+        }
+
+        $alreadySent = (int) $campaign->sent_count;
+
+        $campaign->forceFill([
+            'status'        => EmailCampaign::STATUS_DRAFT,
+            'error_message' => null,
+        ])->save();
+
+        return response()->json([
+            'campaign' => $campaign->fresh(),
+            // Said plainly: re-sending mails everyone again, including the
+            // ones who already received it.
+            'warning'  => $alreadySent > 0
+                ? "{$alreadySent} recipients already received this. Sending again will email them a second time."
+                : null,
         ]);
     }
 

@@ -14,16 +14,19 @@ class EmailCampaign extends Model
     public const STATUS_SENDING = 'sending';
     public const STATUS_SENT    = 'sent';
     public const STATUS_FAILED  = 'failed';
+    /** Stopped by an admin. Terminal, and distinct from FAILED. */
+    public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
         'organization_id', 'segment_id', 'name', 'subject',
         'body_html', 'body_text', 'body_blocks', 'status', 'recipient_count',
-        'sent_count', 'failed_count', 'sent_at', 'error_message',
+        'sent_count', 'failed_count', 'sent_at', 'last_progress_at', 'error_message',
         'created_by_user_id', 'sent_by_user_id',
     ];
 
     protected $casts = [
-        'sent_at'         => 'datetime',
+        'sent_at'          => 'datetime',
+        'last_progress_at' => 'datetime',
         'recipient_count' => 'integer',
         'sent_count'      => 'integer',
         'failed_count'    => 'integer',
