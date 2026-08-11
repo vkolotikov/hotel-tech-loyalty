@@ -29,6 +29,9 @@ const PortalRewards  = lazy(() => import('./pages/portal/PortalRewards').then(m 
 const PortalOffers   = lazy(() => import('./pages/portal/PortalOffers').then(m => ({ default: m.PortalOffers })))
 const PortalActivity = lazy(() => import('./pages/portal/PortalActivity').then(m => ({ default: m.PortalActivity })))
 const PortalProfile  = lazy(() => import('./pages/portal/PortalProfile').then(m => ({ default: m.PortalProfile })))
+// Public — no auth guard. These are how someone BECOMES a member.
+const PortalJoin     = lazy(() => import('./pages/portal/PortalJoin').then(m => ({ default: m.PortalJoin })))
+const PortalClaim    = lazy(() => import('./pages/portal/PortalClaim').then(m => ({ default: m.PortalClaim })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -248,6 +251,11 @@ export default function App() {
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* Public member entry points. Outside MemberRoute: nobody
+              signing up or claiming an account has a session yet. */}
+          <Route path="/portal/join"  element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalJoin /></Suspense></ChunkErrorBoundary>} />
+          <Route path="/portal/claim" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalClaim /></Suspense></ChunkErrorBoundary>} />
 
           {/* Member portal — same login, different app. */}
           <Route path="/portal"          element={<MemberRoute><PortalHome /></MemberRoute>} />

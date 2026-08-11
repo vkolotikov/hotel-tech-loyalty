@@ -210,7 +210,14 @@ class MemberController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($validated['password'], $user->password)) {
+        // Same guard as login: a non-bcrypt stored value (imported member
+        // who has never claimed their account) must read as "wrong
+        // password", not throw.
+        $matches = false;
+        try { $matches = Hash::check($validated['password'], (string) $user->password); }
+        catch (\Throwable) { $matches = false; }
+
+        if (!$matches) {
             throw ValidationException::withMessages([
                 'password' => ['Incorrect password.'],
             ]);

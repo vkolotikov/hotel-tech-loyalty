@@ -94,6 +94,11 @@ Route::prefix('v1')->group(function () {
     // ─── Public ──────────────────────────────────────────────────────────────────
     Route::get('theme', [SettingsController::class, 'theme']);
 
+    // Public sign-up context. The join link carries the org's widget_token
+    // so a member-facing registration page knows which programme it is
+    // enrolling someone into — see PublicJoinController.
+    Route::get('public/join/{token}', [\App\Http\Controllers\Api\V1\PublicJoinController::class, 'show']);
+
     // Auth routes — rate-limited to prevent brute-force.
     //
     // Outer throttle covers the whole prefix; inner throttles tighten the

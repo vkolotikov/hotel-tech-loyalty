@@ -36,8 +36,18 @@ const ALL_FEATURES: SubscriptionData['features'] = {
 const ALL_PRODUCTS = ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking']
 
 export function useSubscription() {
+  // Billing is a staff concern. A signed-in loyalty member 401s on this
+  // endpoint, and the polling below meant one console error per minute for
+  // as long as the portal stayed open.
+  let isStaff = true
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('loyalty-auth') : null
+    if (raw) isStaff = JSON.parse(raw)?.state?.user?.user_type !== 'member'
+  } catch { /* assume staff and let the request decide */ }
+
   const { data, isLoading } = useQuery<SubscriptionData>({
     queryKey: ['subscription-status'],
+    enabled: isStaff,
     queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
     // Tight refetch policy. Billing status is the gate that decides whether
     // the user keeps using the product, so we want the wall to flip on

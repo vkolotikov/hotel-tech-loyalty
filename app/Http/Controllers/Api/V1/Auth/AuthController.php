@@ -42,13 +42,43 @@ class AuthController extends Controller
             'language'      => 'nullable|string|max:10',
             'referral_code' => 'nullable|string|max:20',
             'organization_id' => 'nullable|integer|exists:organizations,id',
+            // Public sign-up passes the org's widget_token instead of a
+            // numeric id — same token the booking/services/chat widgets
+            // use, so a hotel can put one link on their website.
+            'org_token'     => 'nullable|string|max:191',
         ]);
 
         $validated['email'] = strtolower(trim($validated['email']));
 
         // Bind org context for tenant-scoped queries (tier lookup, settings, etc.)
         $orgId = $validated['organization_id'] ?? null;
-        if ($orgId && !app()->bound('current_organization_id')) {
+
+        if (!$orgId && !empty($validated['org_token'])) {
+            // resolveByToken also binds brand context, so the member lands
+            // in the right brand of a multi-brand org.
+            $brand = \App\Models\Brand::resolveByToken($validated['org_token']);
+            $orgId = $brand?->organization_id;
+        }
+
+        if (!$orgId && app()->bound('current_organization_id')) {
+            $orgId = app('current_organization_id');
+        }
+
+        // Fail here, clearly, rather than deep inside the transaction.
+        // Without an org the tier lookup below runs unscoped and can pick
+        // another tenant's tier, and the user row is written with a null
+        // organization_id that TenantScope then fails closed on — a member
+        // who can sign in and then sees an empty app. In practice it
+        // surfaced as a 500 reading "No query results for model
+        // [LoyaltyMember]", which tells the person signing up nothing.
+        if (!$orgId) {
+            return response()->json([
+                'message' => 'We could not tell which loyalty programme you are joining. '
+                           . 'Please use the sign-up link provided by the hotel.',
+            ], 422);
+        }
+
+        if (!app()->bound('current_organization_id')) {
             app()->instance('current_organization_id', $orgId);
         }
 
@@ -172,6 +202,26 @@ class AuthController extends Controller
         ], 201);
     }
 
+    /**
+     * Does this plaintext match the stored hash?
+     *
+     * Returns false — never throws — when the stored value is not a bcrypt
+     * hash, which is the case for imported members whose password is
+     * intentionally unusable until they claim the account.
+     */
+    private function passwordMatches(string $plain, ?string $hash): bool
+    {
+        if (!$hash) {
+            return false;
+        }
+
+        try {
+            return Hash::check($plain, $hash);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -184,7 +234,14 @@ class AuthController extends Controller
 
         // No tenant context at login — bypass global scopes
         $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
-        $localOk = $user && Hash::check($validated['password'], $user->password);
+        // Guarded: BcryptHasher::check() THROWS on a stored value that is
+        // not a bcrypt hash, and imported members deliberately carry one
+        // that nothing can match (see MemberImportService). Unguarded, a
+        // customer who tried to sign in before claiming their account got
+        // a 500 reading "This password does not use the Bcrypt algorithm"
+        // instead of "invalid credentials". A hash bcrypt cannot parse is
+        // a hash no password matches.
+        $localOk = $user && $this->passwordMatches($validated['password'], $user->password);
 
         // SaaS fallback: when local lookup fails, ask SaaS whether this
         // email+password combo is valid. Covers the case where a
