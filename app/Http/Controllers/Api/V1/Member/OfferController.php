@@ -22,11 +22,25 @@ class OfferController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        // Personalized AI offers
+        // The member's own offers: AI-personalised ones they haven't acted
+        // on yet, AND anything they have actually claimed.
+        //
+        // This filtered on status='available' alone, so the moment a member
+        // claimed an offer it vanished from their list — the claim existed
+        // in the database, was valid, and was invisible to the only person
+        // who needed to see it. Recently-used claims stay in the list too,
+        // greyed out, so "did I already use that?" has an answer.
         $personalizedOffers = $member->memberOffers()
-            ->where('status', 'available')
-            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); })
+            ->whereIn('status', ['available', 'claimed', 'used'])
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('used_at')->orWhere('used_at', '>', now()->subDays(30));
+            })
             ->with('offer')
+            ->orderByRaw('used_at IS NULL DESC')
+            ->orderByDesc('claimed_at')
             ->get();
 
         return response()->json([

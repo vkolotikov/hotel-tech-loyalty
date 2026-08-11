@@ -698,6 +698,17 @@ class LoyaltyService
             'total_nights'      => $totalNights,
             'progress'          => $progress,
             'recent_activity'   => $recentTransactions,
+            // Communication preferences. Absent until now, so a client had
+            // no way to show the member their own settings — the web
+            // portal's consent toggle saved correctly and then rendered
+            // itself back off, because it was reading a key that was never
+            // in the payload. `marketing_consent` in particular is what the
+            // campaign consent gate reads, so the member needs to see and
+            // control it.
+            'marketing_consent'   => (bool) $member->marketing_consent,
+            'email_notifications' => (bool) $member->email_notifications,
+            'push_notifications'  => (bool) $member->push_notifications,
+            'unsubscribed_at'     => $member->unsubscribed_at?->toIso8601String(),
             'member_since'      => $member->joined_at->format('Y-m-d'),
             'created_at'        => $member->created_at?->toIso8601String(),
             'user'              => $member->user->only('id', 'name', 'email', 'phone', 'nationality', 'language', 'avatar_url'),

@@ -6,6 +6,7 @@ import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores/authStore'
 import { APP_BASE, api } from './lib/api'
 import { Layout, canAccess } from './components/Layout'
+import { PortalLayout } from './pages/portal/PortalLayout'
 import type { NavGate } from './components/Layout'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { useTheme } from './hooks/useTheme'
@@ -22,6 +23,12 @@ import { Setup } from './pages/Setup'
 // Offers, Benefits, Tiers) is now loaded INSIDE the hub components
 // at pages/hubs/* — see MembersHub / ProgramHub / RewardsHub /
 // CampaignsHub. The hub wrappers do their own lazy-load.
+// Member-facing portal. Lazy so a staff session never downloads it.
+const PortalHome     = lazy(() => import('./pages/portal/PortalHome').then(m => ({ default: m.PortalHome })))
+const PortalRewards  = lazy(() => import('./pages/portal/PortalRewards').then(m => ({ default: m.PortalRewards })))
+const PortalOffers   = lazy(() => import('./pages/portal/PortalOffers').then(m => ({ default: m.PortalOffers })))
+const PortalActivity = lazy(() => import('./pages/portal/PortalActivity').then(m => ({ default: m.PortalActivity })))
+const PortalProfile  = lazy(() => import('./pages/portal/PortalProfile').then(m => ({ default: m.PortalProfile })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -108,9 +115,13 @@ function ThemeLoader() {
  * until it's actually needed.
  */
 function AuthedFloatingAiChat() {
-  const { token } = useAuthStore()
+  const { token, user } = useAuthStore()
   const { hasFeature } = useSubscription()
   if (!token) return null
+  // Never in the member portal. This is the staff CRM copilot with 35+
+  // admin tools behind it; a loyalty member has no business seeing the
+  // launcher, and every call it makes would 403 anyway.
+  if (user?.user_type === 'member') return null
   // Plan gate: the admin AI is the Anthropic Claude / 35+ CRM tools
   // copilot — Enterprise-only on the pricing v2 surface. Hiding the
   // floating launcher entirely on Starter/Growth is cleaner than
@@ -146,6 +157,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [token, user, forceRerun])
 
   if (!token) return <Navigate to="/login" replace />
+  // A member who reaches an admin URL belongs in the portal, not on a
+  // page whose every API call will 403.
+  if (user?.user_type === 'member') return <Navigate to="/portal" replace />
   if (setupDone === null) return <PageLoader />
   if (!setupDone) return <Setup onComplete={() => {
     // Strip the rerun flag so the wizard doesn't open again on the
@@ -157,6 +171,28 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     setSetupDone(true)
   }} />
   return <Layout>{children}</Layout>
+}
+
+/**
+ * Guard for the member-facing portal.
+ *
+ * Mirror image of ProtectedRoute: that one requires `user_type === 'staff'`,
+ * which is why a member signing in on the web used to be bounced straight
+ * back to the login screen even though the whole /v1/member/* API was
+ * already there. Staff who land here are sent to the admin console rather
+ * than shown an empty portal.
+ */
+function MemberRoute({ children }: { children: React.ReactNode }) {
+  const { token, user } = useAuthStore()
+  if (!token) return <Navigate to="/login" replace />
+  if (user?.user_type === 'staff') return <Navigate to="/" replace />
+  return (
+    <PortalLayout>
+      <ChunkErrorBoundary>
+        <Suspense fallback={<PageLoader />}>{children}</Suspense>
+      </ChunkErrorBoundary>
+    </PortalLayout>
+  )
 }
 
 function GatedRoute({ gate, product, feature, children }: { gate?: NavGate; product?: string; feature?: string; children: React.ReactNode }) {
@@ -212,6 +248,14 @@ export default function App() {
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* Member portal — same login, different app. */}
+          <Route path="/portal"          element={<MemberRoute><PortalHome /></MemberRoute>} />
+          <Route path="/portal/rewards"  element={<MemberRoute><PortalRewards /></MemberRoute>} />
+          <Route path="/portal/offers"   element={<MemberRoute><PortalOffers /></MemberRoute>} />
+          <Route path="/portal/activity" element={<MemberRoute><PortalActivity /></MemberRoute>} />
+          <Route path="/portal/profile"  element={<MemberRoute><PortalProfile /></MemberRoute>} />
+
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />
           <Route path="/reset-password" element={<Login />} />

@@ -234,7 +234,16 @@ export function useTheme() {
     // 'I picked a preset but after refresh it reverted' bug.
     queryFn: async () => {
       const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('auth_token')
-      const endpoint = hasToken ? '/v1/admin/branding/theme' : '/v1/theme'
+      // Members hold a token but no admin rights, so the authenticated
+      // endpoint 403s for them — which left the portal unbranded and
+      // logged an error on every load. They take the public route, which
+      // is exactly what it exists for.
+      let isStaff = true
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem('loyalty-auth') : null
+        if (raw) isStaff = JSON.parse(raw)?.state?.user?.user_type !== 'member'
+      } catch { /* fall back to the admin endpoint */ }
+      const endpoint = hasToken && isStaff ? '/v1/admin/branding/theme' : '/v1/theme'
       const r = await api.get(endpoint)
       return r.data.theme as ThemeColors
     },

@@ -405,7 +405,7 @@ export function Login() {
         localStorage.setItem('auth_token', saasToken)
         api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
         setAuth(saasToken, body, body.staff)
-        navigate(redirectTo, { replace: true })
+        navigate(body?.user_type === 'member' ? '/portal' : redirectTo, { replace: true })
       })
       .catch((err) => {
         setError(err?.message || 'Could not complete single sign-on. Please try signing in below.')
@@ -443,7 +443,10 @@ export function Login() {
     try {
       const { data } = await api.post('/v1/auth/login', { email, password })
       setAuth(data.token, data.user, data.staff)
-      navigate('/')
+      // Members and staff share one sign-in but land in different apps.
+      // Before the portal existed, a member who signed in here was bounced
+      // straight back by ProtectedRoute's staff-only check.
+      navigate(data.user?.user_type === 'member' ? '/portal' : '/', { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
     } finally {
