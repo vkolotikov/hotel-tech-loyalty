@@ -16,15 +16,33 @@ class LoyaltyTier extends Model
     /** Cache TTL for the per-org active-tiers collection. */
     private const CACHE_TTL = 1800;
 
+    /**
+     * Every field TierController validates must be here.
+     *
+     * Seven of them were missing — min_nights, min_stays, min_spend,
+     * qualification_window, grace_period_days, soft_landing and
+     * invitation_only — so `LoyaltyTier::create($validated)` silently
+     * dropped them and returned 201. An admin could set "invitation only"
+     * and a 2,500 spend threshold, see "Tier created", and get a tier with
+     * neither. LoyaltyService branches on all seven, so they were live
+     * settings that could not be set.
+     */
     protected $fillable = [
-        'organization_id', 'name', 'min_points', 'max_points', 'earn_rate', 'bonus_nights',
-        'color_hex', 'icon', 'perks', 'sort_order', 'is_active',
+        'organization_id', 'name', 'description', 'min_points', 'max_points',
+        'earn_rate', 'bonus_nights', 'color_hex', 'icon', 'perks',
+        'min_nights', 'min_stays', 'min_spend',
+        'qualification_window', 'grace_period_days',
+        'soft_landing', 'invitation_only',
+        'sort_order', 'is_active',
     ];
 
     protected $casts = [
         'perks' => 'array',
         'is_active' => 'boolean',
         'earn_rate' => 'decimal:2',
+        'min_spend' => 'decimal:2',
+        'soft_landing' => 'boolean',
+        'invitation_only' => 'boolean',
     ];
 
     protected static function booted(): void

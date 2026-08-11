@@ -29,6 +29,7 @@ const PortalRewards  = lazy(() => import('./pages/portal/PortalRewards').then(m 
 const PortalOffers   = lazy(() => import('./pages/portal/PortalOffers').then(m => ({ default: m.PortalOffers })))
 const PortalActivity = lazy(() => import('./pages/portal/PortalActivity').then(m => ({ default: m.PortalActivity })))
 const PortalProfile  = lazy(() => import('./pages/portal/PortalProfile').then(m => ({ default: m.PortalProfile })))
+const PortalBenefits = lazy(() => import('./pages/portal/PortalBenefits').then(m => ({ default: m.PortalBenefits })))
 // Public — no auth guard. These are how someone BECOMES a member.
 const PortalJoin     = lazy(() => import('./pages/portal/PortalJoin').then(m => ({ default: m.PortalJoin })))
 const PortalClaim    = lazy(() => import('./pages/portal/PortalClaim').then(m => ({ default: m.PortalClaim })))
@@ -261,6 +262,7 @@ export default function App() {
           <Route path="/portal"          element={<MemberRoute><PortalHome /></MemberRoute>} />
           <Route path="/portal/rewards"  element={<MemberRoute><PortalRewards /></MemberRoute>} />
           <Route path="/portal/offers"   element={<MemberRoute><PortalOffers /></MemberRoute>} />
+          <Route path="/portal/benefits" element={<MemberRoute><PortalBenefits /></MemberRoute>} />
           <Route path="/portal/activity" element={<MemberRoute><PortalActivity /></MemberRoute>} />
           <Route path="/portal/profile"  element={<MemberRoute><PortalProfile /></MemberRoute>} />
 

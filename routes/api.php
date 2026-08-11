@@ -286,6 +286,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('card',              [MemberController::class, 'card']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
+            // Tier benefits the member holds, and requests for the ones
+            // that need a person to say yes. This is what finally fills the
+            // BenefitEntitlement queue that ScanController already renders
+            // for staff — nothing created a row before.
+            Route::get   ('benefits',                     [\App\Http\Controllers\Api\V1\Member\BenefitController::class, 'index']);
+            Route::post  ('benefits/{id}/request',        [\App\Http\Controllers\Api\V1\Member\BenefitController::class, 'requestBenefit']);
+            Route::delete('benefits/requests/{id}',       [\App\Http\Controllers\Api\V1\Member\BenefitController::class, 'cancelRequest']);
             Route::get('offers',            [OfferController::class, 'index']);
             Route::post('offers/{id}/claim',[OfferController::class, 'claim']);
             Route::get('bookings',          [BookingController::class, 'index']);

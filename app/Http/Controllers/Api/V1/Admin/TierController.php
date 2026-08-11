@@ -80,6 +80,14 @@ class TierController extends Controller
             'sort_order'           => 'nullable|integer',
         ]);
 
+        // Place the tier at the end of the ladder unless the admin said
+        // otherwise. The form used to default this to 0, which put every
+        // new tier at the bottom regardless of its points threshold — see
+        // the direction comment in LoyaltyService::assessTier.
+        if (!isset($validated['sort_order']) || $validated['sort_order'] === null) {
+            $validated['sort_order'] = (int) LoyaltyTier::max('sort_order') + 1;
+        }
+
         $tier = LoyaltyTier::create($validated);
 
         AuditLog::record('tier_created', $tier, $validated, [], $request->user(), "Tier '{$tier->name}' created");

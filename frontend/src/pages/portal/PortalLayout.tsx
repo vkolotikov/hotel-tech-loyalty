@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Home, Gift, Sparkles, Receipt, User, LogOut } from 'lucide-react'
+import { Home, Gift, Sparkles, User, LogOut, Crown } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 
 /**
@@ -20,12 +20,15 @@ import { useAuthStore } from '../../stores/authStore'
  * white-labelled org gets its own palette here for free.
  */
 
+// Six destinations. Activity moved off the bar and onto Home's "See all"
+// link — six icons is the most that stays tappable at 390px, and a member
+// checks their perks far more often than their full ledger.
 const NAV = [
-  { to: '/portal',          label: 'Home',    icon: Home,     end: true },
-  { to: '/portal/rewards',  label: 'Rewards', icon: Gift },
-  { to: '/portal/offers',   label: 'Offers',  icon: Sparkles },
-  { to: '/portal/activity', label: 'Activity', icon: Receipt },
-  { to: '/portal/profile',  label: 'Profile', icon: User },
+  { to: '/portal',          label: 'Home',     icon: Home, end: true },
+  { to: '/portal/benefits', label: 'Benefits', icon: Crown },
+  { to: '/portal/rewards',  label: 'Rewards',  icon: Gift },
+  { to: '/portal/offers',   label: 'Offers',   icon: Sparkles },
+  { to: '/portal/profile',  label: 'Profile',  icon: User },
 ]
 
 export function PortalLayout({ children }: { children: ReactNode }) {

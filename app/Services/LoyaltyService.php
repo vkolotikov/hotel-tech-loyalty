@@ -459,8 +459,25 @@ class LoyaltyService
             return true;
         }
 
-        $isUpgrade = $appropriateTier->sort_order > $currentTier->sort_order;
-        $isDowngrade = $appropriateTier->sort_order < $currentTier->sort_order;
+        // Direction comes from the points ladder, not sort_order.
+        //
+        // Tier SELECTION is done by min_points (getTierForPoints), but the
+        // direction was read off sort_order — two orderings that only agree
+        // when an admin keeps them in sync by hand. The tier form defaults
+        // sort_order to 0 while every seeded ladder starts at 1, so a tier
+        // created through the UI looked like the BOTTOM of the ladder: a
+        // member qualifying for it was treated as being downgraded, which
+        // then hit the tier_locked and tier_override guards and blocked the
+        // promotion outright, while soft-landing actively pushed them a
+        // tier further down. Audit rows, DomainEvents and the tier-movement
+        // analytics were all wrong for anyone affected.
+        //
+        // min_points is the same axis the tier was chosen on, so the two can
+        // no longer disagree. Ties are no move.
+        $newFloor = (int) $appropriateTier->min_points;
+        $oldFloor = (int) $currentTier->min_points;
+        $isUpgrade = $newFloor > $oldFloor;
+        $isDowngrade = $newFloor < $oldFloor;
 
         // Prevent downgrade if tier is locked (invitation tier, etc.)
         if ($isDowngrade && $member->tier_locked) {
