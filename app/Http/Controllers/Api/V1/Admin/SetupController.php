@@ -34,8 +34,18 @@ class SetupController extends Controller
         $hasTiers = LoyaltyTier::where('organization_id', $orgId)->exists();
         $onboarded = \App\Models\CrmSetting::where('key', 'onboarding_completed_at')->first();
 
+        // Complete = the wizard (or trial provisioning) said so, OR tiers
+        // exist (legacy orgs from before the marker). Keying on tiers ALONE
+        // trapped medical orgs — which never get tiers, by design — in the
+        // wizard on every navigation forever, even after completing it.
+        $isComplete = $hasTiers || $onboarded !== null;
+
         return response()->json([
-            'setup_complete'           => $hasTiers,
+            'setup_complete'           => $isComplete,
+            // The industry stamped at registration, so the wizard (when it
+            // does show) starts on the user's actual vertical instead of
+            // silently defaulting to hotel.
+            'industry'                 => \App\Models\Organization::find($orgId)?->resolved_industry,
             'organization_id'          => $orgId,
             'onboarding_completed_at'  => $onboarded ? trim((string) $onboarded->value, '"') : null,
         ]);

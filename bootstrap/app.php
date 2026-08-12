@@ -13,6 +13,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Production sits behind Laravel Cloud's load balancer. Without
+        // trusting the proxy, $request->ip() is the BALANCER's address for
+        // every visitor — so all per-IP rate limits (throttle:60,1 on /auth,
+        // 8/min on login, 5/min on forgot-password) become ONE bucket shared
+        // by the whole site. Eight failed login attempts by anyone, anywhere,
+        // inside a minute locked out every user on the platform. This is the
+        // "too many attempts" that appeared intermittently in production and
+        // never reproduced locally, where there is no proxy.
+        // The widget visitor fingerprint (hash of org|ip|ua) also degrades
+        // to UA-only without this.
+        $middleware->trustProxies(at: '*');
+
         $middleware->prepend(\App\Http\Middleware\Cors::class);
         $middleware->alias([
             'saas.auth'          => \App\Http\Middleware\SaasAuthMiddleware::class,
@@ -71,6 +83,20 @@ return Application::configure(basePath: dirname(__DIR__))
                         'plan'        => $e->planSlug,
                         'upgrade_url' => 'https://saas.hotel-tech.ai/admin/subscription',
                     ], 402);
+                }
+                // Rate limits: keep the Retry-After information instead of a
+                // bare "Too Many Attempts." — the person mid-signup needs to
+                // know it is a wait, not a failure, and for how long.
+                if ($e instanceof \Illuminate\Http\Exceptions\ThrottleRequestsException) {
+                    $retryAfter = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+                    $wait = $retryAfter >= 120
+                        ? ceil($retryAfter / 60) . ' minutes'
+                        : $retryAfter . ' seconds';
+                    return response()->json([
+                        'error'       => "Too many requests — please wait {$wait} and try again.",
+                        'message'     => "Too many requests — please wait {$wait} and try again.",
+                        'retry_after' => $retryAfter,
+                    ], 429, ['Retry-After' => $retryAfter]);
                 }
                 if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                     // Use the actual exception message as `error` so clients

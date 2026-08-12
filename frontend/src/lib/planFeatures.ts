@@ -80,20 +80,22 @@
  */
 export const ALL_FEATURES = [
   // Day-to-day operations
-  { key: 'crm',             label: 'Customer CRM' },
+  { key: 'crm',             label: 'Customer CRM & lead pipeline' },
   { key: 'loyalty',         label: 'Loyalty program' },
+  { key: 'member_portal',   label: 'Member web portal & self-signup' },
   { key: 'booking',         label: 'Booking engine & payments' },
 
   // Customer engagement
   { key: 'chatbot',         label: 'Website chatbot (AI)' },
   { key: 'engagement',      label: 'Live chat inbox & lead tracking' },
-  { key: 'campaigns',       label: 'Email campaigns' },
+  { key: 'campaigns',       label: 'Email campaigns & segments' },
+  { key: 'content_planner', label: 'AI Content Planner (social media)' },
   { key: 'reviews',         label: 'Reviews & feedback' },
   { key: 'wallet',          label: 'Digital wallet cards (Apple + Google)' },
   { key: 'mobile',          label: 'Member mobile app + push' },
 
   // Insight & analytics
-  { key: 'analytics',       label: 'Analytics & AI insights' },
+  { key: 'analytics',       label: 'Dashboards & analytics' },
 
   // Scale & ops
   { key: 'properties',      label: 'Multi-location support' },
@@ -113,16 +115,22 @@ export type FeatureKey = (typeof ALL_FEATURES)[number]['key']
 
 export const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
   starter: {
-    crm:             'Unlimited profiles',
-    loyalty:         'Basic tiers and benefits',
+    // Caps are the REAL enforced numbers from PlanLimitGuard /
+    // getTrialPlanLimits — the previous "Unlimited profiles" on every
+    // tier contradicted the hard 500-member cap Starter actually
+    // enforces with a 402.
+    crm:             'Up to 500 members · CSV import',
+    loyalty:         'Tiers, points & rewards',
+    member_portal:   true,
     booking:         false,
     chatbot:         false,
     engagement:      false,
     campaigns:       false,
+    content_planner: false,
     reviews:         false,
     wallet:          false,
     mobile:          true,
-    analytics:       false,
+    analytics:       'Core dashboards',
     properties:      'Single location',
     brands:          false,
     time_management: false,
@@ -132,39 +140,49 @@ export const PLAN_FEATURES: Record<string, Record<string, string | boolean>> = {
     sla:             false,
   },
   growth: {
-    crm:             'Unlimited profiles',
-    loyalty:         'Standard tiers and benefits',
+    crm:             'Up to 5,000 members · CSV import',
+    loyalty:         'Plus discounts, offers & benefits',
+    member_portal:   true,
     booking:         'With online payments',
     chatbot:         true,
     engagement:      true,
     campaigns:       true,
+    content_planner: 'Posts, calendar & AI images',
     reviews:         true,
     wallet:          true,
     mobile:          true,
-    analytics:       true,
+    // Split from the old single "Analytics & AI insights ✗/✓" row: the
+    // dashboards themselves are open to every plan; the AI layer is the
+    // Growth differentiator (matches the enforced ai_insights flag).
+    analytics:       'Full analytics + AI insights',
     properties:      'Up to 3 locations',
     brands:          false,
     time_management: false,
-    api:             false,
+    // The backend has always granted api_access to Growth
+    // (getTrialFeatures + SaaS catalog). The card said Enterprise-only,
+    // contradicting what buyers actually receive.
+    api:             'Lead intake & member API',
     admin_ai:        false,
     support:         'Email, online or in person',
     sla:             false,
   },
   enterprise: {
-    crm:             'Unlimited profiles',
-    loyalty:         'Custom tiers & rules',
+    crm:             'Unlimited members · CSV import',
+    loyalty:         'Custom rules, benefits & approvals',
+    member_portal:   true,
     booking:         'With online payments',
     chatbot:         true,
     engagement:      true,
     campaigns:       true,
+    content_planner: 'Everything in Growth + strategy AI',
     reviews:         true,
     wallet:          true,
     mobile:          true,
-    analytics:       true,
+    analytics:       'Everything + retention & points liability',
     properties:      'Unlimited locations',
     brands:          'Unlimited brand portfolios',
     time_management: 'Staff scheduling & team automation',
-    api:             true,
+    api:             'Full API + integrations',
     // Detail string carries the model attribution for AI-aware buyers
     // who'll recognise Anthropic Claude as a tool signal. Headline
     // stays "Staff AI copilot" so non-technical buyers read the

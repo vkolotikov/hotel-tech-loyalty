@@ -100,6 +100,13 @@ class LoyaltyPresetService
                 ['key' => 'members_preset'],
                 ['value' => $key],
             );
+            // Same marker as the normal path: a medical org's members
+            // "onboarding" is the decision that there is no programme —
+            // don't walk them through a tier wizard afterwards.
+            CrmSetting::updateOrCreate(
+                ['key' => 'members_onboarding_completed_at'],
+                ['value' => json_encode(now()->toIso8601String())],
+            );
             return [
                 'tiers_set'        => 0,
                 'tiers_added'      => 0,
@@ -231,6 +238,15 @@ class LoyaltyPresetService
             CrmSetting::updateOrCreate(
                 ['key' => 'members_preset'],
                 ['value' => $key],
+            );
+
+            // The Members page has its own first-visit gate keyed on this
+            // marker. A preset applied at signup IS that onboarding — without
+            // the stamp, a freshly provisioned org was walked through a
+            // second tier-setup wizard for a ladder it already had.
+            CrmSetting::updateOrCreate(
+                ['key' => 'members_onboarding_completed_at'],
+                ['value' => json_encode(now()->toIso8601String())],
             );
         });
 

@@ -227,6 +227,47 @@ class OrganizationSetupService
      * behavioural change for the existing call site at line 176, which
      * keeps invoking via `self::defaultIdentityFor(...)`.
      */
+    /**
+     * Brand accent per vertical.
+     *
+     * Until now every org — salon, clinic, gym — booted with the gold
+     * hotel palette, because the appearance seed hard-coded #c9a84c. Only
+     * the primary accent varies per industry; the dark neutrals are shared
+     * so every vertical keeps the same legibility guarantees. Admins can
+     * change any of it later in Settings -> Branding.
+     */
+    public static function industryPrimaryColor(string $industry): string
+    {
+        return match ($industry) {
+            'beauty'      => '#d96aa8', // rose
+            'medical'     => '#4a9fd8', // clinical blue
+            'restaurant'  => '#d97742', // terracotta
+            'fitness'     => '#f97316', // energetic orange
+            'education'   => '#7c6fd8', // indigo
+            'legal'       => '#8a99b5', // steel
+            'real_estate' => '#3fae8a', // emerald
+            default       => '#c9a84c', // hotel gold
+        };
+    }
+
+    /**
+     * Review-form wording per vertical. The old seed said "We hope you
+     * enjoyed your stay" to gym members and dental patients.
+     */
+    public static function reviewFormCopy(string $industry): array
+    {
+        return match ($industry) {
+            'beauty'      => ['name' => 'Visit Feedback',       'intro' => 'We hope you loved your visit. Your feedback helps us improve.'],
+            'medical'     => ['name' => 'Appointment Feedback', 'intro' => 'Thank you for visiting us. Your feedback helps us improve our care.'],
+            'restaurant'  => ['name' => 'Dining Feedback',      'intro' => 'We hope you enjoyed your meal. Your feedback helps us improve.'],
+            'fitness'     => ['name' => 'Session Feedback',     'intro' => 'We hope you enjoyed your session. Your feedback helps us improve.'],
+            'education'   => ['name' => 'Course Feedback',      'intro' => 'Thank you for learning with us. Your feedback helps us improve.'],
+            'legal'       => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
+            'real_estate' => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
+            default       => ['name' => 'Stay Feedback',        'intro' => 'We hope you enjoyed your stay. Your feedback helps us improve.'],
+        };
+    }
+
     public static function defaultIdentityFor(string $industry, string $orgName): string
     {
         return match ($industry) {
@@ -327,8 +368,24 @@ class OrganizationSetupService
         // baked in. Phase 5's LoyaltyPresetService unification will seed
         // industry-appropriate ones.
         $defaults = [
-            ['key' => 'hotel_name',  'value' => $org->name, 'type' => 'text', 'group' => 'general', 'label' => 'Hotel Name'],
+            ['key' => 'hotel_name',  'value' => $org->name, 'type' => 'text', 'group' => 'general', 'label' => 'Business Name'],
         ];
+        // Operational loyalty settings (expiry, bonuses, points-per-unit)
+        // apply to EVERY industry that runs a programme — the previous
+        // hotel-only gate left salons and gyms with no birthday bonus, no
+        // expiry policy and no points-per-currency, so those crons and
+        // earn calculations silently used code defaults the admin had
+        // never seen. Medical stays excluded (no patient loyalty).
+        $hasLoyaltyProgramme = $resolvedIndustry !== 'medical';
+        if ($hasLoyaltyProgramme && !$seedLoyalty) {
+            array_push($defaults,
+                ['key' => 'referrer_bonus_points', 'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Referrer Bonus Points'],
+                ['key' => 'referee_bonus_points',  'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Referee Bonus Points'],
+                ['key' => 'birthday_bonus_points', 'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Birthday Bonus Points'],
+                ['key' => 'points_expiry_months',  'value' => '24',  'type' => 'number', 'group' => 'loyalty', 'label' => 'Points Expiry (Months)'],
+                ['key' => 'points_per_currency',   'value' => '10',  'type' => 'number', 'group' => 'loyalty', 'label' => 'Points per Currency Unit'],
+            );
+        }
         if ($seedLoyalty) {
             array_push($defaults,
                 ['key' => 'welcome_bonus_points',  'value' => '500', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Welcome Bonus Points'],
@@ -342,7 +399,7 @@ class OrganizationSetupService
         $defaults[] = ['key' => 'currency_symbol', 'value' => '€', 'type' => 'text', 'group' => 'general', 'label' => 'Currency Symbol'];
         $defaults = array_merge($defaults, [
             // Appearance (brand colors) — needed for theme endpoint + branding UI
-            ['key' => 'primary_color',        'value' => '#c9a84c', 'type' => 'string', 'group' => 'appearance', 'label' => 'Primary Color'],
+            ['key' => 'primary_color',        'value' => self::industryPrimaryColor($resolvedIndustry), 'type' => 'string', 'group' => 'appearance', 'label' => 'Primary Color'],
             ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string', 'group' => 'appearance', 'label' => 'Secondary Color'],
             ['key' => 'accent_color',         'value' => '#32d74b', 'type' => 'string', 'group' => 'appearance', 'label' => 'Accent / Success'],
             ['key' => 'background_color',     'value' => '#0d0d0d', 'type' => 'string', 'group' => 'appearance', 'label' => 'Background'],
@@ -365,15 +422,16 @@ class OrganizationSetupService
 
         // Default basic rating form — gives every org a working review
         // URL out of the box; custom forms can be added later in admin.
+        $reviewCopy = self::reviewFormCopy($resolvedIndustry);
         ReviewForm::withoutGlobalScopes()->firstOrCreate(
             ['organization_id' => $org->id, 'is_default' => true],
             [
-                'name'       => 'Stay Feedback',
+                'name'       => $reviewCopy['name'],
                 'type'       => 'basic',
                 'is_active'  => true,
                 'embed_key'  => Str::random(32),
                 'config'     => [
-                    'intro_text'         => 'We hope you enjoyed your stay. Your feedback helps us improve.',
+                    'intro_text'         => $reviewCopy['intro'],
                     'thank_you_text'     => 'Thank you for taking the time to share your experience.',
                     'ask_for_comment'    => true,
                     'allow_anonymous'    => true,
@@ -397,12 +455,29 @@ class OrganizationSetupService
         // Make sure default tiers exist even if the caller skipped setupDefaults.
         $this->setupDefaults($org);
 
-        $bronzeTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Bronze')->first();
-        $silverTier = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Silver')->first();
-        $goldTier   = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->where('name', 'Gold')->first();
+        // Resolve tiers by ladder POSITION, not by hotel names. A beauty org
+        // has Glow/Radiance/Luxe, a gym has Member/Plus/Pro — looking up
+        // "Bronze" found nothing there, logged a warning, and silently
+        // seeded no demo data for every non-hotel industry, so "with demo
+        // data" was a hotel-only checkbox that lied to everyone else.
+        $ladder = LoyaltyTier::withoutGlobalScopes()
+            ->where('organization_id', $org->id)
+            ->where('is_active', true)
+            ->orderBy('min_points')
+            ->get();
+
+        $bronzeTier = $ladder->first();
+        $silverTier = $ladder->count() >= 2 ? $ladder[intdiv($ladder->count(), 2)] : $bronzeTier;
+        $goldTier   = $ladder->count() >= 2 ? $ladder->last() : $bronzeTier;
 
         if (!$bronzeTier) {
-            Log::warning('seedSampleData: tiers missing after setupDefaults — aborting', ['org_id' => $org->id]);
+            // Genuinely tierless (medical) — demo members have no ladder to
+            // sit on, so only the CRM-side demo data applies.
+            Log::info('seedSampleData: no tiers for this industry — seeding guests/offers only', ['org_id' => $org->id]);
+            DB::transaction(function () use ($org) {
+                $this->seedSampleGuests($org);
+                $this->seedSampleOffers($org);
+            });
             return;
         }
 

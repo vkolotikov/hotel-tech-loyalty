@@ -121,21 +121,14 @@ describe('INDUSTRY_COPY content invariants', () => {
 })
 
 describe('PICKER_INDUSTRIES — umbrella signup card list', () => {
-  it('contains ONLY the 4 GTM-shipped industries', () => {
+  it('ships all 8 industries', () => {
+    // Decision #7 (four GTM-shipped industries only) was revisited:
+    // fitness / education / legal / real_estate now ship on the picker
+    // under umbrella branding. Every backend preset for them exists and
+    // trial provisioning was verified end to end before this list grew.
     expect([...PICKER_INDUSTRIES].sort()).toEqual(
-      ['beauty', 'hotel', 'medical', 'restaurant'].sort(),
+      ['beauty', 'education', 'fitness', 'hotel', 'legal', 'medical', 'real_estate', 'restaurant'].sort(),
     )
-  })
-
-  it('does NOT include Settings-only industries', () => {
-    // Per decision #7: legal / real_estate / education / fitness
-    // are reachable in Settings → Industry but have NO dedicated
-    // sub-brand domain or marketing landing. They MUST NOT appear
-    // as picker cards on the umbrella signup view.
-    const settingsOnly = ['legal', 'real_estate', 'education', 'fitness'] as const
-    for (const id of settingsOnly) {
-      expect(PICKER_INDUSTRIES.includes(id as any)).toBe(false)
-    }
   })
 
   it('every PICKER_INDUSTRIES entry has full INDUSTRY_COPY', () => {

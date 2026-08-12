@@ -132,27 +132,58 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
   // dedicated sub-brand. Sparse overrides only; no identity
   // mappings (which would break the i18n chain).
   legal: {
+    'Members & Loyalty': 'Clients',
     'Members':           'Clients',
     'Reservations':      'Consultations',
+    'Services':          'Services',
+    'Masters':           'Attorneys',
+    'Properties':        'Offices',
     'Hotel Info':        'Firm Info',
+    'Booking Engine':    'Consultation Engine',
+    'Member App':        'Client App',
+    'Team & Roles':      'Attorneys & Roles',
+    'Hotel Loyalty':     'Client Portal',
   },
   real_estate: {
+    'Members & Loyalty': 'Clients',
     'Members':           'Clients',
     'Reservations':      'Viewings',
+    'Masters':           'Agents',
     'Properties':        'Listings',
     'Hotel Info':        'Agency Info',
+    'Booking Engine':    'Viewing Scheduler',
+    'Member App':        'Client App',
+    'Team & Roles':      'Agents & Roles',
+    'Hotel Loyalty':     'Client Portal',
   },
   education: {
+    'Members & Loyalty': 'Students',
     'Members':           'Students',
     'Reservations':      'Lessons',
+    'Services':          'Courses',
+    'Rooms & Services':  'Courses',
+    'Masters':           'Teachers',
+    'Properties':        'Campuses',
     'Hotel Info':        'School Info',
+    'Loyalty Program':   'Student Rewards',
+    'Booking Engine':    'Lesson Booking',
+    'Member App':        'Student App',
+    'Team & Roles':      'Teachers & Roles',
+    'Hotel Loyalty':     'Student Rewards',
   },
   fitness: {
     // No 'Members' override — "Members" IS the right word for a gym.
     // An identity mapping would break i18n for fitness orgs.
     'Reservations':      'Classes',
+    'Services':          'Programs',
+    'Rooms & Services':  'Classes & Programs',
+    'Masters':           'Trainers',
     'Properties':        'Locations',
     'Hotel Info':        'Studio Info',
+    'Loyalty Program':   'Membership Program',
+    'Booking Engine':    'Class Booking',
+    'Team & Roles':      'Trainers & Roles',
+    'Hotel Loyalty':     'Member Rewards',
   },
 }
 

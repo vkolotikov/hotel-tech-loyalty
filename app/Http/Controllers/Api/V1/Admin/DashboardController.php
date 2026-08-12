@@ -58,6 +58,13 @@ class DashboardController extends Controller
                 'beauty'     => app(\App\Services\IndustryKpis\BeautyKpiService::class),
                 'medical'    => app(\App\Services\IndustryKpis\MedicalKpiService::class),
                 'restaurant' => app(\App\Services\IndustryKpis\RestaurantKpiService::class),
+                // Appointment-shaped verticals share the service-business
+                // tiles (Appointments today / Avg ticket / Returning
+                // clients / Pipeline). Falling through to the hotel default
+                // used to greet a gym owner with Occupancy and Arrivals —
+                // numbers their business does not have.
+                'fitness', 'education', 'legal', 'real_estate'
+                             => app(\App\Services\IndustryKpis\BeautyKpiService::class),
                 default      => app(\App\Services\IndustryKpis\HotelKpiService::class),
             };
             return $service->compute((int) $orgId);

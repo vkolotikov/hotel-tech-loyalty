@@ -200,9 +200,17 @@ export function industryCopyFor(industry: IndustryId | null | undefined): Indust
 
 /**
  * Industries that get rendered as cards on the umbrella picker.
- * Excludes Settings-only industries because we don't have dedicated
- * sub-brand domains or marketing for them yet (decision #7).
+ *
+ * All eight ship now. The four late additions (fitness / education /
+ * legal / real_estate) run under the umbrella HexaTech brand rather
+ * than a dedicated sub-brand domain — their INDUSTRY_COPY entries are
+ * complete, every backend preset (CRM pipeline, planner, custom
+ * fields, loyalty ladder, chat identity, KPI tiles, vocabulary,
+ * palette) exists, and trial provisioning configures them end to end.
+ * A sub-brand later means a domain + monogram + mail branding, not a
+ * functional change.
  */
 export const PICKER_INDUSTRIES: ReadonlyArray<IndustryId> = [
   'hotel', 'beauty', 'medical', 'restaurant',
+  'fitness', 'education', 'legal', 'real_estate',
 ] as const

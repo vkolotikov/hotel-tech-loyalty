@@ -176,21 +176,56 @@ class OrganizationSetupServiceTest extends TestCase
         }
     }
 
-    public function test_beauty_org_skips_loyalty_specific_hotel_settings(): void
+    public function test_beauty_org_gets_operational_loyalty_settings_but_not_the_hotel_welcome_bonus(): void
     {
-        // The third leg of the industry gate. Loyalty settings
-        // (welcome bonus, points-per-currency etc.) MUST NOT be
-        // seeded for non-hotel orgs.
+        // Revised contract. The original gate excluded ALL loyalty-group
+        // settings for non-hotel orgs on the promise that Phase 5's
+        // LoyaltyPresetService would seed industry-appropriate ones — but
+        // Phase 5 only ever wrote welcome_bonus_points. The result in
+        // production: salons and gyms ran with NO expiry policy, NO
+        // birthday bonus and NO points-per-currency, so the expiry cron
+        // and earn math used invisible code defaults the admin had never
+        // seen or agreed to.
+        //
+        // Now: operational settings (expiry / bonuses / points-per-unit)
+        // are seeded for every industry that runs a programme. The
+        // welcome bonus itself stays with LoyaltyPresetService, which
+        // sets the industry-appropriate amount.
         $org = $this->freshBeautyOrg();
 
         $this->service->setupDefaults($org);
 
-        $loyaltyKeys = ['welcome_bonus_points', 'referrer_bonus_points',
-                        'points_expiry_months', 'points_per_currency'];
-        foreach ($loyaltyKeys as $key) {
+        foreach (['referrer_bonus_points', 'birthday_bonus_points',
+                  'points_expiry_months', 'points_per_currency'] as $key) {
+            $this->assertNotNull(
+                HotelSetting::where('key', $key)->first(),
+                "Beauty org must have operational loyalty setting '{$key}'.",
+            );
+        }
+
+        // The hotel-shaped 500-point welcome bonus is still NOT seeded
+        // here — LoyaltyPresetService owns that per industry.
+        $this->assertNull(
+            HotelSetting::where('key', 'welcome_bonus_points')->first(),
+            'Welcome bonus belongs to LoyaltyPresetService, not setupDefaults.',
+        );
+    }
+
+    public function test_medical_org_gets_no_loyalty_settings_at_all(): void
+    {
+        // Medical has no patient-loyalty programme (decision #5) — the
+        // operational settings would be dead weight and imply a
+        // programme that deliberately does not exist.
+        $org = $this->freshBeautyOrg();
+        $org->update(['industry' => 'medical']);
+
+        $this->service->setupDefaults($org->fresh());
+
+        foreach (['welcome_bonus_points', 'referrer_bonus_points',
+                  'points_expiry_months', 'points_per_currency'] as $key) {
             $this->assertNull(
                 HotelSetting::where('key', $key)->first(),
-                "Beauty org must NOT have hotel-shaped loyalty setting '{$key}'.",
+                "Medical org must NOT have loyalty setting '{$key}'.",
             );
         }
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
@@ -74,6 +74,22 @@ export function Setup({ onComplete }: Props) {
 
   // Step 2
   const [features, setFeatures] = useState<string[]>(INDUSTRIES[0].defaultFeatures)
+
+  // Start on the industry the org actually registered with, rather than
+  // silently defaulting to hotel. A beauty owner who clicked "Next"
+  // without noticing used to get a hotel pipeline over their beauty one.
+  useEffect(() => {
+    api.get('/v1/admin/setup/status')
+      .then(r => {
+        const ind = r.data?.industry
+        if (ind && INDUSTRIES.some(i => i.key === ind)) {
+          setIndustry(ind)
+          const def = INDUSTRIES.find(i => i.key === ind)
+          if (def) setFeatures(def.defaultFeatures)
+        }
+      })
+      .catch(() => { /* keep the hotel default */ })
+  }, [])
 
   // Step 3
   const [welcomeMessage, setWelcomeMessage] = useState('')

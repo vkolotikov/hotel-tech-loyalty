@@ -40,9 +40,13 @@ final class BookingWidgetVocab
             'beauty'      => array_merge($defaults, self::beauty()),
             'medical'     => array_merge($defaults, self::medical()),
             'restaurant'  => array_merge($defaults, self::restaurant()),
-            // Settings-only industries fall through to the hotel
-            // defaults today. Phase 9.x adds per-industry overrides
-            // once those verticals get GTM polish.
+            'fitness'     => array_merge($defaults, self::fitness()),
+            'education'   => array_merge($defaults, self::education()),
+            // Legal / real-estate widgets use the generic service
+            // wording below; their public flows are consultation /
+            // viewing requests rather than searches with dates.
+            'legal'       => array_merge($defaults, self::genericService('consultation', 'Book a Consultation')),
+            'real_estate' => array_merge($defaults, self::genericService('viewing', 'Book a Viewing')),
             default       => $defaults,
         };
     }
@@ -86,6 +90,66 @@ final class BookingWidgetVocab
             'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
             'svc_details_title'  => 'Your details',
             'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+        ];
+    }
+
+    private static function fitness(): array
+    {
+        return [
+            'steps_no_pay'      => ['Date & Time', 'Classes', 'Add-ons', 'Details & Confirm'],
+            'steps_pay'         => ['Date & Time', 'Classes', 'Add-ons', 'Member Details', 'Payment'],
+            'search_title'      => 'Book Your Class',
+            'search_sub'        => 'Pick a date to see available classes and sessions',
+            'extras_title'      => 'Add To Your Session',
+            'details_title'     => 'Member Details',
+            'check_in'          => 'Date',
+            'check_out'         => 'End',
+            'adults'            => 'Participants',
+            'search_button'     => 'Search Classes',
+            'svc_service_title'  => 'Select your class',
+            'svc_service_sub'    => "Choose the class or session you'd like to book.",
+            'svc_provider_title' => 'Choose your trainer',
+            'svc_provider_sub'   => 'Pick a specific trainer for your session.',
+        ];
+    }
+
+    private static function education(): array
+    {
+        return [
+            'steps_no_pay'      => ['Date & Time', 'Lessons', 'Add-ons', 'Details & Confirm'],
+            'steps_pay'         => ['Date & Time', 'Lessons', 'Add-ons', 'Student Details', 'Payment'],
+            'search_title'      => 'Book a Lesson',
+            'search_sub'        => 'Pick a date to see available lessons and courses',
+            'extras_title'      => 'Add To Your Booking',
+            'details_title'     => 'Student Details',
+            'check_in'          => 'Date',
+            'check_out'         => 'End',
+            'adults'            => 'Students',
+            'search_button'     => 'Search Lessons',
+            'svc_service_title'  => 'Select your course',
+            'svc_service_sub'    => "Choose the lesson or course you'd like to book.",
+            'svc_provider_title' => 'Choose your teacher',
+            'svc_provider_sub'   => 'Pick a specific teacher for your lesson.',
+        ];
+    }
+
+    /** Neutral service wording for consultation-shaped verticals. */
+    private static function genericService(string $noun, string $title): array
+    {
+        return [
+            'steps_no_pay'      => ['Date & Time', 'Services', 'Add-ons', 'Details & Confirm'],
+            'steps_pay'         => ['Date & Time', 'Services', 'Add-ons', 'Your Details', 'Payment'],
+            'search_title'      => $title,
+            'search_sub'        => "Pick a date to see available {$noun} slots",
+            'extras_title'      => 'Additional Options',
+            'details_title'     => 'Your Details',
+            'check_in'          => 'Date',
+            'check_out'         => 'End',
+            'adults'            => 'Attendees',
+            'search_button'     => 'Search Availability',
+            'svc_service_title'  => 'Select a service',
+            'svc_provider_title' => 'Choose your specialist',
+            'svc_provider_sub'   => "Pick a specific specialist for your {$noun}.",
         ];
     }
 

@@ -305,6 +305,17 @@ export function Login() {
   const [selectedPlan, setSelectedPlan] = useState('growth')
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>([])
+  // Mobile plan cards render collapsed (included rows only) — three fully
+  // expanded cards put ~1,400px between the form and the submit button.
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({})
+  const [isMobilePlanView, setIsMobilePlanView] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 768
+  )
+  useEffect(() => {
+    const onResize = () => setIsMobilePlanView(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -314,6 +325,8 @@ export function Login() {
   const [verified, setVerified] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  // True while a verify-code POST is in flight — see verifyCode.
+  const verifyingRef = useRef(false)
 
   // Password reset state
   const [showPassword, setShowPassword] = useState(false)
@@ -464,9 +477,20 @@ export function Login() {
       setCountdown(60)
       setView('verify')
     } catch (err: any) {
-      // If mail service is unavailable (503), skip verification and go directly to trial
-      if (err.response?.status === 503) {
+      // Mail outage → skip verification and go straight to the trial.
+      // The backend returns 502 on a send failure; this previously only
+      // matched 503, so the fallback was dead code and an SMTP outage
+      // stranded every signup at "Could not send verification email".
+      if (err.response?.status === 502 || err.response?.status === 503) {
         await handleTrial()
+        return
+      }
+      if (err.response?.status === 429) {
+        // The 1-per-60s resend guard. Reuse the visible countdown instead
+        // of a bare error so the user knows it's a wait, not a failure.
+        setCodeSent(true)
+        setCountdown(err.response?.data?.retry_after ?? 60)
+        setView('verify')
         return
       }
       setError(err.response?.data?.error || 'Could not send verification code.')
@@ -511,6 +535,11 @@ export function Login() {
   }
 
   const verifyCode = async (code: string) => {
+    // Guard against double-fire: typing the sixth digit AND pasting (or a
+    // fast re-render) could submit twice, and every duplicate that lost
+    // the race counted as a failed attempt toward the 5-attempt lockout.
+    if (verifyingRef.current) return
+    verifyingRef.current = true
     setLoading(true)
     setError('')
     try {
@@ -523,6 +552,7 @@ export function Login() {
       setCodeDigits(['', '', '', '', '', ''])
       inputRefs.current[0]?.focus()
     } finally {
+      verifyingRef.current = false
       setLoading(false)
     }
   }
@@ -679,7 +709,11 @@ export function Login() {
                     value={digit}
                     onChange={e => handleCodeChange(i, e.target.value)}
                     onKeyDown={e => handleCodeKeyDown(i, e)}
-                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    // Locked while a verification is in flight or already
+                    // accepted — edits during either fired extra verify-code
+                    // POSTs that burned brute-force attempts.
+                    disabled={loading || verified}
+                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:opacity-60"
                     autoFocus={i === 0}
                   />
                 ))}
@@ -1040,8 +1074,12 @@ export function Login() {
                           // plan-specific PLAN_TAGLINES copy (Starter /
                           // Enterprise) because the sub-brand framing
                           // doesn't apply to every tier.
-                          const tagline = p.description
-                            || (isPopular ? industryCopy.planTagline : null)
+                          // The industry-aware tagline ("For growing
+                          // studios + gyms") takes priority on the popular
+                          // card — previously p.description always shadowed
+                          // it, so the per-industry line was dead code.
+                          const tagline = (isPopular ? industryCopy.planTagline : null)
+                            || p.description
                             || PLAN_TAGLINES[p.slug]
                             || ''
                           return (
@@ -1079,9 +1117,26 @@ export function Login() {
                               )}
 
                               <div className="space-y-1 mb-3 flex-1">
-                                {ALL_FEATURES.map((f) => {
+                                {ALL_FEATURES
+                                  // On phones the three stacked cards put
+                                  // ~1,400px of feature rows between the form
+                                  // and the submit button. Collapsed cards
+                                  // show only what the plan INCLUDES; the
+                                  // full comparison stays on sm+ screens.
+                                  .filter((f) => {
+                                    if (expandedPlans[p.slug] || !isMobilePlanView) return true
+                                    const v = features[f.key]
+                                    return v === true || typeof v === 'string'
+                                  })
+                                  .map((f) => {
                                   const val = features[f.key]
-                                  const included = val !== false
+                                  // Explicit inclusion only. `val !== false`
+                                  // rendered every row as included for any
+                                  // slug missing from PLAN_FEATURES —
+                                  // an unknown SaaS plan showed a full
+                                  // green-tick column of features it never
+                                  // granted.
+                                  const included = val === true || typeof val === 'string'
                                   const detail = typeof val === 'string' ? val : null
                                   return (
                                     <div key={f.key} className={'flex items-start gap-1.5 text-[11px] ' + (!included ? 'opacity-40' : '')}>
@@ -1094,6 +1149,17 @@ export function Login() {
                                     </div>
                                   )
                                 })}
+                                {isMobilePlanView && (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); setExpandedPlans(x => ({ ...x, [p.slug]: !x[p.slug] })) }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setExpandedPlans(x => ({ ...x, [p.slug]: !x[p.slug] })) } }}
+                                    className="inline-block text-[11px] text-blue-400 hover:text-blue-300 pt-1 cursor-pointer"
+                                  >
+                                    {expandedPlans[p.slug] ? 'Show less' : 'See everything included'}
+                                  </span>
+                                )}
                               </div>
 
                               <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-white/[0.05]">

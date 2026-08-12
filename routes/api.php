@@ -247,7 +247,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
     // ─── Authenticated Routes ──────────────────────────────────────────────────
     // SaaS JWT middleware runs first; if valid, logs user in before Sanctum checks
-    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'brand', 'throttle:120,1'])->group(function () {
+    Route::middleware(['saas.auth', 'auth:sanctum', 'tenant', 'brand', 'throttle:240,1'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);

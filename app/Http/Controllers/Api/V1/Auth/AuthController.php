@@ -756,6 +756,12 @@ class AuthController extends Controller
         // Generate 6-digit code
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
+        // A fresh code means fresh attempts. Without this, someone who
+        // fumbled five entries was told "request a new code" — and then the
+        // new code ALSO bounced off the still-full counter for 15 minutes,
+        // a dead end with no way out from the UI.
+        \Illuminate\Support\Facades\Cache::forget('verify_attempts:' . $validated['email']);
+
         // Invalidate old codes
         EmailVerificationCode::where('email', $validated['email'])
             ->whereNull('verified_at')
@@ -801,15 +807,32 @@ class AuthController extends Controller
             return response()->json(['error' => 'Too many verification attempts. Please request a new code.'], 429);
         }
 
+        // Deliberately NOT filtered on verified_at. startTrial accepts a
+        // verification up to 30 minutes old, and re-entering a code that was
+        // already verified is a normal flow: the trial request failed (email
+        // collision, network), the UI put the user back on the code screen,
+        // and they typed the same six digits again. The old whereNull filter
+        // made that read as "Invalid verification code" AND count as a failed
+        // attempt — five of those locked the address out for 15 minutes in
+        // the middle of an honest signup.
         $record = EmailVerificationCode::where('email', $validated['email'])
             ->where('code', $validated['code'])
-            ->whereNull('verified_at')
             ->latest()
             ->first();
 
         if (!$record) {
             \Illuminate\Support\Facades\Cache::put($attemptKey, $attempts + 1, now()->addMinutes(15));
             return response()->json(['error' => 'Invalid verification code.'], 422);
+        }
+
+        // Already verified and still inside startTrial's acceptance window —
+        // same success, no attempt burned.
+        if ($record->verified_at !== null) {
+            if ($record->verified_at->gt(now()->subMinutes(30))) {
+                \Illuminate\Support\Facades\Cache::forget($attemptKey);
+                return response()->json(['verified' => true]);
+            }
+            return response()->json(['error' => 'Code has expired. Please request a new one.'], 422);
         }
 
         if ($record->isExpired()) {
@@ -897,6 +920,25 @@ class AuthController extends Controller
             : null;
 
         if ($existingUser && $existingStaff) {
+            // If the password they just typed matches, this is almost
+            // certainly a RETRY of a signup that already succeeded — the
+            // first attempt can legitimately take 15+ seconds (SaaS register
+            // 10s timeout + bootstrap sync), long enough for a user to
+            // resubmit or for a proxy to retry. Telling that person "already
+            // registered, please sign in" right after they registered reads
+            // as a failure and loses them at the door. Complete the signup
+            // instead: same response shape as the success path.
+            if ($this->passwordMatches($validated['password'], $existingUser->password)) {
+                $token = $existingUser->createToken('admin')->plainTextToken;
+                return response()->json([
+                    'token'      => $token,
+                    'saas_token' => null,
+                    'user'       => $existingUser->fresh(),
+                    'staff'      => $existingStaff,
+                    'resumed'    => true,
+                ]);
+            }
+
             return response()->json(['error' => 'This email is already registered. Please sign in instead.'], 422);
         }
 
@@ -977,9 +1019,6 @@ class AuthController extends Controller
 
             // Bind org context for BelongsToOrganization trait
             app()->instance('current_organization_id', $org->id);
-
-            // NOTE: Do NOT call setupDefaults() here — let the Setup wizard handle it
-            // so the user gets to choose blank vs demo data.
 
             // Create or re-use local user. When an existing user completes
             // their trial signup (they had a half-set-up account), honor the
@@ -1111,6 +1150,49 @@ class AuthController extends Controller
                 $localUser ?? null,
                 "Preset apply failed on trial signup (failed at: {$failedAt}) — workspace will retry via apply-industry"
             );
+        }
+
+        // Complete the workspace so the user lands on a WORKING dashboard.
+        //
+        // Previously this was left to the Setup wizard ("do NOT call
+        // setupDefaults here") — but the wizard's own gate keyed
+        // setup_complete on "loyalty tiers exist", and the preset block
+        // above just created tiers for every non-medical industry. Result:
+        // the wizard never showed, setupDefaults never ran, and every
+        // self-serve org started with no property record, no settings, no
+        // currency, no theme, no review form and no chat widget. (Medical
+        // orgs got the opposite failure: no tiers ever, so the wizard
+        // reappeared on every navigation forever.)
+        //
+        // We have everything the wizard would have asked for — industry and
+        // company name are on the form — so provision now. setupDefaults is
+        // idempotent (firstOrCreate throughout) and stamps organization_id
+        // on every row.
+        try {
+            $setupSvc = app(\App\Services\OrganizationSetupService::class);
+            $setupSvc->setupDefaults($org);
+
+            // Seed the chat widget shell so the AI chat pages aren't empty.
+            // The per-industry assistant identity was already written by
+            // IndustryPresetService::apply above.
+            $widget = \App\Models\ChatWidgetConfig::firstOrNew(['organization_id' => $org->id]);
+            if (!$widget->widget_key) $widget->widget_key = (string) \Illuminate\Support\Str::uuid();
+            if (!$widget->api_key)    $widget->api_key    = \Illuminate\Support\Str::random(48);
+            if (!$widget->company_name) $widget->company_name = $org->name;
+            if (!$widget->header_title) $widget->header_title = $org->name;
+            $widget->save();
+
+            // Mark onboarding done — the Setup wizard is for orgs that
+            // arrived without this information, not for trial signups.
+            \App\Models\CrmSetting::updateOrCreate(
+                ['key' => 'onboarding_completed_at'],
+                ['value' => json_encode(now()->toIso8601String())],
+            );
+        } catch (\Throwable $e) {
+            // Non-blocking: a provisioning hiccup must not eat the signup.
+            // The Setup wizard remains as the recovery path (the marker was
+            // not written, so the gate will show it).
+            report($e);
         }
 
         // Step 4: Provision trial entitlements on the local org.
